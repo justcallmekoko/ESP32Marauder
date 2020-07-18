@@ -11,9 +11,6 @@ env:
 
 before_install:
 
-  # TODO: undo
-  # remove submodules, we don't want those to be actually tested for compliance
-  - git submodule status | rm -Rf `cut -d ' ' -f 3`
   - git clone https://github.com/per1234/arduino-ci-script.git "${HOME}/scripts/arduino-ci-script"
   - cd "${HOME}/scripts/arduino-ci-script"
   # Get new tags from the remote
@@ -31,13 +28,12 @@ before_install:
   - set_application_folder "$APPLICATION_FOLDER"
   - set_sketchbook_folder "$SKETCHBOOK_FOLDER"
 
-  - install_ide '("1.8.0" "1.8.9" "newest")'
+  - install_ide '("1.8.11" "1.8.12" "newest")'
 
   # Install the library from the repository
-  - install_library
-  - install_library "M5Stack"
   - install_library "https://github.com/lvgl/lv_port_esp32/archive/master.zip"
   - install_library "TFT_eSPI"
+  - install_library "JPEGDecoder"
   - install_library "https://github.com/spacehuhn/SimpleList.git"
   # - install_library 'https://github.com/bblanchon/ArduinoJson.git' # "ArduinoJSON"
   - install_package "esp32:esp32" "https://dl.espressif.com/dl/package_esp32_index.json" #  # esp32:esp32:m5stack-core-esp32
