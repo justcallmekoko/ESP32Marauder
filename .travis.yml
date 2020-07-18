@@ -56,7 +56,7 @@ script:
   # build_sketch arguments: sketch name, fqbn, allow failure, IDE version/list/range
   # - check_library_manager_compliance "$TRAVIS_BUILD_DIR"
   - set_ide_preference "compiler.warning_level=auto"
-  - build_sketch "${TRAVIS_BUILD_DIR}/esp32_marauder/esp32_marauder.ino" "esp32:esp32:d32_pro:FlashFreq=80,UploadSpeed=921600" "false" "newest"
+  - build_sketch "${TRAVIS_BUILD_DIR}/esp32_marauder/esp32_marauder.ino" "esp32:esp32:d32_pro:FlashFreq=80,UploadSpeed=921600,PartitionScheme=min_spiffs" "false" "newest"
 
 after_script:
   # Commit a report of the job results to the CI-reports repository
