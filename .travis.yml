@@ -28,7 +28,8 @@ before_install:
   - set_application_folder "$APPLICATION_FOLDER"
   - set_sketchbook_folder "$SKETCHBOOK_FOLDER"
 
-  - install_ide '("1.8.11" "1.8.12" "newest")'
+  #- install_ide '("1.8.11" "1.8.12" "newest")'
+  - install_ide '("newest")'
 
   # Install the library from the repository
   #- install_library "https://github.com/lvgl/lv_port_esp32/archive/master.zip"
@@ -36,8 +37,9 @@ before_install:
   - install_library "JPEGDecoder"
   - install_library "LinkedList"
   - install_library "lv_arduino"
+  - install_library 'https://github.com/bblanchon/ArduinoJson.git'
   #- install_library "https://github.com/spacehuhn/SimpleList.git"
-  # - install_library 'https://github.com/bblanchon/ArduinoJson.git' # "ArduinoJSON"
+  # 
   - install_package "esp32:esp32" "https://dl.espressif.com/dl/package_esp32_index.json" #  # esp32:esp32:m5stack-core-esp32
   #- /home/travis/arduino-ide/arduino-1.8.10/arduino --pref "compiler.warning_level=none" --save-prefs   &>/dev/null
   #- /home/travis/arduino-ide/arduino-1.8.10/arduino --pref "build.warn_data_percentage=75" --save-prefs   &>/dev/null
