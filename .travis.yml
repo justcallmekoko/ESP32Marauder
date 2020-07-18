@@ -37,7 +37,9 @@ before_install:
   - install_library "JPEGDecoder"
   - install_library "LinkedList"
   - install_library "lv_arduino"
-  - install_library 'https://github.com/bblanchon/ArduinoJson.git'
+  - install_library "Adafruit_NeoPixel"
+  - install_library 'ArduinoJson'
+  #- install_library 'https://github.com/bblanchon/ArduinoJson.git'
   #- install_library "https://github.com/spacehuhn/SimpleList.git"
   # 
   - install_package "esp32:esp32" "https://dl.espressif.com/dl/package_esp32_index.json" #  # esp32:esp32:m5stack-core-esp32
