@@ -31,10 +31,11 @@ before_install:
   - install_ide '("1.8.11" "1.8.12" "newest")'
 
   # Install the library from the repository
-  - install_library "https://github.com/lvgl/lv_port_esp32/archive/master.zip"
+  #- install_library "https://github.com/lvgl/lv_port_esp32/archive/master.zip"
   - install_library "TFT_eSPI"
   - install_library "JPEGDecoder"
   - install_library "LinkedList"
+  - install_library "lv_arduino"
   #- install_library "https://github.com/spacehuhn/SimpleList.git"
   # - install_library 'https://github.com/bblanchon/ArduinoJson.git' # "ArduinoJSON"
   - install_package "esp32:esp32" "https://dl.espressif.com/dl/package_esp32_index.json" #  # esp32:esp32:m5stack-core-esp32
