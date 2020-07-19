@@ -196,6 +196,8 @@ void MenuFunctions::updateStatusBar()
       digitalWrite(BATTERY_PIN, LOW);
       if (battery_analog > 100)
         battery_analog = 100;
+      else if (battery_analog < 0)
+        battery_analog = 0;
       battery_analog1 = battery_analog;
       if (battery_analog9 > 0)
         battery_analog = ( battery_analog + battery_analog1 + battery_analog2 + battery_analog3 + battery_analog4 + battery_analog5 + battery_analog6 + battery_analog7 + battery_analog8 + battery_analog9) / 10;
