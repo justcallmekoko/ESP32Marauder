@@ -27,6 +27,8 @@ extern BatteryInterface battery_obj;
 //#define BUTTON_ARRAY_LEN 5
 
 #define FLASH_BUTTON 0
+#define BATTERY_PIN 13
+#define ANALOG_PIN 34
 
 // Icon definitions
 #define ATTACKS 0
@@ -55,6 +57,7 @@ extern BatteryInterface battery_obj;
 #define STATUS_SD 23
 #define PWNAGOTCHI 24
 #define ESPRESSIF 25
+
 
 struct Menu;
 
