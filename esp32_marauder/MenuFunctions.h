@@ -27,6 +27,9 @@ extern BatteryInterface battery_obj;
 //#define BUTTON_ARRAY_LEN 5
 
 #define FLASH_BUTTON 0
+#define BATTERY_PIN 13
+#define ANALOG_PIN 34
+#define CHARGING_PIN 27
 
 // Icon definitions
 #define ATTACKS 0
