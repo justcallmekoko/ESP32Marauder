@@ -58,6 +58,8 @@ void setup()
   pinMode(FLASH_BUTTON, INPUT);
   pinMode(TFT_BL, OUTPUT);
   digitalWrite(TFT_BL, LOW);
+  pinMode(BATTERY_PIN, OUTPUT);
+  pinMode(CHARGING_PIN, INPUT);
 
   // Preset SPI CS pins to avoid bus conflicts
   digitalWrite(TFT_CS, HIGH);
