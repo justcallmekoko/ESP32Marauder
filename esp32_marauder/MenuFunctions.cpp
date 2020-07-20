@@ -301,8 +301,24 @@ void MenuFunctions::drawStatusBar()
   //display_obj.tft.fillRect(0, STATUS_BAR_WIDTH + 1, 240, 1, TFT_DARKGREY);
   display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR);
   //display_obj.tft.setTextSize(2);
-
+  
   uint16_t the_color;
+  
+  if ( digitalRead(CHARGING_PIN) == 1) the_color = TFT_BLUE;
+  else if (battery_analog < 20) the_color = TFT_RED;
+  else if (battery_analog < 40)  the_color = TFT_YELLOW;
+  else the_color = TFT_GREEN;
+
+    display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR);
+    display_obj.tft.fillRect(186, 0, 50, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+    display_obj.tft.drawXBitmap(186,
+                                0,
+                                menu_icons[STATUS_BAT],
+                                16,
+                                16,
+                                STATUSBAR_COLOR,
+                                the_color);
+    display_obj.tft.drawString((String) battery_analog + "%", 204, 0, 2);
 
   // Draw temp info
   if (temp_obj.current_temp < 70)
