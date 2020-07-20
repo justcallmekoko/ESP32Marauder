@@ -96,6 +96,14 @@ Make the following connections between your 2.8" TFT Screen and your ESP32 board
 |         | T_IRQ    |        |
 | SD_CS   |          | GPIO12 |
 
+For the analog battery circuit, use a 4 to 1 voltage divider, and (optional) a mosfet
+For the charge detection circuit, use a 1 to 2 voltage divider
+| BATTERY | ESP32  |
+| ------- | ------ |
+|  BAT +  | GPIO34 |
+|  MOSFET | GPIO13 |
+| CHARGE +| GPIO27 |
+
 ## Flashing Firmware
 ### Using Arduino IDE
 1. Install the [Arduino IDE](https://www.arduino.cc/en/main/software)
