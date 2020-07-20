@@ -1,5 +1,7 @@
 #include "MenuFunctions.h"
 //#include "icons.h"
+#define BATTERY_ANALOG_ON 0
+
 
 extern const unsigned char menu_icons[][66];
 
