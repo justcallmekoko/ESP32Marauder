@@ -156,9 +156,68 @@ void MenuFunctions::main(uint32_t currentTime)
   y = -1;
 }
 
+
+byte battery_analog_array[10];
+byte battery_count = 0;
+byte battery_analog_last = 101;
+#define BATTERY_CHECK 50
+uint16_t battery_analog = 0;
+
 void MenuFunctions::updateStatusBar()
 {
   uint16_t the_color;
+  uint8_t n = 0;
+  byte battery_analog_sample[10];
+  byte deviation;
+  if (BATTERY_ANALOG_ON) {
+    if (battery_count == BATTERY_CHECK - 5)  digitalWrite(BATTERY_PIN, HIGH);
+    else if (battery_count == 5) digitalWrite(BATTERY_PIN, LOW);
+    if (battery_count < BATTERY_CHECK) battery_count++;
+    else if (battery_count == BATTERY_CHECK) {
+      battery_analog = 0;
+      for (n = 9; n > 0; n--)battery_analog_array[n] = battery_analog_array[n - 1];
+      for (n = 0; n < 10; n++) {
+        battery_analog_sample[n] = map((analogRead(ANALOG_PIN) * 5), 2400, 4200, 0, 100);
+        if (battery_analog_sample[n] > 100) battery_analog_sample[n] = 100;
+        else if (battery_analog_sample[n] < 0) battery_analog_sample[n] = 0;
+        battery_analog += battery_analog_sample[n];
+      }
+      battery_analog = battery_analog / 10;
+      for (n = 0; n < 10; n++) {
+        deviation = abs(battery_analog - battery_analog_sample[n]);
+        if (deviation >= 10) battery_analog_sample[n] = battery_analog;
+      }
+      battery_analog = 0;
+      for (n = 0; n < 10; n++) battery_analog += battery_analog_sample[n];
+      battery_analog = battery_analog / 10;
+      battery_analog_array[0] = battery_analog;
+      if (battery_analog_array[9] > 0 ) {
+        battery_analog = 0;
+        for (n = 0; n < 10; n++) battery_analog += battery_analog_array[n];
+        battery_analog = battery_analog / 10;
+      }
+      battery_count = 0;
+    }
+
+    if ( digitalRead(CHARGING_PIN) == 1) the_color = TFT_BLUE;
+    else if (battery_analog < 20) the_color = TFT_RED;
+    else if (battery_analog < 40)  the_color = TFT_YELLOW;
+    else the_color = TFT_GREEN;
+
+    if (battery_analog_last != battery_analog) {
+      battery_analog_last = battery_analog;
+      display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR);
+      display_obj.tft.fillRect(186, 0, 50, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+      display_obj.tft.drawXBitmap(186,
+                                  0,
+                                  menu_icons[STATUS_BAT],
+                                  16,
+                                  16,
+                                  STATUSBAR_COLOR,
+                                  the_color);
+      display_obj.tft.drawString((String) battery_analog + "%", 204, 0, 2);
+    }
+  }
 
   // Draw temp info
   if (temp_obj.current_temp < 70)
