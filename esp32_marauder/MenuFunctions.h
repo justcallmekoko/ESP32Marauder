@@ -128,8 +128,8 @@ class MenuFunctions
     void addNodes(Menu* menu, String name, uint16_t color, Menu* child, int place, std::function<void()> callable);
     void drawStatusBar();
     void updateStatusBar();
-    void battery();
-    void battery2();
+    void battery(bool initial = false);
+    void battery2(bool initial = false);
     void showMenuList(Menu* menu, int layer);
     void orientDisplay();
 

@@ -162,7 +162,7 @@ byte battery_count = 0;
 byte battery_analog_last = 101;
 #define BATTERY_CHECK 50
 uint16_t battery_analog = 0;
-void MenuFunctions::battery()
+void MenuFunctions::battery(bool initial)
 {
   if (BATTERY_ANALOG_ON) {
     uint8_t n = 0;
@@ -204,7 +204,7 @@ void MenuFunctions::battery()
     }
   }
 }
-void MenuFunctions::battery2()
+void MenuFunctions::battery2(bool initial)
 {
   uint16_t the_color;
   if ( digitalRead(CHARGING_PIN) == 1) the_color = TFT_BLUE;
@@ -224,17 +224,18 @@ void MenuFunctions::battery2()
   display_obj.tft.drawString((String) battery_analog + "%", 204, 0, 2);
 }
 #else
-void MenuFunctions::battery()
+void MenuFunctions::battery(bool initial)
 {
   uint16_t the_color;
   if (battery_obj.i2c_supported)
   {
-    if ((String)battery_obj.battery_level != "25")
+    // Could use int compare maybe idk
+    if (((String)battery_obj.battery_level != "25") && ((String)battery_obj.battery_level != "0"))
       the_color = TFT_GREEN;
     else
       the_color = TFT_RED;
 
-    if (battery_obj.battery_level != battery_obj.old_level) {
+    if ((battery_obj.battery_level != battery_obj.old_level) || (initial)) {
       battery_obj.old_level = battery_obj.battery_level;
       display_obj.tft.fillRect(204, 0, SCREEN_WIDTH, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
       display_obj.tft.setCursor(0, 1);
@@ -249,9 +250,9 @@ void MenuFunctions::battery()
     }
   }
 }
-void MenuFunctions::battery2()
+void MenuFunctions::battery2(bool initial)
 {
-  MenuFunctions::battery();
+  MenuFunctions::battery(initial);
 }
 #endif
 
@@ -295,7 +296,7 @@ void MenuFunctions::updateStatusBar()
   }
 
   // Draw battery info
-  MenuFunctions::battery();
+  MenuFunctions::battery(false);
 
   // Draw SD info
   if (sd_obj.supported)
@@ -353,7 +354,7 @@ void MenuFunctions::drawStatusBar()
   display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", 100, 0, 2);
 
 
-  MenuFunctions::battery2();
+  MenuFunctions::battery2(true);
 
   // Draw SD info
   if (sd_obj.supported)
