@@ -199,6 +199,7 @@ void MenuFunctions::battery()
     else if (battery_count >= BATTERY_CHECK) battery_count = 0;
 
     if (battery_analog_last != battery_analog) {
+      battery_analog_last = battery_analog;
       MenuFunctions::battery2();
     }
   }
