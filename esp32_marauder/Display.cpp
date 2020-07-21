@@ -465,7 +465,6 @@ void Display::drawJpeg(const char *filename, int xpos, int ypos) {
 uint16_t xlast;
 uint16_t ylast;
 uint32_t AH;
-float wd = 3;
 void Display::drawStylus()
 {
   uint16_t x = 0, y = 0; // To store the touch coordinates
@@ -477,6 +476,7 @@ void Display::drawStylus()
   if (pressed) {
     //    tft.fillCircle(x, y, 2, TFT_WHITE);
     if ( xlast > 0 && ylast > 0 ) {
+      float wd = 3;
       int dx = abs(x - xlast), sx = xlast < x ? 1 : -1;
       int dy = abs(y - ylast), sy = ylast < y ? 1 : -1;
       int err = dx - dy, e2, x2, y2;                        /* error value e_xy */
