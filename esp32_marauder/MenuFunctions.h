@@ -1,7 +1,7 @@
 #ifndef MenuFunctions_h
 #define MenuFunctions_h
 
-#define BATTERY_ANALOG_ON 1
+#define BATTERY_ANALOG_ON 0
 
 #include "WiFiScan.h"
 #include "Display.h"
