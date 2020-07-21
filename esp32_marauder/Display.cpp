@@ -484,14 +484,9 @@ void Display::drawStylus()
       int y2;
       int n;
       int n2 = -wd;
-      xlast2 = xlast;
-      x2 = x;
-      ylast2 = ylast;
-      y2 = y;
+      xlast2 = xlast - wd;
+      x2 = x - wd;
       for (n = -wd; n <= wd; n++) {
-        xlast2 = xlast + n2;
-        x2 = x + n2;
-        tft.drawLine(xlast2, ylast2, x2, y2, the_color);
         ylast2 = ylast + n;
         y2 = y + n;
         tft.drawLine(xlast2, ylast2, x2, y2, the_color);
@@ -500,14 +495,8 @@ void Display::drawStylus()
         xlast2 = xlast + n2;
         x2 = x + n2;
         tft.drawLine(xlast2, ylast2, x2, y2, the_color);
-        ylast2 = ylast + n;
-        y2 = y + n;
-        tft.drawLine(xlast2, ylast2, x2, y2, the_color);
       }
       for (n = wd; n >= -wd; n--) {
-        xlast2 = xlast + n2;
-        x2 = x + n2;
-        tft.drawLine(xlast2, ylast2, x2, y2, the_color);
         ylast2 = ylast + n;
         y2 = y + n;
         tft.drawLine(xlast2, ylast2, x2, y2, the_color);
@@ -515,9 +504,6 @@ void Display::drawStylus()
       for (n2 = wd; n2 >= -wd; n2--) {
         xlast2 = xlast + n2;
         x2 = x + n2;
-        tft.drawLine(xlast2, ylast2, x2, y2, the_color);
-        ylast2 = ylast + n;
-        y2 = y + n;
         tft.drawLine(xlast2, ylast2, x2, y2, the_color);
       }
 //      tft.drawLine(xlast, ylast, x, y, TFT_WHITE);
