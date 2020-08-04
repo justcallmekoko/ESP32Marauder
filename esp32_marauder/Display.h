@@ -10,6 +10,7 @@
 #include <SPI.h>
 //#include <lvgl.h>
 #include <Ticker.h>
+//#include <M5Stack.h>
 #include "SPIFFS.h"
 #include "Assets.h"
 
@@ -75,12 +76,13 @@ class Display
     TFT_eSPI tft = TFT_eSPI();
     TFT_eSprite img = TFT_eSprite(&tft);
     TFT_eSPI_Button key[BUTTON_ARRAY_LEN];
-    String version_number = "v0.6.8";
+    String version_number = "v0.6.9";
 
     bool printing = false;
     bool loading = false;
     bool tteBar = false;
     bool draw_tft = false;
+    bool exit_draw = false;
 
     int TOP_FIXED_AREA_2 = 48;
     int print_delay_1, print_delay_2 = 10;
@@ -124,6 +126,7 @@ class Display
     void clearScreen();
     void displayBuffer(bool do_clear = false);
     void drawJpeg(const char *filename, int xpos, int ypos);
+    void setupDraw();
     void drawStylus();
     void getTouchWhileFunction(bool pressed);
     void initScrollValues(bool tte = false);
