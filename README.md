@@ -3,7 +3,7 @@
 <!---[![Build Status](https://travis-ci.com/justcallmekoko/ESP32Marauder.svg?branch=master)](https://travis-ci.com/justcallmekoko/ESP32Marauder)--->
 <!---Shields/Badges https://shields.io/--->
 
-# ESP32 Marauder v0.6.8
+# ESP32 Marauder v0.6.9
 <p align="center"><img alt="Marauder logo" src="https://github.com/justcallmekoko/ESP32Marauder/blob/master/pictures/marauder3L.jpg?raw=true" width="300"></p>
 <p align="center">
   <b>A suite of WiFi/Bluetooth offensive and defensive tools for the ESP32</b>
@@ -96,7 +96,7 @@ Make the following connections between your 2.8" TFT Screen and your ESP32 board
 |         | T_IRQ    |        |
 | SD_CS   |          | GPIO12 |
 
-For the analog battery circuit, use a 4 to 1 voltage divider, and (optional) a mosfet
+For the analog battery circuit, use a 4 to 1 voltage divider, and (optional) a mosfet.
 For the charge detection circuit, use a 1 to 2 voltage divider (the charge detection is optional and only changes the battery icon colour while charging)
 | BATTERY | ESP32  |
 | ------- | ------ |
