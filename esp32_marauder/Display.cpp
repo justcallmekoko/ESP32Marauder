@@ -47,10 +47,11 @@ void Display::RunSetup()
   //tft.fillScreen(TFT_BLACK);
   clearScreen();
 
-  //Serial.println("SPI_FREQUENCY: " + (String)SPI_FREQUENCY);
-  //Serial.println("SPI_READ_FREQUENCY: " + (String)SPI_READ_FREQUENCY);
-  //Serial.println("SPI_TOUCH_FREQUENCY: " + (String)SPI_TOUCH_FREQUENCY);
+  auto currentPanel = tft.getPanel();
 
+  Serial.println("SPI_FREQUENCY: " + (String)((int)getApbFrequency()>>1));
+  Serial.println("SPI_READ_FREQUENCY: " + (String)currentPanel->freq_read);
+  Serial.println("SPI_TOUCH_FREQUENCY: " + (String)2000000);
 
   // Initialize file system
   // This should probably have its own class
