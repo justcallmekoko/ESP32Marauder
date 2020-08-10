@@ -43,7 +43,7 @@ before_install:
   - install_library "LovyanGFX"
   - install_library "https://github.com/tobozo/ESP32-Chimera-Core/archive/Touch.zip"
   
-  - cp ${TRAVIS_BUILD_DIR}/User_Setup.h /home/travis/arduino-sketchbook/libraries/TFT_eSPI/User_Setup.h
+  #- cp ${TRAVIS_BUILD_DIR}/User_Setup.h /home/travis/arduino-sketchbook/libraries/TFT_eSPI/User_Setup.h
   #- install_library 'https://github.com/bblanchon/ArduinoJson.git'
   #- install_library "https://github.com/spacehuhn/SimpleList.git"
   # 
