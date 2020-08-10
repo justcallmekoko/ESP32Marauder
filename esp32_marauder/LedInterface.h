@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
 
-#define PIN 25
+#define PIN -1 //25
 #define Pixels 1
 
 extern Adafruit_NeoPixel strip;
@@ -19,13 +19,13 @@ class LedInterface {
     int wheel_speed = 1; // lower = slower
 
     uint32_t Wheel(byte WheelPos);
-  
+
   public:
     LedInterface();
 
     void RunSetup();
     void main(uint32_t currentTime);
-  
+
 };
 
 #endif

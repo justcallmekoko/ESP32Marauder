@@ -54,7 +54,7 @@ void MenuFunctions::main(uint32_t currentTime)
 
   // getTouch causes a 10ms delay which makes beacon spam less effective
   //if (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF)
-  pressed = display_obj.tft.getTouch(&t_x, &t_y);
+  pressed = tft.getTouch(&t_x, &t_y);
 
   //if (pressed)
   //  Serial.println("Pressed, son");
@@ -87,7 +87,7 @@ void MenuFunctions::main(uint32_t currentTime)
       wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
 
       // If we don't do this, the text and button coordinates will be off
-      display_obj.tft.init();
+      tft.init();
 
       // Take us back to the menu
       changeMenu(current_menu);
@@ -115,19 +115,21 @@ void MenuFunctions::main(uint32_t currentTime)
 
     // Check if any key has changed state
     for (uint8_t b = 0; b < current_menu->list->size(); b++) {
-      display_obj.tft.setFreeFont(MENU_FONT);
+      tft.setFreeFont(MENU_FONT);
       if (display_obj.key[b].justPressed()) {
         //display_obj.key[b].drawButton2(current_menu->list->get(b).name, true);  // draw invert
         //display_obj.key[b].drawButton(ML_DATUM, BUTTON_PADDING, current_menu->list->get(b).name, true);
         display_obj.key[b].drawButton(true, current_menu->list->get(b).name);
         if (current_menu->list->get(b).name != "Back")
-          display_obj.tft.drawXBitmap(0,
-                                      KEY_Y + b * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
-                                      menu_icons[current_menu->list->get(b).icon],
-                                      ICON_W,
-                                      ICON_H,
-                                      current_menu->list->get(b).color,
-                                      TFT_BLACK);
+          tft.drawXBitmap(
+            0,
+            KEY_Y + b * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
+            (uint8_t*)menu_icons[current_menu->list->get(b).icon],
+            ICON_W,
+            ICON_H,
+            (uint16_t)current_menu->list->get(b).color,
+            (uint16_t)TFT_BLACK
+          );
       }
       //else if (pressed)
       //  display_obj.key[b].drawButton(false, current_menu->list->get(b).name);
@@ -144,16 +146,18 @@ void MenuFunctions::main(uint32_t currentTime)
       else if ((display_obj.key[b].justReleased()) && (pressed)) {
         display_obj.key[b].drawButton(false, current_menu->list->get(b).name);
         if (current_menu->list->get(b).name != "Back")
-          display_obj.tft.drawXBitmap(0,
-                                      KEY_Y + b * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
-                                      menu_icons[current_menu->list->get(b).icon],
-                                      ICON_W,
-                                      ICON_H,
-                                      TFT_BLACK,
-                                      current_menu->list->get(b).color);
+          tft.drawXBitmap(
+            0,
+            KEY_Y + b * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
+            (uint8_t*)menu_icons[current_menu->list->get(b).icon],
+            ICON_W,
+            ICON_H,
+            (uint16_t)TFT_BLACK,
+            (uint16_t)current_menu->list->get(b).color
+          );
       }
 
-      display_obj.tft.setFreeFont(NULL);
+      tft.setFreeFont(NULL);
     }
   }
   x = -1;
@@ -216,16 +220,18 @@ void MenuFunctions::battery2(bool initial)
   else if (battery_analog < 40)  the_color = TFT_YELLOW;
   else the_color = TFT_GREEN;
 
-  display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR);
-  display_obj.tft.fillRect(186, 0, 50, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
-  display_obj.tft.drawXBitmap(186,
-                              0,
-                              menu_icons[STATUS_BAT],
-                              16,
-                              16,
-                              STATUSBAR_COLOR,
-                              the_color);
-  display_obj.tft.drawString((String) battery_analog + "%", 204, 0, 2);
+  tft.setTextColor(the_color, STATUSBAR_COLOR);
+  tft.fillRect(186, 0, 50, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+  tft.drawXBitmap(
+    186,
+    0,
+    (uint8_t*)menu_icons[STATUS_BAT],
+    16,
+    16,
+    (uint16_t)STATUSBAR_COLOR,
+    (uint16_t)the_color
+  );
+  tft.drawString((String) battery_analog + "%", 204, 0, 2);
 }
 #else
 void MenuFunctions::battery(bool initial)
@@ -241,16 +247,18 @@ void MenuFunctions::battery(bool initial)
 
     if ((battery_obj.battery_level != battery_obj.old_level) || (initial)) {
       battery_obj.old_level = battery_obj.battery_level;
-      display_obj.tft.fillRect(204, 0, SCREEN_WIDTH, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
-      display_obj.tft.setCursor(0, 1);
-      display_obj.tft.drawXBitmap(186,
-                                  0,
-                                  menu_icons[STATUS_BAT],
-                                  16,
-                                  16,
-                                  STATUSBAR_COLOR,
-                                  the_color);
-      display_obj.tft.drawString((String)battery_obj.battery_level + "%", 204, 0, 2);
+      tft.fillRect(204, 0, SCREEN_WIDTH, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+      tft.setCursor(0, 1);
+      tft.drawXBitmap(
+        186,
+        0,
+        (uint8_t*)menu_icons[STATUS_BAT],
+        16,
+        16,
+        (uint16_t)STATUSBAR_COLOR,
+        (uint16_t)the_color
+      );
+      tft.drawString((String)battery_obj.battery_level + "%", 204, 0, 2);
     }
   }
 }
@@ -262,7 +270,7 @@ void MenuFunctions::battery2(bool initial)
 
 void MenuFunctions::updateStatusBar()
 {
-  uint16_t the_color; 
+  uint16_t the_color;
 
   // Draw temp info
   if (temp_obj.current_temp < 70)
@@ -276,27 +284,27 @@ void MenuFunctions::updateStatusBar()
   else
     the_color = TFT_MAROON;
 
-  display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR);
+  tft.setTextColor(the_color, STATUSBAR_COLOR);
   if (temp_obj.current_temp != temp_obj.old_temp) {
     temp_obj.old_temp = temp_obj.current_temp;
-    display_obj.tft.fillRect(0, 0, 50, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
-    display_obj.tft.drawString((String)temp_obj.current_temp + " C", 4, 0, 2);
+    tft.fillRect(0, 0, 50, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+    tft.drawString((String)temp_obj.current_temp + " C", 4, 0, 2);
   }
-  display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR);
+  tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR);
 
   // WiFi Channel Stuff
   if (wifi_scan_obj.set_channel != wifi_scan_obj.old_channel) {
     wifi_scan_obj.old_channel = wifi_scan_obj.set_channel;
-    display_obj.tft.fillRect(50, 0, 50, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
-    display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.set_channel, 50, 0, 2);
+    tft.fillRect(50, 0, 50, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+    tft.drawString("CH: " + (String)wifi_scan_obj.set_channel, 50, 0, 2);
   }
 
   // RAM Stuff
   wifi_scan_obj.freeRAM();
   if (wifi_scan_obj.free_ram != wifi_scan_obj.old_free_ram) {
     wifi_scan_obj.old_free_ram = wifi_scan_obj.free_ram;
-    display_obj.tft.fillRect(100, 0, 60, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
-    display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", 100, 0, 2);
+    tft.fillRect(100, 0, 60, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+    tft.drawString((String)wifi_scan_obj.free_ram + "B", 100, 0, 2);
   }
 
   // Draw battery info
@@ -308,22 +316,24 @@ void MenuFunctions::updateStatusBar()
   else
     the_color = TFT_RED;
 
-  display_obj.tft.drawXBitmap(170,
-                              0,
-                              menu_icons[STATUS_SD],
-                              16,
-                              16,
-                              STATUSBAR_COLOR,
-                              the_color);
-  //display_obj.tft.print((String)battery_obj.battery_level + "%");
+  tft.drawXBitmap(
+    170,
+    0,
+    (uint8_t*)menu_icons[STATUS_SD],
+    16,
+    16,
+    (uint16_t)STATUSBAR_COLOR,
+    (uint16_t)the_color
+  );
+  //tft.print((String)battery_obj.battery_level + "%");
 }
 
 void MenuFunctions::drawStatusBar()
 {
-  display_obj.tft.fillRect(0, 0, 240, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
-  //display_obj.tft.fillRect(0, STATUS_BAR_WIDTH + 1, 240, 1, TFT_DARKGREY);
-  display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR);
-  //display_obj.tft.setTextSize(2);
+  tft.fillRect(0, 0, 240, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+  //tft.fillRect(0, STATUS_BAR_WIDTH + 1, 240, 1, TFT_DARKGREY);
+  tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR);
+  //tft.setTextSize(2);
 
   uint16_t the_color;
 
@@ -339,23 +349,23 @@ void MenuFunctions::drawStatusBar()
   else
     the_color = TFT_MAROON;
 
-  display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR);
+  tft.setTextColor(the_color, STATUSBAR_COLOR);
   temp_obj.old_temp = temp_obj.current_temp;
-  display_obj.tft.fillRect(0, 0, 50, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
-  display_obj.tft.drawString((String)temp_obj.current_temp + " C", 4, 0, 2);
-  display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR);
+  tft.fillRect(0, 0, 50, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+  tft.drawString((String)temp_obj.current_temp + " C", 4, 0, 2);
+  tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR);
 
 
   // WiFi Channel Stuff
   wifi_scan_obj.old_channel = wifi_scan_obj.set_channel;
-  display_obj.tft.fillRect(50, 0, 50, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
-  display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.set_channel, 50, 0, 2);
+  tft.fillRect(50, 0, 50, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+  tft.drawString("CH: " + (String)wifi_scan_obj.set_channel, 50, 0, 2);
 
   // RAM Stuff
   wifi_scan_obj.freeRAM();
   wifi_scan_obj.old_free_ram = wifi_scan_obj.free_ram;
-  display_obj.tft.fillRect(100, 0, 60, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
-  display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", 100, 0, 2);
+  tft.fillRect(100, 0, 60, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+  tft.drawString((String)wifi_scan_obj.free_ram + "B", 100, 0, 2);
 
 
   MenuFunctions::battery2(true);
@@ -366,36 +376,40 @@ void MenuFunctions::drawStatusBar()
   else
     the_color = TFT_RED;
 
-  display_obj.tft.drawXBitmap(170,
-                              0,
-                              menu_icons[STATUS_SD],
-                              16,
-                              16,
-                              STATUSBAR_COLOR,
-                              the_color);
-  //display_obj.tft.print((String)battery_obj.battery_level + "%");
+  tft.drawXBitmap(
+    170,
+    0,
+    (uint8_t*)menu_icons[STATUS_SD],
+    16,
+    16,
+    (uint16_t)STATUSBAR_COLOR,
+    (uint16_t)the_color
+  );
+  //tft.print((String)battery_obj.battery_level + "%");
 }
 
 void MenuFunctions::orientDisplay()
 {
-  display_obj.tft.init();
+  tft.init();
 
-  display_obj.tft.setRotation(0); // Portrait
+  tft.setRotation(0); // Portrait
 
-  display_obj.tft.setCursor(0, 0);
+  tft.setCursor(0, 0);
 
   //uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait
   //uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // tft.setRotation(0); // Portrait with DIY TFT
 
-#ifdef TFT_SHIELD
+#if defined(TFT_SHIELD)
   uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield
   Serial.println("Using TFT Shield");
-#else if defined(TFT_DIY)
+#elif defined(TFT_DIY)
   uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // tft.setRotation(0); // Portrait with DIY TFT
   Serial.println("Using TFT DIY");
+#else
+  #error "Please select either TFT_SHIELD or TFT_DIY"
 #endif
 
-  display_obj.tft.setTouch(calData);
+  tft.setTouch(calData);
 
   //display_obj.clearScreen();
 
@@ -665,7 +679,7 @@ void MenuFunctions::changeMenu(Menu * menu)
 {
   display_obj.initScrollValues();
   display_obj.setupScrollArea(TOP_FIXED_AREA, BOT_FIXED_AREA);
-  display_obj.tft.init();
+  tft.init();
   current_menu = menu;
 
   buildButtons(menu);
@@ -696,7 +710,7 @@ void MenuFunctions::showMenuList(Menu * menu, int layer)
 // Function to add MenuNodes to a menu
 void MenuFunctions::addNodes(Menu * menu, String name, uint16_t color, Menu * child, int place, std::function<void()> callable)
 {
-  TFT_eSPI_Button new_button;
+  TouchButton new_button;
   menu->list->add(MenuNode{name, color, place, &new_button, callable});
   //strcpy(menu->list->get(-1).icon, bluetooth_icon);
 }
@@ -710,20 +724,21 @@ void MenuFunctions::buildButtons(Menu * menu)
     //  key[i] = NULL;
     for (int i = 0; i < menu->list->size(); i++)
     {
-      TFT_eSPI_Button new_button;
+      TouchButton new_button;
       char buf[menu->list->get(i).name.length() + 1] = {};
       menu->list->get(i).name.toCharArray(buf, menu->list->get(i).name.length() + 1);
-      display_obj.key[i].initButton(&display_obj.tft,
-                                    KEY_X + 0 * (KEY_W + KEY_SPACING_X),
-                                    KEY_Y + i * (KEY_H + KEY_SPACING_Y), // x, y, w, h, outline, fill, text
-                                    KEY_W,
-                                    KEY_H,
-                                    TFT_BLACK, // Outline
-                                    TFT_BLACK, // Fill
-                                    menu->list->get(i).color, // Text
-                                    buf,
-                                    KEY_TEXTSIZE);
-
+      display_obj.key[i].initButton(
+        &tft,
+        KEY_X + 0 * (KEY_W + KEY_SPACING_X),
+        KEY_Y + i * (KEY_H + KEY_SPACING_Y), // x, y, w, h, outline, fill, text
+        KEY_W,
+        KEY_H,
+        TFT_BLACK, // Outline
+        TFT_BLACK, // Fill
+        menu->list->get(i).color, // Text
+        buf,
+        KEY_TEXTSIZE
+      );
       display_obj.key[i].setLabelDatum(BUTTON_PADDING - (KEY_W / 2), 2, ML_DATUM);
     }
   }
@@ -734,20 +749,20 @@ void MenuFunctions::displayCurrentMenu()
 {
   Serial.println("Displaying current menu...");
   display_obj.clearScreen();
-  display_obj.tft.setTextColor(TFT_LIGHTGREY, TFT_DARKGREY);
+  tft.setTextColor(TFT_LIGHTGREY, TFT_DARKGREY);
   this->drawStatusBar();
-  //display_obj.tft.fillRect(0,0,240,16, TFT_DARKGREY);
-  //display_obj.tft.drawCentreString(" ESP32 Marauder ",120,0,2);
+  //tft.fillRect(0,0,240,16, TFT_DARKGREY);
+  //tft.drawCentreString(" ESP32 Marauder ",120,0,2);
   //Serial.println("Getting size...");
   //char buf[&current_menu->parentMenu->name.length() + 1] = {};
   //Serial.println("Got size...");
   //current_menu->parentMenu->name.toCharArray(buf, current_menu->parentMenu->name.length() + 1);
   //String current_name = &current_menu->parentMenu->name;
   //Serial.println("gottem");
-  //display_obj.tft.drawCentreString(current_menu->name,120,0,2);
+  //tft.drawCentreString(current_menu->name,120,0,2);
   if (current_menu->list != NULL)
   {
-    display_obj.tft.setFreeFont(MENU_FONT);
+    tft.setFreeFont(MENU_FONT);
     for (int i = 0; i < current_menu->list->size(); i++)
     {
       //display_obj.key[i].drawButton2(current_menu->list->get(i).name);
@@ -756,14 +771,16 @@ void MenuFunctions::displayCurrentMenu()
       display_obj.key[i].drawButton(false, current_menu->list->get(i).name);
 
       if (current_menu->list->get(i).name != "Back")
-        display_obj.tft.drawXBitmap(0,
-                                    KEY_Y + i * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
-                                    menu_icons[current_menu->list->get(i).icon],
-                                    ICON_W,
-                                    ICON_H,
-                                    TFT_BLACK,
-                                    current_menu->list->get(i).color);
+        tft.drawXBitmap(
+          0,
+          KEY_Y + i * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
+          (uint8_t*)menu_icons[current_menu->list->get(i).icon],
+          ICON_W,
+          ICON_H,
+          (uint16_t)TFT_BLACK,
+          (uint16_t)current_menu->list->get(i).color
+        );
     }
-    display_obj.tft.setFreeFont(NULL);
+    tft.setFreeFont(NULL);
   }
 }

@@ -73,7 +73,7 @@ struct MenuNode {
   String name;
   uint16_t color;
   int icon;
-  TFT_eSPI_Button* button;
+  TouchButton* button;
   std::function<void()> callable;
 };
 

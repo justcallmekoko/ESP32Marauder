@@ -5,6 +5,11 @@ Partition Scheme: Minimal SPIFFS
 https://www.online-utility.org/image/convert/to/XBM
 */
 
+#define TOUCH_CS 21 // enable touch
+#include <ESP32-Chimera-Core.h> // https://github.com/tobozo/ESP32-Chimera-Core or regular M5Stack Core
+#define tft M5.Lcd
+
+
 #include <WiFi.h>
 #include <Wire.h>
 #include "esp_wifi.h"
@@ -55,30 +60,38 @@ uint32_t currentTime  = 0;
 
 void setup()
 {
-  pinMode(FLASH_BUTTON, INPUT);
-  pinMode(TFT_BL, OUTPUT);
-  digitalWrite(TFT_BL, LOW);
+
+  M5.setTouchSpiShared( TOUCH_CS ); // call this before M5.begin() !!
+  M5.begin(true, false); // don't start the SD
+  M5.ts->setRotation(0);
+
+  tft.drawRect(10,10,20,20,0xFFFF);
+  tft.print("BLAH");
+  delay(1000);
+
+  //pinMode(FLASH_BUTTON, INPUT);
+  //pinMode(TFT_BL, OUTPUT);
+  //digitalWrite(TFT_BL, LOW);
+
 #if BATTERY_ANALOG_ON == 1
-  pinMode(BATTERY_PIN, OUTPUT);
-  pinMode(CHARGING_PIN, INPUT);
+  //pinMode(BATTERY_PIN, OUTPUT);
+  //pinMode(CHARGING_PIN, INPUT);
 #endif
-  
+
   // Preset SPI CS pins to avoid bus conflicts
-  digitalWrite(TFT_CS, HIGH);
-  digitalWrite(SD_CS, HIGH);
+  //digitalWrite(TFT_CS, HIGH);
+  //digitalWrite(SD_CS, HIGH);
 
-  Serial.begin(115200);
-  
-  Serial.begin(115200);
-  
+  //Serial.begin(115200); // serial is already started by M5.begin()
+
   display_obj.RunSetup();
-  display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-  digitalWrite(TFT_BL, HIGH);
+  tft.setTextColor(TFT_CYAN, TFT_BLACK);
+  //digitalWrite(TFT_BL, HIGH);
 
-  display_obj.tft.println("Marauder " + display_obj.version_number + "\n");
+  tft.println("Marauder " + display_obj.version_number + "\n");
 
-  display_obj.tft.println("Started Serial");
-  
+  tft.println("Started Serial");
+
   Serial.println("\n\n--------------------------------\n");
   Serial.println("         ESP32 Marauder      \n");
   Serial.println("            " + display_obj.version_number + "\n");
@@ -89,19 +102,19 @@ void setup()
 
   Serial.println(wifi_scan_obj.freeRAM());
 
-  display_obj.tft.println("Checked RAM");
+  tft.println("Checked RAM");
 
   // Do some SD stuff
+  /*
   if(sd_obj.initSD()) {
     Serial.println("SD Card supported");
-    display_obj.tft.println("Initialized SD Card");
-  }
-  else {
+    tft.println("Initialized SD Card");
+  } else {
     Serial.println("SD Card NOT Supported");
-    display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
-    display_obj.tft.println("Failed to Initialize SD Card");
-    display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-  }
+    tft.setTextColor(TFT_RED, TFT_BLACK);
+    tft.println("Failed to Initialize SD Card");
+    tft.setTextColor(TFT_CYAN, TFT_BLACK);
+  }*/
 
   // Run display setup
   Serial.println(wifi_scan_obj.freeRAM());
@@ -111,21 +124,21 @@ void setup()
   Serial.println(wifi_scan_obj.freeRAM());
   //menu_function_obj.RunSetup();
 
-  //display_obj.tft.println("Created Menu Structure");
+  //tft.println("Created Menu Structure");
 
   // Battery stuff
   Serial.println(wifi_scan_obj.freeRAM());
-  battery_obj.RunSetup();
+  //battery_obj.RunSetup();
 
-  display_obj.tft.println("Checked battery configuration");
+  tft.println("Checked battery configuration");
 
   // Temperature stuff
   Serial.println(wifi_scan_obj.freeRAM());
   temp_obj.RunSetup();
 
-  display_obj.tft.println("Initialized temperature interface");
+  tft.println("Initialized temperature interface");
 
-  battery_obj.battery_level = battery_obj.getBatteryLevel();
+  //battery_obj.battery_level = battery_obj.getBatteryLevel();
 
   if (battery_obj.i2c_supported) {
     Serial.println("IP5306 I2C Supported: true");
@@ -136,25 +149,25 @@ void setup()
   Serial.println(wifi_scan_obj.freeRAM());
 
   // Do some LED stuff
-  led_obj.RunSetup();
+  //led_obj.RunSetup();
 
-  display_obj.tft.println("Initialized LED Interface");
+  tft.println("Initialized LED Interface");
 
-  display_obj.tft.println("Starting...");
+  tft.println("Starting...");
 
   delay(1000);
 
-  display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
-  digitalWrite(TFT_BL, LOW);
+  //digitalWrite(TFT_BL, LOW);
 
   // Draw the title screen
-  display_obj.drawJpeg("/marauder3L.jpg", 0 , 0);     // 240 x 320 image
+  tft.drawJpgFile( SPIFFS, "/marauder3L.jpg", 0 , 0);     // 240 x 320 image
 
   //showCenterText(version_number, 250);
-  display_obj.tft.drawCentreString(display_obj.version_number, 120, 250, 2);
+  tft.drawCentreString(display_obj.version_number, 120, 250, 2);
 
-  digitalWrite(TFT_BL, HIGH);
+  //digitalWrite(TFT_BL, HIGH);
 
   delay(5000);
 
@@ -173,7 +186,7 @@ void loop()
   //    (wifi_scan_obj.currentScanMode != OTA_UPDATE))
   if (!display_obj.draw_tft)
   {
-    display_obj.main(); 
+    display_obj.main();
     wifi_scan_obj.main(currentTime);
     sd_obj.main();
     battery_obj.main(currentTime);

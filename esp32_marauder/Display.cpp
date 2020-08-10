@@ -2,8 +2,10 @@
 
 
 /*
-Big thanks to bodmer for having great TFT and JPEG libraries
+Big thanks to lovyan03 for having built this great TFT library
+and to bodmer for inspiring the community
 
+https://github.com/lovyan03
 https://github.com/bodmer
 */
 
@@ -22,33 +24,34 @@ void Display::RunSetup()
 
   // Need to declare new
   display_buffer = new LinkedList<String>();
-  
-  tft.init();
-  tft.setRotation(0); // Portrait
 
+  tft.setRotation(0); // Portrait
   tft.setCursor(0, 0);
   //tft.setFreeFont(&FreeMonoBold9pt7b);
 
   // Calibration data
   //uint16_t calData[5] = { 390, 3516, 253, 3520, 7 }; tft.setRotation(1); // Portrait
 
-  #ifdef TFT_SHIELD
+  #if defined(TFT_SHIELD)
     uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield
     Serial.println("Using TFT Shield");
-  #else if defined(TFT_DIY)
-    uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // tft.setRotation(0); // Portrait with DIY TFT
+  #elif defined(TFT_DIY)
+    // uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // tft.setRotation(0); // Portrait with DIY TFT
+    uint16_t calData[5] = { 808, 2241, 599, 3448, 0 }; // tft.setRotation(0); // Portrait with DIY TFT
     Serial.println("Using TFT DIY");
+  #else
+    #error "Please select either TFT_SHIELD or TFT_DIY"
   #endif
   tft.setTouch(calData);
 
   //tft.fillScreen(TFT_BLACK);
   clearScreen();
 
-  Serial.println("SPI_FREQUENCY: " + (String)SPI_FREQUENCY);
-  Serial.println("SPI_READ_FREQUENCY: " + (String)SPI_READ_FREQUENCY);
-  Serial.println("SPI_TOUCH_FREQUENCY: " + (String)SPI_TOUCH_FREQUENCY);
+  //Serial.println("SPI_FREQUENCY: " + (String)SPI_FREQUENCY);
+  //Serial.println("SPI_READ_FREQUENCY: " + (String)SPI_READ_FREQUENCY);
+  //Serial.println("SPI_TOUCH_FREQUENCY: " + (String)SPI_TOUCH_FREQUENCY);
 
-  
+
   // Initialize file system
   // This should probably have its own class
   if (!SPIFFS.begin()) {
@@ -81,16 +84,16 @@ void Display::lv_tick_handler()
   extern Display display_obj;
   uint16_t c;
 
-  display_obj.tft.startWrite();
-  display_obj.tft.setAddrWindow(area->x1, area->y1, (area->x2 - area->x1 + 1), (area->y2 - area->y1 + 1));
+ tft.startWrite();
+ tft.setAddrWindow(area->x1, area->y1, (area->x2 - area->x1 + 1), (area->y2 - area->y1 + 1));
   for (int y = area->y1; y <= area->y2; y++) {
     for (int x = area->x1; x <= area->x2; x++) {
       c = color_p->full;
-      display_obj.tft.writeColor(c, 1);
+     tft.writeColor(c, 1);
       color_p++;
     }
   }
-  display_obj.tft.endWrite();
+ tft.endWrite();
   lv_disp_flush_ready(disp);
 }*/
 
@@ -98,10 +101,10 @@ void Display::lv_tick_handler()
 bool my_touchpad_read(lv_indev_drv_t * indev_driver, lv_indev_data_t * data)
 {
   extern Display display_obj;
-  
+
   uint16_t touchX, touchY;
 
-  bool touched = display_obj.tft.getTouch(&touchX, &touchY, 600);
+  bool touched =tft.getTouch(&touchX, &touchY, 600);
 
   if(!touched)
   {
@@ -119,16 +122,16 @@ bool my_touchpad_read(lv_indev_drv_t * indev_driver, lv_indev_data_t * data)
   else
   {
 
-    data->state = touched ? LV_INDEV_STATE_PR : LV_INDEV_STATE_REL; 
+    data->state = touched ? LV_INDEV_STATE_PR : LV_INDEV_STATE_REL;
 
     //if(data->state == LV_INDEV_STATE_PR) touchpad_get_xy(&last_x, &last_y);
-   
+
     data->point.x = touchX;
     data->point.y = touchY;
 
     Serial.print("Data x");
     Serial.println(touchX);
-    
+
     Serial.print("Data y");
     Serial.println(touchY);
 
@@ -154,14 +157,14 @@ void Display::tftDrawEapolColorKey()
 {
   //Display color key
   tft.setTextSize(1); tft.setTextColor(TFT_WHITE);
-  tft.fillRect(14, 0, 15, 8, TFT_CYAN); tft.setCursor(30, 0); tft.print(" - EAPOL"); 
+  tft.fillRect(14, 0, 15, 8, TFT_CYAN); tft.setCursor(30, 0); tft.print(" - EAPOL");
 }
 
 void Display::tftDrawColorKey()
 {
   //Display color key
   tft.setTextSize(1); tft.setTextColor(TFT_WHITE);
-  tft.fillRect(14, 0, 15, 8, TFT_GREEN); tft.setCursor(30, 0); tft.print(" - Beacons"); 
+  tft.fillRect(14, 0, 15, 8, TFT_GREEN); tft.setCursor(30, 0); tft.print(" - Beacons");
   tft.fillRect(14, 8, 15, 8, TFT_RED); tft.setCursor(30, 8); tft.print(" - Deauths");
   tft.fillRect(14, 16, 15, 8, TFT_BLUE); tft.setCursor(30, 16); tft.print(" - Probes");
 }
@@ -171,26 +174,30 @@ void Display::tftDrawXScaleButtons(byte x_scale)
   tft.drawFastVLine(234, 0, 20, TFT_WHITE);
   tft.setCursor(208, 21); tft.setTextColor(TFT_WHITE); tft.setTextSize(1); tft.print("X Scale:"); tft.print(x_scale);
 
-  key[0].initButton(&tft, // x - box
-                        220,
-                        10, // x, y, w, h, outline, fill, text
-                        20,
-                        20,
-                        TFT_BLACK, // Outline
-                        TFT_CYAN, // Fill
-                        TFT_BLACK, // Text
-                        "-",
-                        2);
-  key[1].initButton(&tft, // x + box
-                        249,
-                        10, // x, y, w, h, outline, fill, text
-                        20,
-                        20,
-                        TFT_BLACK, // Outline
-                        TFT_CYAN, // Fill
-                        TFT_BLACK, // Text
-                        "+",
-                        2);
+  key[0].initButton(
+    &tft, // x - box
+    220,
+    10, // x, y, w, h, outline, fill, text
+    20,
+    20,
+    TFT_BLACK, // Outline
+    TFT_CYAN, // Fill
+    TFT_BLACK, // Text
+    "-",
+    2
+  );
+  key[1].initButton(
+    &tft, // x + box
+    249,
+    10, // x, y, w, h, outline, fill, text
+    20,
+    20,
+    TFT_BLACK, // Outline
+    TFT_CYAN, // Fill
+    TFT_BLACK, // Text
+    "+",
+    2
+  );
 
   key[0].setLabelDatum(1, 5, MC_DATUM);
   key[1].setLabelDatum(1, 5, MC_DATUM);
@@ -204,26 +211,30 @@ void Display::tftDrawYScaleButtons(byte y_scale)
   tft.drawFastVLine(290, 0, 20, TFT_WHITE);
   tft.setCursor(265, 21); tft.setTextColor(TFT_WHITE); tft.setTextSize(1); tft.print("Y Scale:"); tft.print(y_scale);
 
-  key[2].initButton(&tft, // y - box
-                        276,
-                        10, // x, y, w, h, outline, fill, text
-                        20,
-                        20,
-                        TFT_BLACK, // Outline
-                        TFT_MAGENTA, // Fill
-                        TFT_BLACK, // Text
-                        "-",
-                        2);
-  key[3].initButton(&tft, // y + box
-                        305,
-                        10, // x, y, w, h, outline, fill, text
-                        20,
-                        20,
-                        TFT_BLACK, // Outline
-                        TFT_MAGENTA, // Fill
-                        TFT_BLACK, // Text
-                        "+",
-                        2);
+  key[2].initButton(
+    &tft, // y - box
+    276,
+    10, // x, y, w, h, outline, fill, text
+    20,
+    20,
+    TFT_BLACK, // Outline
+    TFT_MAGENTA, // Fill
+    TFT_BLACK, // Text
+    "-",
+    2
+  );
+  key[3].initButton(
+    &tft, // y + box
+    305,
+    10, // x, y, w, h, outline, fill, text
+    20,
+    20,
+    TFT_BLACK, // Outline
+    TFT_MAGENTA, // Fill
+    TFT_BLACK, // Text
+    "+",
+    2
+  );
 
   key[2].setLabelDatum(1, 5, MC_DATUM);
   key[3].setLabelDatum(1, 5, MC_DATUM);
@@ -237,26 +248,30 @@ void Display::tftDrawChannelScaleButtons(int set_channel)
   tft.drawFastVLine(178, 0, 20, TFT_WHITE);
   tft.setCursor(145, 21); tft.setTextColor(TFT_WHITE); tft.setTextSize(1); tft.print("Channel:"); tft.print(set_channel);
 
-  key[4].initButton(&tft, // channel - box
-                        164,
-                        10, // x, y, w, h, outline, fill, text
-                        20,
-                        20,
-                        TFT_BLACK, // Outline
-                        TFT_BLUE, // Fill
-                        TFT_BLACK, // Text
-                        "-",
-                        2);
-  key[5].initButton(&tft, // channel + box
-                        193,
-                        10, // x, y, w, h, outline, fill, text
-                        20,
-                        20,
-                        TFT_BLACK, // Outline
-                        TFT_BLUE, // Fill
-                        TFT_BLACK, // Text
-                        "+",
-                        2);
+  key[4].initButton(
+    &tft, // channel - box
+    164,
+    10, // x, y, w, h, outline, fill, text
+    20,
+    20,
+    TFT_BLACK, // Outline
+    TFT_BLUE, // Fill
+    TFT_BLACK, // Text
+    "-",
+    2
+  );
+  key[5].initButton(
+    &tft, // channel + box
+    193,
+    10, // x, y, w, h, outline, fill, text
+    20,
+    20,
+    TFT_BLACK, // Outline
+    TFT_BLUE, // Fill
+    TFT_BLACK, // Text
+    "+",
+    2
+  );
 
   key[4].setLabelDatum(1, 5, MC_DATUM);
   key[5].setLabelDatum(1, 5, MC_DATUM);
@@ -270,16 +285,18 @@ void Display::tftDrawExitScaleButtons()
   //tft.drawFastVLine(178, 0, 20, TFT_WHITE);
   //tft.setCursor(145, 21); tft.setTextColor(TFT_WHITE); tft.setTextSize(1); tft.print("Channel:"); tft.print(set_channel);
 
-  key[6].initButton(&tft, // Exit box
-                        137,
-                        10, // x, y, w, h, outline, fill, text
-                        20,
-                        20,
-                        TFT_ORANGE, // Outline
-                        TFT_RED, // Fill
-                        TFT_BLACK, // Text
-                        "X",
-                        2);
+  key[6].initButton(
+    &tft, // Exit box
+    137,
+    10, // x, y, w, h, outline, fill, text
+    20,
+    20,
+    TFT_ORANGE, // Outline
+    TFT_RED, // Fill
+    TFT_BLACK, // Text
+    "X",
+    2
+  );
 
   key[6].setLabelDatum(1, 5, MC_DATUM);
 
@@ -322,7 +339,7 @@ void Display::displayBuffer(bool do_clear)
   if (this->display_buffer->size() > 0)
   {
     delay(1);
-    
+
     while (display_buffer->size() > 0)
     {
       xPos = 0;
@@ -387,7 +404,7 @@ int Display::scroll_line(uint32_t color) {
   if (!tteBar)
   {
     tft.fillRect(0,yStart,blank[(yStart-TOP_FIXED_AREA)/TEXT_HEIGHT],TEXT_HEIGHT, color);
-  
+
     // Change the top of the scroll area
     yStart+=TEXT_HEIGHT;
     // The value must wrap around as the screen memory is a circular buffer
@@ -396,7 +413,7 @@ int Display::scroll_line(uint32_t color) {
   else
   {
     tft.fillRect(0,yStart,blank[(yStart-TOP_FIXED_AREA_2)/TEXT_HEIGHT],TEXT_HEIGHT, color);
-  
+
     // Change the top of the scroll area
     yStart+=TEXT_HEIGHT;
     // The value must wrap around as the screen memory is a circular buffer
@@ -414,7 +431,7 @@ void Display::setupScrollArea(uint16_t tfa, uint16_t bfa) {
   Serial.println("   tfa: " + (String)tfa);
   Serial.println("   bfa: " + (String)bfa);
   Serial.println("yStart: " + (String)this->yStart);
-  tft.writecommand(ILI9341_VSCRDEF); // Vertical scroll definition
+  tft.writecommand(0x33/*ILI9341_VSCRDEF*/); // Vertical scroll definition
   tft.writedata(tfa >> 8);           // Top Fixed Area line count
   tft.writedata(tfa);
   tft.writedata((YMAX-tfa-bfa)>>8);  // Vertical Scrolling Area line count
@@ -425,14 +442,14 @@ void Display::setupScrollArea(uint16_t tfa, uint16_t bfa) {
 
 
 void Display::scrollAddress(uint16_t vsp) {
-  tft.writecommand(ILI9341_VSCRSADD); // Vertical scrolling pointer
+  tft.writecommand(0x37/*ILI9341_VSCRSADD*/); // Vertical scrolling pointer
   tft.writedata(vsp>>8);
   tft.writedata(vsp);
 }
 
 
 
-
+/*
 // JPEG_functions
 void Display::drawJpeg(const char *filename, int xpos, int ypos) {
 
@@ -460,12 +477,12 @@ void Display::drawJpeg(const char *filename, int xpos, int ypos) {
   else {
     Serial.println("Jpeg file format not supported!");
   }
-}
+}*/
 
 void Display::setupDraw() {
-  this->tft.drawLine(0, 0, 10, 0, TFT_MAGENTA);
-  this->tft.drawLine(0, 0, 0, 10, TFT_GREEN);
-  this->tft.drawLine(0, 0, 0, 0, TFT_CYAN);
+  tft.drawLine(0, 0, 10, 0, TFT_MAGENTA);
+  tft.drawLine(0, 0, 0, 10, TFT_GREEN);
+  tft.drawLine(0, 0, 0, 0, TFT_CYAN);
 }
 
 uint16_t xlast;
@@ -536,6 +553,7 @@ void Display::drawStylus()
   }
 }
 
+/*
 //====================================================================================
 //   Decode and render the Jpeg image onto the TFT screen
 //====================================================================================
@@ -606,7 +624,7 @@ void Display::jpegRender(int xpos, int ypos) {
 
   // calculate how long it took to draw the image
   drawTime = millis() - drawTime; // Calculate the time it took
-}
+}*/
 
 //====================================================================================
 //   Print information decoded from the Jpeg image
@@ -631,7 +649,11 @@ void Display::jpegInfo() {
 
 //====================================================================================
 //   Open a Jpeg file and send it to the Serial port in a C array compatible format
+
+// ... or use "xxd" command line utility and save some ROM space :-)
+
 //====================================================================================
+/*
 void createArray(const char *filename) {
 
   // Open the named file
@@ -672,7 +694,7 @@ void createArray(const char *filename) {
 
   Serial.println("};\r\n");
   jpgFile.close();
-}
+}*/
 
 // End JPEG_functions
 
@@ -772,15 +794,15 @@ void Display::listDir(fs::FS &fs, const char * dirname, uint8_t levels) {
 
 void Display::updateBanner(String msg)
 {
-  this->img.deleteSprite();
-  
-  this->img.setColorDepth(8);
+  img.deleteSprite();
 
-  this->img.createSprite(SCREEN_WIDTH, TEXT_HEIGHT);
+  img.setColorDepth(8);
+
+  img.createSprite(SCREEN_WIDTH, TEXT_HEIGHT);
 
   this->buildBanner(msg, current_banner_pos);
 
-  this->img.pushSprite(0, STATUS_BAR_WIDTH);
+  img.pushSprite(0, STATUS_BAR_WIDTH);
 
   current_banner_pos--;
 
@@ -819,7 +841,7 @@ void Display::buildBanner(String msg, int xpos)
 /*
 void Display::initLVGL() {
   tick.attach_ms(LVGL_TICK_PERIOD, lv_tick_handler);
-  
+
   lv_init();
 
   lv_disp_buf_init(&disp_buf, buf, NULL, LV_HOR_RES_MAX * 10);
@@ -833,10 +855,10 @@ void Display::initLVGL() {
   lv_disp_drv_register(&disp_drv);
 
   lv_indev_drv_t indev_drv;
-  lv_indev_drv_init(&indev_drv);             
-  indev_drv.type = LV_INDEV_TYPE_POINTER;    
-  indev_drv.read_cb = my_touchpad_read;      
-  lv_indev_drv_register(&indev_drv);         
+  lv_indev_drv_init(&indev_drv);
+  indev_drv.type = LV_INDEV_TYPE_POINTER;
+  indev_drv.read_cb = my_touchpad_read;
+  lv_indev_drv_register(&indev_drv);
 }*/
 
 /*
@@ -882,7 +904,7 @@ void Display::joinWiFiGFX(){
   // Focus it on one of the text areas to start
   lv_keyboard_set_textarea(kb, ta1);
   lv_keyboard_set_cursor_manage(kb, true);
-  
+
 }*/
 
 /*
@@ -919,7 +941,7 @@ void ta_event_cb(lv_obj_t * ta, lv_event_t event)
 }*/
 
 void Display::main()
-{  
+{
   //lv_task_handler();
   return;
 }

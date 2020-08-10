@@ -2,19 +2,27 @@
 #define Display_h
 
 
-#include <FS.h>
-#include <functional>
-#include <JPEGDecoder.h>
+//#undef LGFX_AUTODETECT
+#define LGFX_LOLIN_D32_PRO
+#define TOUCH_CS 21 // enable touch
+#include <ESP32-Chimera-Core.h> // https://github.com/tobozo/ESP32-Chimera-Core or regular M5Stack Core
+#define tft M5.Lcd
+static TFT_eSprite img = new TFT_eSprite( &tft );
+
+//#include <FS.h>
+//#include <functional>
+//#include <JPEGDecoder.h>
 //#include <SimpleList.h>
 #include <LinkedList.h>
-#include <SPI.h>
+//#include <SPI.h>
 //#include <lvgl.h>
 #include <Ticker.h>
 //#include <M5Stack.h>
 #include "SPIFFS.h"
 #include "Assets.h"
 
-#include <TFT_eSPI.h>
+//#include <TFT_eSPI.h>
+//extern M5Stack M5;
 
 //#define TFT_SHIELD
 #define TFT_DIY
@@ -55,12 +63,12 @@
 class Display
 {
   private:
-    
+
     bool run_setup = true;
-    
+
     // For the byte we read from the serial port
     byte data = 0;
-    
+
     // A few test variables used during debugging
     boolean change_colour = 1;
     boolean selected = 1;
@@ -73,9 +81,9 @@ class Display
   public:
     Display();
     Ticker tick;
-    TFT_eSPI tft = TFT_eSPI();
-    TFT_eSprite img = TFT_eSprite(&tft);
-    TFT_eSPI_Button key[BUTTON_ARRAY_LEN];
+    //TFT_eSPI tft = TFT_eSPI();
+    //TFT_eSprite img = TFT_eSprite(&tft);
+    TouchButton key[BUTTON_ARRAY_LEN];
     String version_number = "v0.6.9";
 
     bool printing = false;
@@ -89,7 +97,7 @@ class Display
     int current_banner_pos = SCREEN_WIDTH;
 
     //Menu* current_menu;
-    
+
     //Menu mainMenu;
     //Menu wifiMenu;
     //Menu bluetoothMenu;
@@ -125,13 +133,13 @@ class Display
     void buildBanner(String msg, int xpos);
     void clearScreen();
     void displayBuffer(bool do_clear = false);
-    void drawJpeg(const char *filename, int xpos, int ypos);
+    //void drawJpeg(const char *filename, int xpos, int ypos);
     void setupDraw();
     void drawStylus();
     void getTouchWhileFunction(bool pressed);
     void initScrollValues(bool tte = false);
     void jpegInfo();
-    void jpegRender(int xpos, int ypos);
+    //void jpegRender(int xpos, int ypos);
     void listDir(fs::FS &fs, const char * dirname, uint8_t levels);
     void listFiles();
     void main();
