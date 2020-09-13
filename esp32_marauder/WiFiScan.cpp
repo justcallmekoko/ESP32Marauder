@@ -1138,18 +1138,32 @@ void WiFiScan::pwnSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
         //Serial.println("\n" + (String)(snifferPacket->payload[37]) + " -> " + essid);
 
         // Load json
-        DynamicJsonBuffer jsonBuffer;
-        JsonObject& json = jsonBuffer.parseObject(essid);
-        if (!json.success()) {
+        //DynamicJsonBuffer jsonBuffer;  //j5
+        // JsonObject& json = jsonBuffer.parseObject(essid);  //j5
+
+        DynamicJsonDocument doc(1024); //j6
+        deserializeJson(doc, essid);  //j6
+        auto error = deserializeJson(doc, essid);  //j6
+
+        //   if (!json.success()) {  //j5
+
+        if (error) {   //j6
           Serial.println("\nCould not parse Pwnagotchi json");
           display_string.concat(essid);
         }
         else {
           Serial.println("\nSuccessfully parsed json");
-          String json_output;
-          json.printTo(json_output);
-          Serial.println(json_output);
-          display_string.concat(json["name"].as<String>() + " pwnd: " + json["pwnd_tot"].as<String>());
+
+          String doc_output; //j6
+          serializeJson(doc, doc_output); //j6
+          Serial.println(doc_output); //j6
+          display_string.concat(doc["name"].as<String>() + " pwnd: " + doc["pwnd_tot"].as<String>()); // j6
+
+          //          String json_output; //j5
+          //          json.printTo(json_output); //j5
+          //          Serial.println(json_output); //j5
+          //          display_string.concat(json["name"].as<String>() + " pwnd: " + json["pwnd_tot"].as<String>()); //j5
+
         }
   
         int temp_len = display_string.length();
