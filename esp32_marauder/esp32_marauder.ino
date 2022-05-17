@@ -31,6 +31,7 @@ https://www.online-utility.org/image/convert/to/XBM
 #include "settings.h"
 #include "CommandLine.h"
 #include "configs.h"
+#include "lang_var.h"
 
 #ifdef MARAUDER_MINI
   #include <SwitchLib.h>
@@ -129,13 +130,13 @@ void setup()
 
   display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
 
-  display_obj.tft.println("Giving room for HardwareSerial...");
+  display_obj.tft.println(text_table0[0]);
 
   delay(2000);
 
   display_obj.tft.println("Marauder " + display_obj.version_number + "\n");
 
-  display_obj.tft.println("Started Serial");
+  display_obj.tft.println(text_table0[1]);
   
   Serial.println(F("\n\n--------------------------------\n"));
   Serial.println(F("         ESP32 Marauder      \n"));
@@ -148,7 +149,7 @@ void setup()
   settings_obj.begin();
 
   Serial.println("This is a test Channel: " + (String)settings_obj.loadSetting<uint8_t>("Channel"));
-  if (settings_obj.loadSetting<bool>("Force PMKID"))
+  if (settings_obj.loadSetting<bool>( "Force PMKID"))
     Serial.println("This is a test Force PMKID: true");
   else
     Serial.println("This is a test Force PMKID: false");
@@ -157,17 +158,17 @@ void setup()
 
   Serial.println(wifi_scan_obj.freeRAM());
 
-  display_obj.tft.println("Checked RAM");
+  display_obj.tft.println(F(text_table0[2]));
 
   // Do some SD stuff
   if(sd_obj.initSD()) {
     Serial.println(F("SD Card supported"));
-    display_obj.tft.println(F("Initialized SD Card"));
+    display_obj.tft.println(F(text_table0[3]));
   }
   else {
     Serial.println(F("SD Card NOT Supported"));
     display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
-    display_obj.tft.println(F("Failed to Initialize SD Card"));
+    display_obj.tft.println(F(text_table0[4]));
     display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
   }
 
@@ -185,13 +186,13 @@ void setup()
   Serial.println(wifi_scan_obj.freeRAM());
   battery_obj.RunSetup();
 
-  display_obj.tft.println(F("Checked battery configuration"));
+  display_obj.tft.println(F(text_table0[5]));
 
   // Temperature stuff
   Serial.println(wifi_scan_obj.freeRAM());
   temp_obj.RunSetup();
 
-  display_obj.tft.println(F("Initialized temperature interface"));
+  display_obj.tft.println(F(text_table0[6]));
 
   battery_obj.battery_level = battery_obj.getBatteryLevel();
 
@@ -206,9 +207,7 @@ void setup()
   // Do some LED stuff
   led_obj.RunSetup();
 
-  display_obj.tft.println(F("Initialized LED Interface"));
-
-  //display_obj.tft.println(F("Starting..."));
+  display_obj.tft.println(F(text_table0[7]));
 
   delay(500);
 
@@ -231,7 +230,7 @@ void setup()
   
   //a32u4_obj.begin(); // This goes last to make sure nothing is messed up when reading serial
 
-  display_obj.tft.println(F("Starting..."));
+  display_obj.tft.println(F(text_table0[8]));
 
   display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
 

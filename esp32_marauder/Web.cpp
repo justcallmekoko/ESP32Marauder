@@ -1,4 +1,5 @@
 #include "Web.h"
+#include "lang_var.h"
 
 WebServer server(80);
 
@@ -52,7 +53,7 @@ void Web::setupOTAupdate()
   display_obj.tft.setTextColor(TFT_WHITE);
 
   Serial.println(wifi_scan_obj.freeRAM());
-  display_obj.tft.print("Configuring update server...\n\n");  
+  display_obj.tft.print(text_table3[0]);  
   Serial.println("Configuring update server...");
 
   display_obj.tft.setTextColor(TFT_YELLOW);
@@ -76,9 +77,9 @@ void Web::setupOTAupdate()
   Serial.println(wifi_scan_obj.freeRAM());
 
   Serial.println("Displaying settings to TFT...");
-  display_obj.tft.print("SSID: ");
+  display_obj.tft.print(text_table1[2]);
   display_obj.tft.println(ssid);
-  display_obj.tft.print("IP address: ");
+  display_obj.tft.print(text_table3[1]);
   display_obj.tft.print(WiFi.softAPIP());
   display_obj.tft.print("\n");
   Serial.print("IP address: ");
@@ -117,7 +118,7 @@ void Web::setupOTAupdate()
     HTTPUpload& upload = server.upload();
     if (upload.status == UPLOAD_FILE_START) {
       display_obj.tft.setTextColor(TFT_YELLOW);
-      display_obj.tft.print("Update: ");
+      display_obj.tft.print(text_table3[2]);
       display_obj.tft.print(upload.filename.c_str());
       display_obj.tft.print("\n");
       //display_obj.updateBanner(menu_function_obj.current_menu->name);
@@ -143,7 +144,7 @@ void Web::setupOTAupdate()
       //delay(1);
       //display_obj.tft.print(display_string);
       display_obj.tft.setCursor(0, 164);
-      display_obj.tft.print("Bytes complete: ");
+      display_obj.tft.print(text_table3[3]);
       display_obj.tft.print(upload.totalSize);
       display_obj.tft.print("\n");
       
@@ -151,9 +152,9 @@ void Web::setupOTAupdate()
     } else if (upload.status == UPLOAD_FILE_END) {
       if (Update.end(true)) { //true to set the size to the current progress
         display_obj.tft.setTextColor(TFT_GREEN);
-        display_obj.tft.print("Update Success: ");
+        display_obj.tft.print(text_table3[4]);
         display_obj.tft.print(upload.totalSize);
-        display_obj.tft.print("\nRebooting...\n");
+        display_obj.tft.print(text_table2[3]);
         Serial.printf("Update Success: %u\nRebooting...\n", upload.totalSize);
         delay(1000);
       } else {
@@ -169,7 +170,7 @@ void Web::setupOTAupdate()
   server.begin();
 
   display_obj.tft.setTextColor(TFT_GREEN);
-  display_obj.tft.println("\nCompleted update server setup");
+  display_obj.tft.println(text_table3[5]);
   Serial.println("Completed update server setup");
   Serial.println(wifi_scan_obj.freeRAM());
 }

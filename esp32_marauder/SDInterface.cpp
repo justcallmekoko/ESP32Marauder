@@ -1,4 +1,5 @@
 #include "SDInterface.h"
+#include "lang_var.h"
 
 bool SDInterface::initSD() {
   String display_string = "";
@@ -96,12 +97,12 @@ void SDInterface::runUpdate() {
   display_obj.tft.setTextSize(1);
   display_obj.tft.setTextColor(TFT_WHITE);
 
-  display_obj.tft.println(F("Opening /update.bin..."));
+  display_obj.tft.println(F(text15));
   File updateBin = SD.open("/update.bin");
   if (updateBin) {
     if(updateBin.isDirectory()){
       display_obj.tft.setTextColor(TFT_RED);
-      display_obj.tft.println(F("Error, could not find update.bin"));
+      display_obj.tft.println(F(text_table2[0]));
       Serial.println(F("Error, update.bin is not a file"));
       display_obj.tft.setTextColor(TFT_WHITE);
       updateBin.close();
@@ -111,13 +112,13 @@ void SDInterface::runUpdate() {
     size_t updateSize = updateBin.size();
 
     if (updateSize > 0) {
-      display_obj.tft.println(F("Starting SD Update..."));
+      display_obj.tft.println(F(text_table2[1]));
       Serial.println(F("Try to start update"));
       this->performUpdate(updateBin, updateSize);
     }
     else {
       display_obj.tft.setTextColor(TFT_RED);
-      display_obj.tft.println(F("Error, update.bin is empty"));
+      display_obj.tft.println(F(text_table2[2]));
       Serial.println(F("Error, file is empty"));
       display_obj.tft.setTextColor(TFT_WHITE);
       return;
@@ -126,7 +127,7 @@ void SDInterface::runUpdate() {
     updateBin.close();
     
       // whe finished remove the binary from sd card to indicate end of the process
-    display_obj.tft.println(F("rebooting..."));
+    display_obj.tft.println(F(text_table2[3]));
     Serial.println(F("rebooting..."));
     //SD.remove("/update.bin");      
     delay(1000);
@@ -134,7 +135,7 @@ void SDInterface::runUpdate() {
   }
   else {
     display_obj.tft.setTextColor(TFT_RED);
-    display_obj.tft.println(F("Could not load update.bin from /"));
+    display_obj.tft.println(F(text_table2[4]));
     Serial.println(F("Could not load update.bin from sd root"));
     display_obj.tft.setTextColor(TFT_WHITE);
   }
@@ -142,39 +143,39 @@ void SDInterface::runUpdate() {
 
 void SDInterface::performUpdate(Stream &updateSource, size_t updateSize) {
   if (Update.begin(updateSize)) {   
-    display_obj.tft.println("File size: " + String(updateSize));
-    display_obj.tft.println(F("Writing file to partition..."));
+    display_obj.tft.println(text_table2[5] + String(updateSize));
+    display_obj.tft.println(F(text_table2[6]));
     size_t written = Update.writeStream(updateSource);
     if (written == updateSize) {
-      display_obj.tft.println("Written: " + String(written) + " successfully");
+      display_obj.tft.println(text_table2[7] + String(written) + text_table2[10]);
       Serial.println("Written : " + String(written) + " successfully");
     }
     else {
-      display_obj.tft.println("Written only : " + String(written) + "/" + String(updateSize) + ". Retry?");
+      display_obj.tft.println(text_table2[8] + String(written) + "/" + String(updateSize) + text_table2[9]);
       Serial.println("Written only : " + String(written) + "/" + String(updateSize) + ". Retry?");
     }
     if (Update.end()) {
       Serial.println("OTA done!");
       if (Update.isFinished()) {
-        display_obj.tft.println(F("Update complete"));
+        display_obj.tft.println(F(text_table2[11]));
         Serial.println(F("Update successfully completed. Rebooting."));
       }
       else {
         display_obj.tft.setTextColor(TFT_RED);
-        display_obj.tft.println("Update could not complete");
+        display_obj.tft.println(text_table2[12]);
         Serial.println("Update not finished? Something went wrong!");
         display_obj.tft.setTextColor(TFT_WHITE);
       }
     }
     else {
-      display_obj.tft.println("Error Occurred. Error #: " + String(Update.getError()));
+      display_obj.tft.println(text_table2[13] + String(Update.getError()));
       Serial.println("Error Occurred. Error #: " + String(Update.getError()));
     }
 
   }
   else
   {
-    display_obj.tft.println("Not enough space to begin OTA");
+    display_obj.tft.println(text_table2[14]);
     Serial.println("Not enough space to begin OTA");
   }
 }
