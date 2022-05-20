@@ -6,6 +6,7 @@
   
   //#define MARAUDER_MINI
   #define MARAUDER_V4
+  //#define MARAUDER_FLIPPER
 
   #define MARAUDER_VERSION "v0.9.6"
 
@@ -185,6 +186,38 @@
   #ifdef MARAUDER_MINI
     #define SD_CS 4
   #endif
+
+  #ifdef MARAUDER_FLIPPER
+    #define SD_CS -1
+  #endif
   //// END SD DEFINITIONS
+
+  //// SCREEN STUFF
+  #ifdef MARAUDER_MINI
+    #define HAS_SCREEN
+  #endif
+
+  #ifdef MARAUDER_V4
+    #define HAS_SCREEN
+  #endif
+
+  #ifndef HAS_SCREEN
+    #define TFT_CYAN 0
+    #define TFT_BLUE 0
+    #define TFT_RED 0
+    #define TFT_GREEN 0
+    #define TFT_GREY 0
+    #define TFT_GRAY 0
+    #define TFT_MAGENTA 0
+    #define STANDARD_FONT_CHAR_LIMIT 40
+    #define FLASH_BUTTON -1
+
+    #include <FS.h>
+    #include <functional>
+    #include <LinkedList.h>
+    #include "SPIFFS.h"
+    #include "Assets.h"
+  #endif
+  //// END SCREEN STUFF
 
 #endif

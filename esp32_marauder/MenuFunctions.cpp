@@ -2,6 +2,8 @@
 #include "lang_var.h"
 //#include "icons.h"
 
+#ifdef HAS_SCREEN
+
 extern const unsigned char menu_icons[][66];
 PROGMEM lv_obj_t * slider_label;
 PROGMEM lv_obj_t * ta1;
@@ -1495,7 +1497,7 @@ void MenuFunctions::RunSetup()
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_PROBE, TFT_CYAN);
-  }, "probescan");
+  });
   addNodes(&wifiSnifferMenu, text_table1[43], TFT_MAGENTA, NULL, BEACON_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
@@ -1526,7 +1528,7 @@ void MenuFunctions::RunSetup()
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_TARGET_AP, TFT_MAGENTA);
-  }, "scanap");
+  });
 
   // Build WiFi attack menu
   wifiAttackMenu.parentMenu = &wifiMenu; // Main Menu is second menu parent
@@ -1955,3 +1957,5 @@ void MenuFunctions::displayCurrentMenu()
     display_obj.tft.setFreeFont(NULL);
   }
 }
+
+#endif

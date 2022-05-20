@@ -1,6 +1,8 @@
 #ifndef WiFiScan_h
 #define WiFiScan_h
 
+#include "configs.h"
+
 //#include <BLEDevice.h>
 //#include <BLEUtils.h>
 //#include <BLEScan.h>
@@ -16,7 +18,9 @@
 #include "esp_wifi.h"
 #include "esp_wifi_types.h"
 #include "esp_bt.h"
-#include "Display.h"
+#ifdef HAS_SCREEN
+  #include "Display.h"
+#endif
 #include "SDInterface.h"
 #include "Buffer.h"
 #include "BatteryInterface.h"
@@ -56,7 +60,9 @@
 
 #define MAX_CHANNEL 14
 
-extern Display display_obj;
+#ifdef HAS_SCREEN
+  extern Display display_obj;
+#endif
 extern SDInterface sd_obj;
 extern Buffer buffer_obj;
 extern BatteryInterface battery_obj;

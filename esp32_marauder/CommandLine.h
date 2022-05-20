@@ -1,13 +1,21 @@
 #ifndef CommandLine_h
 #define CommandLine_h
 
-#include "MenuFunctions.h"
-#include "WiFiScan.h"
-#include "Display.h"
+#include "configs.h"
 
-extern MenuFunctions menu_function_obj;
+#ifdef HAS_SCREEN
+  #include "MenuFunctions.h"
+  #include "Display.h"
+#endif 
+
+#include "WiFiScan.h"
+
+#ifdef HAS_SCREEN
+  extern MenuFunctions menu_function_obj;
+  extern Display display_obj;
+#endif
+
 extern WiFiScan wifi_scan_obj;
-extern Display display_obj;
 
 // Commands
 const char PROGMEM SCANAP_CMD[] = "scanap";
