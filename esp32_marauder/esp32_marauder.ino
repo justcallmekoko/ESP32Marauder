@@ -231,24 +231,33 @@ void setup()
 
   // Temperature stuff
   Serial.println(wifi_scan_obj.freeRAM());
-  temp_obj.RunSetup();
+  #ifndef MARAUDER_FLIPPER
+    temp_obj.RunSetup();
+  #endif
 
   #ifdef HAS_SCREEN
     display_obj.tft.println(F(text_table0[6]));
   #endif
 
-  battery_obj.battery_level = battery_obj.getBatteryLevel();
+  Serial.println("Bat lvl");
 
-  if (battery_obj.i2c_supported) {
-    Serial.println(F("IP5306 I2C Supported: true"));
-  }
-  else
-    Serial.println(F("IP5306 I2C Supported: false"));
+  #ifndef MARAUDER_FLIPPER
+    battery_obj.battery_level = battery_obj.getBatteryLevel();
+  
+    if (battery_obj.i2c_supported) {
+      Serial.println(F("IP5306 I2C Supported: true"));
+    }
+    else
+      Serial.println(F("IP5306 I2C Supported: false"));
+  #endif
 
   Serial.println(wifi_scan_obj.freeRAM());
 
   // Do some LED stuff
-  led_obj.RunSetup();
+  #ifndef MARAUDER_FLIPPER
+    Serial.println("LED");
+    led_obj.RunSetup();
+  #endif
 
   #ifdef HAS_SCREEN
     display_obj.tft.println(F(text_table0[7]));
@@ -264,6 +273,7 @@ void setup()
     delay(2000);
   #endif
 
+  Serial.println("CLI");
   cli_obj.RunSetup();
 
   #ifdef HAS_SCREEN
@@ -290,8 +300,10 @@ void loop()
     #endif
     wifi_scan_obj.main(currentTime);
     sd_obj.main();
-    battery_obj.main(currentTime);
-    temp_obj.main(currentTime);
+    #ifndef MARAUDER_FLIPPER
+      battery_obj.main(currentTime);
+      temp_obj.main(currentTime);
+    #endif
     settings_obj.main(currentTime);
     if ((wifi_scan_obj.currentScanMode != WIFI_PACKET_MONITOR) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_EAPOL)) {

@@ -6,6 +6,7 @@
   
   //#define MARAUDER_MINI
   #define MARAUDER_V4
+  //#define GENERIC_ESP32
   //#define MARAUDER_FLIPPER
 
   #define MARAUDER_VERSION "v0.9.6"
@@ -195,10 +196,16 @@
   //// SCREEN STUFF
   #ifdef MARAUDER_MINI
     #define HAS_SCREEN
+    #define HAS_BT
   #endif
 
   #ifdef MARAUDER_V4
     #define HAS_SCREEN
+    #define HAS_BT
+  #endif
+
+  #ifdef GENERIC_ESP32
+    #define HAS_BT
   #endif
 
   #ifndef HAS_SCREEN

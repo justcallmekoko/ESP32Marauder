@@ -16,107 +16,109 @@ extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32
       return 0;
 }
 
-class bluetoothScanAllCallback: public BLEAdvertisedDeviceCallbacks {
-
-    void onResult(BLEAdvertisedDevice *advertisedDevice) {
-
-      #ifdef HAS_SCREEN
-        int buf = display_obj.display_buffer->size();
-      #else
-        int buf = 0;
-      #endif
-        
-      String display_string = "";
-      if (buf >= 0)
-      {
-        display_string.concat(text_table4[0]);
-        display_string.concat(advertisedDevice->getRSSI());
-        Serial.print(" RSSI: ");
-        Serial.print(advertisedDevice->getRSSI());
-
-        display_string.concat(" ");
-        Serial.print(" ");
-        
-        Serial.print("Device: ");
-        if(advertisedDevice->getName().length() != 0)
-        {
-          display_string.concat(advertisedDevice->getName().c_str());
-          Serial.print(advertisedDevice->getName().c_str());
-          
-        }
-        else
-        {
-          display_string.concat(advertisedDevice->getAddress().toString().c_str());
-          Serial.print(advertisedDevice->getAddress().toString().c_str());
-        }
-
+#ifdef HAS_BT
+  class bluetoothScanAllCallback: public BLEAdvertisedDeviceCallbacks {
+  
+      void onResult(BLEAdvertisedDevice *advertisedDevice) {
+  
         #ifdef HAS_SCREEN
-          uint8_t temp_len = display_string.length();
-          for (uint8_t i = 0; i < 40 - temp_len; i++)
-          {
-            display_string.concat(" ");
-          }
-  
-          Serial.println();
-  
-          while (display_obj.printing)
-            delay(1);
-          display_obj.loading = true;
-          display_obj.display_buffer->add(display_string);
-          display_obj.loading = false;
+          int buf = display_obj.display_buffer->size();
+        #else
+          int buf = 0;
         #endif
-      }
-    }
-};
-
-class bluetoothScanSkimmersCallback: public BLEAdvertisedDeviceCallbacks {
-    void onResult(BLEAdvertisedDevice *advertisedDevice) {
-      String bad_list[bad_list_length] = {"HC-03", "HC-05", "HC-06"};
-
-      #ifdef HAS_SCREEN
-        int buf = display_obj.display_buffer->size();
-      #else
-        int buf = 0;
-      #endif
-        
-      if (buf >= 0)
-      {
-        Serial.print("Device: ");
+          
         String display_string = "";
-        if(advertisedDevice->getName().length() != 0)
+        if (buf >= 0)
         {
-          Serial.print(advertisedDevice->getName().c_str());
-          for(uint8_t i = 0; i < bad_list_length; i++)
+          display_string.concat(text_table4[0]);
+          display_string.concat(advertisedDevice->getRSSI());
+          Serial.print(" RSSI: ");
+          Serial.print(advertisedDevice->getRSSI());
+  
+          display_string.concat(" ");
+          Serial.print(" ");
+          
+          Serial.print("Device: ");
+          if(advertisedDevice->getName().length() != 0)
           {
-            #ifdef HAS_SCREEN
-              if(strcmp(advertisedDevice->getName().c_str(), bad_list[i].c_str()) == 0)
-              {
-                display_string.concat(text_table4[1]);
-                display_string.concat(" ");
-                display_string.concat(advertisedDevice->getName().c_str());
-                uint8_t temp_len = display_string.length();
-                for (uint8_t i = 0; i < 40 - temp_len; i++)
-                {
-                  display_string.concat(" ");
-                }
-                while (display_obj.printing)
-                  delay(1);
-                display_obj.loading = true;
-                display_obj.display_buffer->add(display_string);
-                display_obj.loading = false;
-              }
-            #endif
+            display_string.concat(advertisedDevice->getName().c_str());
+            Serial.print(advertisedDevice->getName().c_str());
+            
           }
+          else
+          {
+            display_string.concat(advertisedDevice->getAddress().toString().c_str());
+            Serial.print(advertisedDevice->getAddress().toString().c_str());
+          }
+  
+          #ifdef HAS_SCREEN
+            uint8_t temp_len = display_string.length();
+            for (uint8_t i = 0; i < 40 - temp_len; i++)
+            {
+              display_string.concat(" ");
+            }
+    
+            Serial.println();
+    
+            while (display_obj.printing)
+              delay(1);
+            display_obj.loading = true;
+            display_obj.display_buffer->add(display_string);
+            display_obj.loading = false;
+          #endif
         }
-        else
-        {
-          Serial.print(advertisedDevice->getAddress().toString().c_str());
-        }
-        Serial.print(" RSSI: ");
-        Serial.println(advertisedDevice->getRSSI());
       }
-    }
-};
+  };
+  
+  class bluetoothScanSkimmersCallback: public BLEAdvertisedDeviceCallbacks {
+      void onResult(BLEAdvertisedDevice *advertisedDevice) {
+        String bad_list[bad_list_length] = {"HC-03", "HC-05", "HC-06"};
+  
+        #ifdef HAS_SCREEN
+          int buf = display_obj.display_buffer->size();
+        #else
+          int buf = 0;
+        #endif
+          
+        if (buf >= 0)
+        {
+          Serial.print("Device: ");
+          String display_string = "";
+          if(advertisedDevice->getName().length() != 0)
+          {
+            Serial.print(advertisedDevice->getName().c_str());
+            for(uint8_t i = 0; i < bad_list_length; i++)
+            {
+              #ifdef HAS_SCREEN
+                if(strcmp(advertisedDevice->getName().c_str(), bad_list[i].c_str()) == 0)
+                {
+                  display_string.concat(text_table4[1]);
+                  display_string.concat(" ");
+                  display_string.concat(advertisedDevice->getName().c_str());
+                  uint8_t temp_len = display_string.length();
+                  for (uint8_t i = 0; i < 40 - temp_len; i++)
+                  {
+                    display_string.concat(" ");
+                  }
+                  while (display_obj.printing)
+                    delay(1);
+                  display_obj.loading = true;
+                  display_obj.display_buffer->add(display_string);
+                  display_obj.loading = false;
+                }
+              #endif
+            }
+          }
+          else
+          {
+            Serial.print(advertisedDevice->getAddress().toString().c_str());
+          }
+          Serial.print(" RSSI: ");
+          Serial.println(advertisedDevice->getRSSI());
+        }
+      }
+  };
+#endif
 
 
 WiFiScan::WiFiScan()
@@ -131,13 +133,16 @@ void WiFiScan::RunSetup() {
     
   ssids = new LinkedList<ssid>();
   access_points = new LinkedList<AccessPoint>();
-  NimBLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DEVICE);
-  NimBLEDevice::setScanDuplicateCacheSize(200);
-  NimBLEDevice::init("");
-  pBLEScan = NimBLEDevice::getScan(); //create new scan
-  this->ble_initialized = true;
-  
-  this->shutdownBLE();
+
+  #ifdef HAS_BT
+    NimBLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DEVICE);
+    NimBLEDevice::setScanDuplicateCacheSize(200);
+    NimBLEDevice::init("");
+    pBLEScan = NimBLEDevice::getScan(); //create new scan
+    this->ble_initialized = true;
+    
+    this->shutdownBLE();
+  #endif
 
   this->initWiFi(1);
 }
@@ -291,10 +296,16 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     this->startWiFiAttacks(scan_mode, color, text_table4[7]);
   else if (scan_mode == WIFI_ATTACK_DEAUTH)
     this->startWiFiAttacks(scan_mode, color, text_table4[8]);
-  else if (scan_mode == BT_SCAN_ALL)
-    RunBluetoothScan(scan_mode, color);
-  else if (scan_mode == BT_SCAN_SKIMMERS)
-    RunBluetoothScan(scan_mode, color);
+  else if (scan_mode == BT_SCAN_ALL) {
+    #ifdef HAS_BT
+      RunBluetoothScan(scan_mode, color);
+    #endif
+  }
+  else if (scan_mode == BT_SCAN_SKIMMERS) {
+    #ifdef HAS_BT
+      RunBluetoothScan(scan_mode, color);
+    #endif
+  }
   else if (scan_mode == WIFI_SCAN_ESPRESSIF)
     RunEspressifScan(scan_mode, color);
   else if (scan_mode == LV_JOIN_WIFI) {
@@ -357,18 +368,22 @@ bool WiFiScan::shutdownWiFi() {
 }
 
 bool WiFiScan::shutdownBLE() {
-  if (this->ble_initialized) {
-    pBLEScan->stop();
+  #ifdef HAS_BT
+    if (this->ble_initialized) {
+      pBLEScan->stop();
+      
+      pBLEScan->clearResults();
+      BLEDevice::deinit();
     
-    pBLEScan->clearResults();
-    BLEDevice::deinit();
-  
-    this->ble_initialized = false;
-    return true;
-  }
-  else {
-    return false;
-  }
+      this->ble_initialized = false;
+      return true;
+    }
+    else {
+      return false;
+    }
+  #endif
+
+  return true;
 }
 
 // Function to stop all wifi scans
@@ -398,7 +413,9 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   else if ((currentScanMode == BT_SCAN_ALL) ||
   (currentScanMode == BT_SCAN_SKIMMERS))
   {
-    this->shutdownBLE();
+    #ifdef HAS_BT
+      this->shutdownBLE();
+    #endif
   }
 
   #ifdef HAS_SCREEN
@@ -980,64 +997,68 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
 // Function to start running any BLE scan
 void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
 {
-  #ifdef HAS_SCREEN
-    display_obj.print_delay_1 = 50;
-    display_obj.print_delay_2 = 20;
+  #ifdef HAS_BT
+    #ifdef HAS_SCREEN
+      display_obj.print_delay_1 = 50;
+      display_obj.print_delay_2 = 20;
+    #endif
+  
+    NimBLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DEVICE);
+    NimBLEDevice::setScanDuplicateCacheSize(200);
+    NimBLEDevice::init("");
+    pBLEScan = NimBLEDevice::getScan(); //create new scan
+    if (scan_mode == BT_SCAN_ALL)
+    {
+      #ifdef HAS_SCREEN
+        display_obj.TOP_FIXED_AREA_2 = 48;
+        display_obj.tteBar = true;
+        display_obj.initScrollValues(true);
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setTextColor(TFT_BLACK, color);
+        display_obj.tft.fillRect(0,16,240,16, color);
+        display_obj.tft.drawCentreString(text_table4[41],120,16,2);
+        display_obj.touchToExit();
+        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+        display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
+      #endif
+      pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), false);
+    }
+    else if (scan_mode == BT_SCAN_SKIMMERS)
+    {
+      #ifdef HAS_SCREEN
+        display_obj.TOP_FIXED_AREA_2 = 160;
+        display_obj.tteBar = true;
+        display_obj.tft.fillScreen(TFT_DARKGREY);
+        display_obj.initScrollValues(true);
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setTextColor(TFT_BLACK, color);
+        display_obj.tft.fillRect(0,16,240,16, color);
+        display_obj.tft.drawCentreString(text_table4[42],120,16,2);
+        display_obj.twoPartDisplay(text_table4[43]);
+        display_obj.tft.setTextColor(TFT_BLACK, TFT_DARKGREY);
+        display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
+      #endif
+      pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanSkimmersCallback(), false);
+    }
+    pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
+    pBLEScan->setInterval(97);
+    pBLEScan->setWindow(37);  // less or equal setInterval value
+    pBLEScan->setMaxResults(0);
+    pBLEScan->start(0, scanCompleteCB, false);
+    Serial.println("Started BLE Scan");
+    this->ble_initialized = true;
+    initTime = millis();
   #endif
-
-  NimBLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DEVICE);
-  NimBLEDevice::setScanDuplicateCacheSize(200);
-  NimBLEDevice::init("");
-  pBLEScan = NimBLEDevice::getScan(); //create new scan
-  if (scan_mode == BT_SCAN_ALL)
-  {
-    #ifdef HAS_SCREEN
-      display_obj.TOP_FIXED_AREA_2 = 48;
-      display_obj.tteBar = true;
-      display_obj.initScrollValues(true);
-      display_obj.tft.setTextWrap(false);
-      display_obj.tft.setTextColor(TFT_BLACK, color);
-      display_obj.tft.fillRect(0,16,240,16, color);
-      display_obj.tft.drawCentreString(text_table4[41],120,16,2);
-      display_obj.touchToExit();
-      display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-      display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
-    #endif
-    pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), false);
-  }
-  else if (scan_mode == BT_SCAN_SKIMMERS)
-  {
-    #ifdef HAS_SCREEN
-      display_obj.TOP_FIXED_AREA_2 = 160;
-      display_obj.tteBar = true;
-      display_obj.tft.fillScreen(TFT_DARKGREY);
-      display_obj.initScrollValues(true);
-      display_obj.tft.setTextWrap(false);
-      display_obj.tft.setTextColor(TFT_BLACK, color);
-      display_obj.tft.fillRect(0,16,240,16, color);
-      display_obj.tft.drawCentreString(text_table4[42],120,16,2);
-      display_obj.twoPartDisplay(text_table4[43]);
-      display_obj.tft.setTextColor(TFT_BLACK, TFT_DARKGREY);
-      display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
-    #endif
-    pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanSkimmersCallback(), false);
-  }
-  pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
-  pBLEScan->setInterval(97);
-  pBLEScan->setWindow(37);  // less or equal setInterval value
-  pBLEScan->setMaxResults(0);
-  pBLEScan->start(0, scanCompleteCB, false);
-  Serial.println("Started BLE Scan");
-  this->ble_initialized = true;
-  initTime = millis();
 }
 
 // Function that is called when BLE scan is completed
-void WiFiScan::scanCompleteCB(BLEScanResults scanResults) {
-  printf("Scan complete!\n");
-  printf("Found %d devices\n", scanResults.getCount());
-  scanResults.dump();
-} // scanCompleteCB
+#ifdef HAS_BT
+  void WiFiScan::scanCompleteCB(BLEScanResults scanResults) {
+    printf("Scan complete!\n");
+    printf("Found %d devices\n", scanResults.getCount());
+    scanResults.dump();
+  } // scanCompleteCB
+#endif
 
 
 // Function to extract MAC addr from a packet at given offset

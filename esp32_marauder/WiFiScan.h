@@ -10,14 +10,17 @@
 #include <ArduinoJson.h>
 
 // Testing NimBLE
-#include <NimBLEDevice.h>
-//#include <NimBLEAdvertisedDevice.h>
+#ifdef HAS_BT
+  #include <NimBLEDevice.h>
+#endif
 
 #include <WiFi.h>
 #include <math.h>
 #include "esp_wifi.h"
 #include "esp_wifi_types.h"
-#include "esp_bt.h"
+#ifdef HAS_BT
+  #include "esp_bt.h"
+#endif
 #ifdef HAS_SCREEN
   #include "Display.h"
 #endif
@@ -118,7 +121,9 @@ class WiFiScan
     int bluetoothScanTime = 5;
     int packets_sent = 0;
     const wifi_promiscuous_filter_t filt = {.filter_mask=WIFI_PROMIS_FILTER_MASK_MGMT | WIFI_PROMIS_FILTER_MASK_DATA};
-    NimBLEScan* pBLEScan;
+    #ifdef HAS_BT
+      NimBLEScan* pBLEScan;
+    #endif
 
     //String connected_network = "";
     String alfa = "1234567890qwertyuiopasdfghjkklzxcvbnm QWERTYUIOPASDFGHJKLZXCVBNM_";
@@ -241,7 +246,9 @@ class WiFiScan
     void RunPacketMonitor(uint8_t scan_mode, uint16_t color);
     void RunBluetoothScan(uint8_t scan_mode, uint16_t color);
     void RunLvJoinWiFi(uint8_t scan_mode, uint16_t color);
-    static void scanCompleteCB(BLEScanResults scanResults);
+    #ifdef HAS_BT
+      static void scanCompleteCB(BLEScanResults scanResults);
+    #endif
 
     //int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3);
 
