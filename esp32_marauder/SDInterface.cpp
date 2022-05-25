@@ -33,18 +33,11 @@ bool SDInterface::initSD() {
     else
         Serial.println(F("SD: UNKNOWN Card Mounted"));
 
-    //this->cardSizeBT = SD.cardSize();
-    //this->cardSizeKB = SD.cardSize() / 1024;
     this->cardSizeMB = SD.cardSize() / (1024 * 1024);
-    //this->cardSizeGB = SD.cardSize() / (1024 * 1024 * 1024);
     
-    //Serial.printf("SD Card Size: %llu Bytes\n", this->cardSizeBT);
-    //Serial.printf("SD Card Size: %lluKB\n", this->cardSizeKB);
     Serial.printf("SD Card Size: %lluMB\n", this->cardSizeMB);
-    //Serial.printf("SD Card Size: %lluGB\n", this->cardSizeGB);
 
     if (this->supported) {
-      //display_obj.tft.println((byte)(sd_obj.cardSizeMB % 10));
       const int NUM_DIGITS = log10(this->cardSizeMB) + 1;
     
       char sz[NUM_DIGITS + 1];
@@ -56,16 +49,11 @@ bool SDInterface::initSD() {
           display_string.concat((String)sz[i]);
       }
   
-      //this->card_sz = display_string;  
       this->card_sz = sz;
     }
 
     buffer_obj = Buffer();
-
-    //if (this->supported)
-    //  buffer_obj.open(&SD);
-
-    // Check for SCRIPTS folder
+    
     if (!SD.exists("/SCRIPTS")) {
       Serial.println("/SCRIPTS does not exist. Creating...");
 
@@ -79,7 +67,6 @@ bool SDInterface::initSD() {
 
 void SDInterface::addPacket(uint8_t* buf, uint32_t len) {
   if ((this->supported) && (this->do_save)) {
-    //Serial.println("Adding packet to buffer...");
     buffer_obj.addPacket(buf, len);
   }
 }
@@ -90,21 +77,28 @@ void SDInterface::openCapture(String file_name) {
 }
 
 void SDInterface::runUpdate() {
-  //display_obj.clearScreen();
-  display_obj.tft.setTextWrap(false);
-  display_obj.tft.setFreeFont(NULL);
-  display_obj.tft.setCursor(0, 100);
-  display_obj.tft.setTextSize(1);
-  display_obj.tft.setTextColor(TFT_WHITE);
 
-  display_obj.tft.println(F(text15));
+  #ifdef HAS_SCREEN
+    display_obj.tft.setTextWrap(false);
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.tft.setCursor(0, 100);
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextColor(TFT_WHITE);
+  
+    display_obj.tft.println(F(text15));
+  #endif
   File updateBin = SD.open("/update.bin");
   if (updateBin) {
     if(updateBin.isDirectory()){
-      display_obj.tft.setTextColor(TFT_RED);
-      display_obj.tft.println(F(text_table2[0]));
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextColor(TFT_RED);
+        display_obj.tft.println(F(text_table2[0]));
+      #endif
+
       Serial.println(F("Error, update.bin is not a file"));
-      display_obj.tft.setTextColor(TFT_WHITE);
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextColor(TFT_WHITE);
+      #endif
       updateBin.close();
       return;
     }
@@ -112,70 +106,114 @@ void SDInterface::runUpdate() {
     size_t updateSize = updateBin.size();
 
     if (updateSize > 0) {
-      display_obj.tft.println(F(text_table2[1]));
+
+      #ifdef HAS_SCREEN
+        display_obj.tft.println(F(text_table2[1]));
+      #endif
+
       Serial.println(F("Try to start update"));
       this->performUpdate(updateBin, updateSize);
     }
     else {
-      display_obj.tft.setTextColor(TFT_RED);
-      display_obj.tft.println(F(text_table2[2]));
+
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextColor(TFT_RED);
+        display_obj.tft.println(F(text_table2[2]));
+      #endif
+
       Serial.println(F("Error, file is empty"));
-      display_obj.tft.setTextColor(TFT_WHITE);
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextColor(TFT_WHITE);
+      #endif
       return;
     }
 
     updateBin.close();
     
       // whe finished remove the binary from sd card to indicate end of the process
-    display_obj.tft.println(F(text_table2[3]));
+
+    #ifdef HAS_SCREEN
+      display_obj.tft.println(F(text_table2[3]));
+    #endif
+    
     Serial.println(F("rebooting..."));
     //SD.remove("/update.bin");      
     delay(1000);
     ESP.restart();
   }
   else {
-    display_obj.tft.setTextColor(TFT_RED);
-    display_obj.tft.println(F(text_table2[4]));
+
+    #ifdef HAS_SCREEN
+      display_obj.tft.setTextColor(TFT_RED);
+      display_obj.tft.println(F(text_table2[4]));
+    #endif
+
     Serial.println(F("Could not load update.bin from sd root"));
-    display_obj.tft.setTextColor(TFT_WHITE);
+    #ifdef HAS_SCREEN
+      display_obj.tft.setTextColor(TFT_WHITE);
+    #endif
   }
 }
 
 void SDInterface::performUpdate(Stream &updateSource, size_t updateSize) {
   if (Update.begin(updateSize)) {   
-    display_obj.tft.println(text_table2[5] + String(updateSize));
-    display_obj.tft.println(F(text_table2[6]));
+
+    #ifdef HAS_SCREEN
+      display_obj.tft.println(text_table2[5] + String(updateSize));
+      display_obj.tft.println(F(text_table2[6]));
+    #endif
     size_t written = Update.writeStream(updateSource);
     if (written == updateSize) {
-      display_obj.tft.println(text_table2[7] + String(written) + text_table2[10]);
+      #ifdef HAS_SCREEN
+        display_obj.tft.println(text_table2[7] + String(written) + text_table2[10]);
+      #endif
       Serial.println("Written : " + String(written) + " successfully");
     }
     else {
-      display_obj.tft.println(text_table2[8] + String(written) + "/" + String(updateSize) + text_table2[9]);
+      #ifdef HAS_SCREEN
+        display_obj.tft.println(text_table2[8] + String(written) + "/" + String(updateSize) + text_table2[9]);
+      #endif
+
       Serial.println("Written only : " + String(written) + "/" + String(updateSize) + ". Retry?");
     }
     if (Update.end()) {
       Serial.println("OTA done!");
       if (Update.isFinished()) {
-        display_obj.tft.println(F(text_table2[11]));
+
+        #ifdef HAS_SCREEN
+          display_obj.tft.println(F(text_table2[11]));
+        #endif
         Serial.println(F("Update successfully completed. Rebooting."));
       }
       else {
-        display_obj.tft.setTextColor(TFT_RED);
-        display_obj.tft.println(text_table2[12]);
+        #ifdef HAS_SCREEN
+          display_obj.tft.setTextColor(TFT_RED);
+          display_obj.tft.println(text_table2[12]);
+        #endif
+
         Serial.println("Update not finished? Something went wrong!");
-        display_obj.tft.setTextColor(TFT_WHITE);
+        #ifdef HAS_SCREEN
+          display_obj.tft.setTextColor(TFT_WHITE);
+        #endif
       }
     }
     else {
-      display_obj.tft.println(text_table2[13] + String(Update.getError()));
+
+      #ifdef HAS_SCREEN
+        display_obj.tft.println(text_table2[13] + String(Update.getError()));
+      #endif
+
       Serial.println("Error Occurred. Error #: " + String(Update.getError()));
     }
 
   }
   else
   {
-    display_obj.tft.println(text_table2[14]);
+
+    #ifdef HAS_SCREEN
+      display_obj.tft.println(text_table2[14]);
+    #endif
+
     Serial.println("Not enough space to begin OTA");
   }
 }
@@ -203,8 +241,3 @@ void SDInterface::main() {
     }
   }
 }
-
-//void SDInterface::savePacket(uint8_t* buf, uint32_t len) {
-//  if (this->supported)
-//    buffer_obj.save(
-//}

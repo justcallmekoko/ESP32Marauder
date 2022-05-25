@@ -1,6 +1,7 @@
 #include "Display.h"
 #include "lang_var.h"
 
+
 Display::Display()
 {
 }
@@ -764,3 +765,5 @@ void Display::main(uint8_t scan_mode)
   return;
 }
 // End SPIFFS_functions
+
+#endif

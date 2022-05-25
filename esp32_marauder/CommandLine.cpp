@@ -28,15 +28,17 @@ void CommandLine::parseCommand(String input) {
     wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
 
     // If we don't do this, the text and button coordinates will be off
-    display_obj.tft.init();
-
-    // Take us back to the menu
-    menu_function_obj.changeMenu(menu_function_obj.current_menu);
+    #ifdef HAS_SCREEN
+      display_obj.tft.init();
+      menu_function_obj.changeMenu(menu_function_obj.current_menu);
+    #endif
   }
     
   else if (input == SCANAP_CMD) {
-    display_obj.clearScreen();
-    menu_function_obj.drawStatusBar();
+    #ifdef HAS_SCREEN
+      display_obj.clearScreen();
+      menu_function_obj.drawStatusBar();
+    #endif
     wifi_scan_obj.StartScan(WIFI_SCAN_TARGET_AP, TFT_MAGENTA);
   }
 
@@ -45,14 +47,18 @@ void CommandLine::parseCommand(String input) {
   }
 
   else if (input == SNIFF_BEACON_CMD) {
-    display_obj.clearScreen();
-    menu_function_obj.drawStatusBar();
+    #ifdef HAS_SCREEN
+      display_obj.clearScreen();
+      menu_function_obj.drawStatusBar();
+    #endif
     wifi_scan_obj.StartScan(WIFI_SCAN_AP, TFT_MAGENTA);
   }
 
   else if (input == SNIFF_DEAUTH_CMD) {
-    display_obj.clearScreen();
-    menu_function_obj.drawStatusBar();
+    #ifdef HAS_SCREEN
+      display_obj.clearScreen();
+      menu_function_obj.drawStatusBar();
+    #endif
     wifi_scan_obj.StartScan(WIFI_SCAN_DEAUTH, TFT_RED);
   }
 }
