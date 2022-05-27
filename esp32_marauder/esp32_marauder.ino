@@ -295,6 +295,7 @@ void loop()
   
   if ((!do_draw) && (wifi_scan_obj.currentScanMode != ESP_UPDATE))
   {
+    cli_obj.main(currentTime);
     #ifdef HAS_SCREEN
       display_obj.main(wifi_scan_obj.currentScanMode);
     #endif
@@ -310,7 +311,7 @@ void loop()
       #ifdef HAS_SCREEN
         menu_function_obj.main(currentTime);
       #endif
-      cli_obj.main(currentTime);
+      //cli_obj.main(currentTime);
     }
       if (wifi_scan_obj.currentScanMode == OTA_UPDATE)
         web_obj.main();

@@ -260,6 +260,13 @@ void WiFiScan::initWiFi(uint8_t scan_mode) {
   }
 }
 
+bool WiFiScan::scanning() {
+  if (this->currentScanMode == WIFI_SCAN_OFF)
+    return false;
+  else
+    return true;
+}
+
 // Function to prepare to run a specific scan
 void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
 {  
@@ -268,11 +275,8 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     StopScan(scan_mode);
   else if (scan_mode == WIFI_SCAN_PROBE)
     RunProbeScan(scan_mode, color);
-  else if (scan_mode == WIFI_SCAN_EAPOL) {
-    #ifdef HAS_SCREEN
-      RunEapolScan(scan_mode, color);
-    #endif
-  }
+  else if (scan_mode == WIFI_SCAN_EAPOL)
+    RunEapolScan(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_AP)
     RunBeaconScan(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_TARGET_AP)
@@ -2387,18 +2391,18 @@ void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 
 void WiFiScan::changeChannel()
 {
-  esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
+  esp_wifi_set_channel(this->set_channel, WIFI_SECOND_CHAN_NONE);
   delay(1);
 }
 
 // Function to cycle to the next channel
 void WiFiScan::channelHop()
 {
-  set_channel = set_channel + 1;
-  if (set_channel > 13) {
-    set_channel = 1;
+  this->set_channel = this->set_channel + 1;
+  if (this->set_channel > 13) {
+    this->set_channel = 1;
   }
-  esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
+  esp_wifi_set_channel(this->set_channel, WIFI_SECOND_CHAN_NONE);
   delay(1);
 }
 

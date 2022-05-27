@@ -283,6 +283,7 @@ class WiFiScan
     int generateSSIDs();
     bool shutdownWiFi();
     bool shutdownBLE();
+    bool scanning();
     void joinWiFi(String ssid, String password);
     String getStaMAC();
     String getApMAC();
