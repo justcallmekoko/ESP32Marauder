@@ -329,7 +329,7 @@ void loop()
       display_obj.main(wifi_scan_obj.currentScanMode);
       menu_function_obj.main(currentTime);
     #endif
-    cli_obj.main(currentTime);
+    //cli_obj.main(currentTime);
     delay(1);
   }
 }

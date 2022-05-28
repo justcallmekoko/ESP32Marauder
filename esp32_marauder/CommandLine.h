@@ -18,7 +18,7 @@
 extern WiFiScan wifi_scan_obj;
 
 // Commands
-const char PROGMEM SET_CH_CMD[] = "setch";
+const char PROGMEM CH_CMD[] = "channel";
 const char PROGMEM SCANAP_CMD[] = "scanap";
 const char PROGMEM SNIFF_BEACON_CMD[] = "sniffbeacon";
 const char PROGMEM SNIFF_DEAUTH_CMD[] = "sniffdeauth";
@@ -29,8 +29,9 @@ const char PROGMEM CLEARAP_CMD[] = "clearap";
 class CommandLine {
   private:
     String getSerialInput();
-    void parseCommand(String input);
+    LinkedList<String> parseCommand(String input);
     void runCommand(String input);
+    int argSearch(LinkedList<String>* cmd_args, String key);
         
   public:
     CommandLine();

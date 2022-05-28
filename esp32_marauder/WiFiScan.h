@@ -218,7 +218,6 @@ class WiFiScan
 
     void packetMonitorMain(uint32_t currentTime);
     void eapolMonitorMain(uint32_t currentTime);
-    void changeChannel();
     void updateMidway();
     void tftDrawXScalButtons();
     void tftDrawYScaleButtons();
@@ -288,6 +287,7 @@ class WiFiScan
     String getStaMAC();
     String getApMAC();
     String freeRAM();
+    void changeChannel();
     void RunInfo();
     void RunShutdownWiFi();
     void RunShutdownBLE();
