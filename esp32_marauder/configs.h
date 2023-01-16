@@ -10,6 +10,7 @@
   //#define MARAUDER_KIT
   //#define GENERIC_ESP32
   #define MARAUDER_FLIPPER
+  #define DISABLE_RGB_LED
   //#define ESP32_LDDB
 
   #define MARAUDER_VERSION "v0.10.0"

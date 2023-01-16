@@ -1,6 +1,9 @@
 #include "flipperLED.h"
 
 void flipperLED::RunSetup() {
+#ifdef DISABLE_RGB_LED
+  return;
+#endif
   pinMode(B_PIN, OUTPUT);
   pinMode(G_PIN, OUTPUT);
   pinMode(R_PIN, OUTPUT);
@@ -26,6 +29,9 @@ void flipperLED::RunSetup() {
 }
 
 void flipperLED::attackLED() {
+#ifdef DISABLE_RGB_LED
+  return;
+#endif
   if (!settings_obj.loadSetting<bool>("EnableLED"))
     return;
     
@@ -37,6 +43,9 @@ void flipperLED::attackLED() {
 }
 
 void flipperLED::sniffLED() {
+#ifdef DISABLE_RGB_LED
+  return;
+#endif
   if (!settings_obj.loadSetting<bool>("EnableLED"))
     return;
     
@@ -48,6 +57,9 @@ void flipperLED::sniffLED() {
 }
 
 void flipperLED::offLED() {
+#ifdef DISABLE_RGB_LED
+  return;
+#endif
   if (!settings_obj.loadSetting<bool>("EnableLED"))
     return;
     
