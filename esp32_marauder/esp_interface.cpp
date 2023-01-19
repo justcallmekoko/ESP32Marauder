@@ -1,6 +1,6 @@
 #include "esp_interface.h"
 
-HardwareSerial MySerial(1);
+HardwareSerial MySerial(2);
 
 void EspInterface::begin() {
   pinMode(ESP_RST, OUTPUT);
