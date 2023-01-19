@@ -168,8 +168,8 @@
 #define PIN_D6  12  // GPIO12       HMISO
 #define PIN_D7  13  // GPIO13       HMOSI  RXD2
 #define PIN_D8  15  // GPIO15       HCS    TXD0 (must be low on boot to enter UART0 FLASH mode)
-#define PIN_D9   3  //              RXD0
-#define PIN_D10  1  //              TXD0
+#define PIN_D9  16  //              RXD2
+#define PIN_D10 17  //              TXD2
 
 #define PIN_MOSI 8  // SD1          FLASH and overlap mode
 #define PIN_MISO 7  // SD0
