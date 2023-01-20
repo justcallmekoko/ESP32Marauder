@@ -1,6 +1,6 @@
 #include "esp_interface.h"
 
-HardwareSerial MySerial(2);
+HardwareSerial MySerial(16,17);
 
 void EspInterface::begin() {
   pinMode(ESP_RST, OUTPUT);
@@ -92,7 +92,7 @@ void EspInterface::bootProgramMode() {
 
 void EspInterface::bootRunMode() {
   Serial.end();
-  Serial.begin(115200);
+  MySerial.begin(115200, 16, 17);
   Serial.println("[!] Setting ESP12 in run mode...");
   digitalWrite(ESP_ZERO, HIGH);
   delay(100);
