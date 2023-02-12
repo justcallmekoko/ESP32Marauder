@@ -19,10 +19,10 @@
 
 // Only ONE line below should be uncommented.  Add extra lines and files as needed.
 
-//#include <User_Setup.h>           // Default setup is root library folder
+#include <User_Setup.h>           //T-embed add Default setup is root library folder
 
 //#include <User_Setup_og_marauder.h>
-#include <User_Setup_marauder_mini.h>
+//#include <User_Setup_marauder_mini.h>  //Tembed remove
 
 //#include <User_Setups/Setup1_ILI9341.h>  // Setup file configured for my ILI9341
 //#include <User_Setups/Setup2_ST7735.h>   // Setup file configured for my ST7735
@@ -42,7 +42,7 @@
 //#include <User_Setups/Setup15_HX8357D.h>           // Setup file configured for HX8357D (untested)
 //#include <User_Setups/Setup16_ILI9488_Parallel.h>  // Setup file for the ESP32 with parallel bus TFT
 //#include <User_Setups/Setup17_ePaper.h>            // Setup file for any Waveshare ePaper display
-//#include <User_Setups/Setup18_ST7789.h>            // Setup file configured for ST7789
+#include <User_Setups/Setup18_ST7789.h>            //T-embed Setup file configured for ST7789
 
 //#include <User_Setups/Setup19_RM68140_Parallel.h>	 // Setup file configured for RM68140 with parallel bus
 
@@ -52,7 +52,7 @@
 //#include <User_Setups/Setup22_TTGO_T4.h>           // Setup file for ESP32 and TTGO T4 (BTC) ILI9341 SPI bus TFT
 //#include <User_Setups/Setup23_TTGO_TM.h>           // Setup file for ESP32 and TTGO TM ST7789 SPI bus TFT
 //#include <User_Setups/Setup24_ST7789.h>            // Setup file configured for ST7789 240 x 240
-//#include <User_Setups/Setup25_TTGO_T_Display.h>    // Setup file for ESP32 and TTGO T-Display ST7789V SPI bus TFT
+#include <User_Setups/Setup25_TTGO_T_Display.h>    //T-embed Setup file for ESP32 and TTGO T-Display ST7789V SPI bus TFT
 //#include <User_Setups/Setup26_TTGO_T_Wristband.h>  // Setup file for ESP32 and TTGO T-Wristband ST7735 SPI bus TFT
 
 //#include <User_Setups/Setup27_RPi_ST7796_ESP32.h>    // ESP32   RPi MHS-4.0 inch Display-B
