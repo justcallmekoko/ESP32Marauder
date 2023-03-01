@@ -1,3 +1,4 @@
 
 .vscode/arduino.json
 .vscode/c_cpp_properties.json
+esp32_marauder/.vscode/settings.json
