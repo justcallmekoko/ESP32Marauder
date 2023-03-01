@@ -345,5 +345,6 @@ class WiFiScan
     static void activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
+    static void addPacket(wifi_promiscuous_pkt_t *snifferPacket, int len);
 };
 #endif
