@@ -4,9 +4,9 @@
 
   #define POLISH_POTATO
 
-  // Indicates that it must redirect the stream with the captured packets to serial (1)
-  // If not defined, will write packages to SD card if supported
-  // #define WRITE_PACKETS_SERIAL
+  //Indicates that it must redirect the stream with the captured packets to serial (1)
+  //If not defined, will write packages to SD card if supported
+  //#define WRITE_PACKETS_SERIAL
   
   //#define MARAUDER_MINI
   //#define MARAUDER_V4
