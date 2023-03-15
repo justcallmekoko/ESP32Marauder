@@ -301,6 +301,7 @@ class WiFiScan
     //lv_obj_t * scr = lv_cont_create(NULL, NULL);
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT(); 
+    wifi_config_t ap_config;
 
     char* stringToChar(String string);
     void RunSetup();

@@ -369,10 +369,19 @@ void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_
     display_obj.touchToExit();
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
   #endif
+
+  //wifi_ap_config_t ap_config;
+  //ap_config.ssid_hidden = 1;
+
+  ap_config.ap.ssid_hidden = 1;
+  ap_config.ap.beacon_interval = 10000;
+  ap_config.ap.ssid_len = 0;
+        
   packets_sent = 0;
   esp_wifi_init(&cfg);
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
-  esp_wifi_set_mode(WIFI_AP_STA);
+  esp_wifi_set_mode(WIFI_MODE_AP);
+  esp_wifi_set_config(WIFI_IF_AP, &ap_config);
   esp_wifi_start();
   esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   
@@ -404,6 +413,7 @@ bool WiFiScan::shutdownWiFi() {
   
     esp_wifi_set_mode(WIFI_MODE_NULL);
     esp_wifi_stop();
+    esp_wifi_restore();
     esp_wifi_deinit();
 
     #ifdef MARAUDER_FLIPPER
