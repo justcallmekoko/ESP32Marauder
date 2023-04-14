@@ -134,7 +134,7 @@ jobs:
       - name: Configure SD Serial for Flipper Zero SD Serial
         run: |
           pwd
-          sed -i 's/^  \/\/#define WRITE_PACKETS_SERIAL/  #define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
+          sed -i 's/^  \/\/#define WRITE_PACKETS_SERIAL/  #define WRITE_PACKETS_SERIAL/' esp32_marauder/configs.h
           
       - name: Build Marauder SD Serial for Flipper Zero WiFi Dev Board
         uses: ArminJo/arduino-test-compile@v3.2.0
@@ -150,7 +150,7 @@ jobs:
       - name: Remove SD Serial
         run: |
           pwd
-          sed -i 's/^  #define WRITE_PACKETS_SERIAL/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
+          sed -i 's/^  #define WRITE_PACKETS_SERIAL/  \/\/#define WRITE_PACKETS_SERIAL/' esp32_marauder/configs.h
           
       - name: Build Marauder for Flipper Zero Multi Board
         uses: ArminJo/arduino-test-compile@v3.2.0
