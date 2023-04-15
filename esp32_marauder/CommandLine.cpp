@@ -495,7 +495,7 @@ void CommandLine::runCommand(String input) {
       #endif
       wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_GREEN);
       #else
-        Serial.println("BT not supported.");
+        Serial.println("Bluetooth not supported");
       #endif
     }
     // Bluetooth CC Skimmer scan
@@ -508,7 +508,7 @@ void CommandLine::runCommand(String input) {
       #endif
       wifi_scan_obj.StartScan(BT_SCAN_SKIMMERS, TFT_MAGENTA);
       #else
-        Serial.println("BT not supported.");
+        Serial.println("Bluetooth not supported");
       #endif
     }
 
