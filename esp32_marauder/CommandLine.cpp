@@ -99,6 +99,15 @@ bool CommandLine::hasSSIDs() {
   return true;
 }
 
+void CommandLine::showCounts(int selected, int unselected) {
+  Serial.print((String) selected + " selected");
+  
+  if (unselected != -1) 
+    Serial.print(", " + (String) unselected + " unselected");
+  
+  Serial.println("");
+}
+
 void CommandLine::runCommand(String input) {
   if (input != "")
     Serial.println("#" + input);
@@ -542,6 +551,7 @@ void CommandLine::runCommand(String input) {
   }
 
 
+  int count_selected = 0;
   //// WiFi aux commands
   // List access points
   if (cmd_args.get(0) == LIST_AP_CMD) {
@@ -552,20 +562,26 @@ void CommandLine::runCommand(String input) {
     // List APs
     if (ap_sw != -1) {
       for (int i = 0; i < access_points->size(); i++) {
-        if (access_points->get(i).selected)
+        if (access_points->get(i).selected) {
           Serial.println("[" + (String)i + "] " + access_points->get(i).essid + " " + (String)access_points->get(i).rssi + " (selected)");
+          count_selected += 1;
+        } 
         else
           Serial.println("[" + (String)i + "] " + access_points->get(i).essid + " " + (String)access_points->get(i).rssi);
       }
+      this->showCounts(count_selected);
     }
     // List SSIDs
     else if (ss_sw != -1) {
       for (int i = 0; i < ssids->size(); i++) {
-        if (ssids->get(i).selected)
+        if (ssids->get(i).selected) {
           Serial.println("[" + (String)i + "] " + ssids->get(i).essid + " (selected)");
+          count_selected += 1;
+        } 
         else
           Serial.println("[" + (String)i + "] " + ssids->get(i).essid);
       }
+      this->showCounts(count_selected);
     }
     // List Stations
     else if (cl_sw != -1) {
@@ -578,6 +594,7 @@ void CommandLine::runCommand(String input) {
             Serial.print("  [" + (String)access_points->get(x).stations->get(i) + "] ");
             Serial.print(sta_mac);
             Serial.println(" (selected)");
+            count_selected += 1;
           }
           else {
             Serial.print("  [" + (String)access_points->get(x).stations->get(i) + "] ");
@@ -585,6 +602,7 @@ void CommandLine::runCommand(String input) {
           }
         }
       }
+      this->showCounts(count_selected);
     }
     else {
       Serial.println("You did not specify which list to show");
@@ -598,6 +616,8 @@ void CommandLine::runCommand(String input) {
     int ss_sw = this->argSearch(&cmd_args, "-s");
     int cl_sw = this->argSearch(&cmd_args, "-c");
 
+    count_selected = 0;
+    int count_unselected = 0;
     // select Access points
     if (ap_sw != -1) {
       // Get list of indices
@@ -611,14 +631,17 @@ void CommandLine::runCommand(String input) {
             AccessPoint new_ap = access_points->get(i);
             new_ap.selected = false;
             access_points->set(i, new_ap);
+            count_unselected += 1;
           }
           else {
             // Select "unselected" ap
             AccessPoint new_ap = access_points->get(i);
             new_ap.selected = true;
             access_points->set(i, new_ap);
+            count_selected += 1;
           }
         }
+        this->showCounts(count_selected, count_unselected);
       }
       // Select specific APs
       else {
@@ -634,14 +657,17 @@ void CommandLine::runCommand(String input) {
             AccessPoint new_ap = access_points->get(index);
             new_ap.selected = false;
             access_points->set(index, new_ap);
+            count_unselected += 1;
           }
           else {
             // Select "unselected" ap
             AccessPoint new_ap = access_points->get(index);
             new_ap.selected = true;
             access_points->set(index, new_ap);
+            count_selected += 1;
           }
         }
+        this->showCounts(count_selected, count_unselected);
       }
     }
     else if (cl_sw != -1) {
@@ -655,14 +681,17 @@ void CommandLine::runCommand(String input) {
             Station new_sta = stations->get(i);
             new_sta.selected = false;
             stations->set(i, new_sta);
+            count_unselected += 1;
           }
           else {
             // Select "unselected" ap
             Station new_sta = stations->get(i);
             new_sta.selected = true;
             stations->set(i, new_sta);
+            count_selected += 1;
           }
         }
+        this->showCounts(count_selected, count_unselected);
       }
       // Select specific Stations
       else {
@@ -678,14 +707,17 @@ void CommandLine::runCommand(String input) {
             Station new_sta = stations->get(index);
             new_sta.selected = false;
             stations->set(index, new_sta);
+            count_unselected += 1;
           }
           else {
             // Select "unselected" ap
             Station new_sta = stations->get(index);
             new_sta.selected = true;
             stations->set(index, new_sta);
+            count_selected += 1;
           }
         }
+        this->showCounts(count_selected, count_unselected);
       }
     }
     // select ssids
@@ -705,14 +737,17 @@ void CommandLine::runCommand(String input) {
           ssid new_ssid = ssids->get(index);
           new_ssid.selected = false;
           ssids->set(index, new_ssid);
+          count_unselected += 1;
         }
         else {
           // Select "unselected" ap
           ssid new_ssid = ssids->get(index);
           new_ssid.selected = true;
           ssids->set(index, new_ssid);
+          count_selected += 1;
         }
       }
+      this->showCounts(count_selected, count_unselected);
     }
     else {
       Serial.println("You did not specify which list to select from");

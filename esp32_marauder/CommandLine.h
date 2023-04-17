@@ -115,6 +115,7 @@ class CommandLine {
     bool inRange(int max, int index);
     bool apSelected();
     bool hasSSIDs();
+    void showCounts(int selected, int unselected = -1);
     int argSearch(LinkedList<String>* cmd_args, String key);
 
     const char* ascii_art =
