@@ -291,7 +291,7 @@ void CommandLine::runCommand(String input) {
     }
     // Scan stations
     else if (cmd_args.get(0) == SCANSTA_CMD) {    
-      if(stations->size() < 1)
+      if(access_points->size() < 1)
         Serial.println("The AP list is empty. Scan APs first with " + (String)SCANAP_CMD);  
 
       Serial.println("Starting Station scan. Stop with " + (String)STOPSCAN_CMD);  
