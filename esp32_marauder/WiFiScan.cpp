@@ -199,66 +199,69 @@ int WiFiScan::generateSSIDs(int count) {
   return num_gen;
 }
 
-#ifdef HAS_SCREEN
-  void WiFiScan::joinWiFi(String ssid, String password)
-  {
-    static const char * btns[] ={text16, ""};
-    int count = 0;
-    
-    if ((WiFi.status() == WL_CONNECTED) && (ssid == connected_network) && (ssid != "")) {
+void WiFiScan::joinWiFi(String ssid, String password)
+{
+  static const char * btns[] ={text16, ""};
+  int count = 0;
+  
+  if ((WiFi.status() == WL_CONNECTED) && (ssid == connected_network) && (ssid != "")) {
+    #ifdef HAS_SCREEN
       lv_obj_t * mbox1 = lv_msgbox_create(lv_scr_act(), NULL);
       lv_msgbox_set_text(mbox1, text_table4[2]);
       lv_msgbox_add_btns(mbox1, btns);
       lv_obj_set_width(mbox1, 200);
       lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); /*Align to the corner*/
-      this->wifi_initialized = true;
-      return;
-    }
-    else if (WiFi.status() == WL_CONNECTED) {
-      Serial.println("Already connected. Disconnecting...");
-      WiFi.disconnect();
-    }
-  
-    esp_wifi_init(&cfg);
-    esp_wifi_set_storage(WIFI_STORAGE_RAM);
-    esp_wifi_set_mode(WIFI_MODE_NULL);
-    esp_wifi_start();
-      
-    WiFi.begin(ssid.c_str(), password.c_str());
-  
-    Serial.print("Connecting to WiFi");
-    while (WiFi.status() != WL_CONNECTED) {
-      delay(500);
-      Serial.print(".");
-      count++;
-      if (count == 10)
-      {
-        Serial.println("\nCould not connect to WiFi network");
+    #endif
+    this->wifi_initialized = true;
+    return;
+  }
+  else if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("Already connected. Disconnecting...");
+    WiFi.disconnect();
+  }
+
+  esp_wifi_init(&cfg);
+  esp_wifi_set_storage(WIFI_STORAGE_RAM);
+  esp_wifi_set_mode(WIFI_MODE_NULL);
+  esp_wifi_start();
+    
+  WiFi.begin(ssid.c_str(), password.c_str());
+
+  Serial.print("Connecting to WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+    count++;
+    if (count == 10)
+    {
+      Serial.println("\nCould not connect to WiFi network");
+      #ifdef HAS_SCREEN
         lv_obj_t * mbox1 = lv_msgbox_create(lv_scr_act(), NULL);
         lv_msgbox_set_text(mbox1, text_table4[3]);
         lv_msgbox_add_btns(mbox1, btns);
         lv_obj_set_width(mbox1, 200);
         //lv_obj_set_event_cb(mbox1, event_handler);
         lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); /*Align to the corner*/
-        WiFi.mode(WIFI_OFF);
-        return;
-      }
+      #endif
+      WiFi.mode(WIFI_OFF);
+      return;
     }
+  }
   
+  #ifdef HAS_SCREEN
     lv_obj_t * mbox1 = lv_msgbox_create(lv_scr_act(), NULL);
     lv_msgbox_set_text(mbox1, text_table4[4]);
     lv_msgbox_add_btns(mbox1, btns);
     lv_obj_set_width(mbox1, 200);
     lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); /*Align to the corner*/
+  #endif
+  connected_network = ssid;
   
-    connected_network = ssid;
-    
-    Serial.println("\nConnected to the WiFi network");
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
-    this->wifi_initialized = true;
-  }
-#endif
+  Serial.println("\nConnected to the WiFi network");
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+  this->wifi_initialized = true;
+}
 
 // Apply WiFi settings
 void WiFiScan::initWiFi(uint8_t scan_mode) {

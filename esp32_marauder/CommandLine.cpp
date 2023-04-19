@@ -9,6 +9,9 @@ void CommandLine::RunSetup() {
   Serial.println(F("\n\n--------------------------------\n"));
   Serial.println(F("         ESP32 Marauder      \n"));
   Serial.println("            " + version_number + "\n");
+  #ifdef WRITE_PACKETS_SERIAL
+    Serial.println(F("           >> Serial      \n"));
+  #endif
   Serial.println(F("       By: justcallmekoko\n"));
   Serial.println(F("--------------------------------\n\n"));
   
@@ -96,6 +99,15 @@ bool CommandLine::hasSSIDs() {
   return true;
 }
 
+void CommandLine::showCounts(int selected, int unselected) {
+  Serial.print((String) selected + " selected");
+  
+  if (unselected != -1) 
+    Serial.print(", " + (String) unselected + " unselected");
+  
+  Serial.println("");
+}
+
 void CommandLine::runCommand(String input) {
   if (input != "")
     Serial.println("#" + input);
@@ -137,6 +149,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_SEL_CMD_A);
     Serial.println(HELP_SSID_CMD_A);
     Serial.println(HELP_SSID_CMD_B);
+    Serial.println(HELP_JOIN_WIFI_CMD);
     
     // Bluetooth sniff/scan
     Serial.println(HELP_BT_SNIFF_CMD);
@@ -278,6 +291,9 @@ void CommandLine::runCommand(String input) {
     }
     // Scan stations
     else if (cmd_args.get(0) == SCANSTA_CMD) {    
+      if(access_points->size() < 1)
+        Serial.println("The AP list is empty. Scan APs first with " + (String)SCANAP_CMD);  
+
       Serial.println("Starting Station scan. Stop with " + (String)STOPSCAN_CMD);  
       #ifdef HAS_SCREEN
         display_obj.clearScreen();
@@ -350,7 +366,7 @@ void CommandLine::runCommand(String input) {
         Serial.println("Starting PMKID sniff with deauthentication on channel " + (String)wifi_scan_obj.set_channel + ". Stop with " + (String)STOPSCAN_CMD);
         wifi_scan_obj.StartScan(WIFI_SCAN_ACTIVE_EAPOL, TFT_VIOLET);
       }
-    }
+    }    
 
     //// WiFi attack commands
     // attack
@@ -490,21 +506,21 @@ void CommandLine::runCommand(String input) {
     //// Bluetooth scan/attack commands
     // Bluetooth scan
     if (cmd_args.get(0) == BT_SNIFF_CMD) {
-      Serial.println("Starting Bluetooth scan. Stop with " + (String)STOPSCAN_CMD);
-      #ifdef HAS_SCREEN
-        display_obj.clearScreen();
-        menu_function_obj.drawStatusBar();
-      #endif
-      wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_GREEN);
+        Serial.println("Starting Bluetooth scan. Stop with " + (String)STOPSCAN_CMD);
+        #ifdef HAS_SCREEN
+          display_obj.clearScreen();
+          menu_function_obj.drawStatusBar();
+        #endif
+        wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_GREEN);
     }
     // Bluetooth CC Skimmer scan
     else if (cmd_args.get(0) == BT_SKIM_CMD) {
-      Serial.println("Starting Bluetooth CC Skimmer scan. Stop with " + (String)STOPSCAN_CMD);
-      #ifdef HAS_SCREEN
-        display_obj.clearScreen();
-        menu_function_obj.drawStatusBar();
-      #endif
-      wifi_scan_obj.StartScan(BT_SCAN_SKIMMERS, TFT_MAGENTA);
+        Serial.println("Starting Bluetooth CC Skimmer scan. Stop with " + (String)STOPSCAN_CMD);
+        #ifdef HAS_SCREEN
+          display_obj.clearScreen();
+          menu_function_obj.drawStatusBar();
+        #endif
+        wifi_scan_obj.StartScan(BT_SCAN_SKIMMERS, TFT_MAGENTA);
     }
 
     // Update command
@@ -538,6 +554,7 @@ void CommandLine::runCommand(String input) {
   }
 
 
+  int count_selected = 0;
   //// WiFi aux commands
   // List access points
   if (cmd_args.get(0) == LIST_AP_CMD) {
@@ -548,20 +565,26 @@ void CommandLine::runCommand(String input) {
     // List APs
     if (ap_sw != -1) {
       for (int i = 0; i < access_points->size(); i++) {
-        if (access_points->get(i).selected)
+        if (access_points->get(i).selected) {
           Serial.println("[" + (String)i + "] " + access_points->get(i).essid + " " + (String)access_points->get(i).rssi + " (selected)");
+          count_selected += 1;
+        } 
         else
           Serial.println("[" + (String)i + "] " + access_points->get(i).essid + " " + (String)access_points->get(i).rssi);
       }
+      this->showCounts(count_selected);
     }
     // List SSIDs
     else if (ss_sw != -1) {
       for (int i = 0; i < ssids->size(); i++) {
-        if (ssids->get(i).selected)
+        if (ssids->get(i).selected) {
           Serial.println("[" + (String)i + "] " + ssids->get(i).essid + " (selected)");
+          count_selected += 1;
+        } 
         else
           Serial.println("[" + (String)i + "] " + ssids->get(i).essid);
       }
+      this->showCounts(count_selected);
     }
     // List Stations
     else if (cl_sw != -1) {
@@ -574,6 +597,7 @@ void CommandLine::runCommand(String input) {
             Serial.print("  [" + (String)access_points->get(x).stations->get(i) + "] ");
             Serial.print(sta_mac);
             Serial.println(" (selected)");
+            count_selected += 1;
           }
           else {
             Serial.print("  [" + (String)access_points->get(x).stations->get(i) + "] ");
@@ -581,6 +605,7 @@ void CommandLine::runCommand(String input) {
           }
         }
       }
+      this->showCounts(count_selected);
     }
     else {
       Serial.println("You did not specify which list to show");
@@ -594,6 +619,8 @@ void CommandLine::runCommand(String input) {
     int ss_sw = this->argSearch(&cmd_args, "-s");
     int cl_sw = this->argSearch(&cmd_args, "-c");
 
+    count_selected = 0;
+    int count_unselected = 0;
     // select Access points
     if (ap_sw != -1) {
       // Get list of indices
@@ -607,14 +634,17 @@ void CommandLine::runCommand(String input) {
             AccessPoint new_ap = access_points->get(i);
             new_ap.selected = false;
             access_points->set(i, new_ap);
+            count_unselected += 1;
           }
           else {
             // Select "unselected" ap
             AccessPoint new_ap = access_points->get(i);
             new_ap.selected = true;
             access_points->set(i, new_ap);
+            count_selected += 1;
           }
         }
+        this->showCounts(count_selected, count_unselected);
       }
       // Select specific APs
       else {
@@ -630,14 +660,17 @@ void CommandLine::runCommand(String input) {
             AccessPoint new_ap = access_points->get(index);
             new_ap.selected = false;
             access_points->set(index, new_ap);
+            count_unselected += 1;
           }
           else {
             // Select "unselected" ap
             AccessPoint new_ap = access_points->get(index);
             new_ap.selected = true;
             access_points->set(index, new_ap);
+            count_selected += 1;
           }
         }
+        this->showCounts(count_selected, count_unselected);
       }
     }
     else if (cl_sw != -1) {
@@ -651,14 +684,17 @@ void CommandLine::runCommand(String input) {
             Station new_sta = stations->get(i);
             new_sta.selected = false;
             stations->set(i, new_sta);
+            count_unselected += 1;
           }
           else {
             // Select "unselected" ap
             Station new_sta = stations->get(i);
             new_sta.selected = true;
             stations->set(i, new_sta);
+            count_selected += 1;
           }
         }
+        this->showCounts(count_selected, count_unselected);
       }
       // Select specific Stations
       else {
@@ -674,14 +710,17 @@ void CommandLine::runCommand(String input) {
             Station new_sta = stations->get(index);
             new_sta.selected = false;
             stations->set(index, new_sta);
+            count_unselected += 1;
           }
           else {
             // Select "unselected" ap
             Station new_sta = stations->get(index);
             new_sta.selected = true;
             stations->set(index, new_sta);
+            count_selected += 1;
           }
         }
+        this->showCounts(count_selected, count_unselected);
       }
     }
     // select ssids
@@ -701,14 +740,17 @@ void CommandLine::runCommand(String input) {
           ssid new_ssid = ssids->get(index);
           new_ssid.selected = false;
           ssids->set(index, new_ssid);
+          count_unselected += 1;
         }
         else {
           // Select "unselected" ap
           ssid new_ssid = ssids->get(index);
           new_ssid.selected = true;
           ssids->set(index, new_ssid);
+          count_selected += 1;
         }
       }
+      this->showCounts(count_selected, count_unselected);
     }
     else {
       Serial.println("You did not specify which list to select from");
@@ -751,5 +793,42 @@ void CommandLine::runCommand(String input) {
       Serial.println("You did not specify whether to add or remove SSIDs");
       return;
     }
+  }
+  // Join WiFi
+  else if (cmd_args.get(0) == JOINWIFI_CMD) {
+    int n_sw = this->argSearch(&cmd_args, "-n"); // name
+    int a_sw = this->argSearch(&cmd_args, "-a"); // access point
+    int s_sw = this->argSearch(&cmd_args, "-s"); // ssid
+    int p_sw = this->argSearch(&cmd_args, "-p");   
+    
+    String essid = "";
+    String pwx = "";
+    
+    if (s_sw != -1) {
+      int index = cmd_args.get(s_sw + 1).toInt();
+      if (!this->inRange(ssids->size(), index)) {
+        Serial.println("Index not in range: " + (String)index);
+        return;
+      }
+      essid = ssids->get(index).essid;
+    } else if (a_sw != -1) {
+      int index = cmd_args.get(a_sw + 1).toInt();
+      if (!this->inRange(access_points->size(), index)) {
+        Serial.println("Index not in range: " + (String)index);
+        return;
+      }
+      essid = access_points->get(index).essid;
+    } else if (n_sw != -1) {
+      essid = cmd_args.get(n_sw + 1);
+    } else {
+      Serial.println("You must specify an access point or ssid");
+      return;
+    }
+    
+    if (p_sw != -1) {
+      pwx = cmd_args.get(p_sw + 1);
+    }
+    Serial.println("Attempting to join WiFi with ssid " + (String)essid);
+    wifi_scan_obj.joinWiFi(essid, pwx);
   }
 }
