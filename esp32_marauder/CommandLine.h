@@ -110,6 +110,8 @@ class CommandLine {
   private:
     String getSerialInput();
     LinkedList<String> parseCommand(String input, char* delim);
+    String toLowerCase(String str);
+    void filterAccessPoints(String filter);
     void runCommand(String input);
     bool checkValueExists(LinkedList<String>* cmd_args_list, int index);
     bool inRange(int max, int index);

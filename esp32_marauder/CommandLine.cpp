@@ -41,21 +41,38 @@ LinkedList<String> CommandLine::parseCommand(String input, char* delim) {
   LinkedList<String> cmd_args;
 
   bool inQuote = false;
+  bool inApostrophe = false;
   String buffer = "";
 
   for (int i = 0; i < input.length(); i++) {
     char c = input.charAt(i);
-    // Do not break parameters that are enclosed in quotes
+
     if (c == '"') {
-      inQuote = !inQuote;
-    } else if (!inQuote && strchr(delim, c) != NULL) {
+      // Check if the quote is within an apostrophe
+      if (inApostrophe) {
+        buffer += c;
+      } else {
+        inQuote = !inQuote;
+      }
+    } else if (c == '\'') {
+      // Check if the apostrophe is within a quote
+      if (inQuote) {
+        buffer += c;
+      } else {
+        inApostrophe = !inApostrophe;
+      }
+    } else if (!inQuote && !inApostrophe && strchr(delim, c) != NULL) {
       cmd_args.add(buffer);
       buffer = "";
     } else {
       buffer += c;
     }
   }
-  cmd_args.add(buffer);
+
+  // Add the last argument
+  if (!buffer.isEmpty()) {
+    cmd_args.add(buffer);
+  }
 
   return cmd_args;
 }
@@ -106,6 +123,76 @@ void CommandLine::showCounts(int selected, int unselected) {
     Serial.print(", " + (String) unselected + " unselected");
   
   Serial.println("");
+}
+
+String CommandLine::toLowerCase(String str) {
+  String result = str;
+  for (int i = 0; i < str.length(); i++) {
+    int charValue = str.charAt(i);
+    if (charValue >= 65 && charValue <= 90) { // ASCII codes for uppercase letters
+      charValue += 32;
+      result.setCharAt(i, char(charValue));
+    }
+  }
+  return result;
+}
+
+void CommandLine::filterAccessPoints(String filter) {
+  int count_selected = 0;
+  int count_unselected = 0;
+
+  // Split the filter string into individual filters
+  LinkedList<String> filters;
+  int start = 0;
+  int end = filter.indexOf(" or ");
+  while (end != -1) {
+    filters.add(filter.substring(start, end));
+    start = end + 4;
+    end = filter.indexOf(" or ", start);
+  }
+  filters.add(filter.substring(start));
+
+  // Loop over each access point and check if it matches any of the filters
+  for (int i = 0; i < access_points->size(); i++) {
+    bool matchesFilter = false;
+    for (int j = 0; j < filters.size(); j++) {
+      String f = toLowerCase(filters.get(j));
+      if (f.substring(0, 7) == "equals ") {
+        String ssidEquals = f.substring(7);
+        if ((ssidEquals.charAt(0) == '\"' && ssidEquals.charAt(ssidEquals.length() - 1) == '\"' && ssidEquals.length() > 1) ||
+            (ssidEquals.charAt(0) == '\'' && ssidEquals.charAt(ssidEquals.length() - 1) == '\'' && ssidEquals.length() > 1)) {
+          ssidEquals = ssidEquals.substring(1, ssidEquals.length() - 1);
+        }
+        if (access_points->get(i).essid.equalsIgnoreCase(ssidEquals)) {
+          matchesFilter = true;
+          break;
+        }
+      } else if (f.substring(0, 9) == "contains ") {
+        String ssidContains = f.substring(9);
+        if ((ssidContains.charAt(0) == '\"' && ssidContains.charAt(ssidContains.length() - 1) == '\"' && ssidContains.length() > 1) ||
+            (ssidContains.charAt(0) == '\'' && ssidContains.charAt(ssidContains.length() - 1) == '\'' && ssidContains.length() > 1)) {
+          ssidContains = ssidContains.substring(1, ssidContains.length() - 1);
+        }
+        String essid = toLowerCase(access_points->get(i).essid);
+        if (essid.indexOf(ssidContains) != -1) {
+          matchesFilter = true;
+          break;
+        }
+      }
+    }
+    // Toggles the selected state of the AP
+    AccessPoint new_ap = access_points->get(i);
+    new_ap.selected = matchesFilter;
+    access_points->set(i, new_ap);
+
+    if (matchesFilter) {
+      count_selected++;
+    } else {
+      count_unselected++;
+    }
+  }
+
+  this->showCounts(count_selected, count_unselected);
 }
 
 void CommandLine::runCommand(String input) {
@@ -618,59 +705,67 @@ void CommandLine::runCommand(String input) {
     int ap_sw = this->argSearch(&cmd_args, "-a");
     int ss_sw = this->argSearch(&cmd_args, "-s");
     int cl_sw = this->argSearch(&cmd_args, "-c");
+    int filter_sw = this->argSearch(&cmd_args, "-f");
 
     count_selected = 0;
     int count_unselected = 0;
     // select Access points
     if (ap_sw != -1) {
-      // Get list of indices
-      LinkedList<String> ap_index = this->parseCommand(cmd_args.get(ap_sw + 1), ",");
 
-      // Select ALL APs
-      if (cmd_args.get(ap_sw + 1) == "all") {
-        for (int i = 0; i < access_points->size(); i++) {
-          if (access_points->get(i).selected) {
-            // Unselect "selected" ap
-            AccessPoint new_ap = access_points->get(i);
-            new_ap.selected = false;
-            access_points->set(i, new_ap);
-            count_unselected += 1;
+      // If the filters parameter was specified
+      if (filter_sw != -1) {
+        String filter_ap = cmd_args.get(filter_sw + 1);
+        this->filterAccessPoints(filter_ap);
+      } else {
+        // Get list of indices
+        LinkedList<String> ap_index = this->parseCommand(cmd_args.get(ap_sw + 1), ",");
+
+        // Select ALL APs
+        if (cmd_args.get(ap_sw + 1) == "all") {
+          for (int i = 0; i < access_points->size(); i++) {
+            if (access_points->get(i).selected) {
+              // Unselect "selected" ap
+              AccessPoint new_ap = access_points->get(i);
+              new_ap.selected = false;
+              access_points->set(i, new_ap);
+              count_unselected += 1;
+            }
+            else {
+              // Select "unselected" ap
+              AccessPoint new_ap = access_points->get(i);
+              new_ap.selected = true;
+              access_points->set(i, new_ap);
+              count_selected += 1;
+            }
           }
-          else {
-            // Select "unselected" ap
-            AccessPoint new_ap = access_points->get(i);
-            new_ap.selected = true;
-            access_points->set(i, new_ap);
-            count_selected += 1;
-          }
+          this->showCounts(count_selected, count_unselected);
         }
-        this->showCounts(count_selected, count_unselected);
-      }
-      // Select specific APs
-      else {
-        // Mark APs as selected
-        for (int i = 0; i < ap_index.size(); i++) {
-          int index = ap_index.get(i).toInt();
-          if (!this->inRange(access_points->size(), index)) {
-            Serial.println("Index not in range: " + (String)index);
-            continue;
+        // Select specific APs
+        else {
+          // Mark APs as selected
+          for (int i = 0; i < ap_index.size(); i++) {
+            int index = ap_index.get(i).toInt();
+            if (!this->inRange(access_points->size(), index)) {
+              Serial.println("Index not in range: " + (String)index);
+              continue;
+            }
+            if (access_points->get(index).selected) {
+              // Unselect "selected" ap
+              AccessPoint new_ap = access_points->get(index);
+              new_ap.selected = false;
+              access_points->set(index, new_ap);
+              count_unselected += 1;
+            }
+            else {
+              // Select "unselected" ap
+              AccessPoint new_ap = access_points->get(index);
+              new_ap.selected = true;
+              access_points->set(index, new_ap);
+              count_selected += 1;
+            }
           }
-          if (access_points->get(index).selected) {
-            // Unselect "selected" ap
-            AccessPoint new_ap = access_points->get(index);
-            new_ap.selected = false;
-            access_points->set(index, new_ap);
-            count_unselected += 1;
-          }
-          else {
-            // Select "unselected" ap
-            AccessPoint new_ap = access_points->get(index);
-            new_ap.selected = true;
-            access_points->set(index, new_ap);
-            count_selected += 1;
-          }
+          this->showCounts(count_selected, count_unselected);
         }
-        this->showCounts(count_selected, count_unselected);
       }
     }
     else if (cl_sw != -1) {
