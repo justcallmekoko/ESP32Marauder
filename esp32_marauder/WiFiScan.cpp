@@ -2938,6 +2938,8 @@ void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
           display_obj.loading = false;
         }
       #endif
+    #else
+      Serial.println(addr);    
     #endif
     
 //    for (int i = 0; i < len; i++) {
