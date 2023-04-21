@@ -593,21 +593,29 @@ void CommandLine::runCommand(String input) {
     //// Bluetooth scan/attack commands
     // Bluetooth scan
     if (cmd_args.get(0) == BT_SNIFF_CMD) {
+      #ifdef HAS_BT
         Serial.println("Starting Bluetooth scan. Stop with " + (String)STOPSCAN_CMD);
         #ifdef HAS_SCREEN
           display_obj.clearScreen();
           menu_function_obj.drawStatusBar();
         #endif
         wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_GREEN);
+      #else
+        Serial.println("Bluetooth not supported");
+      #endif
     }
     // Bluetooth CC Skimmer scan
     else if (cmd_args.get(0) == BT_SKIM_CMD) {
+      #ifdef HAS_BT
         Serial.println("Starting Bluetooth CC Skimmer scan. Stop with " + (String)STOPSCAN_CMD);
         #ifdef HAS_SCREEN
           display_obj.clearScreen();
           menu_function_obj.drawStatusBar();
         #endif
         wifi_scan_obj.StartScan(BT_SCAN_SKIMMERS, TFT_MAGENTA);
+      #else
+        Serial.println("Bluetooth not supported");
+      #endif
     }
 
     // Update command
