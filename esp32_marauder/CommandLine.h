@@ -60,6 +60,7 @@ const char PROGMEM ATTACK_TYPE_RR[] = "rickroll";
 const char PROGMEM LIST_AP_CMD[] = "list";
 const char PROGMEM SEL_CMD[] = "select";
 const char PROGMEM SSID_CMD[] = "ssid";
+const char PROGMEM JOINWIFI_CMD[] = "join";
 
 // Bluetooth sniff/scan
 const char PROGMEM BT_SNIFF_CMD[] = "sniffbt";
@@ -86,6 +87,7 @@ const char PROGMEM HELP_SNIFF_ESP_CMD[] = "sniffesp";
 const char PROGMEM HELP_SNIFF_DEAUTH_CMD[] = "sniffdeauth";
 const char PROGMEM HELP_SNIFF_PMKID_CMD[] = "sniffpmkid [-c <channel>]";
 const char PROGMEM HELP_STOPSCAN_CMD[] = "stopscan";
+const char PROGMEM HELP_JOIN_WIFI_CMD[] = "join [-n <ssid_name>/-s <ssid_index>/-a <access_point_index>] -p <password>";
 
 // WiFi attack
 const char PROGMEM HELP_ATTACK_CMD[] = "attack -t <beacon [-l/-r/-a]/deauth [-c]/[-s <src mac>] [-d <dst mac>]/probe/rickroll>";
@@ -108,11 +110,14 @@ class CommandLine {
   private:
     String getSerialInput();
     LinkedList<String> parseCommand(String input, char* delim);
+    String toLowerCase(String str);
+    void filterAccessPoints(String filter);
     void runCommand(String input);
     bool checkValueExists(LinkedList<String>* cmd_args_list, int index);
     bool inRange(int max, int index);
     bool apSelected();
     bool hasSSIDs();
+    void showCounts(int selected, int unselected = -1);
     int argSearch(LinkedList<String>* cmd_args, String key);
 
     const char* ascii_art =
