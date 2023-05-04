@@ -85,7 +85,7 @@ const char PROGMEM HELP_SNIFF_PROBE_CMD[] = "sniffprobe";
 const char PROGMEM HELP_SNIFF_PWN_CMD[] = "sniffpwn";
 const char PROGMEM HELP_SNIFF_ESP_CMD[] = "sniffesp";
 const char PROGMEM HELP_SNIFF_DEAUTH_CMD[] = "sniffdeauth";
-const char PROGMEM HELP_SNIFF_PMKID_CMD[] = "sniffpmkid [-c <channel>]";
+const char PROGMEM HELP_SNIFF_PMKID_CMD[] = "sniffpmkid [-c <channel>][-d][-l]";
 const char PROGMEM HELP_STOPSCAN_CMD[] = "stopscan";
 const char PROGMEM HELP_JOIN_WIFI_CMD[] = "join [-n <ssid_name>/-s <ssid_index>/-a <access_point_index>] -p <password>";
 
@@ -96,7 +96,7 @@ const char PROGMEM HELP_ATTACK_CMD[] = "attack -t <beacon [-l/-r/-a]/deauth [-c]
 const char PROGMEM HELP_LIST_AP_CMD_A[] = "list -s";
 const char PROGMEM HELP_LIST_AP_CMD_B[] = "list -a";
 const char PROGMEM HELP_LIST_AP_CMD_C[] = "list -c";
-const char PROGMEM HELP_SEL_CMD_A[] = "select -a/-s/-c <index (comma separated)>";
+const char PROGMEM HELP_SEL_CMD_A[] = "select -a/-s/-c <index (comma separated)>/-f \"equals <String> or contains <String>\"";
 const char PROGMEM HELP_SSID_CMD_A[] = "ssid -a [-g <count>/-n <name>]";
 const char PROGMEM HELP_SSID_CMD_B[] = "ssid -r <index>";
 
