@@ -437,6 +437,14 @@ void CommandLine::runCommand(String input) {
     else if (cmd_args.get(0) == SNIFF_PMKID_CMD) {
       int ch_sw = this->argSearch(&cmd_args, "-c");
       int d_sw = this->argSearch(&cmd_args, "-d"); // Deauth for pmkid
+      int l_sw = this->argSearch(&cmd_args, "-l"); // Only run on list
+
+      if (l_sw != -1) {
+        if (!this->apSelected()) {
+          Serial.println("You don't have any targets selected. Use " + (String)SEL_CMD);
+          return;
+        }
+      }
       
       if (ch_sw != -1) {
         wifi_scan_obj.set_channel = cmd_args.get(ch_sw + 1).toInt();
@@ -448,6 +456,10 @@ void CommandLine::runCommand(String input) {
       if (d_sw == -1) {
         Serial.println("Starting PMKID sniff on channel " + (String)wifi_scan_obj.set_channel + ". Stop with " + (String)STOPSCAN_CMD);
         wifi_scan_obj.StartScan(WIFI_SCAN_EAPOL, TFT_VIOLET);
+      }
+      else if ((d_sw != -1) && (l_sw != -1)) {
+        Serial.println("Starting TARGETED PMKID sniff with deauthentication on channel " + (String)wifi_scan_obj.set_channel + ". Stop with " + (String)STOPSCAN_CMD);
+        wifi_scan_obj.StartScan(WIFI_SCAN_ACTIVE_LIST_EAPOL, TFT_VIOLET);
       }
       else {
         Serial.println("Starting PMKID sniff with deauthentication on channel " + (String)wifi_scan_obj.set_channel + ". Stop with " + (String)STOPSCAN_CMD);
@@ -661,11 +673,11 @@ void CommandLine::runCommand(String input) {
     if (ap_sw != -1) {
       for (int i = 0; i < access_points->size(); i++) {
         if (access_points->get(i).selected) {
-          Serial.println("[" + (String)i + "] " + access_points->get(i).essid + " " + (String)access_points->get(i).rssi + " (selected)");
+          Serial.println("[" + (String)i + "][CH:" + (String)access_points->get(i).channel + "] " + access_points->get(i).essid + " " + (String)access_points->get(i).rssi + " (selected)");
           count_selected += 1;
         } 
         else
-          Serial.println("[" + (String)i + "] " + access_points->get(i).essid + " " + (String)access_points->get(i).rssi);
+          Serial.println("[" + (String)i + "][CH:" + (String)access_points->get(i).channel + "] " + access_points->get(i).essid + " " + (String)access_points->get(i).rssi);
       }
       this->showCounts(count_selected);
     }

@@ -296,6 +296,8 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     RunEapolScan(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_ACTIVE_EAPOL)
     RunEapolScan(scan_mode, color);
+  else if (scan_mode == WIFI_SCAN_ACTIVE_LIST_EAPOL)
+    RunEapolScan(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_AP)
     RunBeaconScan(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_RAW_CAPTURE)
@@ -471,6 +473,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   (currentScanMode == WIFI_SCAN_ESPRESSIF) ||
   (currentScanMode == WIFI_SCAN_EAPOL) ||
   (currentScanMode == WIFI_SCAN_ACTIVE_EAPOL) ||
+  (currentScanMode == WIFI_SCAN_ACTIVE_LIST_EAPOL) ||
   (currentScanMode == WIFI_SCAN_ALL) ||
   (currentScanMode == WIFI_SCAN_DEAUTH) ||
   (currentScanMode == WIFI_ATTACK_BEACON_LIST) ||
@@ -1053,6 +1056,8 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
   if (scan_mode == WIFI_SCAN_ACTIVE_EAPOL)
+    esp_wifi_set_promiscuous_rx_cb(&activeEapolSnifferCallback);
+  else if (scan_mode == WIFI_SCAN_ACTIVE_LIST_EAPOL)
     esp_wifi_set_promiscuous_rx_cb(&activeEapolSnifferCallback);
   else
     esp_wifi_set_promiscuous_rx_cb(&eapolSnifferCallback);
@@ -2961,6 +2966,8 @@ void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 
 void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 {
+  extern WiFiScan wifi_scan_obj;
+
   bool send_deauth = settings_obj.loadSetting<bool>(text_table4[5]);
   
   wifi_promiscuous_pkt_t *snifferPacket = (wifi_promiscuous_pkt_t*)buf;
@@ -2975,13 +2982,46 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
     const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)snifferPacket->payload;
     const WifiMgmtHdr *hdr = &ipkt->hdr;
   }
-
+  
   // Found beacon frame. Decide whether to deauth
 
-  if (snifferPacket->payload[0] == 0x80) {    
+  if (snifferPacket->payload[0] == 0x80) {   
+
+    // Do target stuff
+    if (wifi_scan_obj.currentScanMode == WIFI_SCAN_ACTIVE_LIST_EAPOL) {
+      bool found = false;
+
+      // Check list of APs
+      for (int i = 0; i < access_points->size(); i++) {
+        if (access_points->get(i).selected) {
+          uint8_t addr[] = {snifferPacket->payload[10],
+                            snifferPacket->payload[11],
+                            snifferPacket->payload[12],
+                            snifferPacket->payload[13],
+                            snifferPacket->payload[14],
+                            snifferPacket->payload[15]};
+          // Compare AP bssid to ssid of recvd packet
+          for (int x = 0; x < 6; x++) {
+            if (addr[x] != access_points->get(i).bssid[x]) {
+              found = false;
+              break;
+            }
+            else
+              found = true;
+          }
+          if (found) {
+            Serial.println("Received beacon from " + access_points->get(i).essid + ". Deauthenticating...");
+            break;
+          }
+        }
+      }
+      if (!found)
+        return;      
+    } // End targeted stuff 
     // Build packet
 
-    //Serial.println("Recieved beacon frame");
+    //Serial.println("Recieved beacon frame");    
+    
 
     uint8_t new_packet[26] = {
                               0xc0, 0x00, 0x3a, 0x01,
@@ -3525,6 +3565,16 @@ void WiFiScan::main(uint32_t currentTime)
     #ifdef HAS_SCREEN
       eapolMonitorMain(currentTime);
     #endif
+  }
+  else if (currentScanMode == WIFI_SCAN_ACTIVE_LIST_EAPOL) {
+    if (currentTime - initTime >= this->channel_hop_delay * 1000)
+    {
+      initTime = millis();
+      channelHop();
+    }
+    #ifdef HAS_SCREEN
+      eapolMonitorMain(currentTime);
+    #endif    
   }
   else if (currentScanMode == WIFI_ATTACK_AUTH) {
     for (int i = 0; i < 55; i++)

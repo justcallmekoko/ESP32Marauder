@@ -987,6 +987,7 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == BT_SCAN_SKIMMERS) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_EAPOL) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_ACTIVE_EAPOL) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_ACTIVE_LIST_EAPOL) ||
           (wifi_scan_obj.currentScanMode == WIFI_PACKET_MONITOR))
       {
         wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
