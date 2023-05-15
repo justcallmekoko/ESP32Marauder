@@ -20,11 +20,17 @@ void Display::RunSetup()
   #endif
   
   tft.init();
-  tft.setRotation(0); // Portrait
+  #ifndef MARAUDER_M5STICKC
+    tft.setRotation(0); // Portrait
+  #endif
+
+  #ifdef MARAUDER_M5STICKC
+    tft.setRotation(3);
+  #endif
 
   tft.setCursor(0, 0);
 
-  #ifndef MARAUDER_MINI
+  #ifdef HAS_ILI9341
 
     #ifdef TFT_SHIELD
       uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield
@@ -380,7 +386,7 @@ void Display::setupScrollArea(uint16_t tfa, uint16_t bfa) {
   //Serial.println("   tfa: " + (String)tfa);
   //Serial.println("   bfa: " + (String)bfa);
   //Serial.println("yStart: " + (String)this->yStart);
-  #ifndef MARAUDER_MINI
+  #ifdef HAS_ILI9341
     tft.writecommand(ILI9341_VSCRDEF); // Vertical scroll definition
     tft.writedata(tfa >> 8);           // Top Fixed Area line count
     tft.writedata(tfa);
@@ -393,7 +399,7 @@ void Display::setupScrollArea(uint16_t tfa, uint16_t bfa) {
 
 
 void Display::scrollAddress(uint16_t vsp) {
-  #ifndef MARAUDER_MINI
+  #ifdef HAS_ILI9341
     tft.writecommand(ILI9341_VSCRSADD); // Vertical scrolling pointer
     tft.writedata(vsp>>8);
     tft.writedata(vsp);

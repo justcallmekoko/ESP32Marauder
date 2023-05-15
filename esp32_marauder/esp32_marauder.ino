@@ -42,13 +42,25 @@ https://www.online-utility.org/image/convert/to/XBM
   #include "a32u4_interface.h"
 #endif
 
-#ifdef MARAUDER_MINI
+#ifdef HAS_BUTTONS
   #include <SwitchLib.h>
-  SwitchLib u_btn = SwitchLib(U_BTN, 1000, true);
-  SwitchLib d_btn = SwitchLib(D_BTN, 1000, true);
-  SwitchLib l_btn = SwitchLib(L_BTN, 1000, true);
-  SwitchLib r_btn = SwitchLib(R_BTN, 1000, true);
-  SwitchLib c_btn = SwitchLib(C_BTN, 1000, true);
+  
+  #if (U_BTN >= 0)
+    SwitchLib u_btn = SwitchLib(U_BTN, 1000, true);
+  #endif
+  #if (D_BTN >= 0)
+    SwitchLib d_btn = SwitchLib(D_BTN, 1000, true);
+  #endif
+  #if (L_BTN >= 0)
+    SwitchLib l_btn = SwitchLib(L_BTN, 1000, true);
+  #endif
+  #if (R_BTN >= 0)
+    SwitchLib r_btn = SwitchLib(R_BTN, 1000, true);
+  #endif
+  #if (C_BTN >= 0)
+    SwitchLib c_btn = SwitchLib(C_BTN, 1000, true);
+  #endif
+
 #endif
 
 WiFiScan wifi_scan_obj;
@@ -67,6 +79,10 @@ flipperLED flipper_led;
   Display display_obj;
   MenuFunctions menu_function_obj;
   A32u4Interface a32u4_obj;
+#endif
+
+#ifdef MARAUDER_M5STICKC
+  AXP192 axp192_obj;
 #endif
 
 const String PROGMEM version_number = MARAUDER_VERSION;
@@ -103,6 +119,10 @@ void backlightOff() {
 
 void setup()
 {
+  #ifdef MARAUDER_M5STICKC
+    axp192_obj.begin();
+  #endif
+  
   pinMode(FLASH_BUTTON, INPUT);
 
   #ifdef HAS_SCREEN
