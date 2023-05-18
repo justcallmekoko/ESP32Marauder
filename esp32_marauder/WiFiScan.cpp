@@ -300,6 +300,8 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     RunEapolScan(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_AP)
     RunBeaconScan(scan_mode, color);
+  else if (scan_mode == WIFI_SCAN_SIG_STREN)
+    RunBeaconScan(scan_mode, color);    
   else if (scan_mode == WIFI_SCAN_RAW_CAPTURE)
     RunRawScan(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_STATION)
@@ -467,6 +469,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   (currentScanMode == WIFI_SCAN_AP) ||
   (currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
   (currentScanMode == WIFI_SCAN_STATION) ||
+  (currentScanMode == WIFI_SCAN_SIG_STREN) ||
   (currentScanMode == WIFI_SCAN_TARGET_AP) ||
   (currentScanMode == WIFI_SCAN_TARGET_AP_FULL) ||
   (currentScanMode == WIFI_SCAN_PWN) ||
@@ -1887,6 +1890,8 @@ void WiFiScan::apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 
 void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 {
+  extern WiFiScan wifi_scan_obj;
+
   wifi_promiscuous_pkt_t *snifferPacket = (wifi_promiscuous_pkt_t*)buf;
   WifiMgmtHdr *frameControl = (WifiMgmtHdr*)snifferPacket->payload;
   wifi_pkt_rx_ctrl_t ctrl = (wifi_pkt_rx_ctrl_t)snifferPacket->rx_ctrl;
@@ -1909,45 +1914,90 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
     #endif
     if ((snifferPacket->payload[0] == 0x80) && (buf == 0))
     {
-      delay(random(0, 10));
-      Serial.print("RSSI: ");
-      Serial.print(snifferPacket->rx_ctrl.rssi);
-      Serial.print(" Ch: ");
-      Serial.print(snifferPacket->rx_ctrl.channel);
-      Serial.print(" BSSID: ");
-      char addr[] = "00:00:00:00:00:00";
-      getMAC(addr, snifferPacket->payload, 10);
-      Serial.print(addr);
-      display_string.concat(addr);
-      Serial.print(" ESSID: ");
-      display_string.concat(" -> ");
-      for (int i = 0; i < snifferPacket->payload[37]; i++)
-      {
-        Serial.print((char)snifferPacket->payload[i + 38]);
-        display_string.concat((char)snifferPacket->payload[i + 38]);
+      // Do signal strength stuff first
+      if (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN) {
+        bool found = false;
+        uint8_t targ_index = 0;
+        AccessPoint targ_ap;
+
+        // Check list of APs
+        for (int i = 0; i < access_points->size(); i++) {
+          if (access_points->get(i).selected) {
+            uint8_t addr[] = {snifferPacket->payload[10],
+                              snifferPacket->payload[11],
+                              snifferPacket->payload[12],
+                              snifferPacket->payload[13],
+                              snifferPacket->payload[14],
+                              snifferPacket->payload[15]};
+            // Compare AP bssid to ssid of recvd packet
+            for (int x = 0; x < 6; x++) {
+              if (addr[x] != access_points->get(i).bssid[x]) {
+                found = false;
+                break;
+              }
+              else
+                found = true;
+            }
+            if (found) {
+              //Serial.println("Received beacon from " + access_points->get(i).essid + ". Checking RSSI...");
+              targ_ap = access_points->get(i);
+              targ_index = i;
+              break;
+            }
+          }
+        }
+        if (!found)
+          return;
+
+        if ((targ_ap.rssi + 5 < snifferPacket->rx_ctrl.rssi) || (snifferPacket->rx_ctrl.rssi + 5 < targ_ap.rssi)) {
+          targ_ap.rssi = snifferPacket->rx_ctrl.rssi;
+          access_points->set(targ_index, targ_ap);
+          Serial.println((String)access_points->get(targ_index).essid + " RSSI: " + (String)access_points->get(targ_index).rssi);
+          return;
+        }
       }
 
-      int temp_len = display_string.length();
-
-      #ifdef HAS_SCREEN
-        for (int i = 0; i < 40 - temp_len; i++)
+      else {
+        delay(random(0, 10));
+        Serial.print("RSSI: ");
+        Serial.print(snifferPacket->rx_ctrl.rssi);
+        Serial.print(" Ch: ");
+        Serial.print(snifferPacket->rx_ctrl.channel);
+        Serial.print(" BSSID: ");
+        char addr[] = "00:00:00:00:00:00";
+        getMAC(addr, snifferPacket->payload, 10);
+        Serial.print(addr);
+        display_string.concat(addr);
+        Serial.print(" ESSID: ");
+        display_string.concat(" -> ");
+        for (int i = 0; i < snifferPacket->payload[37]; i++)
         {
-          display_string.concat(" ");
+          Serial.print((char)snifferPacket->payload[i + 38]);
+          display_string.concat((char)snifferPacket->payload[i + 38]);
         }
-  
-        Serial.print(" ");
-  
-        if (display_obj.display_buffer->size() == 0)
-        {
-          display_obj.loading = true;
-          display_obj.display_buffer->add(display_string);
-          display_obj.loading = false;
-        }
-      #endif
 
-      Serial.println();
+        int temp_len = display_string.length();
 
-      addPacket(snifferPacket, len);
+        #ifdef HAS_SCREEN
+          for (int i = 0; i < 40 - temp_len; i++)
+          {
+            display_string.concat(" ");
+          }
+    
+          Serial.print(" ");
+    
+          if (display_obj.display_buffer->size() == 0)
+          {
+            display_obj.loading = true;
+            display_obj.display_buffer->add(display_string);
+            display_obj.loading = false;
+          }
+        #endif
+
+        Serial.println();
+
+        addPacket(snifferPacket, len);
+      }
     }
   }
 }
@@ -3532,6 +3582,7 @@ void WiFiScan::main(uint32_t currentTime)
   if ((currentScanMode == WIFI_SCAN_PROBE) ||
   (currentScanMode == WIFI_SCAN_AP) ||
   (currentScanMode == WIFI_SCAN_STATION) ||
+  (currentScanMode == WIFI_SCAN_SIG_STREN) ||
   (currentScanMode == WIFI_SCAN_TARGET_AP) ||
   (currentScanMode == WIFI_SCAN_PWN) ||
   (currentScanMode == WIFI_SCAN_ESPRESSIF) ||

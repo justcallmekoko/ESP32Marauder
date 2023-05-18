@@ -215,6 +215,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_UPDATE_CMD_A);
     
     // WiFi sniff/scan
+    Serial.println(HELP_SIGSTREN_CMD);
     Serial.println(HELP_SCANAP_CMD);
     Serial.println(HELP_SCANSTA_CMD);
     Serial.println(HELP_SNIFF_RAW_CMD);
@@ -349,9 +350,13 @@ void CommandLine::runCommand(String input) {
 
   //// WiFi/Bluetooth Scan/Attack commands
   if (!wifi_scan_obj.scanning()) {
-
+    // Signal strength scan
+    if (cmd_args.get(0) == SIGSTREN_CMD) {
+      Serial.println("Starting Signal Strength Scan. Stop with " + (String)STOPSCAN_CMD);
+      wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_MAGENTA);
+    }
     // AP Scan
-    if (cmd_args.get(0) == SCANAP_CMD) {
+    else if (cmd_args.get(0) == SCANAP_CMD) {
       int full_sw = -1;
       #ifdef HAS_SCREEN
         display_obj.clearScreen();
