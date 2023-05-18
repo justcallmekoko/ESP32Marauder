@@ -8,13 +8,13 @@
   //If not defined, will write packages to SD card if supported
   //#define WRITE_PACKETS_SERIAL
   
-  #define MARAUDER_M5STICKC
+  //#define MARAUDER_M5STICKC
   //#define MARAUDER_MINI
   //#define MARAUDER_V4
   //#define MARAUDER_V6
   //#define MARAUDER_KIT
   //#define GENERIC_ESP32
-  //#define MARAUDER_FLIPPER
+  #define MARAUDER_FLIPPER
   //#define ESP32_LDDB
   //#define MARAUDER_DEV_BOARD_PRO
 
