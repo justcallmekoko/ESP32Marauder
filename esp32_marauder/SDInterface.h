@@ -3,6 +3,7 @@
 
 #include "configs.h"
 
+#include "settings.h"
 #include "SD.h"
 #include "Buffer.h"
 #ifdef HAS_SCREEN
@@ -11,6 +12,7 @@
 #include <Update.h>
 
 extern Buffer buffer_obj;
+extern Settings settings_obj;
 #ifdef HAS_SCREEN
   extern Display display_obj;
 #endif

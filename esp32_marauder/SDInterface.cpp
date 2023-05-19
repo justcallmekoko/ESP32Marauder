@@ -76,9 +76,11 @@ void SDInterface::addPacket(uint8_t* buf, uint32_t len) {
 }
 
 void SDInterface::openCapture(String file_name) {
-  if (this->supported)
+  bool save_pcap = settings_obj.loadSetting<bool>("SavePCAP");
+  if ((this->supported) && (save_pcap)) {
     buffer_obj.createPcapFile(&SD, file_name);
     buffer_obj.open();
+  }
 }
 
 void SDInterface::runUpdate() {
