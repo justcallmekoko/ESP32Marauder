@@ -38,7 +38,7 @@ const char PROGMEM HELP_CMD[] = "help";
 const char PROGMEM SETTINGS_CMD[] = "settings";
 
 // WiFi sniff/scan
-const char PROGMEM SIGSTREN_CMD[] = "sigstren";
+const char PROGMEM SIGSTREN_CMD[] = "sigmon";
 const char PROGMEM SCANAP_CMD[] = "scanap";
 const char PROGMEM SCANSTA_CMD[] = "scansta";
 const char PROGMEM SNIFF_RAW_CMD[] = "sniffraw";
@@ -78,7 +78,7 @@ const char PROGMEM HELP_UPDATE_CMD_A[] = "update -s/-w";
 const char PROGMEM HELP_SETTINGS_CMD[] = "settings [-s <setting> enable/disable>]/[-r]";
 
 // WiFi sniff/scan
-const char PROGMEM HELP_SIGSTREN_CMD[] = "sigstren";
+const char PROGMEM HELP_SIGSTREN_CMD[] = "sigmon";
 const char PROGMEM HELP_SCANAP_CMD[] = "scanap";
 const char PROGMEM HELP_SCANSTA_CMD[] = "scansta";
 const char PROGMEM HELP_SNIFF_RAW_CMD[] = "sniffraw";

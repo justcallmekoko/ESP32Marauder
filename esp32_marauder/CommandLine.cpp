@@ -353,6 +353,10 @@ void CommandLine::runCommand(String input) {
     // Signal strength scan
     if (cmd_args.get(0) == SIGSTREN_CMD) {
       Serial.println("Starting Signal Strength Scan. Stop with " + (String)STOPSCAN_CMD);
+      #ifdef HAS_SCREEN
+        display_obj.clearScreen();
+        menu_function_obj.drawStatusBar();
+      #endif
       wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_MAGENTA);
     }
     // AP Scan
