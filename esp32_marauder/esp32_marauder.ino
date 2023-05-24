@@ -140,11 +140,11 @@ void setup()
     digitalWrite(TFT_CS, HIGH);
   #endif
 
-  pinMode(SD_CS, OUTPUT);
+  pinMode(SDMMC_CS, OUTPUT);
 
   delay(10);
   
-  digitalWrite(SD_CS, HIGH);
+  digitalWrite(SDMMC_CS, HIGH);
 
   delay(10);
 

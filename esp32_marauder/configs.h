@@ -468,7 +468,11 @@
   #endif
 
   #ifdef MARAUDER_FLIPPER
-    #define SD_CS 10
+    #define SDMMC_CS 10 // SS
+    #define SDMMC_CUSTOMPINS
+    #define SDMMC_CLK 11
+    #define SDMMC_D0 12 // MOSI
+    #define SDMMC_CMD 13 // MISO
   #endif
 
   #ifdef ESP32_LDDB
