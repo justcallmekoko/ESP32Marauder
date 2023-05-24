@@ -502,6 +502,8 @@ void WiFiScan::StopScan(uint8_t scan_mode)
     #endif
   }
 
+  buffer_obj.scheduleCleanup = true;
+
   #ifdef HAS_SCREEN
     display_obj.display_buffer->clear();
     #ifdef SCREEN_BUFFER
