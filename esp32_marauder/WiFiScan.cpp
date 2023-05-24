@@ -2564,9 +2564,7 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, ssid custom_ssid) {
   custom_ssid.essid.toCharArray(ESSID, custom_ssid.essid.length() + 1);
 
   int ssidLen = strlen(ESSID);
-  //int rand_len = sizeof(rand_reg);
-  int fullLen = ssidLen;
-  packet[37] = fullLen;
+  packet[37] = ssidLen;
 
   // Insert my tag
   for(int i = 0; i < ssidLen; i++)
@@ -2574,21 +2572,20 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, ssid custom_ssid) {
 
   /////////////////////////////
   
-  packet[50 + fullLen] = set_channel;
+  packet[50 + ssidLen] = set_channel;
 
-  uint8_t postSSID[13] = {0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x24, 0x30, 0x48, 0x6c, //supported rate
-                      0x03, 0x01, 0x04 /*DSSS (Current Channel)*/ };
-
-
+  uint8_t postSSID[13] = { 0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x24, 0x30, 0x48, 0x6c, //supported rate
+                          0x03, 0x01, 0x04 /*DSSS (Current Channel)*/ };
 
   // Add everything that goes after the SSID
   for(int i = 0; i < 12; i++) 
-    packet[38 + fullLen + i] = postSSID[i];
-  
+    packet[38 + ssidLen + i] = postSSID[i];
 
-  esp_wifi_80211_tx(WIFI_IF_AP, packet, sizeof(packet), false);
-  esp_wifi_80211_tx(WIFI_IF_AP, packet, sizeof(packet), false);
-  esp_wifi_80211_tx(WIFI_IF_AP, packet, sizeof(packet), false);
+  int packetSize = (51 + ssidLen);
+
+  esp_wifi_80211_tx(WIFI_IF_AP, packet, packetSize, false);
+  esp_wifi_80211_tx(WIFI_IF_AP, packet, packetSize, false);
+  esp_wifi_80211_tx(WIFI_IF_AP, packet, packetSize, false);
 
   packets_sent = packets_sent + 3;
 }
