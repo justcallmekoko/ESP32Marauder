@@ -79,13 +79,6 @@ jobs:
           ref: main
           path: CustomSwitchLib
           
-      - name: Install SD_MMC
-        uses: actions/checkout@v2
-        with:
-          repository: arduino-esp32/SD_MMC
-          ref: main
-          path: CustomSD_MMC
-          
       - name: Search for SD lib in arduino-esp32 v2.0.4
         run: |
           find /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.4arduino-esp32 -name "SD"
