@@ -14,9 +14,10 @@
   //#define MARAUDER_V6
   //#define MARAUDER_KIT
   //#define GENERIC_ESP32
-  #define MARAUDER_FLIPPER
+  //#define MARAUDER_FLIPPER
   //#define ESP32_LDDB
   //#define MARAUDER_DEV_BOARD_PRO
+  #define FLIPPER_ENDGAME_S3
 
   #define MARAUDER_VERSION "v0.10.5"
 
@@ -448,23 +449,23 @@
 
   //// SD DEFINITIONS
   #ifdef MARAUDER_V4
-    #define SD_CS 12
+    #define SDMMC_CS 12
   #endif
 
   #ifdef MARAUDER_V6
-    #define SD_CS 12
+    #define SDMMC_CS 12
   #endif
 
   #ifdef MARAUDER_KIT
-    #define SD_CS 12
+    #define SDMMC_CS 12
   #endif
 
   #ifdef MARAUDER_MINI
-    #define SD_CS 4
+    #define SDMMC_CS 4
   #endif
 
   #ifdef MARAUDER_M5STICKC
-    #define SD_CS 10
+    #define SDMMC_CS 10
   #endif
 
   #ifdef MARAUDER_FLIPPER
@@ -475,12 +476,20 @@
     #define SDMMC_CMD 13 // MISO
   #endif
 
+  #ifdef FLIPPER_ENDGAME_S3
+    #define SDMMC_CS 10 // SS
+    #define SDMMC_CUSTOMPINS
+    #define SDMMC_CLK 9
+    #define SDMMC_D0 11 // MOSI
+    #define SDMMC_CMD 10 // MISO
+  #endif
+
   #ifdef ESP32_LDDB
-    #define SD_CS 4
+    #define SDMMC_CS 4
   #endif
 
   #ifdef MARAUDER_DEV_BOARD_PRO
-    #define SD_CS 4
+    #define SDMMC_CS 4
   #endif
   //// END SD DEFINITIONS
 
