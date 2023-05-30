@@ -69,6 +69,28 @@ bool SDInterface::initSD() {
   }
 }
 
+void SDInterface::listDir(String str_dir){
+  if (this->supported) {
+    File dir = SD.open(str_dir);
+    while (true)
+    {
+      File entry =  dir.openNextFile();
+      if (! entry)
+      {
+        break;
+      }
+      //for (uint8_t i = 0; i < numTabs; i++)
+      //{
+      //  Serial.print('\t');
+      //}
+      Serial.print(entry.name());
+      Serial.print("\t");
+      Serial.println(entry.size());
+      entry.close();
+    }
+  }
+}
+
 void SDInterface::addPacket(uint8_t* buf, uint32_t len) {
   if ((this->supported) && (this->do_save)) {
     buffer_obj.addPacket(buf, len);

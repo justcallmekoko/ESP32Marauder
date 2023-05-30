@@ -36,6 +36,7 @@ const char PROGMEM REBOOT_CMD[] = "reboot";
 const char PROGMEM UPDATE_CMD[] = "update";
 const char PROGMEM HELP_CMD[] = "help";
 const char PROGMEM SETTINGS_CMD[] = "settings";
+const char PROGMEM LS_CMD[] = "ls";
 
 // WiFi sniff/scan
 const char PROGMEM SIGSTREN_CMD[] = "sigmon";
@@ -76,6 +77,7 @@ const char PROGMEM HELP_CLEARAP_CMD_A[] = "clearlist -a/-c/-s";
 const char PROGMEM HELP_REBOOT_CMD[] = "reboot";
 const char PROGMEM HELP_UPDATE_CMD_A[] = "update -s/-w";
 const char PROGMEM HELP_SETTINGS_CMD[] = "settings [-s <setting> enable/disable>]/[-r]";
+const char PROGMEM HELP_LS_CMD[] = "ls <directory>";
 
 // WiFi sniff/scan
 const char PROGMEM HELP_SIGSTREN_CMD[] = "sigmon";
