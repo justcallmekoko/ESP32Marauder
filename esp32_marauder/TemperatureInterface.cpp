@@ -19,7 +19,7 @@ void TemperatureInterface::RunSetup() {
 }
 
 uint8_t TemperatureInterface::getCurrentTemp() {
-  #ifndef MARAUDER_FLIPPER
+  #if !defined(MARAUDER_FLIPPER) && !defined(FLIPPER_ENDGAME_S3)
     return ((temprature_sens_read() - 32) / 1.8);
   #endif
     return 0;
