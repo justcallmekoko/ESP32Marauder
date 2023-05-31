@@ -555,7 +555,7 @@ MenuFunctions::MenuFunctions()
         Serial.println("Writing to target file: " + (String)target_file_name);
   
         // Open file with the given name
-        File script = SD_MMC.open(target_file_name, FILE_WRITE);
+        File script = SD_FS.open(target_file_name, FILE_WRITE);
   
         if (script) {
           menu_function_obj.loaded_file = target_file_name;
@@ -596,7 +596,7 @@ MenuFunctions::MenuFunctions()
   
       // Get file content and send to text area
       if (btn_text != text12) {
-        File script = SD_MMC.open(btn_text);
+        File script = SD_FS.open(btn_text);
   
         if (script) {
           while (script.available()) {
@@ -648,7 +648,7 @@ MenuFunctions::MenuFunctions()
         //lv_list_set_anim_time(list1, 0);
     
         // Load file names into buttons
-        File scripts = SD_MMC.open("/SCRIPTS");
+        File scripts = SD_FS.open("/SCRIPTS");
     
         // Build list of files from the SD card
         lv_obj_t * list_btn;
@@ -713,7 +713,7 @@ MenuFunctions::MenuFunctions()
   
         Serial.println("Writing to file: " + (String)menu_function_obj.loaded_file);
   
-        File script = SD_MMC.open(menu_function_obj.loaded_file, FILE_WRITE);
+        File script = SD_FS.open(menu_function_obj.loaded_file, FILE_WRITE);
   
         // Write data to file
         if (script) {

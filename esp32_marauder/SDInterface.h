@@ -4,7 +4,12 @@
 #include "configs.h"
 
 #include "settings.h"
-#include "SD_MMC.h"
+#ifdef SD_CS
+  #include "SD.h"
+#endif
+#ifdef SDMMC_CS
+  #include "SD_MMC.h"
+#endif
 #include "Buffer.h"
 #ifdef HAS_SCREEN
   #include "Display.h"
@@ -18,7 +23,7 @@ extern Settings settings_obj;
 #endif
 
 #ifdef KIT
-  #define SDMMC_DET 4
+  #define SD_DET 4
 #endif
 
 class SDInterface {
