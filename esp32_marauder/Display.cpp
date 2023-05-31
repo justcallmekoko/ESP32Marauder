@@ -615,7 +615,7 @@ void createArray(const char *filename) {
 
   // Open the named file
   fs::File jpgFile = SPIFFS.open( filename, "r");    // File handle reference for SPIFFS
-  //  File jpgFile = SD.open( filename, FILE_READ);  // or, file handle reference for SD library
+  //  File jpgFile = SD_MMC.open( filename, FILE_READ);  // or, file handle reference for SD library
 
   if ( !jpgFile ) {
     Serial.print("ERROR: File \""); Serial.print(filename); Serial.println ("\" not found!");
