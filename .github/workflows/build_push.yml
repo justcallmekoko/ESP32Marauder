@@ -176,7 +176,7 @@ jobs:
 
       - name: Rename Marauder End Game bin
         run: |
-          mv ./esp32_marauder/build/esp32.esp32.esp32s3/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.esp32s3/esp32_marauder.endgameS3.bin
+          mv ./esp32_marauder/build/esp32.esp32.esp32s3/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.esp32s3/esp32_marauder.end_game_S3.bin
 
       - name: Configure TFT_eSPI and configs.h for OG Marauder
         run: |
@@ -379,6 +379,13 @@ jobs:
           path: ./esp32_marauder/build/esp32.esp32.esp32s3/esp32_marauder.multiboardS3.bin
           retention-days: 5
           
+      - name: 'Upload End Game Artifact'
+        uses: actions/upload-artifact@v3
+        with:
+          name: esp32_marauder.end_game_S3.bin
+          path: ./esp32_marauder/build/esp32.esp32.esp32s3/esp32_marauder.end_game_S3.bin
+          retention-days: 5
+          
       - name: 'Upload OG Artifact'
         uses: actions/upload-artifact@v3
         with:
@@ -473,6 +480,18 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./esp32_marauder/build/esp32.esp32.esp32s3/esp32_marauder.multiboardS3.bin
           asset_name: esp32_marauder.mutliboardS3.bin
+          asset_content_type: application/bin
+        if: github.event_name != 'pull_request'
+          
+      - name: Upload End Game Asset
+        id: upload-end-game-s3-release-asset 
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./esp32_marauder/build/esp32.esp32.esp32s3/esp32_marauder.end_game_s3.bin
+          asset_name: esp32_marauder.end_game_s3.bin
           asset_content_type: application/bin
         if: github.event_name != 'pull_request'
           
