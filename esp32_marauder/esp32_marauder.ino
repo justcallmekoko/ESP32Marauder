@@ -345,13 +345,13 @@ void loop()
       #ifdef HAS_SCREEN
         menu_function_obj.main(currentTime);
       #endif
-      #ifndef MARAUDER_FLIPPER
-        led_obj.main(currentTime);
-      #endif
       //cli_obj.main(currentTime);
     }
-      if (wifi_scan_obj.currentScanMode == OTA_UPDATE)
-        web_obj.main();
+    #ifndef MARAUDER_FLIPPER
+      led_obj.main(currentTime);
+    #endif
+    if (wifi_scan_obj.currentScanMode == OTA_UPDATE)
+      web_obj.main();
     #ifdef HAS_SCREEN
       delay(1);
     #else
