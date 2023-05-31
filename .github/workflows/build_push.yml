@@ -78,10 +78,6 @@ jobs:
           ref: main
           path: CustomSwitchLib
           
-      - name: Search for SD lib in arduino-esp32 v2.0.4
-        run: |
-          find /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.4arduino-esp32 -name "SD"
-          
       - name: Configure TFT_eSPI
         run: |
           rm -f CustomTFT_eSPI/User_Setup_Select.h
@@ -99,12 +95,6 @@ jobs:
           sketch-names: MarauderOTA.ino
           arduino-board-fqbn: esp32:esp32:esp32s2
           platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.3/package_esp32_dev_index.json
-          
-      - name: Replace SD lib
-        run: |
-          rm -rf /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.3/libraries/SD
-          cp -R /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.4arduino-esp32/libraries/SD /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.3/libraries/SD
-          ls -la /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.3/libraries/SD
           
       - name: Modify platform.txt
         run: |
