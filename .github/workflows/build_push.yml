@@ -16,12 +16,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
         
-      - name: Pull arduino-esp32 v2.0.4
+      - name: Pull arduino-esp32
         uses: actions/checkout@v2
         with:
           repository: espressif/arduino-esp32
-          ref: 2.0.4
-          path: 2.0.4arduino-esp32
+          ref: master
       
       - name: Install TFT_eSPI
         uses: actions/checkout@v2
