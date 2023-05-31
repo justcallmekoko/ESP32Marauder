@@ -60,7 +60,7 @@
     #define TFT_RST 18
     #define TFT_BL 10
     #define TOUCH_CS 10
-    //#define SD_CS 1
+    //#define SDMMC_CS 1
 
     #define SCREEN_BUFFER
 
@@ -294,7 +294,7 @@
     #define TFT_RST 5
     #define TFT_BL 32
     #define TOUCH_CS 21
-    #define SD_CS 4
+    #define SDMMC_CS 4
 
     #define SCREEN_BUFFER
 
@@ -448,35 +448,43 @@
 
   //// SD DEFINITIONS
   #ifdef MARAUDER_V4
-    #define SD_CS 12
+    #define SDMMC_CS 12
   #endif
 
   #ifdef MARAUDER_V6
-    #define SD_CS 12
+    #define SDMMC_CS 12
   #endif
 
   #ifdef MARAUDER_KIT
-    #define SD_CS 12
+    #define SDMMC_CS 12
   #endif
 
   #ifdef MARAUDER_MINI
-    #define SD_CS 4
+    #define SDMMC_CS 4
   #endif
 
   #ifdef MARAUDER_M5STICKC
-    #define SD_CS 10
+    #define SDMMC_CS 10
   #endif
 
   #ifdef MARAUDER_FLIPPER
-    #define SD_CS 10
+    #define SDMMC_CS 10
   #endif
 
   #ifdef ESP32_LDDB
-    #define SD_CS 4
+    #define SDMMC_CS 4
   #endif
 
   #ifdef MARAUDER_DEV_BOARD_PRO
-    #define SD_CS 4
+    #define SDMMC_CS 4
+  #endif
+
+  #ifdef FLIPPER_ENDGAME_S3
+    #define SDMMC_CS 14
+    #define SDMMC_CUSTOMPINS
+    #define SDMMC_CLK 9
+    #define SDMMC_D0 11 // MOSI
+    #define SDMMC_CMD 10 // MISO
   #endif
   //// END SD DEFINITIONS
 

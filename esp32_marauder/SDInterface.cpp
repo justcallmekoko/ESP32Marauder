@@ -16,7 +16,7 @@ bool SDInterface::initSD() {
     }
   #endif
 
-  pinMode(SD_CS, OUTPUT);
+  pinMode(SDMMC_CS, OUTPUT);
 
   delay(10);
   
