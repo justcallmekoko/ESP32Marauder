@@ -77,7 +77,7 @@ bool SDInterface::initSD() {
 
 void SDInterface::listDir(String str_dir){
   if (this->supported) {
-    File dir = SD.open(str_dir);
+    File dir = SD_MMC.open(str_dir);
     while (true)
     {
       File entry =  dir.openNextFile();
