@@ -17,6 +17,7 @@
   #define MARAUDER_FLIPPER
   //#define ESP32_LDDB
   //#define MARAUDER_DEV_BOARD_PRO
+  //#define MARAUDER_ENDGAME_S3
 
   #define MARAUDER_VERSION "v0.10.6"
 
@@ -479,7 +480,7 @@
     #define SDMMC_CS 4
   #endif
 
-  #ifdef FLIPPER_ENDGAME_S3
+  #ifdef MARAUDER_ENDGAME_S3
     #define SDMMC_CS 14
     #define SDMMC_CUSTOMPINS
     #define SDMMC_CLK 9

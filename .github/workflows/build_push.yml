@@ -16,12 +16,12 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
         
-      - name: Pull arduino-esp32 v2.0.4
+      - name: Pull arduino-esp32
         uses: actions/checkout@v2
         with:
           repository: espressif/arduino-esp32
-          ref: 2.0.4
-          path: 2.0.4arduino-esp32
+          ref: master
+          path: arduino-esp32
       
       - name: Install TFT_eSPI
         uses: actions/checkout@v2
@@ -79,10 +79,6 @@ jobs:
           ref: main
           path: CustomSwitchLib
           
-      - name: Search for SD lib in arduino-esp32 v2.0.4
-        run: |
-          find /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.4arduino-esp32 -name "SD"
-          
       - name: Configure TFT_eSPI
         run: |
           rm -f CustomTFT_eSPI/User_Setup_Select.h
@@ -100,12 +96,6 @@ jobs:
           sketch-names: MarauderOTA.ino
           arduino-board-fqbn: esp32:esp32:esp32s2
           platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.3/package_esp32_dev_index.json
-          
-      - name: Replace SD lib
-        run: |
-          rm -rf /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.3/libraries/SD
-          cp -R /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.4arduino-esp32/libraries/SD /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.3/libraries/SD
-          ls -la /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.3/libraries/SD
           
       - name: Modify platform.txt
         run: |
@@ -164,6 +154,30 @@ jobs:
         run: |
           mv ./esp32_marauder/build/esp32.esp32.esp32s3/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.esp32s3/esp32_marauder.multiboardS3.bin
          
+      - name: Configure configs.h for End Game Board
+        run: |
+          pwd
+          sed -i 's/^  #define MARAUDER_MINI/  \/\/#define MARAUDER_MINI/' esp32_marauder/configs.h
+          sed -i 's/^  #define MARAUDER_V4/  \/\/#define MARAUDER_V4/' esp32_marauder/configs.h
+          sed -i 's/^  #define MARAUDER_V6/  \/\/#define MARAUDER_V6/' esp32_marauder/configs.h
+          sed -i 's/^  #define MARAUDER_KIT/  \/\/#define MARAUDER_KIT/' esp32_marauder/configs.h
+          sed -i 's/^  #define GENERIC_ESP32/  \/\/#define GENERIC_ESP32/' esp32_marauder/configs.h
+          sed -i 's/^  #define MARAUDER_FLIPPER/  \/\/#define MARAUDER_FLIPPER/' esp32_marauder/configs.h
+          sed -i 's/^  #define ESP32_LDDB/  \/\/#define ESP32_LDDB/' esp32_marauder/configs.h
+          sed -i 's/^  #define MARAUDER_DEV_BOARD_PRO/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
+          sed -i 's/^  \/\/#define MARAUDER_ENDGAME_S3/  #define MARAUDER_ENDGAME_S3/' esp32_marauder/configs.h
+
+      - name: Build Marauder for End Game Board
+        uses: ArminJo/arduino-test-compile@v3.2.0
+        with:
+          sketch-names: esp32_marauder.ino
+          arduino-board-fqbn: esp32:esp32:esp32s3:PartitionScheme=min_spiffs,FlashSize=8M,PSRAM=enabled
+          extra-arduino-cli-args: "--warnings none"
+
+      - name: Rename Marauder End Game bin
+        run: |
+          mv ./esp32_marauder/build/esp32.esp32.esp32s3/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.esp32s3/esp32_marauder.endgameS3.bin
+
       - name: Configure TFT_eSPI and configs.h for OG Marauder
         run: |
           pwd
@@ -178,6 +192,7 @@ jobs:
           sed -i 's/^  #define MARAUDER_FLIPPER/  \/\/#define MARAUDER_FLIPPER/' esp32_marauder/configs.h
           sed -i 's/^  #define ESP32_LDDB/  \/\/#define ESP32_LDDB/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_DEV_BOARD_PRO/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
+          sed -i 's/^  #define MARAUDER_ENDGAME_S3/  \/\/#define MARAUDER_ENDGAME_S3/' esp32_marauder/configs.h
           
       - name: Build Marauder for OG Marauder
         uses: ArminJo/arduino-test-compile@v3.2.0
@@ -202,6 +217,7 @@ jobs:
           sed -i 's/^  #define MARAUDER_FLIPPER/  \/\/#define MARAUDER_FLIPPER/' esp32_marauder/configs.h
           sed -i 's/^  #define ESP32_LDDB/  \/\/#define ESP32_LDDB/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_DEV_BOARD_PRO/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
+          sed -i 's/^  #define MARAUDER_ENDGAME_S3/  \/\/#define MARAUDER_ENDGAME_S3/' esp32_marauder/configs.h
           
       - name: Build Marauder for v6 Marauder
         uses: ArminJo/arduino-test-compile@v3.2.0
@@ -226,6 +242,7 @@ jobs:
           sed -i 's/^  #define MARAUDER_FLIPPER/  \/\/#define MARAUDER_FLIPPER/' esp32_marauder/configs.h
           sed -i 's/^  #define ESP32_LDDB/  \/\/#define ESP32_LDDB/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_DEV_BOARD_PRO/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
+          sed -i 's/^  #define MARAUDER_ENDGAME_S3/  \/\/#define MARAUDER_ENDGAME_S3/' esp32_marauder/configs.h
           
       - name: Build Marauder for Marauder Kit
         uses: ArminJo/arduino-test-compile@v3.2.0
@@ -250,6 +267,7 @@ jobs:
           sed -i 's/^  #define MARAUDER_FLIPPER/  \/\/#define MARAUDER_FLIPPER/' esp32_marauder/configs.h
           sed -i 's/^  #define ESP32_LDDB/  \/\/#define ESP32_LDDB/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_DEV_BOARD_PRO/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
+          sed -i 's/^  #define MARAUDER_ENDGAME_S3/  \/\/#define MARAUDER_ENDGAME_S3/' esp32_marauder/configs.h
           
       - name: Build Marauder for Marauder Mini
         uses: ArminJo/arduino-test-compile@v3.2.0
@@ -272,6 +290,7 @@ jobs:
           sed -i 's/^  #define MARAUDER_FLIPPER/  \/\/#define MARAUDER_FLIPPER/' esp32_marauder/configs.h
           sed -i 's/^  \/\/#define ESP32_LDDB/  #define ESP32_LDDB/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_DEV_BOARD_PRO/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
+          sed -i 's/^  #define MARAUDER_ENDGAME_S3/  \/\/#define MARAUDER_ENDGAME_S3/' esp32_marauder/configs.h
           
       - name: Build Marauder for ESP32 LDDB
         uses: ArminJo/arduino-test-compile@v3.2.0
@@ -294,6 +313,7 @@ jobs:
           sed -i 's/^  #define MARAUDER_FLIPPER/  \/\/#define MARAUDER_FLIPPER/' esp32_marauder/configs.h
           sed -i 's/^  #define ESP32_LDDB/  \/\/#define ESP32_LDDB/' esp32_marauder/configs.h
           sed -i 's/^  \/\/#define MARAUDER_DEV_BOARD_PRO/  #define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
+          sed -i 's/^  #define MARAUDER_ENDGAME_S3/  \/\/#define MARAUDER_ENDGAME_S3/' esp32_marauder/configs.h
           
       - name: Build Marauder for Marauder Dev Board Pro
         uses: ArminJo/arduino-test-compile@v3.2.0
@@ -320,6 +340,7 @@ jobs:
           sed -i 's/^  #define MARAUDER_FLIPPER/  \/\/#define MARAUDER_FLIPPER/' esp32_marauder/configs.h
           sed -i 's/^  #define ESP32_LDDB/  \/\/#define ESP32_LDDB/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_DEV_BOARD_PRO/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
+          sed -i 's/^  #define MARAUDER_ENDGAME_S3/  \/\/#define MARAUDER_ENDGAME_S3/' esp32_marauder/configs.h
           sed -i 's/^  \/\/#define MARAUDER_M5STICKC/  #define MARAUDER_M5STICKC/' esp32_marauder/configs.h
           
       - name: Build Marauder for Marauder M5StickC
