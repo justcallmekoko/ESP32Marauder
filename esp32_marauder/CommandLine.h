@@ -36,8 +36,10 @@ const char PROGMEM REBOOT_CMD[] = "reboot";
 const char PROGMEM UPDATE_CMD[] = "update";
 const char PROGMEM HELP_CMD[] = "help";
 const char PROGMEM SETTINGS_CMD[] = "settings";
+const char PROGMEM LS_CMD[] = "ls";
 
 // WiFi sniff/scan
+const char PROGMEM SIGSTREN_CMD[] = "sigmon";
 const char PROGMEM SCANAP_CMD[] = "scanap";
 const char PROGMEM SCANSTA_CMD[] = "scansta";
 const char PROGMEM SNIFF_RAW_CMD[] = "sniffraw";
@@ -60,6 +62,7 @@ const char PROGMEM ATTACK_TYPE_RR[] = "rickroll";
 const char PROGMEM LIST_AP_CMD[] = "list";
 const char PROGMEM SEL_CMD[] = "select";
 const char PROGMEM SSID_CMD[] = "ssid";
+const char PROGMEM JOINWIFI_CMD[] = "join";
 
 // Bluetooth sniff/scan
 const char PROGMEM BT_SNIFF_CMD[] = "sniffbt";
@@ -74,8 +77,10 @@ const char PROGMEM HELP_CLEARAP_CMD_A[] = "clearlist -a/-c/-s";
 const char PROGMEM HELP_REBOOT_CMD[] = "reboot";
 const char PROGMEM HELP_UPDATE_CMD_A[] = "update -s/-w";
 const char PROGMEM HELP_SETTINGS_CMD[] = "settings [-s <setting> enable/disable>]/[-r]";
+const char PROGMEM HELP_LS_CMD[] = "ls <directory>";
 
 // WiFi sniff/scan
+const char PROGMEM HELP_SIGSTREN_CMD[] = "sigmon";
 const char PROGMEM HELP_SCANAP_CMD[] = "scanap";
 const char PROGMEM HELP_SCANSTA_CMD[] = "scansta";
 const char PROGMEM HELP_SNIFF_RAW_CMD[] = "sniffraw";
@@ -84,8 +89,9 @@ const char PROGMEM HELP_SNIFF_PROBE_CMD[] = "sniffprobe";
 const char PROGMEM HELP_SNIFF_PWN_CMD[] = "sniffpwn";
 const char PROGMEM HELP_SNIFF_ESP_CMD[] = "sniffesp";
 const char PROGMEM HELP_SNIFF_DEAUTH_CMD[] = "sniffdeauth";
-const char PROGMEM HELP_SNIFF_PMKID_CMD[] = "sniffpmkid [-c <channel>]";
+const char PROGMEM HELP_SNIFF_PMKID_CMD[] = "sniffpmkid [-c <channel>][-d][-l]";
 const char PROGMEM HELP_STOPSCAN_CMD[] = "stopscan";
+const char PROGMEM HELP_JOIN_WIFI_CMD[] = "join [-n <ssid_name>/-s <ssid_index>/-a <access_point_index>] -p <password>";
 
 // WiFi attack
 const char PROGMEM HELP_ATTACK_CMD[] = "attack -t <beacon [-l/-r/-a]/deauth [-c]/[-s <src mac>] [-d <dst mac>]/probe/rickroll>";
@@ -94,7 +100,7 @@ const char PROGMEM HELP_ATTACK_CMD[] = "attack -t <beacon [-l/-r/-a]/deauth [-c]
 const char PROGMEM HELP_LIST_AP_CMD_A[] = "list -s";
 const char PROGMEM HELP_LIST_AP_CMD_B[] = "list -a";
 const char PROGMEM HELP_LIST_AP_CMD_C[] = "list -c";
-const char PROGMEM HELP_SEL_CMD_A[] = "select -a/-s/-c <index (comma separated)>";
+const char PROGMEM HELP_SEL_CMD_A[] = "select -a/-s/-c <index (comma separated)>/-f \"equals <String> or contains <String>\"";
 const char PROGMEM HELP_SSID_CMD_A[] = "ssid -a [-g <count>/-n <name>]";
 const char PROGMEM HELP_SSID_CMD_B[] = "ssid -r <index>";
 
@@ -108,11 +114,14 @@ class CommandLine {
   private:
     String getSerialInput();
     LinkedList<String> parseCommand(String input, char* delim);
+    String toLowerCase(String str);
+    void filterAccessPoints(String filter);
     void runCommand(String input);
     bool checkValueExists(LinkedList<String>* cmd_args_list, int index);
     bool inRange(int max, int index);
     bool apSelected();
     bool hasSSIDs();
+    void showCounts(int selected, int unselected = -1);
     int argSearch(LinkedList<String>* cmd_args, String key);
 
     const char* ascii_art =

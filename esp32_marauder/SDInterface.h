@@ -3,6 +3,7 @@
 
 #include "configs.h"
 
+#include "settings.h"
 #include "SD.h"
 #include "Buffer.h"
 #ifdef HAS_SCREEN
@@ -11,6 +12,7 @@
 #include <Update.h>
 
 extern Buffer buffer_obj;
+extern Settings settings_obj;
 #ifdef HAS_SCREEN
   extern Display display_obj;
 #endif
@@ -37,6 +39,7 @@ class SDInterface {
   
     bool initSD();
 
+    void listDir(String str_dir);
     void addPacket(uint8_t* buf, uint32_t len);
     void openCapture(String file_name = "");
     void runUpdate();

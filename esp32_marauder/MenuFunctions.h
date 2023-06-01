@@ -16,7 +16,7 @@
 #include "a32u4_interface.h"
 #include "settings.h"
 
-#ifdef MARAUDER_MINI
+#ifdef HAS_BUTTONS
   #include <SwitchLib.h>
   extern SwitchLib u_btn;
   extern SwitchLib d_btn;

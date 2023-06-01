@@ -42,13 +42,25 @@ https://www.online-utility.org/image/convert/to/XBM
   #include "a32u4_interface.h"
 #endif
 
-#ifdef MARAUDER_MINI
+#ifdef HAS_BUTTONS
   #include <SwitchLib.h>
-  SwitchLib u_btn = SwitchLib(U_BTN, 1000, true);
-  SwitchLib d_btn = SwitchLib(D_BTN, 1000, true);
-  SwitchLib l_btn = SwitchLib(L_BTN, 1000, true);
-  SwitchLib r_btn = SwitchLib(R_BTN, 1000, true);
-  SwitchLib c_btn = SwitchLib(C_BTN, 1000, true);
+  
+  #if (U_BTN >= 0)
+    SwitchLib u_btn = SwitchLib(U_BTN, 1000, true);
+  #endif
+  #if (D_BTN >= 0)
+    SwitchLib d_btn = SwitchLib(D_BTN, 1000, true);
+  #endif
+  #if (L_BTN >= 0)
+    SwitchLib l_btn = SwitchLib(L_BTN, 1000, true);
+  #endif
+  #if (R_BTN >= 0)
+    SwitchLib r_btn = SwitchLib(R_BTN, 1000, true);
+  #endif
+  #if (C_BTN >= 0)
+    SwitchLib c_btn = SwitchLib(C_BTN, 1000, true);
+  #endif
+
 #endif
 
 WiFiScan wifi_scan_obj;
@@ -67,6 +79,10 @@ flipperLED flipper_led;
   Display display_obj;
   MenuFunctions menu_function_obj;
   A32u4Interface a32u4_obj;
+#endif
+
+#ifdef MARAUDER_M5STICKC
+  AXP192 axp192_obj;
 #endif
 
 const String PROGMEM version_number = MARAUDER_VERSION;
@@ -103,6 +119,10 @@ void backlightOff() {
 
 void setup()
 {
+  #ifdef MARAUDER_M5STICKC
+    axp192_obj.begin();
+  #endif
+  
   pinMode(FLASH_BUTTON, INPUT);
 
   #ifdef HAS_SCREEN
@@ -129,8 +149,11 @@ void setup()
   delay(10);
 
   Serial.begin(115200);
-  
-  //Serial.begin(115200);
+
+  #ifdef WRITE_PACKETS_SERIAL
+    // Starts a second serial channel to stream the captured packets
+    Serial1.begin(115200);
+  #endif
 
   //Serial.println("\n\nHello, World!\n");
 
@@ -205,21 +228,23 @@ void setup()
     display_obj.tft.println(F(text_table0[2]));
   #endif
 
-  // Do some SD stuff
-  if(sd_obj.initSD()) {
-    //Serial.println(F("SD Card supported"));
-    #ifdef HAS_SCREEN
-      display_obj.tft.println(F(text_table0[3]));
-    #endif
-  }
-  else {
-    Serial.println(F("SD Card NOT Supported"));
-    #ifdef HAS_SCREEN
-      display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
-      display_obj.tft.println(F(text_table0[4]));
-      display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-    #endif
-  }
+  #ifdef WRITE_PACKETS_SERIAL
+    buffer_obj = Buffer();
+  #else
+    // Do some SD stuff
+    if(sd_obj.initSD()) {
+      #ifdef HAS_SCREEN
+        display_obj.tft.println(F(text_table0[3]));
+      #endif
+    } else {
+      Serial.println(F("SD Card NOT Supported"));
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+        display_obj.tft.println(F(text_table0[4]));
+        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+      #endif
+    }
+  #endif
 
   battery_obj.RunSetup();
 
@@ -303,7 +328,13 @@ void loop()
       display_obj.main(wifi_scan_obj.currentScanMode);
     #endif
     wifi_scan_obj.main(currentTime);
-    sd_obj.main();
+
+    #ifdef WRITE_PACKETS_SERIAL
+      buffer_obj.forceSaveSerial();
+    #else
+      sd_obj.main();
+    #endif
+
     #ifndef MARAUDER_FLIPPER
       battery_obj.main(currentTime);
       temp_obj.main(currentTime);
@@ -314,13 +345,13 @@ void loop()
       #ifdef HAS_SCREEN
         menu_function_obj.main(currentTime);
       #endif
-      #ifndef MARAUDER_FLIPPER
-        led_obj.main(currentTime);
-      #endif
       //cli_obj.main(currentTime);
     }
-      if (wifi_scan_obj.currentScanMode == OTA_UPDATE)
-        web_obj.main();
+    #ifndef MARAUDER_FLIPPER
+      led_obj.main(currentTime);
+    #endif
+    if (wifi_scan_obj.currentScanMode == OTA_UPDATE)
+      web_obj.main();
     #ifdef HAS_SCREEN
       delay(1);
     #else
