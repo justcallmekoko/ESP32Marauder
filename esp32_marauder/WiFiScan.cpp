@@ -492,7 +492,6 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   {
     this->shutdownWiFi();
   }
-
   
   else if ((currentScanMode == BT_SCAN_ALL) ||
   (currentScanMode == BT_SCAN_SKIMMERS))
@@ -501,6 +500,8 @@ void WiFiScan::StopScan(uint8_t scan_mode)
       this->shutdownBLE();
     #endif
   }
+
+  buffer_obj.scheduleCleanup = true;
 
   #ifdef HAS_SCREEN
     display_obj.display_buffer->clear();
