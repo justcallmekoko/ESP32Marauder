@@ -5,7 +5,7 @@
 
 #include "configs.h"
 
-#ifndef MARAUDER_FLIPPER
+#if !defined(MARAUDER_FLIPPER) && !defined(MARAUDER_ENDGAME_S3)
   #include <Wire.h>
 #endif
 
