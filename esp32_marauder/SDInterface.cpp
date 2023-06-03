@@ -248,7 +248,7 @@ void SDInterface::performUpdate(Stream &updateSource, size_t updateSize) {
 }
 
 bool SDInterface::checkDetectPin() {
-  #ifdef KIT
+  #ifdef SD_DET
     if (digitalRead(SD_DET) == LOW)
       return true;
     else
