@@ -558,7 +558,7 @@
   //// NEOPIXEL STUFF  
   #if defined(ESP32_LDDB)
     #define PIN 17
-  #elif defined(MARAUDER_DEV_BOARD_PRO)
+  #elif defined(MARAUDER_DEV_BOARD_PRO) || defined(MARAUDER_ENDGAME_S3)
     #define PIN 16
   #else
     #define PIN 25
