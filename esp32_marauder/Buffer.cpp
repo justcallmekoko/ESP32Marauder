@@ -21,7 +21,7 @@ void Buffer::createPcapFile(fs::FS* fs, String fn) {
 
 void Buffer::open() {
   if (bufA == NULL && bufB == NULL) {
-    bufLength = ((heap_caps_get_largest_free_block(MALLOC_CAP_8BIT | MALLOC_CAP_SPIRAM) * 0.85) / 2);
+    bufLength = ((heap_caps_get_largest_free_block(MALLOC_CAP_8BIT | MALLOC_CAP_SPIRAM) * 0.75) / 2);
     //bufA = (uint8_t*)malloc(bufLength);
     //bufB = (uint8_t*)malloc(bufLength);
     bufA = (uint8_t*)heap_caps_malloc(bufLength, MALLOC_CAP_8BIT | MALLOC_CAP_SPIRAM);
