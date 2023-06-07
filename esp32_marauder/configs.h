@@ -18,7 +18,7 @@
   //#define ESP32_LDDB
   //#define MARAUDER_DEV_BOARD_PRO
 
-  #define MARAUDER_VERSION "v0.10.6"
+  #define MARAUDER_VERSION "v0.10.7"
 
   //// POWER MANAGEMENT
   #ifdef MARAUDER_M5STICKC
@@ -481,6 +481,10 @@
   //// END SD DEFINITIONS
 
   //// SCREEN STUFF
+  #ifdef MARAUDER_DEV_BOARD_PRO
+    #define HAS_BT
+  #endif
+  
   #ifdef MARAUDER_MINI
     #define HAS_SCREEN
     #define HAS_BT
