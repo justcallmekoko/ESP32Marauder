@@ -19,7 +19,7 @@
   //#define MARAUDER_DEV_BOARD_PRO
   //#define MARAUDER_ENDGAME_S3
 
-  #define MARAUDER_VERSION "v0.10.6"
+  #define MARAUDER_VERSION "v0.10.7"
 
   //// POWER MANAGEMENT
   #ifdef MARAUDER_M5STICKC
@@ -93,7 +93,7 @@
     //#define MENU_FONT &FreeMonoBold9pt7b
     //#define MENU_FONT &FreeSans9pt7b
     //#define MENU_FONT &FreeSansBold9pt7b
-    #define BUTTON_ARRAY_LEN 10
+    #define BUTTON_ARRAY_LEN 11
     #define STATUS_BAR_WIDTH (TFT_HEIGHT/16)
     #define LVGL_TICK_PERIOD 6
     
@@ -147,7 +147,7 @@
     //#define MENU_FONT &FreeMonoBold9pt7b
     //#define MENU_FONT &FreeSans9pt7b
     //#define MENU_FONT &FreeSansBold9pt7b
-    #define BUTTON_ARRAY_LEN 10
+    #define BUTTON_ARRAY_LEN 11
     #define STATUS_BAR_WIDTH 16
     #define LVGL_TICK_PERIOD 6
     
@@ -203,7 +203,7 @@
     //#define MENU_FONT &FreeMonoBold9pt7b
     //#define MENU_FONT &FreeSans9pt7b
     //#define MENU_FONT &FreeSansBold9pt7b
-    #define BUTTON_ARRAY_LEN 10
+    #define BUTTON_ARRAY_LEN 11
     #define STATUS_BAR_WIDTH 16
     #define LVGL_TICK_PERIOD 6
     
@@ -260,7 +260,7 @@
     //#define MENU_FONT &FreeMonoBold9pt7b
     //#define MENU_FONT &FreeSans9pt7b
     //#define MENU_FONT &FreeSansBold9pt7b
-    #define BUTTON_ARRAY_LEN 10
+    #define BUTTON_ARRAY_LEN 11
     #define STATUS_BAR_WIDTH 16
     #define LVGL_TICK_PERIOD 6
     
@@ -327,7 +327,7 @@
     //#define MENU_FONT &FreeMonoBold9pt7b
     //#define MENU_FONT &FreeSans9pt7b
     //#define MENU_FONT &FreeSansBold9pt7b
-    #define BUTTON_ARRAY_LEN 10
+    #define BUTTON_ARRAY_LEN 11
     #define STATUS_BAR_WIDTH (TFT_HEIGHT/16)
     #define LVGL_TICK_PERIOD 6
     
@@ -504,6 +504,10 @@
   //// END SD DEFINITIONS
 
   //// SCREEN STUFF
+  #ifdef MARAUDER_DEV_BOARD_PRO
+    #define HAS_BT
+  #endif
+  
   #ifdef MARAUDER_MINI
     #define HAS_SCREEN
     #define HAS_BT

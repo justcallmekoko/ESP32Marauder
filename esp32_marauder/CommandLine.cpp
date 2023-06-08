@@ -213,6 +213,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_CLEARAP_CMD_A);
     Serial.println(HELP_REBOOT_CMD);
     Serial.println(HELP_UPDATE_CMD_A);
+    Serial.println(HELP_LS_CMD);
     
     // WiFi sniff/scan
     Serial.println(HELP_SIGSTREN_CMD);
