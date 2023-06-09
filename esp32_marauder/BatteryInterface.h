@@ -5,7 +5,7 @@
 
 #include "configs.h"
 
-#ifndef MARAUDER_FLIPPER
+#ifndef MARAUDER_FLIPPER || XIAO_ESP32_S3
   #include <Wire.h>
 #endif
 
