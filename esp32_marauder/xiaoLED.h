@@ -6,9 +6,7 @@
 
 #include <Arduino.h>
 
-#ifdef XIAO_ESP32_S3
-    #define XIAO_LED_PIN 21
-#endif
+#define XIAO_LED_PIN 21
 
 extern Settings settings_obj;
 
