@@ -17,6 +17,7 @@
   #define MARAUDER_FLIPPER
   //#define ESP32_LDDB
   //#define MARAUDER_DEV_BOARD_PRO
+  //#define XIAO_ESP32_S3
 
   #define MARAUDER_VERSION "v0.10.7"
 
@@ -478,6 +479,13 @@
   #ifdef MARAUDER_DEV_BOARD_PRO
     #define SD_CS 4
   #endif
+
+  #ifdef XIAO_ESP32_S3
+    #define SD_CS 3
+    // Override RX1+TX1 pins
+    #define XIAO_RX1 1
+    #define XIAO_TX1 2
+  #endif
   //// END SD DEFINITIONS
 
   //// SCREEN STUFF
@@ -510,6 +518,10 @@
   #endif
 
   #ifdef GENERIC_ESP32
+    #define HAS_BT
+  #endif
+
+  #ifdef XIAO_ESP32_S3
     #define HAS_BT
   #endif
 

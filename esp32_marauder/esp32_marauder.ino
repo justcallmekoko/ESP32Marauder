@@ -35,6 +35,7 @@ https://www.online-utility.org/image/convert/to/XBM
 #include "CommandLine.h"
 #include "lang_var.h"
 #include "flipperLED.h"
+#include "xiaoLED.h"
 
 #ifdef HAS_SCREEN
   #include "Display.h"
@@ -74,6 +75,7 @@ EspInterface esp_obj;
 Settings settings_obj;
 CommandLine cli_obj;
 flipperLED flipper_led;
+xiaoLED xiao_led;
 
 #ifdef HAS_SCREEN
   Display display_obj;
@@ -214,6 +216,10 @@ void setup()
     flipper_led.RunSetup();
   #endif
 
+  #ifdef XIAO_ESP32_S3
+    xiao_led.runSetup();
+  #endif
+
   //Serial.println("This is a test Channel: " + (String)settings_obj.loadSetting<uint8_t>("Channel"));
   //if (settings_obj.loadSetting<bool>( "Force PMKID"))
   //  Serial.println("This is a test Force PMKID: true");
@@ -253,7 +259,7 @@ void setup()
   #endif
 
   // Temperature stuff
-  #ifndef MARAUDER_FLIPPER
+  #ifndef MARAUDER_FLIPPER || XIAO_ESP32_S3
     temp_obj.RunSetup();
   #endif
 
@@ -261,7 +267,7 @@ void setup()
     display_obj.tft.println(F(text_table0[6]));
   #endif
 
-  #ifndef MARAUDER_FLIPPER
+  #ifndef MARAUDER_FLIPPER || XIAO_ESP32_S3
     battery_obj.battery_level = battery_obj.getBatteryLevel();
   
 //    if (battery_obj.i2c_supported) {
@@ -272,7 +278,7 @@ void setup()
   #endif
 
   // Do some LED stuff
-  #ifndef MARAUDER_FLIPPER
+  #ifndef MARAUDER_FLIPPER || XIAO_ESP32_S3
     led_obj.RunSetup();
   #endif
 
@@ -335,7 +341,7 @@ void loop()
       sd_obj.main();
     #endif
 
-    #ifndef MARAUDER_FLIPPER
+    #ifndef MARAUDER_FLIPPER || XIAO_ESP32_S3
       battery_obj.main(currentTime);
       temp_obj.main(currentTime);
     #endif
@@ -347,7 +353,7 @@ void loop()
       #endif
       //cli_obj.main(currentTime);
     }
-    #ifndef MARAUDER_FLIPPER
+    #ifndef MARAUDER_FLIPPER || XIAO_ESP32_S3
       led_obj.main(currentTime);
     #endif
     if (wifi_scan_obj.currentScanMode == OTA_UPDATE)
@@ -370,7 +376,7 @@ void loop()
       display_obj.main(wifi_scan_obj.currentScanMode);
       menu_function_obj.main(currentTime);
     #endif
-    #ifndef MARAUDER_FLIPPER
+    #ifndef MARAUDER_FLIPPER || XIAO_ESP32_S3
       led_obj.main(currentTime);
     #endif
     //cli_obj.main(currentTime);
