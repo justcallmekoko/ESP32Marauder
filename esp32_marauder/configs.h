@@ -14,11 +14,11 @@
   //#define MARAUDER_V6
   //#define MARAUDER_KIT
   //#define GENERIC_ESP32
-  #define MARAUDER_FLIPPER
-  //#define ESP32_LDDB
+  //#define MARAUDER_FLIPPER
+  #define ESP32_LDDB
   //#define MARAUDER_DEV_BOARD_PRO
 
-  #define MARAUDER_VERSION "v0.10.7"
+  #define MARAUDER_VERSION "v0.10.8"
 
   //// POWER MANAGEMENT
   #ifdef MARAUDER_M5STICKC
