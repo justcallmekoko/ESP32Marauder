@@ -217,7 +217,7 @@ void setup()
   #endif
 
   #ifdef XIAO_ESP32_S3
-    xiao_led.runSetup();
+    xiao_led.RunSetup();
   #endif
 
   //Serial.println("This is a test Channel: " + (String)settings_obj.loadSetting<uint8_t>("Channel"));
