@@ -116,7 +116,6 @@ CommandLine cli_obj;
 #endif
 
 const String PROGMEM version_number = MARAUDER_VERSION;
-const String PROGMEM board_target = MARAUDER_TARGET;
 
 #ifdef HAS_NEOPIXEL_LED
   Adafruit_NeoPixel strip = Adafruit_NeoPixel(Pixels, PIN, NEO_GRB + NEO_KHZ800);
@@ -267,7 +266,7 @@ void setup()
 
   #ifdef WRITE_PACKETS_SERIAL
     buffer_obj = Buffer();
-  #else
+  #elif defined(HAS_SD)
     // Do some SD stuff
     if(sd_obj.initSD()) {
       #ifdef HAS_SCREEN
@@ -281,6 +280,8 @@ void setup()
         display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
       #endif
     }
+  #else
+    return;
   #endif
 
   #ifdef HAS_BATTERY
@@ -374,8 +375,10 @@ void loop()
 
     #ifdef WRITE_PACKETS_SERIAL
       buffer_obj.forceSaveSerial();
-    #else
+    #elif defined(HAS_SD)
       sd_obj.main();
+    #else
+      return;
     #endif
 
     #ifdef HAS_BATTERY
