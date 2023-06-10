@@ -580,8 +580,10 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
 {
   #ifdef WRITE_PACKETS_SERIAL
     buffer_obj.open();
-  #else
+  #elif defined(HAS_SD)
     sd_obj.openCapture("ap");
+  #else
+    return;
   #endif
 
   #ifdef MARAUDER_FLIPPER
@@ -809,7 +811,7 @@ void WiFiScan::RunInfo()
     #ifdef HAS_SCREEN
       display_obj.tft.println(text_table4[48]);
     #endif
-  #else
+  #elif defined(HAS_SD)
     if (sd_obj.supported) {
       #ifdef HAS_SCREEN
         display_obj.tft.println(text_table4[28]);
@@ -823,6 +825,8 @@ void WiFiScan::RunInfo()
         display_obj.tft.println(text_table4[31]);
       #endif
     }
+  #else
+    return;
   #endif
 
   #ifdef HAS_BATTERY
@@ -848,8 +852,10 @@ void WiFiScan::RunInfo()
 void WiFiScan::RunEspressifScan(uint8_t scan_mode, uint16_t color) {
   #ifdef WRITE_PACKETS_SERIAL
     buffer_obj.open();
-  #else
+  #elif defined(HAS_SD)
     sd_obj.openCapture("espressif");
+  #else
+    return;
   #endif
 
   #ifdef MARAUDER_FLIPPER
@@ -901,8 +907,10 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
 
   #ifdef WRITE_PACKETS_SERIAL
     buffer_obj.open();
-  #else
+  #elif defined(HAS_SD)
     sd_obj.openCapture("packet_monitor");
+  #else
+    return;
   #endif
 
   #ifdef HAS_ILI9341
@@ -1020,8 +1028,10 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
   #else
     #ifdef WRITE_PACKETS_SERIAL
       buffer_obj.open();
-    #else
+    #elif defined(HAS_SD)
       sd_obj.openCapture("eapol");
+    #else
+      return;
     #endif
     
     #ifdef HAS_SCREEN
@@ -1119,8 +1129,10 @@ void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color)
 {
   #ifdef WRITE_PACKETS_SERIAL
     buffer_obj.open();
-  #else
+  #elif defined(HAS_SD)
     sd_obj.openCapture("pwnagotchi");
+  #else
+    return;
   #endif
 
   #ifdef MARAUDER_FLIPPER
@@ -1165,8 +1177,10 @@ void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color)
 {
   #ifdef WRITE_PACKETS_SERIAL
     buffer_obj.open();
-  #else
+  #elif defined(HAS_SD)
     sd_obj.openCapture("beacon");
+  #else
+    return;
   #endif
 
   #ifdef MARAUDER_FLIPPER
@@ -1210,8 +1224,10 @@ void WiFiScan::RunStationScan(uint8_t scan_mode, uint16_t color)
 {
   #ifdef WRITE_PACKETS_SERIAL
     buffer_obj.open();
-  #else
+  #elif defined(HAS_SD)
     sd_obj.openCapture("station");
+  #else
+    return;
   #endif
 
   #ifdef MARAUDER_FLIPPER
@@ -1255,9 +1271,11 @@ void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color)
 {
   #ifdef WRITE_PACKETS_SERIAL
     buffer_obj.open();
-  #else
+  #elif defined(HAS_SD)
     if (scan_mode != WIFI_SCAN_SIG_STREN)
       sd_obj.openCapture("raw");
+  #else
+    return;
   #endif
 
   #ifdef MARAUDER_FLIPPER
@@ -1304,8 +1322,10 @@ void WiFiScan::RunDeauthScan(uint8_t scan_mode, uint16_t color)
 {
   #ifdef WRITE_PACKETS_SERIAL
     buffer_obj.open();
-  #else
+  #elif defined(HAS_SD)
     sd_obj.openCapture("deauth");
+  #else
+    return;
   #endif
 
   #ifdef MARAUDER_FLIPPER
@@ -1351,8 +1371,10 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
 {
   #ifdef WRITE_PACKETS_SERIAL
     buffer_obj.open();
-  #else
+  #elif defined(HAS_SD)
     sd_obj.openCapture("probe");
+  #else
+    return;
   #endif
 
   #ifdef MARAUDER_FLIPPER
@@ -3209,8 +3231,10 @@ void WiFiScan::addPacket(wifi_promiscuous_pkt_t *snifferPacket, int len) {
   if (save_packet) {
     #ifdef WRITE_PACKETS_SERIAL
       buffer_obj.addPacket(snifferPacket->payload, len);
-    #else
+    #elif defined(HAS_SD)
       sd_obj.addPacket(snifferPacket->payload, len);
+    #else
+      return;
     #endif
   }
 }

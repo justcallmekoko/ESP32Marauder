@@ -38,11 +38,9 @@
 #include "Assets.h"
 #ifdef MARAUDER_FLIPPER
   #include "flipperLED.h"
-#endif
-#ifdef XIAO_ESP32_S3
+#elif defined(XIAO_ESP32_S3)
   #include "xiaoLED.h"
-#endif
-#ifndef MARAUDER_FLIPPER || XIAO_ESP32_S3
+#else
   #include "LedInterface.h"
 #endif
 //#include "MenuFunctions.h"
