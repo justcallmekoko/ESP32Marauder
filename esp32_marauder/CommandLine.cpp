@@ -270,12 +270,15 @@ void CommandLine::runCommand(String input) {
     #endif
   }
   // ls command
-  else if (cmd_args.get(0) == LS_CMD) {
-    if (cmd_args.size() > 1)
-      sd_obj.listDir(cmd_args.get(1));
-    else
-      Serial.println("You did not provide a dir to list");
-  }
+  #ifdef HAS_SD
+    else if (cmd_args.get(0) == LS_CMD) {
+      if (cmd_args.size() > 1)
+        sd_obj.listDir(cmd_args.get(1));
+      else
+        Serial.println("You did not provide a dir to list");
+    }
+  #endif
+
   // Channel command
   else if (cmd_args.get(0) == CH_CMD) {
     // Search for channel set arg

@@ -14,6 +14,7 @@ class xiaoLED {
 
     public:
         void RunSetup();
+        void main();
         void attackLED();
         void sniffLED();
         void offLED();
