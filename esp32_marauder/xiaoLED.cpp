@@ -13,9 +13,11 @@ delay(50);
   digitalWrite(XIAO_LED_PIN, LOW);
   delay(500);
   digitalWrite(XIAO_LED_PIN, HIGH);
+  delay(250);
   digitalWrite(XIAO_LED_PIN, LOW);
   delay(500);
   digitalWrite(XIAO_LED_PIN, HIGH);
+  delay(250);
   digitalWrite(XIAO_LED_PIN, LOW);
   delay(500);
   digitalWrite(XIAO_LED_PIN, HIGH);
@@ -26,7 +28,7 @@ void xiaoLED::attackLED() {
     return;
     
   digitalWrite(XIAO_LED_PIN, HIGH);
-  delay(10);
+  delay(300);
   digitalWrite(XIAO_LED_PIN, LOW);
 }
 
@@ -35,7 +37,7 @@ void xiaoLED::sniffLED() {
     return;
     
   digitalWrite(XIAO_LED_PIN, HIGH);
-  delay(10);
+  delay(300);
   digitalWrite(XIAO_LED_PIN, LOW);
 }
 
@@ -44,4 +46,8 @@ void xiaoLED::offLED() {
     return;
     
   digitalWrite(XIAO_LED_PIN, HIGH);
+}
+
+void xiaoLED::main() {
+  // do nothing
 }

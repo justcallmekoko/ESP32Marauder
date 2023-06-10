@@ -404,6 +404,8 @@ void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_
   this->wifi_initialized = true;
   #ifdef MARAUDER_FLIPPER
     flipper_led.attackLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.attackLED();
   #else
     led_obj.setMode(MODE_ATTACK);
   #endif
@@ -425,6 +427,8 @@ bool WiFiScan::shutdownWiFi() {
 
     #ifdef MARAUDER_FLIPPER
       flipper_led.offLED();
+    #elif defined(XIAO_ESP32_S3)
+      xiao_led.offLED();
     #else
       led_obj.setMode(MODE_OFF);
     #endif
@@ -447,6 +451,8 @@ bool WiFiScan::shutdownBLE() {
 
       #ifdef MARAUDER_FLIPPER
         flipper_led.offLED();
+      #elif defined(XIAO_ESP32_S3)
+        xiao_led.offLED();
       #else
         led_obj.setMode(MODE_OFF);
       #endif
@@ -580,6 +586,8 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
   #else
     led_obj.setMode(MODE_SNIFF);
   #endif
@@ -817,20 +825,21 @@ void WiFiScan::RunInfo()
     }
   #endif
 
-
-  battery_obj.battery_level = battery_obj.getBatteryLevel();
-  if (battery_obj.i2c_supported) {
-    #ifdef HAS_SCREEN
-      display_obj.tft.println(text_table4[32]);
-      display_obj.tft.println(text_table4[33] + (String)battery_obj.battery_level + "%");
-    #endif
-  }
-  else {
-    #ifdef HAS_SCREEN
-      display_obj.tft.println(text_table4[34]);
-    #endif
-  }
-
+  #ifdef HAS_BATTERY
+    battery_obj.battery_level = battery_obj.getBatteryLevel();
+    if (battery_obj.i2c_supported) {
+      #ifdef HAS_SCREEN
+        display_obj.tft.println(text_table4[32]);
+        display_obj.tft.println(text_table4[33] + (String)battery_obj.battery_level + "%");
+      #endif
+    }
+    else {
+      #ifdef HAS_SCREEN
+        display_obj.tft.println(text_table4[34]);
+      #endif
+    }
+  #endif
+  
   #ifdef HAS_SCREEN
     display_obj.tft.println(text_table4[35] + (String)temp_obj.current_temp + " C");
   #endif
@@ -845,6 +854,8 @@ void WiFiScan::RunEspressifScan(uint8_t scan_mode, uint16_t color) {
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
   #else
     led_obj.setMode(MODE_SNIFF);
   #endif
@@ -882,6 +893,8 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
 {
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
   #else
     led_obj.setMode(MODE_SNIFF);
   #endif
@@ -961,6 +974,8 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
 {
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
   #else
     led_obj.setMode(MODE_SNIFF);
   #endif
@@ -1110,6 +1125,8 @@ void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color)
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
   #else
     led_obj.setMode(MODE_SNIFF);
   #endif
@@ -1154,6 +1171,8 @@ void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color)
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
   #else
     led_obj.setMode(MODE_SNIFF);
   #endif
@@ -1197,6 +1216,8 @@ void WiFiScan::RunStationScan(uint8_t scan_mode, uint16_t color)
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
   #else
     led_obj.setMode(MODE_SNIFF);
   #endif
@@ -1241,6 +1262,8 @@ void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color)
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
   #else
     led_obj.setMode(MODE_SNIFF);
   #endif
@@ -1287,6 +1310,8 @@ void WiFiScan::RunDeauthScan(uint8_t scan_mode, uint16_t color)
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
   #else
     led_obj.setMode(MODE_SNIFF);
   #endif
@@ -1332,6 +1357,8 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
   #else
     led_obj.setMode(MODE_SNIFF);
   #endif

@@ -1,7 +1,7 @@
 #include "LedInterface.h"
 
 LedInterface::LedInterface() {
-  
+
 }
 
 void LedInterface::RunSetup() {
@@ -61,10 +61,10 @@ void LedInterface::ledOff() {
   strip.show();
 }
 
-void LedInterface::rainbow() {
+  void LedInterface::rainbow() {
   strip.setPixelColor(0, this->Wheel((0 * 256 / 100 + this->wheel_pos) % 256));
   strip.show();
-    
+
   this->current_fade_itter++;
 
   this->wheel_pos = this->wheel_pos - this->wheel_speed;
