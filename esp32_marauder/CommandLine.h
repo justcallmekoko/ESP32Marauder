@@ -14,6 +14,7 @@
   #include "SDInterface.h"
 #endif
 #include "settings.h"
+#include "LedInterface.h"
 
 #ifdef HAS_SCREEN
   extern MenuFunctions menu_function_obj;
@@ -26,6 +27,7 @@ extern Web web_obj;
   extern SDInterface sd_obj;
 #endif
 extern Settings settings_obj;
+extern LedInterface led_obj;
 extern LinkedList<AccessPoint>* access_points;
 extern LinkedList<ssid>* ssids;
 extern LinkedList<Station>* stations;
@@ -42,6 +44,7 @@ const char PROGMEM UPDATE_CMD[] = "update";
 const char PROGMEM HELP_CMD[] = "help";
 const char PROGMEM SETTINGS_CMD[] = "settings";
 const char PROGMEM LS_CMD[] = "ls";
+const char PROGMEM LED_CMD[] = "led";
 
 // WiFi sniff/scan
 const char PROGMEM SIGSTREN_CMD[] = "sigmon";
@@ -83,6 +86,7 @@ const char PROGMEM HELP_REBOOT_CMD[] = "reboot";
 const char PROGMEM HELP_UPDATE_CMD_A[] = "update -s/-w";
 const char PROGMEM HELP_SETTINGS_CMD[] = "settings [-s <setting> enable/disable>]/[-r]";
 const char PROGMEM HELP_LS_CMD[] = "ls <directory>";
+const char PROGMEM HELP_LED_CMD[] = "led -s <hex color>/-p <rainbow>";
 
 // WiFi sniff/scan
 const char PROGMEM HELP_SIGSTREN_CMD[] = "sigmon";
