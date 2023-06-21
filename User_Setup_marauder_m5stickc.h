@@ -18,6 +18,8 @@
 // Display type -  only define if RPi display
 //#define RPI_DRIVER
 
+#define CGRAM_OFFSET
+
 // Only define one driver, the other ones must be commented out
 //#define ILI9341_DRIVER // OG Marauder
 //#define ST7735_DRIVER    // Marauder Mini  // Define additional parameters below for this display
