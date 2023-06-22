@@ -18,7 +18,7 @@
   //#define ESP32_LDDB
   //#define MARAUDER_DEV_BOARD_PRO
 
-  #define MARAUDER_VERSION "v0.10.7"
+  #define MARAUDER_VERSION "v0.10.8"
 
   //// POWER MANAGEMENT
   #ifdef MARAUDER_M5STICKC
