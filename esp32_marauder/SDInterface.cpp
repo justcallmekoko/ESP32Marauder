@@ -2,71 +2,77 @@
 #include "lang_var.h"
 
 bool SDInterface::initSD() {
-  String display_string = "";
+  #ifdef HAS_SD
+    String display_string = "";
 
-  #ifdef KIT
-    pinMode(SD_DET, INPUT);
-    if (digitalRead(SD_DET) == LOW) {
-      Serial.println(F("SD Card Detect Pin Detected"));
-    }
-    else {
-      Serial.println(F("SD Card Detect Pin Not Detected"));
+    #ifdef KIT
+      pinMode(SD_DET, INPUT);
+      if (digitalRead(SD_DET) == LOW) {
+        Serial.println(F("SD Card Detect Pin Detected"));
+      }
+      else {
+        Serial.println(F("SD Card Detect Pin Not Detected"));
+        this->supported = false;
+        return false;
+      }
+    #endif
+
+    pinMode(SD_CS, OUTPUT);
+
+    delay(10);
+  
+    if (!SD.begin(SD_CS)) {
+      Serial.println(F("Failed to mount SD Card"));
       this->supported = false;
       return false;
     }
-  #endif
+    else {
+      this->supported = true;
+      this->cardType = SD.cardType();
+      //if (cardType == CARD_MMC)
+      //  Serial.println(F("SD: MMC Mounted"));
+      //else if(cardType == CARD_SD)
+      //    Serial.println(F("SD: SDSC Mounted"));
+      //else if(cardType == CARD_SDHC)
+      //    Serial.println(F("SD: SDHC Mounted"));
+      //else
+      //    Serial.println(F("SD: UNKNOWN Card Mounted"));
 
-  pinMode(SD_CS, OUTPUT);
+      this->cardSizeMB = SD.cardSize() / (1024 * 1024);
+    
+      //Serial.printf("SD Card Size: %lluMB\n", this->cardSizeMB);
 
-  delay(10);
+      if (this->supported) {
+        const int NUM_DIGITS = log10(this->cardSizeMB) + 1;
+
+        char sz[NUM_DIGITS + 1];
+
+        sz[NUM_DIGITS] =  0;
+        for ( size_t i = NUM_DIGITS; i--; this->cardSizeMB /= 10)
+        {
+            sz[i] = '0' + (this->cardSizeMB % 10);
+            display_string.concat((String)sz[i]);
+        }
   
-  if (!SD.begin(SD_CS)) {
-    Serial.println(F("Failed to mount SD Card"));
-    this->supported = false;
-    return false;
-  }
-  else {
-    this->supported = true;
-    this->cardType = SD.cardType();
-    //if (cardType == CARD_MMC)
-    //  Serial.println(F("SD: MMC Mounted"));
-    //else if(cardType == CARD_SD)
-    //    Serial.println(F("SD: SDSC Mounted"));
-    //else if(cardType == CARD_SDHC)
-    //    Serial.println(F("SD: SDHC Mounted"));
-    //else
-    //    Serial.println(F("SD: UNKNOWN Card Mounted"));
-
-    this->cardSizeMB = SD.cardSize() / (1024 * 1024);
-    
-    //Serial.printf("SD Card Size: %lluMB\n", this->cardSizeMB);
-
-    if (this->supported) {
-      const int NUM_DIGITS = log10(this->cardSizeMB) + 1;
-    
-      char sz[NUM_DIGITS + 1];
-     
-      sz[NUM_DIGITS] =  0;
-      for ( size_t i = NUM_DIGITS; i--; this->cardSizeMB /= 10)
-      {
-          sz[i] = '0' + (this->cardSizeMB % 10);
-          display_string.concat((String)sz[i]);
+        this->card_sz = sz;
       }
-  
-      this->card_sz = sz;
-    }
 
-    buffer_obj = Buffer();
+      buffer_obj = Buffer();
     
-    if (!SD.exists("/SCRIPTS")) {
-      Serial.println("/SCRIPTS does not exist. Creating...");
+      if (!SD.exists("/SCRIPTS")) {
+        Serial.println("/SCRIPTS does not exist. Creating...");
 
-      SD.mkdir("/SCRIPTS");
-      Serial.println("/SCRIPTS created");
-    }
+        SD.mkdir("/SCRIPTS");
+        Serial.println("/SCRIPTS created");
+      }
     
-    return true;
+      return true;
   }
+
+  #else
+    Serial.println("SD support disabled, skipping init");
+    return false;
+  #endif
 }
 
 void SDInterface::listDir(String str_dir){

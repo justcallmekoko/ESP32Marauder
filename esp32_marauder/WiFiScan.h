@@ -24,14 +24,25 @@
 #ifdef HAS_SCREEN
   #include "Display.h"
 #endif
-#include "SDInterface.h"
+#ifdef HAS_SD
+  #include "SDInterface.h"
+#endif
 #include "Buffer.h"
-#include "BatteryInterface.h"
-#include "TemperatureInterface.h"
+#ifdef HAS_BATTERY
+  #include "BatteryInterface.h"
+#endif
+#ifdef HAS_TEMP_SENSOR
+  #include "TemperatureInterface.h"
+#endif
 #include "settings.h"
 #include "Assets.h"
-#include "flipperLED.h"
-#include "LedInterface.h"
+#ifdef MARAUDER_FLIPPER
+  #include "flipperLED.h"
+#elif defined(XIAO_ESP32_S3)
+  #include "xiaoLED.h"
+#else
+  #include "LedInterface.h"
+#endif
 //#include "MenuFunctions.h"
 
 #define bad_list_length 3
@@ -77,13 +88,24 @@
 #ifdef HAS_SCREEN
   extern Display display_obj;
 #endif
-extern SDInterface sd_obj;
+#ifdef HAS_SD
+  extern SDInterface sd_obj;
+#endif
 extern Buffer buffer_obj;
-extern BatteryInterface battery_obj;
-extern TemperatureInterface temp_obj;
+#ifdef HAS_BATTERY
+  extern BatteryInterface battery_obj;
+#endif
+#ifdef HAS_TEMP_SENSOR
+  extern TemperatureInterface temp_obj;
+#endif
 extern Settings settings_obj;
-extern flipperLED flipper_led;
-extern LedInterface led_obj;
+#ifdef MARAUDER_FLIPPER
+  extern flipperLED flipper_led;
+#elif defined(XIAO_ESP32_S3)
+  extern xiaoLED xiao_led;
+#else
+  extern LedInterface led_obj;
+#endif
 
 esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx, const void *buffer, int len, bool en_sys_seq);
 //int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3);

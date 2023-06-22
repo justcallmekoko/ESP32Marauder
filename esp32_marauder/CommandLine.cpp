@@ -292,12 +292,18 @@ void CommandLine::runCommand(String input) {
     #endif
   }
   // ls command
-  else if (cmd_args.get(0) == LS_CMD) {
-    if (cmd_args.size() > 1)
-      sd_obj.listDir(cmd_args.get(1));
-    else
-      Serial.println("You did not provide a dir to list");
-  }
+    else if (cmd_args.get(0) == LS_CMD) {
+      #ifdef HAS_SD
+        if (cmd_args.size() > 1)
+          sd_obj.listDir(cmd_args.get(1));
+        else
+          Serial.println("You did not provide a dir to list");
+      #else
+        Serial.println("SD support disabled, cannot use command");
+        return;
+      }
+  #endif
+
   // Channel command
   else if (cmd_args.get(0) == CH_CMD) {
     // Search for channel set arg
@@ -685,16 +691,21 @@ void CommandLine::runCommand(String input) {
       }
       // Update via SD
       else if (sd_sw != -1) {
-        #ifndef WRITE_PACKETS_SERIAL
-          if (!sd_obj.supported) {
-            Serial.println("SD card is not connected. Cannot perform SD Update");
-            return;
-          }
-          wifi_scan_obj.currentScanMode = OTA_UPDATE;
-          sd_obj.runUpdate();
-        #else
-          Serial.println("SD card not initialized. Cannot perform SD Update");
-        #endif
+      #ifdef HAS_SD
+          #ifndef WRITE_PACKETS_SERIAL
+            if (!sd_obj.supported) {
+              Serial.println("SD card is not connected. Cannot perform SD Update");
+              return;
+            }
+            wifi_scan_obj.currentScanMode = OTA_UPDATE;
+            sd_obj.runUpdate();
+          #else
+            Serial.println("SD card not initialized. Cannot perform SD Update");
+          #endif
+      #else
+        Serial.println("SD card support disabled. Cannot perform SD Update");
+        return;
+      #endif
       }
     }
   }
