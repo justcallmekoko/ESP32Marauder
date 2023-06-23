@@ -54,7 +54,7 @@
     #define HAS_BATTERY
     #define HAS_BT
     //#define HAS_BUTTONS
-    //#define HAS_NEOPIXEL_LED
+    #define HAS_NEOPIXEL_LED
     //#define HAS_PWR_MGMT
     #define HAS_SCREEN
     #define HAS_SD
