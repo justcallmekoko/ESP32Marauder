@@ -292,17 +292,17 @@ void CommandLine::runCommand(String input) {
     #endif
   }
   // ls command
-    else if (cmd_args.get(0) == LS_CMD) {
-      #ifdef HAS_SD
-        if (cmd_args.size() > 1)
-          sd_obj.listDir(cmd_args.get(1));
-        else
-          Serial.println("You did not provide a dir to list");
-      #else
-        Serial.println("SD support disabled, cannot use command");
-        return;
-      }
-  #endif
+  else if (cmd_args.get(0) == LS_CMD) {
+    #ifdef HAS_SD
+      if (cmd_args.size() > 1)
+        sd_obj.listDir(cmd_args.get(1));
+      else
+        Serial.println("You did not provide a dir to list");
+    #else
+      Serial.println("SD support disabled, cannot use command");
+      return;
+    #endif
+  }
 
   // Channel command
   else if (cmd_args.get(0) == CH_CMD) {

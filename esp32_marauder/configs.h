@@ -32,6 +32,7 @@
     #define HAS_PWR_MGMT
     #define HAS_SCREEN
     #define HAS_SD
+    #define USE_SD
     #define HAS_TEMP_SENSOR
   #endif
 
@@ -44,6 +45,7 @@
     //#define HAS_PWR_MGMT
     #define HAS_SCREEN
     #define HAS_SD
+    #define USE_SD
     #define HAS_TEMP_SENSOR
   #endif
 
@@ -56,6 +58,7 @@
     //#define HAS_PWR_MGMT
     #define HAS_SCREEN
     #define HAS_SD
+    #define USE_SD
     #define HAS_TEMP_SENSOR
   #endif
 
@@ -68,6 +71,7 @@
     //#define HAS_PWR_MGMT
     #define HAS_SCREEN
     #define HAS_SD
+    #define USE_SD
     #define HAS_TEMP_SENSOR
   #endif
 
@@ -80,6 +84,7 @@
     //#define HAS_PWR_MGMT
     #define HAS_SCREEN
     #define HAS_SD
+    #define USE_SD
     #define HAS_TEMP_SENSOR
   #endif
 
@@ -116,6 +121,7 @@
     //#define HAS_PWR_MGMT
     //#define HAS_SCREEN
     #define HAS_SD
+    #define USE_SD
     //#define HAS_TEMP_SENSOR
   #endif
 
@@ -128,6 +134,7 @@
     //#define HAS_PWR_MGMT
     //#define HAS_SCREEN
     #define HAS_SD
+    #define USE_SD
     //#define HAS_TEMP_SENSOR
   #endif
 
