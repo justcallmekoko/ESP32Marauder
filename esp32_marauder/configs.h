@@ -15,13 +15,13 @@
   //#define MARAUDER_V6
   //#define MARAUDER_KIT
   //#define GENERIC_ESP32
-  //#define MARAUDER_FLIPPER
+  #define MARAUDER_FLIPPER
   //#define ESP32_LDDB
   //#define MARAUDER_DEV_BOARD_PRO
   //#define XIAO_ESP32_S3
   //// END BOARD TARGETS
 
-  #define MARAUDER_VERSION "v0.10.7"
+  #define MARAUDER_VERSION "v0.10.8"
 
  //// BOARD FEATURES
   #ifdef MARAUDER_M5STICKC
@@ -32,6 +32,7 @@
     #define HAS_PWR_MGMT
     #define HAS_SCREEN
     #define HAS_SD
+    #define USE_SD
     #define HAS_TEMP_SENSOR
   #endif
 
@@ -44,6 +45,7 @@
     //#define HAS_PWR_MGMT
     #define HAS_SCREEN
     #define HAS_SD
+    #define USE_SD
     #define HAS_TEMP_SENSOR
   #endif
 
@@ -51,11 +53,12 @@
     //#define FLIPPER_ZERO_HAT
     #define HAS_BATTERY
     #define HAS_BT
-    #define HAS_BUTTONS
+    //#define HAS_BUTTONS
     //#define HAS_NEOPIXEL_LED
     //#define HAS_PWR_MGMT
     #define HAS_SCREEN
     #define HAS_SD
+    #define USE_SD
     #define HAS_TEMP_SENSOR
   #endif
 
@@ -63,11 +66,12 @@
     //#define FLIPPER_ZERO_HAT
     #define HAS_BATTERY
     #define HAS_BT
-    #define HAS_BUTTONS
+    //#define HAS_BUTTONS
     //#define HAS_NEOPIXEL_LED
     //#define HAS_PWR_MGMT
     #define HAS_SCREEN
     #define HAS_SD
+    #define USE_SD
     #define HAS_TEMP_SENSOR
   #endif
 
@@ -75,11 +79,12 @@
     //#define FLIPPER_ZERO_HAT
     #define HAS_BATTERY
     #define HAS_BT
-    #define HAS_BUTTONS
+    //#define HAS_BUTTONS
     //#define HAS_NEOPIXEL_LED
     //#define HAS_PWR_MGMT
     #define HAS_SCREEN
     #define HAS_SD
+    #define USE_SD
     #define HAS_TEMP_SENSOR
   #endif
 
@@ -116,6 +121,7 @@
     //#define HAS_PWR_MGMT
     //#define HAS_SCREEN
     #define HAS_SD
+    #define USE_SD
     //#define HAS_TEMP_SENSOR
   #endif
 
@@ -124,10 +130,11 @@
     //#define HAS_BATTERY
     #define HAS_BT
     //#define HAS_BUTTONS
-    //#define HAS_NEOPIXEL_LED
+    #define HAS_NEOPIXEL_LED
     //#define HAS_PWR_MGMT
     //#define HAS_SCREEN
     #define HAS_SD
+    #define USE_SD
     //#define HAS_TEMP_SENSOR
   #endif
 
