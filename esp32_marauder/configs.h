@@ -17,6 +17,7 @@
   #define MARAUDER_FLIPPER
   //#define ESP32_LDDB
   //#define MARAUDER_DEV_BOARD_PRO
+  //#define MARAUDER_ENDGAME_S3
 
   #define MARAUDER_VERSION "v0.10.8"
 
@@ -447,36 +448,58 @@
   //// END MENU DEFINITIONS
 
   //// SD DEFINITIONS
+    // "SD_FS" is required, used as a filesystem pointer
+    // ESP32/ESP32-S2 define as "SD_FS SD"
+    // ESP32-S3 define as "SD_FS SD_MMC"
+    // "SD_CS" or "SDMMC_CS" are also required, one or the other not both. This is used to determine what SD library is used
+    // "SDMMC_CUSTOMPINS", is optional. "SDMMC_CLK", "SDMMC_D0", "SDMMC_CMD" are required if "SDMMC_CUSTOMPINS" is used.
   #ifdef MARAUDER_V4
+    #define SD_FS SD
     #define SD_CS 12
   #endif
 
   #ifdef MARAUDER_V6
+    #define SD_FS SD
     #define SD_CS 12
   #endif
 
   #ifdef MARAUDER_KIT
+    #define SD_FS SD
     #define SD_CS 12
   #endif
 
   #ifdef MARAUDER_MINI
+    #define SD_FS SD
     #define SD_CS 4
   #endif
 
   #ifdef MARAUDER_M5STICKC
+    #define SD_FS SD
     #define SD_CS 10
   #endif
 
   #ifdef MARAUDER_FLIPPER
+    #define SD_FS SD
     #define SD_CS 10
   #endif
 
   #ifdef ESP32_LDDB
+    #define SD_FS SD
     #define SD_CS 4
   #endif
 
   #ifdef MARAUDER_DEV_BOARD_PRO
+    #define SD_FS SD
     #define SD_CS 4
+  #endif
+
+  #ifdef MARAUDER_ENDGAME_S3
+    #define SD_FS SD_MMC
+    #define SDMMC_CS 14
+    #define SDMMC_CUSTOMPINS
+    #define SDMMC_CLK 9
+    #define SDMMC_CMD 10 // MISO
+    #define SDMMC_D0 11 // MOSI
   #endif
   //// END SD DEFINITIONS
 
@@ -539,7 +562,7 @@
   //// NEOPIXEL STUFF  
   #if defined(ESP32_LDDB)
     #define PIN 17
-  #elif defined(MARAUDER_DEV_BOARD_PRO)
+  #elif defined(MARAUDER_DEV_BOARD_PRO) || defined(MARAUDER_ENDGAME_S3)
     #define PIN 16
   #else
     #define PIN 25

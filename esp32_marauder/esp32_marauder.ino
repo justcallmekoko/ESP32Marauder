@@ -140,14 +140,6 @@ void setup()
     digitalWrite(TFT_CS, HIGH);
   #endif
 
-  pinMode(SD_CS, OUTPUT);
-
-  delay(10);
-  
-  digitalWrite(SD_CS, HIGH);
-
-  delay(10);
-
   Serial.begin(115200);
 
   #ifdef WRITE_PACKETS_SERIAL
