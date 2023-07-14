@@ -24,6 +24,7 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #include "Assets.h"
 #include "WiFiScan.h"
+#include "EvilPortal.h"
 #ifdef HAS_SD
   #include "SDInterface.h"
 #endif
@@ -79,6 +80,7 @@ https://www.online-utility.org/image/convert/to/XBM
 #endif
 
 WiFiScan wifi_scan_obj;
+EvilPortal evil_portal_obj;
 Web web_obj;
 Buffer buffer_obj;
 EspInterface esp_obj;
