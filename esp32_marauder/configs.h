@@ -15,8 +15,8 @@
   //#define MARAUDER_V6
   //#define MARAUDER_KIT
   //#define GENERIC_ESP32
-  //#define MARAUDER_FLIPPER
-  #define ESP32_LDDB
+  #define MARAUDER_FLIPPER
+  //#define ESP32_LDDB
   //#define MARAUDER_DEV_BOARD_PRO
   //#define XIAO_ESP32_S3
   //// END BOARD TARGETS
