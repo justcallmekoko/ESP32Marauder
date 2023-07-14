@@ -22,6 +22,20 @@ jobs:
           repository: espressif/arduino-esp32
           ref: 2.0.4
           path: 2.0.4arduino-esp32
+          
+      - name: Install AsyncTCP
+        uses: actions/checkout@v2
+        with:
+          repository: me-no-dev/AsyncTCP
+          ref: master
+          path: CustomAsyncTCP
+          
+      - name: Install ESPAsyncWebServer
+        uses: actions/checkout@v2
+        with:
+          repository: me-no-dev/ESPAsyncWebServer
+          ref: master
+          path: CustomESPAsyncWebServer
       
       - name: Install TFT_eSPI
         uses: actions/checkout@v2
