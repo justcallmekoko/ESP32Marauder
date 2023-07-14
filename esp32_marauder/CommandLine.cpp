@@ -250,15 +250,15 @@ void CommandLine::runCommand(String input) {
 
   // Stop Scan
   if (cmd_args.get(0) == STOPSCAN_CMD) {
-    if (wifi_scan_obj.currentScanMode == OTA_UPDATE) {
-      wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
+    //if (wifi_scan_obj.currentScanMode == OTA_UPDATE) {
+    //  wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
       //#ifdef HAS_SCREEN
       //  menu_function_obj.changeMenu(menu_function_obj.updateMenu.parentMenu);
       //#endif
-      WiFi.softAPdisconnect(true);
-      web_obj.shutdownServer();
-      return;
-    }
+    //  WiFi.softAPdisconnect(true);
+    //  web_obj.shutdownServer();
+    //  return;
+    //}
     
     wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
 
@@ -400,9 +400,36 @@ void CommandLine::runCommand(String input) {
         display_obj.clearScreen();
         menu_function_obj.drawStatusBar();
       #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_MAGENTA);
+      wifi_scan_obj.StartScan(WIFI_SCAN_EVIL_PORTAL, TFT_MAGENTA);
     }
     // AP Scan
+    else if (cmd_args.get(0) == EVIL_PORTAL_CMD) {
+      int cmd_sw = this->argSearch(&cmd_args, "-c");
+
+      if (cmd_sw != -1) {
+        String et_command = cmd_args.get(cmd_sw + 1);
+        if (et_command == "start") {
+          Serial.println("Starting Evil Portal. Stop with " + (String)STOPSCAN_CMD);
+          #ifdef HAS_SCREEN
+            display_obj.clearScreen();
+            menu_function_obj.drawStatusBar();
+          #endif
+          wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_MAGENTA);
+        }
+        else if (et_command == "reset") {
+          
+        }
+        else if (et_command == "ack") {
+          
+        }
+        else if (et_command == "sethtml") {
+
+        }
+        else if (et_command == "setap") {
+
+        }
+      }
+    }
     else if (cmd_args.get(0) == SCANAP_CMD) {
       int full_sw = -1;
       #ifdef HAS_SCREEN
@@ -684,20 +711,20 @@ void CommandLine::runCommand(String input) {
 
     // Update command
     if (cmd_args.get(0) == UPDATE_CMD) {
-      int w_sw = this->argSearch(&cmd_args, "-w"); // Web update
+      //int w_sw = this->argSearch(&cmd_args, "-w"); // Web update
       int sd_sw = this->argSearch(&cmd_args, "-s"); // SD Update
 
       // Update via OTA
-      if (w_sw != -1) {
-        Serial.println("Starting Marauder OTA Update. Stop with " + (String)STOPSCAN_CMD);
-        wifi_scan_obj.currentScanMode = OTA_UPDATE;
+      //if (w_sw != -1) {
+      //  Serial.println("Starting Marauder OTA Update. Stop with " + (String)STOPSCAN_CMD);
+      //  wifi_scan_obj.currentScanMode = OTA_UPDATE;
         //#ifdef HAS_SCREEN
         //  menu_function_obj.changeMenu(menu_function_obj.updateMenu);
         //#endif
-        web_obj.setupOTAupdate();
-      }
+      //  web_obj.setupOTAupdate();
+      //}
       // Update via SD
-      else if (sd_sw != -1) {
+      if (sd_sw != -1) {
       #ifdef HAS_SD
           #ifndef WRITE_PACKETS_SERIAL
             if (!sd_obj.supported) {

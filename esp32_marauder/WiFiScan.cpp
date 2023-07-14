@@ -300,6 +300,8 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     StopScan(scan_mode);
   else if (scan_mode == WIFI_SCAN_PROBE)
     RunProbeScan(scan_mode, color);
+  else if (scan_mode == WIFI_SCAN_EVIL_PORTAL)
+    RunEvilPortal(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_EAPOL)
     RunEapolScan(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_ACTIVE_EAPOL)
@@ -481,6 +483,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
 {
   if ((currentScanMode == WIFI_SCAN_PROBE) ||
   (currentScanMode == WIFI_SCAN_AP) ||
+  (currentScanMode == WIFI_SCAN_EVIL_PORTAL) ||
   (currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
   (currentScanMode == WIFI_SCAN_STATION) ||
   (currentScanMode == WIFI_SCAN_SIG_STREN) ||
@@ -581,6 +584,58 @@ String WiFiScan::freeRAM()
   sprintf(s, "RAM Free: %u bytes", esp_get_free_heap_size());
   this->free_ram = String(esp_get_free_heap_size());
   return String(s);
+}
+
+void WiFiScan::RunEvilPortal(uint8_t scan_mode, uint16_t color)
+{
+  #ifdef WRITE_PACKETS_SERIAL
+    buffer_obj.open();
+  #elif defined(HAS_SD)
+    sd_obj.openCapture("evil_portal");
+  #else
+    return;
+  #endif
+
+  #ifdef MARAUDER_FLIPPER
+    flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
+  #else
+    led_obj.setMode(MODE_SNIFF);
+  #endif
+
+  Serial.println(text_table4[9] + (String)access_points->size());
+  #ifdef HAS_SCREEN
+    display_obj.TOP_FIXED_AREA_2 = 48;
+    display_obj.tteBar = true;
+    display_obj.print_delay_1 = 15;
+    display_obj.print_delay_2 = 10;
+    display_obj.initScrollValues(true);
+    display_obj.tft.setTextWrap(false);
+    display_obj.tft.setTextColor(TFT_WHITE, color);
+    #ifdef HAS_ILI9341
+      display_obj.tft.fillRect(0,16,240,16, color);
+      display_obj.tft.drawCentreString("Evil Portal");
+      display_obj.touchToExit();
+    #endif
+    display_obj.tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
+    display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
+  #endif
+
+  //esp_wifi_init(&cfg);
+  //esp_wifi_set_storage(WIFI_STORAGE_RAM);
+  //esp_wifi_set_mode(WIFI_MODE_NULL);
+  //esp_wifi_start();
+  //esp_wifi_set_promiscuous(true);
+  //esp_wifi_set_promiscuous_filter(&filt);
+  //if (scan_mode == WIFI_SCAN_TARGET_AP_FULL)
+  //esp_wifi_set_promiscuous_rx_cb(&apSnifferCallbackFull);
+  //else
+  //  esp_wifi_set_promiscuous_rx_cb(&apSnifferCallback);
+  //esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
+  evil_portal_obj.begin();
+  this->wifi_initialized = true;
+  initTime = millis();
 }
 
 // Function to start running a beacon scan
@@ -3726,6 +3781,7 @@ void WiFiScan::main(uint32_t currentTime)
   // WiFi operations
   if ((currentScanMode == WIFI_SCAN_PROBE) ||
   (currentScanMode == WIFI_SCAN_AP) ||
+  (currentScanMode == WIFI_SCAN_EVIL_PORTAL) ||
   (currentScanMode == WIFI_SCAN_STATION) ||
   (currentScanMode == WIFI_SCAN_SIG_STREN) ||
   (currentScanMode == WIFI_SCAN_TARGET_AP) ||

@@ -11,7 +11,7 @@
 #include "Display.h"
 #include "BatteryInterface.h"
 #include "SDInterface.h"
-#include "Web.h"
+//#include "Web.h"
 #include "esp_interface.h"
 #include "a32u4_interface.h"
 #include "settings.h"
@@ -27,7 +27,7 @@
 
 extern Display display_obj;
 extern WiFiScan wifi_scan_obj;
-extern Web web_obj;
+//extern Web web_obj;
 extern SDInterface sd_obj;
 extern BatteryInterface battery_obj;
 extern EspInterface esp_obj;

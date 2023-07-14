@@ -919,6 +919,7 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_STATION) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_EVIL_PORTAL) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_TARGET_AP) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_TARGET_AP_FULL) ||
@@ -969,6 +970,7 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_STATION) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_EVIL_PORTAL) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_TARGET_AP) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_TARGET_AP_FULL) ||
@@ -1966,11 +1968,11 @@ void MenuFunctions::RunSetup()
     wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
     changeMenu(whichUpdateMenu.parentMenu);
   });
-  addNodes(&whichUpdateMenu, text_table1[39], TFT_GREEN, NULL, WEB_UPDATE, [this]() {
-    wifi_scan_obj.currentScanMode = OTA_UPDATE;
-    changeMenu(&updateMenu);
-    web_obj.setupOTAupdate();
-  });
+  //addNodes(&whichUpdateMenu, text_table1[39], TFT_GREEN, NULL, WEB_UPDATE, [this]() {
+  //  wifi_scan_obj.currentScanMode = OTA_UPDATE;
+  //  changeMenu(&updateMenu);
+  //  web_obj.setupOTAupdate();
+  //});
   #ifndef WRITE_PACKETS_SERIAL
     if (sd_obj.supported) addNodes(&whichUpdateMenu, text_table1[40], TFT_MAGENTA, NULL, SD_UPDATE, [this]() {
       wifi_scan_obj.currentScanMode = OTA_UPDATE;
@@ -2005,12 +2007,12 @@ void MenuFunctions::RunSetup()
 
   // Web Update
   updateMenu.parentMenu = &deviceMenu;
-  addNodes(&updateMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-    wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
-    changeMenu(updateMenu.parentMenu);
-    WiFi.softAPdisconnect(true);
-    web_obj.shutdownServer();
-  });
+  //addNodes(&updateMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+  //  wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
+  //  changeMenu(updateMenu.parentMenu);
+  //  WiFi.softAPdisconnect(true);
+  //  web_obj.shutdownServer();
+  //});
   //addNodes(&updateMenu, text09, TFT_LIGHTGREY, NULL, 0, [this](){wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF; changeMenu(updateMenu.parentMenu);});
 
   // Failed update menu

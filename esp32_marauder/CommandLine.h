@@ -9,7 +9,7 @@
 #endif 
 
 #include "WiFiScan.h"
-#include "Web.h"
+//#include "Web.h"
 #ifdef HAS_SD
   #include "SDInterface.h"
 #endif
@@ -22,7 +22,7 @@
 #endif
 
 extern WiFiScan wifi_scan_obj;
-extern Web web_obj;
+//extern Web web_obj;
 #ifdef HAS_SD
   extern SDInterface sd_obj;
 #endif
@@ -47,6 +47,7 @@ const char PROGMEM LS_CMD[] = "ls";
 const char PROGMEM LED_CMD[] = "led";
 
 // WiFi sniff/scan
+const char PROGMEM EVIL_PORTAL_CMD[] = "evilportal";
 const char PROGMEM SIGSTREN_CMD[] = "sigmon";
 const char PROGMEM SCANAP_CMD[] = "scanap";
 const char PROGMEM SCANSTA_CMD[] = "scansta";
@@ -89,6 +90,7 @@ const char PROGMEM HELP_LS_CMD[] = "ls <directory>";
 const char PROGMEM HELP_LED_CMD[] = "led -s <hex color>/-p <rainbow>";
 
 // WiFi sniff/scan
+const char PROGMEM HELP_EVIL_PORTAL_CMD[] = "evilportal -c start/reset/ack/sethtml <HTML>/setap <AP name>";
 const char PROGMEM HELP_SIGSTREN_CMD[] = "sigmon";
 const char PROGMEM HELP_SCANAP_CMD[] = "scanap";
 const char PROGMEM HELP_SCANSTA_CMD[] = "scansta";

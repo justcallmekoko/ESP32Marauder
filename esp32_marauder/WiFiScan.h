@@ -15,6 +15,7 @@
 #endif
 
 #include <WiFi.h>
+#include "EvilPortal.h"
 #include <math.h>
 #include "esp_wifi.h"
 #include "esp_wifi_types.h"
@@ -80,10 +81,13 @@
 #define WIFI_ATTACK_DEAUTH_TARGETED 27
 #define WIFI_SCAN_ACTIVE_LIST_EAPOL 28
 #define WIFI_SCAN_SIG_STREN 29
+#define WIFI_SCAN_EVIL_PORTAL 30
 
 #define GRAPH_REFRESH 100
 
 #define MAX_CHANNEL 14
+
+extern EvilPortal evil_portal_obj;
 
 #ifdef HAS_SCREEN
   extern Display display_obj;
@@ -295,6 +299,7 @@ class WiFiScan
     void RunPacketMonitor(uint8_t scan_mode, uint16_t color);
     void RunBluetoothScan(uint8_t scan_mode, uint16_t color);
     void RunLvJoinWiFi(uint8_t scan_mode, uint16_t color);
+    void RunEvilPortal(uint8_t scan_mode, uint16_t color);
     bool checkMem();
     #ifdef HAS_BT
       static void scanCompleteCB(BLEScanResults scanResults);

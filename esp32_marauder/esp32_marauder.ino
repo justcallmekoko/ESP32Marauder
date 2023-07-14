@@ -13,6 +13,8 @@ https://www.online-utility.org/image/convert/to/XBM
 #endif
 
 #include <WiFi.h>
+//#include "Web.h"
+#include "EvilPortal.h"
 #include <Wire.h>
 #include "esp_wifi.h"
 #include "esp_wifi_types.h"
@@ -24,11 +26,9 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #include "Assets.h"
 #include "WiFiScan.h"
-#include "EvilPortal.h"
 #ifdef HAS_SD
   #include "SDInterface.h"
 #endif
-#include "Web.h"
 #include "Buffer.h"
 
 #ifdef MARAUDER_FLIPPER
@@ -81,7 +81,7 @@ https://www.online-utility.org/image/convert/to/XBM
 
 WiFiScan wifi_scan_obj;
 EvilPortal evil_portal_obj;
-Web web_obj;
+//Web web_obj;
 Buffer buffer_obj;
 EspInterface esp_obj;
 Settings settings_obj;
@@ -403,8 +403,8 @@ void loop()
       led_obj.main(currentTime);
     #endif
 
-    if (wifi_scan_obj.currentScanMode == OTA_UPDATE)
-      web_obj.main();
+    //if (wifi_scan_obj.currentScanMode == OTA_UPDATE)
+    //  web_obj.main();
     #ifdef HAS_SCREEN
       delay(1);
     #else
