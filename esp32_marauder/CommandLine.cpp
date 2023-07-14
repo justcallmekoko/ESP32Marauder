@@ -275,7 +275,7 @@ void CommandLine::runCommand(String input) {
     int hex_arg = this->argSearch(&cmd_args, "-s");
     int pat_arg = this->argSearch(&cmd_args, "-p");
     #ifdef PIN
-      if (hex_arg != 0) {
+      if (hex_arg != -1) {
         String hexstring = cmd_args.get(hex_arg + 1);
         int number = (int)strtol(&hexstring[1], NULL, 16);
         int r = number >> 16;
@@ -286,6 +286,13 @@ void CommandLine::runCommand(String input) {
         //Serial.println(b);
         led_obj.setColor(r, g, b);
         led_obj.setMode(MODE_CUSTOM);
+      }
+      else if (pat_arg != -1) {
+        String pat_name = cmd_args.get(pat_arg + 1);
+        pat_name.toLowerCase();
+        if (pat_name == "rainbow") {
+          led_obj.setMode(MODE_RAINBOW);
+        }
       }
     #else
       Serial.println("This hardware does not support neopixel");

@@ -15,13 +15,13 @@
   //#define MARAUDER_V6
   //#define MARAUDER_KIT
   //#define GENERIC_ESP32
-  #define MARAUDER_FLIPPER
-  //#define ESP32_LDDB
+  //#define MARAUDER_FLIPPER
+  #define ESP32_LDDB
   //#define MARAUDER_DEV_BOARD_PRO
   //#define XIAO_ESP32_S3
   //// END BOARD TARGETS
 
-  #define MARAUDER_VERSION "v0.10.8"
+  #define MARAUDER_VERSION "v0.10.9"
 
  //// BOARD FEATURES
   #ifdef MARAUDER_M5STICKC
@@ -668,6 +668,31 @@
 
   #endif
   //// END SCREEN STUFF
+
+  //// MEMORY LOWER LIMIT STUFF
+  // These values are in bytes
+  #ifdef MARAUDER_M5STICKC
+    #define MEM_LOWER_LIM 20000
+  #elif defined(MARAUDER_MINI)
+    #define MEM_LOWER_LIM 20000
+  #elif defined(MARAUDER_V4)
+    #define MEM_LOWER_LIM 20000
+  #elif defined(MARAUDER_V6)
+    #define MEM_LOWER_LIM 20000
+  #elif defined(MARAUDER_KIT)
+    #define MEM_LOWER_LIM 20000
+  #elif defined(GENERIC_ESP32)
+    #define MEM_LOWER_LIM 20000
+  #elif defined(MARAUDER_FLIPPER)
+    #define MEM_LOWER_LIM 20000
+  #elif defined(ESP32_LDDB)
+    #define MEM_LOWER_LIM 20000
+  #elif defined(MARAUDER_DEV_BOARD_PRO)
+    #define MEM_LOWER_LIM 20000
+  #elif defined(XIAO_ESP32_S3)
+    #define MEM_LOWER_LIM 20000
+  #endif
+  //// END MEMORY LOWER LIMIT STUFF
 
   //// NEOPIXEL STUFF  
   #ifdef HAS_NEOPIXEL_LED

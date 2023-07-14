@@ -161,9 +161,17 @@ int WiFiScan::clearStations() {
   return num_cleared;
 }
 
+bool WiFiScan::checkMem() {
+  if (esp_get_free_heap_size() <= MEM_LOWER_LIM)
+    return false;
+  else
+    return true;
+}
+
 int WiFiScan::clearAPs() {
   int num_cleared = access_points->size();
-  access_points->clear();
+  while (access_points->size() > 0)
+    access_points->remove(0);
   Serial.println("access_points: " + (String)access_points->size());
   return num_cleared;
 }
@@ -611,6 +619,10 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
     display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
   #endif
+
+  delete access_points;
+  access_points = new LinkedList<AccessPoint>();
+
   esp_wifi_init(&cfg);
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
@@ -1663,6 +1675,7 @@ void WiFiScan::pwnSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 }
 
 void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type) {  
+  extern WiFiScan wifi_scan_obj;
   wifi_promiscuous_pkt_t *snifferPacket = (wifi_promiscuous_pkt_t*)buf;
   WifiMgmtHdr *frameControl = (WifiMgmtHdr*)snifferPacket->payload;
   wifi_pkt_rx_ctrl_t ctrl = (wifi_pkt_rx_ctrl_t)snifferPacket->rx_ctrl;
@@ -1806,9 +1819,23 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
 
         ap.rssi = snifferPacket->rx_ctrl.rssi;
 
-        access_points->add(ap);
+        if (!wifi_scan_obj.checkMem()) {
+          //access_points->set(access_points->size() - 1, ap);
+          if (access_points->size() == 0) {
+            Serial.println("Leaked too much memory. The device must reboot");
+            wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+            return;
+          }
+          AccessPoint removed_ap = access_points->remove(0);
+          Serial.println("Removed " + removed_ap.essid + " to save memory");
+          //delete removed_ap;
+        }
+        else
+          access_points->add(ap);
 
         Serial.print(access_points->size());
+        Serial.print(" ");
+        Serial.print(esp_get_free_heap_size());
 
         Serial.println();
 
@@ -1820,6 +1847,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
 
 void WiFiScan::apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 {
+  extern WiFiScan wifi_scan_obj;
   wifi_promiscuous_pkt_t *snifferPacket = (wifi_promiscuous_pkt_t*)buf;
   WifiMgmtHdr *frameControl = (WifiMgmtHdr*)snifferPacket->payload;
   wifi_pkt_rx_ctrl_t ctrl = (wifi_pkt_rx_ctrl_t)snifferPacket->rx_ctrl;
@@ -1929,9 +1957,23 @@ void WiFiScan::apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
                           snifferPacket->rx_ctrl.rssi,
                           new LinkedList<int>()};
 
-        access_points->add(ap);
+        if (!wifi_scan_obj.checkMem()) {
+          //access_points->set(access_points->size() - 1, ap);
+          if (access_points->size() == 0) {
+            Serial.println("Leaked too much memory. The device must reboot");
+            wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+            return;
+          }
+          AccessPoint removed_ap = access_points->remove(0);
+          Serial.println("Removed " + removed_ap.essid + " to save memory");
+          //delete removed_ap;
+        }
+        else
+          access_points->add(ap);
 
         Serial.print(access_points->size());
+        Serial.print(" ");
+        Serial.print(esp_get_free_heap_size());
 
         Serial.println();
 

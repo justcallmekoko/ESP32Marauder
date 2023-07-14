@@ -66,7 +66,7 @@ void LedInterface::ledOff() {
   this->setColor(0, 0, 0);
 }
 
-  void LedInterface::rainbow() {
+void LedInterface::rainbow() {
   strip.setPixelColor(0, this->Wheel((0 * 256 / 100 + this->wheel_pos) % 256));
   strip.show();
 

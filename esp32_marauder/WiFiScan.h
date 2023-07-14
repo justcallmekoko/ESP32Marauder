@@ -295,6 +295,7 @@ class WiFiScan
     void RunPacketMonitor(uint8_t scan_mode, uint16_t color);
     void RunBluetoothScan(uint8_t scan_mode, uint16_t color);
     void RunLvJoinWiFi(uint8_t scan_mode, uint16_t color);
+    bool checkMem();
     #ifdef HAS_BT
       static void scanCompleteCB(BLEScanResults scanResults);
     #endif
