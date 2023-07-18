@@ -114,8 +114,6 @@ jobs:
           sketch-names: MarauderOTA.ino
           arduino-board-fqbn: esp32:esp32:esp32s2
           platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.4/package_esp32_dev_index.json
-          libraries: |
-            espressif/arduino-esp32@2.0.3
           
       - name: Search for SD lib in arduino-esp32 v2.0.3
         run: |
