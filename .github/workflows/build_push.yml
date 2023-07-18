@@ -97,6 +97,10 @@ jobs:
         run: |
           find /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.4arduino-esp32 -name "SD"
           
+      - name: Search for SD lib in arduino-esp32 v2.0.3
+        run: |
+          find /home/runner/ -name "SD"
+          
       - name: Configure TFT_eSPI
         run: |
           rm -f CustomTFT_eSPI/User_Setup_Select.h
