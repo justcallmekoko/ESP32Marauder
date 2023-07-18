@@ -113,17 +113,17 @@ jobs:
         with:
           sketch-names: MarauderOTA.ino
           arduino-board-fqbn: esp32:esp32:esp32s2
-          platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.3/package_esp32_dev_index.json
+          platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.10/package_esp32_dev_index.json
           
-      - name: Search for SD lib in arduino-esp32 v2.0.3
+      - name: Search for SD lib in arduino-esp32 v2.0.10
         run: |
           find /home/runner/ -name "SD"
           
-      - name: Replace SD lib
-        run: |
-          rm -rf /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.3/libraries/SD
-          cp -R /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.4arduino-esp32/libraries/SD /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.3/libraries/SD
-          ls -la /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.3/libraries/SD
+      #- name: Replace SD lib
+      #  run: |
+      #    rm -rf /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.10/libraries/SD
+      #    cp -R /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.4arduino-esp32/libraries/SD /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.10/libraries/SD
+      #    ls -la /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.10/libraries/SD
           
       - name: Modify platform.txt
         run: |
