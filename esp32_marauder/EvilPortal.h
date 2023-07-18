@@ -8,9 +8,11 @@
 #include "configs.h"
 #include "settings.h"
 #include "SDInterface.h"
+#include "lang_var.h"
 
 extern Settings settings_obj;
 extern SDInterface sd_obj;
+extern Buffer buffer_obj; 
 
 #define WAITING 0
 #define GOOD 1
@@ -57,18 +59,20 @@ class EvilPortal {
 
     void (*resetFunction)(void) = 0;
 
-    void setHtml();
-    void setAP();
+    bool setHtml();
+    bool setAP();
     void setupServer();
     void startPortal();
     void startAP();
+    void addLog(String log, int len);
+    void convertStringToUint8Array(const String& str, uint8_t*& buf, uint32_t& len);
 
   public:
     EvilPortal();
 
     String get_user_name();
     String get_password();
-    void begin();
+    bool begin();
     void main(uint8_t scan_mode);
 
 };

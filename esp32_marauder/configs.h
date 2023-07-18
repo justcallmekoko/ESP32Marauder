@@ -15,8 +15,8 @@
   //#define MARAUDER_V6
   //#define MARAUDER_KIT
   //#define GENERIC_ESP32
-  //#define MARAUDER_FLIPPER
-  #define ESP32_LDDB
+  #define MARAUDER_FLIPPER
+  //#define ESP32_LDDB
   //#define MARAUDER_DEV_BOARD_PRO
   //#define XIAO_ESP32_S3
   //// END BOARD TARGETS
@@ -154,9 +154,9 @@
   //// FLIPPER ZERO HAT SETTINGS
   #ifdef FLIPPER_ZERO_HAT
 
-    #ifdef MARAUDER_FLIPPER
-      #define USE_FLIPPER_SD
-    #endif
+    //#ifdef MARAUDER_FLIPPER
+    //  #define USE_FLIPPER_SD
+    //#endif
 
     #ifdef XIAO_ESP32_S3
       #define USE_FLIPPER_SD

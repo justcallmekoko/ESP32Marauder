@@ -375,7 +375,7 @@ void loop()
     #endif
     wifi_scan_obj.main(currentTime);
     evil_portal_obj.main(wifi_scan_obj.currentScanMode);
-
+    
     #ifdef WRITE_PACKETS_SERIAL
       buffer_obj.forceSaveSerial();
     #elif defined(HAS_SD)

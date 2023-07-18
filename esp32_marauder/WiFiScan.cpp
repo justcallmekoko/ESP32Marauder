@@ -591,7 +591,7 @@ void WiFiScan::RunEvilPortal(uint8_t scan_mode, uint16_t color)
   #ifdef WRITE_PACKETS_SERIAL
     buffer_obj.open();
   #elif defined(HAS_SD)
-    sd_obj.openCapture("evil_portal");
+    sd_obj.openLog("evil_portal");
   #else
     return;
   #endif
@@ -3335,6 +3335,22 @@ void WiFiScan::addPacket(wifi_promiscuous_pkt_t *snifferPacket, int len) {
   }
 }
 
+/*void WiFiScan::addLog(String log, int len) {
+  uint8_t *buf;
+  log.getBytes(buf, log.length());
+  bool save_packet = settings_obj.loadSetting<bool>(text_table4[7]);
+  if (save_packet) {
+    Serial.println("Saving data...");
+    #ifdef WRITE_PACKETS_SERIAL
+      buffer_obj.addPacket(buf, len);
+    #elif defined(HAS_SD)
+      sd_obj.addPacket(buf, len);
+    #else
+      return;
+    #endif
+  }
+}*/
+
 #ifdef HAS_SCREEN
   void WiFiScan::eapolMonitorMain(uint32_t currentTime)
   {
@@ -3795,6 +3811,13 @@ void WiFiScan::main(uint32_t currentTime)
       channelHop();
     }
   }
+  /*else if (currentScanMode == WIFI_SCAN_EVIL_PORTAL) {
+    String evil_portal_result = "";
+    evil_portal_result = evil_portal_obj.main(currentScanMode);
+    if (evil_portal_result != "") {
+      this->addLog(evil_portal_result, strlen(evil_portal_result.c_str()));
+    }
+  }*/
   else if (currentScanMode == WIFI_PACKET_MONITOR)
   {
     #ifdef HAS_SCREEN

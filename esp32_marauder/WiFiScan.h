@@ -362,6 +362,7 @@ class WiFiScan
     void main(uint32_t currentTime);
     void StartScan(uint8_t scan_mode, uint16_t color = 0);
     void StopScan(uint8_t scan_mode);
+    //void addLog(String log, int len);
     
     static void getMAC(char *addr, uint8_t* data, uint16_t offset);
     static void espressifSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
