@@ -75,6 +75,15 @@ bool SDInterface::initSD() {
   #endif
 }
 
+File SDInterface::getFile(String path) {
+  if (this->supported) {
+    File file = SD.open(path, FILE_READ);
+
+    if (file)
+      return file;
+  }
+}
+
 void SDInterface::listDir(String str_dir){
   if (this->supported) {
     File dir = SD.open(str_dir);

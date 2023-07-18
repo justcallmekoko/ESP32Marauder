@@ -217,6 +217,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_LED_CMD);
     
     // WiFi sniff/scan
+    Serial.println(HELP_EVIL_PORTAL_CMD);
     Serial.println(HELP_SIGSTREN_CMD);
     Serial.println(HELP_SCANAP_CMD);
     Serial.println(HELP_SCANSTA_CMD);
@@ -414,7 +415,7 @@ void CommandLine::runCommand(String input) {
             display_obj.clearScreen();
             menu_function_obj.drawStatusBar();
           #endif
-          wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_MAGENTA);
+          wifi_scan_obj.StartScan(WIFI_SCAN_EVIL_PORTAL, TFT_MAGENTA);
         }
         else if (et_command == "reset") {
           
