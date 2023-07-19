@@ -722,15 +722,15 @@
 
   //// EVIL PORTAL STUFF
   #ifdef MARAUDER_M5STICKC
-    #define MAX_HTML_SIZE 13000
+    #define MAX_HTML_SIZE 7000
   #elif defined(MARAUDER_MINI)
-    #define MAX_HTML_SIZE 13000
+    #define MAX_HTML_SIZE 7000
   #elif defined(MARAUDER_V4)
-    #define MAX_HTML_SIZE 13000
+    #define MAX_HTML_SIZE 7000
   #elif defined(MARAUDER_V6)
-    #define MAX_HTML_SIZE 13000
+    #define MAX_HTML_SIZE 7000
   #elif defined(MARAUDER_KIT)
-    #define MAX_HTML_SIZE 13000
+    #define MAX_HTML_SIZE 7000
   #elif defined(GENERIC_ESP32)
     #define MAX_HTML_SIZE 20000
   #elif defined(MARAUDER_FLIPPER)
