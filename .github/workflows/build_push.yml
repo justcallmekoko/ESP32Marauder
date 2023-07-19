@@ -20,12 +20,8 @@ jobs:
         uses: ArminJo/arduino-test-compile@v3.2.1
         with:
           sketch-names: TestFile.ino
-          #arduino-board-fqbn: esp32:esp32:esp32s2
-          #platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.3/package_esp32_dev_index.json
-          
-      - name: Search for SD lib in arduino-esp32 v2.0.3
-        run: |
-          find /home/runner/ -name "SD"
+          arduino-board-fqbn: esp32:esp32:esp32s2
+          platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.10/package_esp32_dev_index.json
         
       - name: Pull arduino-esp32 v2.0.4
         uses: actions/checkout@v2
@@ -34,12 +30,12 @@ jobs:
           ref: 2.0.4
           path: 2.0.4arduino-esp32
           
-      - name: Pull arduino-esp32 v2.0.3
+      - name: Pull arduino-esp32 v2.0.10
         uses: actions/checkout@v2
         with:
           repository: espressif/arduino-esp32
-          ref: 2.0.3
-          path: 2.0.3
+          ref: 2.0.10
+          path: 2.0.10
           
       - name: Install AsyncTCP
         uses: actions/checkout@v2
@@ -48,108 +44,68 @@ jobs:
           ref: master
           path: CustomAsyncTCP
           
-      - name: Search for SD lib in arduino-esp32 v2.0.3
-        run: |
-          find /home/runner/ -name "SD"
-          
       - name: Install ESPAsyncWebServer
         uses: actions/checkout@v2
         with:
           repository: justcallmekoko/ESPAsyncWebServer
           ref: master
           path: CustomESPAsyncWebServer
-          
-      - name: Search for SD lib in arduino-esp32 v2.0.3
-        run: |
-          find /home/runner/ -name "SD"
-      
+
       - name: Install TFT_eSPI
         uses: actions/checkout@v2
         with:
           repository: justcallmekoko/TFT_eSPI
           ref: master
           path: CustomTFT_eSPI
-          
-      - name: Search for SD lib in arduino-esp32 v2.0.3
-        run: |
-          find /home/runner/ -name "SD"
-          
+
       - name: Install LinkedList
         uses: actions/checkout@v2
         with:
           repository: ivanseidel/LinkedList
           ref: v1.3.1
           path: CustomLinkedList
-          
-      - name: Search for SD lib in arduino-esp32 v2.0.3
-        run: |
-          find /home/runner/ -name "SD"
-          
+
       - name: Install lv_arduino
         uses: actions/checkout@v2
         with:
           repository: lvgl/lv_arduino
           ref: 3.0.0
           path: Customlv_arduino
-          
-      - name: Search for SD lib in arduino-esp32 v2.0.3
-        run: |
-          find /home/runner/ -name "SD"
-          
+
       - name: Install JPEGDecoder
         uses: actions/checkout@v2
         with:
           repository: Bodmer/JPEGDecoder
           ref: 1.8.0
           path: CustomJPEGDecoder
-          
-      - name: Search for SD lib in arduino-esp32 v2.0.3
-        run: |
-          find /home/runner/ -name "SD"
-          
+
       - name: Install NimBLE-Arduino
         uses: actions/checkout@v2
         with:
           repository: h2zero/NimBLE-Arduino
           ref: 1.2.0
           path: CustomNimBLE-Arduino
-          
-      - name: Search for SD lib in arduino-esp32 v2.0.3
-        run: |
-          find /home/runner/ -name "SD"
-          
+
       - name: Install Adafruit_NeoPixel
         uses: actions/checkout@v2
         with:
           repository: adafruit/Adafruit_NeoPixel
           ref: 1.10.7
           path: CustomAdafruit_NeoPixel
-          
-      - name: Search for SD lib in arduino-esp32 v2.0.3
-        run: |
-          find /home/runner/ -name "SD"
-          
+
       - name: Install ArduinoJson
         uses: actions/checkout@v2
         with:
           repository: bblanchon/ArduinoJson
           ref: v6.18.2
           path: CustomArduinoJson
-          
-      - name: Search for SD lib in arduino-esp32 v2.0.3
-        run: |
-          find /home/runner/ -name "SD"
-          
+
       - name: Install SwitchLib
         uses: actions/checkout@v2
         with:
           repository: justcallmekoko/SwitchLib
           ref: main
           path: CustomSwitchLib
-          
-      - name: Search for SD lib in arduino-esp32 v2.0.3
-        run: |
-          find /home/runner/ -name "SD"
           
       - name: Search for SD lib in arduino-esp32 v2.0.4
         run: |
@@ -166,12 +122,12 @@ jobs:
           ls -la
           ls -la CustomTFT_eSPI
           
-      - name: Place 2.0.3 for use
-        run: |
-          mkdir -p /home/runner/.arduino15/packages/esp32/hardware/esp32/
-          cp -R /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.3 /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.3
-          ls -la /home/runner/.arduino15/packages/esp32/hardware/esp32/
-          echo Whoever made me have to do this can fuck off
+      #- name: Place 2.0.10 for use
+      #  run: |
+      #    mkdir -p /home/runner/.arduino15/packages/esp32/hardware/esp32/
+      #    cp -R /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.3 /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.3
+      #    ls -la /home/runner/.arduino15/packages/esp32/hardware/esp32/
+      #    echo Whoever made me have to do this can fuck off
           
       #- name: Replace arduino-esp32 v2.0.10 that was gloriously forced on us
       #  run: |
@@ -180,15 +136,15 @@ jobs:
       #    ls -la /home/runner/.arduino15/packages/esp32/hardware/esp32/
       #    echo Whoever made me have to do this can fuck off
           
-      - name: Search for SD lib in arduino-esp32 v2.0.3
+      - name: Search for SD lib in arduino-esp32
         run: |
           find /home/runner/ -name "SD"
           
-      - name: Replace SD lib
-        run: |
-          rm -rf /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.3/libraries/SD
-          cp -R /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.4arduino-esp32/libraries/SD /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.3/libraries/SD
-          ls -la /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.3/libraries/SD
+      #- name: Replace SD lib
+      #  run: |
+      #    rm -rf /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.10/libraries/SD
+      #    cp -R /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.4arduino-esp32/libraries/SD /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.10/libraries/SD
+      #    ls -la /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.10/libraries/SD
           
       - name: Modify platform.txt
         run: |
