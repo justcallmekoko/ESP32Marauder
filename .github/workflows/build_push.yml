@@ -168,7 +168,7 @@ jobs:
           
       - name: Replace arduino-esp32 v2.0.10 that was gloriously forced on us
         run: |
-#          rm -rf /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.10
+          #rm -rf /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.10
           cp -R /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.3 /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.3
           ls -la /home/runner/.arduino15/packages/esp32/hardware/esp32/
           echo Whoever made me have to do this can fuck off
