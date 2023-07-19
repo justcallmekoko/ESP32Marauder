@@ -166,12 +166,19 @@ jobs:
           ls -la
           ls -la CustomTFT_eSPI
           
-      - name: Replace arduino-esp32 v2.0.10 that was gloriously forced on us
+      - name: Place 2.0.3 for use
         run: |
-          #rm -rf /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.10
+          mkdir -p /home/runner/.arduino15/packages/esp32/hardware/esp32/
           cp -R /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.3 /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.3
           ls -la /home/runner/.arduino15/packages/esp32/hardware/esp32/
           echo Whoever made me have to do this can fuck off
+          
+      #- name: Replace arduino-esp32 v2.0.10 that was gloriously forced on us
+      #  run: |
+      #    rm -rf /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.10
+      #    cp -R /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.3 /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.3
+      #    ls -la /home/runner/.arduino15/packages/esp32/hardware/esp32/
+      #    echo Whoever made me have to do this can fuck off
           
       - name: Search for SD lib in arduino-esp32 v2.0.3
         run: |
