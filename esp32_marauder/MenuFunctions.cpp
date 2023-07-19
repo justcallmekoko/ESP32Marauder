@@ -113,7 +113,7 @@ MenuFunctions::MenuFunctions()
     //lv_deinit();
   }
   
-  void MenuFunctions::writeBadUSB(){
+  /*void MenuFunctions::writeBadUSB(){
     // Create a keyboard and apply the styles
     kb = lv_keyboard_create(lv_scr_act(), NULL);
     lv_obj_set_size(kb, LV_HOR_RES, LV_VER_RES / 2);
@@ -159,7 +159,7 @@ MenuFunctions::MenuFunctions()
     // Focus it on one of the text areas to start
     lv_keyboard_set_textarea(kb, ta1);
     lv_keyboard_set_cursor_manage(kb, true);
-  }
+  }*/
   
   // Event handler for settings drop down menus
   void setting_dropdown_cb(lv_obj_t * obj, lv_event_t event) {
@@ -729,7 +729,7 @@ MenuFunctions::MenuFunctions()
     }
   }
   
-  void write_bad_usb_keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event) {
+  /*void write_bad_usb_keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event) {
     extern Display display_obj;
     extern MenuFunctions menu_function_obj;
     extern A32u4Interface a32u4_obj;
@@ -752,7 +752,7 @@ MenuFunctions::MenuFunctions()
       wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
       display_obj.exit_draw = true; // set everything back to normal
     }
-  }
+  }*/
   
   // Keyboard callback dedicated to joining wifi
   void add_ssid_keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event){
@@ -1489,7 +1489,7 @@ void MenuFunctions::RunSetup()
   // Main menu stuff
   wifiMenu.list = new LinkedList<MenuNode>(); // Get list in second menu ready
   bluetoothMenu.list = new LinkedList<MenuNode>(); // Get list in third menu ready
-  badusbMenu.list = new LinkedList<MenuNode>();
+  //badusbMenu.list = new LinkedList<MenuNode>();
   generalMenu.list = new LinkedList<MenuNode>();
   deviceMenu.list = new LinkedList<MenuNode>();
 
@@ -1497,7 +1497,7 @@ void MenuFunctions::RunSetup()
   failedUpdateMenu.list = new LinkedList<MenuNode>();
   whichUpdateMenu.list = new LinkedList<MenuNode>();
   confirmMenu.list = new LinkedList<MenuNode>();
-  espUpdateMenu.list = new LinkedList<MenuNode>();
+  //espUpdateMenu.list = new LinkedList<MenuNode>();
   updateMenu.list = new LinkedList<MenuNode>();
   settingsMenu.list = new LinkedList<MenuNode>();
   specSettingMenu.list = new LinkedList<MenuNode>();
@@ -1524,13 +1524,13 @@ void MenuFunctions::RunSetup()
   // Work menu names
   mainMenu.name = text_table1[6];
   wifiMenu.name = text_table1[7];
-  badusbMenu.name = text_table1[8];
+  //badusbMenu.name = text_table1[8];
   deviceMenu.name = text_table1[9];
   generalMenu.name = text_table1[10];
   failedUpdateMenu.name = text_table1[11];
   whichUpdateMenu.name = text_table1[12];
   confirmMenu.name = text_table1[13];
-  espUpdateMenu.name = text_table1[14];
+  //espUpdateMenu.name = text_table1[14];
   updateMenu.name = text_table1[15];
   languageMenu.name = text_table1[16]; 
   infoMenu.name = text_table1[17];
@@ -1557,9 +1557,9 @@ void MenuFunctions::RunSetup()
   addNodes(&mainMenu, text_table1[19], TFT_CYAN, NULL, BLUETOOTH, [this]() {
     changeMenu(&bluetoothMenu);
   });
-  if (a32u4_obj.supported) addNodes(&mainMenu, text_table1[8], TFT_RED, NULL, BAD_USB_ICO, [this]() {
-    changeMenu(&badusbMenu);
-  });
+  //if (a32u4_obj.supported) addNodes(&mainMenu, text_table1[8], TFT_RED, NULL, BAD_USB_ICO, [this]() {
+  //  changeMenu(&badusbMenu);
+  //});
   addNodes(&mainMenu, text_table1[10], TFT_MAGENTA, NULL, GENERAL_APPS, [this]() {
     changeMenu(&generalMenu);
   });
@@ -1881,21 +1881,21 @@ void MenuFunctions::RunSetup()
   });
 
   // Bad USB Menu
-  badusbMenu.parentMenu = &mainMenu;
-  addNodes(&badusbMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-    changeMenu(badusbMenu.parentMenu);
-  });
-  addNodes(&badusbMenu, text_table1[36], TFT_PURPLE, NULL, TEST_BAD_USB_ICO, [this]() {
-    a32u4_obj.test();
-  });
-  #ifdef HAS_ILI9341
-    addNodes(&badusbMenu, text_table1[37], TFT_RED, NULL, BAD_USB_ICO, [this](){
-      display_obj.clearScreen(); 
-      wifi_scan_obj.currentScanMode = LV_ADD_SSID; 
-      wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_RED); 
-      writeBadUSB();
-    });
-  #endif
+  //badusbMenu.parentMenu = &mainMenu;
+  //addNodes(&badusbMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+  //  changeMenu(badusbMenu.parentMenu);
+  //});
+  //addNodes(&badusbMenu, text_table1[36], TFT_PURPLE, NULL, TEST_BAD_USB_ICO, [this]() {
+  //  a32u4_obj.test();
+  //});
+  //#ifdef HAS_ILI9341
+  //  addNodes(&badusbMenu, text_table1[37], TFT_RED, NULL, BAD_USB_ICO, [this](){
+  //    display_obj.clearScreen(); 
+  //    wifi_scan_obj.currentScanMode = LV_ADD_SSID; 
+  //    wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_RED); 
+  //    writeBadUSB();
+  //  });
+  //#endif
 
   // General apps menu
   generalMenu.parentMenu = &mainMenu;
@@ -1979,19 +1979,19 @@ void MenuFunctions::RunSetup()
       changeMenu(&confirmMenu);
     });
   #endif
-  addNodes(&whichUpdateMenu, text_table1[41], TFT_RED, NULL, ESP_UPDATE_ICO, [this]() {
-    wifi_scan_obj.currentScanMode = ESP_UPDATE;
-    changeMenu(&espUpdateMenu);
-    esp_obj.RunUpdate();
-  });
+  //addNodes(&whichUpdateMenu, text_table1[41], TFT_RED, NULL, ESP_UPDATE_ICO, [this]() {
+  //  wifi_scan_obj.currentScanMode = ESP_UPDATE;
+  //  changeMenu(&espUpdateMenu);
+  //  esp_obj.RunUpdate();
+  //});
 
   // ESP Update Menu
-  espUpdateMenu.parentMenu = &whichUpdateMenu;
-  addNodes(&espUpdateMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-    wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
-    esp_obj.bootRunMode();
-    changeMenu(espUpdateMenu.parentMenu);
-  });
+  //espUpdateMenu.parentMenu = &whichUpdateMenu;
+  //addNodes(&espUpdateMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+  //  wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
+  //  esp_obj.bootRunMode();
+  //  changeMenu(espUpdateMenu.parentMenu);
+  //});
 
   // Confirm SD update menu
   confirmMenu.parentMenu = &whichUpdateMenu;

@@ -39,7 +39,7 @@ https://www.online-utility.org/image/convert/to/XBM
   #include "LedInterface.h"
 #endif
 
-#include "esp_interface.h"
+//#include "esp_interface.h"
 #include "settings.h"
 #include "CommandLine.h"
 #include "lang_var.h"
@@ -55,7 +55,7 @@ https://www.online-utility.org/image/convert/to/XBM
 #ifdef HAS_SCREEN
   #include "Display.h"
   #include "MenuFunctions.h"
-  #include "a32u4_interface.h"
+  //#include "a32u4_interface.h"
 #endif
 
 #ifdef HAS_BUTTONS
@@ -83,7 +83,7 @@ WiFiScan wifi_scan_obj;
 EvilPortal evil_portal_obj;
 //Web web_obj;
 Buffer buffer_obj;
-EspInterface esp_obj;
+//EspInterface esp_obj;
 Settings settings_obj;
 CommandLine cli_obj;
 
@@ -98,7 +98,7 @@ CommandLine cli_obj;
 #ifdef HAS_SCREEN
   Display display_obj;
   MenuFunctions menu_function_obj;
-  A32u4Interface a32u4_obj;
+  //A32u4Interface a32u4_obj;
 #endif
 
 #ifdef HAS_SD
