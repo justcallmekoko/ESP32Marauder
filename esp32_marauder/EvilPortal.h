@@ -29,7 +29,6 @@ extern Buffer buffer_obj;
 #define RESET_CMD "reset"
 #define START_CMD "start"
 #define ACK_CMD "ack"
-#define MAX_HTML_SIZE 20000
 #define MAX_AP_NAME_SIZE 30
 #define WIFI_SCAN_EVIL_PORTAL 30
 

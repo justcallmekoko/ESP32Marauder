@@ -346,7 +346,7 @@ void setup()
   //Serial.println(F("       By: justcallmekoko\n"));
   //Serial.println(F("--------------------------------\n\n"));
   
-  Serial.println("CLI Ready");
+  Serial.println(F("CLI Ready"));
   cli_obj.RunSetup();
 }
 
