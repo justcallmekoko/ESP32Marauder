@@ -614,7 +614,7 @@ void WiFiScan::RunEvilPortal(uint8_t scan_mode, uint16_t color)
     display_obj.tft.setTextColor(TFT_WHITE, color);
     #ifdef HAS_ILI9341
       display_obj.tft.fillRect(0,16,240,16, color);
-      display_obj.tft.drawCentreString("Evil Portal");
+      display_obj.tft.drawCentreString(" Evil Portal ",120,16,2);
       display_obj.touchToExit();
     #endif
     display_obj.tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
