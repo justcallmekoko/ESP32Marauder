@@ -6,8 +6,8 @@
 //#define jquery_min_js_v3_2_1_gz_len 30178
 
 PROGMEM static String espressif_macs[] = {
-  "fc:f5:c4",
-  "f4:cf:a2",
+  "fc:f5:c4"};
+/*  "f4:cf:a2",
   "f0:08:d1",
   "ec:fa:bc",
   "e0:98:06",
@@ -54,7 +54,7 @@ PROGMEM static String espressif_macs[] = {
   "24:0a:c4",
   "18:fe:34",
   "10:52:1c"
-};
+};*/
 
 
 PROGMEM static const unsigned char menu_icons[][66] = {

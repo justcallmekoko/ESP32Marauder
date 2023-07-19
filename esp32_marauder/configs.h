@@ -11,11 +11,11 @@
   //// BOARD TARGETS
   //#define MARAUDER_M5STICKC
   //#define MARAUDER_MINI
-  //#define MARAUDER_V4
+  #define MARAUDER_V4
   //#define MARAUDER_V6
   //#define MARAUDER_KIT
   //#define GENERIC_ESP32
-  #define MARAUDER_FLIPPER
+  //#define MARAUDER_FLIPPER
   //#define ESP32_LDDB
   //#define MARAUDER_DEV_BOARD_PRO
   //#define XIAO_ESP32_S3
@@ -726,7 +726,7 @@
   #elif defined(MARAUDER_MINI)
     #define MAX_HTML_SIZE 7000
   #elif defined(MARAUDER_V4)
-    #define MAX_HTML_SIZE 7000
+    #define MAX_HTML_SIZE 8000
   #elif defined(MARAUDER_V6)
     #define MAX_HTML_SIZE 7000
   #elif defined(MARAUDER_KIT)
