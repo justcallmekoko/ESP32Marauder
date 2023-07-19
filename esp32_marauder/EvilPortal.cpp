@@ -67,6 +67,10 @@ bool EvilPortal::setHtml() {
       return false;
     }
     else {
+      if (html_file.size() > MAX_HTML_SIZE) {
+        Serial.println("The provided HTML is too large. Byte limit is " + (String)MAX_HTML_SIZE);
+        return false;
+      }
       String html = "";
       while (html_file.available()) {
         char c = html_file.read();
@@ -93,6 +97,10 @@ bool EvilPortal::setAP() {
       return false;
     }
     else {
+      if (ap_config_file.size() > MAX_AP_NAME_SIZE) {
+        Serial.println("The provided AP name is too large. Byte limit is " + (String)MAX_AP_NAME_SIZE);
+        return false;
+      }
       String ap_config = "";
       while (ap_config_file.available()) {
         char c = ap_config_file.read();
