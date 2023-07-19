@@ -7,11 +7,17 @@
 
 #include "configs.h"
 #include "settings.h"
-#include "SDInterface.h"
+#ifndef WRITE_PACKETS_SERIAL
+  #include "SDInterface.h"
+#else
+  #include "Buffer.h"
+#endif
 #include "lang_var.h"
 
 extern Settings settings_obj;
-extern SDInterface sd_obj;
+#ifndef WRITE_PACKETS_SERIAL
+  extern SDInterface sd_obj;
+#endif
 extern Buffer buffer_obj; 
 
 #define WAITING 0

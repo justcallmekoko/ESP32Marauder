@@ -632,7 +632,8 @@ void WiFiScan::RunEvilPortal(uint8_t scan_mode, uint16_t color)
   //else
   //  esp_wifi_set_promiscuous_rx_cb(&apSnifferCallback);
   //esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
-  evil_portal_obj.begin();
+  if (!evil_portal_obj.begin())
+    this->StartScan(WIFI_SCAN_OFF, TFT_MAGENTA);
   this->wifi_initialized = true;
   initTime = millis();
 }

