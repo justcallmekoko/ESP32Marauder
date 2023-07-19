@@ -115,12 +115,12 @@ jobs:
           ls -la
           ls -la CustomTFT_eSPI
           
-      - name: Install ESP32 Boards and Compile MarauderOTA
-        uses: ArminJo/arduino-test-compile@v3.2.0
-        with:
-          sketch-names: MarauderOTA.ino
-          arduino-board-fqbn: esp32:esp32:esp32s2
-          platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.3/package_esp32_dev_index.json
+      #- name: Install ESP32 Boards and Compile MarauderOTA
+      #  uses: ArminJo/arduino-test-compile@v3.2.0
+      #  with:
+      #    sketch-names: MarauderOTA.ino
+      #    arduino-board-fqbn: esp32:esp32:esp32s2
+      #    platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.3/package_esp32_dev_index.json
           
       - name: Replace arduino-esp32 v2.0.10 that was gloriously forced on us
         run: |
