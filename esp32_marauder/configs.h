@@ -726,7 +726,7 @@
   #elif defined(MARAUDER_MINI)
     #define MAX_HTML_SIZE 7000
   #elif defined(MARAUDER_V4)
-    #define MAX_HTML_SIZE 11500
+    #define MAX_HTML_SIZE 11450
   #elif defined(MARAUDER_V6)
     #define MAX_HTML_SIZE 7000
   #elif defined(MARAUDER_KIT)
