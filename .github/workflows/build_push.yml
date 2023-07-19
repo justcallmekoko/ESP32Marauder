@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v3
         
       - name: Install ESP32 Boards and Compile MarauderOTA
-        uses: ArminJo/arduino-test-compile@v3.2.0
+        uses: ArminJo/arduino-test-compile@v3.2.1
         with:
           sketch-names: MarauderOTA.ino
           arduino-board-fqbn: esp32:esp32:esp32s2
@@ -154,7 +154,7 @@ jobs:
           done
                     
       - name: Build Marauder for Flipper Zero WiFi Dev Board
-        uses: ArminJo/arduino-test-compile@v3.2.0
+        uses: ArminJo/arduino-test-compile@v3.2.1
         with:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: esp32:esp32:esp32s2:PartitionScheme=min_spiffs,FlashSize=4M,PSRAM=enabled
@@ -170,7 +170,7 @@ jobs:
           sed -i 's/^  \/\/#define WRITE_PACKETS_SERIAL/  #define WRITE_PACKETS_SERIAL/' esp32_marauder/configs.h
           
       - name: Build Marauder SD Serial for Flipper Zero WiFi Dev Board
-        uses: ArminJo/arduino-test-compile@v3.2.0
+        uses: ArminJo/arduino-test-compile@v3.2.1
         with:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: esp32:esp32:esp32s2:PartitionScheme=min_spiffs,FlashSize=4M,PSRAM=enabled
@@ -186,7 +186,7 @@ jobs:
           sed -i 's/^  #define WRITE_PACKETS_SERIAL/  \/\/#define WRITE_PACKETS_SERIAL/' esp32_marauder/configs.h
           
       - name: Build Marauder for Flipper Zero Multi Board
-        uses: ArminJo/arduino-test-compile@v3.2.0
+        uses: ArminJo/arduino-test-compile@v3.2.1
         with:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: esp32:esp32:esp32s3:PartitionScheme=min_spiffs,FlashSize=8M,PSRAM=enabled
@@ -212,7 +212,7 @@ jobs:
           sed -i 's/^  #define MARAUDER_DEV_BOARD_PRO/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
           
       - name: Build Marauder for OG Marauder
-        uses: ArminJo/arduino-test-compile@v3.2.0
+        uses: ArminJo/arduino-test-compile@v3.2.1
         with:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: esp32:esp32:d32:PartitionScheme=min_spiffs
@@ -236,7 +236,7 @@ jobs:
           sed -i 's/^  #define MARAUDER_DEV_BOARD_PRO/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
           
       - name: Build Marauder for v6 Marauder
-        uses: ArminJo/arduino-test-compile@v3.2.0
+        uses: ArminJo/arduino-test-compile@v3.2.1
         with:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: esp32:esp32:d32:PartitionScheme=min_spiffs
@@ -260,7 +260,7 @@ jobs:
           sed -i 's/^  #define MARAUDER_DEV_BOARD_PRO/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
           
       - name: Build Marauder for Marauder Kit
-        uses: ArminJo/arduino-test-compile@v3.2.0
+        uses: ArminJo/arduino-test-compile@v3.2.1
         with:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: esp32:esp32:d32:PartitionScheme=min_spiffs
@@ -284,7 +284,7 @@ jobs:
           sed -i 's/^  #define MARAUDER_DEV_BOARD_PRO/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
           
       - name: Build Marauder for Marauder Mini
-        uses: ArminJo/arduino-test-compile@v3.2.0
+        uses: ArminJo/arduino-test-compile@v3.2.1
         with:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: esp32:esp32:d32:PartitionScheme=min_spiffs
@@ -306,7 +306,7 @@ jobs:
           sed -i 's/^  #define MARAUDER_DEV_BOARD_PRO/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
           
       - name: Build Marauder for ESP32 LDDB
-        uses: ArminJo/arduino-test-compile@v3.2.0
+        uses: ArminJo/arduino-test-compile@v3.2.1
         with:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: esp32:esp32:d32:PartitionScheme=min_spiffs
@@ -328,7 +328,7 @@ jobs:
           sed -i 's/^  \/\/#define MARAUDER_DEV_BOARD_PRO/  #define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
           
       - name: Build Marauder for Marauder Dev Board Pro
-        uses: ArminJo/arduino-test-compile@v3.2.0
+        uses: ArminJo/arduino-test-compile@v3.2.1
         with:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: esp32:esp32:d32:PartitionScheme=min_spiffs
@@ -355,7 +355,7 @@ jobs:
           sed -i 's/^  \/\/#define MARAUDER_M5STICKC/  #define MARAUDER_M5STICKC/' esp32_marauder/configs.h
           
       - name: Build Marauder for Marauder M5StickC
-        uses: ArminJo/arduino-test-compile@v3.2.0
+        uses: ArminJo/arduino-test-compile@v3.2.1
         with:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: esp32:esp32:m5stick-c:PartitionScheme=min_spiffs
