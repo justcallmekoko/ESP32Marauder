@@ -79,7 +79,7 @@ class EvilPortal {
     void (*resetFunction)(void) = 0;
 
     bool setHtml();
-    bool setAP();
+    bool setAP(LinkedList<ssid>* ssids);
     void setupServer();
     void startPortal();
     void startAP();

