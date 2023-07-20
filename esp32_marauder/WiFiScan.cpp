@@ -620,19 +620,7 @@ void WiFiScan::RunEvilPortal(uint8_t scan_mode, uint16_t color)
     display_obj.tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
     display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
   #endif
-
-  //esp_wifi_init(&cfg);
-  //esp_wifi_set_storage(WIFI_STORAGE_RAM);
-  //esp_wifi_set_mode(WIFI_MODE_NULL);
-  //esp_wifi_start();
-  //esp_wifi_set_promiscuous(true);
-  //esp_wifi_set_promiscuous_filter(&filt);
-  //if (scan_mode == WIFI_SCAN_TARGET_AP_FULL)
-  //esp_wifi_set_promiscuous_rx_cb(&apSnifferCallbackFull);
-  //else
-  //  esp_wifi_set_promiscuous_rx_cb(&apSnifferCallback);
-  //esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
-  if (!evil_portal_obj.begin())
+  if (!evil_portal_obj.begin(ssids))
     this->StartScan(WIFI_SCAN_OFF, TFT_MAGENTA);
   this->wifi_initialized = true;
   initTime = millis();
@@ -3797,7 +3785,6 @@ void WiFiScan::main(uint32_t currentTime)
   // WiFi operations
   if ((currentScanMode == WIFI_SCAN_PROBE) ||
   (currentScanMode == WIFI_SCAN_AP) ||
-  (currentScanMode == WIFI_SCAN_EVIL_PORTAL) ||
   (currentScanMode == WIFI_SCAN_STATION) ||
   (currentScanMode == WIFI_SCAN_SIG_STREN) ||
   (currentScanMode == WIFI_SCAN_TARGET_AP) ||
@@ -3812,13 +3799,9 @@ void WiFiScan::main(uint32_t currentTime)
       channelHop();
     }
   }
-  /*else if (currentScanMode == WIFI_SCAN_EVIL_PORTAL) {
-    String evil_portal_result = "";
-    evil_portal_result = evil_portal_obj.main(currentScanMode);
-    if (evil_portal_result != "") {
-      this->addLog(evil_portal_result, strlen(evil_portal_result.c_str()));
-    }
-  }*/
+  else if (currentScanMode == WIFI_SCAN_EVIL_PORTAL) {
+    evil_portal_obj.main(currentScanMode);
+  }
   else if (currentScanMode == WIFI_PACKET_MONITOR)
   {
     #ifdef HAS_SCREEN

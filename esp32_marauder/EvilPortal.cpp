@@ -10,7 +10,7 @@ EvilPortal::EvilPortal() {
   this->has_ap = false;
 }
 
-bool EvilPortal::begin() {
+bool EvilPortal::begin(LinkedList<ssid>* ssids) {
   // wait for init flipper input
   if (!this->setAP())
     return false;
@@ -63,11 +63,25 @@ bool EvilPortal::setHtml() {
   #ifndef WRITE_PACKETS_SERIAL
     File html_file = sd_obj.getFile("/index.html");
     if (!html_file) {
-      Serial.println("Could not open index.html. Exiting...");
+      #ifdef HAS_SCREEN
+        display_obj.tft.setCursor(0, 100);
+        display_obj.tft.setFreeFont(NULL);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.println("Could not find /index.html. Touch to exit...");
+      #endif
+      Serial.println("Could not find /index.html. Exiting...");
       return false;
     }
     else {
       if (html_file.size() > MAX_HTML_SIZE) {
+        #ifdef HAS_SCREEN
+          display_obj.tft.setCursor(0, 100);
+          display_obj.tft.setFreeFont(NULL);
+          display_obj.tft.setTextSize(1);
+          display_obj.tft.println("The provided HTML is too large.");
+          display_obj.tft.println("The Byte limit is " + (String)MAX_HTML_SIZE);
+          display_obj.tft.println("Touch to exit...");
+        #endif
         Serial.println("The provided HTML is too large. Byte limit is " + (String)MAX_HTML_SIZE);
         return false;
       }
@@ -93,11 +107,25 @@ bool EvilPortal::setAP() {
   #ifndef WRITE_PACKETS_SERIAL
     File ap_config_file = sd_obj.getFile("/ap.config.txt");
     if (!ap_config_file) {
-      Serial.println("Could not open ap.config.txt. Exiting...");
+      #ifdef HAS_SCREEN
+        display_obj.tft.setCursor(0, 100);
+        display_obj.tft.setFreeFont(NULL);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.println("Could not find /ap.config.txt.\nTouch to exit...");
+      #endif
+      Serial.println("Could not find /ap.config.txt. Exiting...");
       return false;
     }
     else {
       if (ap_config_file.size() > MAX_AP_NAME_SIZE) {
+        #ifdef HAS_SCREEN
+          display_obj.tft.setCursor(0, 100);
+          display_obj.tft.setFreeFont(NULL);
+          display_obj.tft.setTextSize(1);
+          display_obj.tft.println("The provided AP name is too large.");
+          display_obj.tft.println("The Byte limit is " + (String)MAX_AP_NAME_SIZE);
+          display_obj.tft.println("Touch to exit...");
+        #endif
         Serial.println("The provided AP name is too large. Byte limit is " + (String)MAX_AP_NAME_SIZE);
         return false;
       }
@@ -172,6 +200,24 @@ void EvilPortal::addLog(String log, int len) {
       return;
     #endif
   }
+}
+
+void EvilPortal::sendToDisplay(String msg) {
+  #ifdef HAS_SCREEN
+    String display_string = "";
+    display_string.concat(msg);
+    int temp_len = display_string.length();
+    for (int i = 0; i < 40 - temp_len; i++)
+    {
+      display_string.concat(" ");
+    }
+    if (display_obj.display_buffer->size() == 0)
+    {
+      display_obj.loading = true;
+      display_obj.display_buffer->add(display_string);
+      display_obj.loading = false;
+    }
+  #endif
 }
 
 void EvilPortal::main(uint8_t scan_mode) {

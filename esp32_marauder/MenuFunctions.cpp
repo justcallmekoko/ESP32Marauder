@@ -729,31 +729,6 @@ MenuFunctions::MenuFunctions()
     }
   }
   
-  /*void write_bad_usb_keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event) {
-    extern Display display_obj;
-    extern MenuFunctions menu_function_obj;
-    extern A32u4Interface a32u4_obj;
-    extern WiFiScan wifi_scan_obj;
-    
-    lv_keyboard_def_event_cb(kb, event);
-    if(event == LV_EVENT_APPLY){
-        String display_string = "";
-        printf("LV_EVENT_APPLY\n");
-  
-      String ta1_text = lv_textarea_get_text(ta1);
-    
-      Serial.println(ta1_text);
-    
-      a32u4_obj.runScript(ta1_text);
-    }
-    else if(event == LV_EVENT_CANCEL) {
-      printf("LV_EVENT_CANCEL\n");
-      menu_function_obj.deinitLVGL();
-      wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
-      display_obj.exit_draw = true; // set everything back to normal
-    }
-  }*/
-  
   // Keyboard callback dedicated to joining wifi
   void add_ssid_keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event){
     extern Display display_obj;
@@ -822,12 +797,6 @@ MenuFunctions::MenuFunctions()
         lv_keyboard_set_textarea(kb, ta);
     }
   
-    //else if(event == LV_EVENT_INSERT) {
-    //  const char * str = lv_event_get_data();
-    //  if(str[0] == '\n') {
-    //    printf("Ready\n");
-    //  }
-    //}
   }
 
 #endif
@@ -1489,7 +1458,6 @@ void MenuFunctions::RunSetup()
   // Main menu stuff
   wifiMenu.list = new LinkedList<MenuNode>(); // Get list in second menu ready
   bluetoothMenu.list = new LinkedList<MenuNode>(); // Get list in third menu ready
-  //badusbMenu.list = new LinkedList<MenuNode>();
   generalMenu.list = new LinkedList<MenuNode>();
   deviceMenu.list = new LinkedList<MenuNode>();
 
@@ -1497,7 +1465,6 @@ void MenuFunctions::RunSetup()
   failedUpdateMenu.list = new LinkedList<MenuNode>();
   whichUpdateMenu.list = new LinkedList<MenuNode>();
   confirmMenu.list = new LinkedList<MenuNode>();
-  //espUpdateMenu.list = new LinkedList<MenuNode>();
   updateMenu.list = new LinkedList<MenuNode>();
   settingsMenu.list = new LinkedList<MenuNode>();
   specSettingMenu.list = new LinkedList<MenuNode>();
@@ -1524,13 +1491,11 @@ void MenuFunctions::RunSetup()
   // Work menu names
   mainMenu.name = text_table1[6];
   wifiMenu.name = text_table1[7];
-  //badusbMenu.name = text_table1[8];
   deviceMenu.name = text_table1[9];
   generalMenu.name = text_table1[10];
   failedUpdateMenu.name = text_table1[11];
   whichUpdateMenu.name = text_table1[12];
   confirmMenu.name = text_table1[13];
-  //espUpdateMenu.name = text_table1[14];
   updateMenu.name = text_table1[15];
   languageMenu.name = text_table1[16]; 
   infoMenu.name = text_table1[17];
@@ -1578,9 +1543,6 @@ void MenuFunctions::RunSetup()
   addNodes(&wifiMenu, text_table1[31], TFT_YELLOW, NULL, SNIFFERS, [this]() {
     changeMenu(&wifiSnifferMenu);
   });
-  //addNodes(&wifiMenu, "Scanners", TFT_ORANGE, NULL, SCANNERS, [this]() {
-  //  changeMenu(&wifiScannerMenu);
-  //});
   addNodes(&wifiMenu, text_table1[32], TFT_RED, NULL, ATTACKS, [this]() {
     changeMenu(&wifiAttackMenu);
   });
@@ -1632,11 +1594,11 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_PWN, TFT_RED);
   });
-  /*addNodes(&wifiSnifferMenu, text_table1[48], TFT_ORANGE, NULL, ESPRESSIF, [this]() {
+  addNodes(&wifiSnifferMenu, "Evil Portal", TFT_ORANGE, NULL, BEACON_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_ESPRESSIF, TFT_ORANGE);
-  });*/
+    wifi_scan_obj.StartScan(WIFI_SCAN_EVIL_PORTAL, TFT_ORANGE);
+  });
   addNodes(&wifiSnifferMenu, text_table1[49], TFT_MAGENTA, NULL, BEACON_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
