@@ -58,6 +58,16 @@ struct ssid {
   bool selected;
 };
 
+struct AccessPoint {
+  String essid;
+  int channel;
+  int bssid[6];
+  bool selected;
+  LinkedList<char>* beacon;
+  int rssi;
+  LinkedList<int>* stations;
+};
+
 class EvilPortal {
 
   private:
@@ -79,7 +89,7 @@ class EvilPortal {
     void (*resetFunction)(void) = 0;
 
     bool setHtml();
-    bool setAP(LinkedList<ssid>* ssids);
+    bool setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_points);
     void setupServer();
     void startPortal();
     void startAP();
@@ -92,7 +102,7 @@ class EvilPortal {
 
     String get_user_name();
     String get_password();
-    bool begin(LinkedList<ssid>* ssids);
+    bool begin(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_points);
     void main(uint8_t scan_mode);
 
 };

@@ -620,8 +620,14 @@ void WiFiScan::RunEvilPortal(uint8_t scan_mode, uint16_t color)
     display_obj.tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
     display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
   #endif
-  if (!evil_portal_obj.begin(ssids))
-    this->StartScan(WIFI_SCAN_OFF, TFT_MAGENTA);
+  evil_portal_obj.begin(ssids, access_points);
+  //if (!evil_portal_obj.begin(ssids, access_points)) {
+  //  Serial.println("Could not successfully start EvilPortal. Setting WIFI_SCAN_OFF...");
+  //  this->StartScan(WIFI_SCAN_OFF, TFT_MAGENTA);
+  //  return;
+  //}
+  //else
+  //  Serial.println("Setup EvilPortal. Current mode: " + this->currentScanMode);
   this->wifi_initialized = true;
   initTime = millis();
 }

