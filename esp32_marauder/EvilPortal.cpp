@@ -71,7 +71,7 @@ bool EvilPortal::setHtml() {
         this->sendToDisplay("Could not find /index.html.");
         this->sendToDisplay("Touch to exit...");
       #endif
-      Serial.println("Could not find /index.html. Exiting...");
+      Serial.println("Could not find /index.html. Use stopscan...");
       return false;
     }
     else {
@@ -81,7 +81,7 @@ bool EvilPortal::setHtml() {
           this->sendToDisplay("The Byte limit is " + (String)MAX_HTML_SIZE);
           this->sendToDisplay("Touch to exit...");
         #endif
-        Serial.println("The provided HTML is too large. Byte limit is " + (String)MAX_HTML_SIZE);
+        Serial.println("The provided HTML is too large. Byte limit is " + (String)MAX_HTML_SIZE + "\nUse stopscan...");
         return false;
       }
       String html = "";
@@ -123,7 +123,7 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
           this->sendToDisplay("Could not find /ap.config.txt.");
           this->sendToDisplay("Touch to exit...");
         #endif
-        Serial.println("Could not find /ap.config.txt. Exiting...");
+        Serial.println("Could not find /ap.config.txt. Use stopscan...");
         return false;
       }
       // Config file good. Proceed
@@ -135,7 +135,7 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
             this->sendToDisplay("The Byte limit is " + (String)MAX_AP_NAME_SIZE);
             this->sendToDisplay("Touch to exit...");
           #endif
-          Serial.println("The provided AP name is too large. Byte limit is " + (String)MAX_AP_NAME_SIZE);
+          Serial.println("The provided AP name is too large. Byte limit is " + (String)MAX_AP_NAME_SIZE + "\nUse stopscan...");
           return false;
         }
         // AP name length good. Read from file into var
@@ -167,7 +167,7 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
         this->sendToDisplay("The Byte limit is " + (String)MAX_AP_NAME_SIZE);
         this->sendToDisplay("Touch to exit...");
       #endif
-      Serial.println("The provided AP name is too large. Byte limit is " + (String)MAX_AP_NAME_SIZE);
+      Serial.println("The provided AP name is too large. Byte limit is " + (String)MAX_AP_NAME_SIZE + "\nUse stopscan...");
       return false;
     }
     #ifdef HAS_SCREEN
@@ -183,6 +183,7 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
         this->sendToDisplay("The Byte limit is " + (String)MAX_AP_NAME_SIZE);
         this->sendToDisplay("Touch to exit...");
       #endif
+      Serial.println("The given AP name is too large. Byte limit is " + (String)MAX_AP_NAME_SIZE + "\nUse stopscan...");
     }
     else {
       ap_config = temp_ap_name;
@@ -194,7 +195,7 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
     }
   }
   else {
-    Serial.println("Could not configure Access Point. Exiting...");
+    Serial.println("Could not configure Access Point. Use stopscan...");
     #ifdef HAS_SCREEN
       this->sendToDisplay("Could not configure Access Point.");
       this->sendToDisplay("Touch to exit...");
