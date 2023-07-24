@@ -1868,19 +1868,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
 
         ap.rssi = snifferPacket->rx_ctrl.rssi;
 
-        if (!wifi_scan_obj.checkMem()) {
-          //access_points->set(access_points->size() - 1, ap);
-          if (access_points->size() == 0) {
-            Serial.println("Leaked too much memory. The device must reboot");
-            wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
-            return;
-          }
-          AccessPoint removed_ap = access_points->remove(0);
-          Serial.println("Removed " + removed_ap.essid + " to save memory");
-          //delete removed_ap;
-        }
-        else
-          access_points->add(ap);
+        access_points->add(ap);
 
         Serial.print(access_points->size());
         Serial.print(" ");
@@ -2006,19 +1994,7 @@ void WiFiScan::apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
                           snifferPacket->rx_ctrl.rssi,
                           new LinkedList<int>()};
 
-        if (!wifi_scan_obj.checkMem()) {
-          //access_points->set(access_points->size() - 1, ap);
-          if (access_points->size() == 0) {
-            Serial.println("Leaked too much memory. The device must reboot");
-            wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
-            return;
-          }
-          AccessPoint removed_ap = access_points->remove(0);
-          Serial.println("Removed " + removed_ap.essid + " to save memory");
-          //delete removed_ap;
-        }
-        else
-          access_points->add(ap);
+        access_points->add(ap);
 
         Serial.print(access_points->size());
         Serial.print(" ");
