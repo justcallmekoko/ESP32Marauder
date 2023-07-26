@@ -39,17 +39,8 @@ extern Buffer buffer_obj;
 #define MAX_AP_NAME_SIZE 30
 #define WIFI_SCAN_EVIL_PORTAL 30
 
-class CaptiveRequestHandler : public AsyncWebHandler {
-public:
-  CaptiveRequestHandler() {}
-  virtual ~CaptiveRequestHandler() {}
-
-  bool canHandle(AsyncWebServerRequest *request) { return true; }
-
-  void handleRequest(AsyncWebServerRequest *request, char * index_html) {
-    request->send_P(200, "text/html", index_html);
-  }
-};
+char apName[MAX_AP_NAME_SIZE] = "PORTAL";
+char index_html[MAX_HTML_SIZE] = "TEST";
 
 struct ssid {
   String essid;
@@ -68,6 +59,18 @@ struct AccessPoint {
   LinkedList<int>* stations;
 };
 
+class CaptiveRequestHandler : public AsyncWebHandler {
+public:
+  CaptiveRequestHandler() {}
+  virtual ~CaptiveRequestHandler() {}
+
+  bool canHandle(AsyncWebServerRequest *request) { return true; }
+
+  void handleRequest(AsyncWebServerRequest *request) {
+    request->send_P(200, "text/html", index_html);
+  }
+};
+
 class EvilPortal {
 
   private:
@@ -77,9 +80,6 @@ class EvilPortal {
 
     String user_name;
     String password;
-
-    char apName[MAX_AP_NAME_SIZE] = "PORTAL";
-    char index_html[MAX_HTML_SIZE] = "TEST";
 
     bool has_html;
     bool has_ap;
