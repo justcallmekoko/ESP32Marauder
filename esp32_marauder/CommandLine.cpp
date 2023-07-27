@@ -401,7 +401,7 @@ void CommandLine::runCommand(String input) {
         display_obj.clearScreen();
         menu_function_obj.drawStatusBar();
       #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_EVIL_PORTAL, TFT_MAGENTA);
+      wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_MAGENTA);
     }
     // AP Scan
     else if (cmd_args.get(0) == EVIL_PORTAL_CMD) {
