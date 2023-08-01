@@ -15,6 +15,7 @@
 #endif
 
 #include <WiFi.h>
+#include "EvilPortal.h"
 #include <math.h>
 #include "esp_wifi.h"
 #include "esp_wifi_types.h"
@@ -24,14 +25,25 @@
 #ifdef HAS_SCREEN
   #include "Display.h"
 #endif
-#include "SDInterface.h"
+#ifdef HAS_SD
+  #include "SDInterface.h"
+#endif
 #include "Buffer.h"
-#include "BatteryInterface.h"
-#include "TemperatureInterface.h"
+#ifdef HAS_BATTERY
+  #include "BatteryInterface.h"
+#endif
+#ifdef HAS_TEMP_SENSOR
+  #include "TemperatureInterface.h"
+#endif
 #include "settings.h"
 #include "Assets.h"
-#include "flipperLED.h"
-#include "LedInterface.h"
+#ifdef MARAUDER_FLIPPER
+  #include "flipperLED.h"
+#elif defined(XIAO_ESP32_S3)
+  #include "xiaoLED.h"
+#else
+  #include "LedInterface.h"
+#endif
 //#include "MenuFunctions.h"
 
 #define bad_list_length 3
@@ -69,33 +81,47 @@
 #define WIFI_ATTACK_DEAUTH_TARGETED 27
 #define WIFI_SCAN_ACTIVE_LIST_EAPOL 28
 #define WIFI_SCAN_SIG_STREN 29
+#define WIFI_SCAN_EVIL_PORTAL 30
 
 #define GRAPH_REFRESH 100
 
 #define MAX_CHANNEL 14
 
+extern EvilPortal evil_portal_obj;
+
 #ifdef HAS_SCREEN
   extern Display display_obj;
 #endif
-extern SDInterface sd_obj;
+#ifdef HAS_SD
+  extern SDInterface sd_obj;
+#endif
 extern Buffer buffer_obj;
-extern BatteryInterface battery_obj;
-extern TemperatureInterface temp_obj;
+#ifdef HAS_BATTERY
+  extern BatteryInterface battery_obj;
+#endif
+#ifdef HAS_TEMP_SENSOR
+  extern TemperatureInterface temp_obj;
+#endif
 extern Settings settings_obj;
-extern flipperLED flipper_led;
-extern LedInterface led_obj;
+#ifdef MARAUDER_FLIPPER
+  extern flipperLED flipper_led;
+#elif defined(XIAO_ESP32_S3)
+  extern xiaoLED xiao_led;
+#else
+  extern LedInterface led_obj;
+#endif
 
 esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx, const void *buffer, int len, bool en_sys_seq);
 //int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3);
 
-struct ssid {
+/*struct ssid {
   String essid;
-  int channel;
+  uint8_t channel;
   int bssid[6];
   bool selected;
-};
+};*/
 
-struct AccessPoint {
+/*struct AccessPoint {
   String essid;
   int channel;
   int bssid[6];
@@ -103,7 +129,7 @@ struct AccessPoint {
   LinkedList<char>* beacon;
   int rssi;
   LinkedList<int>* stations;
-};
+};*/
 
 struct Station {
   uint8_t mac[6];
@@ -273,6 +299,8 @@ class WiFiScan
     void RunPacketMonitor(uint8_t scan_mode, uint16_t color);
     void RunBluetoothScan(uint8_t scan_mode, uint16_t color);
     void RunLvJoinWiFi(uint8_t scan_mode, uint16_t color);
+    void RunEvilPortal(uint8_t scan_mode, uint16_t color);
+    bool checkMem();
     #ifdef HAS_BT
       static void scanCompleteCB(BLEScanResults scanResults);
     #endif
@@ -334,6 +362,7 @@ class WiFiScan
     void main(uint32_t currentTime);
     void StartScan(uint8_t scan_mode, uint16_t color = 0);
     void StopScan(uint8_t scan_mode);
+    //void addLog(String log, int len);
     
     static void getMAC(char *addr, uint8_t* data, uint16_t offset);
     static void espressifSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);

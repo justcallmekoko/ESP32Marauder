@@ -13,6 +13,8 @@ https://www.online-utility.org/image/convert/to/XBM
 #endif
 
 #include <WiFi.h>
+//#include "Web.h"
+#include "EvilPortal.h"
 #include <Wire.h>
 #include "esp_wifi.h"
 #include "esp_wifi_types.h"
@@ -24,22 +26,36 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #include "Assets.h"
 #include "WiFiScan.h"
-#include "SDInterface.h"
-#include "Web.h"
+#ifdef HAS_SD
+  #include "SDInterface.h"
+#endif
 #include "Buffer.h"
-#include "BatteryInterface.h"
-#include "TemperatureInterface.h"
-#include "LedInterface.h"
-#include "esp_interface.h"
+
+#ifdef MARAUDER_FLIPPER
+  #include "flipperLED.h"
+#elif defined(XIAO_ESP32_S3)
+  #include "xiaoLED.h"
+#else
+  #include "LedInterface.h"
+#endif
+
+//#include "esp_interface.h"
 #include "settings.h"
 #include "CommandLine.h"
 #include "lang_var.h"
-#include "flipperLED.h"
+
+#ifdef HAS_BATTERY
+  #include "BatteryInterface.h"
+#endif
+
+#ifdef HAS_TEMP_SENSOR
+  #include "TemperatureInterface.h"
+#endif
 
 #ifdef HAS_SCREEN
   #include "Display.h"
   #include "MenuFunctions.h"
-  #include "a32u4_interface.h"
+  //#include "a32u4_interface.h"
 #endif
 
 #ifdef HAS_BUTTONS
@@ -64,30 +80,48 @@ https://www.online-utility.org/image/convert/to/XBM
 #endif
 
 WiFiScan wifi_scan_obj;
-SDInterface sd_obj;
-Web web_obj;
+EvilPortal evil_portal_obj;
+//Web web_obj;
 Buffer buffer_obj;
-BatteryInterface battery_obj;
-TemperatureInterface temp_obj;
-LedInterface led_obj;
-EspInterface esp_obj;
+//EspInterface esp_obj;
 Settings settings_obj;
 CommandLine cli_obj;
-flipperLED flipper_led;
+
+#ifdef HAS_BATTERY
+  BatteryInterface battery_obj;
+#endif
+
+#ifdef HAS_TEMP_SENSOR
+  TemperatureInterface temp_obj;
+#endif
 
 #ifdef HAS_SCREEN
   Display display_obj;
   MenuFunctions menu_function_obj;
-  A32u4Interface a32u4_obj;
+  //A32u4Interface a32u4_obj;
+#endif
+
+#ifdef HAS_SD
+  SDInterface sd_obj;
 #endif
 
 #ifdef MARAUDER_M5STICKC
   AXP192 axp192_obj;
 #endif
 
+#ifdef MARAUDER_FLIPPER
+  flipperLED flipper_led;
+#elif defined(XIAO_ESP32_S3)
+  xiaoLED xiao_led;
+#else
+  LedInterface led_obj;
+#endif
+
 const String PROGMEM version_number = MARAUDER_VERSION;
 
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(Pixels, PIN, NEO_GRB + NEO_KHZ800);
+#ifdef HAS_NEOPIXEL_LED
+  Adafruit_NeoPixel strip = Adafruit_NeoPixel(Pixels, PIN, NEO_GRB + NEO_KHZ800);
+#endif
 
 uint32_t currentTime  = 0;
 
@@ -139,20 +173,28 @@ void setup()
   #ifdef HAS_SCREEN
     digitalWrite(TFT_CS, HIGH);
   #endif
-
-  pinMode(SD_CS, OUTPUT);
-
-  delay(10);
   
-  digitalWrite(SD_CS, HIGH);
+  #ifdef HAS_SD
+    pinMode(SD_CS, OUTPUT);
 
-  delay(10);
+    delay(10);
+  
+    digitalWrite(SD_CS, HIGH);
+
+    delay(10);
+  #endif
 
   Serial.begin(115200);
 
+  // Starts a second serial channel to stream the captured packets
   #ifdef WRITE_PACKETS_SERIAL
-    // Starts a second serial channel to stream the captured packets
-    Serial1.begin(115200);
+    
+    #ifdef XIAO_ESP32_S3
+      Serial1.begin(115200, SERIAL_8N1, XIAO_RX1, XIAO_TX1);
+    #else
+      Serial1.begin(115200);
+    #endif
+    
   #endif
 
   //Serial.println("\n\nHello, World!\n");
@@ -210,10 +252,6 @@ void setup()
 
   settings_obj.begin();
 
-  #ifdef MARAUDER_FLIPPER
-    flipper_led.RunSetup();
-  #endif
-
   //Serial.println("This is a test Channel: " + (String)settings_obj.loadSetting<uint8_t>("Channel"));
   //if (settings_obj.loadSetting<bool>( "Force PMKID"))
   //  Serial.println("This is a test Force PMKID: true");
@@ -230,7 +268,7 @@ void setup()
 
   #ifdef WRITE_PACKETS_SERIAL
     buffer_obj = Buffer();
-  #else
+  #elif defined(HAS_SD)
     // Do some SD stuff
     if(sd_obj.initSD()) {
       #ifdef HAS_SCREEN
@@ -244,16 +282,20 @@ void setup()
         display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
       #endif
     }
+  #else
+    return;
   #endif
 
-  battery_obj.RunSetup();
-
+  #ifdef HAS_BATTERY
+    battery_obj.RunSetup();
+  #endif
+  
   #ifdef HAS_SCREEN
     display_obj.tft.println(F(text_table0[5]));
   #endif
 
   // Temperature stuff
-  #ifndef MARAUDER_FLIPPER
+  #ifdef HAS_TEMP_SENSOR
     temp_obj.RunSetup();
   #endif
 
@@ -261,7 +303,7 @@ void setup()
     display_obj.tft.println(F(text_table0[6]));
   #endif
 
-  #ifndef MARAUDER_FLIPPER
+  #ifdef HAS_BATTERY
     battery_obj.battery_level = battery_obj.getBatteryLevel();
   
 //    if (battery_obj.i2c_supported) {
@@ -272,7 +314,11 @@ void setup()
   #endif
 
   // Do some LED stuff
-  #ifndef MARAUDER_FLIPPER
+  #ifdef MARAUDER_FLIPPER
+    flipper_led.RunSetup();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.RunSetup();
+  #else
     led_obj.RunSetup();
   #endif
 
@@ -300,7 +346,7 @@ void setup()
   //Serial.println(F("       By: justcallmekoko\n"));
   //Serial.println(F("--------------------------------\n\n"));
   
-  Serial.println("CLI Ready");
+  Serial.println(F("CLI Ready"));
   cli_obj.RunSetup();
 }
 
@@ -328,14 +374,17 @@ void loop()
       display_obj.main(wifi_scan_obj.currentScanMode);
     #endif
     wifi_scan_obj.main(currentTime);
-
+    //evil_portal_obj.main(wifi_scan_obj.currentScanMode);
+    
     #ifdef WRITE_PACKETS_SERIAL
       buffer_obj.forceSaveSerial();
-    #else
+    #elif defined(HAS_SD)
       sd_obj.main();
+    #else
+      return;
     #endif
 
-    #ifndef MARAUDER_FLIPPER
+    #ifdef HAS_BATTERY
       battery_obj.main(currentTime);
       temp_obj.main(currentTime);
     #endif
@@ -347,11 +396,16 @@ void loop()
       #endif
       //cli_obj.main(currentTime);
     }
-    #ifndef MARAUDER_FLIPPER
+    #ifdef MARAUDER_FLIPPER
+      flipper_led.main();
+    #elif defined(XIAO_ESP32_S3)
+      xiao_led.main();
+    #else
       led_obj.main(currentTime);
     #endif
-    if (wifi_scan_obj.currentScanMode == OTA_UPDATE)
-      web_obj.main();
+
+    //if (wifi_scan_obj.currentScanMode == OTA_UPDATE)
+    //  web_obj.main();
     #ifdef HAS_SCREEN
       delay(1);
     #else
@@ -370,9 +424,15 @@ void loop()
       display_obj.main(wifi_scan_obj.currentScanMode);
       menu_function_obj.main(currentTime);
     #endif
-    #ifndef MARAUDER_FLIPPER
+
+    #ifdef MARAUDER_FLIPPER
+      flipper_led.main();
+    #elif defined(XIAO_ESP32_S3)
+      xiao_led.main();
+    #else
       led_obj.main(currentTime);
     #endif
+    
     //cli_obj.main(currentTime);
     delay(1);
   }

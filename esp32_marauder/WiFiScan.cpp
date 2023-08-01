@@ -161,9 +161,17 @@ int WiFiScan::clearStations() {
   return num_cleared;
 }
 
+bool WiFiScan::checkMem() {
+  if (esp_get_free_heap_size() <= MEM_LOWER_LIM)
+    return false;
+  else
+    return true;
+}
+
 int WiFiScan::clearAPs() {
   int num_cleared = access_points->size();
-  access_points->clear();
+  while (access_points->size() > 0)
+    access_points->remove(0);
   Serial.println("access_points: " + (String)access_points->size());
   return num_cleared;
 }
@@ -292,6 +300,8 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     StopScan(scan_mode);
   else if (scan_mode == WIFI_SCAN_PROBE)
     RunProbeScan(scan_mode, color);
+  else if (scan_mode == WIFI_SCAN_EVIL_PORTAL)
+    RunEvilPortal(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_EAPOL)
     RunEapolScan(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_ACTIVE_EAPOL)
@@ -404,6 +414,8 @@ void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_
   this->wifi_initialized = true;
   #ifdef MARAUDER_FLIPPER
     flipper_led.attackLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.attackLED();
   #else
     led_obj.setMode(MODE_ATTACK);
   #endif
@@ -425,6 +437,8 @@ bool WiFiScan::shutdownWiFi() {
 
     #ifdef MARAUDER_FLIPPER
       flipper_led.offLED();
+    #elif defined(XIAO_ESP32_S3)
+      xiao_led.offLED();
     #else
       led_obj.setMode(MODE_OFF);
     #endif
@@ -447,6 +461,8 @@ bool WiFiScan::shutdownBLE() {
 
       #ifdef MARAUDER_FLIPPER
         flipper_led.offLED();
+      #elif defined(XIAO_ESP32_S3)
+        xiao_led.offLED();
       #else
         led_obj.setMode(MODE_OFF);
       #endif
@@ -467,6 +483,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
 {
   if ((currentScanMode == WIFI_SCAN_PROBE) ||
   (currentScanMode == WIFI_SCAN_AP) ||
+  (currentScanMode == WIFI_SCAN_EVIL_PORTAL) ||
   (currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
   (currentScanMode == WIFI_SCAN_STATION) ||
   (currentScanMode == WIFI_SCAN_SIG_STREN) ||
@@ -569,17 +586,67 @@ String WiFiScan::freeRAM()
   return String(s);
 }
 
+void WiFiScan::RunEvilPortal(uint8_t scan_mode, uint16_t color)
+{
+  #ifdef WRITE_PACKETS_SERIAL
+    buffer_obj.open();
+  #elif defined(HAS_SD)
+    sd_obj.openLog("evil_portal");
+  #else
+    return;
+  #endif
+
+  #ifdef MARAUDER_FLIPPER
+    flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
+  #else
+    led_obj.setMode(MODE_SNIFF);
+  #endif
+
+  #ifdef HAS_SCREEN
+    display_obj.TOP_FIXED_AREA_2 = 48;
+    display_obj.tteBar = true;
+    display_obj.print_delay_1 = 15;
+    display_obj.print_delay_2 = 10;
+    display_obj.initScrollValues(true);
+    display_obj.tft.setTextWrap(false);
+    display_obj.tft.setTextColor(TFT_WHITE, color);
+    #ifdef HAS_ILI9341
+      display_obj.tft.fillRect(0,16,240,16, color);
+      display_obj.tft.drawCentreString(" Evil Portal ",120,16,2);
+      display_obj.touchToExit();
+    #endif
+    display_obj.tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
+    display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
+  #endif
+  evil_portal_obj.begin(ssids, access_points);
+  //if (!evil_portal_obj.begin(ssids, access_points)) {
+  //  Serial.println("Could not successfully start EvilPortal. Setting WIFI_SCAN_OFF...");
+  //  this->StartScan(WIFI_SCAN_OFF, TFT_MAGENTA);
+  //  return;
+  //}
+  //else
+  //  Serial.println("Setup EvilPortal. Current mode: " + this->currentScanMode);
+  this->wifi_initialized = true;
+  initTime = millis();
+}
+
 // Function to start running a beacon scan
 void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
 {
   #ifdef WRITE_PACKETS_SERIAL
     buffer_obj.open();
-  #else
+  #elif defined(HAS_SD)
     sd_obj.openCapture("ap");
+  #else
+    return;
   #endif
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
   #else
     led_obj.setMode(MODE_SNIFF);
   #endif
@@ -601,6 +668,10 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
     display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
   #endif
+
+  delete access_points;
+  access_points = new LinkedList<AccessPoint>();
+
   esp_wifi_init(&cfg);
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
@@ -801,7 +872,7 @@ void WiFiScan::RunInfo()
     #ifdef HAS_SCREEN
       display_obj.tft.println(text_table4[48]);
     #endif
-  #else
+  #elif defined(HAS_SD)
     if (sd_obj.supported) {
       #ifdef HAS_SCREEN
         display_obj.tft.println(text_table4[28]);
@@ -815,22 +886,25 @@ void WiFiScan::RunInfo()
         display_obj.tft.println(text_table4[31]);
       #endif
     }
+  #else
+    return;
   #endif
 
-
-  battery_obj.battery_level = battery_obj.getBatteryLevel();
-  if (battery_obj.i2c_supported) {
-    #ifdef HAS_SCREEN
-      display_obj.tft.println(text_table4[32]);
-      display_obj.tft.println(text_table4[33] + (String)battery_obj.battery_level + "%");
-    #endif
-  }
-  else {
-    #ifdef HAS_SCREEN
-      display_obj.tft.println(text_table4[34]);
-    #endif
-  }
-
+  #ifdef HAS_BATTERY
+    battery_obj.battery_level = battery_obj.getBatteryLevel();
+    if (battery_obj.i2c_supported) {
+      #ifdef HAS_SCREEN
+        display_obj.tft.println(text_table4[32]);
+        display_obj.tft.println(text_table4[33] + (String)battery_obj.battery_level + "%");
+      #endif
+    }
+    else {
+      #ifdef HAS_SCREEN
+        display_obj.tft.println(text_table4[34]);
+      #endif
+    }
+  #endif
+  
   #ifdef HAS_SCREEN
     display_obj.tft.println(text_table4[35] + (String)temp_obj.current_temp + " C");
   #endif
@@ -839,12 +913,16 @@ void WiFiScan::RunInfo()
 void WiFiScan::RunEspressifScan(uint8_t scan_mode, uint16_t color) {
   #ifdef WRITE_PACKETS_SERIAL
     buffer_obj.open();
-  #else
+  #elif defined(HAS_SD)
     sd_obj.openCapture("espressif");
+  #else
+    return;
   #endif
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
   #else
     led_obj.setMode(MODE_SNIFF);
   #endif
@@ -882,14 +960,18 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
 {
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
   #else
     led_obj.setMode(MODE_SNIFF);
   #endif
 
   #ifdef WRITE_PACKETS_SERIAL
     buffer_obj.open();
-  #else
+  #elif defined(HAS_SD)
     sd_obj.openCapture("packet_monitor");
+  #else
+    return;
   #endif
 
   #ifdef HAS_ILI9341
@@ -961,6 +1043,8 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
 {
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
   #else
     led_obj.setMode(MODE_SNIFF);
   #endif
@@ -1005,8 +1089,10 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
   #else
     #ifdef WRITE_PACKETS_SERIAL
       buffer_obj.open();
-    #else
+    #elif defined(HAS_SD)
       sd_obj.openCapture("eapol");
+    #else
+      return;
     #endif
     
     #ifdef HAS_SCREEN
@@ -1104,12 +1190,16 @@ void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color)
 {
   #ifdef WRITE_PACKETS_SERIAL
     buffer_obj.open();
-  #else
+  #elif defined(HAS_SD)
     sd_obj.openCapture("pwnagotchi");
+  #else
+    return;
   #endif
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
   #else
     led_obj.setMode(MODE_SNIFF);
   #endif
@@ -1148,12 +1238,16 @@ void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color)
 {
   #ifdef WRITE_PACKETS_SERIAL
     buffer_obj.open();
-  #else
+  #elif defined(HAS_SD)
     sd_obj.openCapture("beacon");
+  #else
+    return;
   #endif
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
   #else
     led_obj.setMode(MODE_SNIFF);
   #endif
@@ -1191,12 +1285,16 @@ void WiFiScan::RunStationScan(uint8_t scan_mode, uint16_t color)
 {
   #ifdef WRITE_PACKETS_SERIAL
     buffer_obj.open();
-  #else
+  #elif defined(HAS_SD)
     sd_obj.openCapture("station");
+  #else
+    return;
   #endif
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
   #else
     led_obj.setMode(MODE_SNIFF);
   #endif
@@ -1234,13 +1332,17 @@ void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color)
 {
   #ifdef WRITE_PACKETS_SERIAL
     buffer_obj.open();
-  #else
+  #elif defined(HAS_SD)
     if (scan_mode != WIFI_SCAN_SIG_STREN)
       sd_obj.openCapture("raw");
+  #else
+    return;
   #endif
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
   #else
     led_obj.setMode(MODE_SNIFF);
   #endif
@@ -1281,12 +1383,16 @@ void WiFiScan::RunDeauthScan(uint8_t scan_mode, uint16_t color)
 {
   #ifdef WRITE_PACKETS_SERIAL
     buffer_obj.open();
-  #else
+  #elif defined(HAS_SD)
     sd_obj.openCapture("deauth");
+  #else
+    return;
   #endif
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
   #else
     led_obj.setMode(MODE_SNIFF);
   #endif
@@ -1326,12 +1432,16 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
 {
   #ifdef WRITE_PACKETS_SERIAL
     buffer_obj.open();
-  #else
+  #elif defined(HAS_SD)
     sd_obj.openCapture("probe");
+  #else
+    return;
   #endif
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
   #else
     led_obj.setMode(MODE_SNIFF);
   #endif
@@ -1614,6 +1724,7 @@ void WiFiScan::pwnSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 }
 
 void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type) {  
+  extern WiFiScan wifi_scan_obj;
   wifi_promiscuous_pkt_t *snifferPacket = (wifi_promiscuous_pkt_t*)buf;
   WifiMgmtHdr *frameControl = (WifiMgmtHdr*)snifferPacket->payload;
   wifi_pkt_rx_ctrl_t ctrl = (wifi_pkt_rx_ctrl_t)snifferPacket->rx_ctrl;
@@ -1760,6 +1871,8 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
         access_points->add(ap);
 
         Serial.print(access_points->size());
+        Serial.print(" ");
+        Serial.print(esp_get_free_heap_size());
 
         Serial.println();
 
@@ -1771,6 +1884,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
 
 void WiFiScan::apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 {
+  extern WiFiScan wifi_scan_obj;
   wifi_promiscuous_pkt_t *snifferPacket = (wifi_promiscuous_pkt_t*)buf;
   WifiMgmtHdr *frameControl = (WifiMgmtHdr*)snifferPacket->payload;
   wifi_pkt_rx_ctrl_t ctrl = (wifi_pkt_rx_ctrl_t)snifferPacket->rx_ctrl;
@@ -1883,6 +1997,8 @@ void WiFiScan::apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
         access_points->add(ap);
 
         Serial.print(access_points->size());
+        Serial.print(" ");
+        Serial.print(esp_get_free_heap_size());
 
         Serial.println();
 
@@ -3182,11 +3298,29 @@ void WiFiScan::addPacket(wifi_promiscuous_pkt_t *snifferPacket, int len) {
   if (save_packet) {
     #ifdef WRITE_PACKETS_SERIAL
       buffer_obj.addPacket(snifferPacket->payload, len);
-    #else
+    #elif defined(HAS_SD)
       sd_obj.addPacket(snifferPacket->payload, len);
+    #else
+      return;
     #endif
   }
 }
+
+/*void WiFiScan::addLog(String log, int len) {
+  uint8_t *buf;
+  log.getBytes(buf, log.length());
+  bool save_packet = settings_obj.loadSetting<bool>(text_table4[7]);
+  if (save_packet) {
+    Serial.println("Saving data...");
+    #ifdef WRITE_PACKETS_SERIAL
+      buffer_obj.addPacket(buf, len);
+    #elif defined(HAS_SD)
+      sd_obj.addPacket(buf, len);
+    #else
+      return;
+    #endif
+  }
+}*/
 
 #ifdef HAS_SCREEN
   void WiFiScan::eapolMonitorMain(uint32_t currentTime)
@@ -3646,6 +3780,9 @@ void WiFiScan::main(uint32_t currentTime)
       initTime = millis();
       channelHop();
     }
+  }
+  else if (currentScanMode == WIFI_SCAN_EVIL_PORTAL) {
+    evil_portal_obj.main(currentScanMode);
   }
   else if (currentScanMode == WIFI_PACKET_MONITOR)
   {

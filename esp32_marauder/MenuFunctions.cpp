@@ -113,7 +113,7 @@ MenuFunctions::MenuFunctions()
     //lv_deinit();
   }
   
-  void MenuFunctions::writeBadUSB(){
+  /*void MenuFunctions::writeBadUSB(){
     // Create a keyboard and apply the styles
     kb = lv_keyboard_create(lv_scr_act(), NULL);
     lv_obj_set_size(kb, LV_HOR_RES, LV_VER_RES / 2);
@@ -159,7 +159,7 @@ MenuFunctions::MenuFunctions()
     // Focus it on one of the text areas to start
     lv_keyboard_set_textarea(kb, ta1);
     lv_keyboard_set_cursor_manage(kb, true);
-  }
+  }*/
   
   // Event handler for settings drop down menus
   void setting_dropdown_cb(lv_obj_t * obj, lv_event_t event) {
@@ -729,31 +729,6 @@ MenuFunctions::MenuFunctions()
     }
   }
   
-  void write_bad_usb_keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event) {
-    extern Display display_obj;
-    extern MenuFunctions menu_function_obj;
-    extern A32u4Interface a32u4_obj;
-    extern WiFiScan wifi_scan_obj;
-    
-    lv_keyboard_def_event_cb(kb, event);
-    if(event == LV_EVENT_APPLY){
-        String display_string = "";
-        printf("LV_EVENT_APPLY\n");
-  
-      String ta1_text = lv_textarea_get_text(ta1);
-    
-      Serial.println(ta1_text);
-    
-      a32u4_obj.runScript(ta1_text);
-    }
-    else if(event == LV_EVENT_CANCEL) {
-      printf("LV_EVENT_CANCEL\n");
-      menu_function_obj.deinitLVGL();
-      wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
-      display_obj.exit_draw = true; // set everything back to normal
-    }
-  }
-  
   // Keyboard callback dedicated to joining wifi
   void add_ssid_keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event){
     extern Display display_obj;
@@ -822,12 +797,6 @@ MenuFunctions::MenuFunctions()
         lv_keyboard_set_textarea(kb, ta);
     }
   
-    //else if(event == LV_EVENT_INSERT) {
-    //  const char * str = lv_event_get_data();
-    //  if(str[0] == '\n') {
-    //    printf("Ready\n");
-    //  }
-    //}
   }
 
 #endif
@@ -919,6 +888,7 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_STATION) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_EVIL_PORTAL) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_TARGET_AP) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_TARGET_AP_FULL) ||
@@ -969,6 +939,7 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_STATION) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_EVIL_PORTAL) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_TARGET_AP) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_TARGET_AP_FULL) ||
@@ -1487,7 +1458,6 @@ void MenuFunctions::RunSetup()
   // Main menu stuff
   wifiMenu.list = new LinkedList<MenuNode>(); // Get list in second menu ready
   bluetoothMenu.list = new LinkedList<MenuNode>(); // Get list in third menu ready
-  badusbMenu.list = new LinkedList<MenuNode>();
   generalMenu.list = new LinkedList<MenuNode>();
   deviceMenu.list = new LinkedList<MenuNode>();
 
@@ -1495,7 +1465,6 @@ void MenuFunctions::RunSetup()
   failedUpdateMenu.list = new LinkedList<MenuNode>();
   whichUpdateMenu.list = new LinkedList<MenuNode>();
   confirmMenu.list = new LinkedList<MenuNode>();
-  espUpdateMenu.list = new LinkedList<MenuNode>();
   updateMenu.list = new LinkedList<MenuNode>();
   settingsMenu.list = new LinkedList<MenuNode>();
   specSettingMenu.list = new LinkedList<MenuNode>();
@@ -1522,13 +1491,11 @@ void MenuFunctions::RunSetup()
   // Work menu names
   mainMenu.name = text_table1[6];
   wifiMenu.name = text_table1[7];
-  badusbMenu.name = text_table1[8];
   deviceMenu.name = text_table1[9];
   generalMenu.name = text_table1[10];
   failedUpdateMenu.name = text_table1[11];
   whichUpdateMenu.name = text_table1[12];
   confirmMenu.name = text_table1[13];
-  espUpdateMenu.name = text_table1[14];
   updateMenu.name = text_table1[15];
   languageMenu.name = text_table1[16]; 
   infoMenu.name = text_table1[17];
@@ -1555,9 +1522,9 @@ void MenuFunctions::RunSetup()
   addNodes(&mainMenu, text_table1[19], TFT_CYAN, NULL, BLUETOOTH, [this]() {
     changeMenu(&bluetoothMenu);
   });
-  if (a32u4_obj.supported) addNodes(&mainMenu, text_table1[8], TFT_RED, NULL, BAD_USB_ICO, [this]() {
-    changeMenu(&badusbMenu);
-  });
+  //if (a32u4_obj.supported) addNodes(&mainMenu, text_table1[8], TFT_RED, NULL, BAD_USB_ICO, [this]() {
+  //  changeMenu(&badusbMenu);
+  //});
   addNodes(&mainMenu, text_table1[10], TFT_MAGENTA, NULL, GENERAL_APPS, [this]() {
     changeMenu(&generalMenu);
   });
@@ -1576,9 +1543,6 @@ void MenuFunctions::RunSetup()
   addNodes(&wifiMenu, text_table1[31], TFT_YELLOW, NULL, SNIFFERS, [this]() {
     changeMenu(&wifiSnifferMenu);
   });
-  //addNodes(&wifiMenu, "Scanners", TFT_ORANGE, NULL, SCANNERS, [this]() {
-  //  changeMenu(&wifiScannerMenu);
-  //});
   addNodes(&wifiMenu, text_table1[32], TFT_RED, NULL, ATTACKS, [this]() {
     changeMenu(&wifiAttackMenu);
   });
@@ -1630,11 +1594,6 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_PWN, TFT_RED);
   });
-  /*addNodes(&wifiSnifferMenu, text_table1[48], TFT_ORANGE, NULL, ESPRESSIF, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_ESPRESSIF, TFT_ORANGE);
-  });*/
   addNodes(&wifiSnifferMenu, text_table1[49], TFT_MAGENTA, NULL, BEACON_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
@@ -1682,6 +1641,11 @@ void MenuFunctions::RunSetup()
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_ATTACK_AUTH, TFT_RED);
+  });
+  addNodes(&wifiAttackMenu, "Evil Portal", TFT_ORANGE, NULL, BEACON_SNIFF, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_SCAN_EVIL_PORTAL, TFT_ORANGE);
   });
   addNodes(&wifiAttackMenu, text_table1[54], TFT_RED, NULL, DEAUTH_SNIFF, [this]() {
     display_obj.clearScreen();
@@ -1879,21 +1843,21 @@ void MenuFunctions::RunSetup()
   });
 
   // Bad USB Menu
-  badusbMenu.parentMenu = &mainMenu;
-  addNodes(&badusbMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-    changeMenu(badusbMenu.parentMenu);
-  });
-  addNodes(&badusbMenu, text_table1[36], TFT_PURPLE, NULL, TEST_BAD_USB_ICO, [this]() {
-    a32u4_obj.test();
-  });
-  #ifdef HAS_ILI9341
-    addNodes(&badusbMenu, text_table1[37], TFT_RED, NULL, BAD_USB_ICO, [this](){
-      display_obj.clearScreen(); 
-      wifi_scan_obj.currentScanMode = LV_ADD_SSID; 
-      wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_RED); 
-      writeBadUSB();
-    });
-  #endif
+  //badusbMenu.parentMenu = &mainMenu;
+  //addNodes(&badusbMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+  //  changeMenu(badusbMenu.parentMenu);
+  //});
+  //addNodes(&badusbMenu, text_table1[36], TFT_PURPLE, NULL, TEST_BAD_USB_ICO, [this]() {
+  //  a32u4_obj.test();
+  //});
+  //#ifdef HAS_ILI9341
+  //  addNodes(&badusbMenu, text_table1[37], TFT_RED, NULL, BAD_USB_ICO, [this](){
+  //    display_obj.clearScreen(); 
+  //    wifi_scan_obj.currentScanMode = LV_ADD_SSID; 
+  //    wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_RED); 
+  //    writeBadUSB();
+  //  });
+  //#endif
 
   // General apps menu
   generalMenu.parentMenu = &mainMenu;
@@ -1966,30 +1930,30 @@ void MenuFunctions::RunSetup()
     wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
     changeMenu(whichUpdateMenu.parentMenu);
   });
-  addNodes(&whichUpdateMenu, text_table1[39], TFT_GREEN, NULL, WEB_UPDATE, [this]() {
-    wifi_scan_obj.currentScanMode = OTA_UPDATE;
-    changeMenu(&updateMenu);
-    web_obj.setupOTAupdate();
-  });
+  //addNodes(&whichUpdateMenu, text_table1[39], TFT_GREEN, NULL, WEB_UPDATE, [this]() {
+  //  wifi_scan_obj.currentScanMode = OTA_UPDATE;
+  //  changeMenu(&updateMenu);
+  //  web_obj.setupOTAupdate();
+  //});
   #ifndef WRITE_PACKETS_SERIAL
     if (sd_obj.supported) addNodes(&whichUpdateMenu, text_table1[40], TFT_MAGENTA, NULL, SD_UPDATE, [this]() {
       wifi_scan_obj.currentScanMode = OTA_UPDATE;
       changeMenu(&confirmMenu);
     });
   #endif
-  addNodes(&whichUpdateMenu, text_table1[41], TFT_RED, NULL, ESP_UPDATE_ICO, [this]() {
-    wifi_scan_obj.currentScanMode = ESP_UPDATE;
-    changeMenu(&espUpdateMenu);
-    esp_obj.RunUpdate();
-  });
+  //addNodes(&whichUpdateMenu, text_table1[41], TFT_RED, NULL, ESP_UPDATE_ICO, [this]() {
+  //  wifi_scan_obj.currentScanMode = ESP_UPDATE;
+  //  changeMenu(&espUpdateMenu);
+  //  esp_obj.RunUpdate();
+  //});
 
   // ESP Update Menu
-  espUpdateMenu.parentMenu = &whichUpdateMenu;
-  addNodes(&espUpdateMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-    wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
-    esp_obj.bootRunMode();
-    changeMenu(espUpdateMenu.parentMenu);
-  });
+  //espUpdateMenu.parentMenu = &whichUpdateMenu;
+  //addNodes(&espUpdateMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+  //  wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
+  //  esp_obj.bootRunMode();
+  //  changeMenu(espUpdateMenu.parentMenu);
+  //});
 
   // Confirm SD update menu
   confirmMenu.parentMenu = &whichUpdateMenu;
@@ -2005,12 +1969,12 @@ void MenuFunctions::RunSetup()
 
   // Web Update
   updateMenu.parentMenu = &deviceMenu;
-  addNodes(&updateMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-    wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
-    changeMenu(updateMenu.parentMenu);
-    WiFi.softAPdisconnect(true);
-    web_obj.shutdownServer();
-  });
+  //addNodes(&updateMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+  //  wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
+  //  changeMenu(updateMenu.parentMenu);
+  //  WiFi.softAPdisconnect(true);
+  //  web_obj.shutdownServer();
+  //});
   //addNodes(&updateMenu, text09, TFT_LIGHTGREY, NULL, 0, [this](){wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF; changeMenu(updateMenu.parentMenu);});
 
   // Failed update menu
