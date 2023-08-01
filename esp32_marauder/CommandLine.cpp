@@ -217,6 +217,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_LED_CMD);
     
     // WiFi sniff/scan
+    Serial.println(HELP_EVIL_PORTAL_CMD);
     Serial.println(HELP_SIGSTREN_CMD);
     Serial.println(HELP_SCANAP_CMD);
     Serial.println(HELP_SCANSTA_CMD);
@@ -250,15 +251,15 @@ void CommandLine::runCommand(String input) {
 
   // Stop Scan
   if (cmd_args.get(0) == STOPSCAN_CMD) {
-    if (wifi_scan_obj.currentScanMode == OTA_UPDATE) {
-      wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
+    //if (wifi_scan_obj.currentScanMode == OTA_UPDATE) {
+    //  wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
       //#ifdef HAS_SCREEN
       //  menu_function_obj.changeMenu(menu_function_obj.updateMenu.parentMenu);
       //#endif
-      WiFi.softAPdisconnect(true);
-      web_obj.shutdownServer();
-      return;
-    }
+    //  WiFi.softAPdisconnect(true);
+    //  web_obj.shutdownServer();
+    //  return;
+    //}
     
     wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
 
@@ -275,7 +276,7 @@ void CommandLine::runCommand(String input) {
     int hex_arg = this->argSearch(&cmd_args, "-s");
     int pat_arg = this->argSearch(&cmd_args, "-p");
     #ifdef PIN
-      if (hex_arg != 0) {
+      if (hex_arg != -1) {
         String hexstring = cmd_args.get(hex_arg + 1);
         int number = (int)strtol(&hexstring[1], NULL, 16);
         int r = number >> 16;
@@ -287,17 +288,30 @@ void CommandLine::runCommand(String input) {
         led_obj.setColor(r, g, b);
         led_obj.setMode(MODE_CUSTOM);
       }
+      else if (pat_arg != -1) {
+        String pat_name = cmd_args.get(pat_arg + 1);
+        pat_name.toLowerCase();
+        if (pat_name == "rainbow") {
+          led_obj.setMode(MODE_RAINBOW);
+        }
+      }
     #else
-      Serial.println("This hardware does not support neopixel")
+      Serial.println("This hardware does not support neopixel");
     #endif
   }
   // ls command
   else if (cmd_args.get(0) == LS_CMD) {
-    if (cmd_args.size() > 1)
-      sd_obj.listDir(cmd_args.get(1));
-    else
-      Serial.println("You did not provide a dir to list");
+    #ifdef HAS_SD
+      if (cmd_args.size() > 1)
+        sd_obj.listDir(cmd_args.get(1));
+      else
+        Serial.println("You did not provide a dir to list");
+    #else
+      Serial.println("SD support disabled, cannot use command");
+      return;
+    #endif
   }
+
   // Channel command
   else if (cmd_args.get(0) == CH_CMD) {
     // Search for channel set arg
@@ -390,6 +404,33 @@ void CommandLine::runCommand(String input) {
       wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_MAGENTA);
     }
     // AP Scan
+    else if (cmd_args.get(0) == EVIL_PORTAL_CMD) {
+      int cmd_sw = this->argSearch(&cmd_args, "-c");
+
+      if (cmd_sw != -1) {
+        String et_command = cmd_args.get(cmd_sw + 1);
+        if (et_command == "start") {
+          Serial.println("Starting Evil Portal. Stop with " + (String)STOPSCAN_CMD);
+          #ifdef HAS_SCREEN
+            display_obj.clearScreen();
+            menu_function_obj.drawStatusBar();
+          #endif
+          wifi_scan_obj.StartScan(WIFI_SCAN_EVIL_PORTAL, TFT_MAGENTA);
+        }
+        else if (et_command == "reset") {
+          
+        }
+        else if (et_command == "ack") {
+          
+        }
+        else if (et_command == "sethtml") {
+
+        }
+        else if (et_command == "setap") {
+
+        }
+      }
+    }
     else if (cmd_args.get(0) == SCANAP_CMD) {
       int full_sw = -1;
       #ifdef HAS_SCREEN
@@ -671,30 +712,35 @@ void CommandLine::runCommand(String input) {
 
     // Update command
     if (cmd_args.get(0) == UPDATE_CMD) {
-      int w_sw = this->argSearch(&cmd_args, "-w"); // Web update
+      //int w_sw = this->argSearch(&cmd_args, "-w"); // Web update
       int sd_sw = this->argSearch(&cmd_args, "-s"); // SD Update
 
       // Update via OTA
-      if (w_sw != -1) {
-        Serial.println("Starting Marauder OTA Update. Stop with " + (String)STOPSCAN_CMD);
-        wifi_scan_obj.currentScanMode = OTA_UPDATE;
+      //if (w_sw != -1) {
+      //  Serial.println("Starting Marauder OTA Update. Stop with " + (String)STOPSCAN_CMD);
+      //  wifi_scan_obj.currentScanMode = OTA_UPDATE;
         //#ifdef HAS_SCREEN
         //  menu_function_obj.changeMenu(menu_function_obj.updateMenu);
         //#endif
-        web_obj.setupOTAupdate();
-      }
+      //  web_obj.setupOTAupdate();
+      //}
       // Update via SD
-      else if (sd_sw != -1) {
-        #ifndef WRITE_PACKETS_SERIAL
-          if (!sd_obj.supported) {
-            Serial.println("SD card is not connected. Cannot perform SD Update");
-            return;
-          }
-          wifi_scan_obj.currentScanMode = OTA_UPDATE;
-          sd_obj.runUpdate();
-        #else
-          Serial.println("SD card not initialized. Cannot perform SD Update");
-        #endif
+      if (sd_sw != -1) {
+      #ifdef HAS_SD
+          #ifndef WRITE_PACKETS_SERIAL
+            if (!sd_obj.supported) {
+              Serial.println("SD card is not connected. Cannot perform SD Update");
+              return;
+            }
+            wifi_scan_obj.currentScanMode = OTA_UPDATE;
+            sd_obj.runUpdate();
+          #else
+            Serial.println("SD card not initialized. Cannot perform SD Update");
+          #endif
+      #else
+        Serial.println("SD card support disabled. Cannot perform SD Update");
+        return;
+      #endif
       }
     }
   }

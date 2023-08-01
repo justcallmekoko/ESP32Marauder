@@ -40,8 +40,10 @@ class SDInterface {
     bool initSD();
 
     void listDir(String str_dir);
-    void addPacket(uint8_t* buf, uint32_t len);
+    File getFile(String path);
+    void addPacket(uint8_t* buf, uint32_t len, bool log = false);
     void openCapture(String file_name = "");
+    void openLog(String file_name = "");
     void runUpdate();
     void performUpdate(Stream &updateSource, size_t updateSize);
     void main();
