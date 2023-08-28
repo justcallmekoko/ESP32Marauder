@@ -203,7 +203,7 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
   }
 
   if (ap_config != "") {
-    strncpy(apName, ap_config.c_str(), strlen(ap_config.c_str()));
+    strncpy(apName, ap_config.c_str(), MAX_AP_NAME_SIZE);
     this->has_ap = true;
     Serial.println("ap config set");
     return true;
