@@ -1,5 +1,7 @@
 #include "GpsInterface.h"
 
+#ifdef HAS_GPS
+
 char nmeaBuffer[100];
 
 MicroNMEA nmea(nmeaBuffer, sizeof(nmeaBuffer));
@@ -114,3 +116,4 @@ void GpsInterface::main() {
     //Serial.println("No fix");
   }
 }
+#endif

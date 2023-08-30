@@ -764,6 +764,9 @@
     #elif defined(MARAUDER_V4)
       #define GPS_TX 4
       #define GPS_RX 13
+    #elif defined(MARAUDER_KIT)
+      #define GPS_TX 4
+      #define GPS_RX 13
     #endif
   #endif
   //// END GPS STUFF
