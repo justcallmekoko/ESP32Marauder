@@ -905,9 +905,9 @@ void WiFiScan::RunInfo()
     }
   #endif
   
-  #ifdef HAS_SCREEN
-    display_obj.tft.println(text_table4[35] + (String)temp_obj.current_temp + " C");
-  #endif
+  //#ifdef HAS_SCREEN
+  //  display_obj.tft.println(text_table4[35] + (String)temp_obj.current_temp + " C");
+  //#endif
 }
 
 void WiFiScan::RunEspressifScan(uint8_t scan_mode, uint16_t color) {

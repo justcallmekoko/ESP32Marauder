@@ -32,9 +32,9 @@
 #ifdef HAS_BATTERY
   #include "BatteryInterface.h"
 #endif
-#ifdef HAS_TEMP_SENSOR
-  #include "TemperatureInterface.h"
-#endif
+//#ifdef HAS_TEMP_SENSOR
+//  #include "TemperatureInterface.h"
+//#endif
 #include "settings.h"
 #include "Assets.h"
 #ifdef MARAUDER_FLIPPER
@@ -99,9 +99,9 @@ extern Buffer buffer_obj;
 #ifdef HAS_BATTERY
   extern BatteryInterface battery_obj;
 #endif
-#ifdef HAS_TEMP_SENSOR
-  extern TemperatureInterface temp_obj;
-#endif
+//#ifdef HAS_TEMP_SENSOR
+//  extern TemperatureInterface temp_obj;
+//#endif
 extern Settings settings_obj;
 #ifdef MARAUDER_FLIPPER
   extern flipperLED flipper_led;

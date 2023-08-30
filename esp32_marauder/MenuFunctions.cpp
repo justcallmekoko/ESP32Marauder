@@ -1202,7 +1202,7 @@ void MenuFunctions::updateStatusBar()
   uint16_t the_color; 
 
   // Draw temp info
-  if (temp_obj.current_temp < 70)
+  /*if (temp_obj.current_temp < 70)
     the_color = TFT_GREEN;
   else if ((temp_obj.current_temp >= 70) && (temp_obj.current_temp < 80))
     the_color = TFT_YELLOW;
@@ -1211,7 +1211,7 @@ void MenuFunctions::updateStatusBar()
   else if ((temp_obj.current_temp >= 90) && (temp_obj.current_temp < 100))
     the_color = TFT_RED;
   else
-    the_color = TFT_MAROON;
+    the_color = TFT_MAROON;*/
 
   /*
   display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR);
@@ -1326,7 +1326,7 @@ void MenuFunctions::drawStatusBar()
   uint16_t the_color;
 
   // Draw temp info
-  if (temp_obj.current_temp < 70)
+  /*if (temp_obj.current_temp < 70)
     the_color = TFT_GREEN;
   else if ((temp_obj.current_temp >= 70) && (temp_obj.current_temp < 80))
     the_color = TFT_YELLOW;
@@ -1339,7 +1339,7 @@ void MenuFunctions::drawStatusBar()
 
   display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR);
   temp_obj.old_temp = temp_obj.current_temp;
-  display_obj.tft.fillRect(0, 0, 50, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+  display_obj.tft.fillRect(0, 0, 50, STATUS_BAR_WIDTH, STATUSBAR_COLOR);*/
   /*
   #ifdef HAS_ILI9341
     display_obj.tft.drawString((String)temp_obj.current_temp + " C", 4, 0, 2);

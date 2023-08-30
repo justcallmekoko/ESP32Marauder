@@ -52,9 +52,9 @@ https://www.online-utility.org/image/convert/to/XBM
   #include "BatteryInterface.h"
 #endif
 
-#ifdef HAS_TEMP_SENSOR
-  #include "TemperatureInterface.h"
-#endif
+//#ifdef HAS_TEMP_SENSOR
+//  #include "TemperatureInterface.h"
+//#endif
 
 #ifdef HAS_SCREEN
   #include "Display.h"
@@ -99,9 +99,9 @@ CommandLine cli_obj;
   BatteryInterface battery_obj;
 #endif
 
-#ifdef HAS_TEMP_SENSOR
-  TemperatureInterface temp_obj;
-#endif
+//#ifdef HAS_TEMP_SENSOR
+//  TemperatureInterface temp_obj;
+//#endif
 
 #ifdef HAS_SCREEN
   Display display_obj;
@@ -303,9 +303,9 @@ void setup()
   #endif
 
   // Temperature stuff
-  #ifdef HAS_TEMP_SENSOR
-    temp_obj.RunSetup();
-  #endif
+  //#ifdef HAS_TEMP_SENSOR
+  //  temp_obj.RunSetup();
+  //#endif
 
   #ifdef HAS_SCREEN
     display_obj.tft.println(F(text_table0[6]));
@@ -408,7 +408,7 @@ void loop()
 
     #ifdef HAS_BATTERY
       battery_obj.main(currentTime);
-      temp_obj.main(currentTime);
+      //temp_obj.main(currentTime);
     #endif
     settings_obj.main(currentTime);
     if (((wifi_scan_obj.currentScanMode != WIFI_PACKET_MONITOR) && (wifi_scan_obj.currentScanMode != WIFI_SCAN_EAPOL)) ||
