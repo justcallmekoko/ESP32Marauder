@@ -11,8 +11,8 @@
   //// BOARD TARGETS
   //#define MARAUDER_M5STICKC
   //#define MARAUDER_MINI
-  #define MARAUDER_V4
-  //#define MARAUDER_V6
+  //#define MARAUDER_V4
+  #define MARAUDER_V6
   //#define MARAUDER_KIT
   //#define GENERIC_ESP32
   //#define MARAUDER_FLIPPER
@@ -756,6 +756,16 @@
   #endif
   //// END EVIL PORTAL STUFF
 
-  //// 
+  //// GPS STUFF
+  #ifdef HAS_GPS
+    #ifdef MARAUDER_V6
+      #define GPS_TX 4
+      #define GPS_RX 13
+    #elif defined(MARAUDER_V4)
+      #define GPS_TX 4
+      #define GPS_RX 13
+    #endif
+  #endif
+  //// END GPS STUFF
 
 #endif

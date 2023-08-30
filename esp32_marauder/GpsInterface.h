@@ -3,6 +3,8 @@
 
 #include <MicroNMEA.h>
 
+#include "configs.h"
+
 class GpsInterface {
   public:
     void begin();
