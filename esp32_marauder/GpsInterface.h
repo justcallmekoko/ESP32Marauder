@@ -10,8 +10,10 @@ class GpsInterface {
 
     String getNumSatsString();
     bool getFixStatus();
+    bool getGpsModuleStatus();
 
   private:
+    bool gps_enabled = false;
     bool good_fix = false;
     uint8_t num_sats = 0;
     //MicroNMEA nmea(nmeaBuffer, sizeof(nmeaBuffer));

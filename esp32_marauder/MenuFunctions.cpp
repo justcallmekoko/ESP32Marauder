@@ -1230,22 +1230,26 @@ void MenuFunctions::updateStatusBar()
   */
 
   // GPS Stuff
-  if (gps_obj.getFixStatus())
-    the_color = TFT_GREEN;
-  else
-    the_color = TFT_RED;
-    
-  #ifdef HAS_ILI9341
-    display_obj.tft.drawXBitmap(4,
-                                0,
-                                menu_icons[STATUS_GPS],
-                                16,
-                                16,
-                                STATUSBAR_COLOR,
-                                the_color);
-    display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR);
+  #ifdef HAS_GPS
+    if (gps_obj.getGpsModuleStatus()) {
+      if (gps_obj.getFixStatus())
+        the_color = TFT_GREEN;
+      else
+        the_color = TFT_RED;
+        
+      #ifdef HAS_ILI9341
+        display_obj.tft.drawXBitmap(4,
+                                    0,
+                                    menu_icons[STATUS_GPS],
+                                    16,
+                                    16,
+                                    STATUSBAR_COLOR,
+                                    the_color);
+        display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR);
 
-    display_obj.tft.drawString(gps_obj.getNumSatsString(), 22, 0, 2);
+        display_obj.tft.drawString(gps_obj.getNumSatsString(), 22, 0, 2);
+      #endif
+    }
   #endif
 
   display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR);
@@ -1348,22 +1352,26 @@ void MenuFunctions::drawStatusBar()
   */
 
   // GPS Stuff
-  if (gps_obj.getFixStatus())
-    the_color = TFT_GREEN;
-  else
-    the_color = TFT_RED;
-    
-  #ifdef HAS_ILI9341
-    display_obj.tft.drawXBitmap(4,
-                                0,
-                                menu_icons[STATUS_GPS],
-                                16,
-                                16,
-                                STATUSBAR_COLOR,
-                                the_color);
-    display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR);
+  #ifdef HAS_GPS
+    if (gps_obj.getGpsModuleStatus()) {
+      if (gps_obj.getFixStatus())
+        the_color = TFT_GREEN;
+      else
+        the_color = TFT_RED;
+        
+      #ifdef HAS_ILI9341
+        display_obj.tft.drawXBitmap(4,
+                                    0,
+                                    menu_icons[STATUS_GPS],
+                                    16,
+                                    16,
+                                    STATUSBAR_COLOR,
+                                    the_color);
+        display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR);
 
-    display_obj.tft.drawString(gps_obj.getNumSatsString(), 22, 0, 2);
+        display_obj.tft.drawString(gps_obj.getNumSatsString(), 22, 0, 2);
+      #endif
+    }
   #endif
 
   display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR);

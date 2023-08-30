@@ -17,8 +17,12 @@ void GpsInterface::begin() {
 
   delay(4000);
 
-  while (Serial2.available())
-    Serial2.read();
+  if (Serial2.available()) {
+    Serial.println("GPS Attached Successfully");
+    this->gps_enabled = true;
+    while (Serial2.available())
+      Serial2.read();
+  }
 }
 
 void GpsInterface::showGPSInfo() {
@@ -80,6 +84,10 @@ String GpsInterface::getNumSatsString() {
 
 bool GpsInterface::getFixStatus() {
   return this->good_fix;
+}
+
+bool GpsInterface::getGpsModuleStatus() {
+  return this->gps_enabled;
 }
 
 void GpsInterface::main() {

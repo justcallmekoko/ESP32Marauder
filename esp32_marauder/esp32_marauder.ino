@@ -24,7 +24,9 @@ https://www.online-utility.org/image/convert/to/XBM
 #include "esp_system.h"
 #include <Arduino.h>
 
-#include "GpsInterface.h"
+#ifdef HAS_GPS
+  #include "GpsInterface.h"
+#endif
 
 #include "Assets.h"
 #include "WiFiScan.h"
@@ -89,7 +91,9 @@ Buffer buffer_obj;
 Settings settings_obj;
 CommandLine cli_obj;
 
-GpsInterface gps_obj;
+#ifdef HAS_GPS
+  GpsInterface gps_obj;
+#endif
 
 #ifdef HAS_BATTERY
   BatteryInterface battery_obj;
@@ -200,8 +204,6 @@ void setup()
     #endif
     
   #endif
-
-  gps_obj.begin();
 
   //Serial.println("\n\nHello, World!\n");
 
@@ -334,6 +336,16 @@ void setup()
     delay(500);
   #endif
 
+  #ifdef HAS_GPS
+    gps_obj.begin();
+    #ifdef HAS_SCREEN
+      if (gps_obj.getGpsModuleStatus())
+        display_obj.tft.println("GPS Module connected");
+      else
+        display_obj.tft.println("GPS Module NOT connected");
+    #endif
+  #endif
+
   #ifdef HAS_SCREEN
     display_obj.tft.println(F(text_table0[8]));
   
@@ -382,7 +394,9 @@ void loop()
     wifi_scan_obj.main(currentTime);
     //evil_portal_obj.main(wifi_scan_obj.currentScanMode);
 
-    gps_obj.main();
+    #ifdef HAS_GPS
+      gps_obj.main();
+    #endif
     
     #ifdef WRITE_PACKETS_SERIAL
       buffer_obj.forceSaveSerial();
