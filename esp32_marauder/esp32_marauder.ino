@@ -24,6 +24,8 @@ https://www.online-utility.org/image/convert/to/XBM
 #include "esp_system.h"
 #include <Arduino.h>
 
+#include "GpsInterface.h"
+
 #include "Assets.h"
 #include "WiFiScan.h"
 #ifdef HAS_SD
@@ -86,6 +88,8 @@ Buffer buffer_obj;
 //EspInterface esp_obj;
 Settings settings_obj;
 CommandLine cli_obj;
+
+GpsInterface gps_obj;
 
 #ifdef HAS_BATTERY
   BatteryInterface battery_obj;
@@ -196,6 +200,8 @@ void setup()
     #endif
     
   #endif
+
+  gps_obj.begin();
 
   //Serial.println("\n\nHello, World!\n");
 
@@ -375,6 +381,8 @@ void loop()
     #endif
     wifi_scan_obj.main(currentTime);
     //evil_portal_obj.main(wifi_scan_obj.currentScanMode);
+
+    gps_obj.main();
     
     #ifdef WRITE_PACKETS_SERIAL
       buffer_obj.forceSaveSerial();

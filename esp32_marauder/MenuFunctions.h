@@ -16,6 +16,8 @@
 //#include "a32u4_interface.h"
 #include "settings.h"
 
+#include "GpsInterface.h"
+
 #ifdef HAS_BUTTONS
   #include <SwitchLib.h>
   extern SwitchLib u_btn;
@@ -33,6 +35,8 @@ extern BatteryInterface battery_obj;
 //extern EspInterface esp_obj;
 //extern A32u4Interface a32u4_obj;
 extern Settings settings_obj;
+
+extern GpsInterface gps_obj;
 
 #define FLASH_BUTTON 0
 
@@ -79,6 +83,7 @@ extern Settings settings_obj;
 #define BAD_USB_ICO 33
 #define TEST_BAD_USB_ICO 34
 #define LANGUAGE 35
+#define STATUS_GPS 36
 
 PROGMEM void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p);
 PROGMEM bool my_touchpad_read(lv_indev_drv_t * indev_driver, lv_indev_data_t * data);

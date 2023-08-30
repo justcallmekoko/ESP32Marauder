@@ -21,7 +21,7 @@
   //#define XIAO_ESP32_S3
   //// END BOARD TARGETS
 
-  #define MARAUDER_VERSION "v0.11.0-RC3"
+  #define MARAUDER_VERSION "v0.11.0"
 
  //// BOARD FEATURES
   #ifdef MARAUDER_M5STICKC
@@ -34,6 +34,7 @@
     #define HAS_SD
     #define USE_SD
     #define HAS_TEMP_SENSOR
+    //#define HAS_GPS
   #endif
 
   #ifdef MARAUDER_MINI
@@ -47,6 +48,7 @@
     #define HAS_SD
     #define USE_SD
     #define HAS_TEMP_SENSOR
+    //#define HAS_GPS
   #endif
 
   #ifdef MARAUDER_V4
@@ -60,6 +62,7 @@
     #define HAS_SD
     #define USE_SD
     #define HAS_TEMP_SENSOR
+    #define HAS_GPS
   #endif
 
   #ifdef MARAUDER_V6
@@ -73,6 +76,7 @@
     #define HAS_SD
     #define USE_SD
     #define HAS_TEMP_SENSOR
+    #define HAS_GPS
   #endif
 
   #ifdef MARAUDER_KIT
@@ -86,6 +90,7 @@
     #define HAS_SD
     #define USE_SD
     #define HAS_TEMP_SENSOR
+    #define HAS_GPS
   #endif
 
   #ifdef GENERIC_ESP32
@@ -98,6 +103,7 @@
     //#define HAS_SCREEN
     //#define HAS_SD
     //#define HAS_TEMP_SENSOR
+    //#define HAS_GPS
   #endif
 
   #ifdef MARAUDER_FLIPPER
@@ -108,6 +114,7 @@
     //#define HAS_NEOPIXEL_LED
     //#define HAS_PWR_MGMT
     //#define HAS_SCREEN
+    //#define HAS_GPS
     #ifndef WRITE_PACKETS_SERIAL
       #define HAS_SD
       #define USE_SD
@@ -126,6 +133,7 @@
     #define HAS_SD
     #define USE_SD
     //#define HAS_TEMP_SENSOR
+    //#define HAS_GPS
   #endif
 
   #ifdef MARAUDER_DEV_BOARD_PRO
@@ -139,6 +147,7 @@
     #define HAS_SD
     #define USE_SD
     //#define HAS_TEMP_SENSOR
+    //#define HAS_GPS
   #endif
 
   #ifdef XIAO_ESP32_S3
@@ -151,6 +160,7 @@
     //#define HAS_SCREEN
     //#define HAS_SD
     //#define HAS_TEMP_SENSOR
+    //#define HAS_GPS
   #endif
   //// END BOARD FEATURES
 
@@ -745,5 +755,7 @@
     #define MAX_HTML_SIZE 20000
   #endif
   //// END EVIL PORTAL STUFF
+
+  //// 
 
 #endif
