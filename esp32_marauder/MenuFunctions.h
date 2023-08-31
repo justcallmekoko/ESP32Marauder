@@ -147,7 +147,7 @@ class MenuFunctions
     Menu wifiMenu;
     Menu bluetoothMenu;
     Menu badusbMenu;
-    Menu generalMenu;
+    //Menu generalMenu;
     Menu deviceMenu;
 
     // Device menu stuff

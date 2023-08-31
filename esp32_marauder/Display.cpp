@@ -441,13 +441,13 @@ void Display::drawJpeg(const char *filename, int xpos, int ypos) {
   //}
 }
 
-void Display::setupDraw() {
+/*void Display::setupDraw() {
   this->tft.drawLine(0, 0, 10, 0, TFT_MAGENTA);
   this->tft.drawLine(0, 0, 0, 10, TFT_GREEN);
   this->tft.drawLine(0, 0, 0, 0, TFT_CYAN);
-}
+}*/
 
-uint16_t xlast;
+/*uint16_t xlast;
 uint16_t ylast;
 uint32_t AH;
 void Display::drawStylus()
@@ -513,7 +513,7 @@ void Display::drawStylus()
     xlast = 0;
     ylast = 0;
   }
-}
+}*/
 
 //====================================================================================
 //   Decode and render the Jpeg image onto the TFT screen

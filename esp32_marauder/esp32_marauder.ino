@@ -383,69 +383,62 @@ void loop()
   #endif
 
   // Update all of our objects
-  #ifdef HAS_SCREEN
+  /*#ifdef HAS_SCREEN
     bool do_draw = display_obj.draw_tft;
   #else
     bool do_draw = false;
+  #endif*/
+  
+  //if ((!do_draw) && (wifi_scan_obj.currentScanMode != ESP_UPDATE))
+  //{
+  cli_obj.main(currentTime);
+  #ifdef HAS_SCREEN
+    display_obj.main(wifi_scan_obj.currentScanMode);
+  #endif
+  wifi_scan_obj.main(currentTime);
+  //evil_portal_obj.main(wifi_scan_obj.currentScanMode);
+
+  #ifdef HAS_GPS
+    gps_obj.main();
   #endif
   
-  if ((!do_draw) && (wifi_scan_obj.currentScanMode != ESP_UPDATE))
-  {
-    cli_obj.main(currentTime);
-    #ifdef HAS_SCREEN
-      display_obj.main(wifi_scan_obj.currentScanMode);
-    #endif
-    wifi_scan_obj.main(currentTime);
-    //evil_portal_obj.main(wifi_scan_obj.currentScanMode);
-
-    #ifdef HAS_GPS
-      gps_obj.main();
-    #endif
-    
-    #ifdef WRITE_PACKETS_SERIAL
-      buffer_obj.forceSaveSerial();
-    #elif defined(HAS_SD)
-      sd_obj.main();
-    #else
-      return;
-    #endif
-
-    #ifdef HAS_BATTERY
-      battery_obj.main(currentTime);
-      //temp_obj.main(currentTime);
-    #endif
-    settings_obj.main(currentTime);
-    if (((wifi_scan_obj.currentScanMode != WIFI_PACKET_MONITOR) && (wifi_scan_obj.currentScanMode != WIFI_SCAN_EAPOL)) ||
-        (mini)) {
-      #ifdef HAS_SCREEN
-        menu_function_obj.main(currentTime);
-      #endif
-      //cli_obj.main(currentTime);
-    }
-    #ifdef MARAUDER_FLIPPER
-      flipper_led.main();
-    #elif defined(XIAO_ESP32_S3)
-      xiao_led.main();
-    #else
-      led_obj.main(currentTime);
-    #endif
-
-    //if (wifi_scan_obj.currentScanMode == OTA_UPDATE)
-    //  web_obj.main();
-    #ifdef HAS_SCREEN
-      delay(1);
-    #else
-      delay(50);
-    #endif
-  }
-  #ifdef HAS_SCREEN
-    else if ((display_obj.draw_tft) &&
-             (wifi_scan_obj.currentScanMode != OTA_UPDATE))
-    {
-      display_obj.drawStylus();
-    }
+  #ifdef WRITE_PACKETS_SERIAL
+    buffer_obj.forceSaveSerial();
+  #elif defined(HAS_SD)
+    sd_obj.main();
+  #else
+    return;
   #endif
-  else if (wifi_scan_obj.currentScanMode == ESP_UPDATE) {
+
+  #ifdef HAS_BATTERY
+    battery_obj.main(currentTime);
+    //temp_obj.main(currentTime);
+  #endif
+  settings_obj.main(currentTime);
+  if (((wifi_scan_obj.currentScanMode != WIFI_PACKET_MONITOR) && (wifi_scan_obj.currentScanMode != WIFI_SCAN_EAPOL)) ||
+      (mini)) {
+    #ifdef HAS_SCREEN
+      menu_function_obj.main(currentTime);
+    #endif
+    //cli_obj.main(currentTime);
+  }
+  #ifdef MARAUDER_FLIPPER
+    flipper_led.main();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.main();
+  #else
+    led_obj.main(currentTime);
+  #endif
+
+  //if (wifi_scan_obj.currentScanMode == OTA_UPDATE)
+  //  web_obj.main();
+  #ifdef HAS_SCREEN
+    delay(1);
+  #else
+    delay(50);
+  #endif
+  //}
+  /*else if (wifi_scan_obj.currentScanMode == ESP_UPDATE) {
     #ifdef HAS_SCREEN
       display_obj.main(wifi_scan_obj.currentScanMode);
       menu_function_obj.main(currentTime);
@@ -461,5 +454,5 @@ void loop()
     
     //cli_obj.main(currentTime);
     delay(1);
-  }
+  }*/
 }

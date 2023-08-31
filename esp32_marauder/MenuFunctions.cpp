@@ -1514,7 +1514,7 @@ void MenuFunctions::RunSetup()
   // Main menu stuff
   wifiMenu.list = new LinkedList<MenuNode>(); // Get list in second menu ready
   bluetoothMenu.list = new LinkedList<MenuNode>(); // Get list in third menu ready
-  generalMenu.list = new LinkedList<MenuNode>();
+  //generalMenu.list = new LinkedList<MenuNode>();
   deviceMenu.list = new LinkedList<MenuNode>();
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
@@ -1554,7 +1554,7 @@ void MenuFunctions::RunSetup()
   mainMenu.name = text_table1[6];
   wifiMenu.name = text_table1[7];
   deviceMenu.name = text_table1[9];
-  generalMenu.name = text_table1[10];
+  //generalMenu.name = text_table1[10];
   failedUpdateMenu.name = text_table1[11];
   whichUpdateMenu.name = text_table1[12];
   confirmMenu.name = text_table1[13];
@@ -1597,9 +1597,9 @@ void MenuFunctions::RunSetup()
   //if (a32u4_obj.supported) addNodes(&mainMenu, text_table1[8], TFT_RED, NULL, BAD_USB_ICO, [this]() {
   //  changeMenu(&badusbMenu);
   //});
-  addNodes(&mainMenu, text_table1[10], TFT_MAGENTA, NULL, GENERAL_APPS, [this]() {
+  /*addNodes(&mainMenu, text_table1[10], TFT_MAGENTA, NULL, GENERAL_APPS, [this]() {
     changeMenu(&generalMenu);
-  });
+  });*/
   addNodes(&mainMenu, text_table1[9], TFT_BLUE, NULL, DEVICE, [this]() {
     changeMenu(&deviceMenu);
   });
@@ -1951,7 +1951,7 @@ void MenuFunctions::RunSetup()
   //#endif
 
   // General apps menu
-  generalMenu.parentMenu = &mainMenu;
+  /*generalMenu.parentMenu = &mainMenu;
   addNodes(&generalMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
     display_obj.draw_tft = false;
     changeMenu(generalMenu.parentMenu);
@@ -1960,7 +1960,7 @@ void MenuFunctions::RunSetup()
     display_obj.clearScreen();
     display_obj.setupDraw();
     display_obj.draw_tft = true;
-  });
+  });*/
 
   // Device menu
   deviceMenu.parentMenu = &mainMenu;
