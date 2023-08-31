@@ -3,13 +3,8 @@
 
 #include "configs.h"
 
-//#include <BLEDevice.h>
-//#include <BLEUtils.h>
-//#include <BLEScan.h>
-//#include <BLEAdvertisedDevice.h>
 #include <ArduinoJson.h>
 
-// Testing NimBLE
 #ifdef HAS_BT
   #include <NimBLEDevice.h>
 #endif
@@ -32,9 +27,6 @@
 #ifdef HAS_BATTERY
   #include "BatteryInterface.h"
 #endif
-//#ifdef HAS_TEMP_SENSOR
-//  #include "TemperatureInterface.h"
-//#endif
 #include "settings.h"
 #include "Assets.h"
 #ifdef MARAUDER_FLIPPER
@@ -44,7 +36,6 @@
 #else
   #include "LedInterface.h"
 #endif
-//#include "MenuFunctions.h"
 
 #define bad_list_length 3
 
@@ -99,9 +90,6 @@ extern Buffer buffer_obj;
 #ifdef HAS_BATTERY
   extern BatteryInterface battery_obj;
 #endif
-//#ifdef HAS_TEMP_SENSOR
-//  extern TemperatureInterface temp_obj;
-//#endif
 extern Settings settings_obj;
 #ifdef MARAUDER_FLIPPER
   extern flipperLED flipper_led;
@@ -112,7 +100,6 @@ extern Settings settings_obj;
 #endif
 
 esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx, const void *buffer, int len, bool en_sys_seq);
-//int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3);
 
 /*struct ssid {
   String essid;
@@ -218,22 +205,6 @@ class WiFiScan
                     /* SSID */
                     /*36*/  0x00
                     };
-
-    /*uint8_t auth_packet[128] = {0xB0, 0x00, 0x3C, 0x00, // Frame Control, Duration
-                                0x01, 0x02, 0x03, 0x04, 0x05, 0x06, // Dest
-                                0x01, 0x02, 0x03, 0x04, 0x05, 0x06, // Source
-                                0x01, 0x02, 0x03, 0x04, 0x05, 0x06, // Dest BSSID
-                                0x00, 0x01, // Sequence number
-                                0x00, 0x00, // Algo
-                                0x01, 0x00, // Auth sequence number
-                                0x00, 0x00, // Status Code
-                                0x7F, 0x08,
-                                0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x40,
-                                0xDD, 0x0B, 0x00, 0x17, 0xF2, 0x0A, 0x00, 0x01, // Say it was Apple
-                                0x04, 0x00, 0x00, 0x00, 0x00, 0xDD, 0x0A, 0x00,
-                                0x10, 0x18, 0x02, 0x00, 0x00, 0x10, 0x00, 0x00,
-                                0x00
-                                };*/
     uint8_t auth_packet[65] = {0xb0, 0x00, 0x3c, 0x00, 
                               0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 
                               0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 
@@ -282,12 +253,7 @@ class WiFiScan
     void broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_ssid);
     void broadcastSetSSID(uint32_t current_time, char* ESSID);
     void RunAPScan(uint8_t scan_mode, uint16_t color);
-    //void RunRickRoll(uint8_t scan_mode, uint16_t color);
-    //void RunBeaconSpam(uint8_t scan_mode, uint16_t color);
-    //void RunProbeFlood(uint8_t scan_mode, uint16_t color);
-    //void RunDeauthFlood(uint8_t scan_mode, uint16_t color);
     void RunMimicFlood(uint8_t scan_mode, uint16_t color);
-    //void RunBeaconList(uint8_t scan_mode, uint16_t color);
     void RunPwnScan(uint8_t scan_mode, uint16_t color);
     void RunBeaconScan(uint8_t scan_mode, uint16_t color);
     void RunRawScan(uint8_t scan_mode, uint16_t color);
@@ -304,7 +270,6 @@ class WiFiScan
       static void scanCompleteCB(BLEScanResults scanResults);
     #endif
 
-    //int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3);
 
   public:
     WiFiScan();
@@ -328,7 +293,6 @@ class WiFiScan
     String dst_mac = "ff:ff:ff:ff:ff:ff";
     byte src_mac[6] = {};
 
-    //lv_obj_t * scr = lv_cont_create(NULL, NULL);
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT(); 
     wifi_config_t ap_config;
@@ -350,7 +314,6 @@ class WiFiScan
     void changeChannel();
     void changeChannel(int chan);
     void RunInfo();
-    void RunShutdownWiFi();
     void RunShutdownBLE();
     void RunGenerateSSIDs(int count = 20);
     void RunClearSSIDs();

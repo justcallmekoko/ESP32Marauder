@@ -355,11 +355,6 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
       RunBluetoothScan(scan_mode, color);
     #endif
   }
-  else if (scan_mode == LV_JOIN_WIFI) {
-    #ifdef HAS_SCREEN
-      RunLvJoinWiFi(scan_mode, color);
-    #endif
-  }
   else if (scan_mode == LV_ADD_SSID) {
     #ifdef HAS_SCREEN
       RunLvJoinWiFi(scan_mode, color);
@@ -769,33 +764,6 @@ void WiFiScan::RunGenerateSSIDs(int count) {
   #else
     this->generateSSIDs(count);
   #endif
-}
-
-void WiFiScan::RunShutdownWiFi() {
-  #ifdef HAS_SCREEN
-    display_obj.tft.setTextWrap(false);
-    display_obj.tft.setFreeFont(NULL);
-    display_obj.tft.setCursor(0, 100);
-    display_obj.tft.setTextSize(1);
-    display_obj.tft.setTextColor(TFT_CYAN);
-
-    display_obj.tft.print(F(text_table4[16]));
-  #endif
-
-  if (this->wifi_initialized) {
-    this->shutdownWiFi();
-    #ifdef HAS_SCREEN
-      display_obj.tft.setTextColor(TFT_GREEN);
-      display_obj.tft.println(F("OK"));
-    #endif
-  }
-  else {
-    #ifdef HAS_SCREEN
-      display_obj.tft.setTextColor(TFT_RED);
-      display_obj.tft.println(F(text17));
-      display_obj.tft.println(F(text_table4[17]));
-    #endif
-  }
 }
 
 void WiFiScan::RunShutdownBLE() {
@@ -2698,7 +2666,6 @@ void WiFiScan::sendProbeAttack(uint32_t currentTime) {
 
       // Set SSID length
       int ssidLen = access_points->get(i).essid.length();
-      //int rand_len = sizeof(rand_reg);
       int fullLen = ssidLen;
       prob_req_packet[25] = fullLen;
 
@@ -2708,16 +2675,6 @@ void WiFiScan::sendProbeAttack(uint32_t currentTime) {
       
       for(int i = 0; i < ssidLen; i++)
         prob_req_packet[26 + i] = buf[i];
-        
-      /*
-       * 0x01, 0x08, 0x8c, 0x12, 0x18, 0x24, 
-                                  0x30, 0x48, 0x60, 0x6c, 0x2d, 0x1a, 
-                                  0xad, 0x01, 0x17, 0xff, 0xff, 0x00, 
-                                  0x00, 0x7e, 0x00, 0x00, 0x00, 0x00, 
-                                  0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 
-                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-                                  0x00, 0x00
-       */
 
       uint8_t postSSID[40] = {0x00, 0x00, 0x01, 0x08, 0x8c, 0x12, 
                               0x18, 0x24, 0x30, 0x48, 0x60, 0x6c, 
@@ -2981,14 +2938,6 @@ void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
   if (send_deauth) {
     if (snifferPacket->payload[0] == 0x80) {    
       // Build packet
-  
-      /*uint8_t new_packet[26] = {
-                                0xc0, 0x00, 0x3a, 0x01,
-                                0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                0xf0, 0xff, 0x02, 0x00
-                            };*/
       
       wifi_scan_obj.deauth_frame_default[10] = snifferPacket->payload[10];
       wifi_scan_obj.deauth_frame_default[11] = snifferPacket->payload[11];
@@ -3005,8 +2954,6 @@ void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
       wifi_scan_obj.deauth_frame_default[21] = snifferPacket->payload[15];      
     
       // Send packet
-      //esp_wifi_80211_tx(WIFI_IF_AP, new_packet, sizeof(new_packet), false);
-      //esp_wifi_80211_tx(WIFI_IF_AP, new_packet, sizeof(new_packet), false);
       esp_wifi_80211_tx(WIFI_IF_AP, wifi_scan_obj.deauth_frame_default, sizeof(wifi_scan_obj.deauth_frame_default), false);
       delay(1);
     }
@@ -3043,19 +2990,6 @@ void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
     #else
       Serial.println(addr);    
     #endif
-    
-//    for (int i = 0; i < len; i++) {
-//      char hexCar[4];
-//      sprintf(hexCar, "%02X", snifferPacket->payload[i]);
-//      Serial.print(hexCar);
-      //Serial.print(snifferPacket->payload[i], HEX);
-//      if ((i + 1) % 16 == 0)
-//        Serial.print("\n");
-//      else
-//        Serial.print(" ");
-//    }
-  
-//    Serial.print("\n");
   }
 
   addPacket(snifferPacket, len);
@@ -3116,17 +3050,6 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
         return;      
     } // End targeted stuff 
     // Build packet
-
-    //Serial.println("Recieved beacon frame");    
-    
-
-    /*uint8_t new_packet[26] = {
-                              0xc0, 0x00, 0x3a, 0x01,
-                              0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                              0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                              0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                              0xf0, 0xff, 0x02, 0x00
-                          };*/
     
     wifi_scan_obj.deauth_frame_default[10] = snifferPacket->payload[10];
     wifi_scan_obj.deauth_frame_default[11] = snifferPacket->payload[11];
@@ -3143,8 +3066,6 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
     wifi_scan_obj.deauth_frame_default[21] = snifferPacket->payload[15];      
   
     // Send packet
-    //esp_wifi_80211_tx(WIFI_IF_AP, new_packet, sizeof(new_packet), false);
-    //esp_wifi_80211_tx(WIFI_IF_AP, new_packet, sizeof(new_packet), false);
     esp_wifi_80211_tx(WIFI_IF_AP, wifi_scan_obj.deauth_frame_default, sizeof(wifi_scan_obj.deauth_frame_default), false);
     delay(1);
   }
@@ -3155,18 +3076,6 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
     num_eapol++;
     Serial.println("Received EAPOL:");
 
-//    for (int i = 0; i < len; i++) {
-//      char hexCar[3];
-//      snprintf(hexCar, 3, "%02X", snifferPacket->payload[i]);
-//      Serial.print(hexCar);
-      //Serial.print(snifferPacket->payload[i], HEX);
-//      if ((i + 1) % 16 == 0)
-//        Serial.print("\n");
-//      else
-//        Serial.print(" ");
-//    }
-  
-//    Serial.print("\n");
   }
 
   addPacket(snifferPacket, len);
@@ -3184,22 +3093,6 @@ void WiFiScan::addPacket(wifi_promiscuous_pkt_t *snifferPacket, int len) {
     #endif
   }
 }
-
-/*void WiFiScan::addLog(String log, int len) {
-  uint8_t *buf;
-  log.getBytes(buf, log.length());
-  bool save_packet = settings_obj.loadSetting<bool>(text_table4[7]);
-  if (save_packet) {
-    Serial.println("Saving data...");
-    #ifdef WRITE_PACKETS_SERIAL
-      buffer_obj.addPacket(buf, len);
-    #elif defined(HAS_SD)
-      sd_obj.addPacket(buf, len);
-    #else
-      return;
-    #endif
-  }
-}*/
 
 #ifdef HAS_SCREEN
   void WiFiScan::eapolMonitorMain(uint32_t currentTime)
@@ -3262,8 +3155,6 @@ void WiFiScan::addPacket(wifi_promiscuous_pkt_t *snifferPacket, int len) {
               set_channel--;
               delay(70);
               display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
-              //display_obj.tftDrawXScaleButtons(x_scale);
-              //display_obj.tftDrawYScaleButtons(y_scale);
               display_obj.tftDrawChannelScaleButtons(set_channel);
               display_obj.tftDrawExitScaleButtons();
               changeChannel();
@@ -3278,8 +3169,6 @@ void WiFiScan::addPacket(wifi_promiscuous_pkt_t *snifferPacket, int len) {
               set_channel++;
               delay(70);
               display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
-              //display_obj.tftDrawXScaleButtons(x_scale);
-              //display_obj.tftDrawYScaleButtons(y_scale);
               display_obj.tftDrawChannelScaleButtons(set_channel);
               display_obj.tftDrawExitScaleButtons();
               changeChannel();
@@ -3297,8 +3186,6 @@ void WiFiScan::addPacket(wifi_promiscuous_pkt_t *snifferPacket, int len) {
       }
   
       if (currentTime - initTime >= (GRAPH_REFRESH * 5)) {
-        //Serial.println("-----------------------------------------");
-        //Serial.println("Time elapsed: " + (String)(currentTime - initTime) + "ms");
         x_pos += x_scale;
         initTime = millis();
         y_pos_x = ((-num_eapol * (y_scale * 3)) + (HEIGHT_1 - 2)); // GREEN
@@ -3306,27 +3193,12 @@ void WiFiScan::addPacket(wifi_promiscuous_pkt_t *snifferPacket, int len) {
           Serial.println("Max EAPOL number reached. Adjusting...");
           num_eapol = 0;
         }
-        //y_pos_y = ((-num_deauth * (y_scale * 3)) + (HEIGHT_1 - 2)); // RED
-        //y_pos_z = ((-num_probe * (y_scale * 3)) + (HEIGHT_1 - 2)); // BLUE
-  
-        //Serial.println("num_beacon: " + (String)num_beacon);
-        //Serial.println("num_deauth: " + (String)num_deauth);
-        //Serial.println(" num_probe: " + (String)num_probe);
-  
-        //num_beacon = 0;
-        //num_probe = 0;
-        //num_deauth = 0;
   
         //CODE FOR PLOTTING CONTINUOUS LINES!!!!!!!!!!!!
         //Plot "X" value
         display_obj.tft.drawLine(x_pos - x_scale, y_pos_x_old, x_pos, y_pos_x, TFT_CYAN);
-        //Plot "Z" value
-        //display_obj.tft.drawLine(x_pos - x_scale, y_pos_z_old, x_pos, y_pos_z, TFT_BLUE);
-        //Plot "Y" value
-        //display_obj.tft.drawLine(x_pos - x_scale, y_pos_y_old, x_pos, y_pos_y, TFT_RED);
   
         //Draw preceding black 'boxes' to erase old plot lines, !!!WEIRD CODE TO COMPENSATE FOR BUTTONS AND COLOR KEY SO 'ERASER' DOESN'T ERASE BUTTONS AND COLOR KEY!!!
-        //if ((x_pos <= 90) || ((x_pos >= 198) && (x_pos <= 320))) //above x axis
         if ((x_pos <= 90) || ((x_pos >= 117) && (x_pos <= 320))) //above x axis
         {
           display_obj.tft.fillRect(x_pos+1, 28, 10, 93, TFT_BLACK); //compensate for buttons!
@@ -3335,8 +3207,6 @@ void WiFiScan::addPacket(wifi_promiscuous_pkt_t *snifferPacket, int len) {
         {
           display_obj.tft.fillRect(x_pos+1, 0, 10, 121, TFT_BLACK); //don't compensate for buttons!
         }
-        //if ((x_pos >= 254) && (x_pos <= 320)) //below x axis
-        //if (x_pos <= 90)
         if (x_pos < 0) // below x axis
         {
           //tft.fillRect(x_pos+1, 121, 10, 88, TFT_BLACK);

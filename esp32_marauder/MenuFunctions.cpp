@@ -1764,18 +1764,18 @@ void MenuFunctions::RunSetup()
   addNodes(&wifiGeneralMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
     changeMenu(wifiGeneralMenu.parentMenu);
   });
-  #ifdef HAS_ILI9341
+  /*#ifdef HAS_ILI9341
     addNodes(&wifiGeneralMenu, text_table1[55], TFT_DARKCYAN, NULL, JOIN_WIFI, [this](){
       display_obj.clearScreen(); 
       wifi_scan_obj.currentScanMode = LV_JOIN_WIFI; 
       wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
       joinWiFiGFX();
     });
-  #endif
-  addNodes(&wifiGeneralMenu, text_table1[25], TFT_CYAN, NULL, SHUTDOWN, [this]() {
+  #endif*/
+  /*addNodes(&wifiGeneralMenu, text_table1[25], TFT_CYAN, NULL, SHUTDOWN, [this]() {
     changeMenu(&shutdownWiFiMenu);
     wifi_scan_obj.RunShutdownWiFi();
-  });
+  });*/
   addNodes(&wifiGeneralMenu, text_table1[27], TFT_SKYBLUE, NULL, GENERATE, [this]() {
     changeMenu(&generateSSIDsMenu);
     wifi_scan_obj.RunGenerateSSIDs();

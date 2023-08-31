@@ -24,10 +24,8 @@ class GpsInterface {
     bool gps_enabled = false;
     bool good_fix = false;
     uint8_t num_sats = 0;
-    //MicroNMEA nmea(nmeaBuffer, sizeof(nmeaBuffer));
 
     String dt_string_from_gps();
-    void showGPSInfo();
     void setGPSInfo();
 };
 
