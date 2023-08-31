@@ -771,4 +771,18 @@
   #endif
   //// END GPS STUFF
 
+  //// MARAUDER TITLE STUFF
+  #ifdef MARAUDER_V4
+    #define MARAUDER_TITLE_BYTES 6334
+  #elif defined(MARAUDER_V6)
+    #define MARAUDER_TITLE_BYTES 6334
+  #elif defined(MARAUDER_KIT)
+    #define MARAUDER_TITLE_BYTES 6334
+  #elif defined(MARAUDER_MINI)
+    #define MARAUDER_TITLE_BYTES 13578
+  #else
+    #define MARAUDER_TITLE_BYTES 13578
+  #endif
+  //// END MARAUDER TITLE STUFF
+
 #endif

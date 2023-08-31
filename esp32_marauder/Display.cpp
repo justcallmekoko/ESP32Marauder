@@ -427,7 +427,7 @@ void Display::drawJpeg(const char *filename, int xpos, int ypos) {
   // the filename can be a String or character array type:
 
   //boolean decoded = JpegDec.decodeFsFile(filename);  // or pass the filename (leading / distinguishes SPIFFS files)
-  boolean decoded = JpegDec.decodeArray(MarauderTitle, 13578);
+  boolean decoded = JpegDec.decodeArray(MarauderTitle, MARAUDER_TITLE_BYTES);
 
   if (decoded) {
     // print information about the image to the serial port

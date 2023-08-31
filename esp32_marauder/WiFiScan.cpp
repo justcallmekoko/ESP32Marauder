@@ -798,11 +798,7 @@ void WiFiScan::RunInfo()
   String sta_mac = this->getStaMAC();
   String ap_mac = this->getApMAC();
   String free_ram = this->freeRAM();
-  
-  //Serial.print("STA MAC: ");
-  //Serial.println(sta_mac);
-  //Serial.print("AP MAC: ");
-  //Serial.println(ap_mac);
+
   Serial.println(free_ram);
 
   #ifdef HAS_SCREEN
