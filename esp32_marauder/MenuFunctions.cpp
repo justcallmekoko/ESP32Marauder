@@ -1891,9 +1891,9 @@ void MenuFunctions::RunSetup()
   //addNodes(&bluetoothMenu, "Scanners", TFT_ORANGE, NULL, SCANNERS, [this]() {
   //  changeMenu(&bluetoothScannerMenu);
   //});
-  addNodes(&bluetoothMenu, text_table1[33], TFT_PURPLE, NULL, GENERAL_APPS, [this]() {
+  /*addNodes(&bluetoothMenu, text_table1[33], TFT_PURPLE, NULL, GENERAL_APPS, [this]() {
     changeMenu(&bluetoothGeneralMenu);
-  });
+  });*/
 
   // Build bluetooth sniffer Menu
   bluetoothSnifferMenu.parentMenu = &bluetoothMenu; // Second Menu is third menu parent
@@ -1918,7 +1918,7 @@ void MenuFunctions::RunSetup()
   //});
 
   // Build bluetooth general menu
-  bluetoothGeneralMenu.parentMenu = &bluetoothMenu;
+  /*bluetoothGeneralMenu.parentMenu = &bluetoothMenu;
   addNodes(&bluetoothGeneralMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
     changeMenu(bluetoothGeneralMenu.parentMenu);
   });
@@ -1931,7 +1931,7 @@ void MenuFunctions::RunSetup()
   shutdownBLEMenu.parentMenu = &bluetoothGeneralMenu;
   addNodes(&shutdownBLEMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
     changeMenu(shutdownBLEMenu.parentMenu);
-  });
+  });*/
 
   // Bad USB Menu
   //badusbMenu.parentMenu = &mainMenu;

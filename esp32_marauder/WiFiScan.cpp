@@ -766,7 +766,7 @@ void WiFiScan::RunGenerateSSIDs(int count) {
   #endif
 }
 
-void WiFiScan::RunShutdownBLE() {
+/*void WiFiScan::RunShutdownBLE() {
   #ifdef HAS_SCREEN
     display_obj.tft.setTextWrap(false);
     display_obj.tft.setFreeFont(NULL);
@@ -791,7 +791,7 @@ void WiFiScan::RunShutdownBLE() {
       display_obj.tft.println(F(text_table4[19]));
     #endif
   }
-}
+}*/
 
 void WiFiScan::RunInfo()
 {

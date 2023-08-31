@@ -314,7 +314,7 @@ class WiFiScan
     void changeChannel();
     void changeChannel(int chan);
     void RunInfo();
-    void RunShutdownBLE();
+    //void RunShutdownBLE();
     void RunGenerateSSIDs(int count = 20);
     void RunClearSSIDs();
     void RunClearAPs();
