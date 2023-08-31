@@ -8,7 +8,7 @@
 #define BATTERY_ANALOG_ON 0
 
 #include "WiFiScan.h"
-#include "Display.h"
+//#include "Display.h"
 #include "BatteryInterface.h"
 #include "SDInterface.h"
 //#include "Web.h"
@@ -29,7 +29,7 @@
   extern SwitchLib c_btn;
 #endif
 
-extern Display display_obj;
+//extern Display display_obj;
 extern WiFiScan wifi_scan_obj;
 //extern Web web_obj;
 extern SDInterface sd_obj;
