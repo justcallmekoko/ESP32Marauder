@@ -27,6 +27,51 @@ void GpsInterface::begin() {
   }
 }
 
+// Thanks JosephHewitt
+String GpsInterface::dt_string_from_gps(){
+  //Return a datetime String using GPS data only.
+  String datetime = "";
+  if (nmea.isValid() && nmea.getYear() > 0){
+    datetime += nmea.getYear();
+    datetime += "-";
+    datetime += nmea.getMonth();
+    datetime += "-";
+    datetime += nmea.getDay();
+    datetime += " ";
+    datetime += nmea.getHour();
+    datetime += ":";
+    datetime += nmea.getMinute();
+    datetime += ":";
+    datetime += nmea.getSecond();
+  }
+  return datetime;
+}
+
+void GpsInterface::setGPSInfo() {
+  this->good_fix = nmea.isValid();
+  this->num_sats = nmea.getNumSatellites();
+
+  this->gps_year = nmea.getYear();
+  this->gps_month = nmea.getMonth();
+  this->gps_day = nmea.getDay();
+  this->gps_hour = nmea.getHour();
+  this->gps_minute = nmea.getMinute();
+  this->gps_second = nmea.getSecond();
+  this->gps_hundredths = nmea.getHundredths();
+
+  this->datetime = this->dt_string_from_gps();
+
+  this->lat = String((float)nmea.getLatitude()/1000000, 7);
+  this->lon = String((float)nmea.getLongitude()/1000000, 7);
+  long alt = 0;
+  if (!nmea.getAltitude(alt)){
+    alt = 0;
+  }
+  this->altf = (float)alt / 1000;
+
+  //nmea.clear();
+}
+
 void GpsInterface::showGPSInfo() {
   Serial.print("Valid fix: ");
   Serial.println(nmea.isValid() ? "yes" : "no");
@@ -104,15 +149,17 @@ void GpsInterface::main() {
   uint8_t num_sat = nmea.getNumSatellites();
 
   if ((nmea.isValid()) && (num_sat > 0)) {
-    this->good_fix = true;
-    this->num_sats = nmea.getNumSatellites();
+    //this->good_fix = true;
+    //this->num_sats = nmea.getNumSatellites();
+    this->setGPSInfo();
     //Serial.print("Got fix: ");
     //Serial.println(num_sats);
     //this->showGPSInfo();
   }
   else if ((!nmea.isValid()) && (num_sat <= 0)) {
-    this->good_fix = false;
-    this->num_sats = nmea.getNumSatellites();
+    //this->good_fix = false;
+    //this->num_sats = nmea.getNumSatellites();
+    this->setGPSInfo();
     //Serial.println("No fix");
   }
 }

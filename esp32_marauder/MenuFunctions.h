@@ -77,18 +77,15 @@ extern Settings settings_obj;
 #define STATUS_BAT 22
 #define STATUS_SD 23
 #define PWNAGOTCHI 24
-#define ESPRESSIF 25
-#define SHUTDOWN 26
-#define BEACON_LIST 27
-#define GENERATE 28
-#define CLEAR_ICO 29
-#define KEYBOARD_ICO 30
-#define JOIN_WIFI 31
-#define ESP_UPDATE_ICO 32
-#define BAD_USB_ICO 33
-#define TEST_BAD_USB_ICO 34
-#define LANGUAGE 35
-#define STATUS_GPS 36
+#define SHUTDOWN 25
+#define BEACON_LIST 26
+#define GENERATE 27
+#define CLEAR_ICO 28
+#define KEYBOARD_ICO 29
+#define JOIN_WIFI 30
+#define LANGUAGE 31
+#define STATUS_GPS 32
+#define GPS_MENU 33
 
 PROGMEM void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p);
 PROGMEM bool my_touchpad_read(lv_indev_drv_t * indev_driver, lv_indev_data_t * data);
@@ -178,6 +175,13 @@ class MenuFunctions
     Menu shutdownWiFiMenu;
     Menu shutdownBLEMenu;
     Menu generateSSIDsMenu;
+
+    #ifdef HAS_GPS
+      Menu gpsMenu;
+
+      // GPS Menu
+      Menu gpsInfoMenu;
+    #endif
 
     static void lv_tick_handler();
 

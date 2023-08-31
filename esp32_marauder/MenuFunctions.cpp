@@ -1516,6 +1516,12 @@ void MenuFunctions::RunSetup()
   bluetoothMenu.list = new LinkedList<MenuNode>(); // Get list in third menu ready
   generalMenu.list = new LinkedList<MenuNode>();
   deviceMenu.list = new LinkedList<MenuNode>();
+  #ifdef HAS_GPS
+    if (gps_obj.getGpsModuleStatus()) {
+      gpsMenu.list = new LinkedList<MenuNode>();
+      gpsInfoMenu.list = new LinkedList<MenuNode>();
+    }
+  #endif
 
   // Device menu stuff
   failedUpdateMenu.list = new LinkedList<MenuNode>();
@@ -1568,7 +1574,10 @@ void MenuFunctions::RunSetup()
   clearSSIDsMenu.name = text_table1[28];
   clearAPsMenu.name = text_table1[29];
   wifiAPMenu.name = "Access Points";
-  
+  #ifdef HAS_GPS
+    gpsMenu.name = "GPS";
+    gpsInfoMenu.name = "GPS Data";
+  #endif  
 
   // Build Main Menu
   mainMenu.parentMenu = NULL;
@@ -1578,6 +1587,13 @@ void MenuFunctions::RunSetup()
   addNodes(&mainMenu, text_table1[19], TFT_CYAN, NULL, BLUETOOTH, [this]() {
     changeMenu(&bluetoothMenu);
   });
+  #ifdef HAS_GPS
+    if (gps_obj.getGpsModuleStatus()) {
+      addNodes(&mainMenu, "GPS", TFT_RED, NULL, GPS_MENU, [this]() {
+        changeMenu(&gpsMenu);
+      });
+    }
+  #endif
   //if (a32u4_obj.supported) addNodes(&mainMenu, text_table1[8], TFT_RED, NULL, BAD_USB_ICO, [this]() {
   //  changeMenu(&badusbMenu);
   //});
@@ -1590,6 +1606,25 @@ void MenuFunctions::RunSetup()
   addNodes(&mainMenu, text_table1[30], TFT_LIGHTGREY, NULL, REBOOT, []() {
     ESP.restart();
   });
+
+  // GPS Menu
+  #ifdef HAS_GPS
+    if (gps_obj.getGpsModuleStatus()) {
+      gpsMenu.parentMenu = &mainMenu;
+      addNodes(&gpsMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+        changeMenu(gpsMenu.parentMenu);
+      });
+      addNodes(&gpsMenu, "GPS Data", TFT_CYAN, NULL, GPS_MENU, [this]() {
+        changeMenu(&gpsInfoMenu);
+      });
+
+      // GPS Info Menu
+      gpsInfoMenu.parentMenu = &gpsMenu;
+      addNodes(&gpsInfoMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+        changeMenu(gpsInfoMenu.parentMenu);
+      }); 
+    }
+  #endif
 
   // Build WiFi Menu
   wifiMenu.parentMenu = &mainMenu; // Main Menu is second menu parent
