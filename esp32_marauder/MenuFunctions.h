@@ -116,7 +116,7 @@ struct MenuNode {
   String name;
   String command;
   uint16_t color;
-  int icon;
+  uint8_t icon;
   TFT_eSPI_Button* button;
   bool selected;
   std::function<void()> callable;
@@ -154,7 +154,7 @@ class MenuFunctions
     Menu whichUpdateMenu;
     Menu failedUpdateMenu;
     Menu confirmMenu;
-    Menu espUpdateMenu;
+    //Menu espUpdateMenu;
     Menu updateMenu;
     Menu settingsMenu;
     Menu specSettingMenu;
@@ -169,11 +169,11 @@ class MenuFunctions
 
     // Bluetooth menu stuff
     Menu bluetoothSnifferMenu;
-    Menu bluetoothGeneralMenu;
+    //Menu bluetoothGeneralMenu;
 
     // Settings things menus
-    Menu shutdownWiFiMenu;
-    Menu shutdownBLEMenu;
+    //Menu shutdownWiFiMenu;
+    //Menu shutdownBLEMenu;
     Menu generateSSIDsMenu;
 
     #ifdef HAS_GPS

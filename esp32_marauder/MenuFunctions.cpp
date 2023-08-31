@@ -1541,11 +1541,11 @@ void MenuFunctions::RunSetup()
 
   // Bluetooth menu stuff
   bluetoothSnifferMenu.list = new LinkedList<MenuNode>();
-  bluetoothGeneralMenu.list = new LinkedList<MenuNode>();
+  //bluetoothGeneralMenu.list = new LinkedList<MenuNode>();
 
   // Settings stuff
-  shutdownWiFiMenu.list = new LinkedList<MenuNode>();
-  shutdownBLEMenu.list = new LinkedList<MenuNode>();
+  //shutdownWiFiMenu.list = new LinkedList<MenuNode>();
+  //shutdownBLEMenu.list = new LinkedList<MenuNode>();
   generateSSIDsMenu.list = new LinkedList<MenuNode>();
   clearSSIDsMenu.list = new LinkedList<MenuNode>();
   clearAPsMenu.list = new LinkedList<MenuNode>();
@@ -1567,9 +1567,9 @@ void MenuFunctions::RunSetup()
   wifiAttackMenu.name = text_table1[21];
   wifiGeneralMenu.name = text_table1[22];
   bluetoothSnifferMenu.name = text_table1[23];
-  bluetoothGeneralMenu.name = text_table1[24];
-  shutdownWiFiMenu.name = text_table1[25];
-  shutdownBLEMenu.name = text_table1[26];
+  //bluetoothGeneralMenu.name = text_table1[24];
+  //shutdownWiFiMenu.name = text_table1[25];
+  //shutdownBLEMenu.name = text_table1[26];
   generateSSIDsMenu.name = text_table1[27];
   clearSSIDsMenu.name = text_table1[28];
   clearAPsMenu.name = text_table1[29];
@@ -1858,10 +1858,10 @@ void MenuFunctions::RunSetup()
   #endif
 
   // Build shutdown wifi menu
-  shutdownWiFiMenu.parentMenu = &wifiGeneralMenu;
+  /*shutdownWiFiMenu.parentMenu = &wifiGeneralMenu;
   addNodes(&shutdownWiFiMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
     changeMenu(shutdownWiFiMenu.parentMenu);
-  });
+  });*/
 
   // Build generate ssids menu
   generateSSIDsMenu.parentMenu = &wifiGeneralMenu;

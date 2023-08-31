@@ -95,9 +95,9 @@ class Display
     bool draw_tft = false;
     bool exit_draw = false;
 
-    int TOP_FIXED_AREA_2 = 48;
-    int print_delay_1, print_delay_2 = 10;
-    int current_banner_pos = SCREEN_WIDTH;
+    uint8_t TOP_FIXED_AREA_2 = 48;
+    uint8_t print_delay_1, print_delay_2 = 10;
+    uint8_t current_banner_pos = SCREEN_WIDTH;
 
     //Menu* current_menu;
     
