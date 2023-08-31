@@ -355,8 +355,6 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
       RunBluetoothScan(scan_mode, color);
     #endif
   }
-  else if (scan_mode == WIFI_SCAN_ESPRESSIF)
-    RunEspressifScan(scan_mode, color);
   else if (scan_mode == LV_JOIN_WIFI) {
     #ifdef HAS_SCREEN
       RunLvJoinWiFi(scan_mode, color);
@@ -490,7 +488,6 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   (currentScanMode == WIFI_SCAN_TARGET_AP) ||
   (currentScanMode == WIFI_SCAN_TARGET_AP_FULL) ||
   (currentScanMode == WIFI_SCAN_PWN) ||
-  (currentScanMode == WIFI_SCAN_ESPRESSIF) ||
   (currentScanMode == WIFI_SCAN_EAPOL) ||
   (currentScanMode == WIFI_SCAN_ACTIVE_EAPOL) ||
   (currentScanMode == WIFI_SCAN_ACTIVE_LIST_EAPOL) ||
@@ -908,52 +905,6 @@ void WiFiScan::RunInfo()
   //#ifdef HAS_SCREEN
   //  display_obj.tft.println(text_table4[35] + (String)temp_obj.current_temp + " C");
   //#endif
-}
-
-void WiFiScan::RunEspressifScan(uint8_t scan_mode, uint16_t color) {
-  #ifdef WRITE_PACKETS_SERIAL
-    buffer_obj.open();
-  #elif defined(HAS_SD)
-    sd_obj.openCapture("espressif");
-  #else
-    return;
-  #endif
-
-  #ifdef MARAUDER_FLIPPER
-    flipper_led.sniffLED();
-  #elif defined(XIAO_ESP32_S3)
-    xiao_led.sniffLED();
-  #else
-    led_obj.setMode(MODE_SNIFF);
-  #endif
-
-  #ifdef HAS_SCREEN
-    display_obj.TOP_FIXED_AREA_2 = 48;
-    display_obj.tteBar = true;
-    display_obj.print_delay_1 = 15;
-    display_obj.print_delay_2 = 10;
-    display_obj.initScrollValues(true);
-    display_obj.tft.setTextWrap(false);
-    display_obj.tft.setTextColor(TFT_WHITE, color);
-    #ifndef MARAUDER_MINI
-      display_obj.tft.fillRect(0,16,240,16, color);
-      display_obj.tft.drawCentreString(text_table4[36],120,16,2);
-      display_obj.touchToExit();
-    #endif
-    display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
-    display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
-  #endif
-  
-  esp_wifi_init(&cfg);
-  esp_wifi_set_storage(WIFI_STORAGE_RAM);
-  esp_wifi_set_mode(WIFI_MODE_NULL);
-  esp_wifi_start();
-  esp_wifi_set_promiscuous(true);
-  esp_wifi_set_promiscuous_filter(&filt);
-  esp_wifi_set_promiscuous_rx_cb(&espressifSnifferCallback);
-  esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
-  this->wifi_initialized = true;
-  initTime = millis();
 }
 
 void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
@@ -1546,78 +1497,6 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
 // Function to extract MAC addr from a packet at given offset
 void WiFiScan::getMAC(char *addr, uint8_t* data, uint16_t offset) {
   sprintf(addr, "%02x:%02x:%02x:%02x:%02x:%02x", data[offset+0], data[offset+1], data[offset+2], data[offset+3], data[offset+4], data[offset+5]);
-}
-
-void WiFiScan::espressifSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
-{
-  wifi_promiscuous_pkt_t *snifferPacket = (wifi_promiscuous_pkt_t*)buf;
-  WifiMgmtHdr *frameControl = (WifiMgmtHdr*)snifferPacket->payload;
-  wifi_pkt_rx_ctrl_t ctrl = (wifi_pkt_rx_ctrl_t)snifferPacket->rx_ctrl;
-  int len = snifferPacket->rx_ctrl.sig_len;
-
-  String display_string = "";
-  String src_addr_string = "";
-
-  if (type == WIFI_PKT_MGMT)
-  {
-    len -= 4;
-  }
-  int fctl = ntohs(frameControl->fctl);
-  const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)snifferPacket->payload;
-  const WifiMgmtHdr *hdr = &ipkt->hdr;
-
-  // If we dont the buffer size is not 0, don't write or else we get CORRUPT_HEAP
-  //if ((snifferPacket->payload[0] == 0x80) && (display_obj.display_buffer->size() == 0))
-  //{
-
-  char addr[] = "00:00:00:00:00:00";
-  getMAC(addr, snifferPacket->payload, 10);
-
-  src_addr_string.concat(addr);
-  bool match = false;
-
-  for (int i = 0; i < (sizeof(espressif_macs) / sizeof(espressif_macs[0])); i++) {
-    if (src_addr_string.startsWith(espressif_macs[i])) {
-      match = true;
-      break;
-    }
-  }
-  
-  if (!match)
-    return;
-
-  delay(random(0, 10));
-  Serial.print("RSSI: ");
-  Serial.print(snifferPacket->rx_ctrl.rssi);
-  Serial.print(" Ch: ");
-  Serial.print(snifferPacket->rx_ctrl.channel);
-  Serial.print(" BSSID: ");
-    
-  Serial.print(addr);
-  //display_string.concat(" RSSI: ");
-  //display_string.concat(snifferPacket->rx_ctrl.rssi);
-  display_string.concat("CH: " + (String)snifferPacket->rx_ctrl.channel);
-
-  //display_string.concat(" ");
-  display_string.concat(" -> ");
-  display_string.concat(addr);
-
-  for (int i = 0; i < 19 - snifferPacket->payload[37]; i++)
-  {
-    display_string.concat(" ");
-  }
-
-  Serial.print(" ");
-
-  #ifdef HAS_SCREEN
-    display_obj.loading = true;
-    display_obj.display_buffer->add(display_string);
-    display_obj.loading = false;
-  #endif
-  
-  Serial.println();
-
-  addPacket(snifferPacket, len);
 }
 
 void WiFiScan::pwnSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
@@ -3771,7 +3650,6 @@ void WiFiScan::main(uint32_t currentTime)
   (currentScanMode == WIFI_SCAN_SIG_STREN) ||
   (currentScanMode == WIFI_SCAN_TARGET_AP) ||
   (currentScanMode == WIFI_SCAN_PWN) ||
-  (currentScanMode == WIFI_SCAN_ESPRESSIF) ||
   (currentScanMode == WIFI_SCAN_DEAUTH) ||
   (currentScanMode == WIFI_SCAN_ALL))
   {

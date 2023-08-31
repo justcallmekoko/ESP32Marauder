@@ -288,7 +288,6 @@ class WiFiScan
     //void RunDeauthFlood(uint8_t scan_mode, uint16_t color);
     void RunMimicFlood(uint8_t scan_mode, uint16_t color);
     //void RunBeaconList(uint8_t scan_mode, uint16_t color);
-    void RunEspressifScan(uint8_t scan_mode, uint16_t color);
     void RunPwnScan(uint8_t scan_mode, uint16_t color);
     void RunBeaconScan(uint8_t scan_mode, uint16_t color);
     void RunRawScan(uint8_t scan_mode, uint16_t color);
@@ -365,7 +364,6 @@ class WiFiScan
     //void addLog(String log, int len);
     
     static void getMAC(char *addr, uint8_t* data, uint16_t offset);
-    static void espressifSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void pwnSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void rawSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);

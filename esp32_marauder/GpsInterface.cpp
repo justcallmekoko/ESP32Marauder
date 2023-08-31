@@ -51,14 +51,6 @@ void GpsInterface::setGPSInfo() {
   this->good_fix = nmea.isValid();
   this->num_sats = nmea.getNumSatellites();
 
-  this->gps_year = nmea.getYear();
-  this->gps_month = nmea.getMonth();
-  this->gps_day = nmea.getDay();
-  this->gps_hour = nmea.getHour();
-  this->gps_minute = nmea.getMinute();
-  this->gps_second = nmea.getSecond();
-  this->gps_hundredths = nmea.getHundredths();
-
   this->datetime = this->dt_string_from_gps();
 
   this->lat = String((float)nmea.getLatitude()/1000000, 7);

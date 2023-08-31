@@ -19,13 +19,6 @@ class GpsInterface {
     String lat = "";
     String lon = "";
     float altf = 0.0;
-    uint8_t gps_year = 0;
-    uint8_t gps_month = 0;
-    uint8_t gps_day = 0;
-    uint8_t gps_hour = 0;
-    uint8_t gps_minute = 0;
-    uint8_t gps_second = 0;
-    uint8_t gps_hundredths = 0;
     String datetime = "";
     
     bool gps_enabled = false;
