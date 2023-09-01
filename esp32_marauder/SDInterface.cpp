@@ -17,18 +17,30 @@ bool SDInterface::initSD() {
       }
     #endif
 
-    pinMode(SD_CS, OUTPUT);
-
-    delay(10);
-  
-    if (!SD.begin(SD_CS)) {
-      Serial.println(F("Failed to mount SD Card"));
-      this->supported = false;
-      return false;
-    }
+    #ifdef SD_IS_MMC
+      if (!SD_MMC.begin("/sdcard", true, false, SDMMC_FREQ_DEFAULT)) {
+        Serial.println(F("Failed to mount SD_MMC Card"));
+        this->supported = false;
+        return false;
+      }
+    #else
+      //pinMode(SD_CS, OUTPUT); // this was already done in esp32_marauder.ino
+      //delay(10);
+    
+      if (!SD.begin(SD_CS)) {
+        Serial.println(F("Failed to mount SD Card"));
+        this->supported = false;
+        return false;
+      }
+    #endif
     else {
       this->supported = true;
-      this->cardType = SD.cardType();
+      #ifdef SD_IS_MMC
+        this->cardType = SD_MMC.cardType();
+      #else
+        this->cardType = SD.cardType();
+      #endif
+      
       //if (cardType == CARD_MMC)
       //  Serial.println(F("SD: MMC Mounted"));
       //else if(cardType == CARD_SD)
@@ -38,7 +50,11 @@ bool SDInterface::initSD() {
       //else
       //    Serial.println(F("SD: UNKNOWN Card Mounted"));
 
-      this->cardSizeMB = SD.cardSize() / (1024 * 1024);
+      #ifdef SD_IS_MMC
+        this->cardSizeMB = SD_MMC.cardSize() / (1024 * 1024);
+      #else
+        this->cardSizeMB = SD.cardSize() / (1024 * 1024);
+      #endif
     
       //Serial.printf("SD Card Size: %lluMB\n", this->cardSizeMB);
 
@@ -59,10 +75,18 @@ bool SDInterface::initSD() {
 
       buffer_obj = Buffer();
     
-      if (!SD.exists("/SCRIPTS")) {
+      #ifdef SD_IS_MMC
+        if (!SD_MMC.exists("/SCRIPTS")) {
+      #else
+        if (!SD.exists("/SCRIPTS")) {
+      #endif
         Serial.println("/SCRIPTS does not exist. Creating...");
 
-        SD.mkdir("/SCRIPTS");
+        #ifdef SD_IS_MMC
+          SD_MMC.mkdir("/SCRIPTS");
+        #else
+          SD.mkdir("/SCRIPTS");
+        #endif
         Serial.println("/SCRIPTS created");
       }
     
@@ -77,7 +101,11 @@ bool SDInterface::initSD() {
 
 File SDInterface::getFile(String path) {
   if (this->supported) {
-    File file = SD.open(path, FILE_READ);
+    #ifdef SD_IS_MMC
+      File file = SD_MMC.open(path, FILE_READ);
+    #else
+      File file = SD.open(path, FILE_READ);
+    #endif
 
     //if (file)
     return file;
@@ -86,7 +114,12 @@ File SDInterface::getFile(String path) {
 
 void SDInterface::listDir(String str_dir){
   if (this->supported) {
-    File dir = SD.open(str_dir);
+    #ifdef SD_IS_MMC
+      File dir = SD_MMC.open(str_dir);
+    #else
+      File dir = SD.open(str_dir);
+    #endif
+    
     while (true)
     {
       File entry =  dir.openNextFile();
@@ -115,7 +148,12 @@ void SDInterface::addPacket(uint8_t* buf, uint32_t len, bool log) {
 void SDInterface::openCapture(String file_name) {
   bool save_pcap = settings_obj.loadSetting<bool>("SavePCAP");
   if ((this->supported) && (save_pcap)) {
-    buffer_obj.createPcapFile(&SD, file_name);
+    #ifdef SD_IS_MMC
+      buffer_obj.createPcapFile(&SD_MMC, file_name);
+    #else
+      buffer_obj.createPcapFile(&SD, file_name);
+    #endif
+    
     buffer_obj.open();
   }
 }
@@ -123,7 +161,12 @@ void SDInterface::openCapture(String file_name) {
 void SDInterface::openLog(String file_name) {
   bool save_pcap = settings_obj.loadSetting<bool>("SavePCAP");
   if ((this->supported) && (save_pcap)) {
-    buffer_obj.createPcapFile(&SD, file_name, true);
+    #ifdef SD_IS_MMC
+      buffer_obj.createPcapFile(&SD_MMC, file_name, true);
+    #else
+      buffer_obj.createPcapFile(&SD, file_name, true);
+    #endif
+    
     buffer_obj.open(true);
   }
 }
@@ -138,7 +181,13 @@ void SDInterface::runUpdate() {
   
     display_obj.tft.println(F(text15));
   #endif
-  File updateBin = SD.open("/update.bin");
+
+  #ifdef SD_IS_MMC
+    File updateBin = SD_MMC.open("/update.bin");
+  #else
+    File updateBin = SD.open("/update.bin");
+  #endif
+  
   if (updateBin) {
     if(updateBin.isDirectory()){
       #ifdef HAS_SCREEN
@@ -266,7 +315,11 @@ bool SDInterface::checkDetectPin() {
 void SDInterface::main() {
   if ((this->supported) && (this->do_save)) {
     //Serial.println("Saving packet...");
-    buffer_obj.forceSave(&SD);
+    #ifdef SD_IS_MMC
+      buffer_obj.forceSave(&SD_MMC);
+    #else
+      buffer_obj.forceSave(&SD);
+    #endif
   }
   else if (!this->supported) {
     if (checkDetectPin()) {
