@@ -41,7 +41,7 @@
   #include "flipperLED.h"
 #elif defined(XIAO_ESP32_S3)
   #include "xiaoLED.h"
-#else
+#elif defined(HAS_NEOPIXEL_LED)
   #include "LedInterface.h"
 #endif
 //#include "MenuFunctions.h"
@@ -107,7 +107,7 @@ extern Settings settings_obj;
   extern flipperLED flipper_led;
 #elif defined(XIAO_ESP32_S3)
   extern xiaoLED xiao_led;
-#else
+#elif defined(HAS_NEOPIXEL_LED)
   extern LedInterface led_obj;
 #endif
 

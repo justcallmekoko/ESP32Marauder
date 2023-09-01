@@ -23,7 +23,10 @@ https://www.online-utility.org/image/convert/to/XBM
 #include "freertos/task.h"
 #include "esp_system.h"
 #include <Arduino.h>
-
+#ifdef MARAUDER_ESP32CAM
+  #include "soc/soc.h"
+  #include "soc/rtc_cntl_reg.h"
+#endif
 #include "Assets.h"
 #include "WiFiScan.h"
 #ifdef HAS_SD
@@ -35,7 +38,7 @@ https://www.online-utility.org/image/convert/to/XBM
   #include "flipperLED.h"
 #elif defined(XIAO_ESP32_S3)
   #include "xiaoLED.h"
-#else
+#elif defined(HAS_NEOPIXEL_LED)
   #include "LedInterface.h"
 #endif
 
@@ -113,7 +116,7 @@ CommandLine cli_obj;
   flipperLED flipper_led;
 #elif defined(XIAO_ESP32_S3)
   xiaoLED xiao_led;
-#else
+#elif defined(HAS_NEOPIXEL_LED)
   LedInterface led_obj;
 #endif
 
@@ -156,18 +159,29 @@ void setup()
   #ifdef MARAUDER_M5STICKC
     axp192_obj.begin();
   #endif
-  
-  pinMode(FLASH_BUTTON, INPUT);
 
+  #ifdef MARAUDER_ESP32CAM
+    // Start with the flashlight off
+    pinMode(4, OUTPUT);
+    digitalWrite(4, LOW);
+
+    // Disable brownout detector
+    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+  #endif
+
+  #ifndef MARAUDER_ESP32CAM
+    pinMode(FLASH_BUTTON, INPUT);
+  #endif
+  
   #ifdef HAS_SCREEN
     pinMode(TFT_BL, OUTPUT);
   #endif
   
   backlightOff();
-#if BATTERY_ANALOG_ON == 1
-  pinMode(BATTERY_PIN, OUTPUT);
-  pinMode(CHARGING_PIN, INPUT);
-#endif
+  #if BATTERY_ANALOG_ON == 1
+    pinMode(BATTERY_PIN, OUTPUT);
+    pinMode(CHARGING_PIN, INPUT);
+  #endif
   
   // Preset SPI CS pins to avoid bus conflicts
   #ifdef HAS_SCREEN
@@ -175,26 +189,22 @@ void setup()
   #endif
   
   #ifdef HAS_SD
-    pinMode(SD_CS, OUTPUT);
-
-    delay(10);
-  
-    digitalWrite(SD_CS, HIGH);
-
-    delay(10);
+    #ifndef SD_IS_MMC
+      pinMode(SD_CS, OUTPUT);
+      delay(10);
+      digitalWrite(SD_CS, HIGH);
+      delay(10);
+     #endif
   #endif
 
   Serial.begin(115200);
-
   // Starts a second serial channel to stream the captured packets
   #ifdef WRITE_PACKETS_SERIAL
-    
     #ifdef XIAO_ESP32_S3
       Serial1.begin(115200, SERIAL_8N1, XIAO_RX1, XIAO_TX1);
     #else
       Serial1.begin(115200);
     #endif
-    
   #endif
 
   //Serial.println("\n\nHello, World!\n");
@@ -283,7 +293,8 @@ void setup()
       #endif
     }
   #else
-    return;
+    Serial.println(F("No SD, limited functionality"));
+    //return;
   #endif
 
   #ifdef HAS_BATTERY
@@ -318,7 +329,7 @@ void setup()
     flipper_led.RunSetup();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.RunSetup();
-  #else
+  #elif defined(HAS_NEOPIXEL_LED)
     led_obj.RunSetup();
   #endif
 
@@ -400,7 +411,7 @@ void loop()
       flipper_led.main();
     #elif defined(XIAO_ESP32_S3)
       xiao_led.main();
-    #else
+    #elif defined(HAS_NEOPIXEL_LED)
       led_obj.main(currentTime);
     #endif
 
@@ -429,7 +440,7 @@ void loop()
       flipper_led.main();
     #elif defined(XIAO_ESP32_S3)
       xiao_led.main();
-    #else
+    #elif defined(HAS_NEOPIXEL_LED)
       led_obj.main(currentTime);
     #endif
     
