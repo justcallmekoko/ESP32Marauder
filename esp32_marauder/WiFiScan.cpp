@@ -793,6 +793,35 @@ void WiFiScan::RunGenerateSSIDs(int count) {
   }
 }*/
 
+void WiFiScan::RunGPSInfo() {
+  #ifdef HAS_SCREEN
+    Serial.println("Refreshing GPS Data on screen...");
+
+    // Get screen position ready
+    display_obj.tft.setTextWrap(false);
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextColor(TFT_CYAN);
+
+    // Clean up screen first
+    //display_obj.tft.fillRect(0, 0, 240, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+    display_obj.tft.fillRect(0, (SCREEN_HEIGHT / 3) - 6, SCREEN_WIDTH, SCREEN_HEIGHT - ((SCREEN_HEIGHT / 3) - 6), TFT_BLACK);
+
+    // Print the GPS data: 3
+    display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+    if (gps_obj.getFixStatus())
+      display_obj.tft.println("  Good Fix: Yes");
+    else
+      display_obj.tft.println("  Good Fix: No");
+    display_obj.tft.println("Satellites: " + gps_obj.getNumSatsString());
+    display_obj.tft.println("  Latitude: " + gps_obj.getLat());
+    display_obj.tft.println(" Longitude: " + gps_obj.getLon());
+    display_obj.tft.println("  Altitude: " + (String)gps_obj.getAlt());
+    display_obj.tft.println("  Datetime: " + gps_obj.getDatetime());
+  #endif
+}
+
 void WiFiScan::RunInfo()
 {
   String sta_mac = this->getStaMAC();
@@ -3523,6 +3552,12 @@ void WiFiScan::main(uint32_t currentTime)
     {
       initTime = millis();
       channelHop();
+    }
+  }
+  else if (currentScanMode == WIFI_SCAN_GPS_DATA) {
+    if (currentTime - initTime >= 5000) {
+      this->initTime = millis();
+      this->RunGPSInfo();
     }
   }
   else if (currentScanMode == WIFI_SCAN_EVIL_PORTAL) {

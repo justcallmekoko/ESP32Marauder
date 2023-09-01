@@ -13,6 +13,10 @@ class GpsInterface {
     String getNumSatsString();
     bool getFixStatus();
     bool getGpsModuleStatus();
+    String getLat();
+    String getLon();
+    float getAlt();
+    String getDatetime();
 
   private:
     // GPS Info

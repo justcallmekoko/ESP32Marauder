@@ -16,10 +16,6 @@
 //#include "a32u4_interface.h"
 #include "settings.h"
 
-#ifdef HAS_GPS
-  #include "GpsInterface.h"
-#endif
-
 #ifdef HAS_BUTTONS
   #include <SwitchLib.h>
   extern SwitchLib u_btn;
@@ -37,11 +33,6 @@ extern BatteryInterface battery_obj;
 //extern EspInterface esp_obj;
 //extern A32u4Interface a32u4_obj;
 extern Settings settings_obj;
-
-
-#ifdef HAS_GPS
-  extern GpsInterface gps_obj;
-#endif
 
 #define FLASH_BUTTON 0
 

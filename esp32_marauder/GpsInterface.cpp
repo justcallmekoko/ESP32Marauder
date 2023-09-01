@@ -64,6 +64,22 @@ void GpsInterface::setGPSInfo() {
   //nmea.clear();
 }
 
+String GpsInterface::getLat() {
+  return this->lat;
+}
+
+String GpsInterface::getLon() {
+  return this->lon;
+}
+
+float GpsInterface::getAlt() {
+  return this->altf;
+}
+
+String GpsInterface::getDatetime() {
+  return this->datetime;
+}
+
 String GpsInterface::getNumSatsString() {
   return (String)num_sats;
 }

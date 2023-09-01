@@ -212,6 +212,7 @@
   #ifdef HAS_SCREEN
 
     #ifdef MARAUDER_M5STICKC
+      #define SCREEN_CHAR_WIDTH 40
       //#define TFT_MISO 19
       #define TFT_MOSI 15
       #define TFT_SCLK 13
@@ -278,6 +279,7 @@
     #endif
 
     #ifdef MARAUDER_V4
+      #define SCREEN_CHAR_WIDTH 40
       #define HAS_ILI9341
       #define BANNER_TEXT_SIZE 2
 
@@ -333,6 +335,7 @@
     #endif
 
     #ifdef MARAUDER_V6
+      #define SCREEN_CHAR_WIDTH 40
       #define HAS_ILI9341
     
       #define BANNER_TEXT_SIZE 2
@@ -389,6 +392,7 @@
     #endif 
 
     #ifdef MARAUDER_KIT
+      #define SCREEN_CHAR_WIDTH 40
       #define HAS_ILI9341
     
       #define BANNER_TEXT_SIZE 2
@@ -446,6 +450,7 @@
     #endif
   
     #ifdef MARAUDER_MINI
+      #define SCREEN_CHAR_WIDTH 40
       #define TFT_MISO 19
       #define TFT_MOSI 23
       #define TFT_SCLK 18

@@ -27,6 +27,9 @@
 #ifdef HAS_BATTERY
   #include "BatteryInterface.h"
 #endif
+#ifdef HAS_GPS
+  #include "GpsInterface.h"
+#endif
 #include "settings.h"
 #include "Assets.h"
 #ifdef MARAUDER_FLIPPER
@@ -73,6 +76,7 @@
 #define WIFI_SCAN_ACTIVE_LIST_EAPOL 28
 #define WIFI_SCAN_SIG_STREN 29
 #define WIFI_SCAN_EVIL_PORTAL 30
+#define WIFI_SCAN_GPS_DATA 31
 
 #define GRAPH_REFRESH 100
 
@@ -85,6 +89,9 @@ extern EvilPortal evil_portal_obj;
 #endif
 #ifdef HAS_SD
   extern SDInterface sd_obj;
+#endif
+#ifdef HAS_GPS
+  extern GpsInterface gps_obj;
 #endif
 extern Buffer buffer_obj;
 #ifdef HAS_BATTERY
@@ -253,6 +260,7 @@ class WiFiScan
     void broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_ssid);
     void broadcastSetSSID(uint32_t current_time, char* ESSID);
     void RunAPScan(uint8_t scan_mode, uint16_t color);
+    void RunGPSInfo();
     void RunMimicFlood(uint8_t scan_mode, uint16_t color);
     void RunPwnScan(uint8_t scan_mode, uint16_t color);
     void RunBeaconScan(uint8_t scan_mode, uint16_t color);

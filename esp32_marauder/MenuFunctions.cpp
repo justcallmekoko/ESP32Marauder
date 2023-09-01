@@ -824,7 +824,8 @@ void MenuFunctions::main(uint32_t currentTime)
   if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
       (wifi_scan_obj.currentScanMode == OTA_UPDATE) ||
       (wifi_scan_obj.currentScanMode == ESP_UPDATE) ||
-      (wifi_scan_obj.currentScanMode == SHOW_INFO)) {
+      (wifi_scan_obj.currentScanMode == SHOW_INFO) ||
+      (wifi_scan_obj.currentScanMode == WIFI_SCAN_GPS_DATA)) {
     if (wifi_scan_obj.orient_display) {
       this->orientDisplay();
       wifi_scan_obj.orient_display = false;
@@ -881,7 +882,8 @@ void MenuFunctions::main(uint32_t currentTime)
         (pressed) &&
         (wifi_scan_obj.currentScanMode != OTA_UPDATE) &&
         (wifi_scan_obj.currentScanMode != ESP_UPDATE) &&
-        (wifi_scan_obj.currentScanMode != SHOW_INFO))
+        (wifi_scan_obj.currentScanMode != SHOW_INFO) &&
+        (wifi_scan_obj.currentScanMode != WIFI_SCAN_GPS_DATA))
     {
       // Stop the current scan
       if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_PROBE) ||
@@ -932,7 +934,8 @@ void MenuFunctions::main(uint32_t currentTime)
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_OFF) &&
         (wifi_scan_obj.currentScanMode != OTA_UPDATE) &&
         (wifi_scan_obj.currentScanMode != ESP_UPDATE) &&
-        (wifi_scan_obj.currentScanMode != SHOW_INFO))
+        (wifi_scan_obj.currentScanMode != SHOW_INFO) &&
+        (wifi_scan_obj.currentScanMode != WIFI_SCAN_GPS_DATA))
     {
       // Stop the current scan
       if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_PROBE) ||
@@ -1615,7 +1618,9 @@ void MenuFunctions::RunSetup()
         changeMenu(gpsMenu.parentMenu);
       });
       addNodes(&gpsMenu, "GPS Data", TFT_CYAN, NULL, GPS_MENU, [this]() {
+        wifi_scan_obj.currentScanMode = WIFI_SCAN_GPS_DATA;
         changeMenu(&gpsInfoMenu);
+        wifi_scan_obj.StartScan(WIFI_SCAN_GPS_DATA, TFT_CYAN);
       });
 
       // GPS Info Menu
