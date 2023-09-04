@@ -1626,6 +1626,7 @@ void MenuFunctions::RunSetup()
       // GPS Info Menu
       gpsInfoMenu.parentMenu = &gpsMenu;
       addNodes(&gpsInfoMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+        wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
         changeMenu(gpsInfoMenu.parentMenu);
       }); 
     }
