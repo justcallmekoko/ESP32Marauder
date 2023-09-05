@@ -149,8 +149,6 @@ class MenuFunctions
     Menu generateSSIDsMenu;
 
     #ifdef HAS_GPS
-      Menu gpsMenu;
-
       // GPS Menu
       Menu gpsInfoMenu;
     #endif

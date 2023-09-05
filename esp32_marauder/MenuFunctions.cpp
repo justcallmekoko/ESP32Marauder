@@ -1101,11 +1101,9 @@ void MenuFunctions::RunSetup()
   // Main menu stuff
   wifiMenu.list = new LinkedList<MenuNode>(); // Get list in second menu ready
   bluetoothMenu.list = new LinkedList<MenuNode>(); // Get list in third menu ready
-  //generalMenu.list = new LinkedList<MenuNode>();
   deviceMenu.list = new LinkedList<MenuNode>();
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
-      gpsMenu.list = new LinkedList<MenuNode>();
       gpsInfoMenu.list = new LinkedList<MenuNode>();
     }
   #endif
@@ -1128,11 +1126,8 @@ void MenuFunctions::RunSetup()
 
   // Bluetooth menu stuff
   bluetoothSnifferMenu.list = new LinkedList<MenuNode>();
-  //bluetoothGeneralMenu.list = new LinkedList<MenuNode>();
 
   // Settings stuff
-  //shutdownWiFiMenu.list = new LinkedList<MenuNode>();
-  //shutdownBLEMenu.list = new LinkedList<MenuNode>();
   generateSSIDsMenu.list = new LinkedList<MenuNode>();
   clearSSIDsMenu.list = new LinkedList<MenuNode>();
   clearAPsMenu.list = new LinkedList<MenuNode>();
@@ -1141,7 +1136,6 @@ void MenuFunctions::RunSetup()
   mainMenu.name = text_table1[6];
   wifiMenu.name = text_table1[7];
   deviceMenu.name = text_table1[9];
-  //generalMenu.name = text_table1[10];
   failedUpdateMenu.name = text_table1[11];
   whichUpdateMenu.name = text_table1[12];
   confirmMenu.name = text_table1[13];
@@ -1154,15 +1148,11 @@ void MenuFunctions::RunSetup()
   wifiAttackMenu.name = text_table1[21];
   wifiGeneralMenu.name = text_table1[22];
   bluetoothSnifferMenu.name = text_table1[23];
-  //bluetoothGeneralMenu.name = text_table1[24];
-  //shutdownWiFiMenu.name = text_table1[25];
-  //shutdownBLEMenu.name = text_table1[26];
   generateSSIDsMenu.name = text_table1[27];
   clearSSIDsMenu.name = text_table1[28];
   clearAPsMenu.name = text_table1[29];
   wifiAPMenu.name = "Access Points";
   #ifdef HAS_GPS
-    gpsMenu.name = "GPS";
     gpsInfoMenu.name = "GPS Data";
   #endif  
 
@@ -1174,47 +1164,12 @@ void MenuFunctions::RunSetup()
   addNodes(&mainMenu, text_table1[19], TFT_CYAN, NULL, BLUETOOTH, [this]() {
     changeMenu(&bluetoothMenu);
   });
-  #ifdef HAS_GPS
-    if (gps_obj.getGpsModuleStatus()) {
-      addNodes(&mainMenu, "GPS", TFT_RED, NULL, GPS_MENU, [this]() {
-        changeMenu(&gpsMenu);
-      });
-    }
-  #endif
-  //if (a32u4_obj.supported) addNodes(&mainMenu, text_table1[8], TFT_RED, NULL, BAD_USB_ICO, [this]() {
-  //  changeMenu(&badusbMenu);
-  //});
-  /*addNodes(&mainMenu, text_table1[10], TFT_MAGENTA, NULL, GENERAL_APPS, [this]() {
-    changeMenu(&generalMenu);
-  });*/
   addNodes(&mainMenu, text_table1[9], TFT_BLUE, NULL, DEVICE, [this]() {
     changeMenu(&deviceMenu);
   });
   addNodes(&mainMenu, text_table1[30], TFT_LIGHTGREY, NULL, REBOOT, []() {
     ESP.restart();
   });
-
-  // GPS Menu
-  #ifdef HAS_GPS
-    if (gps_obj.getGpsModuleStatus()) {
-      gpsMenu.parentMenu = &mainMenu;
-      addNodes(&gpsMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-        changeMenu(gpsMenu.parentMenu);
-      });
-      addNodes(&gpsMenu, "GPS Data", TFT_CYAN, NULL, GPS_MENU, [this]() {
-        wifi_scan_obj.currentScanMode = WIFI_SCAN_GPS_DATA;
-        changeMenu(&gpsInfoMenu);
-        wifi_scan_obj.StartScan(WIFI_SCAN_GPS_DATA, TFT_CYAN);
-      });
-
-      // GPS Info Menu
-      gpsInfoMenu.parentMenu = &gpsMenu;
-      addNodes(&gpsInfoMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-        wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
-        changeMenu(gpsInfoMenu.parentMenu);
-      }); 
-    }
-  #endif
 
   // Build WiFi Menu
   wifiMenu.parentMenu = &mainMenu; // Main Menu is second menu parent
@@ -1582,6 +1537,23 @@ void MenuFunctions::RunSetup()
     wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_RED);  
     displaySettingsGFX();
   });*/
+  // GPS Menu
+  #ifdef HAS_GPS
+    if (gps_obj.getGpsModuleStatus()) {
+      addNodes(&deviceMenu, "GPS Data", TFT_RED, NULL, GPS_MENU, [this]() {
+        wifi_scan_obj.currentScanMode = WIFI_SCAN_GPS_DATA;
+        changeMenu(&gpsInfoMenu);
+        wifi_scan_obj.StartScan(WIFI_SCAN_GPS_DATA, TFT_CYAN);
+      });
+
+      // GPS Info Menu
+      gpsInfoMenu.parentMenu = &deviceMenu;
+      addNodes(&gpsInfoMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+        wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
+        changeMenu(gpsInfoMenu.parentMenu);
+      }); 
+    }
+  #endif
 
   // Settings menu
   // Device menu
