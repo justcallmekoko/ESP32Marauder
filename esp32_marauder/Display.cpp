@@ -751,20 +751,20 @@ void Display::listDir(fs::FS &fs, const char * dirname, uint8_t levels) {
 
 void Display::updateBanner(String msg)
 {
-  this->img.deleteSprite();
+  //this->img.deleteSprite();
   
-  this->img.setColorDepth(8);
+  //this->img.setColorDepth(8);
 
-  this->img.createSprite(SCREEN_WIDTH, TEXT_HEIGHT);
+  //this->img.createSprite(SCREEN_WIDTH, TEXT_HEIGHT);
 
   this->buildBanner(msg, current_banner_pos);
 
-  this->img.pushSprite(0, STATUS_BAR_WIDTH);
+  //this->img.pushSprite(0, STATUS_BAR_WIDTH);
 
-  current_banner_pos--;
+  //current_banner_pos--;
 
-  if (current_banner_pos <= 0)
-    current_banner_pos = SCREEN_WIDTH + 2;
+  //if (current_banner_pos <= 0)
+  //  current_banner_pos = SCREEN_WIDTH + 2;
 }
 
 
@@ -772,6 +772,13 @@ void Display::buildBanner(String msg, int xpos)
 {
   int h = TEXT_HEIGHT;
 
+  this->tft.fillRect(0, STATUS_BAR_WIDTH, SCREEN_WIDTH, TEXT_HEIGHT, TFT_BLACK);
+  this->tft.setTextSize(BANNER_TEXT_SIZE);           // Font size scaling is x1
+  this->tft.setTextFont(0);           // Font 4 selected
+  this->tft.setTextColor(TFT_WHITE, TFT_BLACK);  // Black text, no background colour
+  this->tft.drawCentreString(msg.c_str(), SCREEN_WIDTH / 2, TEXT_HEIGHT, 2);
+
+  /*
   // We could just use fillSprite(color) but lets be a bit more creative...
 
   // Fill with rainbow stripes
@@ -793,6 +800,7 @@ void Display::buildBanner(String msg, int xpos)
 
   img.setCursor(xpos - SCREEN_WIDTH, 2); // Print text at xpos - sprite width
   img.print(msg);
+  */
 }
 
 void Display::main(uint8_t scan_mode)

@@ -85,7 +85,7 @@ class Display
     Display();
     //Ticker tick;
     TFT_eSPI tft = TFT_eSPI();
-    TFT_eSprite img = TFT_eSprite(&tft);
+    //TFT_eSprite img = TFT_eSprite(&tft);
     TFT_eSPI_Button key[BUTTON_ARRAY_LEN];
     const String PROGMEM version_number = MARAUDER_VERSION;
 

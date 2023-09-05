@@ -8,12 +8,8 @@
 #define BATTERY_ANALOG_ON 0
 
 #include "WiFiScan.h"
-//#include "Display.h"
 #include "BatteryInterface.h"
 #include "SDInterface.h"
-//#include "Web.h"
-//#include "esp_interface.h"
-//#include "a32u4_interface.h"
 #include "settings.h"
 
 #ifdef HAS_BUTTONS
@@ -25,13 +21,9 @@
   extern SwitchLib c_btn;
 #endif
 
-//extern Display display_obj;
 extern WiFiScan wifi_scan_obj;
-//extern Web web_obj;
 extern SDInterface sd_obj;
 extern BatteryInterface battery_obj;
-//extern EspInterface esp_obj;
-//extern A32u4Interface a32u4_obj;
 extern Settings settings_obj;
 
 #define FLASH_BUTTON 0
@@ -85,15 +77,10 @@ PROGMEM static lv_disp_buf_t disp_buf;
 PROGMEM static lv_color_t buf[LV_HOR_RES_MAX * 10];
 
 PROGMEM static void ta_event_cb(lv_obj_t * ta, lv_event_t event);
-PROGMEM static void join_wifi_keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event);
 PROGMEM static void add_ssid_keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event);
-PROGMEM static void write_bad_usb_keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event);
-PROGMEM static void load_btn_cb(lv_obj_t * load_btn, lv_event_t event);
-PROGMEM static void test_btn_cb(lv_obj_t * load_btn, lv_event_t event);
 PROGMEM static void ap_list_cb(lv_obj_t * btn, lv_event_t event);
 PROGMEM static void station_list_cb(lv_obj_t * btn, lv_event_t event);
 PROGMEM static void setting_dropdown_cb(lv_obj_t * btn, lv_event_t event);
-PROGMEM static void save_as_keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event);
 
 // lvgl stuff
 PROGMEM static lv_obj_t *kb;
@@ -130,7 +117,6 @@ class MenuFunctions
 
     uint32_t initTime = 0;
 
-    //Menu* current_menu;
 
     // Main menu stuff
     Menu mainMenu;
@@ -138,14 +124,12 @@ class MenuFunctions
     Menu wifiMenu;
     Menu bluetoothMenu;
     Menu badusbMenu;
-    //Menu generalMenu;
     Menu deviceMenu;
 
     // Device menu stuff
     Menu whichUpdateMenu;
     Menu failedUpdateMenu;
     Menu confirmMenu;
-    //Menu espUpdateMenu;
     Menu updateMenu;
     Menu settingsMenu;
     Menu specSettingMenu;
@@ -160,11 +144,8 @@ class MenuFunctions
 
     // Bluetooth menu stuff
     Menu bluetoothSnifferMenu;
-    //Menu bluetoothGeneralMenu;
 
     // Settings things menus
-    //Menu shutdownWiFiMenu;
-    //Menu shutdownBLEMenu;
     Menu generateSSIDsMenu;
 
     #ifdef HAS_GPS
@@ -179,7 +160,6 @@ class MenuFunctions
     // Menu icons
 
 
-    //TFT_eSPI_Button key[BUTTON_ARRAY_LEN];
 
     void addNodes(Menu* menu, String name, uint16_t color, Menu* child, int place, std::function<void()> callable, bool selected = false, String command = "");
     void updateStatusBar();
@@ -208,13 +188,9 @@ class MenuFunctions
 
     void initLVGL();
     void deinitLVGL();
-    void joinWiFiGFX();
     void addSSIDGFX();
     void addAPGFX();
     void addStationGFX();
-    void displaySettingsGFX();
-    void writeBadUSB();
-
     void buildButtons(Menu* menu, int starting_index = 0);
     void changeMenu(Menu* menu);
     void drawStatusBar();

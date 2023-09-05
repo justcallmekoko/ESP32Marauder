@@ -240,7 +240,6 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_SEL_CMD_A);
     Serial.println(HELP_SSID_CMD_A);
     Serial.println(HELP_SSID_CMD_B);
-    Serial.println(HELP_JOIN_WIFI_CMD);
     
     // Bluetooth sniff/scan
     Serial.println(HELP_BT_SNIFF_CMD);
@@ -995,7 +994,7 @@ void CommandLine::runCommand(String input) {
     }
   }
   // Join WiFi
-  else if (cmd_args.get(0) == JOINWIFI_CMD) {
+  /*else if (cmd_args.get(0) == JOINWIFI_CMD) {
     int n_sw = this->argSearch(&cmd_args, "-n"); // name
     int a_sw = this->argSearch(&cmd_args, "-a"); // access point
     int s_sw = this->argSearch(&cmd_args, "-s"); // ssid
@@ -1030,5 +1029,5 @@ void CommandLine::runCommand(String input) {
     }
     Serial.println("Attempting to join WiFi with ssid " + (String)essid);
     wifi_scan_obj.joinWiFi(essid, pwx);
-  }
+  }*/
 }

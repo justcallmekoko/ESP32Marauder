@@ -207,7 +207,7 @@ int WiFiScan::generateSSIDs(int count) {
   return num_gen;
 }
 
-void WiFiScan::joinWiFi(String ssid, String password)
+/*void WiFiScan::joinWiFi(String ssid, String password)
 {
   static const char * btns[] ={text16, ""};
   int count = 0;
@@ -218,7 +218,7 @@ void WiFiScan::joinWiFi(String ssid, String password)
       lv_msgbox_set_text(mbox1, text_table4[2]);
       lv_msgbox_add_btns(mbox1, btns);
       lv_obj_set_width(mbox1, 200);
-      lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); /*Align to the corner*/
+      lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); //Align to the corner
     #endif
     this->wifi_initialized = true;
     return;
@@ -249,7 +249,7 @@ void WiFiScan::joinWiFi(String ssid, String password)
         lv_msgbox_add_btns(mbox1, btns);
         lv_obj_set_width(mbox1, 200);
         //lv_obj_set_event_cb(mbox1, event_handler);
-        lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); /*Align to the corner*/
+        lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); //Align to the corner
       #endif
       WiFi.mode(WIFI_OFF);
       return;
@@ -261,7 +261,7 @@ void WiFiScan::joinWiFi(String ssid, String password)
     lv_msgbox_set_text(mbox1, text_table4[4]);
     lv_msgbox_add_btns(mbox1, btns);
     lv_obj_set_width(mbox1, 200);
-    lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); /*Align to the corner*/
+    lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); //Align to the corner
   #endif
   connected_network = ssid;
   
@@ -269,7 +269,7 @@ void WiFiScan::joinWiFi(String ssid, String password)
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
   this->wifi_initialized = true;
-}
+}*/
 
 // Apply WiFi settings
 void WiFiScan::initWiFi(uint8_t scan_mode) {
