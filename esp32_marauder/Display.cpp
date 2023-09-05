@@ -319,7 +319,7 @@ void Display::displayBuffer(bool do_clear)
 
 void Display::showCenterText(String text, int y)
 {
-  tft.setCursor((SCREEN_WIDTH - (text.length() * 6)) / 2, y);
+  tft.setCursor((SCREEN_WIDTH - (text.length() * (6 * BANNER_TEXT_SIZE))) / 2, y);
   tft.println(text);
 }
 
@@ -773,10 +773,11 @@ void Display::buildBanner(String msg, int xpos)
   int h = TEXT_HEIGHT;
 
   this->tft.fillRect(0, STATUS_BAR_WIDTH, SCREEN_WIDTH, TEXT_HEIGHT, TFT_BLACK);
+  this->tft.setFreeFont(NULL);           // Font 4 selected
   this->tft.setTextSize(BANNER_TEXT_SIZE);           // Font size scaling is x1
-  this->tft.setTextFont(0);           // Font 4 selected
   this->tft.setTextColor(TFT_WHITE, TFT_BLACK);  // Black text, no background colour
-  this->tft.drawCentreString(msg.c_str(), SCREEN_WIDTH / 2, TEXT_HEIGHT, 2);
+  //this->tft.drawCentreString(msg.c_str(), SCREEN_WIDTH / 2, TEXT_HEIGHT, BANNER_TEXT_SIZE);
+  this->showCenterText(msg, STATUS_BAR_WIDTH);
 
   /*
   // We could just use fillSprite(color) but lets be a bit more creative...

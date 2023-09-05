@@ -338,7 +338,7 @@
       #define SCREEN_CHAR_WIDTH 40
       #define HAS_ILI9341
     
-      #define BANNER_TEXT_SIZE 1
+      #define BANNER_TEXT_SIZE 2
 
       #ifndef TFT_WIDTH
         #define TFT_WIDTH 240
