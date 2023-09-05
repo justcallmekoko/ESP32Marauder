@@ -776,7 +776,6 @@ void Display::buildBanner(String msg, int xpos)
   this->tft.setFreeFont(NULL);           // Font 4 selected
   this->tft.setTextSize(BANNER_TEXT_SIZE);           // Font size scaling is x1
   this->tft.setTextColor(TFT_WHITE, TFT_BLACK);  // Black text, no background colour
-  //this->tft.drawCentreString(msg.c_str(), SCREEN_WIDTH / 2, TEXT_HEIGHT, BANNER_TEXT_SIZE);
   this->showCenterText(msg, STATUS_BAR_WIDTH);
 
   /*
