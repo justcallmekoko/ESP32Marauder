@@ -45,18 +45,18 @@ char index_html[MAX_HTML_SIZE] = "TEST";
 struct ssid {
   String essid;
   uint8_t channel;
-  int bssid[6];
+  uint8_t bssid[6];
   bool selected;
 };
 
 struct AccessPoint {
   String essid;
-  int channel;
-  int bssid[6];
+  uint8_t channel;
+  uint8_t bssid[6];
   bool selected;
   LinkedList<char>* beacon;
-  int rssi;
-  LinkedList<int>* stations;
+  char rssi;
+  LinkedList<uint8_t>* stations;
 };
 
 class CaptiveRequestHandler : public AsyncWebHandler {

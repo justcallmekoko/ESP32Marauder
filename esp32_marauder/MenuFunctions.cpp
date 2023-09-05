@@ -2132,8 +2132,7 @@ void MenuFunctions::showMenuList(Menu * menu, int layer)
 void MenuFunctions::addNodes(Menu * menu, String name, uint16_t color, Menu * child, int place, std::function<void()> callable, bool selected, String command)
 {
   TFT_eSPI_Button new_button;
-  menu->list->add(MenuNode{name, command, color, place, &new_button, selected, callable});
-  //menu->list->add(MenuNode{name, color, place, callable});
+  menu->list->add(MenuNode{name, false, color, place, &new_button, selected, callable});
 }
 
 void MenuFunctions::buildButtons(Menu * menu, int starting_index)

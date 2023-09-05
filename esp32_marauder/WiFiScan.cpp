@@ -1718,7 +1718,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
         ap.bssid[4] = snifferPacket->payload[14];
         ap.bssid[5] = snifferPacket->payload[15];
         ap.selected = false;
-        ap.stations = new LinkedList<int>();
+        ap.stations = new LinkedList<uint8_t>();
         
         ap.beacon = new LinkedList<char>();
 
@@ -1866,7 +1866,7 @@ void WiFiScan::apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
                           false,
                           NULL,
                           snifferPacket->rx_ctrl.rssi,
-                          new LinkedList<int>()};
+                          new LinkedList<uint8_t>()};
 
         access_points->add(ap);
 
@@ -2582,7 +2582,7 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, ssid custom_ssid) {
 }
 
 // Function to send beacons with random ESSID length
-void WiFiScan::broadcastSetSSID(uint32_t current_time, char* ESSID) {
+void WiFiScan::broadcastSetSSID(uint32_t current_time, const char* ESSID) {
   set_channel = random(1,12); 
   esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   delay(1);  
@@ -2731,7 +2731,7 @@ void WiFiScan::sendProbeAttack(uint32_t currentTime) {
   }
 }
 
-void WiFiScan::sendDeauthFrame(int bssid[6], int channel, uint8_t mac[6]) {
+void WiFiScan::sendDeauthFrame(uint8_t bssid[6], int channel, uint8_t mac[6]) {
   WiFiScan::set_channel = channel;
   esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
   delay(1);

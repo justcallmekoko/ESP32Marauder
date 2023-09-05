@@ -125,6 +125,12 @@ esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx, const void *buffer, int len, b
   LinkedList<int>* stations;
 };*/
 
+#define mac_history_len 512
+
+struct mac_addr {
+   unsigned char bytes[6];
+};
+
 struct Station {
   uint8_t mac[6];
   bool selected;
@@ -133,8 +139,11 @@ struct Station {
 class WiFiScan
 {
   private:
+    // Wardriver thanks to https://github.com/JosephHewitt
+    struct mac_addr mac_history[mac_history_len];
+
     // Settings
-    int channel_hop_delay = 1;
+    uint8_t channel_hop_delay = 1;
     bool force_pmkid = false;
     bool force_probe = false;
     bool save_pcap = false;
@@ -161,7 +170,7 @@ class WiFiScan
     uint32_t initTime = 0;
     bool run_setup = true;
     void initWiFi(uint8_t scan_mode);
-    int bluetoothScanTime = 5;
+    uint8_t bluetoothScanTime = 5;
     int packets_sent = 0;
     const wifi_promiscuous_filter_t filt = {.filter_mask=WIFI_PROMIS_FILTER_MASK_MGMT | WIFI_PROMIS_FILTER_MASK_DATA};
     #ifdef HAS_BT
@@ -169,9 +178,9 @@ class WiFiScan
     #endif
 
     //String connected_network = "";
-    String alfa = "1234567890qwertyuiopasdfghjkklzxcvbnm QWERTYUIOPASDFGHJKLZXCVBNM_";
+    const String alfa = "1234567890qwertyuiopasdfghjkklzxcvbnm QWERTYUIOPASDFGHJKLZXCVBNM_";
 
-    char* rick_roll[8] = {
+    const char* rick_roll[8] = {
       "01 Never gonna give you up",
       "02 Never gonna let you down",
       "03 Never gonna run around",
@@ -212,16 +221,6 @@ class WiFiScan
                     /* SSID */
                     /*36*/  0x00
                     };
-    uint8_t auth_packet[65] = {0xb0, 0x00, 0x3c, 0x00, 
-                              0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 
-                              0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 
-                              0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 
-                              0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 
-                              0x7f, 0x08, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 
-                              0x00, 0x40, 0xdd, 0x0b, 0x00, 0x17, 0xf2, 0x0a, 
-                              0x00, 0x01, 0x04, 0x00, 0x00, 0x00, 0x00, 0xdd, 
-                              0x0a, 0x00, 0x10, 0x18, 0x02, 0x00, 0x00, 0x10, 
-                              0x00, 0x00, 0x00};
 
     uint8_t prob_req_packet[128] = {0x40, 0x00, 0x00, 0x00, 
                                   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // Destination
@@ -254,11 +253,11 @@ class WiFiScan
     void sendProbeAttack(uint32_t currentTime);
     void sendDeauthAttack(uint32_t currentTime, String dst_mac_str = "ff:ff:ff:ff:ff:ff");
     void sendDeauthFrame(uint8_t bssid[6], int channel, String dst_mac_str = "ff:ff:ff:ff:ff:ff");
-    void sendDeauthFrame(int bssid[6], int channel, uint8_t mac[6]);
+    void sendDeauthFrame(uint8_t bssid[6], int channel, uint8_t mac[6]);
     void broadcastRandomSSID(uint32_t currentTime);
     void broadcastCustomBeacon(uint32_t current_time, ssid custom_ssid);
     void broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_ssid);
-    void broadcastSetSSID(uint32_t current_time, char* ESSID);
+    void broadcastSetSSID(uint32_t current_time, const char* ESSID);
     void RunAPScan(uint8_t scan_mode, uint16_t color);
     void RunGPSInfo();
     void RunMimicFlood(uint8_t scan_mode, uint16_t color);
@@ -286,9 +285,9 @@ class WiFiScan
 
     //LinkedList<ssid>* ssids;
 
-    int set_channel = 1;
+    uint8_t set_channel = 1;
 
-    int old_channel = 0;
+    uint8_t old_channel = 0;
 
     bool orient_display = false;
     bool wifi_initialized = false;

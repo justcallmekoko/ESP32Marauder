@@ -105,7 +105,7 @@ struct Menu;
 
 struct MenuNode {
   String name;
-  String command;
+  bool command;
   uint16_t color;
   uint8_t icon;
   TFT_eSPI_Button* button;
