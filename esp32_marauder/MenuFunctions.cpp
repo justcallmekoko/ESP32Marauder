@@ -788,34 +788,6 @@ void MenuFunctions::updateStatusBar()
   
   uint16_t the_color; 
 
-  // Draw temp info
-  /*if (temp_obj.current_temp < 70)
-    the_color = TFT_GREEN;
-  else if ((temp_obj.current_temp >= 70) && (temp_obj.current_temp < 80))
-    the_color = TFT_YELLOW;
-  else if ((temp_obj.current_temp >= 80) && (temp_obj.current_temp < 90))
-    the_color = TFT_ORANGE;
-  else if ((temp_obj.current_temp >= 90) && (temp_obj.current_temp < 100))
-    the_color = TFT_RED;
-  else
-    the_color = TFT_MAROON;*/
-
-  /*
-  display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR);
-  if (temp_obj.current_temp != temp_obj.old_temp) {
-    temp_obj.old_temp = temp_obj.current_temp;
-    display_obj.tft.fillRect(0, 0, 50, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
-    #ifdef HAS_ILI9341
-      display_obj.tft.drawString((String)temp_obj.current_temp + " C", 4, 0, 2);
-    #endif
-
-    #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC)
-      display_obj.tft.drawString((String)temp_obj.current_temp + " C", 0, 0, 1);
-    #endif
-  }
-  display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR);
-  */
-
   // GPS Stuff
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
@@ -871,7 +843,6 @@ void MenuFunctions::updateStatusBar()
   // Draw battery info
   MenuFunctions::battery(false);
 
-  //display_obj.tft.drawString(gps_obj.getNumSatsString(), 204, 0, 2);
 
   // Draw SD info
   #ifndef WRITE_PACKETS_SERIAL
@@ -906,37 +877,9 @@ void MenuFunctions::drawStatusBar()
     display_obj.tft.setFreeFont(NULL);
   #endif
   display_obj.tft.fillRect(0, 0, 240, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
-  //display_obj.tft.fillRect(0, STATUS_BAR_WIDTH + 1, 240, 1, TFT_DARKGREY);
   display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR);
-  //display_obj.tft.setTextSize(2);
 
   uint16_t the_color;
-
-  // Draw temp info
-  /*if (temp_obj.current_temp < 70)
-    the_color = TFT_GREEN;
-  else if ((temp_obj.current_temp >= 70) && (temp_obj.current_temp < 80))
-    the_color = TFT_YELLOW;
-  else if ((temp_obj.current_temp >= 80) && (temp_obj.current_temp < 90))
-    the_color = TFT_ORANGE;
-  else if ((temp_obj.current_temp >= 90) && (temp_obj.current_temp < 100))
-    the_color = TFT_RED;
-  else
-    the_color = TFT_MAROON;
-
-  display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR);
-  temp_obj.old_temp = temp_obj.current_temp;
-  display_obj.tft.fillRect(0, 0, 50, STATUS_BAR_WIDTH, STATUSBAR_COLOR);*/
-  /*
-  #ifdef HAS_ILI9341
-    display_obj.tft.drawString((String)temp_obj.current_temp + " C", 4, 0, 2);
-  #endif
-
-  #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC)
-    display_obj.tft.drawString((String)temp_obj.current_temp + " C", 0, 0, 1);
-  #endif
-  display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR);
-  */
 
   // GPS Stuff
   #ifdef HAS_GPS
@@ -1027,10 +970,8 @@ void MenuFunctions::orientDisplay()
   #ifdef HAS_ILI9341
     #ifdef TFT_SHIELD
       uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield
-      //Serial.println("Using TFT Shield");
     #else if defined(TFT_DIY)
       uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // tft.setRotation(0); // Portrait with DIY TFT
-      //Serial.println("Using TFT DIY");
     #endif
 
     display_obj.tft.setTouch(calData);
@@ -1040,9 +981,7 @@ void MenuFunctions::orientDisplay()
 }
 
 void MenuFunctions::runBoolSetting(String key) {
-  //Serial.println("Building bool setting screen...");
   display_obj.tftDrawRedOnOffButton();
-  //display_obj.tftDrawGreenOnOffButton();
 }
 
 String MenuFunctions::callSetting(String key) {
@@ -1158,95 +1097,95 @@ void MenuFunctions::RunSetup()
 
   // Build Main Menu
   mainMenu.parentMenu = NULL;
-  addNodes(&mainMenu, text_table1[7], TFT_GREEN, NULL, WIFI, [this]() {
-    changeMenu(&wifiMenu);
+  this->addNodes(&mainMenu, text_table1[7], TFT_GREEN, NULL, WIFI, [this]() {
+    this->changeMenu(&wifiMenu);
   });
-  addNodes(&mainMenu, text_table1[19], TFT_CYAN, NULL, BLUETOOTH, [this]() {
-    changeMenu(&bluetoothMenu);
+  this->addNodes(&mainMenu, text_table1[19], TFT_CYAN, NULL, BLUETOOTH, [this]() {
+    this->changeMenu(&bluetoothMenu);
   });
-  addNodes(&mainMenu, text_table1[9], TFT_BLUE, NULL, DEVICE, [this]() {
-    changeMenu(&deviceMenu);
+  this->addNodes(&mainMenu, text_table1[9], TFT_BLUE, NULL, DEVICE, [this]() {
+    this->changeMenu(&deviceMenu);
   });
-  addNodes(&mainMenu, text_table1[30], TFT_LIGHTGREY, NULL, REBOOT, []() {
+  this->addNodes(&mainMenu, text_table1[30], TFT_LIGHTGREY, NULL, REBOOT, []() {
     ESP.restart();
   });
 
   // Build WiFi Menu
   wifiMenu.parentMenu = &mainMenu; // Main Menu is second menu parent
-  addNodes(&wifiMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-    changeMenu(wifiMenu.parentMenu);
+  this->addNodes(&wifiMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(wifiMenu.parentMenu);
   });
-  addNodes(&wifiMenu, text_table1[31], TFT_YELLOW, NULL, SNIFFERS, [this]() {
-    changeMenu(&wifiSnifferMenu);
+  this->addNodes(&wifiMenu, text_table1[31], TFT_YELLOW, NULL, SNIFFERS, [this]() {
+    this->changeMenu(&wifiSnifferMenu);
   });
-  addNodes(&wifiMenu, text_table1[32], TFT_RED, NULL, ATTACKS, [this]() {
-    changeMenu(&wifiAttackMenu);
+  this->addNodes(&wifiMenu, text_table1[32], TFT_RED, NULL, ATTACKS, [this]() {
+    this->changeMenu(&wifiAttackMenu);
   });
-  addNodes(&wifiMenu, text_table1[33], TFT_PURPLE, NULL, GENERAL_APPS, [this]() {
-    changeMenu(&wifiGeneralMenu);
+  this->addNodes(&wifiMenu, text_table1[33], TFT_PURPLE, NULL, GENERAL_APPS, [this]() {
+    this->changeMenu(&wifiGeneralMenu);
   });
 
   // Build WiFi sniffer Menu
   wifiSnifferMenu.parentMenu = &wifiMenu; // Main Menu is second menu parent
-  addNodes(&wifiSnifferMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-    changeMenu(wifiSnifferMenu.parentMenu);
+  this->addNodes(&wifiSnifferMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(wifiSnifferMenu.parentMenu);
   });
-  addNodes(&wifiSnifferMenu, text_table1[42], TFT_CYAN, NULL, PROBE_SNIFF, [this]() {
+  this->addNodes(&wifiSnifferMenu, text_table1[42], TFT_CYAN, NULL, PROBE_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_PROBE, TFT_CYAN);
   });
-  addNodes(&wifiSnifferMenu, text_table1[43], TFT_MAGENTA, NULL, BEACON_SNIFF, [this]() {
+  this->addNodes(&wifiSnifferMenu, text_table1[43], TFT_MAGENTA, NULL, BEACON_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_AP, TFT_MAGENTA);
   });
-  addNodes(&wifiSnifferMenu, text_table1[44], TFT_RED, NULL, DEAUTH_SNIFF, [this]() {
+  this->addNodes(&wifiSnifferMenu, text_table1[44], TFT_RED, NULL, DEAUTH_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_DEAUTH, TFT_RED);
   });
   #ifdef HAS_ILI9341
-    addNodes(&wifiSnifferMenu, text_table1[46], TFT_VIOLET, NULL, EAPOL, [this]() {
+    this->addNodes(&wifiSnifferMenu, text_table1[46], TFT_VIOLET, NULL, EAPOL, [this]() {
       wifi_scan_obj.StartScan(WIFI_SCAN_EAPOL, TFT_VIOLET);
     });
-    addNodes(&wifiSnifferMenu, text_table1[45], TFT_BLUE, NULL, PACKET_MONITOR, [this]() {
+    this->addNodes(&wifiSnifferMenu, text_table1[45], TFT_BLUE, NULL, PACKET_MONITOR, [this]() {
       wifi_scan_obj.StartScan(WIFI_PACKET_MONITOR, TFT_BLUE);
     });
   #else
-    addNodes(&wifiSnifferMenu, text_table1[46], TFT_VIOLET, NULL, EAPOL, [this]() {
+    this->addNodes(&wifiSnifferMenu, text_table1[46], TFT_VIOLET, NULL, EAPOL, [this]() {
       display_obj.clearScreen();
       this->drawStatusBar();
       wifi_scan_obj.StartScan(WIFI_SCAN_EAPOL, TFT_VIOLET);
     });
-    addNodes(&wifiSnifferMenu, text_table1[45], TFT_BLUE, NULL, PACKET_MONITOR, [this]() {
+    this->addNodes(&wifiSnifferMenu, text_table1[45], TFT_BLUE, NULL, PACKET_MONITOR, [this]() {
       display_obj.clearScreen();
       this->drawStatusBar();
       wifi_scan_obj.StartScan(WIFI_PACKET_MONITOR, TFT_BLUE);
     });
   #endif
-  addNodes(&wifiSnifferMenu, text_table1[47], TFT_RED, NULL, PWNAGOTCHI, [this]() {
+  this->addNodes(&wifiSnifferMenu, text_table1[47], TFT_RED, NULL, PWNAGOTCHI, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_PWN, TFT_RED);
   });
-  addNodes(&wifiSnifferMenu, text_table1[49], TFT_MAGENTA, NULL, BEACON_SNIFF, [this]() {
+  this->addNodes(&wifiSnifferMenu, text_table1[49], TFT_MAGENTA, NULL, BEACON_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_TARGET_AP, TFT_MAGENTA);
   });
-  addNodes(&wifiSnifferMenu, text_table1[58], TFT_WHITE, NULL, PACKET_MONITOR, [this]() {
+  this->addNodes(&wifiSnifferMenu, text_table1[58], TFT_WHITE, NULL, PACKET_MONITOR, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_RAW_CAPTURE, TFT_WHITE);
   });
-  addNodes(&wifiSnifferMenu, text_table1[59], TFT_ORANGE, NULL, PACKET_MONITOR, [this]() {
+  this->addNodes(&wifiSnifferMenu, text_table1[59], TFT_ORANGE, NULL, PACKET_MONITOR, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_STATION, TFT_WHITE);
   });
   #ifdef HAS_ILI9341
-    addNodes(&wifiSnifferMenu, "Signal Monitor", TFT_CYAN, NULL, PACKET_MONITOR, [this]() {
+    this->addNodes(&wifiSnifferMenu, "Signal Monitor", TFT_CYAN, NULL, PACKET_MONITOR, [this]() {
       display_obj.clearScreen();
       this->drawStatusBar();
       wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_CYAN);
@@ -1255,105 +1194,87 @@ void MenuFunctions::RunSetup()
 
   // Build WiFi attack menu
   wifiAttackMenu.parentMenu = &wifiMenu; // Main Menu is second menu parent
-  addNodes(&wifiAttackMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-    changeMenu(wifiAttackMenu.parentMenu);
+  this->addNodes(&wifiAttackMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(wifiAttackMenu.parentMenu);
   });
-  addNodes(&wifiAttackMenu, text_table1[50], TFT_RED, NULL, BEACON_LIST, [this]() {
+  this->addNodes(&wifiAttackMenu, text_table1[50], TFT_RED, NULL, BEACON_LIST, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_ATTACK_BEACON_LIST, TFT_RED);
   });
-  addNodes(&wifiAttackMenu, text_table1[51], TFT_ORANGE, NULL, BEACON_SPAM, [this]() {
+  this->addNodes(&wifiAttackMenu, text_table1[51], TFT_ORANGE, NULL, BEACON_SPAM, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_ATTACK_BEACON_SPAM, TFT_ORANGE);
   });
-  addNodes(&wifiAttackMenu, text_table1[52], TFT_YELLOW, NULL, RICK_ROLL, [this]() {
+  this->addNodes(&wifiAttackMenu, text_table1[52], TFT_YELLOW, NULL, RICK_ROLL, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_ATTACK_RICK_ROLL, TFT_YELLOW);
   });
-  addNodes(&wifiAttackMenu, text_table1[53], TFT_RED, NULL, PROBE_SNIFF, [this]() {
+  this->addNodes(&wifiAttackMenu, text_table1[53], TFT_RED, NULL, PROBE_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_ATTACK_AUTH, TFT_RED);
   });
-  addNodes(&wifiAttackMenu, "Evil Portal", TFT_ORANGE, NULL, BEACON_SNIFF, [this]() {
+  this->addNodes(&wifiAttackMenu, "Evil Portal", TFT_ORANGE, NULL, BEACON_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_EVIL_PORTAL, TFT_ORANGE);
   });
-  addNodes(&wifiAttackMenu, text_table1[54], TFT_RED, NULL, DEAUTH_SNIFF, [this]() {
+  this->addNodes(&wifiAttackMenu, text_table1[54], TFT_RED, NULL, DEAUTH_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_ATTACK_DEAUTH, TFT_RED);
   });
-  addNodes(&wifiAttackMenu, text_table1[57], TFT_MAGENTA, NULL, BEACON_LIST, [this]() {
+  this->addNodes(&wifiAttackMenu, text_table1[57], TFT_MAGENTA, NULL, BEACON_LIST, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_ATTACK_AP_SPAM, TFT_MAGENTA);
   });
-  addNodes(&wifiAttackMenu, text_table1[62], TFT_RED, NULL, DEAUTH_SNIFF, [this]() {
+  this->addNodes(&wifiAttackMenu, text_table1[62], TFT_RED, NULL, DEAUTH_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_ATTACK_DEAUTH_TARGETED, TFT_ORANGE);
   });
-  //addNodes(&wifiAttackMenu, "AP Mimic Flood", TFT_PURPLE, NULL, DEAUTH_SNIFF, [this]() {
-  //  display_obj.clearScreen();
-  //  this->drawStatusBar();
-  //  wifi_scan_obj.StartScan(WIFI_ATTACK_MIMIC, TFT_PURPLE);
-  //});
 
   // Build WiFi General menu
   wifiGeneralMenu.parentMenu = &wifiMenu;
-  addNodes(&wifiGeneralMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-    changeMenu(wifiGeneralMenu.parentMenu);
+  this->addNodes(&wifiGeneralMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(wifiGeneralMenu.parentMenu);
   });
-  /*#ifdef HAS_ILI9341
-    addNodes(&wifiGeneralMenu, text_table1[55], TFT_DARKCYAN, NULL, JOIN_WIFI, [this](){
-      display_obj.clearScreen(); 
-      wifi_scan_obj.currentScanMode = LV_JOIN_WIFI; 
-      wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
-      joinWiFiGFX();
-    });
-  #endif*/
-  /*addNodes(&wifiGeneralMenu, text_table1[25], TFT_CYAN, NULL, SHUTDOWN, [this]() {
-    changeMenu(&shutdownWiFiMenu);
-    wifi_scan_obj.RunShutdownWiFi();
-  });*/
-  addNodes(&wifiGeneralMenu, text_table1[27], TFT_SKYBLUE, NULL, GENERATE, [this]() {
-    changeMenu(&generateSSIDsMenu);
+  this->addNodes(&wifiGeneralMenu, text_table1[27], TFT_SKYBLUE, NULL, GENERATE, [this]() {
+    this->changeMenu(&generateSSIDsMenu);
     wifi_scan_obj.RunGenerateSSIDs();
   });
   #ifdef HAS_ILI9341
-    addNodes(&wifiGeneralMenu, text_table1[1], TFT_NAVY, NULL, KEYBOARD_ICO, [this](){
+    this->addNodes(&wifiGeneralMenu, text_table1[1], TFT_NAVY, NULL, KEYBOARD_ICO, [this](){
       display_obj.clearScreen(); 
-      //wifi_scan_obj.currentScanMode = LV_ADD_SSID; 
       wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_YELLOW); 
       addSSIDGFX();
     });
   #endif
-  addNodes(&wifiGeneralMenu, text_table1[28], TFT_SILVER, NULL, CLEAR_ICO, [this]() {
-    changeMenu(&clearSSIDsMenu);
+  this->addNodes(&wifiGeneralMenu, text_table1[28], TFT_SILVER, NULL, CLEAR_ICO, [this]() {
+    this->changeMenu(&clearSSIDsMenu);
     wifi_scan_obj.RunClearSSIDs();
   });
-  addNodes(&wifiGeneralMenu, text_table1[29], TFT_DARKGREY, NULL, CLEAR_ICO, [this]() {
-    changeMenu(&clearAPsMenu);
+  this->addNodes(&wifiGeneralMenu, text_table1[29], TFT_DARKGREY, NULL, CLEAR_ICO, [this]() {
+    this->changeMenu(&clearAPsMenu);
     wifi_scan_obj.RunClearAPs();
   });
-  addNodes(&wifiGeneralMenu, text_table1[60], TFT_BLUE, NULL, CLEAR_ICO, [this]() {
-    changeMenu(&clearAPsMenu);
+  this->addNodes(&wifiGeneralMenu, text_table1[60], TFT_BLUE, NULL, CLEAR_ICO, [this]() {
+    this->changeMenu(&clearAPsMenu);
     wifi_scan_obj.RunClearStations();
   });
   #ifdef HAS_ILI9341
     // Select APs on OG
-    addNodes(&wifiGeneralMenu, text_table1[56], TFT_NAVY, NULL, KEYBOARD_ICO, [this](){
+    this->addNodes(&wifiGeneralMenu, text_table1[56], TFT_NAVY, NULL, KEYBOARD_ICO, [this](){
       display_obj.clearScreen(); 
       wifi_scan_obj.currentScanMode = LV_ADD_SSID; 
       wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_RED);  
       addAPGFX();
     });
-    addNodes(&wifiGeneralMenu, text_table1[61], TFT_LIGHTGREY, NULL, KEYBOARD_ICO, [this](){
+    this->addNodes(&wifiGeneralMenu, text_table1[61], TFT_LIGHTGREY, NULL, KEYBOARD_ICO, [this](){
       display_obj.clearScreen(); 
       wifi_scan_obj.currentScanMode = LV_ADD_SSID; 
       wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_RED);  
@@ -1361,10 +1282,10 @@ void MenuFunctions::RunSetup()
     });
   #else
     // Select APs on Mini
-    addNodes(&wifiGeneralMenu, text_table1[56], TFT_NAVY, NULL, KEYBOARD_ICO, [this](){
+    this->addNodes(&wifiGeneralMenu, text_table1[56], TFT_NAVY, NULL, KEYBOARD_ICO, [this](){
       wifiAPMenu.list->clear();
-        addNodes(&wifiAPMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-        changeMenu(wifiAPMenu.parentMenu);
+        this->addNodes(&wifiAPMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+        this->changeMenu(wifiAPMenu.parentMenu);
       });
       int menu_limit;
       if (access_points->size() <= BUTTON_ARRAY_LEN)
@@ -1372,7 +1293,7 @@ void MenuFunctions::RunSetup()
       else
         menu_limit = BUTTON_ARRAY_LEN;
       for (int i = 0; i < menu_limit - 1; i++) {
-        addNodes(&wifiAPMenu, access_points->get(i).essid, TFT_CYAN, NULL, KEYBOARD_ICO, [this, i](){
+        this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFT_CYAN, NULL, KEYBOARD_ICO, [this, i](){
         AccessPoint new_ap = access_points->get(i);
         new_ap.selected = !access_points->get(i).selected;
 
@@ -1384,173 +1305,100 @@ void MenuFunctions::RunSetup()
         // Change selection status of button key
         if (new_ap.selected) {
           this->buttonSelected(i + 1);
-          //changeMenu(current_menu);
         } else {
           this->buttonNotSelected(i + 1);
-          //changeMenu(current_menu);
         }
         access_points->set(i, new_ap);
-        //changeMenu(wifiAPMenu.parentMenu);
         }, access_points->get(i).selected);
       }
-      changeMenu(&wifiAPMenu);
+      this->changeMenu(&wifiAPMenu);
     });
 
     wifiAPMenu.parentMenu = &wifiGeneralMenu;
-    addNodes(&wifiAPMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-      changeMenu(wifiAPMenu.parentMenu);
+    this->addNodes(&wifiAPMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+      this->changeMenu(wifiAPMenu.parentMenu);
     });
   #endif
 
-  // Build shutdown wifi menu
-  /*shutdownWiFiMenu.parentMenu = &wifiGeneralMenu;
-  addNodes(&shutdownWiFiMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-    changeMenu(shutdownWiFiMenu.parentMenu);
-  });*/
-
   // Build generate ssids menu
   generateSSIDsMenu.parentMenu = &wifiGeneralMenu;
-  addNodes(&generateSSIDsMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-    changeMenu(generateSSIDsMenu.parentMenu);
+  this->addNodes(&generateSSIDsMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(generateSSIDsMenu.parentMenu);
   });
 
   // Build clear ssids menu
   clearSSIDsMenu.parentMenu = &wifiGeneralMenu;
-  addNodes(&clearSSIDsMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-    changeMenu(clearSSIDsMenu.parentMenu);
+  this->addNodes(&clearSSIDsMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(clearSSIDsMenu.parentMenu);
   });
   clearAPsMenu.parentMenu = &wifiGeneralMenu;
-  addNodes(&clearAPsMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-    changeMenu(clearAPsMenu.parentMenu);
+  this->addNodes(&clearAPsMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(clearAPsMenu.parentMenu);
   });
 
 
   // Build Bluetooth Menu
   bluetoothMenu.parentMenu = &mainMenu; // Second Menu is third menu parent
-  addNodes(&bluetoothMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-    changeMenu(bluetoothMenu.parentMenu);
+  this->addNodes(&bluetoothMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(bluetoothMenu.parentMenu);
   });
-  addNodes(&bluetoothMenu, text_table1[31], TFT_YELLOW, NULL, SNIFFERS, [this]() {
-    changeMenu(&bluetoothSnifferMenu);
+  this->addNodes(&bluetoothMenu, text_table1[31], TFT_YELLOW, NULL, SNIFFERS, [this]() {
+    this->changeMenu(&bluetoothSnifferMenu);
   });
-  //addNodes(&bluetoothMenu, "Scanners", TFT_ORANGE, NULL, SCANNERS, [this]() {
-  //  changeMenu(&bluetoothScannerMenu);
-  //});
-  /*addNodes(&bluetoothMenu, text_table1[33], TFT_PURPLE, NULL, GENERAL_APPS, [this]() {
-    changeMenu(&bluetoothGeneralMenu);
-  });*/
 
   // Build bluetooth sniffer Menu
   bluetoothSnifferMenu.parentMenu = &bluetoothMenu; // Second Menu is third menu parent
-  addNodes(&bluetoothSnifferMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-    changeMenu(bluetoothSnifferMenu.parentMenu);
+  this->addNodes(&bluetoothSnifferMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(bluetoothSnifferMenu.parentMenu);
   });
-  addNodes(&bluetoothSnifferMenu, text_table1[34], TFT_GREEN, NULL, BLUETOOTH_SNIFF, [this]() {
+  this->addNodes(&bluetoothSnifferMenu, text_table1[34], TFT_GREEN, NULL, BLUETOOTH_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_GREEN);
   });
-  addNodes(&bluetoothSnifferMenu, text_table1[35], TFT_MAGENTA, NULL, CC_SKIMMERS, [this]() {
+  this->addNodes(&bluetoothSnifferMenu, text_table1[35], TFT_MAGENTA, NULL, CC_SKIMMERS, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_SCAN_SKIMMERS, TFT_MAGENTA);
   });
 
-  // Build bluetooth scanner Menu
-  //bluetoothScannerMenu.parentMenu = &bluetoothMenu; // Second Menu is third menu parent
-  //addNodes(&bluetoothScannerMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-  //  changeMenu(bluetoothScannerMenu.parentMenu);
-  //});
-
-  // Build bluetooth general menu
-  /*bluetoothGeneralMenu.parentMenu = &bluetoothMenu;
-  addNodes(&bluetoothGeneralMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-    changeMenu(bluetoothGeneralMenu.parentMenu);
-  });
-  addNodes(&bluetoothGeneralMenu, text_table1[26], TFT_ORANGE, NULL, SHUTDOWN, [this]() {
-    changeMenu(&shutdownBLEMenu);
-    wifi_scan_obj.RunShutdownBLE();
-  });
-
-  // Build shutdown BLE menu
-  shutdownBLEMenu.parentMenu = &bluetoothGeneralMenu;
-  addNodes(&shutdownBLEMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-    changeMenu(shutdownBLEMenu.parentMenu);
-  });*/
-
-  // Bad USB Menu
-  //badusbMenu.parentMenu = &mainMenu;
-  //addNodes(&badusbMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-  //  changeMenu(badusbMenu.parentMenu);
-  //});
-  //addNodes(&badusbMenu, text_table1[36], TFT_PURPLE, NULL, TEST_BAD_USB_ICO, [this]() {
-  //  a32u4_obj.test();
-  //});
-  //#ifdef HAS_ILI9341
-  //  addNodes(&badusbMenu, text_table1[37], TFT_RED, NULL, BAD_USB_ICO, [this](){
-  //    display_obj.clearScreen(); 
-  //    wifi_scan_obj.currentScanMode = LV_ADD_SSID; 
-  //    wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_RED); 
-  //    writeBadUSB();
-  //  });
-  //#endif
-
-  // General apps menu
-  /*generalMenu.parentMenu = &mainMenu;
-  addNodes(&generalMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-    display_obj.draw_tft = false;
-    changeMenu(generalMenu.parentMenu);
-  });
-  addNodes(&generalMenu, text_table1[38], TFT_WHITE, NULL, DRAW, [this]() {
-    display_obj.clearScreen();
-    display_obj.setupDraw();
-    display_obj.draw_tft = true;
-  });*/
-
   // Device menu
   deviceMenu.parentMenu = &mainMenu;
-  addNodes(&deviceMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-    changeMenu(deviceMenu.parentMenu);
+  this->addNodes(&deviceMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(deviceMenu.parentMenu);
   });
-  //addNodes(&deviceMenu, "Update Firmware", TFT_ORANGE, NULL, UPDATE, [this](){wifi_scan_obj.currentScanMode = OTA_UPDATE; changeMenu(&updateMenu); web_obj.setupOTAupdate();});
-  addNodes(&deviceMenu, text_table1[15], TFT_ORANGE, NULL, UPDATE, [this]() {
+  this->addNodes(&deviceMenu, text_table1[15], TFT_ORANGE, NULL, UPDATE, [this]() {
     wifi_scan_obj.currentScanMode = OTA_UPDATE;
-    changeMenu(&whichUpdateMenu);
+    this->changeMenu(&whichUpdateMenu);
   });
 
-  addNodes(&deviceMenu, text_table1[16], TFT_GREEN, NULL, LANGUAGE, [this]() {
+  this->addNodes(&deviceMenu, text_table1[16], TFT_GREEN, NULL, LANGUAGE, [this]() {
 
     wifi_scan_obj.currentScanMode = SHOW_INFO;
-   changeMenu(&languageMenu);   
+    this->changeMenu(&languageMenu);   
   });
-  addNodes(&deviceMenu, text_table1[17], TFT_WHITE, NULL, DEVICE_INFO, [this]() {
+  this->addNodes(&deviceMenu, text_table1[17], TFT_WHITE, NULL, DEVICE_INFO, [this]() {
     wifi_scan_obj.currentScanMode = SHOW_INFO;
-    changeMenu(&infoMenu);
+    this->changeMenu(&infoMenu);
     wifi_scan_obj.RunInfo();
   });
-  addNodes(&deviceMenu, text08, TFT_NAVY, NULL, KEYBOARD_ICO, [this]() {
-    changeMenu(&settingsMenu);
+  this->addNodes(&deviceMenu, text08, TFT_NAVY, NULL, KEYBOARD_ICO, [this]() {
+    this->changeMenu(&settingsMenu);
   });
-  /*addNodes(&deviceMenu, text08, TFT_NAVY, NULL, KEYBOARD_ICO, [this](){
-    display_obj.clearScreen(); 
-    wifi_scan_obj.currentScanMode = LV_ADD_SSID; 
-    wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_RED);  
-    displaySettingsGFX();
-  });*/
   // GPS Menu
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
-      addNodes(&deviceMenu, "GPS Data", TFT_RED, NULL, GPS_MENU, [this]() {
+      this->addNodes(&deviceMenu, "GPS Data", TFT_RED, NULL, GPS_MENU, [this]() {
         wifi_scan_obj.currentScanMode = WIFI_SCAN_GPS_DATA;
-        changeMenu(&gpsInfoMenu);
+        this->changeMenu(&gpsInfoMenu);
         wifi_scan_obj.StartScan(WIFI_SCAN_GPS_DATA, TFT_CYAN);
       });
 
       // GPS Info Menu
       gpsInfoMenu.parentMenu = &deviceMenu;
-      addNodes(&gpsInfoMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+      this->addNodes(&gpsInfoMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
         wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
-        changeMenu(gpsInfoMenu.parentMenu);
+        this->changeMenu(gpsInfoMenu.parentMenu);
       }); 
     }
   #endif
@@ -1558,15 +1406,14 @@ void MenuFunctions::RunSetup()
   // Settings menu
   // Device menu
   settingsMenu.parentMenu = &deviceMenu;
-  addNodes(&settingsMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+  this->addNodes(&settingsMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
     changeMenu(settingsMenu.parentMenu);
   });
   for (int i = 0; i < settings_obj.getNumberSettings(); i++) {
     if (this->callSetting(settings_obj.setting_index_to_name(i)) == "bool")
-      addNodes(&settingsMenu, settings_obj.setting_index_to_name(i), TFT_LIGHTGREY, NULL, 0, [this, i]() {
+      this->addNodes(&settingsMenu, settings_obj.setting_index_to_name(i), TFT_LIGHTGREY, NULL, 0, [this, i]() {
       settings_obj.toggleSetting(settings_obj.setting_index_to_name(i));
-      changeMenu(&specSettingMenu);
-      //this->callSetting(settings_obj.setting_index_to_name(i));
+      this->changeMenu(&specSettingMenu);
       this->displaySetting(settings_obj.setting_index_to_name(i), &settingsMenu, i + 1);
     }, settings_obj.loadSetting<bool>(settings_obj.setting_index_to_name(i)));
   }
@@ -1574,83 +1421,57 @@ void MenuFunctions::RunSetup()
   // Specific setting menu
   specSettingMenu.parentMenu = &settingsMenu;
   addNodes(&specSettingMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-    changeMenu(specSettingMenu.parentMenu);
+    this->changeMenu(specSettingMenu.parentMenu);
   });
  
   // Select update
   whichUpdateMenu.parentMenu = &deviceMenu;
-  addNodes(&whichUpdateMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+  this->addNodes(&whichUpdateMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
     wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
-    changeMenu(whichUpdateMenu.parentMenu);
+    this->changeMenu(whichUpdateMenu.parentMenu);
   });
-  //addNodes(&whichUpdateMenu, text_table1[39], TFT_GREEN, NULL, WEB_UPDATE, [this]() {
-  //  wifi_scan_obj.currentScanMode = OTA_UPDATE;
-  //  changeMenu(&updateMenu);
-  //  web_obj.setupOTAupdate();
-  //});
   #ifndef WRITE_PACKETS_SERIAL
     if (sd_obj.supported) addNodes(&whichUpdateMenu, text_table1[40], TFT_MAGENTA, NULL, SD_UPDATE, [this]() {
       wifi_scan_obj.currentScanMode = OTA_UPDATE;
-      changeMenu(&confirmMenu);
+      this->changeMenu(&confirmMenu);
     });
   #endif
-  //addNodes(&whichUpdateMenu, text_table1[41], TFT_RED, NULL, ESP_UPDATE_ICO, [this]() {
-  //  wifi_scan_obj.currentScanMode = ESP_UPDATE;
-  //  changeMenu(&espUpdateMenu);
-  //  esp_obj.RunUpdate();
-  //});
-
-  // ESP Update Menu
-  //espUpdateMenu.parentMenu = &whichUpdateMenu;
-  //addNodes(&espUpdateMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-  //  wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
-  //  esp_obj.bootRunMode();
-  //  changeMenu(espUpdateMenu.parentMenu);
-  //});
 
   // Confirm SD update menu
   confirmMenu.parentMenu = &whichUpdateMenu;
-  addNodes(&confirmMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-    changeMenu(confirmMenu.parentMenu);
+  this->addNodes(&confirmMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(confirmMenu.parentMenu);
   });
-  //addNodes(&confirmMenu, "Yes", TFT_ORANGE, NULL, UPDATE, [this](){wifi_scan_obj.currentScanMode = OTA_UPDATE; changeMenu(&updateMenu); sd_obj.runUpdate();});
-  addNodes(&confirmMenu, text14, TFT_ORANGE, NULL, UPDATE, [this]() {
+  this->addNodes(&confirmMenu, text14, TFT_ORANGE, NULL, UPDATE, [this]() {
     wifi_scan_obj.currentScanMode = OTA_UPDATE;
-    changeMenu(&failedUpdateMenu);
+    this->changeMenu(&failedUpdateMenu);
     sd_obj.runUpdate();
   });
 
   // Web Update
   updateMenu.parentMenu = &deviceMenu;
-  //addNodes(&updateMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-  //  wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
-  //  changeMenu(updateMenu.parentMenu);
-  //  WiFi.softAPdisconnect(true);
-  //  web_obj.shutdownServer();
-  //});
-  //addNodes(&updateMenu, text09, TFT_LIGHTGREY, NULL, 0, [this](){wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF; changeMenu(updateMenu.parentMenu);});
 
   // Failed update menu
   failedUpdateMenu.parentMenu = &whichUpdateMenu;
-  addNodes(&failedUpdateMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+  this->addNodes(&failedUpdateMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
     wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
-    changeMenu(failedUpdateMenu.parentMenu);
+    this->changeMenu(failedUpdateMenu.parentMenu);
   });
 
   // Device info menu
   infoMenu.parentMenu = &deviceMenu;
-  addNodes(&infoMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+  this->addNodes(&infoMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
     wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
-    changeMenu(infoMenu.parentMenu);
+    this->changeMenu(infoMenu.parentMenu);
   });
   //language info menu
   languageMenu.parentMenu = &deviceMenu;
-    addNodes(&languageMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+    this->addNodes(&languageMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
       wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
-      changeMenu(infoMenu.parentMenu);
+      this->changeMenu(infoMenu.parentMenu);
     });
   // Set the current menu to the mainMenu
-  changeMenu(&mainMenu);
+  this->changeMenu(&mainMenu);
 
   this->initTime = millis();
 }
@@ -1693,11 +1514,8 @@ void MenuFunctions::addNodes(Menu * menu, String name, uint16_t color, Menu * ch
 
 void MenuFunctions::buildButtons(Menu * menu, int starting_index)
 {
-  //Serial.println("Bulding buttons...");
   if (menu->list != NULL)
   {
-    //for (int i = 0; i < sizeof(key); i++)
-    //  key[i] = NULL;
     for (uint8_t i = 0; i < menu->list->size(); i++)
     {
       TFT_eSPI_Button new_button;

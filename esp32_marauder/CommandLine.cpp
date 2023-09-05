@@ -215,6 +215,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_UPDATE_CMD_A);
     Serial.println(HELP_LS_CMD);
     Serial.println(HELP_LED_CMD);
+    Serial.println(HELP_GPS_DATA_CMD);
     
     // WiFi sniff/scan
     Serial.println(HELP_EVIL_PORTAL_CMD);
@@ -268,6 +269,18 @@ void CommandLine::runCommand(String input) {
     #ifdef HAS_SCREEN
       display_obj.tft.init();
       menu_function_obj.changeMenu(menu_function_obj.current_menu);
+    #endif
+  }
+  else if (cmd_args.get(0) == GPS_DATA_CMD) {
+    #ifdef HAS_GPS
+      if (gps_obj.getGpsModuleStatus()) {
+        Serial.println("Getting GPS Data. Stop with " + (String)STOPSCAN_CMD);
+        wifi_scan_obj.currentScanMode = WIFI_SCAN_GPS_DATA;
+        #ifdef HAS_SCREEN
+          menu_function_obj.changeMenu(&menu_function_obj.gpsInfoMenu);
+        #endif
+        wifi_scan_obj.StartScan(WIFI_SCAN_GPS_DATA, TFT_CYAN);
+      }
     #endif
   }
   // LED command

@@ -148,11 +148,6 @@ class MenuFunctions
     // Settings things menus
     Menu generateSSIDsMenu;
 
-    #ifdef HAS_GPS
-      // GPS Menu
-      Menu gpsInfoMenu;
-    #endif
-
     static void lv_tick_handler();
 
     // Menu icons
@@ -176,6 +171,11 @@ class MenuFunctions
     Menu* current_menu;
     Menu clearSSIDsMenu;
     Menu clearAPsMenu;
+
+    #ifdef HAS_GPS
+      // GPS Menu
+      Menu gpsInfoMenu;
+    #endif
 
     Ticker tick;
 
