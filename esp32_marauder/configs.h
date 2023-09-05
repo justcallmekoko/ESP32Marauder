@@ -114,7 +114,7 @@
     //#define HAS_NEOPIXEL_LED
     //#define HAS_PWR_MGMT
     //#define HAS_SCREEN
-    //#define HAS_GPS
+    #define HAS_GPS
     #ifndef WRITE_PACKETS_SERIAL
       #define HAS_SD
       #define USE_SD
@@ -764,14 +764,21 @@
   //// GPS STUFF
   #ifdef HAS_GPS
     #ifdef MARAUDER_V6
+      #define GPS_SERIAL_INDEX 2
       #define GPS_TX 4
       #define GPS_RX 13
     #elif defined(MARAUDER_V4)
+      #define GPS_SERIAL_INDEX 2
       #define GPS_TX 4
       #define GPS_RX 13
     #elif defined(MARAUDER_KIT)
+      #define GPS_SERIAL_INDEX 2
       #define GPS_TX 4
       #define GPS_RX 13
+    #elif defined(MARAUDER_FLIPPER)
+      #define GPS_SERIAL_INDEX 1
+      #define GPS_TX 9
+      #define GPS_RX 21
     #endif
   #endif
   //// END GPS STUFF

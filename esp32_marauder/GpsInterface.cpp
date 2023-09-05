@@ -6,7 +6,7 @@ char nmeaBuffer[100];
 
 MicroNMEA nmea(nmeaBuffer, sizeof(nmeaBuffer));
 
-HardwareSerial Serial2(2);
+HardwareSerial Serial2(GPS_SERIAL_INDEX);
 
 void GpsInterface::begin() {
 
