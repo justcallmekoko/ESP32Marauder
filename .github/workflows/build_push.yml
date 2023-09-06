@@ -267,6 +267,12 @@ jobs:
         run: |
           mv ./esp32_marauder/build/esp32.esp32.d32/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.d32/esp32_marauder.v6.bin
           
+      - name: Build Marauder for v6 Marauder with arduino/compile-sketches
+        uses: arduino/compile-sketches@v1
+        with:
+          sketch-paths: esp32_marauder/esp32_marauder.ino
+          fqbn: esp32:esp32:d32:PartitionScheme=min_spiffs
+          
       - name: Configure TFT_eSPI and configs.h for Marauder Kit
         run: |
           sed -i 's/^#include <User_Setup_marauder_mini.h>/\/\/#include <User_Setup_marauder_mini.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
