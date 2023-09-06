@@ -256,6 +256,13 @@ jobs:
           sed -i 's/^  #define ESP32_LDDB/  \/\/#define ESP32_LDDB/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_DEV_BOARD_PRO/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
           
+      - name: Build Marauder for v6 Marauder with arduino/compile-sketches
+        uses: arduino/compile-sketches@v1
+        with:
+          sketch-paths: esp32_marauder/esp32_marauder.ino
+          cli-compile-flags: "--warnings"
+          fqbn: esp32:esp32:d32:PartitionScheme=min_spiffs
+          
       - name: Build Marauder for v6 Marauder
         uses: ArminJo/arduino-test-compile@v3.2.1
         with:
@@ -266,12 +273,6 @@ jobs:
       - name: Rename v6 Marauder bin
         run: |
           mv ./esp32_marauder/build/esp32.esp32.d32/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.d32/esp32_marauder.v6.bin
-          
-      - name: Build Marauder for v6 Marauder with arduino/compile-sketches
-        uses: arduino/compile-sketches@v1
-        with:
-          sketch-paths: esp32_marauder/esp32_marauder.ino
-          fqbn: esp32:esp32:d32:PartitionScheme=min_spiffs
           
       - name: Configure TFT_eSPI and configs.h for Marauder Kit
         run: |
