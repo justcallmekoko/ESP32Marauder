@@ -267,7 +267,7 @@ jobs:
           
       - name: Show compiled arduino/compile-sketches v6 bin
         run: |
-          find / -name "exp32_marauder.ino.bin"
+          find ~ -name "esp32_marauder.ino.bin"
           
       - name: Build Marauder for v6 Marauder
         uses: ArminJo/arduino-test-compile@v3.2.1
