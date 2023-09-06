@@ -125,7 +125,7 @@ esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx, const void *buffer, int len, b
   LinkedList<int>* stations;
 };*/
 
-#define mac_history_len 93
+#define mac_history_len 86
 
 struct mac_addr {
    unsigned char bytes[6];
