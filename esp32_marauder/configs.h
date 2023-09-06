@@ -147,7 +147,7 @@
     #define HAS_SD
     #define USE_SD
     //#define HAS_TEMP_SENSOR
-    //#define HAS_GPS
+    #define HAS_GPS
   #endif
 
   #ifdef XIAO_ESP32_S3
@@ -775,6 +775,10 @@
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 4
       #define GPS_RX 13
+    #elif defined(MARAUDER_DEV_BOARD_PRO)
+      #define GPS_SERIAL_INDEX 2
+      #define GPS_TX 17
+      #define GPS_RX 18
     #elif defined(MARAUDER_FLIPPER)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 9
