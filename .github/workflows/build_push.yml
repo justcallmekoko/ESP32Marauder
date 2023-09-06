@@ -260,7 +260,7 @@ jobs:
         uses: arduino/compile-sketches@v1
         with:
           sketch-paths: esp32_marauder/esp32_marauder.ino
-          cli-compile-flags: "--warnings"
+          cli-compile-flags: "--warnings none"
           fqbn: esp32:esp32:d32:PartitionScheme=min_spiffs
           
       - name: Build Marauder for v6 Marauder
