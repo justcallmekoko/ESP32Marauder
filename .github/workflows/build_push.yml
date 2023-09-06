@@ -269,6 +269,10 @@ jobs:
         run: |
           find ~ -name "esp32_marauder.ino.bin"
           
+      - name: Rename v6_2 Marauder bin
+        run: |
+          mv ./esp32_marauder/build/esp32.esp32.d32/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.d32/esp32_marauder.v6_2.bin
+          
       - name: Build Marauder for v6 Marauder
         uses: ArminJo/arduino-test-compile@v3.2.1
         with:
@@ -438,6 +442,13 @@ jobs:
           path: ./esp32_marauder/build/esp32.esp32.d32/esp32_marauder.v6.bin
           retention-days: 5
           
+      - name: 'Upload v6_2 Artifact'
+        uses: actions/upload-artifact@v3
+        with:
+          name: esp32_marauder.v6_2.bin
+          path: ./esp32_marauder/build/esp32.esp32.d32/esp32_marauder.v6_2.bin
+          retention-days: 5
+          
       - name: 'Upload Kit Artifact'
         uses: actions/upload-artifact@v3
         with:
@@ -542,6 +553,18 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./esp32_marauder/build/esp32.esp32.d32/esp32_marauder.v6.bin
           asset_name: esp32_marauder.v6.bin
+          asset_content_type: application/bin
+        if: github.event_name != 'pull_request'
+        
+      - name: Upload v6_2 Asset
+        id: upload-v6-2-release-asset 
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./esp32_marauder/build/esp32.esp32.d32/esp32_marauder.v6_2.bin
+          asset_name: esp32_marauder.v6_2.bin
           asset_content_type: application/bin
         if: github.event_name != 'pull_request'
           
