@@ -114,9 +114,9 @@ jobs:
           ref: main
           path: CustomSwitchLib
           
-      - name: Search for SD lib in arduino-esp32 v2.0.4
-        run: |
-          find /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.4arduino-esp32 -name "SD"
+      #- name: Search for SD lib in arduino-esp32 v2.0.4
+      #  run: |
+      #    find /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.4arduino-esp32 -name "SD"
           
       - name: Configure TFT_eSPI
         run: |
@@ -143,15 +143,15 @@ jobs:
       #    ls -la /home/runner/.arduino15/packages/esp32/hardware/esp32/
       #    echo Whoever made me have to do this can fuck off
           
-      - name: Search for SD lib in arduino-esp32
-        run: |
-          find /home/runner/ -name "SD"
-          
-      #- name: Replace SD lib
+      #- name: Search for SD lib in arduino-esp32
       #  run: |
-      #    rm -rf /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.10/libraries/SD
-      #    cp -R /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.4arduino-esp32/libraries/SD /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.10/libraries/SD
-      #    ls -la /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.10/libraries/SD
+      #    find /home/runner/ -name "SD"
+          
+      - name: Replace SD lib
+        run: |
+          rm -rf /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.10/libraries/SD
+          cp -R /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.4arduino-esp32/libraries/SD /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.10/libraries/SD
+          ls -la /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.10/libraries/SD
           
       - name: Modify platform.txt
         run: |
