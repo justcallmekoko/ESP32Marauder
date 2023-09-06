@@ -48,7 +48,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: stevemarple/MicroNMEA
-          ref: master
+          ref: 2.0.6
           path: CustomMicroNMEA
           
       - name: Install ESPAsyncWebServer
@@ -58,11 +58,18 @@ jobs:
           ref: master
           path: CustomESPAsyncWebServer
 
+      #- name: Install TFT_eSPI
+      #  uses: actions/checkout@v2
+      #  with:
+      #    repository: justcallmekoko/TFT_eSPI
+      #    ref: master
+      #    path: CustomTFT_eSPI
+          
       - name: Install TFT_eSPI
         uses: actions/checkout@v2
         with:
-          repository: justcallmekoko/TFT_eSPI
-          ref: master
+          repository: Bodmer/TFT_eSPI
+          ref: 2.2.23
           path: CustomTFT_eSPI
 
       - name: Install LinkedList
@@ -147,11 +154,11 @@ jobs:
       #  run: |
       #    find /home/runner/ -name "SD"
           
-      - name: Replace SD lib
-        run: |
-          rm -rf /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.10/libraries/SD
-          cp -R /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.4arduino-esp32/libraries/SD /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.10/libraries/SD
-          ls -la /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.10/libraries/SD
+      #- name: Replace SD lib
+      #  run: |
+      #    rm -rf /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.10/libraries/SD
+      #    cp -R /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.4arduino-esp32/libraries/SD /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.10/libraries/SD
+      #    ls -la /home/runner/.arduino15/packages/esp32/hardware/esp32/2.0.10/libraries/SD
           
       - name: Modify platform.txt
         run: |
