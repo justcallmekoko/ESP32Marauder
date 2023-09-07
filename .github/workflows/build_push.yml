@@ -72,13 +72,6 @@ jobs:
           ref: 2.2.23
           path: CustomTFT_eSPI
 
-      - name: Install LinkedList
-        uses: actions/checkout@v2
-        with:
-          repository: ivanseidel/LinkedList
-          ref: v1.3.1
-          path: CustomLinkedList
-
       - name: Install lv_arduino
         uses: actions/checkout@v2
         with:
@@ -120,6 +113,13 @@ jobs:
           repository: justcallmekoko/SwitchLib
           ref: main
           path: CustomSwitchLib
+          
+      - name: Install LinkedList
+        uses: actions/checkout@v2
+        with:
+          repository: ivanseidel/LinkedList
+          ref: v1.3.3
+          path: CustomLinkedList
           
       #- name: Search for SD lib in arduino-esp32 v2.0.4
       #  run: |

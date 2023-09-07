@@ -767,17 +767,17 @@
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 4
       #define GPS_RX 13
-      #define mac_history_len 80
+      #define mac_history_len 512
     #elif defined(MARAUDER_V4)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 4
       #define GPS_RX 13
-      #define mac_history_len 80
+      #define mac_history_len 512
     #elif defined(MARAUDER_KIT)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 4
       #define GPS_RX 13
-      #define mac_history_len 80
+      #define mac_history_len 512
     #elif defined(MARAUDER_DEV_BOARD_PRO)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 21
