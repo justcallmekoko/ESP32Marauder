@@ -21,7 +21,7 @@
   //#define XIAO_ESP32_S3
   //// END BOARD TARGETS
 
-  #define MARAUDER_VERSION "v0.11.1"
+  #define MARAUDER_VERSION "v0.12.0"
 
  //// BOARD FEATURES
   #ifdef MARAUDER_M5STICKC
@@ -767,23 +767,30 @@
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 4
       #define GPS_RX 13
+      #define mac_history_len 80
     #elif defined(MARAUDER_V4)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 4
       #define GPS_RX 13
+      #define mac_history_len 80
     #elif defined(MARAUDER_KIT)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 4
       #define GPS_RX 13
+      #define mac_history_len 80
     #elif defined(MARAUDER_DEV_BOARD_PRO)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 21
       #define GPS_RX 17
+      #define mac_history_len 512
     #elif defined(MARAUDER_FLIPPER)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 9
       #define GPS_RX 21
+      #define mac_history_len 512
     #endif
+  #else
+    #define mac_history_len 512
   #endif
   //// END GPS STUFF
 
