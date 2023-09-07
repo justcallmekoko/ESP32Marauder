@@ -777,7 +777,7 @@
       #define GPS_RX 13
     #elif defined(MARAUDER_DEV_BOARD_PRO)
       #define GPS_SERIAL_INDEX 2
-      #define GPS_TX 18
+      #define GPS_TX 21
       #define GPS_RX 17
     #elif defined(MARAUDER_FLIPPER)
       #define GPS_SERIAL_INDEX 1
