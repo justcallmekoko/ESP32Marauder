@@ -1296,6 +1296,11 @@ void WiFiScan::executeWarDrive() {
       bool do_save;
       String display_string;
       
+      while (WiFi.scanComplete() == WIFI_SCAN_RUNNING) {
+        Serial.println("Scan running...");
+        delay(500);
+      }
+      
       int n = WiFi.scanNetworks(false, true, false, 110, this->set_channel);
 
       if (n > 0) {
@@ -1349,6 +1354,9 @@ void WiFiScan::executeWarDrive() {
         }
       }
       this->channelHop();
+
+      // Free up that memory, you sexy devil
+      WiFi.scanDelete();
     }
   #endif
 }
@@ -1416,11 +1424,15 @@ void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color)
     esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   }
   else {
-    WiFi.mode(WIFI_STA);
-    WiFi.disconnect();
+    this->startWardriverWiFi();
   }
   this->wifi_initialized = true;
   initTime = millis();
+}
+
+void WiFiScan::startWardriverWiFi() {
+  WiFi.mode(WIFI_STA);
+  WiFi.disconnect();
 }
 
 void WiFiScan::RunStationScan(uint8_t scan_mode, uint16_t color)

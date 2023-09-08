@@ -246,6 +246,7 @@ class WiFiScan
     void save_mac(unsigned char* mac);
     void clearMacHistory();
     void executeWarDrive();
+    void startWardriverWiFi();
 
     void startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_string);
 
