@@ -1362,9 +1362,13 @@ void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color)
     if (scan_mode == WIFI_SCAN_AP)
       sd_obj.openCapture("beacon");
     else if (scan_mode == WIFI_SCAN_WAR_DRIVE) {
-      sd_obj.openLog("wardrive");
-      String header_line = "WigleWifi-1.4,appRelease=" + display_obj.version_number + ",model=ESP32 Marauder,release=" + display_obj.version_number + ",device=ESP32 Marauder,display=SPI TFT,board=ESP32 Marauder,brand=JustCallMeKoko\nMAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\n";
-      evil_portal_obj.addLog(header_line, header_line.length());
+      #ifdef HAS_GPS
+        if (gps_obj.getGpsModuleStatus()) {
+          sd_obj.openLog("wardrive");
+          String header_line = "WigleWifi-1.4,appRelease=" + (String)MARAUDER_VERSION + ",model=ESP32 Marauder,release=" + (String)MARAUDER_VERSION + ",device=ESP32 Marauder,display=SPI TFT,board=ESP32 Marauder,brand=JustCallMeKoko\nMAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\n";
+          evil_portal_obj.addLog(header_line, header_line.length());
+        }
+      #endif
     }
   #else
     return;
