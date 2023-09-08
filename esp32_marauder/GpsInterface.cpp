@@ -94,6 +94,13 @@ bool GpsInterface::getFixStatus() {
   return this->good_fix;
 }
 
+String GpsInterface::getFixStatusAsString() {
+  if (this->getFixStatus())
+    return "Yes";
+  else
+    return "No";
+}
+
 bool GpsInterface::getGpsModuleStatus() {
   return this->gps_enabled;
 }

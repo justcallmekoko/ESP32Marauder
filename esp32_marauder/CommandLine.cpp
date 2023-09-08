@@ -216,6 +216,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_LS_CMD);
     Serial.println(HELP_LED_CMD);
     Serial.println(HELP_GPS_DATA_CMD);
+    Serial.println(HELP_GPS_CMD);
     
     // WiFi sniff/scan
     Serial.println(HELP_EVIL_PORTAL_CMD);
@@ -281,6 +282,32 @@ void CommandLine::runCommand(String input) {
           menu_function_obj.changeMenu(&menu_function_obj.gpsInfoMenu);
         #endif
         wifi_scan_obj.StartScan(WIFI_SCAN_GPS_DATA, TFT_CYAN);
+      }
+    #endif
+  }
+  else if (cmd_args.get(0) == GPS_CMD) {
+    #ifdef HAS_GPS
+      if (gps_obj.getGpsModuleStatus()) {
+        int get_arg = this->argSearch(&cmd_args, "-g");
+
+        if (get_arg != -1) {
+          String gps_info = cmd_args.get(get_arg + 1);
+
+          if (gps_info == "fix")
+            Serial.println("Fix: " + gps_obj.getFixStatusAsString());
+          else if (gps_info == "sat")
+            Serial.println("Sats: " + gps_obj.getNumSatsString());
+          else if (gps_info == "lat")
+            Serial.println("Lat: " + gps_obj.getLat());
+          else if (gps_info == "lon")
+            Serial.println("Lon: " + gps_obj.getLon());
+          else if (gps_info == "alt")
+            Serial.println("Alt: " + (String)gps_obj.getAlt());
+          else if (gps_info == "date")
+            Serial.println("Date/Time: " + gps_obj.getDatetime());
+          else
+            Serial.println("You did not provide a valid argument");
+        }
       }
     #endif
   }
@@ -418,12 +445,16 @@ void CommandLine::runCommand(String input) {
     }
     // Wardrive
     else if (cmd_args.get(0) == WARDRIVE_CMD) {
-      Serial.println("Starting Wardrive. Stop with " + (String)STOPSCAN_CMD);
-      #ifdef HAS_SCREEN
-        display_obj.clearScreen();
-        menu_function_obj.drawStatusBar();
+      #ifdef HAS_GPS
+        if (gps_obj.getGpsModuleStatus()) {
+          Serial.println("Starting Wardrive. Stop with " + (String)STOPSCAN_CMD);
+          #ifdef HAS_SCREEN
+            display_obj.clearScreen();
+            menu_function_obj.drawStatusBar();
+          #endif
+          wifi_scan_obj.StartScan(WIFI_SCAN_WAR_DRIVE, TFT_GREEN);
+        }
       #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_WAR_DRIVE, TFT_GREEN);
     }
     // AP Scan
     else if (cmd_args.get(0) == EVIL_PORTAL_CMD) {

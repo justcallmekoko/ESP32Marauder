@@ -12,6 +12,7 @@ class GpsInterface {
 
     String getNumSatsString();
     bool getFixStatus();
+    String getFixStatusAsString();
     bool getGpsModuleStatus();
     String getLat();
     String getLon();

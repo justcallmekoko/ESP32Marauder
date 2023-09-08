@@ -46,6 +46,7 @@ const char PROGMEM SETTINGS_CMD[] = "settings";
 const char PROGMEM LS_CMD[] = "ls";
 const char PROGMEM LED_CMD[] = "led";
 const char PROGMEM GPS_DATA_CMD[] = "gpsdata";
+const char PROGMEM GPS_CMD[] = "gps";
 
 // WiFi sniff/scan
 const char PROGMEM EVIL_PORTAL_CMD[] = "evilportal";
@@ -90,6 +91,7 @@ const char PROGMEM HELP_SETTINGS_CMD[] = "settings [-s <setting> enable/disable>
 const char PROGMEM HELP_LS_CMD[] = "ls <directory>";
 const char PROGMEM HELP_LED_CMD[] = "led -s <hex color>/-p <rainbow>";
 const char PROGMEM HELP_GPS_DATA_CMD[] = "gpsdata";
+const char PROGMEM HELP_GPS_CMD[] = "gps [-g] <fix/sat/lon/lat/alt/date>";
 
 // WiFi sniff/scan
 const char PROGMEM HELP_EVIL_PORTAL_CMD[] = "evilportal [-c start]";
