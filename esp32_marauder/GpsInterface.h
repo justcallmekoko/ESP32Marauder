@@ -16,6 +16,7 @@ class GpsInterface {
     String getLat();
     String getLon();
     float getAlt();
+    float getAccuracy();
     String getDatetime();
 
   private:
@@ -23,6 +24,7 @@ class GpsInterface {
     String lat = "";
     String lon = "";
     float altf = 0.0;
+    float accuracy = 0.0;
     String datetime = "";
     
     bool gps_enabled = false;

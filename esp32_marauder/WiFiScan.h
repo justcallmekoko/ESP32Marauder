@@ -77,6 +77,7 @@
 #define WIFI_SCAN_SIG_STREN 29
 #define WIFI_SCAN_EVIL_PORTAL 30
 #define WIFI_SCAN_GPS_DATA 31
+#define WIFI_SCAN_WAR_DRIVE 32
 
 #define GRAPH_REFRESH 100
 
@@ -142,6 +143,7 @@ class WiFiScan
     struct mac_addr mac_history[mac_history_len];
 
     // Settings
+    uint mac_history_cursor = 0;
     uint8_t channel_hop_delay = 1;
     bool force_pmkid = false;
     bool force_probe = false;
@@ -239,6 +241,12 @@ class WiFiScan
                               0xf0, 0xff, 0x02, 0x00
                           };
 
+    bool seen_mac(unsigned char* mac);
+    bool mac_cmp(struct mac_addr addr1, struct mac_addr addr2);
+    void save_mac(unsigned char* mac);
+    void clearMacHistory();
+    void executeWarDrive();
+
     void startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_string);
 
     void packetMonitorMain(uint32_t currentTime);
@@ -300,9 +308,10 @@ class WiFiScan
     byte src_mac[6] = {};
 
 
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT(); 
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     wifi_config_t ap_config;
 
+    String security_int_to_string(int security_type);
     char* stringToChar(String string);
     void RunSetup();
     int clearSSIDs();

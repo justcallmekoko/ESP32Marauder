@@ -61,7 +61,13 @@ void GpsInterface::setGPSInfo() {
   }
   this->altf = (float)alt / 1000;
 
+  this->accuracy = 2.5 * ((float)nmea.getHDOP()/10);
+
   //nmea.clear();
+}
+
+float GpsInterface::getAccuracy() {
+  return this->accuracy;
 }
 
 String GpsInterface::getLat() {

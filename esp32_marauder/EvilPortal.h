@@ -93,7 +93,6 @@ class EvilPortal {
     void setupServer();
     void startPortal();
     void startAP();
-    void addLog(String log, int len);
     void convertStringToUint8Array(const String& str, uint8_t*& buf, uint32_t& len);
     void sendToDisplay(String msg);
 
@@ -102,6 +101,7 @@ class EvilPortal {
 
     String get_user_name();
     String get_password();
+    void addLog(String log, int len);
     bool begin(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_points);
     void main(uint8_t scan_mode);
 
