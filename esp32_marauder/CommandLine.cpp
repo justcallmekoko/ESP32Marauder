@@ -230,6 +230,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_SNIFF_DEAUTH_CMD);
     Serial.println(HELP_SNIFF_PMKID_CMD);
     Serial.println(HELP_STOPSCAN_CMD);
+    Serial.println(HELP_WARDRIVE_CMD);
     
     // WiFi attack
     Serial.println(HELP_ATTACK_CMD);
@@ -414,6 +415,15 @@ void CommandLine::runCommand(String input) {
         menu_function_obj.drawStatusBar();
       #endif
       wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_MAGENTA);
+    }
+    // Wardrive
+    else if (cmd_args.get(0) == WARDRIVE_CMD) {
+      Serial.println("Starting Wardrive. Stop with " + (String)STOPSCAN_CMD);
+      #ifdef HAS_SCREEN
+        display_obj.clearScreen();
+        menu_function_obj.drawStatusBar();
+      #endif
+      wifi_scan_obj.StartScan(WIFI_SCAN_WAR_DRIVE, TFT_GREEN);
     }
     // AP Scan
     else if (cmd_args.get(0) == EVIL_PORTAL_CMD) {
