@@ -24,6 +24,10 @@ https://www.online-utility.org/image/convert/to/XBM
 #include "esp_system.h"
 #include <Arduino.h>
 
+#ifdef HAS_GPS
+  #include "GpsInterface.h"
+#endif
+
 #include "Assets.h"
 #include "WiFiScan.h"
 #ifdef HAS_SD
@@ -48,9 +52,9 @@ https://www.online-utility.org/image/convert/to/XBM
   #include "BatteryInterface.h"
 #endif
 
-#ifdef HAS_TEMP_SENSOR
-  #include "TemperatureInterface.h"
-#endif
+//#ifdef HAS_TEMP_SENSOR
+//  #include "TemperatureInterface.h"
+//#endif
 
 #ifdef HAS_SCREEN
   #include "Display.h"
@@ -87,13 +91,17 @@ Buffer buffer_obj;
 Settings settings_obj;
 CommandLine cli_obj;
 
+#ifdef HAS_GPS
+  GpsInterface gps_obj;
+#endif
+
 #ifdef HAS_BATTERY
   BatteryInterface battery_obj;
 #endif
 
-#ifdef HAS_TEMP_SENSOR
-  TemperatureInterface temp_obj;
-#endif
+//#ifdef HAS_TEMP_SENSOR
+//  TemperatureInterface temp_obj;
+//#endif
 
 #ifdef HAS_SCREEN
   Display display_obj;
@@ -216,7 +224,11 @@ void setup()
 
   // Draw the title screen
   #ifdef HAS_SCREEN
-    display_obj.drawJpeg("/marauder3L.jpg", 0 , 0);     // 240 x 320 image
+    #ifndef MARAUDER_MINI
+      display_obj.drawJpeg("/marauder3L.jpg", 0 , 0);     // 240 x 320 image
+    #else
+      display_obj.drawJpeg("/marauder3L.jpg", 0, 0);
+    #endif
   #endif
 
   #ifdef HAS_SCREEN
@@ -295,9 +307,9 @@ void setup()
   #endif
 
   // Temperature stuff
-  #ifdef HAS_TEMP_SENSOR
-    temp_obj.RunSetup();
-  #endif
+  //#ifdef HAS_TEMP_SENSOR
+  //  temp_obj.RunSetup();
+  //#endif
 
   #ifdef HAS_SCREEN
     display_obj.tft.println(F(text_table0[6]));
@@ -326,6 +338,16 @@ void setup()
     display_obj.tft.println(F(text_table0[7]));
 
     delay(500);
+  #endif
+
+  #ifdef HAS_GPS
+    gps_obj.begin();
+    #ifdef HAS_SCREEN
+      if (gps_obj.getGpsModuleStatus())
+        display_obj.tft.println("GPS Module connected");
+      else
+        display_obj.tft.println("GPS Module NOT connected");
+    #endif
   #endif
 
   #ifdef HAS_SCREEN
@@ -361,65 +383,62 @@ void loop()
   #endif
 
   // Update all of our objects
-  #ifdef HAS_SCREEN
+  /*#ifdef HAS_SCREEN
     bool do_draw = display_obj.draw_tft;
   #else
     bool do_draw = false;
+  #endif*/
+  
+  //if ((!do_draw) && (wifi_scan_obj.currentScanMode != ESP_UPDATE))
+  //{
+  cli_obj.main(currentTime);
+  #ifdef HAS_SCREEN
+    display_obj.main(wifi_scan_obj.currentScanMode);
+  #endif
+  wifi_scan_obj.main(currentTime);
+  //evil_portal_obj.main(wifi_scan_obj.currentScanMode);
+
+  #ifdef HAS_GPS
+    gps_obj.main();
   #endif
   
-  if ((!do_draw) && (wifi_scan_obj.currentScanMode != ESP_UPDATE))
-  {
-    cli_obj.main(currentTime);
-    #ifdef HAS_SCREEN
-      display_obj.main(wifi_scan_obj.currentScanMode);
-    #endif
-    wifi_scan_obj.main(currentTime);
-    //evil_portal_obj.main(wifi_scan_obj.currentScanMode);
-    
-    #ifdef WRITE_PACKETS_SERIAL
-      buffer_obj.forceSaveSerial();
-    #elif defined(HAS_SD)
-      sd_obj.main();
-    #else
-      return;
-    #endif
-
-    #ifdef HAS_BATTERY
-      battery_obj.main(currentTime);
-      temp_obj.main(currentTime);
-    #endif
-    settings_obj.main(currentTime);
-    if (((wifi_scan_obj.currentScanMode != WIFI_PACKET_MONITOR) && (wifi_scan_obj.currentScanMode != WIFI_SCAN_EAPOL)) ||
-        (mini)) {
-      #ifdef HAS_SCREEN
-        menu_function_obj.main(currentTime);
-      #endif
-      //cli_obj.main(currentTime);
-    }
-    #ifdef MARAUDER_FLIPPER
-      flipper_led.main();
-    #elif defined(XIAO_ESP32_S3)
-      xiao_led.main();
-    #else
-      led_obj.main(currentTime);
-    #endif
-
-    //if (wifi_scan_obj.currentScanMode == OTA_UPDATE)
-    //  web_obj.main();
-    #ifdef HAS_SCREEN
-      delay(1);
-    #else
-      delay(50);
-    #endif
-  }
-  #ifdef HAS_SCREEN
-    else if ((display_obj.draw_tft) &&
-             (wifi_scan_obj.currentScanMode != OTA_UPDATE))
-    {
-      display_obj.drawStylus();
-    }
+  #ifdef WRITE_PACKETS_SERIAL
+    buffer_obj.forceSaveSerial();
+  #elif defined(HAS_SD)
+    sd_obj.main();
+  #else
+    return;
   #endif
-  else if (wifi_scan_obj.currentScanMode == ESP_UPDATE) {
+
+  #ifdef HAS_BATTERY
+    battery_obj.main(currentTime);
+    //temp_obj.main(currentTime);
+  #endif
+  settings_obj.main(currentTime);
+  if (((wifi_scan_obj.currentScanMode != WIFI_PACKET_MONITOR) && (wifi_scan_obj.currentScanMode != WIFI_SCAN_EAPOL)) ||
+      (mini)) {
+    #ifdef HAS_SCREEN
+      menu_function_obj.main(currentTime);
+    #endif
+    //cli_obj.main(currentTime);
+  }
+  #ifdef MARAUDER_FLIPPER
+    flipper_led.main();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.main();
+  #else
+    led_obj.main(currentTime);
+  #endif
+
+  //if (wifi_scan_obj.currentScanMode == OTA_UPDATE)
+  //  web_obj.main();
+  #ifdef HAS_SCREEN
+    delay(1);
+  #else
+    delay(50);
+  #endif
+  //}
+  /*else if (wifi_scan_obj.currentScanMode == ESP_UPDATE) {
     #ifdef HAS_SCREEN
       display_obj.main(wifi_scan_obj.currentScanMode);
       menu_function_obj.main(currentTime);
@@ -435,5 +454,5 @@ void loop()
     
     //cli_obj.main(currentTime);
     delay(1);
-  }
+  }*/
 }

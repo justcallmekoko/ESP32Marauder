@@ -21,7 +21,7 @@
   //#define XIAO_ESP32_S3
   //// END BOARD TARGETS
 
-  #define MARAUDER_VERSION "v0.11.0-RC3"
+  #define MARAUDER_VERSION "v0.12.0"
 
  //// BOARD FEATURES
   #ifdef MARAUDER_M5STICKC
@@ -34,6 +34,7 @@
     #define HAS_SD
     #define USE_SD
     #define HAS_TEMP_SENSOR
+    //#define HAS_GPS
   #endif
 
   #ifdef MARAUDER_MINI
@@ -47,6 +48,7 @@
     #define HAS_SD
     #define USE_SD
     #define HAS_TEMP_SENSOR
+    //#define HAS_GPS
   #endif
 
   #ifdef MARAUDER_V4
@@ -60,6 +62,7 @@
     #define HAS_SD
     #define USE_SD
     #define HAS_TEMP_SENSOR
+    #define HAS_GPS
   #endif
 
   #ifdef MARAUDER_V6
@@ -73,6 +76,7 @@
     #define HAS_SD
     #define USE_SD
     #define HAS_TEMP_SENSOR
+    #define HAS_GPS
   #endif
 
   #ifdef MARAUDER_KIT
@@ -86,6 +90,7 @@
     #define HAS_SD
     #define USE_SD
     #define HAS_TEMP_SENSOR
+    #define HAS_GPS
   #endif
 
   #ifdef GENERIC_ESP32
@@ -98,6 +103,7 @@
     //#define HAS_SCREEN
     //#define HAS_SD
     //#define HAS_TEMP_SENSOR
+    //#define HAS_GPS
   #endif
 
   #ifdef MARAUDER_FLIPPER
@@ -108,6 +114,7 @@
     //#define HAS_NEOPIXEL_LED
     //#define HAS_PWR_MGMT
     //#define HAS_SCREEN
+    #define HAS_GPS
     #ifndef WRITE_PACKETS_SERIAL
       #define HAS_SD
       #define USE_SD
@@ -126,6 +133,7 @@
     #define HAS_SD
     #define USE_SD
     //#define HAS_TEMP_SENSOR
+    //#define HAS_GPS
   #endif
 
   #ifdef MARAUDER_DEV_BOARD_PRO
@@ -139,6 +147,7 @@
     #define HAS_SD
     #define USE_SD
     //#define HAS_TEMP_SENSOR
+    #define HAS_GPS
   #endif
 
   #ifdef XIAO_ESP32_S3
@@ -151,6 +160,7 @@
     //#define HAS_SCREEN
     //#define HAS_SD
     //#define HAS_TEMP_SENSOR
+    //#define HAS_GPS
   #endif
   //// END BOARD FEATURES
 
@@ -202,6 +212,7 @@
   #ifdef HAS_SCREEN
 
     #ifdef MARAUDER_M5STICKC
+      #define SCREEN_CHAR_WIDTH 40
       //#define TFT_MISO 19
       #define TFT_MOSI 15
       #define TFT_SCLK 13
@@ -242,7 +253,7 @@
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
-      #define BUTTON_ARRAY_LEN 11
+      #define BUTTON_ARRAY_LEN 12
       #define STATUS_BAR_WIDTH (TFT_HEIGHT/16)
       #define LVGL_TICK_PERIOD 6
     
@@ -268,6 +279,7 @@
     #endif
 
     #ifdef MARAUDER_V4
+      #define SCREEN_CHAR_WIDTH 40
       #define HAS_ILI9341
       #define BANNER_TEXT_SIZE 2
 
@@ -296,7 +308,7 @@
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
-      #define BUTTON_ARRAY_LEN 11
+      #define BUTTON_ARRAY_LEN 12
       #define STATUS_BAR_WIDTH 16
       #define LVGL_TICK_PERIOD 6
     
@@ -323,6 +335,7 @@
     #endif
 
     #ifdef MARAUDER_V6
+      #define SCREEN_CHAR_WIDTH 40
       #define HAS_ILI9341
     
       #define BANNER_TEXT_SIZE 2
@@ -352,7 +365,7 @@
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
-      #define BUTTON_ARRAY_LEN 11
+      #define BUTTON_ARRAY_LEN 12
       #define STATUS_BAR_WIDTH 16
       #define LVGL_TICK_PERIOD 6
 
@@ -379,6 +392,7 @@
     #endif 
 
     #ifdef MARAUDER_KIT
+      #define SCREEN_CHAR_WIDTH 40
       #define HAS_ILI9341
     
       #define BANNER_TEXT_SIZE 2
@@ -409,7 +423,7 @@
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
-      #define BUTTON_ARRAY_LEN 11
+      #define BUTTON_ARRAY_LEN 12
       #define STATUS_BAR_WIDTH 16
       #define LVGL_TICK_PERIOD 6
 
@@ -436,6 +450,7 @@
     #endif
   
     #ifdef MARAUDER_MINI
+      #define SCREEN_CHAR_WIDTH 40
       #define TFT_MISO 19
       #define TFT_MOSI 23
       #define TFT_SCLK 18
@@ -476,7 +491,7 @@
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
-      #define BUTTON_ARRAY_LEN 11
+      #define BUTTON_ARRAY_LEN 12
       #define STATUS_BAR_WIDTH (TFT_HEIGHT/16)
       #define LVGL_TICK_PERIOD 6
 
@@ -745,5 +760,52 @@
     #define MAX_HTML_SIZE 20000
   #endif
   //// END EVIL PORTAL STUFF
+
+  //// GPS STUFF
+  #ifdef HAS_GPS
+    #ifdef MARAUDER_V6
+      #define GPS_SERIAL_INDEX 2
+      #define GPS_TX 4
+      #define GPS_RX 13
+      #define mac_history_len 512
+    #elif defined(MARAUDER_V4)
+      #define GPS_SERIAL_INDEX 2
+      #define GPS_TX 4
+      #define GPS_RX 13
+      #define mac_history_len 512
+    #elif defined(MARAUDER_KIT)
+      #define GPS_SERIAL_INDEX 2
+      #define GPS_TX 4
+      #define GPS_RX 13
+      #define mac_history_len 512
+    #elif defined(MARAUDER_DEV_BOARD_PRO)
+      #define GPS_SERIAL_INDEX 2
+      #define GPS_TX 21
+      #define GPS_RX 17
+      #define mac_history_len 512
+    #elif defined(MARAUDER_FLIPPER)
+      #define GPS_SERIAL_INDEX 1
+      #define GPS_TX 9
+      #define GPS_RX 21
+      #define mac_history_len 512
+    #endif
+  #else
+    #define mac_history_len 512
+  #endif
+  //// END GPS STUFF
+
+  //// MARAUDER TITLE STUFF
+  #ifdef MARAUDER_V4
+    #define MARAUDER_TITLE_BYTES 13578
+  #elif defined(MARAUDER_V6)
+    #define MARAUDER_TITLE_BYTES 13578
+  #elif defined(MARAUDER_KIT)
+    #define MARAUDER_TITLE_BYTES 13578
+  #elif defined(MARAUDER_MINI)
+    #define MARAUDER_TITLE_BYTES 13578
+  #else
+    #define MARAUDER_TITLE_BYTES 13578
+  #endif
+  //// END MARAUDER TITLE STUFF
 
 #endif
