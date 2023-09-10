@@ -215,6 +215,8 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_UPDATE_CMD_A);
     Serial.println(HELP_LS_CMD);
     Serial.println(HELP_LED_CMD);
+    Serial.println(HELP_GPS_DATA_CMD);
+    Serial.println(HELP_GPS_CMD);
     
     // WiFi sniff/scan
     Serial.println(HELP_EVIL_PORTAL_CMD);
@@ -229,6 +231,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_SNIFF_DEAUTH_CMD);
     Serial.println(HELP_SNIFF_PMKID_CMD);
     Serial.println(HELP_STOPSCAN_CMD);
+    Serial.println(HELP_WARDRIVE_CMD);
     
     // WiFi attack
     Serial.println(HELP_ATTACK_CMD);
@@ -240,7 +243,6 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_SEL_CMD_A);
     Serial.println(HELP_SSID_CMD_A);
     Serial.println(HELP_SSID_CMD_B);
-    Serial.println(HELP_JOIN_WIFI_CMD);
     
     // Bluetooth sniff/scan
     Serial.println(HELP_BT_SNIFF_CMD);
@@ -269,6 +271,44 @@ void CommandLine::runCommand(String input) {
     #ifdef HAS_SCREEN
       display_obj.tft.init();
       menu_function_obj.changeMenu(menu_function_obj.current_menu);
+    #endif
+  }
+  else if (cmd_args.get(0) == GPS_DATA_CMD) {
+    #ifdef HAS_GPS
+      if (gps_obj.getGpsModuleStatus()) {
+        Serial.println("Getting GPS Data. Stop with " + (String)STOPSCAN_CMD);
+        wifi_scan_obj.currentScanMode = WIFI_SCAN_GPS_DATA;
+        #ifdef HAS_SCREEN
+          menu_function_obj.changeMenu(&menu_function_obj.gpsInfoMenu);
+        #endif
+        wifi_scan_obj.StartScan(WIFI_SCAN_GPS_DATA, TFT_CYAN);
+      }
+    #endif
+  }
+  else if (cmd_args.get(0) == GPS_CMD) {
+    #ifdef HAS_GPS
+      if (gps_obj.getGpsModuleStatus()) {
+        int get_arg = this->argSearch(&cmd_args, "-g");
+
+        if (get_arg != -1) {
+          String gps_info = cmd_args.get(get_arg + 1);
+
+          if (gps_info == "fix")
+            Serial.println("Fix: " + gps_obj.getFixStatusAsString());
+          else if (gps_info == "sat")
+            Serial.println("Sats: " + gps_obj.getNumSatsString());
+          else if (gps_info == "lat")
+            Serial.println("Lat: " + gps_obj.getLat());
+          else if (gps_info == "lon")
+            Serial.println("Lon: " + gps_obj.getLon());
+          else if (gps_info == "alt")
+            Serial.println("Alt: " + (String)gps_obj.getAlt());
+          else if (gps_info == "date")
+            Serial.println("Date/Time: " + gps_obj.getDatetime());
+          else
+            Serial.println("You did not provide a valid argument");
+        }
+      }
     #endif
   }
   // LED command
@@ -402,6 +442,19 @@ void CommandLine::runCommand(String input) {
         menu_function_obj.drawStatusBar();
       #endif
       wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_MAGENTA);
+    }
+    // Wardrive
+    else if (cmd_args.get(0) == WARDRIVE_CMD) {
+      #ifdef HAS_GPS
+        if (gps_obj.getGpsModuleStatus()) {
+          Serial.println("Starting Wardrive. Stop with " + (String)STOPSCAN_CMD);
+          #ifdef HAS_SCREEN
+            display_obj.clearScreen();
+            menu_function_obj.drawStatusBar();
+          #endif
+          wifi_scan_obj.StartScan(WIFI_SCAN_WAR_DRIVE, TFT_GREEN);
+        }
+      #endif
     }
     // AP Scan
     else if (cmd_args.get(0) == EVIL_PORTAL_CMD) {
@@ -995,7 +1048,7 @@ void CommandLine::runCommand(String input) {
     }
   }
   // Join WiFi
-  else if (cmd_args.get(0) == JOINWIFI_CMD) {
+  /*else if (cmd_args.get(0) == JOINWIFI_CMD) {
     int n_sw = this->argSearch(&cmd_args, "-n"); // name
     int a_sw = this->argSearch(&cmd_args, "-a"); // access point
     int s_sw = this->argSearch(&cmd_args, "-s"); // ssid
@@ -1030,5 +1083,5 @@ void CommandLine::runCommand(String input) {
     }
     Serial.println("Attempting to join WiFi with ssid " + (String)essid);
     wifi_scan_obj.joinWiFi(essid, pwx);
-  }
+  }*/
 }

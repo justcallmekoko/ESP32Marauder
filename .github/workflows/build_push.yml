@@ -44,6 +44,13 @@ jobs:
           ref: master
           path: CustomAsyncTCP
           
+      - name: Install MicroNMEA
+        uses: actions/checkout@v2
+        with:
+          repository: stevemarple/MicroNMEA
+          ref: v2.0.6
+          path: CustomMicroNMEA
+          
       - name: Install ESPAsyncWebServer
         uses: actions/checkout@v2
         with:
@@ -51,19 +58,19 @@ jobs:
           ref: master
           path: CustomESPAsyncWebServer
 
+      #- name: Install TFT_eSPI
+      #  uses: actions/checkout@v2
+      #  with:
+      #    repository: justcallmekoko/TFT_eSPI
+      #    ref: master
+      #    path: CustomTFT_eSPI
+          
       - name: Install TFT_eSPI
         uses: actions/checkout@v2
         with:
-          repository: justcallmekoko/TFT_eSPI
-          ref: master
+          repository: Bodmer/TFT_eSPI
+          ref: 2.2.23
           path: CustomTFT_eSPI
-
-      - name: Install LinkedList
-        uses: actions/checkout@v2
-        with:
-          repository: ivanseidel/LinkedList
-          ref: v1.3.1
-          path: CustomLinkedList
 
       - name: Install lv_arduino
         uses: actions/checkout@v2
@@ -107,9 +114,16 @@ jobs:
           ref: main
           path: CustomSwitchLib
           
-      - name: Search for SD lib in arduino-esp32 v2.0.4
-        run: |
-          find /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.4arduino-esp32 -name "SD"
+      - name: Install LinkedList
+        uses: actions/checkout@v2
+        with:
+          repository: ivanseidel/LinkedList
+          ref: v1.3.3
+          path: CustomLinkedList
+          
+      #- name: Search for SD lib in arduino-esp32 v2.0.4
+      #  run: |
+      #    find /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.4arduino-esp32 -name "SD"
           
       - name: Configure TFT_eSPI
         run: |
@@ -136,9 +150,9 @@ jobs:
       #    ls -la /home/runner/.arduino15/packages/esp32/hardware/esp32/
       #    echo Whoever made me have to do this can fuck off
           
-      - name: Search for SD lib in arduino-esp32
-        run: |
-          find /home/runner/ -name "SD"
+      #- name: Search for SD lib in arduino-esp32
+      #  run: |
+      #    find /home/runner/ -name "SD"
           
       #- name: Replace SD lib
       #  run: |
@@ -241,6 +255,23 @@ jobs:
           sed -i 's/^  #define MARAUDER_FLIPPER/  \/\/#define MARAUDER_FLIPPER/' esp32_marauder/configs.h
           sed -i 's/^  #define ESP32_LDDB/  \/\/#define ESP32_LDDB/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_DEV_BOARD_PRO/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
+          
+      #- name: Build Marauder for v6 Marauder with arduino/compile-sketches
+      #  uses: arduino/compile-sketches@v1
+      #  with:
+      #    sketch-paths: esp32_marauder/esp32_marauder.ino
+      #    cli-compile-flags: |
+      #      - --warnings="none"
+      #      - --export-binaries
+      #    fqbn: esp32:esp32:d32:PartitionScheme=min_spiffs
+          
+      #- name: Show compiled arduino/compile-sketches v6 bin
+      #  run: |
+      #    find ~ -name "esp32_marauder.ino.bin"
+          
+      #- name: Rename v6_2 Marauder bin
+      #  run: |
+      #    mv ./esp32_marauder/build/esp32.esp32.d32/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.d32/esp32_marauder.v6_2.bin
           
       - name: Build Marauder for v6 Marauder
         uses: ArminJo/arduino-test-compile@v3.2.1
@@ -411,6 +442,13 @@ jobs:
           path: ./esp32_marauder/build/esp32.esp32.d32/esp32_marauder.v6.bin
           retention-days: 5
           
+      #- name: 'Upload v6_2 Artifact'
+      #  uses: actions/upload-artifact@v3
+      #  with:
+      #    name: esp32_marauder.v6_2.bin
+      #    path: ./esp32_marauder/build/esp32.esp32.d32/esp32_marauder.v6_2.bin
+      #    retention-days: 5
+          
       - name: 'Upload Kit Artifact'
         uses: actions/upload-artifact@v3
         with:
@@ -517,6 +555,18 @@ jobs:
           asset_name: esp32_marauder.v6.bin
           asset_content_type: application/bin
         if: github.event_name != 'pull_request'
+        
+      #- name: Upload v6_2 Asset
+      #  id: upload-v6-2-release-asset 
+      #  uses: actions/upload-release-asset@v1
+      #  env:
+      #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #  with:
+      #    upload_url: ${{ steps.create_release.outputs.upload_url }}
+      #    asset_path: ./esp32_marauder/build/esp32.esp32.d32/esp32_marauder.v6_2.bin
+      #    asset_name: esp32_marauder.v6_2.bin
+      #    asset_content_type: application/bin
+      #  if: github.event_name != 'pull_request'
           
       - name: Upload Kit Asset
         id: upload-kit-release-asset 

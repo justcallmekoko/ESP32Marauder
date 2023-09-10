@@ -45,18 +45,18 @@ char index_html[MAX_HTML_SIZE] = "TEST";
 struct ssid {
   String essid;
   uint8_t channel;
-  int bssid[6];
+  uint8_t bssid[6];
   bool selected;
 };
 
 struct AccessPoint {
   String essid;
-  int channel;
-  int bssid[6];
+  uint8_t channel;
+  uint8_t bssid[6];
   bool selected;
   LinkedList<char>* beacon;
-  int rssi;
-  LinkedList<int>* stations;
+  char rssi;
+  LinkedList<uint8_t>* stations;
 };
 
 class CaptiveRequestHandler : public AsyncWebHandler {
@@ -93,7 +93,6 @@ class EvilPortal {
     void setupServer();
     void startPortal();
     void startAP();
-    void addLog(String log, int len);
     void convertStringToUint8Array(const String& str, uint8_t*& buf, uint32_t& len);
     void sendToDisplay(String msg);
 
@@ -102,6 +101,7 @@ class EvilPortal {
 
     String get_user_name();
     String get_password();
+    void addLog(String log, int len);
     bool begin(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_points);
     void main(uint8_t scan_mode);
 

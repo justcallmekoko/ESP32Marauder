@@ -264,9 +264,12 @@ void EvilPortal::addLog(String log, int len) {
     
     #ifdef WRITE_PACKETS_SERIAL
       buffer_obj.addPacket(logBuffer, logLength, true);
+      delete[] logBuffer;
     #elif defined(HAS_SD)
       sd_obj.addPacket(logBuffer, logLength, true);
+      delete[] logBuffer;
     #else
+      delete[] logBuffer;
       return;
     #endif
   }
