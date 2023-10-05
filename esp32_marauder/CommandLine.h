@@ -77,6 +77,7 @@ const char PROGMEM SSID_CMD[] = "ssid";
 
 // Bluetooth sniff/scan
 const char PROGMEM BT_SNIFF_CMD[] = "sniffbt";
+const char PROGMEM BT_WARDRIVE_CMD[] = "btwardrive";
 const char PROGMEM BT_SKIM_CMD[] = "sniffskim";
 
 
@@ -106,7 +107,7 @@ const char PROGMEM HELP_SNIFF_ESP_CMD[] = "sniffesp";
 const char PROGMEM HELP_SNIFF_DEAUTH_CMD[] = "sniffdeauth";
 const char PROGMEM HELP_SNIFF_PMKID_CMD[] = "sniffpmkid [-c <channel>][-d][-l]";
 const char PROGMEM HELP_STOPSCAN_CMD[] = "stopscan";
-const char PROGMEM HELP_WARDRIVE_CMD[] = "wardrive";
+const char PROGMEM HELP_WARDRIVE_CMD[] = "wardrive [-s]";
 
 // WiFi attack
 const char PROGMEM HELP_ATTACK_CMD[] = "attack -t <beacon [-l/-r/-a]/deauth [-c]/[-s <src mac>] [-d <dst mac>]/probe/rickroll>";
@@ -121,6 +122,7 @@ const char PROGMEM HELP_SSID_CMD_B[] = "ssid -r <index>";
 
 // Bluetooth sniff/scan
 const char PROGMEM HELP_BT_SNIFF_CMD[] = "sniffbt";
+const char PROGMEM HELP_BT_WARDRIVE_CMD[] = "btwardrive [-c]";
 const char PROGMEM HELP_BT_SKIM_CMD[] = "sniffskim";
 const char PROGMEM HELP_FOOT[] = "==================================";
 
