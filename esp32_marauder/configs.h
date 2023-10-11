@@ -639,7 +639,7 @@
     #endif
 
     #ifdef MARAUDER_M5STICKC
-      #define SD_CS 10
+      #define SD_CS -1
     #endif
 
     #ifdef MARAUDER_FLIPPER
