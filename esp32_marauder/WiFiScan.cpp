@@ -1397,12 +1397,14 @@ void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color)
 }
 
 void WiFiScan::executeSourApple() {
-  delay(40);
-  NimBLEAdvertisementData advertisementData = getOAdvertisementData();
-  pAdvertising->setAdvertisementData(advertisementData);
-  pAdvertising->start();
-  delay(20);
-  pAdvertising->stop();
+  #ifdef HAS_BT
+    delay(40);
+    NimBLEAdvertisementData advertisementData = getOAdvertisementData();
+    pAdvertising->setAdvertisementData(advertisementData);
+    pAdvertising->start();
+    delay(20);
+    pAdvertising->stop();
+  #endif
 }
 
 void WiFiScan::executeWarDrive() {
