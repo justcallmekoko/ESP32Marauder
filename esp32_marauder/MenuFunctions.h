@@ -144,6 +144,7 @@ class MenuFunctions
 
     // Bluetooth menu stuff
     Menu bluetoothSnifferMenu;
+    Menu bluetoothAttackMenu;
 
     // Settings things menus
     Menu generateSSIDsMenu;

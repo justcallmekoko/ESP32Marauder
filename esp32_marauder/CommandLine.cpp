@@ -249,6 +249,7 @@ void CommandLine::runCommand(String input) {
     // Bluetooth sniff/scan
     #ifdef HAS_BT
       Serial.println(HELP_BT_SNIFF_CMD);
+      Serial.println(HELP_BT_SOUR_APPLE_CMD);
       #ifdef HAS_GPS
         Serial.println(HELP_BT_WARDRIVE_CMD);
       #endif
@@ -767,6 +768,18 @@ void CommandLine::runCommand(String input) {
           menu_function_obj.drawStatusBar();
         #endif
         wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_GREEN);
+      #else
+        Serial.println("Bluetooth not supported");
+      #endif
+    }
+    else if (cmd_args.get(0) == BT_SOUR_APPLE_CMD) {
+      #ifdef HAS_BT
+        Serial.println("Starting Sour Apple attack. Stop with " + (String)STOPSCAN_CMD);
+        #ifdef HAS_SCREEN
+          display_obj.clearScreen();
+          menu_function_obj.drawStatusBar();
+        #endif
+        wifi_scan_obj.StartScan(BT_ATTACK_SOUR_APPLE, TFT_GREEN);
       #else
         Serial.println("Bluetooth not supported");
       #endif

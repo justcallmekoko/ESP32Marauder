@@ -77,6 +77,7 @@ const char PROGMEM SSID_CMD[] = "ssid";
 
 // Bluetooth sniff/scan
 const char PROGMEM BT_SNIFF_CMD[] = "sniffbt";
+const char PROGMEM BT_SOUR_APPLE_CMD[] = "sourapple";
 const char PROGMEM BT_WARDRIVE_CMD[] = "btwardrive";
 const char PROGMEM BT_SKIM_CMD[] = "sniffskim";
 
@@ -122,6 +123,7 @@ const char PROGMEM HELP_SSID_CMD_B[] = "ssid -r <index>";
 
 // Bluetooth sniff/scan
 const char PROGMEM HELP_BT_SNIFF_CMD[] = "sniffbt";
+const char PROGMEM HELP_BT_SOUR_APPLE_CMD[] = "sourapple";
 const char PROGMEM HELP_BT_WARDRIVE_CMD[] = "btwardrive [-c]";
 const char PROGMEM HELP_BT_SKIM_CMD[] = "sniffskim";
 const char PROGMEM HELP_FOOT[] = "==================================";
