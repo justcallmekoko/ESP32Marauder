@@ -471,6 +471,7 @@ void MenuFunctions::main(uint32_t currentTime)
     {
       // Stop the current scan
       if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_PROBE) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_STATION_WAR_DRIVE) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_STATION) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP) ||
@@ -493,6 +494,9 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_RICK_ROLL) ||
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_BEACON_LIST) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_ALL) ||
+          (wifi_scan_obj.currentScanMode == BT_ATTACK_SOUR_APPLE) ||
+          (wifi_scan_obj.currentScanMode == BT_SCAN_WAR_DRIVE) ||
+          (wifi_scan_obj.currentScanMode == BT_SCAN_WAR_DRIVE_CONT) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_SKIMMERS))
       {
         wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
@@ -524,6 +528,7 @@ void MenuFunctions::main(uint32_t currentTime)
     {
       // Stop the current scan
       if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_PROBE) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_STATION_WAR_DRIVE) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_STATION) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP) ||
@@ -546,6 +551,9 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_RICK_ROLL) ||
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_BEACON_LIST) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_ALL) ||
+          (wifi_scan_obj.currentScanMode == BT_ATTACK_SOUR_APPLE) ||
+          (wifi_scan_obj.currentScanMode == BT_SCAN_WAR_DRIVE) ||
+          (wifi_scan_obj.currentScanMode == BT_SCAN_WAR_DRIVE_CONT) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_SKIMMERS) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_EAPOL) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_ACTIVE_EAPOL) ||
@@ -1067,6 +1075,7 @@ void MenuFunctions::RunSetup()
 
   // Bluetooth menu stuff
   bluetoothSnifferMenu.list = new LinkedList<MenuNode>();
+  bluetoothAttackMenu.list = new LinkedList<MenuNode>();
 
   // Settings stuff
   generateSSIDsMenu.list = new LinkedList<MenuNode>();
@@ -1089,6 +1098,7 @@ void MenuFunctions::RunSetup()
   wifiAttackMenu.name = text_table1[21];
   wifiGeneralMenu.name = text_table1[22];
   bluetoothSnifferMenu.name = text_table1[23];
+  bluetoothAttackMenu.name = "Bluetooth Attacks";
   generateSSIDsMenu.name = text_table1[27];
   clearSSIDsMenu.name = text_table1[28];
   clearAPsMenu.name = text_table1[29];
@@ -1166,11 +1176,11 @@ void MenuFunctions::RunSetup()
       wifi_scan_obj.StartScan(WIFI_PACKET_MONITOR, TFT_BLUE);
     });
   #endif
-  this->addNodes(&wifiSnifferMenu, text_table1[47], TFT_RED, NULL, PWNAGOTCHI, [this]() {
+  /*this->addNodes(&wifiSnifferMenu, text_table1[47], TFT_RED, NULL, PWNAGOTCHI, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_PWN, TFT_RED);
-  });
+  });*/
   this->addNodes(&wifiSnifferMenu, text_table1[49], TFT_MAGENTA, NULL, BEACON_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
@@ -1201,7 +1211,16 @@ void MenuFunctions::RunSetup()
         wifi_scan_obj.StartScan(WIFI_SCAN_WAR_DRIVE, TFT_GREEN);
       });
     }
-  #endif  
+  #endif
+  #ifdef HAS_GPS
+    if (gps_obj.getGpsModuleStatus()) {
+      this->addNodes(&wifiSnifferMenu, "Station Wardrive", TFT_ORANGE, NULL, PROBE_SNIFF, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_SCAN_STATION_WAR_DRIVE, TFT_ORANGE);
+      });
+    }
+  #endif
 
   // Build WiFi attack menu
   wifiAttackMenu.parentMenu = &wifiMenu; // Main Menu is second menu parent
@@ -1356,6 +1375,9 @@ void MenuFunctions::RunSetup()
   this->addNodes(&bluetoothMenu, text_table1[31], TFT_YELLOW, NULL, SNIFFERS, [this]() {
     this->changeMenu(&bluetoothSnifferMenu);
   });
+  this->addNodes(&bluetoothMenu, "Bluetooth Attacks", TFT_RED, NULL, ATTACKS, [this]() {
+    this->changeMenu(&bluetoothAttackMenu);
+  });
 
   // Build bluetooth sniffer Menu
   bluetoothSnifferMenu.parentMenu = &bluetoothMenu; // Second Menu is third menu parent
@@ -1367,10 +1389,35 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_GREEN);
   });
+  #ifdef HAS_GPS
+    if (gps_obj.getGpsModuleStatus()) {
+      this->addNodes(&bluetoothSnifferMenu, "BT Wardrive", TFT_CYAN, NULL, BLUETOOTH_SNIFF, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(BT_SCAN_WAR_DRIVE, TFT_GREEN);
+      });
+      this->addNodes(&bluetoothSnifferMenu, "BT Wardrive Continuous", TFT_RED, NULL, REBOOT, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(BT_SCAN_WAR_DRIVE_CONT, TFT_GREEN);
+      });
+    }
+  #endif
   this->addNodes(&bluetoothSnifferMenu, text_table1[35], TFT_MAGENTA, NULL, CC_SKIMMERS, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_SCAN_SKIMMERS, TFT_MAGENTA);
+  });
+
+  // Bluetooth Attack menu
+  bluetoothAttackMenu.parentMenu = &bluetoothMenu; // Second Menu is third menu parent
+  this->addNodes(&bluetoothAttackMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(bluetoothAttackMenu.parentMenu);
+  });
+  this->addNodes(&bluetoothAttackMenu, "Sour Apple", TFT_GREEN, NULL, DEAUTH_SNIFF, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(BT_ATTACK_SOUR_APPLE, TFT_GREEN);
   });
 
   // Device menu

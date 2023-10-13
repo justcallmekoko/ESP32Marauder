@@ -231,7 +231,9 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_SNIFF_DEAUTH_CMD);
     Serial.println(HELP_SNIFF_PMKID_CMD);
     Serial.println(HELP_STOPSCAN_CMD);
-    Serial.println(HELP_WARDRIVE_CMD);
+    #ifdef HAS_GPS
+      Serial.println(HELP_WARDRIVE_CMD);
+    #endif
     
     // WiFi attack
     Serial.println(HELP_ATTACK_CMD);
@@ -245,8 +247,14 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_SSID_CMD_B);
     
     // Bluetooth sniff/scan
-    Serial.println(HELP_BT_SNIFF_CMD);
-    Serial.println(HELP_BT_SKIM_CMD);
+    #ifdef HAS_BT
+      Serial.println(HELP_BT_SNIFF_CMD);
+      Serial.println(HELP_BT_SOUR_APPLE_CMD);
+      #ifdef HAS_GPS
+        Serial.println(HELP_BT_WARDRIVE_CMD);
+      #endif
+      Serial.println(HELP_BT_SKIM_CMD);
+    #endif
     Serial.println(HELP_FOOT);
     return;
   }
@@ -447,13 +455,28 @@ void CommandLine::runCommand(String input) {
     else if (cmd_args.get(0) == WARDRIVE_CMD) {
       #ifdef HAS_GPS
         if (gps_obj.getGpsModuleStatus()) {
-          Serial.println("Starting Wardrive. Stop with " + (String)STOPSCAN_CMD);
-          #ifdef HAS_SCREEN
-            display_obj.clearScreen();
-            menu_function_obj.drawStatusBar();
-          #endif
-          wifi_scan_obj.StartScan(WIFI_SCAN_WAR_DRIVE, TFT_GREEN);
+          int sta_sw = this->argSearch(&cmd_args, "-s");
+
+          if (sta_sw == -1) {
+            Serial.println("Starting Wardrive. Stop with " + (String)STOPSCAN_CMD);
+            #ifdef HAS_SCREEN
+              display_obj.clearScreen();
+              menu_function_obj.drawStatusBar();
+            #endif
+            wifi_scan_obj.StartScan(WIFI_SCAN_WAR_DRIVE, TFT_GREEN);
+          }
+          else {Serial.println("Starting Station Wardrive. Stop with " + (String)STOPSCAN_CMD);
+            #ifdef HAS_SCREEN
+              display_obj.clearScreen();
+              menu_function_obj.drawStatusBar();
+            #endif
+            wifi_scan_obj.StartScan(WIFI_SCAN_STATION_WAR_DRIVE, TFT_GREEN);
+          }
         }
+        else
+          Serial.println("GPS Module not detected");
+      #else
+        Serial.println("GPS not supported");
       #endif
     }
     // AP Scan
@@ -748,6 +771,51 @@ void CommandLine::runCommand(String input) {
       #else
         Serial.println("Bluetooth not supported");
       #endif
+    }
+    else if (cmd_args.get(0) == BT_SOUR_APPLE_CMD) {
+      #ifdef HAS_BT
+        Serial.println("Starting Sour Apple attack. Stop with " + (String)STOPSCAN_CMD);
+        #ifdef HAS_SCREEN
+          display_obj.clearScreen();
+          menu_function_obj.drawStatusBar();
+        #endif
+        wifi_scan_obj.StartScan(BT_ATTACK_SOUR_APPLE, TFT_GREEN);
+      #else
+        Serial.println("Bluetooth not supported");
+      #endif
+    }
+    // Wardrive
+    else if (cmd_args.get(0) == BT_WARDRIVE_CMD) {
+      #ifdef HAS_BT
+        #ifdef HAS_GPS
+          if (gps_obj.getGpsModuleStatus()) {
+            int cont_sw = this->argSearch(&cmd_args, "-c");
+
+            if (cont_sw == -1) {
+              Serial.println("Starting BT Wardrive. Stop with " + (String)STOPSCAN_CMD);
+              #ifdef HAS_SCREEN
+                display_obj.clearScreen();
+                menu_function_obj.drawStatusBar();
+              #endif
+              wifi_scan_obj.StartScan(BT_SCAN_WAR_DRIVE, TFT_GREEN);
+            }
+            else {Serial.println("Starting Continuous BT Wardrive. Stop with " + (String)STOPSCAN_CMD);
+              #ifdef HAS_SCREEN
+                display_obj.clearScreen();
+                menu_function_obj.drawStatusBar();
+              #endif
+              wifi_scan_obj.StartScan(BT_SCAN_WAR_DRIVE_CONT, TFT_GREEN);
+            }
+          }
+          else
+            Serial.println("GPS Module not detected");
+        #else
+          Serial.println("GPS not supported");
+        #endif
+      #else
+        Serial.println("Bluetooth not supported");
+      #endif
+      
     }
     // Bluetooth CC Skimmer scan
     else if (cmd_args.get(0) == BT_SKIM_CMD) {
