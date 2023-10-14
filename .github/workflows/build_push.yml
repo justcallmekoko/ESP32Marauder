@@ -121,6 +121,13 @@ jobs:
           ref: v1.3.3
           path: CustomLinkedList
           
+      - name: Install EspSoftwareSerial
+        uses: actions/checkout@v2
+        with:
+          repository: plerup/espsoftwareserial
+          ref: 8.1.0
+          path: CustomEspSoftwareSerial
+          
       #- name: Search for SD lib in arduino-esp32 v2.0.4
       #  run: |
       #    find /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.4arduino-esp32 -name "SD"
