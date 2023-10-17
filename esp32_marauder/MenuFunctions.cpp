@@ -495,6 +495,7 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_BEACON_LIST) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_ALL) ||
           (wifi_scan_obj.currentScanMode == BT_ATTACK_SOUR_APPLE) ||
+          (wifi_scan_obj.currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_WAR_DRIVE) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_WAR_DRIVE_CONT) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_SKIMMERS))
@@ -552,6 +553,7 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_BEACON_LIST) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_ALL) ||
           (wifi_scan_obj.currentScanMode == BT_ATTACK_SOUR_APPLE) ||
+          (wifi_scan_obj.currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_WAR_DRIVE) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_WAR_DRIVE_CONT) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_SKIMMERS) ||
@@ -1418,6 +1420,11 @@ void MenuFunctions::RunSetup()
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_ATTACK_SOUR_APPLE, TFT_GREEN);
+  });
+  this->addNodes(&bluetoothAttackMenu, "Swiftpair Spam", TFT_CYAN, NULL, KEYBOARD_ICO, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(BT_ATTACK_SWIFTPAIR_SPAM, TFT_CYAN);
   });
 
   // Device menu
