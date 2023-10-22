@@ -192,7 +192,13 @@ void setup()
     delay(10);
   #endif
 
-  Serial.begin(115200);
+  #ifdef ESP32_S2_MINI_MARAUDER_FLIPPER
+    Serial.begin(115200,SERIAL_8N1,S2_MINI_TX0,S2_MINI_RX0);
+  #else
+    Serial.begin(115200);
+  #endif
+
+  // Serial.begin(115200);
 
   // Starts a second serial channel to stream the captured packets
   #ifdef WRITE_PACKETS_SERIAL

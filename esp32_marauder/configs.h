@@ -17,6 +17,7 @@
   //#define MARAUDER_KIT
   //#define GENERIC_ESP32
   #define MARAUDER_FLIPPER
+  //#define ESP32_S2_MINI_MARAUDER_FLIPPER
   //#define ESP32_LDDB
   //#define MARAUDER_DEV_BOARD_PRO
   //#define XIAO_ESP32_S3
@@ -123,6 +124,12 @@
     #endif
     //#define HAS_TEMP_SENSOR
   #endif
+
+  #ifdef ESP32_S2_MINI_MARAUDER_FLIPPER
+    #define MARAUDER_FLIPPER //use the same settings as usual, we're just changing the Serial0 pins
+    #define S2_MINI_TX0 37
+    #define S2_MINI_RX0 39
+  #endif 
 
   #ifdef ESP32_LDDB
     //#define FLIPPER_ZERO_HAT
