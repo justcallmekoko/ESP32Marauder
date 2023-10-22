@@ -1461,7 +1461,11 @@ const char* WiFiScan::generateRandomName() {
 }
 
 void WiFiScan::generateRandomMac(uint8_t* mac) {
-  for (int i = 0; i < 6; i++) {
+  // Set the locally administered bit and unicast bit for the first byte
+  mac[0] = 0x02; // The locally administered bit is the second least significant bit
+
+  // Generate the rest of the MAC address
+  for (int i = 1; i < 6; i++) {
     mac[i] = random(0, 255);
   }
 }
