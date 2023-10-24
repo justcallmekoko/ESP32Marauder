@@ -165,7 +165,7 @@ void setup()
     axp192_obj.begin();
   #endif
   
-  pinMode(FLASH_BUTTON, INPUT);
+  //pinMode(FLASH_BUTTON, INPUT);
 
   #ifdef HAS_SCREEN
     pinMode(TFT_BL, OUTPUT);
@@ -246,6 +246,17 @@ void setup()
 
   #ifdef HAS_SCREEN
     delay(2000);
+
+    // Do some stealth mode stuff
+    #ifdef HAS_BUTTONS
+      if (c_btn.justPressed()) {
+        display_obj.headless_mode = true;
+
+        backlightOff();
+
+        Serial.println("Headless Mode enabled");
+      }
+    #endif
 
     display_obj.clearScreen();
   

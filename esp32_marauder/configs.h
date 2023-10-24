@@ -71,7 +71,8 @@
     //#define FLIPPER_ZERO_HAT
     #define HAS_BATTERY
     #define HAS_BT
-    //#define HAS_BUTTONS
+    #define HAS_BT_REMOTE
+    #define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
     //#define HAS_PWR_MGMT
     #define HAS_SCREEN
@@ -85,7 +86,7 @@
     //#define FLIPPER_ZERO_HAT
     #define HAS_BATTERY
     #define HAS_BT
-    //#define HAS_BUTTONS
+    #define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
     //#define HAS_PWR_MGMT
     #define HAS_SCREEN
@@ -205,6 +206,22 @@
       #define U_BTN -1
       #define R_BTN -1
       #define D_BTN 39
+    #endif
+
+    #ifdef MARAUDER_V6
+      #define L_BTN -1
+      #define C_BTN 0
+      #define U_BTN -1
+      #define R_BTN -1
+      #define D_BTN -1
+    #endif
+
+    #ifdef MARAUDER_V6_1
+      #define L_BTN -1
+      #define C_BTN 0
+      #define U_BTN -1
+      #define R_BTN -1
+      #define D_BTN -1
     #endif  
 
   #endif

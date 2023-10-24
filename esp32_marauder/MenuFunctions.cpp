@@ -18,6 +18,13 @@ MenuFunctions::MenuFunctions()
 /* Interrupt driven periodic handler */
 
 #ifdef HAS_ILI9341
+  uint8_t MenuFunctions::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
+    if (!display_obj.headless_mode)
+      return display_obj.tft.getTouch(x, y, threshold);
+    else
+      return !display_obj.headless_mode;
+  }
+
   void MenuFunctions::lv_tick_handler()
   {
     lv_tick_inc(LVGL_TICK_PERIOD);
@@ -456,7 +463,7 @@ void MenuFunctions::main(uint32_t currentTime)
 
   // getTouch causes a 10ms delay which makes beacon spam less effective
   #ifdef HAS_ILI9341
-    pressed = display_obj.tft.getTouch(&t_x, &t_y);
+    pressed = this->updateTouch(&t_x, &t_y);
   #endif
 
 
@@ -643,50 +650,51 @@ void MenuFunctions::main(uint32_t currentTime)
   #endif
 
   #ifdef HAS_BUTTONS
-    #ifndef MARAUDER_M5STICKC
-      if (u_btn.justPressed()){
+    #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1))
+      #ifndef MARAUDER_M5STICKC
+        if (u_btn.justPressed()){
+          if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
+              (wifi_scan_obj.currentScanMode == OTA_UPDATE)) {
+            if (current_menu->selected > 0) {
+              current_menu->selected--;
+              this->buttonSelected(current_menu->selected);
+              if (!current_menu->list->get(current_menu->selected + 1).selected)
+                this->buttonNotSelected(current_menu->selected + 1);
+            }
+          }
+          else if ((wifi_scan_obj.currentScanMode == WIFI_PACKET_MONITOR) ||
+                  (wifi_scan_obj.currentScanMode == WIFI_SCAN_EAPOL)) {
+            if (wifi_scan_obj.set_channel < 14)
+              wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
+          }
+        }
+      #endif
+      if (d_btn.justPressed()){
         if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
             (wifi_scan_obj.currentScanMode == OTA_UPDATE)) {
-          if (current_menu->selected > 0) {
-            current_menu->selected--;
+          if (current_menu->selected < current_menu->list->size() - 1) {
+            current_menu->selected++;
             this->buttonSelected(current_menu->selected);
-            if (!current_menu->list->get(current_menu->selected + 1).selected)
-              this->buttonNotSelected(current_menu->selected + 1);
+            if (!current_menu->list->get(current_menu->selected - 1).selected)
+              this->buttonNotSelected(current_menu->selected - 1);
+          }
+          else {
+            current_menu->selected = 0;
+            this->buttonSelected(current_menu->selected);
+            if (!current_menu->list->get(current_menu->list->size() - 1).selected)
+              this->buttonNotSelected(current_menu->list->size() - 1);
           }
         }
         else if ((wifi_scan_obj.currentScanMode == WIFI_PACKET_MONITOR) ||
                 (wifi_scan_obj.currentScanMode == WIFI_SCAN_EAPOL)) {
-          if (wifi_scan_obj.set_channel < 14)
-            wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
+          if (wifi_scan_obj.set_channel > 1)
+            wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
         }
+      }
+      if(c_btn_press){
+        current_menu->list->get(current_menu->selected).callable();
       }
     #endif
-    if (d_btn.justPressed()){
-      if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
-          (wifi_scan_obj.currentScanMode == OTA_UPDATE)) {
-        if (current_menu->selected < current_menu->list->size() - 1) {
-          current_menu->selected++;
-          this->buttonSelected(current_menu->selected);
-          if (!current_menu->list->get(current_menu->selected - 1).selected)
-            this->buttonNotSelected(current_menu->selected - 1);
-        }
-        else {
-          current_menu->selected = 0;
-          this->buttonSelected(current_menu->selected);
-          if (!current_menu->list->get(current_menu->list->size() - 1).selected)
-            this->buttonNotSelected(current_menu->list->size() - 1);
-        }
-      }
-      else if ((wifi_scan_obj.currentScanMode == WIFI_PACKET_MONITOR) ||
-               (wifi_scan_obj.currentScanMode == WIFI_SCAN_EAPOL)) {
-        if (wifi_scan_obj.set_channel > 1)
-          wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
-      }
-    }
-    if(c_btn_press){
-      current_menu->list->get(current_menu->selected).callable();
-    }
-
   #endif
 }
 
