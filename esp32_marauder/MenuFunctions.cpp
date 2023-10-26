@@ -698,7 +698,7 @@ void MenuFunctions::main(uint32_t currentTime)
             if (!current_menu->list->get(current_menu->selected - 1).selected)
               this->buttonNotSelected(current_menu->selected - 1 - this->menu_start_index, current_menu->selected - 1);
             // Page down
-            if (current_menu->selected >= BUTTON_SCREEN_LIMIT) {
+            if (current_menu->selected - this->menu_start_index >= BUTTON_SCREEN_LIMIT) {
               this->buildButtons(current_menu, current_menu->selected + 1 - BUTTON_SCREEN_LIMIT);
               this->displayCurrentMenu(current_menu->selected + 1 - BUTTON_SCREEN_LIMIT);
             }
@@ -1219,11 +1219,13 @@ void MenuFunctions::RunSetup()
       wifi_scan_obj.StartScan(WIFI_PACKET_MONITOR, TFT_BLUE);
     });
   #endif
-  /*this->addNodes(&wifiSnifferMenu, text_table1[47], TFT_RED, NULL, PWNAGOTCHI, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_PWN, TFT_RED);
-  });*/
+  #ifndef HAS_ILI9341
+    this->addNodes(&wifiSnifferMenu, text_table1[47], TFT_RED, NULL, PWNAGOTCHI, [this]() {
+      display_obj.clearScreen();
+      this->drawStatusBar();
+      wifi_scan_obj.StartScan(WIFI_SCAN_PWN, TFT_RED);
+    });
+  #endif
   this->addNodes(&wifiSnifferMenu, text_table1[49], TFT_MAGENTA, NULL, BEACON_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
