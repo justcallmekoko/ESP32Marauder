@@ -9,8 +9,8 @@
   //#define WRITE_PACKETS_SERIAL
   
   //// BOARD TARGETS
-  //#define MARAUDER_M5STICKC
-  #define MARAUDER_MINI
+  #define MARAUDER_M5STICKC
+  //#define MARAUDER_MINI
   //#define MARAUDER_V4
   //#define MARAUDER_V6
   //#define MARAUDER_V6_1
@@ -272,7 +272,7 @@
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
-      #define BUTTON_SCREEN_LIMIT 12
+      #define BUTTON_SCREEN_LIMIT 6
       #define BUTTON_ARRAY_LEN 13
       #define STATUS_BAR_WIDTH (TFT_HEIGHT/16)
       #define LVGL_TICK_PERIOD 6
@@ -633,7 +633,7 @@
     #define KEY_TEXTSIZE 1   // Font size multiplier
     #define ICON_W 22
     #define ICON_H 22
-    #define BUTTON_PADDING 10
+    #define BUTTON_PADDING 60
   #endif
   //// END MENU DEFINITIONS
 

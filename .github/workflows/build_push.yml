@@ -183,6 +183,7 @@ jobs:
           
       - name: Configure configs.h for Flipper Zero WiFi Dev Board
         run: |
+          sed -i 's/^  #define MARAUDER_M5STICKC/  \/\/#define MARAUDER_M5STICKC/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_MINI/  \/\/#define MARAUDER_MINI/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_V4/  \/\/#define MARAUDER_V4/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_V6/  \/\/#define MARAUDER_V6/' esp32_marauder/configs.h
