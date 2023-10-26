@@ -679,7 +679,7 @@ void MenuFunctions::main(uint32_t currentTime)
               }
               this->buttonSelected(current_menu->selected, current_menu->selected);
               if (!current_menu->list->get(0).selected)
-                this->buttonNotSelected(0);
+                this->buttonNotSelected(0, this->menu_start_index);
             }
           }
           else if ((wifi_scan_obj.currentScanMode == WIFI_PACKET_MONITOR) ||
