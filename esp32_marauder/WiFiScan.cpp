@@ -518,9 +518,11 @@ void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_
     display_obj.initScrollValues(true);
     display_obj.tft.setTextWrap(false);
     display_obj.tft.setTextColor(TFT_BLACK, color);
-    display_obj.tft.fillRect(0,16,240,16, color);
-    display_obj.tft.drawCentreString((String)title_string,120,16,2);
-    display_obj.touchToExit();
+    #ifdef HAS_ILI9341
+      display_obj.tft.fillRect(0,16,240,16, color);
+      display_obj.tft.drawCentreString((String)title_string,120,16,2);
+      display_obj.touchToExit();
+    #endif
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
   #endif
 
@@ -1461,7 +1463,11 @@ const char* WiFiScan::generateRandomName() {
 }
 
 void WiFiScan::generateRandomMac(uint8_t* mac) {
-  for (int i = 0; i < 6; i++) {
+  // Set the locally administered bit and unicast bit for the first byte
+  mac[0] = 0x02; // The locally administered bit is the second least significant bit
+
+  // Generate the rest of the MAC address
+  for (int i = 1; i < 6; i++) {
     mac[i] = random(0, 255);
   }
 }
@@ -1853,9 +1859,11 @@ void WiFiScan::RunSourApple(uint8_t scan_mode, uint16_t color) {
       display_obj.initScrollValues(true);
       display_obj.tft.setTextWrap(false);
       display_obj.tft.setTextColor(TFT_BLACK, color);
-      display_obj.tft.fillRect(0,16,240,16, color);
-      display_obj.tft.drawCentreString("Sour Apple",120,16,2);
-      display_obj.touchToExit();
+      #ifdef HAS_ILI9341
+        display_obj.tft.fillRect(0,16,240,16, color);
+        display_obj.tft.drawCentreString("Sour Apple",120,16,2);
+        display_obj.touchToExit();
+      #endif
       display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
     #endif
 
@@ -1873,9 +1881,11 @@ void WiFiScan::RunSwiftpairSpam(uint8_t scan_mode, uint16_t color) {
       display_obj.initScrollValues(true);
       display_obj.tft.setTextWrap(false);
       display_obj.tft.setTextColor(TFT_BLACK, color);
-      display_obj.tft.fillRect(0,16,240,16, color);
-      display_obj.tft.drawCentreString("Swiftpair Spam",120,16,2);
-      display_obj.touchToExit();
+      #ifdef HAS_ILI9341
+        display_obj.tft.fillRect(0,16,240,16, color);
+        display_obj.tft.drawCentreString("Swiftpair Spam",120,16,2);
+        display_obj.touchToExit();
+      #endif
       display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
     #endif
 

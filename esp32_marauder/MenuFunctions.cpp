@@ -18,6 +18,13 @@ MenuFunctions::MenuFunctions()
 /* Interrupt driven periodic handler */
 
 #ifdef HAS_ILI9341
+  uint8_t MenuFunctions::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
+    if (!display_obj.headless_mode)
+      return display_obj.tft.getTouch(x, y, threshold);
+    else
+      return !display_obj.headless_mode;
+  }
+
   void MenuFunctions::lv_tick_handler()
   {
     lv_tick_inc(LVGL_TICK_PERIOD);
@@ -386,14 +393,18 @@ MenuFunctions::MenuFunctions()
 #endif
 //// END LV_ARDUINO STUFF
 
-void MenuFunctions::buttonNotSelected(uint8_t b) {
+void MenuFunctions::buttonNotSelected(uint8_t b, int8_t x) {
+  if (x == -1)
+    x = b;
   display_obj.tft.setFreeFont(NULL);
-  display_obj.key[b].drawButton(false, current_menu->list->get(b).name);
+  display_obj.key[b].drawButton(false, current_menu->list->get(x).name);
 }
 
-void MenuFunctions::buttonSelected(uint8_t b) {
+void MenuFunctions::buttonSelected(uint8_t b, int8_t x) {
+  if (x == -1)
+    x = b;
   display_obj.tft.setFreeFont(NULL);
-  display_obj.key[b].drawButton(true, current_menu->list->get(b).name);
+  display_obj.key[b].drawButton(true, current_menu->list->get(x).name);
 }
 
 // Function to check menu input
@@ -456,7 +467,7 @@ void MenuFunctions::main(uint32_t currentTime)
 
   // getTouch causes a 10ms delay which makes beacon spam less effective
   #ifdef HAS_ILI9341
-    pressed = display_obj.tft.getTouch(&t_x, &t_y);
+    pressed = this->updateTouch(&t_x, &t_y);
   #endif
 
 
@@ -643,50 +654,77 @@ void MenuFunctions::main(uint32_t currentTime)
   #endif
 
   #ifdef HAS_BUTTONS
-    #ifndef MARAUDER_M5STICKC
-      if (u_btn.justPressed()){
+    #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1))
+      #ifndef MARAUDER_M5STICKC
+        if (u_btn.justPressed()){
+          if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
+              (wifi_scan_obj.currentScanMode == OTA_UPDATE)) {
+            if (current_menu->selected > 0) {
+              current_menu->selected--;
+              // Page up
+              if (current_menu->selected < this->menu_start_index) {
+                this->buildButtons(current_menu, current_menu->selected);
+                this->displayCurrentMenu(current_menu->selected);
+              }
+              this->buttonSelected(current_menu->selected - this->menu_start_index, current_menu->selected);
+              if (!current_menu->list->get(current_menu->selected + 1).selected)
+                this->buttonNotSelected(current_menu->selected + 1 - this->menu_start_index, current_menu->selected + 1);
+            }
+            // Loop to end
+            else {
+              current_menu->selected = current_menu->list->size() - 1;
+              if (current_menu->selected >= BUTTON_SCREEN_LIMIT) {
+                this->buildButtons(current_menu, current_menu->selected + 1 - BUTTON_SCREEN_LIMIT);
+                this->displayCurrentMenu(current_menu->selected + 1 - BUTTON_SCREEN_LIMIT);
+              }
+              this->buttonSelected(current_menu->selected, current_menu->selected);
+              if (!current_menu->list->get(0).selected)
+                this->buttonNotSelected(0, this->menu_start_index);
+            }
+          }
+          else if ((wifi_scan_obj.currentScanMode == WIFI_PACKET_MONITOR) ||
+                  (wifi_scan_obj.currentScanMode == WIFI_SCAN_EAPOL)) {
+            if (wifi_scan_obj.set_channel < 14)
+              wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
+          }
+        }
+      #endif
+      if (d_btn.justPressed()){
         if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
             (wifi_scan_obj.currentScanMode == OTA_UPDATE)) {
-          if (current_menu->selected > 0) {
-            current_menu->selected--;
+          if (current_menu->selected < current_menu->list->size() - 1) {
+            current_menu->selected++;
+            this->buttonSelected(current_menu->selected - this->menu_start_index, current_menu->selected);
+            if (!current_menu->list->get(current_menu->selected - 1).selected)
+              this->buttonNotSelected(current_menu->selected - 1 - this->menu_start_index, current_menu->selected - 1);
+            // Page down
+            if (current_menu->selected - this->menu_start_index >= BUTTON_SCREEN_LIMIT) {
+              this->buildButtons(current_menu, current_menu->selected + 1 - BUTTON_SCREEN_LIMIT);
+              this->displayCurrentMenu(current_menu->selected + 1 - BUTTON_SCREEN_LIMIT);
+            }
+          }
+          // Loop to beginning
+          else {
+            if (current_menu->selected >= BUTTON_SCREEN_LIMIT) {
+              this->buildButtons(current_menu);
+              this->displayCurrentMenu();
+            }
+            current_menu->selected = 0;
             this->buttonSelected(current_menu->selected);
-            if (!current_menu->list->get(current_menu->selected + 1).selected)
-              this->buttonNotSelected(current_menu->selected + 1);
+            if (!current_menu->list->get(current_menu->list->size() - 1).selected)
+              this->buttonNotSelected(current_menu->list->size() - 1);
           }
         }
         else if ((wifi_scan_obj.currentScanMode == WIFI_PACKET_MONITOR) ||
                 (wifi_scan_obj.currentScanMode == WIFI_SCAN_EAPOL)) {
-          if (wifi_scan_obj.set_channel < 14)
-            wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
+          if (wifi_scan_obj.set_channel > 1)
+            wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
         }
+      }
+      if(c_btn_press){
+        current_menu->list->get(current_menu->selected).callable();
       }
     #endif
-    if (d_btn.justPressed()){
-      if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
-          (wifi_scan_obj.currentScanMode == OTA_UPDATE)) {
-        if (current_menu->selected < current_menu->list->size() - 1) {
-          current_menu->selected++;
-          this->buttonSelected(current_menu->selected);
-          if (!current_menu->list->get(current_menu->selected - 1).selected)
-            this->buttonNotSelected(current_menu->selected - 1);
-        }
-        else {
-          current_menu->selected = 0;
-          this->buttonSelected(current_menu->selected);
-          if (!current_menu->list->get(current_menu->list->size() - 1).selected)
-            this->buttonNotSelected(current_menu->list->size() - 1);
-        }
-      }
-      else if ((wifi_scan_obj.currentScanMode == WIFI_PACKET_MONITOR) ||
-               (wifi_scan_obj.currentScanMode == WIFI_SCAN_EAPOL)) {
-        if (wifi_scan_obj.set_channel > 1)
-          wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
-      }
-    }
-    if(c_btn_press){
-      current_menu->list->get(current_menu->selected).callable();
-    }
-
   #endif
 }
 
@@ -819,6 +857,9 @@ void MenuFunctions::updateStatusBar()
         display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR);
 
         display_obj.tft.drawString(gps_obj.getNumSatsString(), 22, 0, 2);
+      #elif defined(HAS_SCREEN)
+        display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR);
+        display_obj.tft.drawString("GPS", 0, 0, 1);
       #endif
     }
   #endif
@@ -828,7 +869,7 @@ void MenuFunctions::updateStatusBar()
   // WiFi Channel Stuff
   if (wifi_scan_obj.set_channel != wifi_scan_obj.old_channel) {
     wifi_scan_obj.old_channel = wifi_scan_obj.set_channel;
-    display_obj.tft.fillRect(50, 0, 50, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+    display_obj.tft.fillRect(50, 0, TFT_WIDTH * 0.21, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
     #ifdef HAS_ILI9341
       display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.set_channel, 50, 0, 2);
     #endif
@@ -1178,11 +1219,13 @@ void MenuFunctions::RunSetup()
       wifi_scan_obj.StartScan(WIFI_PACKET_MONITOR, TFT_BLUE);
     });
   #endif
-  /*this->addNodes(&wifiSnifferMenu, text_table1[47], TFT_RED, NULL, PWNAGOTCHI, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_PWN, TFT_RED);
-  });*/
+  #ifndef HAS_ILI9341
+    this->addNodes(&wifiSnifferMenu, text_table1[47], TFT_RED, NULL, PWNAGOTCHI, [this]() {
+      display_obj.clearScreen();
+      this->drawStatusBar();
+      wifi_scan_obj.StartScan(WIFI_SCAN_PWN, TFT_RED);
+    });
+  #endif
   this->addNodes(&wifiSnifferMenu, text_table1[49], TFT_MAGENTA, NULL, BEACON_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
@@ -1581,6 +1624,7 @@ void MenuFunctions::buildButtons(Menu * menu, int starting_index)
 {
   if (menu->list != NULL)
   {
+    this->menu_start_index = starting_index;
     for (uint8_t i = 0; i < menu->list->size(); i++)
     {
       TFT_eSPI_Button new_button;
@@ -1603,7 +1647,7 @@ void MenuFunctions::buildButtons(Menu * menu, int starting_index)
 }
 
 
-void MenuFunctions::displayCurrentMenu()
+void MenuFunctions::displayCurrentMenu(uint8_t start_index)
 {
   //Serial.println(F("Displaying current menu..."));
   display_obj.clearScreen();
@@ -1621,7 +1665,7 @@ void MenuFunctions::displayCurrentMenu()
       display_obj.tft.setFreeFont(NULL);
       display_obj.tft.setTextSize(1);
     #endif
-    for (uint8_t i = 0; i < current_menu->list->size(); i++)
+    for (uint8_t i = start_index; i < current_menu->list->size(); i++)
     {
       #ifdef HAS_ILI9341
         if (!current_menu->list->get(i).selected)
@@ -1642,9 +1686,9 @@ void MenuFunctions::displayCurrentMenu()
 
       #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC)
         if ((current_menu->selected == i) || (current_menu->list->get(i).selected))
-          display_obj.key[i].drawButton(true, current_menu->list->get(i).name);
+          display_obj.key[i - start_index].drawButton(true, current_menu->list->get(i).name);
         else 
-          display_obj.key[i].drawButton(false, current_menu->list->get(i).name);
+          display_obj.key[i - start_index].drawButton(false, current_menu->list->get(i).name);
       #endif
     }
     display_obj.tft.setFreeFont(NULL);
