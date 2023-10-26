@@ -661,6 +661,7 @@ void MenuFunctions::main(uint32_t currentTime)
               (wifi_scan_obj.currentScanMode == OTA_UPDATE)) {
             if (current_menu->selected > 0) {
               current_menu->selected--;
+              // Page up
               if (current_menu->selected < this->menu_start_index) {
                 this->buildButtons(current_menu, current_menu->selected);
                 this->displayCurrentMenu(current_menu->selected);
@@ -668,6 +669,17 @@ void MenuFunctions::main(uint32_t currentTime)
               this->buttonSelected(current_menu->selected - this->menu_start_index, current_menu->selected);
               if (!current_menu->list->get(current_menu->selected + 1).selected)
                 this->buttonNotSelected(current_menu->selected + 1 - this->menu_start_index, current_menu->selected + 1);
+            }
+            // Loop to end
+            else {
+              current_menu->selected = current_menu->list->size() - 1;
+              if (current_menu->selected >= BUTTON_SCREEN_LIMIT) {
+                this->buildButtons(current_menu, current_menu->selected + 1 - BUTTON_SCREEN_LIMIT);
+                this->displayCurrentMenu(current_menu->selected + 1 - BUTTON_SCREEN_LIMIT);
+              }
+              this->buttonSelected(current_menu->selected, current_menu->selected);
+              if (!current_menu->list->get(0).selected)
+                this->buttonNotSelected(0);
             }
           }
           else if ((wifi_scan_obj.currentScanMode == WIFI_PACKET_MONITOR) ||
@@ -685,11 +697,13 @@ void MenuFunctions::main(uint32_t currentTime)
             this->buttonSelected(current_menu->selected - this->menu_start_index, current_menu->selected);
             if (!current_menu->list->get(current_menu->selected - 1).selected)
               this->buttonNotSelected(current_menu->selected - 1 - this->menu_start_index, current_menu->selected - 1);
+            // Page down
             if (current_menu->selected >= BUTTON_SCREEN_LIMIT) {
               this->buildButtons(current_menu, current_menu->selected + 1 - BUTTON_SCREEN_LIMIT);
               this->displayCurrentMenu(current_menu->selected + 1 - BUTTON_SCREEN_LIMIT);
             }
           }
+          // Loop to beginning
           else {
             if (current_menu->selected >= BUTTON_SCREEN_LIMIT) {
               this->buildButtons(current_menu);
