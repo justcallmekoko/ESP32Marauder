@@ -518,9 +518,11 @@ void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_
     display_obj.initScrollValues(true);
     display_obj.tft.setTextWrap(false);
     display_obj.tft.setTextColor(TFT_BLACK, color);
-    display_obj.tft.fillRect(0,16,240,16, color);
-    display_obj.tft.drawCentreString((String)title_string,120,16,2);
-    display_obj.touchToExit();
+    #ifdef HAS_ILI9341
+      display_obj.tft.fillRect(0,16,240,16, color);
+      display_obj.tft.drawCentreString((String)title_string,120,16,2);
+      display_obj.touchToExit();
+    #endif
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
   #endif
 
@@ -1857,9 +1859,11 @@ void WiFiScan::RunSourApple(uint8_t scan_mode, uint16_t color) {
       display_obj.initScrollValues(true);
       display_obj.tft.setTextWrap(false);
       display_obj.tft.setTextColor(TFT_BLACK, color);
-      display_obj.tft.fillRect(0,16,240,16, color);
-      display_obj.tft.drawCentreString("Sour Apple",120,16,2);
-      display_obj.touchToExit();
+      #ifdef HAS_ILI9341
+        display_obj.tft.fillRect(0,16,240,16, color);
+        display_obj.tft.drawCentreString("Sour Apple",120,16,2);
+        display_obj.touchToExit();
+      #endif
       display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
     #endif
 
@@ -1877,9 +1881,11 @@ void WiFiScan::RunSwiftpairSpam(uint8_t scan_mode, uint16_t color) {
       display_obj.initScrollValues(true);
       display_obj.tft.setTextWrap(false);
       display_obj.tft.setTextColor(TFT_BLACK, color);
-      display_obj.tft.fillRect(0,16,240,16, color);
-      display_obj.tft.drawCentreString("Swiftpair Spam",120,16,2);
-      display_obj.touchToExit();
+      #ifdef HAS_ILI9341
+        display_obj.tft.fillRect(0,16,240,16, color);
+        display_obj.tft.drawCentreString("Swiftpair Spam",120,16,2);
+        display_obj.touchToExit();
+      #endif
       display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
     #endif
 
