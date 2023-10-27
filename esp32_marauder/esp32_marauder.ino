@@ -305,8 +305,6 @@ void setup()
         display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
       #endif
     }
-  #else
-    return;
   #endif
 
   #ifdef HAS_BATTERY
@@ -389,7 +387,7 @@ void loop()
   currentTime = millis();
   bool mini = false;
 
-  #ifdef MARAUDER_MINI
+  #ifdef SCREEN_BUFFER
     mini = true;
   #endif
 
