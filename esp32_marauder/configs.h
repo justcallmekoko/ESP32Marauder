@@ -36,7 +36,7 @@
     #define HAS_SD
     #define USE_SD
     #define HAS_TEMP_SENSOR
-    //#define HAS_GPS
+    #define HAS_GPS
   #endif
 
   #ifdef MARAUDER_MINI
@@ -824,6 +824,11 @@
       #endif
       #define GPS_TX 9
       #define GPS_RX 21
+      #define mac_history_len 512
+    #elif defined(MARAUDER_M5STICKC)
+      #define GPS_SERIAL_INDEX 1
+      #define GPS_TX 33
+      #define GPS_RX 32
       #define mac_history_len 512
     #endif
   #else
