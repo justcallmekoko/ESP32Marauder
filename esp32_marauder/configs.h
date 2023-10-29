@@ -30,7 +30,7 @@
     #define HAS_BATTERY
     #define HAS_BT
     #define HAS_BUTTONS
-    #define HAS_NEOPIXEL_LED
+    //#define HAS_NEOPIXEL_LED
     #define HAS_PWR_MGMT
     #define HAS_SCREEN
     #define HAS_SD
@@ -238,8 +238,8 @@
       #define TFT_CS 5
       #define TFT_DC 23
       #define TFT_RST 18
-      #define TFT_BL 10
-      #define TOUCH_CS 10
+      #define TFT_BL -1
+      #define TOUCH_CS -1
       //#define SD_CS 1
 
       #define SCREEN_BUFFER

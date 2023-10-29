@@ -39,6 +39,8 @@ https://www.online-utility.org/image/convert/to/XBM
   #include "flipperLED.h"
 #elif defined(XIAO_ESP32_S3)
   #include "xiaoLED.h"
+#elif defined(MARAUDER_M5STICKC)
+  #include "stickcLED.h"
 #else
   #include "LedInterface.h"
 #endif
@@ -121,6 +123,8 @@ CommandLine cli_obj;
   flipperLED flipper_led;
 #elif defined(XIAO_ESP32_S3)
   xiaoLED xiao_led;
+#elif defined(MARAUDER_M5STICKC)
+  stickcLED stickc_led;
 #else
   LedInterface led_obj;
 #endif
@@ -339,6 +343,8 @@ void setup()
     flipper_led.RunSetup();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.RunSetup();
+  #elif defined(MARAUDER_M5STICKC)
+    stickc_led.RunSetup();
   #else
     led_obj.RunSetup();
   #endif
@@ -435,6 +441,8 @@ void loop()
     flipper_led.main();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.main();
+  #elif defined(MARAUDER_M5STICKC)
+    stickc_led.main();
   #else
     led_obj.main(currentTime);
   #endif
