@@ -686,6 +686,8 @@ void MenuFunctions::main(uint32_t currentTime)
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_EAPOL)) {
             if (wifi_scan_obj.set_channel < 14)
               wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
+            else
+              wifi_scan_obj.changeChannel(1);
           }
         }
       #endif
@@ -719,6 +721,8 @@ void MenuFunctions::main(uint32_t currentTime)
                 (wifi_scan_obj.currentScanMode == WIFI_SCAN_EAPOL)) {
           if (wifi_scan_obj.set_channel > 1)
             wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
+          else
+            wifi_scan_obj.changeChannel(14);
         }
       }
       if(c_btn_press){
