@@ -464,7 +464,7 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
   else if (scan_mode == WIFI_ATTACK_RICK_ROLL)
     this->startWiFiAttacks(scan_mode, color, text_table1[52]);
   else if (scan_mode == WIFI_ATTACK_AUTH)
-    this->startWiFiAttacks(scan_mode, color, text_table4[7]);
+    this->startWiFiAttacks(scan_mode, color, text_table1[53]);
   else if (scan_mode == WIFI_ATTACK_DEAUTH)
     this->startWiFiAttacks(scan_mode, color, text_table4[8]);
   else if (scan_mode == WIFI_ATTACK_DEAUTH_MANUAL)
@@ -483,7 +483,8 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
       RunSourApple(scan_mode, color);
     #endif
   }
-  else if (scan_mode == BT_ATTACK_SWIFTPAIR_SPAM) {
+  else if ((scan_mode == BT_ATTACK_SWIFTPAIR_SPAM) || 
+           (scan_mode == BT_ATTACK_KITCHEN_SINK)) {
     #ifdef HAS_BT
       RunSwiftpairSpam(scan_mode, color);
     #endif
@@ -661,6 +662,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   else if ((currentScanMode == BT_SCAN_ALL) ||
   (currentScanMode == BT_ATTACK_SOUR_APPLE) ||
   (currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
+  (currentScanMode == BT_ATTACK_KITCHEN_SINK) ||
   (currentScanMode == BT_SCAN_WAR_DRIVE) ||
   (currentScanMode == BT_SCAN_WAR_DRIVE_CONT) ||
   (currentScanMode == BT_SCAN_SKIMMERS))
@@ -1458,6 +1460,11 @@ void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color)
 
 void WiFiScan::executeSourApple() {
   #ifdef HAS_BT
+    NimBLEDevice::init("");
+    NimBLEServer *pServer = NimBLEDevice::createServer();
+
+    pAdvertising = pServer->getAdvertising();
+
     delay(40);
     NimBLEAdvertisementData advertisementData = getOAdvertisementData();
     pAdvertising->setAdvertisementData(advertisementData);
@@ -1872,10 +1879,10 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
 
 void WiFiScan::RunSourApple(uint8_t scan_mode, uint16_t color) {
   #ifdef HAS_BT
-    NimBLEDevice::init("");
+    /*NimBLEDevice::init("");
     NimBLEServer *pServer = NimBLEDevice::createServer();
 
-    pAdvertising = pServer->getAdvertising();
+    pAdvertising = pServer->getAdvertising();*/
 
     #ifdef HAS_SCREEN
       display_obj.TOP_FIXED_AREA_2 = 48;
@@ -1909,7 +1916,10 @@ void WiFiScan::RunSwiftpairSpam(uint8_t scan_mode, uint16_t color) {
       display_obj.tft.setTextColor(TFT_BLACK, color);
       #ifdef HAS_ILI9341
         display_obj.tft.fillRect(0,16,240,16, color);
-        display_obj.tft.drawCentreString("Swiftpair Spam",120,16,2);
+        if (scan_mode == BT_ATTACK_SWIFTPAIR_SPAM)
+          display_obj.tft.drawCentreString("Swiftpair Spam",120,16,2);
+        else if (scan_mode == BT_ATTACK_KITCHEN_SINK)
+          display_obj.tft.drawCentreString("BLE Kitchen Sink Spam",120,16,2);
         display_obj.touchToExit();
       #endif
       display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
@@ -4255,7 +4265,9 @@ void WiFiScan::main(uint32_t currentTime)
       channelHop();
     }
   }
-  else if (currentScanMode == BT_ATTACK_SOUR_APPLE) {
+  else if ((currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
+           (currentScanMode == BT_ATTACK_SOUR_APPLE) ||
+           (currentScanMode == BT_ATTACK_KITCHEN_SINK)) {
     #ifdef HAS_BT
       if (currentTime - initTime >= 1000) {
         initTime = millis();
@@ -4271,26 +4283,13 @@ void WiFiScan::main(uint32_t currentTime)
         #endif
       }
 
-      this->executeSourApple();
-    #endif
-  }
-  else if (currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) {
-    #ifdef HAS_BT
-      if (currentTime - initTime >= 1000) {
-        initTime = millis();
-        String displayString = "";
-        String displayString2 = "";
-        displayString.concat("Advertising Data...");
-        for (int x = 0; x < STANDARD_FONT_CHAR_LIMIT; x++)
-          displayString2.concat(" ");
-        #ifdef HAS_SCREEN
-          display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
-          display_obj.showCenterText(displayString2, 160);
-          display_obj.showCenterText(displayString, 160);
-        #endif
-      }
+      if ((currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
+          (currentScanMode == BT_ATTACK_KITCHEN_SINK))
+        this->executeSwiftpairSpam();
 
-      this->executeSwiftpairSpam();
+      if ((currentScanMode == BT_ATTACK_SOUR_APPLE) ||
+          (currentScanMode == BT_ATTACK_KITCHEN_SINK))
+        this->executeSourApple();
     #endif
   }
   else if (currentScanMode == WIFI_SCAN_WAR_DRIVE) {
@@ -4507,6 +4506,17 @@ void WiFiScan::main(uint32_t currentTime)
     if (currentTime - initTime >= 1000)
     {
       initTime = millis();
+      String displayString = "";
+      String displayString2 = "";
+      displayString.concat(text18);
+      displayString.concat(packets_sent);
+      for (int x = 0; x < STANDARD_FONT_CHAR_LIMIT; x++)
+        displayString2.concat(" ");
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+        display_obj.showCenterText(displayString2, 160);
+        display_obj.showCenterText(displayString, 160);
+      #endif
       packets_sent = 0;
     }
   }
