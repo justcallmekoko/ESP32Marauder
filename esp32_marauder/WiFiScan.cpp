@@ -484,7 +484,7 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     #endif
   }
   else if ((scan_mode == BT_ATTACK_SWIFTPAIR_SPAM) || 
-           (scan_mode == BT_ATTACK_KITCHEN_SINK)) {
+           (scan_mode == BT_ATTACK_SPAM_ALL)) {
     #ifdef HAS_BT
       RunSwiftpairSpam(scan_mode, color);
     #endif
@@ -662,7 +662,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   else if ((currentScanMode == BT_SCAN_ALL) ||
   (currentScanMode == BT_ATTACK_SOUR_APPLE) ||
   (currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
-  (currentScanMode == BT_ATTACK_KITCHEN_SINK) ||
+  (currentScanMode == BT_ATTACK_SPAM_ALL) ||
   (currentScanMode == BT_SCAN_WAR_DRIVE) ||
   (currentScanMode == BT_SCAN_WAR_DRIVE_CONT) ||
   (currentScanMode == BT_SCAN_SKIMMERS))
@@ -1918,8 +1918,8 @@ void WiFiScan::RunSwiftpairSpam(uint8_t scan_mode, uint16_t color) {
         display_obj.tft.fillRect(0,16,240,16, color);
         if (scan_mode == BT_ATTACK_SWIFTPAIR_SPAM)
           display_obj.tft.drawCentreString("Swiftpair Spam",120,16,2);
-        else if (scan_mode == BT_ATTACK_KITCHEN_SINK)
-          display_obj.tft.drawCentreString("BLE Kitchen Sink Spam",120,16,2);
+        else if (scan_mode == BT_ATTACK_SPAM_ALL)
+          display_obj.tft.drawCentreString("BLE Spam All",120,16,2);
         display_obj.touchToExit();
       #endif
       display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
@@ -4267,7 +4267,7 @@ void WiFiScan::main(uint32_t currentTime)
   }
   else if ((currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
            (currentScanMode == BT_ATTACK_SOUR_APPLE) ||
-           (currentScanMode == BT_ATTACK_KITCHEN_SINK)) {
+           (currentScanMode == BT_ATTACK_SPAM_ALL)) {
     #ifdef HAS_BT
       if (currentTime - initTime >= 1000) {
         initTime = millis();
@@ -4284,11 +4284,11 @@ void WiFiScan::main(uint32_t currentTime)
       }
 
       if ((currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
-          (currentScanMode == BT_ATTACK_KITCHEN_SINK))
+          (currentScanMode == BT_ATTACK_SPAM_ALL))
         this->executeSwiftpairSpam();
 
       if ((currentScanMode == BT_ATTACK_SOUR_APPLE) ||
-          (currentScanMode == BT_ATTACK_KITCHEN_SINK))
+          (currentScanMode == BT_ATTACK_SPAM_ALL))
         this->executeSourApple();
     #endif
   }
