@@ -83,7 +83,6 @@ class EvilPortal {
 
     bool has_html;
     bool has_ap;
-    bool using_serial_html;
 
     DNSServer dnsServer;
 
@@ -101,6 +100,8 @@ class EvilPortal {
     EvilPortal();
 
     String target_html_name = "index.html";
+
+    bool using_serial_html;
 
     String get_user_name();
     String get_password();
