@@ -12,11 +12,11 @@
   //#define MARAUDER_M5STICKC
   //#define MARAUDER_MINI
   //#define MARAUDER_V4
-  #define MARAUDER_V6
+  //#define MARAUDER_V6
   //#define MARAUDER_V6_1
   //#define MARAUDER_KIT
   //#define GENERIC_ESP32
-  //#define MARAUDER_FLIPPER
+  #define MARAUDER_FLIPPER
   //#define ESP32_LDDB
   //#define MARAUDER_DEV_BOARD_PRO
   //#define XIAO_ESP32_S3
@@ -114,7 +114,7 @@
     //#define HAS_BATTERY
     //#define HAS_BT
     //#define HAS_BUTTONS
-    //#define HAS_NEOPIXEL_LED
+    #define HAS_NEOPIXEL_LED
     //#define HAS_PWR_MGMT
     //#define HAS_SCREEN
     #define HAS_GPS
@@ -748,7 +748,7 @@
     #elif defined(MARAUDER_DEV_BOARD_PRO)
       #define PIN 16
     #else
-      #define PIN 25
+      #define PIN 21
     #endif
   
   #endif
