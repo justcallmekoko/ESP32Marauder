@@ -83,6 +83,7 @@ class EvilPortal {
 
     bool has_html;
     bool has_ap;
+    bool using_serial_html;
 
     DNSServer dnsServer;
 
@@ -106,6 +107,7 @@ class EvilPortal {
     void addLog(String log, int len);
     bool begin(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_points);
     void main(uint8_t scan_mode);
+    void setHtmlFromSerial();
 
 };
 
