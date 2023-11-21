@@ -6,13 +6,13 @@
 
   //Indicates that it must redirect the stream with the captured packets to serial (1)
   //If not defined, will write packages to SD card if supported
-  //#define WRITE_PACKETS_SERIAL
+  #define WRITE_PACKETS_SERIAL
   
   //// BOARD TARGETS
   //#define MARAUDER_M5STICKC
   //#define MARAUDER_MINI
-  //#define MARAUDER_V4
-  #define MARAUDER_V6
+  #define MARAUDER_V4
+  //#define MARAUDER_V6
   //#define MARAUDER_V6_1
   //#define MARAUDER_KIT
   //#define GENERIC_ESP32
@@ -20,6 +20,7 @@
   //#define ESP32_LDDB
   //#define MARAUDER_DEV_BOARD_PRO
   //#define XIAO_ESP32_S3
+  #define ESP32_WROOM32
   //// END BOARD TARGETS
 
   #define MARAUDER_VERSION "v0.13.5"
@@ -759,6 +760,12 @@
     #ifdef USE_FLIPPER_SD
       #define XIAO_RX1 1
       #define XIAO_TX1 2
+    #endif
+  #endif
+  #ifdef ESP32_WROOM32
+    #ifdef WRITE_PACKETS_SERIAL
+      #define WROOM32_RX1 16
+      #define WROOM32_TX1 17
     #endif
   #endif
   //// END BOARD PIN OVERRIDES

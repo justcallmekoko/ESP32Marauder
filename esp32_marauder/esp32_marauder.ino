@@ -203,6 +203,8 @@ void setup()
     
     #ifdef XIAO_ESP32_S3
       Serial1.begin(115200, SERIAL_8N1, XIAO_RX1, XIAO_TX1);
+    #elif defined(ESP32_WROOM32)
+      Serial1.begin(115200, SERIAL_8N1, WROOM32_RX1, WROOM32_TX1);
     #else
       Serial1.begin(115200);
     #endif
