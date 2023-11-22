@@ -103,8 +103,11 @@ class EvilPortal {
 
     bool using_serial_html;
 
+    LinkedList<String>* html_files;
+
     String get_user_name();
     String get_password();
+    void setup();
     void addLog(String log, int len);
     bool begin(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_points);
     void main(uint8_t scan_mode);
