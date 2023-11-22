@@ -1238,6 +1238,7 @@ void WiFiScan::RunInfo()
     display_obj.tft.setTextColor(TFT_CYAN);
     display_obj.tft.println(text_table4[20]);
     display_obj.tft.println(text_table4[21] + display_obj.version_number);
+    display_obj.tft.println("Hardware: " + (String)HARDWARE_NAME);
     display_obj.tft.println(text_table4[22] + (String)esp_get_idf_version());
   #endif
 
