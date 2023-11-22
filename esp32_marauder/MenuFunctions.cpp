@@ -1085,7 +1085,6 @@ void MenuFunctions::displaySetting(String key, Menu* menu, int index) {
     
 }
 
-
 // Function to build the menus
 void MenuFunctions::RunSetup()
 {
@@ -1124,6 +1123,9 @@ void MenuFunctions::RunSetup()
   wifiGeneralMenu.list = new LinkedList<MenuNode>();
   wifiAPMenu.list = new LinkedList<MenuNode>();
 
+  // WiFi HTML menu stuff
+  htmlMenu.list = new LinkedList<MenuNode>();
+
   // Bluetooth menu stuff
   bluetoothSnifferMenu.list = new LinkedList<MenuNode>();
   bluetoothAttackMenu.list = new LinkedList<MenuNode>();
@@ -1157,6 +1159,7 @@ void MenuFunctions::RunSetup()
   #ifdef HAS_GPS
     gpsInfoMenu.name = "GPS Data";
   #endif  
+  htmlMenu.name = "EP HTML List";
 
   // Build Main Menu
   mainMenu.parentMenu = NULL;
@@ -1364,6 +1367,26 @@ void MenuFunctions::RunSetup()
       addStationGFX();
     });
   #else
+    this->addNodes(&wifiGeneralMenu, "Select EP HTML File", TFT_CYAN, NULL, KEYBOARD_ICO, [this](){
+      this->changeMenu(&htmlMenu);
+    });
+
+    htmlMenu.parentMenu = &wifiGeneralMenu;
+    this->addNodes(&htmlMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+      this->changeMenu(htmlMenu.parentMenu);
+    });
+
+    int loopLimit = min(evil_portal_obj.html_files->size(), BUTTON_ARRAY_LEN);
+
+    for (int i = 0; i < loopLimit - 1; i++) {
+      this->addNodes(&htmlMenu, evil_portal_obj.html_files->get(i), TFT_CYAN, NULL, 0, [this, i]() {
+        evil_portal_obj.target_html_name = (String)evil_portal_obj.html_files->get(i);
+        Serial.println("Set Evil Portal HTML as " + evil_portal_obj.target_html_name);
+        evil_portal_obj.using_serial_html = false;
+        this->changeMenu(htmlMenu.parentMenu);
+      });
+    }
+
     // Select APs on Mini
     this->addNodes(&wifiGeneralMenu, text_table1[56], TFT_NAVY, NULL, KEYBOARD_ICO, [this](){
       wifiAPMenu.list->clear();
@@ -1636,6 +1659,7 @@ void MenuFunctions::addNodes(Menu * menu, String name, uint16_t color, Menu * ch
 {
   TFT_eSPI_Button new_button;
   menu->list->add(MenuNode{name, false, color, place, &new_button, selected, callable});
+  //menu->list->add(MenuNode{name, false, color, place, selected, callable});
 }
 
 void MenuFunctions::buildButtons(Menu * menu, int starting_index)

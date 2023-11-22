@@ -143,6 +143,9 @@ class MenuFunctions
     Menu wifiGeneralMenu;
     Menu wifiAPMenu;
 
+    // WiFi General Menu
+    Menu htmlMenu;
+
     // Bluetooth menu stuff
     Menu bluetoothSnifferMenu;
     Menu bluetoothAttackMenu;
