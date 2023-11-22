@@ -87,6 +87,7 @@
 #define BT_ATTACK_SOUR_APPLE 36
 #define BT_ATTACK_SWIFTPAIR_SPAM 37
 #define BT_ATTACK_SPAM_ALL 38
+#define BT_ATTACK_SAMSUNG_SPAM 39
 
 #define GRAPH_REFRESH 100
 
@@ -253,13 +254,40 @@ class WiFiScan
                               0xf0, 0xff, 0x02, 0x00
                           };
 
+    #ifdef HAS_BT
+      enum EBLEPayloadType
+      {
+        Microsoft,
+        Apple,
+        Samsung,
+        Google
+      };
+
+      struct BLEData
+      {
+        NimBLEAdvertisementData AdvData;
+        NimBLEAdvertisementData ScanData;
+      };
+
+      struct WatchModel
+      {
+          uint8_t value;
+          const char *name;
+      };
+
+      WatchModel* watch_models = nullptr;
+
+      static void scanCompleteCB(BLEScanResults scanResults);
+      NimBLEAdvertisementData GetUniversalAdvertisementData(EBLEPayloadType type);
+    #endif
+
     bool seen_mac(unsigned char* mac);
     bool mac_cmp(struct mac_addr addr1, struct mac_addr addr2);
     void save_mac(unsigned char* mac);
     void clearMacHistory();
     void executeWarDrive();
     void executeSourApple();
-    void executeSwiftpairSpam();
+    void executeSwiftpairSpam(EBLEPayloadType type);
     void startWardriverWiFi();
     void generateRandomMac(uint8_t* mac);
 
@@ -298,32 +326,6 @@ class WiFiScan
     void RunLvJoinWiFi(uint8_t scan_mode, uint16_t color);
     void RunEvilPortal(uint8_t scan_mode, uint16_t color);
     bool checkMem();
-    #ifdef HAS_BT
-      enum EBLEPayloadType
-      {
-        Microsoft,
-        Apple,
-        Samsung,
-        Google
-      };
-
-      struct BLEData
-      {
-        NimBLEAdvertisementData AdvData;
-        NimBLEAdvertisementData ScanData;
-      };
-
-      struct WatchModel
-      {
-          uint8_t value;
-          const char *name;
-      };
-
-      WatchModel* watch_models = nullptr;
-
-      static void scanCompleteCB(BLEScanResults scanResults);
-      NimBLEAdvertisementData GetUniversalAdvertisementData(EBLEPayloadType type);
-    #endif
 
 
   public:

