@@ -196,7 +196,7 @@ class MenuFunctions
     void addSSIDGFX();
     void addAPGFX();
     void addStationGFX();
-    void buildButtons(Menu* menu, int starting_index = 0);
+    void buildButtons(Menu* menu, int starting_index = 0, String button_name = "");
     void changeMenu(Menu* menu);
     void drawStatusBar();
     void displayCurrentMenu(uint8_t start_index = 0);

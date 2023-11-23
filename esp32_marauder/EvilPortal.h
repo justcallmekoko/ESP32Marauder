@@ -100,6 +100,7 @@ class EvilPortal {
     EvilPortal();
 
     String target_html_name = "index.html";
+    uint8_t selected_html_index = 0;
 
     bool using_serial_html;
 

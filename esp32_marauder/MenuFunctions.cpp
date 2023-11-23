@@ -1369,6 +1369,45 @@ void MenuFunctions::RunSetup()
   #else
     this->addNodes(&wifiGeneralMenu, "Select EP HTML File", TFT_CYAN, NULL, KEYBOARD_ICO, [this](){
       this->changeMenu(&htmlMenu);
+      #ifdef HAS_BUTTONS
+        #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1))
+          while(true) {
+            if (d_btn.justPressed()) {
+              if (evil_portal_obj.selected_html_index > 0)
+                evil_portal_obj.selected_html_index--;
+              else
+                evil_portal_obj.selected_html_index = evil_portal_obj.html_files->size() - 1;
+
+              //Serial.println("Setting button text as " + evil_portal_obj.html_files->get(evil_portal_obj.selected_html_index));
+              this->htmlMenu.list->set(0, MenuNode{evil_portal_obj.html_files->get(evil_portal_obj.selected_html_index), false, TFT_CYAN, 0, NULL, true, NULL});
+              this->buildButtons(&htmlMenu);
+              this->displayCurrentMenu();
+            }
+            #ifndef MARAUDER_M5STICKC
+              if (u_btn.justPressed()) {
+                if (evil_portal_obj.selected_html_index < evil_portal_obj.html_files->size() - 1)
+                  evil_portal_obj.selected_html_index++;
+                else
+                  evil_portal_obj.selected_html_index = 0;
+
+                //Serial.println("Setting button text as " + evil_portal_obj.html_files->get(evil_portal_obj.selected_html_index));
+                this->htmlMenu.list->set(0, MenuNode{evil_portal_obj.html_files->get(evil_portal_obj.selected_html_index), false, TFT_CYAN, 0, NULL, true, NULL});
+                this->buildButtons(&htmlMenu, 0, evil_portal_obj.html_files->get(evil_portal_obj.selected_html_index));
+                this->displayCurrentMenu();
+              }
+            #endif
+            if (c_btn.justPressed()) {
+              if (evil_portal_obj.html_files->get(evil_portal_obj.selected_html_index) != "Back") {
+                evil_portal_obj.target_html_name = evil_portal_obj.html_files->get(evil_portal_obj.selected_html_index);
+                Serial.println("Set Evil Portal HTML as " + evil_portal_obj.target_html_name);
+                evil_portal_obj.using_serial_html = false;
+              }
+              this->changeMenu(htmlMenu.parentMenu);
+              break;
+            }
+          }
+        #endif
+      #endif
     });
 
     htmlMenu.parentMenu = &wifiGeneralMenu;
@@ -1376,7 +1415,7 @@ void MenuFunctions::RunSetup()
       this->changeMenu(htmlMenu.parentMenu);
     });
 
-    int loopLimit = min(evil_portal_obj.html_files->size(), BUTTON_ARRAY_LEN);
+    /*int loopLimit = min(evil_portal_obj.html_files->size(), BUTTON_ARRAY_LEN);
 
     for (int i = 0; i < loopLimit - 1; i++) {
       this->addNodes(&htmlMenu, evil_portal_obj.html_files->get(i), TFT_CYAN, NULL, 0, [this, i]() {
@@ -1385,7 +1424,7 @@ void MenuFunctions::RunSetup()
         evil_portal_obj.using_serial_html = false;
         this->changeMenu(htmlMenu.parentMenu);
       });
-    }
+    }*/
 
     // Select APs on Mini
     this->addNodes(&wifiGeneralMenu, text_table1[56], TFT_NAVY, NULL, KEYBOARD_ICO, [this](){
@@ -1662,7 +1701,7 @@ void MenuFunctions::addNodes(Menu * menu, String name, uint16_t color, Menu * ch
   //menu->list->add(MenuNode{name, false, color, place, selected, callable});
 }
 
-void MenuFunctions::buildButtons(Menu * menu, int starting_index)
+void MenuFunctions::buildButtons(Menu * menu, int starting_index, String button_name)
 {
   if (menu->list != NULL)
   {
@@ -1671,7 +1710,10 @@ void MenuFunctions::buildButtons(Menu * menu, int starting_index)
     {
       TFT_eSPI_Button new_button;
       char buf[menu->list->get(starting_index + i).name.length() + 1] = {};
-      menu->list->get(starting_index + i).name.toCharArray(buf, menu->list->get(starting_index + i).name.length() + 1);
+      if (button_name != "")
+        menu->list->get(starting_index + i).name.toCharArray(buf, menu->list->get(starting_index + i).name.length() + 1);
+      else
+        button_name.toCharArray(buf, button_name.length() + 1);
       display_obj.key[i].initButton(&display_obj.tft,
                                     KEY_X + 0 * (KEY_W + KEY_SPACING_X),
                                     KEY_Y + i * (KEY_H + KEY_SPACING_Y), // x, y, w, h, outline, fill, text
