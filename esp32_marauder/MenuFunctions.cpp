@@ -222,6 +222,86 @@ MenuFunctions::MenuFunctions()
       }
     }
   }
+
+  // GFX Function to build a list showing all EP HTML Files
+  void MenuFunctions::selectEPHTMLGFX() {
+    extern EvilPortal evil_portal_obj;
+  
+    lv_obj_t * list1 = lv_list_create(lv_scr_act(), NULL);
+    lv_obj_set_size(list1, 160, 200);
+    lv_obj_set_width(list1, LV_HOR_RES);
+    lv_obj_align(list1, NULL, LV_ALIGN_CENTER, 0, 0);
+  
+    lv_obj_t * list_btn;
+  
+    lv_obj_t * label;
+  
+    list_btn = lv_list_add_btn(list1, LV_SYMBOL_CLOSE, text09);
+    lv_obj_set_event_cb(list_btn, html_list_cb);
+  
+    for (int i = 1; i < evil_portal_obj.html_files->size(); i++) {
+      char buf[evil_portal_obj.html_files->get(i).length() + 1] = {};
+      evil_portal_obj.html_files->get(i).toCharArray(buf, evil_portal_obj.html_files->get(i).length() + 1);
+      
+      list_btn = lv_list_add_btn(list1, LV_SYMBOL_FILE, buf);
+      lv_btn_set_checkable(list_btn, true);
+      lv_obj_set_event_cb(list_btn, html_list_cb);
+  
+      if (i == evil_portal_obj.selected_html_index)
+        lv_btn_toggle(list_btn);
+    }
+  }
+
+  void html_list_cb(lv_obj_t * btn, lv_event_t event) {
+    extern EvilPortal evil_portal_obj;
+    extern MenuFunctions menu_function_obj;
+  
+    String btn_text = lv_list_get_btn_text(btn);
+    String display_string = "";
+    
+    if (event == LV_EVENT_CLICKED) {
+      if (btn_text != text09) {
+      }
+      else {
+        Serial.println("Exiting...");
+        lv_obj_del_async(lv_obj_get_parent(lv_obj_get_parent(btn)));
+  
+        for (int i = 1; i < evil_portal_obj.html_files->size(); i++) {
+          if (i == evil_portal_obj.selected_html_index) {
+            Serial.println("Selected: " + (String)evil_portal_obj.html_files->get(i));
+          }
+        }
+  
+        printf("LV_EVENT_CANCEL\n");
+        menu_function_obj.deinitLVGL();
+        wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+        display_obj.exit_draw = true; // set everything back to normal
+      }
+    }
+    
+    if (event == LV_EVENT_VALUE_CHANGED) {      
+      if (lv_btn_get_state(btn) == LV_BTN_STATE_CHECKED_RELEASED) {
+        for (int i = 1; i < evil_portal_obj.html_files->size(); i++) {
+          if (evil_portal_obj.html_files->get(i) == btn_text) {
+            Serial.println("Setting HTML: " + (String)evil_portal_obj.html_files->get(i));
+            evil_portal_obj.selected_html_index = i;
+            evil_portal_obj.target_html_name = (String)evil_portal_obj.html_files->get(i);
+          }
+        }
+
+        // Deselect buttons that were previously selected
+        lv_obj_t * list = lv_obj_get_parent(btn);
+
+        lv_obj_t * next_btn = lv_obj_get_child(list, NULL);
+        while (next_btn != NULL) {
+          if (next_btn != btn) {
+            lv_btn_set_state(next_btn, LV_BTN_STATE_RELEASED);
+          }
+          next_btn = lv_obj_get_child(list, next_btn);
+        }
+      }
+    }
+  }
   
   // GFX Function to build a list showing all APs scanned
   void MenuFunctions::addAPGFX(){
@@ -1365,6 +1445,12 @@ void MenuFunctions::RunSetup()
       wifi_scan_obj.currentScanMode = LV_ADD_SSID; 
       wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_RED);  
       addStationGFX();
+    });
+    this->addNodes(&wifiGeneralMenu, "Select EP HTML File", TFT_CYAN, NULL, KEYBOARD_ICO, [this](){
+      display_obj.clearScreen(); 
+      wifi_scan_obj.currentScanMode = LV_ADD_SSID; 
+      wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_RED);  
+      selectEPHTMLGFX();
     });
   #else
     this->addNodes(&wifiGeneralMenu, "Select EP HTML File", TFT_CYAN, NULL, KEYBOARD_ICO, [this](){
