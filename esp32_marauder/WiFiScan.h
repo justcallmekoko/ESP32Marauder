@@ -254,14 +254,15 @@ class WiFiScan
                               0xf0, 0xff, 0x02, 0x00
                           };
 
-    #ifdef HAS_BT
-      enum EBLEPayloadType
-      {
-        Microsoft,
-        Apple,
-        Samsung,
-        Google
-      };
+    enum EBLEPayloadType
+    {
+      Microsoft,
+      Apple,
+      Samsung,
+      Google
+    };
+
+      #ifdef HAS_BT
 
       struct BLEData
       {
