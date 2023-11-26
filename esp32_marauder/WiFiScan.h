@@ -86,6 +86,7 @@
 #define BT_ATTACK_SOUR_APPLE 36
 #define BT_ATTACK_SWIFTPAIR_SPAM 37
 #define BT_ATTACK_SPAM_ALL 38
+#define WIFI_SCAN_GPS_NMEA 39
 
 #define GRAPH_REFRESH 100
 
@@ -281,6 +282,7 @@ class WiFiScan
     void broadcastSetSSID(uint32_t current_time, const char* ESSID);
     void RunAPScan(uint8_t scan_mode, uint16_t color);
     void RunGPSInfo();
+    void RunGPSNmea();
     void RunMimicFlood(uint8_t scan_mode, uint16_t color);
     void RunPwnScan(uint8_t scan_mode, uint16_t color);
     void RunBeaconScan(uint8_t scan_mode, uint16_t color);
