@@ -100,12 +100,32 @@ File SDInterface::getFile(String path) {
   }
 }
 
+void SDInterface::listDirToLinkedList(LinkedList<String>* file_names, String str_dir, String ext) {
+  if (this->supported) {
+    File dir = SD.open(str_dir);
+    while (true)
+    {
+      File entry = dir.openNextFile();
+      if (!entry)
+      {
+        break;
+      }
+      if (ext != "") {
+        String file_name = entry.name();
+        if (file_name.endsWith(ext)) {
+          file_names->add(file_name);
+        }
+      }
+    }
+  }
+}
+
 void SDInterface::listDir(String str_dir){
   if (this->supported) {
     File dir = SD.open(str_dir);
     while (true)
     {
-      File entry =  dir.openNextFile();
+      File entry = dir.openNextFile();
       if (! entry)
       {
         break;

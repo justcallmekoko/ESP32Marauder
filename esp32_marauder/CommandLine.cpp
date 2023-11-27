@@ -254,6 +254,7 @@ void CommandLine::runCommand(String input) {
       Serial.println(HELP_BT_SNIFF_CMD);
       Serial.println(HELP_BT_SOUR_APPLE_CMD);
       Serial.println(HELP_BT_SWIFTPAIR_SPAM_CMD);
+      Serial.println(HELP_BT_SAMSUNG_SPAM_CMD);
       Serial.println(HELP_BT_SPAM_ALL_CMD);
       #ifdef HAS_GPS
         Serial.println(HELP_BT_WARDRIVE_CMD);
@@ -860,6 +861,18 @@ void CommandLine::runCommand(String input) {
           menu_function_obj.drawStatusBar();
         #endif
         wifi_scan_obj.StartScan(BT_ATTACK_SWIFTPAIR_SPAM, TFT_CYAN);
+      #else
+        Serial.println("Bluetooth not supported");
+      #endif
+    }
+    else if (cmd_args.get(0) == BT_SAMSUNG_SPAM_CMD) {
+      #ifdef HAS_BT
+        Serial.println("Starting Samsung Spam attack. Stop with " + (String)STOPSCAN_CMD);
+        #ifdef HAS_SCREEN
+          display_obj.clearScreen();
+          menu_function_obj.drawStatusBar();
+        #endif
+        wifi_scan_obj.StartScan(BT_ATTACK_SAMSUNG_SPAM, TFT_CYAN);
       #else
         Serial.println("Bluetooth not supported");
       #endif
