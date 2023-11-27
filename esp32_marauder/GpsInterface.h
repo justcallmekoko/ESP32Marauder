@@ -38,8 +38,8 @@ class GpsInterface {
     void sendSentence(const char* sentence);
     void sendSentence(Stream &s, const char* sentence);
 
-    const char* generateGXgga();
-    const char* generateGXrmc();
+    String generateGXgga();
+    String generateGXrmc();
 
     enum type_t {
       GPSTYPE_ALL,

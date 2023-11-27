@@ -107,7 +107,7 @@ void GpsInterface::setType(String t){
     this->type_flag=GPSTYPE_ALL;
 }
 
-const char* GpsInterface::generateGXgga(){
+String GpsInterface::generateGXgga(){
   String msg_type="$G";
   if(this->type_flag == GPSTYPE_GPS)
     msg_type+='P';
@@ -120,44 +120,44 @@ const char* GpsInterface::generateGXgga(){
   msg_type+="GGA,";
 
   char timeStr[8];
-  sprintf(timeStr, "%02d%02d%02d,", (int)(nmea.getHour()), (int)(nmea.getMinute()), (int)(nmea.getSecond()));
+  snprintf(timeStr, 8, "%02d%02d%02d,", (int)(nmea.getHour()), (int)(nmea.getMinute()), (int)(nmea.getSecond()));
 
   long lat = nmea.getLatitude();
   char latDir = lat < 0 ? 'S' : 'N';
   lat = abs(lat);
   char latStr[12];
-  sprintf(latStr, "%02ld%08.5f,", lat / 1000000, ((lat % 1000000)*60) / 1000000.0);
+  snprintf(latStr, 12, "%02ld%08.5f,", lat / 1000000, ((lat % 1000000)*60) / 1000000.0);
 
   long lon = nmea.getLongitude();
   char lonDir = lon < 0 ? 'W' : 'E';
   lon = abs(lon);
   char lonStr[13];
-  sprintf(lonStr, "%03ld%08.5f,", lon / 1000000, ((lon % 1000000)*60) / 1000000.0);
+  snprintf(lonStr, 13, "%03ld%08.5f,", lon / 1000000, ((lon % 1000000)*60) / 1000000.0);
 
   int fixQuality = nmea.isValid() ? 1 : 0;
   char fixStr[3];
-  sprintf(fixStr, "%01d,", fixQuality);
+  snprintf(fixStr, 3, "%01d,", fixQuality);
 
   int numSatellites = nmea.getNumSatellites();
   char satStr[4];
-  sprintf(satStr, "%02d,", numSatellites);
+  snprintf(satStr, 4, "%02d,", numSatellites);
 
   unsigned long hdop = nmea.getHDOP();
-  char hdopStr[14];
-  sprintf(hdopStr, "%01.2f,", 2.5 * (((float)(hdop))/10));
+  char hdopStr[13];
+  snprintf(hdopStr, 13, "%01.2f,", 2.5 * (((float)(hdop))/10));
 
   long altitude;
   if(!nmea.getAltitude(altitude)) altitude=0;
-  char altStr[14];
-  sprintf(altStr, "%01.1f,", altitude/1000.0);
+  char altStr[9];
+  snprintf(altStr, 9, "%01.1f,", altitude/1000.0);
 
-  String message = msg_type + timeStr + latStr + latDir + "," + lonStr + lonDir +
-                    "," + fixStr + satStr + hdopStr + altStr + "M,,M,,";
+  String message = msg_type + timeStr + latStr + latDir + ',' + lonStr + lonDir +
+                    ',' + fixStr + satStr + hdopStr + altStr + "M,,M,,";
 
-  return message.c_str();
+  return message;
 }
 
-const char* GpsInterface::generateGXrmc(){
+String GpsInterface::generateGXrmc(){
   String msg_type="$G";
   if(this->type_flag == GPSTYPE_GPS)
     msg_type+='P';
@@ -170,10 +170,10 @@ const char* GpsInterface::generateGXrmc(){
   msg_type+="RMC,";
 
   char timeStr[8];
-  sprintf(timeStr, "%02d%02d%02d,", (int)(nmea.getHour()), (int)(nmea.getMinute()), (int)(nmea.getSecond()));
+  snprintf(timeStr, 8, "%02d%02d%02d,", (int)(nmea.getHour()), (int)(nmea.getMinute()), (int)(nmea.getSecond()));
 
   char dateStr[8];
-  sprintf(dateStr, "%02d%02d%02d,", (int)(nmea.getDay()), (int)(nmea.getMonth()), (int)(nmea.getYear()%100));
+  snprintf(dateStr, 8, "%02d%02d%02d,", (int)(nmea.getDay()), (int)(nmea.getMonth()), (int)(nmea.getYear()%100));
 
   char status = nmea.isValid() ? 'A' : 'V';
   char mode = nmea.isValid() ? 'A' : 'N';
@@ -182,23 +182,23 @@ const char* GpsInterface::generateGXrmc(){
   char latDir = lat < 0 ? 'S' : 'N';
   lat = abs(lat);
   char latStr[12];
-  sprintf(latStr, "%02ld%08.5f,", lat / 1000000, ((lat % 1000000)*60) / 1000000.0);
+  snprintf(latStr, 12, "%02ld%08.5f,", lat / 1000000, ((lat % 1000000)*60) / 1000000.0);
 
   long lon = nmea.getLongitude();
   char lonDir = lon < 0 ? 'W' : 'E';
   lon = abs(lon);
   char lonStr[13];
-  sprintf(lonStr, "%03ld%08.5f,", lon / 1000000, ((lon % 1000000)*60) / 1000000.0);
+  snprintf(lonStr, 13, "%03ld%08.5f,", lon / 1000000, ((lon % 1000000)*60) / 1000000.0);
 
-  char speedStr[14];
-  sprintf(speedStr, "%01.1f,", nmea.getSpeed() / 1000.0);
+  char speedStr[8];
+  snprintf(speedStr, 8, "%01.1f,", nmea.getSpeed() / 1000.0);
 
-  char courseStr[14];
-  sprintf(courseStr, "%01.1f,", nmea.getCourse() / 1000.0);
+  char courseStr[7];
+  snprintf(courseStr, 7, "%01.1f,", nmea.getCourse() / 1000.0);
 
-  String message = msg_type + timeStr + status + "," + latStr + latDir + "," +
-                    lonStr + lonDir + "," + speedStr + courseStr + dateStr + ",," + mode;
-  return message.c_str();
+  String message = msg_type + timeStr + status + ',' + latStr + latDir + ',' +
+                    lonStr + lonDir + ',' + speedStr + courseStr + dateStr + ',' + ',' + mode;
+  return message;
 }
 
 // Thanks JosephHewitt

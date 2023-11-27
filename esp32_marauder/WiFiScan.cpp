@@ -1123,8 +1123,8 @@ void WiFiScan::RunGPSNmea() {
       }
     }
 
-    gps_obj.sendSentence(Serial, gps_obj.generateGXgga());
-    gps_obj.sendSentence(Serial, gps_obj.generateGXrmc());
+    gps_obj.sendSentence(Serial, gps_obj.generateGXgga().c_str());
+    gps_obj.sendSentence(Serial, gps_obj.generateGXrmc().c_str());
 
   #endif
 }

@@ -336,8 +336,8 @@ void CommandLine::runCommand(String input) {
             int notimp_arg = this->argSearch(&cmd_args, "-p");
             int recd_arg = this->argSearch(&cmd_args, "-r");
             if(notimp_arg == -1 && recd_arg == -1){
-              gps_obj.sendSentence(Serial, gps_obj.generateGXgga());
-              gps_obj.sendSentence(Serial, gps_obj.generateGXrmc());
+              gps_obj.sendSentence(Serial, gps_obj.generateGXgga().c_str());
+              gps_obj.sendSentence(Serial, gps_obj.generateGXrmc().c_str());
             }
             else if(notimp_arg == -1)
               Serial.println(gps_obj.getNmea());
@@ -355,7 +355,7 @@ void CommandLine::runCommand(String input) {
           else
             Serial.println("You did not provide a valid argument");
         }
-        else if(cmd_args.size()>0)
+        else if(cmd_args.size()>1)
           Serial.println("You did not provide a valid flag");
         else
           Serial.println("You did not provide an argument");
