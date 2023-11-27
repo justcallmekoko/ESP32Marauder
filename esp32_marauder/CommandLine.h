@@ -97,7 +97,7 @@ const char PROGMEM HELP_SETTINGS_CMD[] = "settings [-s <setting> enable/disable>
 const char PROGMEM HELP_LS_CMD[] = "ls <directory>";
 const char PROGMEM HELP_LED_CMD[] = "led -s <hex color>/-p <rainbow>";
 const char PROGMEM HELP_GPS_DATA_CMD[] = "gpsdata";
-const char PROGMEM HELP_GPS_CMD[] = "gps [-g] <fix/sat/lon/lat/alt/date/accuracy/nmea>";
+const char PROGMEM HELP_GPS_CMD[] = "gps [-g] <fix/sat/lon/lat/alt/date/accuracy/nmea> [-n] <all/gps/glonass/galileo>";
 const char PROGMEM HELP_NMEA_CMD[] = "nmea";
 
 // WiFi sniff/scan

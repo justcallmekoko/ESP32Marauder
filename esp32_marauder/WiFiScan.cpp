@@ -1188,6 +1188,22 @@ void WiFiScan::RunGPSNmea() {
       if(nmea_sentence != "" && nmea_sentence != old_nmea_sentence){
         old_nmea_sentence=nmea_sentence;
         Serial.println(nmea_sentence);
+        #ifdef HAS_SCREEN
+          // Get screen position ready
+          display_obj.tft.setTextWrap(true);
+          display_obj.tft.setFreeFont(NULL);
+          display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+          display_obj.tft.setTextSize(1);
+          display_obj.tft.setTextColor(TFT_CYAN);
+
+          // Clean up screen first
+          display_obj.tft.fillRect(0, (SCREEN_HEIGHT / 3) - 6, SCREEN_WIDTH, SCREEN_HEIGHT - ((SCREEN_HEIGHT / 3) - 6), TFT_BLACK);
+
+          display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+        
+          display_obj.tft.print(nmea_sentence);
+          display_obj.tft.setTextWrap(false);
+        #endif
       }
     }
 
