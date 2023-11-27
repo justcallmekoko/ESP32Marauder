@@ -1165,6 +1165,38 @@ void WiFiScan::RunGPSInfo() {
   #endif
 }
 
+void WiFiScan::RunGPSNmea() {
+  #ifdef HAS_GPS
+    LinkedList<String> *buffer=gps_obj.get_queue();
+
+    static String old_nmea_sentence="";
+    if(buffer && gps_obj.queue_enabled()){
+      gps_obj.new_queue();
+      int size=buffer->size();
+      for(int i=0;i<size;i++){
+        Serial.println(buffer->get(i));
+      }
+      delete buffer;
+    } else  {
+      if(buffer){
+        if(buffer->size()>0) gps_obj.flush_queue();
+      } else {
+        gps_obj.new_queue();
+      }
+
+      String nmea_sentence=gps_obj.getNmeaNotimp();
+      if(nmea_sentence != "" && nmea_sentence != old_nmea_sentence){
+        old_nmea_sentence=nmea_sentence;
+        Serial.println(nmea_sentence);
+      }
+    }
+
+    gps_obj.sendSentence(Serial, gps_obj.generateGXgga().c_str());
+    gps_obj.sendSentence(Serial, gps_obj.generateGXrmc().c_str());
+
+  #endif
+}
+
 void WiFiScan::RunInfo()
 {
   String sta_mac = this->getStaMAC();
@@ -4384,6 +4416,12 @@ void WiFiScan::main(uint32_t currentTime)
     if (currentTime - initTime >= 5000) {
       this->initTime = millis();
       this->RunGPSInfo();
+    }
+  }
+  else if (currentScanMode == WIFI_SCAN_GPS_NMEA) {
+    if (currentTime - initTime >= 1000) {
+      this->initTime = millis();
+      this->RunGPSNmea();
     }
   }
   else if (currentScanMode == WIFI_SCAN_EVIL_PORTAL) {

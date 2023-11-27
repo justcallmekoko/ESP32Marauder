@@ -196,15 +196,17 @@ void CommandLine::filterAccessPoints(String filter) {
 }
 
 void CommandLine::runCommand(String input) {
-  if (input != "")
-    Serial.println("#" + input);
+  if (input == "") return;
+
+  if(wifi_scan_obj.scanning() && wifi_scan_obj.currentScanMode == WIFI_SCAN_GPS_NMEA){
+    if(input != STOPSCAN_CMD) return;    
+  }
   else
-    return;
+    Serial.println("#" + input);
 
   LinkedList<String> cmd_args = this->parseCommand(input, " ");
-
+  
   //// Admin commands
-
   // Help
   if (cmd_args.get(0) == HELP_CMD) {
     Serial.println(HELP_HEAD);
@@ -217,6 +219,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_LED_CMD);
     Serial.println(HELP_GPS_DATA_CMD);
     Serial.println(HELP_GPS_CMD);
+    Serial.println(HELP_NMEA_CMD);
     
     // WiFi sniff/scan
     Serial.println(HELP_EVIL_PORTAL_CMD);
@@ -274,9 +277,20 @@ void CommandLine::runCommand(String input) {
     //  return;
     //}
     
+    uint8_t old_scan_mode=wifi_scan_obj.currentScanMode;
+
     wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
 
-    Serial.println("Stopping WiFi tran/recv");
+    #ifdef HAS_GPS
+      gps_obj.disable_queue();
+    #endif
+
+    if(old_scan_mode == WIFI_SCAN_GPS_NMEA)
+      Serial.println("END OF NMEA STREAM");
+    else if(old_scan_mode == WIFI_SCAN_GPS_DATA)
+      Serial.println("Stopping GPS data updates");
+    else
+      Serial.println("Stopping WiFi tran/recv");
 
     // If we don't do this, the text and button coordinates will be off
     #ifdef HAS_SCREEN
@@ -300,6 +314,7 @@ void CommandLine::runCommand(String input) {
     #ifdef HAS_GPS
       if (gps_obj.getGpsModuleStatus()) {
         int get_arg = this->argSearch(&cmd_args, "-g");
+        int nmea_arg = this->argSearch(&cmd_args, "-n");
 
         if (get_arg != -1) {
           String gps_info = cmd_args.get(get_arg + 1);
@@ -314,11 +329,46 @@ void CommandLine::runCommand(String input) {
             Serial.println("Lon: " + gps_obj.getLon());
           else if (gps_info == "alt")
             Serial.println("Alt: " + (String)gps_obj.getAlt());
+          else if (gps_info == "accuracy")
+            Serial.println("Accuracy: " + (String)gps_obj.getAccuracy());
           else if (gps_info == "date")
             Serial.println("Date/Time: " + gps_obj.getDatetime());
+          else if (gps_info == "nmea"){
+            int notimp_arg = this->argSearch(&cmd_args, "-p");
+            int recd_arg = this->argSearch(&cmd_args, "-r");
+            if(notimp_arg == -1 && recd_arg == -1){
+              gps_obj.sendSentence(Serial, gps_obj.generateGXgga().c_str());
+              gps_obj.sendSentence(Serial, gps_obj.generateGXrmc().c_str());
+            }
+            else if(notimp_arg == -1)
+              Serial.println(gps_obj.getNmea());
+            else
+              Serial.println(gps_obj.getNmeaNotimp());
+          }
           else
             Serial.println("You did not provide a valid argument");
         }
+        else if(nmea_arg != -1){
+          String nmea_type = cmd_args.get(nmea_arg + 1);
+
+          if (nmea_type == "all" || nmea_type == "gps" || nmea_type == "glonass" || nmea_type== "galileo")
+            gps_obj.setType(nmea_type);
+          else
+            Serial.println("You did not provide a valid argument");
+        }
+        else if(cmd_args.size()>1)
+          Serial.println("You did not provide a valid flag");
+        else
+          Serial.println("You did not provide an argument");
+      }
+    #endif
+  }
+  else if (cmd_args.get(0) == NMEA_CMD) {
+    #ifdef HAS_GPS
+      if (gps_obj.getGpsModuleStatus()) {
+        gps_obj.enable_queue();
+        wifi_scan_obj.currentScanMode = WIFI_SCAN_GPS_NMEA;
+        wifi_scan_obj.StartScan(WIFI_SCAN_GPS_NMEA, TFT_CYAN);
       }
     #endif
   }
