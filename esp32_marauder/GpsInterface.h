@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef GpsInterface_h
 #define GpsInterface_h
 

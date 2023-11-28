@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef SDInterface_h
 #define SDInterface_h
 

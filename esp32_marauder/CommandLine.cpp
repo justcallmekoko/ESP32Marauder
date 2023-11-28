@@ -281,9 +281,9 @@ void CommandLine::runCommand(String input) {
 
     wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
 
-    #ifdef HAS_GPS
-      gps_obj.disable_queue();
-    #endif
+    //#ifdef HAS_GPS
+    //  gps_obj.disable_queue();
+    //#endif
 
     if(old_scan_mode == WIFI_SCAN_GPS_NMEA)
       Serial.println("END OF NMEA STREAM");

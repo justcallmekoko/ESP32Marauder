@@ -750,6 +750,11 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   
     display_obj.tteBar = false;
   #endif
+
+  #ifdef HAS_GPS
+    if (gps_obj.queue_enabled())
+      gps_obj.disable_queue();
+  #endif
 }
 
 String WiFiScan::getStaMAC()
@@ -1170,6 +1175,20 @@ void WiFiScan::RunGPSNmea() {
     LinkedList<String> *buffer=gps_obj.get_queue();
 
     static String old_nmea_sentence="";
+    #ifdef HAS_SCREEN
+      // Get screen position ready
+      display_obj.tft.setTextWrap(true);
+      display_obj.tft.setFreeFont(NULL);
+      display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextColor(TFT_CYAN);
+
+      // Clean up screen first
+      display_obj.tft.fillRect(0, (SCREEN_HEIGHT / 3) - 6, SCREEN_WIDTH, SCREEN_HEIGHT - ((SCREEN_HEIGHT / 3) - 6), TFT_BLACK);
+
+      display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+    #endif
+
     if(buffer && gps_obj.queue_enabled()){
       gps_obj.new_queue();
       int size=buffer->size();
@@ -1188,27 +1207,23 @@ void WiFiScan::RunGPSNmea() {
       if(nmea_sentence != "" && nmea_sentence != old_nmea_sentence){
         old_nmea_sentence=nmea_sentence;
         Serial.println(nmea_sentence);
-        #ifdef HAS_SCREEN
-          // Get screen position ready
-          display_obj.tft.setTextWrap(true);
-          display_obj.tft.setFreeFont(NULL);
-          display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-          display_obj.tft.setTextSize(1);
-          display_obj.tft.setTextColor(TFT_CYAN);
-
-          // Clean up screen first
-          display_obj.tft.fillRect(0, (SCREEN_HEIGHT / 3) - 6, SCREEN_WIDTH, SCREEN_HEIGHT - ((SCREEN_HEIGHT / 3) - 6), TFT_BLACK);
-
-          display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-        
+        #ifdef HAS_SCREEN        
           display_obj.tft.print(nmea_sentence);
-          display_obj.tft.setTextWrap(false);
         #endif
       }
     }
 
-    gps_obj.sendSentence(Serial, gps_obj.generateGXgga().c_str());
-    gps_obj.sendSentence(Serial, gps_obj.generateGXrmc().c_str());
+    String gxgga = gps_obj.generateGXgga();
+    String gxrmc = gps_obj.generateGXrmc();
+
+    #ifdef HAS_SCREEN
+      display_obj.tft.print(gxgga);
+      display_obj.tft.print(gxrmc);
+      display_obj.tft.setTextWrap(false);
+    #endif
+
+    gps_obj.sendSentence(Serial, gxgga.c_str());
+    gps_obj.sendSentence(Serial, gxrmc.c_str());
 
   #endif
 }

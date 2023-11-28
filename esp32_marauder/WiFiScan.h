@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef WiFiScan_h
 #define WiFiScan_h
 
