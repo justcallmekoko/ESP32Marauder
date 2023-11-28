@@ -252,10 +252,10 @@ void CommandLine::runCommand(String input) {
     // Bluetooth sniff/scan
     #ifdef HAS_BT
       Serial.println(HELP_BT_SNIFF_CMD);
-      Serial.println(HELP_BT_SOUR_APPLE_CMD);
-      Serial.println(HELP_BT_SWIFTPAIR_SPAM_CMD);
-      Serial.println(HELP_BT_SAMSUNG_SPAM_CMD);
-      Serial.println(HELP_BT_SPAM_ALL_CMD);
+      Serial.println(HELP_BT_SPAM_CMD);
+      //Serial.println(HELP_BT_SWIFTPAIR_SPAM_CMD);
+      //Serial.println(HELP_BT_SAMSUNG_SPAM_CMD);
+      //Serial.println(HELP_BT_SPAM_ALL_CMD);
       #ifdef HAS_GPS
         Serial.println(HELP_BT_WARDRIVE_CMD);
       #endif
@@ -366,6 +366,9 @@ void CommandLine::runCommand(String input) {
   else if (cmd_args.get(0) == NMEA_CMD) {
     #ifdef HAS_GPS
       if (gps_obj.getGpsModuleStatus()) {
+        #ifdef HAS_SCREEN
+          menu_function_obj.changeMenu(&menu_function_obj.gpsInfoMenu);
+        #endif
         gps_obj.enable_queue();
         wifi_scan_obj.currentScanMode = WIFI_SCAN_GPS_NMEA;
         wifi_scan_obj.StartScan(WIFI_SCAN_GPS_NMEA, TFT_CYAN);
@@ -841,7 +844,74 @@ void CommandLine::runCommand(String input) {
         Serial.println("Bluetooth not supported");
       #endif
     }
-    else if (cmd_args.get(0) == BT_SOUR_APPLE_CMD) {
+    else if (cmd_args.get(0) == BT_SPAM_CMD) {
+      int bt_type_sw = this->argSearch(&cmd_args, "-t");
+      if (bt_type_sw != -1) {
+        String bt_type = cmd_args.get(bt_type_sw + 1);
+
+        if (bt_type == "apple") {
+          #ifdef HAS_BT
+            Serial.println("Starting Sour Apple attack. Stop with " + (String)STOPSCAN_CMD);
+            #ifdef HAS_SCREEN
+              display_obj.clearScreen();
+              menu_function_obj.drawStatusBar();
+            #endif
+            wifi_scan_obj.StartScan(BT_ATTACK_SOUR_APPLE, TFT_GREEN);
+          #else
+            Serial.println("Bluetooth not supported");
+          #endif
+        }
+        else if (bt_type == "windows") {
+          #ifdef HAS_BT
+            Serial.println("Starting Swiftpair Spam attack. Stop with " + (String)STOPSCAN_CMD);
+            #ifdef HAS_SCREEN
+              display_obj.clearScreen();
+              menu_function_obj.drawStatusBar();
+            #endif
+            wifi_scan_obj.StartScan(BT_ATTACK_SWIFTPAIR_SPAM, TFT_CYAN);
+          #else
+            Serial.println("Bluetooth not supported");
+          #endif
+        }
+        else if (bt_type == "samsung") {
+          #ifdef HAS_BT
+            Serial.println("Starting Samsung Spam attack. Stop with " + (String)STOPSCAN_CMD);
+            #ifdef HAS_SCREEN
+              display_obj.clearScreen();
+              menu_function_obj.drawStatusBar();
+            #endif
+            wifi_scan_obj.StartScan(BT_ATTACK_SAMSUNG_SPAM, TFT_CYAN);
+          #else
+            Serial.println("Bluetooth not supported");
+          #endif
+        }
+        else if (bt_type == "google") {
+          #ifdef HAS_BT
+            Serial.println("Starting Google Spam attack. Stop with " + (String)STOPSCAN_CMD);
+            #ifdef HAS_SCREEN
+              display_obj.clearScreen();
+              menu_function_obj.drawStatusBar();
+            #endif
+            wifi_scan_obj.StartScan(BT_ATTACK_GOOGLE_SPAM, TFT_CYAN);
+          #else
+            Serial.println("Bluetooth not supported");
+          #endif
+        }
+        else if (bt_type == "all") {
+          #ifdef HAS_BT
+            Serial.println("Starting BT Spam All attack. Stop with " + (String)STOPSCAN_CMD);
+            #ifdef HAS_SCREEN
+              display_obj.clearScreen();
+              menu_function_obj.drawStatusBar();
+            #endif
+            wifi_scan_obj.StartScan(BT_ATTACK_SPAM_ALL, TFT_MAGENTA);
+          #else
+            Serial.println("Bluetooth not supported");
+          #endif
+        }
+      }
+    }
+    /*else if (cmd_args.get(0) == BT_SOUR_APPLE_CMD) {
       #ifdef HAS_BT
         Serial.println("Starting Sour Apple attack. Stop with " + (String)STOPSCAN_CMD);
         #ifdef HAS_SCREEN
@@ -888,7 +958,7 @@ void CommandLine::runCommand(String input) {
       #else
         Serial.println("Bluetooth not supported");
       #endif
-    }
+    }*/
     // Wardrive
     else if (cmd_args.get(0) == BT_WARDRIVE_CMD) {
       #ifdef HAS_BT
