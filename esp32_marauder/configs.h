@@ -144,6 +144,8 @@
     //#define HAS_NEOPIXEL_LED
     //#define HAS_PWR_MGMT
     //#define HAS_SCREEN
+    // To support ElectronicCats Wi-Fi Marauder
+    //#define EC_ESP32_S3
     #define HAS_GPS
     #ifndef WRITE_PACKETS_SERIAL
       #define HAS_SD
@@ -197,9 +199,9 @@
   //// FLIPPER ZERO HAT SETTINGS
   #ifdef FLIPPER_ZERO_HAT
 
-    //#ifdef MARAUDER_FLIPPER
-    //  #define USE_FLIPPER_SD
-    //#endif
+    #ifdef MARAUDER_FLIPPER
+     #define USE_FLIPPER_SD
+    #endif
 
     #ifdef XIAO_ESP32_S3
       #define USE_FLIPPER_SD
@@ -786,6 +788,13 @@
     #ifdef USE_FLIPPER_SD
       #define XIAO_RX1 1
       #define XIAO_TX1 2
+    #endif
+  #endif
+
+  #ifdef EC_ESP32_S3
+    #ifdef USE_FLIPPER_SD
+      #define EC_ESP32_S3_RX1 18
+      #define EC_ESP32_S3_TX1 17
     #endif
   #endif
   //// END BOARD PIN OVERRIDES
