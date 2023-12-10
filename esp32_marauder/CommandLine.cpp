@@ -909,6 +909,9 @@ void CommandLine::runCommand(String input) {
             Serial.println("Bluetooth not supported");
           #endif
         }
+        else {
+          Serial.println("You did not specify a correct spam type");
+        }
       }
     }
     /*else if (cmd_args.get(0) == BT_SOUR_APPLE_CMD) {
