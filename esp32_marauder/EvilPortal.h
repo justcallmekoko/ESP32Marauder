@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef EvilPortal_h
 #define EvilPortal_h
 
