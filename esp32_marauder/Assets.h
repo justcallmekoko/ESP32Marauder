@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef Assets_h
 #define Assets_h
 

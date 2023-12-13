@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef CommandLine_h
 #define CommandLine_h
 
@@ -47,6 +49,7 @@ const char PROGMEM LS_CMD[] = "ls";
 const char PROGMEM LED_CMD[] = "led";
 const char PROGMEM GPS_DATA_CMD[] = "gpsdata";
 const char PROGMEM GPS_CMD[] = "gps";
+const char PROGMEM NMEA_CMD[] = "nmea";
 
 // WiFi sniff/scan
 const char PROGMEM EVIL_PORTAL_CMD[] = "evilportal";
@@ -76,11 +79,12 @@ const char PROGMEM SEL_CMD[] = "select";
 const char PROGMEM SSID_CMD[] = "ssid";
 
 // Bluetooth sniff/scan
+const char PROGMEM BT_SPAM_CMD[] = "blespam";
 const char PROGMEM BT_SNIFF_CMD[] = "sniffbt";
-const char PROGMEM BT_SOUR_APPLE_CMD[] = "sourapple";
-const char PROGMEM BT_SWIFTPAIR_SPAM_CMD[] = "swiftpair";
-const char PROGMEM BT_SAMSUNG_SPAM_CMD[] = "samsungblespam";
-const char PROGMEM BT_SPAM_ALL_CMD[] = "btspamall";
+//const char PROGMEM BT_SOUR_APPLE_CMD[] = "sourapple";
+//const char PROGMEM BT_SWIFTPAIR_SPAM_CMD[] = "swiftpair";
+//const char PROGMEM BT_SAMSUNG_SPAM_CMD[] = "samsungblespam";
+//onst char PROGMEM BT_SPAM_ALL_CMD[] = "btspamall";
 const char PROGMEM BT_WARDRIVE_CMD[] = "btwardrive";
 const char PROGMEM BT_SKIM_CMD[] = "sniffskim";
 
@@ -96,7 +100,8 @@ const char PROGMEM HELP_SETTINGS_CMD[] = "settings [-s <setting> enable/disable>
 const char PROGMEM HELP_LS_CMD[] = "ls <directory>";
 const char PROGMEM HELP_LED_CMD[] = "led -s <hex color>/-p <rainbow>";
 const char PROGMEM HELP_GPS_DATA_CMD[] = "gpsdata";
-const char PROGMEM HELP_GPS_CMD[] = "gps [-g] <fix/sat/lon/lat/alt/date>";
+const char PROGMEM HELP_GPS_CMD[] = "gps [-g] <fix/sat/lon/lat/alt/date/accuracy/nmea> [-n] <all/gps/glonass/galileo>";
+const char PROGMEM HELP_NMEA_CMD[] = "nmea";
 
 // WiFi sniff/scan
 const char PROGMEM HELP_EVIL_PORTAL_CMD[] = "evilportal [-c start [-w html.html]/sethtml <html.html>]";
@@ -126,10 +131,11 @@ const char PROGMEM HELP_SSID_CMD_B[] = "ssid -r <index>";
 
 // Bluetooth sniff/scan
 const char PROGMEM HELP_BT_SNIFF_CMD[] = "sniffbt";
-const char PROGMEM HELP_BT_SOUR_APPLE_CMD[] = "sourapple";
-const char PROGMEM HELP_BT_SWIFTPAIR_SPAM_CMD[] = "swiftpair";
-const char PROGMEM HELP_BT_SAMSUNG_SPAM_CMD[] = "samsungblespam";
-const char PROGMEM HELP_BT_SPAM_ALL_CMD[] = "btspamall";
+const char PROGMEM HELP_BT_SPAM_CMD[] = "blespam -t <apple/google/samsung/windows/all>";
+//const char PROGMEM HELP_BT_SOUR_APPLE_CMD[] = "sourapple";
+//const char PROGMEM HELP_BT_SWIFTPAIR_SPAM_CMD[] = "swiftpair";
+//const char PROGMEM HELP_BT_SAMSUNG_SPAM_CMD[] = "samsungblespam";
+//onst char PROGMEM HELP_BT_SPAM_ALL_CMD[] = "btspamall";
 const char PROGMEM HELP_BT_WARDRIVE_CMD[] = "btwardrive [-c]";
 const char PROGMEM HELP_BT_SKIM_CMD[] = "sniffskim";
 const char PROGMEM HELP_FOOT[] = "==================================";
