@@ -158,7 +158,7 @@ void GpsInterface::enqueue(MicroNMEA& nmea){
                     if(size>=5){
                   #endif
                       #ifdef GPS_TEXT_MAXCOPIES
-                        if(this->text_cycles>GPS_TEXT_MAXCOPIES){
+                        if(this->text_cycles>=GPS_TEXT_MAXCOPIES){
                       #else
                         if(this->text_cycles){
                       #endif
