@@ -36,7 +36,8 @@ void GpsInterface::begin() {
       Serial2.read();
   }
 
-  this->flush_queue(); //init the queue, kill NULLs
+  this->type_flag=GPSTYPE_NATIVE; //enforce default
+  this->disable_queue(); //init the queue, disabled, kill NULLs
 
   nmea.setUnknownSentenceHandler(gps_nmea_notimp);
 }
@@ -225,8 +226,8 @@ void GpsInterface::enable_queue(){
 }
 
 void GpsInterface::disable_queue(){
-  this->flush_queue();
   this->queue_enabled_flag=0;
+  this->flush_queue();
 }
 
 bool GpsInterface::queue_enabled(){
