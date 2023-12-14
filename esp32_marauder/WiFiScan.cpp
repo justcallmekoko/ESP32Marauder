@@ -591,6 +591,11 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
       RunLvJoinWiFi(scan_mode, color);
     #endif
   }
+  else if (scan_mode == WIFI_SCAN_GPS_NMEA){
+    #ifdef HAS_GPS
+      gps_obj.enable_queue();
+    #endif
+  }
 
   WiFiScan::currentScanMode = scan_mode;
 }
@@ -772,8 +777,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   #endif
 
   #ifdef HAS_GPS
-    if (gps_obj.queue_enabled())
-      gps_obj.disable_queue();
+    gps_obj.disable_queue();
   #endif
 }
 
@@ -1147,6 +1151,8 @@ void WiFiScan::RunGenerateSSIDs(int count) {
 
 void WiFiScan::RunGPSInfo() {
   #ifdef HAS_GPS
+    String text=gps_obj.getText();
+
     Serial.println("Refreshing GPS Data on screen...");
     #ifdef HAS_SCREEN
 
@@ -1168,7 +1174,10 @@ void WiFiScan::RunGPSInfo() {
       else
         display_obj.tft.println("  Good Fix: No");
         
+      if(text != "") display_obj.tft.println("      Text: " + text);
+
       display_obj.tft.println("Satellites: " + gps_obj.getNumSatsString());
+      display_obj.tft.println("  Accuracy: " + (String)gps_obj.getAccuracy());
       display_obj.tft.println("  Latitude: " + gps_obj.getLat());
       display_obj.tft.println(" Longitude: " + gps_obj.getLon());
       display_obj.tft.println("  Altitude: " + (String)gps_obj.getAlt());
@@ -1182,7 +1191,10 @@ void WiFiScan::RunGPSInfo() {
     else
       Serial.println("  Good Fix: No");
       
+    if(text != "") Serial.println("      Text: " + text);
+
     Serial.println("Satellites: " + gps_obj.getNumSatsString());
+    Serial.println("  Accuracy: " + (String)gps_obj.getAccuracy());
     Serial.println("  Latitude: " + gps_obj.getLat());
     Serial.println(" Longitude: " + gps_obj.getLon());
     Serial.println("  Altitude: " + (String)gps_obj.getAlt());
@@ -1193,9 +1205,14 @@ void WiFiScan::RunGPSInfo() {
 void WiFiScan::RunGPSNmea() {
   #ifdef HAS_GPS
     LinkedList<String> *buffer=gps_obj.get_queue();
+    bool queue_enabled=gps_obj.queue_enabled();
 
-    static String old_nmea_sentence="";
-    #ifdef HAS_SCREEN
+    if(!buffer||!queue_enabled)
+      gps_obj.flush_queue();
+    #ifndef HAS_SCREEN
+      else
+        gps_obj.flush_text();
+    #else
       // Get screen position ready
       display_obj.tft.setTextWrap(true);
       display_obj.tft.setFreeFont(NULL);
@@ -1207,30 +1224,47 @@ void WiFiScan::RunGPSNmea() {
       display_obj.tft.fillRect(0, (SCREEN_HEIGHT / 3) - 6, SCREEN_WIDTH, SCREEN_HEIGHT - ((SCREEN_HEIGHT / 3) - 6), TFT_BLACK);
 
       display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+
+      String text=gps_obj.getText();
+      if(queue_enabled){
+        if(gps_obj.getTextQueueSize()>0)
+          display_obj.tft.print(gps_obj.getTextQueue());
+        else
+          if(text != "") display_obj.tft.print(text);
+      }
+      else
+        if(text != "") display_obj.tft.print(text);
+
+      //This one doesn't contain self-genned GxGGA or GxRMC, nor does it contain GxTXT, processed above
+      String display_nmea_sentence=gps_obj.getNmeaNotparsed();
     #endif
 
-    if(buffer && gps_obj.queue_enabled()){
-      gps_obj.new_queue();
+    if(buffer && queue_enabled){
       int size=buffer->size();
-      for(int i=0;i<size;i++){
-        Serial.println(buffer->get(i));
-      }
-      delete buffer;
-    } else  {
-      if(buffer){
-        if(buffer->size()>0) gps_obj.flush_queue();
-      } else {
+      if(size){
         gps_obj.new_queue();
+        for(int i=0;i<size;i++){
+          Serial.println(buffer->get(i));
+        }
+        delete buffer;
       }
 
+      #ifdef HAS_SCREEN
+        //This matches the else block, but could later display more of the queue...
+        display_obj.tft.print(display_nmea_sentence);
+      #endif
+    } else {
+      static String old_nmea_sentence="";
       String nmea_sentence=gps_obj.getNmeaNotimp();
+
       if(nmea_sentence != "" && nmea_sentence != old_nmea_sentence){
         old_nmea_sentence=nmea_sentence;
         Serial.println(nmea_sentence);
-        #ifdef HAS_SCREEN        
-          display_obj.tft.print(nmea_sentence);
-        #endif
       }
+
+      #ifdef HAS_SCREEN
+        display_obj.tft.print(display_nmea_sentence);
+      #endif
     }
 
     String gxgga = gps_obj.generateGXgga();
