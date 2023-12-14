@@ -11,6 +11,7 @@
   //#define WRITE_PACKETS_SERIAL
   
   //// BOARD TARGETS
+  //#define MARAUDER_M5STAMP_S3
   //#define MARAUDER_M5STICKC
   //#define MARAUDER_MINI
   //#define MARAUDER_V4
@@ -54,6 +55,22 @@
   //// END HARDWARE NAMES
 
  //// BOARD FEATURES
+  #ifdef MARAUDER_M5STAMP_S3
+    //#define FLIPPER_ZERO_HAT
+    //#define HAS_BATTERY
+    //#define HAS_BT
+    //#define HAS_BUTTONS
+    #define HAS_NEOPIXEL_LED
+    //#define HAS_PWR_MGMT
+    //#define HAS_SCREEN
+    #define HAS_GPS
+    #ifndef WRITE_PACKETS_SERIAL
+      #define HAS_SD
+      #define USE_SD
+    #endif
+    //#define HAS_TEMP_SENSOR
+  #endif
+
   #ifdef MARAUDER_M5STICKC
     //#define FLIPPER_ZERO_HAT
     #define HAS_BATTERY
@@ -699,6 +716,10 @@
       #define SD_CS -1
     #endif
 
+    #ifdef MARAUDER_M5STAMP_S3
+      #define SD_CS 10
+    #endif
+
     #ifdef MARAUDER_FLIPPER
       #define SD_CS 10
     #endif
@@ -760,6 +781,8 @@
     #define MEM_LOWER_LIM 20000
   #elif defined(MARAUDER_FLIPPER)
     #define MEM_LOWER_LIM 20000
+  #elif defined(MARAUDER_M5STAMP_S3)
+    #define MEM_LOWER_LIM 20000
   #elif defined(ESP32_LDDB)
     #define MEM_LOWER_LIM 20000
   #elif defined(MARAUDER_DEV_BOARD_PRO)
@@ -772,7 +795,9 @@
   //// NEOPIXEL STUFF  
   #ifdef HAS_NEOPIXEL_LED
     
-    #if defined(ESP32_LDDB)
+    #if defined(MARAUDER_M5STAMP_S3)
+      #define PIN 21
+    #elif defined(ESP32_LDDB)
       #define PIN 17
     #elif defined(MARAUDER_DEV_BOARD_PRO)
       #define PIN 16
@@ -806,6 +831,8 @@
   #elif defined(GENERIC_ESP32)
     #define MAX_HTML_SIZE 20000
   #elif defined(MARAUDER_FLIPPER)
+    #define MAX_HTML_SIZE 20000
+  #elif defined(MARAUDER_M5STAMP_S3)
     #define MAX_HTML_SIZE 20000
   #elif defined(ESP32_LDDB)
     #define MAX_HTML_SIZE 20000
@@ -846,6 +873,15 @@
       #define GPS_RX 22
       #define mac_history_len 512
     #elif defined(MARAUDER_FLIPPER)
+      #ifdef WRITE_PACKETS_SERIAL
+        #define GPS_SOFTWARE_SERIAL
+      #else
+        #define GPS_SERIAL_INDEX 1
+      #endif
+      #define GPS_TX 9
+      #define GPS_RX 21
+      #define mac_history_len 512
+    #elif defined(MARAUDER_M5STAMP_S3)
       #ifdef WRITE_PACKETS_SERIAL
         #define GPS_SOFTWARE_SERIAL
       #else

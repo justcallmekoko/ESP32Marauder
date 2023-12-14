@@ -176,10 +176,10 @@ void setup()
   #endif
   
   backlightOff();
-#if BATTERY_ANALOG_ON == 1
-  pinMode(BATTERY_PIN, OUTPUT);
-  pinMode(CHARGING_PIN, INPUT);
-#endif
+  #if BATTERY_ANALOG_ON == 1
+    pinMode(BATTERY_PIN, OUTPUT);
+    pinMode(CHARGING_PIN, INPUT);
+  #endif
   
   // Preset SPI CS pins to avoid bus conflicts
   #ifdef HAS_SCREEN
