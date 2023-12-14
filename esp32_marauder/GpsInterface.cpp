@@ -549,7 +549,10 @@ String GpsInterface::getTextQueue(bool flush) {
         for(int i=0;i<size;i++){
           String now=this->text_in->get(i);
           if(now!=""){
-            if(text!="") text+='\n';
+            if(text!=""){
+              text+='\r';
+              text+='\n';
+            }
             text+=now;
           }
         }
