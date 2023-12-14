@@ -281,10 +281,6 @@ void CommandLine::runCommand(String input) {
 
     wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
 
-    //#ifdef HAS_GPS
-    //  gps_obj.disable_queue();
-    //#endif
-
     if(old_scan_mode == WIFI_SCAN_GPS_NMEA)
       Serial.println("END OF NMEA STREAM");
     else if(old_scan_mode == WIFI_SCAN_GPS_DATA)
@@ -333,17 +329,23 @@ void CommandLine::runCommand(String input) {
             Serial.println("Accuracy: " + (String)gps_obj.getAccuracy());
           else if (gps_info == "date")
             Serial.println("Date/Time: " + gps_obj.getDatetime());
+          else if (gps_info == "text"){
+            Serial.println(gps_obj.getText());
+          }
           else if (gps_info == "nmea"){
-            int notimp_arg = this->argSearch(&cmd_args, "-p");
+            int notparsed_arg = this->argSearch(&cmd_args, "-p");
+            int notimp_arg = this->argSearch(&cmd_args, "-i");
             int recd_arg = this->argSearch(&cmd_args, "-r");
-            if(notimp_arg == -1 && recd_arg == -1){
+            if(notparsed_arg == -1 && notimp_arg == -1 && recd_arg == -1){
               gps_obj.sendSentence(Serial, gps_obj.generateGXgga().c_str());
               gps_obj.sendSentence(Serial, gps_obj.generateGXrmc().c_str());
             }
-            else if(notimp_arg == -1)
+            else if(notparsed_arg == -1 && notimp_arg == -1)
               Serial.println(gps_obj.getNmea());
-            else
+            else if(notparsed_arg == -1)
               Serial.println(gps_obj.getNmeaNotimp());
+            else
+              Serial.println(gps_obj.getNmeaNotparsed());
           }
           else
             Serial.println("You did not provide a valid argument");
@@ -351,8 +353,16 @@ void CommandLine::runCommand(String input) {
         else if(nmea_arg != -1){
           String nmea_type = cmd_args.get(nmea_arg + 1);
 
-          if (nmea_type == "all" || nmea_type == "gps" || nmea_type == "glonass" || nmea_type== "galileo")
+          if (nmea_type == "native" || nmea_type == "all" || nmea_type == "gps" || nmea_type == "glonass"
+              || nmea_type == "galileo" || nmea_type == "navic" || nmea_type == "qzss" || nmea_type == "beidou"){
+            if(nmea_type == "beidou"){
+              int beidou_bd_arg = this->argSearch(&cmd_args, "-b");
+              if(beidou_bd_arg != -1)
+                nmea_type="beidou_bd";
+            }
             gps_obj.setType(nmea_type);
+            Serial.println("GPS Output Type Set To: " + nmea_type);
+          }
           else
             Serial.println("You did not provide a valid argument");
         }
@@ -369,7 +379,7 @@ void CommandLine::runCommand(String input) {
         #ifdef HAS_SCREEN
           menu_function_obj.changeMenu(&menu_function_obj.gpsInfoMenu);
         #endif
-        gps_obj.enable_queue();
+        Serial.println("NMEA STREAM FOLLOWS");
         wifi_scan_obj.currentScanMode = WIFI_SCAN_GPS_NMEA;
         wifi_scan_obj.StartScan(WIFI_SCAN_GPS_NMEA, TFT_CYAN);
       }
