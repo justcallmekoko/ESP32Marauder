@@ -102,8 +102,8 @@ void GpsInterface::enqueue(MicroNMEA& nmea){
                     if(this->text_in){
                       int size=text_in->size();
                       if(size){
-                        #ifdef GPS_TEXT_MAXCOPIES
-                          if(this->text_cycles>=GPS_TEXT_MAXCOPIES){
+                        #ifdef GPS_TEXT_MAXCYCLES
+                          if(this->text_cycles>=GPS_TEXT_MAXCYCLES){
                         #else
                           if(this->text_cycles){
                         #endif
@@ -158,8 +158,8 @@ void GpsInterface::enqueue(MicroNMEA& nmea){
                   #else
                     if(size>=5){
                   #endif
-                      #ifdef GPS_TEXT_MAXCOPIES
-                        if(this->text_cycles>=GPS_TEXT_MAXCOPIES){
+                      #ifdef GPS_TEXT_MAXCYCLES
+                        if(this->text_cycles>=GPS_TEXT_MAXCYCLES){
                       #else
                         if(this->text_cycles){
                       #endif
@@ -198,8 +198,8 @@ void GpsInterface::enqueue(MicroNMEA& nmea){
     if(this->queue_enabled_flag){
       if(!this->queue) this->new_queue();
       if(enqueue){
-        String enqueue_me=nmea_sentence.c_str();
-        this->queue->add(enqueue_me);
+        nmea_sentence_t line = { unparsed, msg_id, nmea_sentence.c_str() };
+        this->queue->add(line);
       }
     }
     else
@@ -234,12 +234,12 @@ bool GpsInterface::queue_enabled(){
   return this->queue_enabled_flag;
 }
 
-LinkedList<String>* GpsInterface::get_queue(){
+LinkedList<nmea_sentence_t>* GpsInterface::get_queue(){
   return this->queue;
 }
 
 void GpsInterface::new_queue(){
-  this->queue=new LinkedList<String>;
+  this->queue=new LinkedList<nmea_sentence_t>;
 }
 
 void GpsInterface::flush_queue(){
@@ -250,7 +250,7 @@ void GpsInterface::flush_queue(){
 void GpsInterface::flush_queue_nmea(){
   if(this->queue){
     if(this->queue->size()){
-      LinkedList<String> *delme=this->queue;
+      LinkedList<nmea_sentence_t> *delme=this->queue;
       this->new_queue();
       delete delme;
     }

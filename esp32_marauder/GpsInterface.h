@@ -10,7 +10,26 @@
 #include "configs.h"
 
 //#define GPS_TEXT_MAXLINES 5 //default:5 lines in the buffer maximum
-//#define GPS_TEXT_MAXCOPIES 1 //default:any nonzero number resets, i.e. one copy
+//#define GPS_TEXT_MAXCYCLES 1 //default:1
+
+//#define GPS_NMEA_SCRNLINES TEXT_HEIGHT //default: defined TEXT_HEIGHT from configs.h
+//#define GPS_NMEA_SCRNWRAP true //default:true, except on MARAUDER_MINI where false
+
+#ifdef MARAUDER_MINI
+  #ifndef GPS_NMEA_SCRNWRAP
+    #define GPS_NMEA_SCRNWRAP false
+  #endif
+#else
+  #ifndef GPS_NMEA_SCRNWRAP
+    #define GPS_NMEA_SCRNWRAP true
+  #endif
+#endif
+
+struct nmea_sentence_t {
+  bool unparsed;
+  String type;
+  String sentence;
+};
 
 void gps_nmea_notimp(MicroNMEA& nmea);
 
@@ -38,7 +57,7 @@ class GpsInterface {
     void setType(String t);
 
     void enqueue(MicroNMEA& nmea);
-    LinkedList<String>* get_queue();
+    LinkedList<nmea_sentence_t>* get_queue();
     void flush_queue();
     void flush_text();
     void new_queue();
@@ -84,9 +103,9 @@ class GpsInterface {
     type_t type_flag = GPSTYPE_NATIVE;
 
     bool queue_enabled_flag=0;
-    LinkedList<String> *queue=NULL;
+    LinkedList<nmea_sentence_t> *queue=NULL;
 
-    int text_cycles=0;
+    unsigned int text_cycles=0;
     LinkedList<String> *text_in=NULL;
     LinkedList<String> *text=NULL;
 
