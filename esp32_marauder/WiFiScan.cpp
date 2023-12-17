@@ -4825,7 +4825,9 @@ void WiFiScan::main(uint32_t currentTime)
       packets_sent = 0;
     }
   }
-  else if ((currentScanMode == WIFI_SCAN_OFF))
-    if(gps_obj.queue_enabled())
-      gps_obj.disable_queue();
+  #ifdef HAS_GPS
+    else if ((currentScanMode == WIFI_SCAN_OFF))
+      if(gps_obj.queue_enabled())
+        gps_obj.disable_queue();
+  #endif
 }
