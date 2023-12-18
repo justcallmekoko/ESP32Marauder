@@ -196,11 +196,25 @@ void GpsInterface::enqueue(MicroNMEA& nmea){
       this->notparsed_nmea_sentence = nmea_sentence.c_str();
 
     if(this->queue_enabled_flag){
-      if(!this->queue) this->new_queue();
       if(enqueue){
         nmea_sentence_t line = { unparsed, msg_id, nmea_sentence.c_str() };
+
+        if(this->queue){
+          #ifdef GPS_NMEA_MAXQUEUE
+            if(this->queue->size()>=GPS_NMEA_MAXQUEUE)
+          #else
+            if(this->queue->size()>=30)
+          #endif
+              this->flush_queue();
+        }
+        else
+           this->new_queue();
+
         this->queue->add(line);
       }
+      else
+        if(!this->queue)
+          this->new_queue();
     }
     else
       this->flush_queue();

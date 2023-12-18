@@ -14,6 +14,7 @@
 
 //#define GPS_NMEA_SCRNLINES TEXT_HEIGHT //default: defined TEXT_HEIGHT from configs.h
 //#define GPS_NMEA_SCRNWRAP true //default:true, except on MARAUDER_MINI where false
+//#define GPS_NMEA_MAXQUEUE 30 //default:30 messages max in queue
 
 #ifdef MARAUDER_MINI
   #ifndef GPS_NMEA_SCRNWRAP
