@@ -1821,7 +1821,9 @@ void WiFiScan::executeWarDrive() {
           String wardrive_line = WiFi.BSSIDstr(i) + "," + ssid + "," + this->security_int_to_string(WiFi.encryptionType(i)) + "," + gps_obj.getDatetime() + "," + (String)WiFi.channel(i) + "," + (String)WiFi.RSSI(i) + "," + gps_obj.getLat() + "," + gps_obj.getLon() + "," + gps_obj.getAlt() + "," + gps_obj.getAccuracy() + ",WIFI\n";
           Serial.print((String)this->mac_history_cursor + " | " + wardrive_line);
 
-          evil_portal_obj.addLog(wardrive_line, wardrive_line.length());
+          if (do_save) {
+            evil_portal_obj.addLog(wardrive_line, wardrive_line.length());
+          }
         }
       }
       this->channelHop();
