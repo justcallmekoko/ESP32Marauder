@@ -51,6 +51,7 @@ void Buffer::openFile(String file_name, fs::FS* fs, bool serial, bool is_pcap) {
   if (!save_pcap) {
     this->fs = NULL;
     this->serial = false;
+    writing = false;
     return;
   }
   this->fs = fs;
@@ -143,6 +144,7 @@ void Buffer::write(uint16_t n){
 
 void Buffer::write(const uint8_t* buf, uint32_t len){
   if(!writing) return;
+  while(saving) delay(10);
   
   if(useA){
     memcpy(&bufA[bufSizeA], buf, len);
@@ -198,10 +200,12 @@ void Buffer::saveSerial() {
 }
 
 void Buffer::save() {
-  if((bufSizeA + bufSizeB) == 0) return;
-
   saving = true;
-  writing = false;
+
+  if((bufSizeA + bufSizeB) == 0){
+    saving = false;
+    return;
+  }
 
   if(this->fs) saveFs();
   if(this->serial) saveSerial();
@@ -210,5 +214,4 @@ void Buffer::save() {
   bufSizeB = 0;
 
   saving = false;
-  writing = true;
 }
