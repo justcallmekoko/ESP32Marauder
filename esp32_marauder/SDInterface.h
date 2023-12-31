@@ -46,7 +46,6 @@ class SDInterface {
     void runUpdate();
     void performUpdate(Stream &updateSource, size_t updateSize);
     void main();
-    //void savePacket(uint8_t* buf, uint32_t len);
 };
 
 #endif

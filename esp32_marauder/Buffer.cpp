@@ -153,126 +153,61 @@ void Buffer::write(const uint8_t* buf, uint32_t len){
   }
 }
 
-void Buffer::save(fs::FS* fs){
-  if(saving) return; // makes sure the function isn't called simultaneously on different cores
-
-  // buffers are already emptied, therefor saving is unecessary
-  if((useA && bufSizeB == 0) || (!useA && bufSizeA == 0)){
-    //Serial.printf("useA: %s, bufA %u, bufB %u\n",useA ? "true" : "false",bufSizeA,bufSizeB); // for debug porpuses
-    return;
-  }
-  
-  //Serial.println("saving file");
-  
-  uint32_t startTime = millis();
-  uint32_t finishTime;
-
-  file = fs->open(fileName, FILE_APPEND);
-  if (!file) {
-    Serial.println(text02 + fileName+"'");
-    //useSD = false;
-    return;
-  }
-  
-  saving = true;
-  
-  uint32_t len;
-  
-  if(useA){
-    file.write(bufB, bufSizeB);
-    len = bufSizeB;
-    bufSizeB = 0;
-  }
-  else{
-    file.write(bufA, bufSizeA);
-    len = bufSizeA;
-    bufSizeA = 0;
-  }
-
-  file.close();
-  
-  finishTime = millis() - startTime;
-
-  //Serial.printf("\n%u bytes written for %u ms\n", len, finishTime);
-  
-  saving = false;
-  
-}
-
-void Buffer::forceSave(fs::FS* fs){
-  uint32_t len = bufSizeA + bufSizeB;
-  if(len == 0) return;
-  
+void Buffer::saveFs(){
   file = fs->open(fileName, FILE_APPEND);
   if (!file) {
     Serial.println(text02+fileName+"'");
-    //useSD = false;
     return;
   }
 
-  saving = true;
-  writing = false;
-  
   if(useA){
-
     if(bufSizeB > 0){
       file.write(bufB, bufSizeB);
-      bufSizeB = 0;
     }
-
     if(bufSizeA > 0){
       file.write(bufA, bufSizeA);
-      bufSizeA = 0;
     }
-    
   } else {
-
     if(bufSizeA > 0){
       file.write(bufA, bufSizeA);
-      bufSizeA = 0;
     }
-    
     if(bufSizeB > 0){
       file.write(bufB, bufSizeB);
-      bufSizeB = 0;
     }
-    
   }
 
   file.close();
-
-  //Serial.printf("saved %u bytes\n",len);
-
-  saving = false;
-  writing = true;
 }
 
-void Buffer::forceSaveSerial() {
-  uint32_t len = bufSizeA + bufSizeB;
-  if(len == 0) return;
-
-  saving = true;
-  writing = false;
-
+void Buffer::saveSerial() {
   if(useA){
     if(bufSizeB > 0){
       Serial1.write(bufB, bufSizeB);
-      bufSizeB = 0;
     }
     if(bufSizeA > 0){
       Serial1.write(bufA, bufSizeA);
-      bufSizeA = 0;
     }
   } else {
     if(bufSizeA > 0){
       Serial1.write(bufA, bufSizeA);
-      bufSizeA = 0;
     }
     if(bufSizeB > 0){
       Serial1.write(bufB, bufSizeB);
-      bufSizeB = 0;
     }
   }
+}
+
+void Buffer::save() {
+  if((bufSizeA + bufSizeB) == 0) return;
+
+  saving = true;
+  writing = false;
+
+  if(this->fs) saveFs();
+  if(this->serial) saveSerial();
+
+  bufSizeA = 0;
+  bufSizeB = 0;
 
   saving = false;
   writing = true;

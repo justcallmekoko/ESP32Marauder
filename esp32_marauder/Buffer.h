@@ -22,9 +22,7 @@ class Buffer {
     void logOpen(String file_name, fs::FS* fs, bool serial);
     void pcapAdd(wifi_promiscuous_pkt_t *packet, int len);
     void logAdd(String log);
-    void save(fs::FS* fs);
-    void forceSave(fs::FS* fs);
-    void forceSaveSerial();
+    void save();
   private:
     void createFile(String name, bool is_pcap);
     void open(bool is_pcap);
@@ -34,6 +32,8 @@ class Buffer {
     void write(uint32_t n);
     void write(uint16_t n);
     void write(const uint8_t* buf, uint32_t len);
+    void saveFs();
+    void saveSerial();
     
     uint8_t* bufA;
     uint8_t* bufB;

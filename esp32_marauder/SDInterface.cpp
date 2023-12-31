@@ -276,11 +276,7 @@ bool SDInterface::checkDetectPin() {
 }
 
 void SDInterface::main() {
-  if (this->supported) {
-    //Serial.println("Saving packet...");
-    buffer_obj.forceSave(&SD);
-  }
-  else {
+  if (!this->supported) {
     if (checkDetectPin()) {
       delay(100);
       this->initSD();

@@ -418,13 +418,13 @@ void loop()
     gps_obj.main();
   #endif
   
-  #ifdef WRITE_PACKETS_SERIAL
-    buffer_obj.forceSaveSerial();
-  #elif defined(HAS_SD)
+  // Detect SD card
+  #if defined(HAS_SD)
     sd_obj.main();
-  #else
-    return;
   #endif
+
+  // Save buffer to SD and/or serial
+  buffer_obj.save();
 
   #ifdef HAS_BATTERY
     battery_obj.main(currentTime);
