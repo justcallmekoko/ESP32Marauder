@@ -198,17 +198,6 @@ void setup()
 
   Serial.begin(115200);
 
-  // Starts a second serial channel to stream the captured packets
-  #ifdef WRITE_PACKETS_SERIAL
-    
-    #ifdef XIAO_ESP32_S3
-      Serial1.begin(115200, SERIAL_8N1, XIAO_RX1, XIAO_TX1);
-    #else
-      Serial1.begin(115200);
-    #endif
-    
-  #endif
-
   //Serial.println("\n\nHello, World!\n");
 
   Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));

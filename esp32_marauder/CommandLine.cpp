@@ -1035,21 +1035,17 @@ void CommandLine::runCommand(String input) {
       //}
       // Update via SD
       if (sd_sw != -1) {
-      #ifdef HAS_SD
-          #ifndef WRITE_PACKETS_SERIAL
-            if (!sd_obj.supported) {
-              Serial.println("SD card is not connected. Cannot perform SD Update");
-              return;
-            }
-            wifi_scan_obj.currentScanMode = OTA_UPDATE;
-            sd_obj.runUpdate();
-          #else
-            Serial.println("SD card not initialized. Cannot perform SD Update");
-          #endif
-      #else
-        Serial.println("SD card support disabled. Cannot perform SD Update");
-        return;
-      #endif
+        #ifdef HAS_SD
+          if (!sd_obj.supported) {
+            Serial.println("SD card is not connected. Cannot perform SD Update");
+            return;
+          }
+          wifi_scan_obj.currentScanMode = OTA_UPDATE;
+          sd_obj.runUpdate();
+        #else
+          Serial.println("SD card support disabled. Cannot perform SD Update");
+          return;
+        #endif
       }
     }
   }

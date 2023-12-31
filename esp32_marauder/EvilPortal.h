@@ -13,17 +13,12 @@
   #include "Display.h"
   #include <LinkedList.h>
 #endif
-#ifndef WRITE_PACKETS_SERIAL
-  #include "SDInterface.h"
-#else
-  #include "Buffer.h"
-#endif
+#include "SDInterface.h"
+#include "Buffer.h"
 #include "lang_var.h"
 
 extern Settings settings_obj;
-#ifndef WRITE_PACKETS_SERIAL
-  extern SDInterface sd_obj;
-#endif
+extern SDInterface sd_obj;
 #ifdef HAS_SCREEN
   extern Display display_obj;
 #endif

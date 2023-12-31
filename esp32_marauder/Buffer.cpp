@@ -182,21 +182,44 @@ void Buffer::saveFs(){
 }
 
 void Buffer::saveSerial() {
+  // Saves to main console UART, user-facing app will ignore these markers
+  // Uses / and ] in markers as they are illegal characters for SSIDs
+  const char* mark_begin = "[BUF/BEGIN]";
+  const size_t mark_begin_len = strlen(mark_begin);
+  const char* mark_close = "[BUF/CLOSE]";
+  const size_t mark_close_len = strlen(mark_close);
+
+  // Additional buffer and memcpy's so that a single Serial.write() is called
+  // This is necessary so that other console output isn't mixed into buffer stream
+  uint8_t* buf = (uint8_t*)malloc(mark_begin_len + bufSizeA + bufSizeB + mark_close_len);
+  uint8_t* it = buf;
+  memcpy(it, mark_begin, mark_begin_len);
+  it += mark_begin_len;
+
   if(useA){
     if(bufSizeB > 0){
-      Serial1.write(bufB, bufSizeB);
+      memcpy(it, bufB, bufSizeB);
+      it += bufSizeB;
     }
     if(bufSizeA > 0){
-      Serial1.write(bufA, bufSizeA);
+      memcpy(it, bufA, bufSizeA);
+      it += bufSizeA;
     }
   } else {
     if(bufSizeA > 0){
-      Serial1.write(bufA, bufSizeA);
+      memcpy(it, bufA, bufSizeA);
+      it += bufSizeA;
     }
     if(bufSizeB > 0){
-      Serial1.write(bufB, bufSizeB);
+      memcpy(it, bufB, bufSizeB);
+      it += bufSizeB;
     }
   }
+
+  memcpy(it, mark_close, mark_close_len);
+  it += mark_close_len;
+  Serial.write(buf, it - buf);
+  free(buf);
 }
 
 void Buffer::save() {

@@ -1398,7 +1398,8 @@ void WiFiScan::RunInfo()
     #ifdef HAS_SCREEN
       display_obj.tft.println(text_table4[48]);
     #endif
-  #elif defined(HAS_SD)
+  #endif
+  #if defined(HAS_SD)
     if (sd_obj.supported) {
       #ifdef HAS_SCREEN
         display_obj.tft.println(text_table4[28]);
@@ -1412,8 +1413,6 @@ void WiFiScan::RunInfo()
         display_obj.tft.println(text_table4[31]);
       #endif
     }
-  #else
-    return;
   #endif
 
   #ifdef HAS_BATTERY
