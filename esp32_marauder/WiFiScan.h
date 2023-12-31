@@ -390,6 +390,7 @@ class WiFiScan
     void StopScan(uint8_t scan_mode);
     const char* generateRandomName();
 
+    bool save_serial = false;
     void startPcap(String file_name);
     void startLog(String file_name);
 

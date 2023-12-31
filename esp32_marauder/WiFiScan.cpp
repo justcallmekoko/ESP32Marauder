@@ -937,12 +937,7 @@ void WiFiScan::startPcap(String file_name) {
       sd_obj.supported ? &SD :
     #endif
     NULL,
-    // TODO: make commandline options
-    #ifdef WRITE_PACKETS_SERIAL
-      true
-    #else
-      false
-    #endif
+    save_serial // Set with commandline options
   );
 }
 
@@ -953,12 +948,7 @@ void WiFiScan::startLog(String file_name) {
       sd_obj.supported ? &SD :
     #endif
     NULL,
-    // TODO: make commandline options
-    #ifdef WRITE_PACKETS_SERIAL
-      true
-    #else
-      false
-    #endif
+    save_serial // Set with commandline options
   );
 }
 
@@ -1394,11 +1384,6 @@ void WiFiScan::RunInfo()
     display_obj.tft.println(text_table4[27] + free_ram);
   #endif
 
-  #ifdef WRITE_PACKETS_SERIAL
-    #ifdef HAS_SCREEN
-      display_obj.tft.println(text_table4[48]);
-    #endif
-  #endif
   #if defined(HAS_SD)
     if (sd_obj.supported) {
       #ifdef HAS_SCREEN

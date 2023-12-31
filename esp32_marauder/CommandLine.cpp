@@ -9,9 +9,6 @@ void CommandLine::RunSetup() {
   Serial.println(F("\n\n--------------------------------\n"));
   Serial.println(F("         ESP32 Marauder      \n"));
   Serial.println("            " + version_number + "\n");
-  #ifdef WRITE_PACKETS_SERIAL
-    Serial.println(F("           >> Serial      \n"));
-  #endif
   Serial.println(F("       By: justcallmekoko\n"));
   Serial.println(F("--------------------------------\n\n"));
   
@@ -508,6 +505,9 @@ void CommandLine::runCommand(String input) {
 
   //// WiFi/Bluetooth Scan/Attack commands
   if (!wifi_scan_obj.scanning()) {
+    // Dump pcap/log to serial too, valid for all scan/attack commands
+    wifi_scan_obj.save_serial = this->argSearch(&cmd_args, "-serial") != -1;
+
     // Signal strength scan
     if (cmd_args.get(0) == SIGSTREN_CMD) {
       Serial.println("Starting Signal Strength Scan. Stop with " + (String)STOPSCAN_CMD);
