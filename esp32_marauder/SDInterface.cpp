@@ -143,7 +143,7 @@ void SDInterface::listDir(String str_dir){
 }
 
 void SDInterface::addPacket(uint8_t* buf, uint32_t len, bool log) {
-  if ((this->supported) && (this->do_save)) {
+  if (this->supported) {
     buffer_obj.addPacket(buf, len, log);
   }
 }
@@ -300,11 +300,11 @@ bool SDInterface::checkDetectPin() {
 }
 
 void SDInterface::main() {
-  if ((this->supported) && (this->do_save)) {
+  if (this->supported) {
     //Serial.println("Saving packet...");
     buffer_obj.forceSave(&SD);
   }
-  else if (!this->supported) {
+  else {
     if (checkDetectPin()) {
       delay(100);
       this->initSD();

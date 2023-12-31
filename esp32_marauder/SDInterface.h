@@ -35,7 +35,6 @@ class SDInterface {
     uint64_t cardSizeMB;
     //uint64_t cardSizeGB;
     bool supported = false;
-    bool do_save = true;
 
     String card_sz;
   
