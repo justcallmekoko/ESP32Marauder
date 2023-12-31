@@ -53,7 +53,7 @@ void Buffer::close(fs::FS* fs){
   Serial.println(text01);
 }
 
-void Buffer::addPacket(uint8_t* buf, uint32_t len, bool log){
+void Buffer::add(const uint8_t* buf, uint32_t len, bool is_pcap){
   // buffer is full -> drop packet
   if((useA && bufSizeA + len >= BUF_SIZE && bufSizeB > 0) || (!useA && bufSizeB + len >= BUF_SIZE && bufSizeA > 0)){
     //Serial.print(";"); 
@@ -74,7 +74,7 @@ void Buffer::addPacket(uint8_t* buf, uint32_t len, bool log){
 
   microSeconds -= seconds*1000*1000; // e.g. 45200400 - 45*1000*1000 = 45200400 - 45000000 = 400us (because we only need the offset)
   
-  if (!log) {
+  if (is_pcap) {
     write(seconds); // ts_sec
     write(microSeconds); // ts_usec
     write(len); // incl_len
@@ -82,6 +82,20 @@ void Buffer::addPacket(uint8_t* buf, uint32_t len, bool log){
   }
   
   write(buf, len); // packet payload
+}
+
+void Buffer::pcapAdd(wifi_promiscuous_pkt_t *packet, int len) {
+  bool save_packet = settings_obj.loadSetting<bool>(text_table4[7]);
+  if (save_packet) {
+    add(packet->payload, len, true);
+  }
+}
+
+void Buffer::logAdd(String log) {
+  bool save_packet = settings_obj.loadSetting<bool>(text_table4[7]);
+  if (save_packet) {
+    add((const uint8_t*)log.c_str(), log.length(), false);
+  }
 }
 
 void Buffer::write(int32_t n){
@@ -109,7 +123,7 @@ void Buffer::write(uint16_t n){
   write(buf,2);
 }
 
-void Buffer::write(uint8_t* buf, uint32_t len){
+void Buffer::write(const uint8_t* buf, uint32_t len){
   if(!writing) return;
   
   if(useA){

@@ -389,7 +389,6 @@ class WiFiScan
     void StartScan(uint8_t scan_mode, uint16_t color = 0);
     void StopScan(uint8_t scan_mode);
     const char* generateRandomName();
-    //void addLog(String log, int len);
     
     static void getMAC(char *addr, uint8_t* data, uint16_t offset);
     static void pwnSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
@@ -404,7 +403,6 @@ class WiFiScan
     static void activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
-    static void addPacket(wifi_promiscuous_pkt_t *snifferPacket, int len);
 
     /*#ifdef HAS_BT
       enum EBLEPayloadType

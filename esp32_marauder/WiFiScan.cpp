@@ -242,7 +242,7 @@ extern "C" {
                 Serial.print(wardrive_line);
 
                 if (do_save)
-                  evil_portal_obj.addLog(wardrive_line, wardrive_line.length());
+                  buffer_obj.logAdd(wardrive_line);
               }
             }
           #endif
@@ -1822,7 +1822,7 @@ void WiFiScan::executeWarDrive() {
           Serial.print((String)this->mac_history_cursor + " | " + wardrive_line);
 
           if (do_save) {
-            evil_portal_obj.addLog(wardrive_line, wardrive_line.length());
+            buffer_obj.logAdd(wardrive_line);
           }
         }
       }
@@ -1847,7 +1847,7 @@ void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color)
         if (gps_obj.getGpsModuleStatus()) {
           sd_obj.openLog("wardrive");
           String header_line = "WigleWifi-1.4,appRelease=" + (String)MARAUDER_VERSION + ",model=ESP32 Marauder,release=" + (String)MARAUDER_VERSION + ",device=ESP32 Marauder,display=SPI TFT,board=ESP32 Marauder,brand=JustCallMeKoko\nMAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\n";
-          evil_portal_obj.addLog(header_line, header_line.length());
+          buffer_obj.logAdd(header_line);
         }
       #endif
     }
@@ -2075,7 +2075,7 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
         if (gps_obj.getGpsModuleStatus()) {
           sd_obj.openLog("station_wardrive");
           String header_line = "WigleWifi-1.4,appRelease=" + (String)MARAUDER_VERSION + ",model=ESP32 Marauder,release=" + (String)MARAUDER_VERSION + ",device=ESP32 Marauder,display=SPI TFT,board=ESP32 Marauder,brand=JustCallMeKoko\nMAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\n";
-          evil_portal_obj.addLog(header_line, header_line.length());
+          buffer_obj.logAdd(header_line);
         }
       #endif
     }
@@ -2228,7 +2228,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
               #endif
             }
             String header_line = "WigleWifi-1.4,appRelease=" + (String)MARAUDER_VERSION + ",model=ESP32 Marauder,release=" + (String)MARAUDER_VERSION + ",device=ESP32 Marauder,display=SPI TFT,board=ESP32 Marauder,brand=JustCallMeKoko\nMAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\n";
-            evil_portal_obj.addLog(header_line, header_line.length());
+            buffer_obj.logAdd(header_line);
           }
         #endif
       #else
@@ -2395,7 +2395,7 @@ void WiFiScan::pwnSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 
         Serial.println();
 
-        addPacket(snifferPacket, len);
+        buffer_obj.pcapAdd(snifferPacket, len);
       }
     }
   }
@@ -2554,7 +2554,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
 
         Serial.println();
 
-        addPacket(snifferPacket, len);
+        buffer_obj.pcapAdd(snifferPacket, len);
       }
     }
   }
@@ -2680,7 +2680,7 @@ void WiFiScan::apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 
         Serial.println();
 
-        addPacket(snifferPacket, len);
+        buffer_obj.pcapAdd(snifferPacket, len);
       }
     }
   }
@@ -2801,7 +2801,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
 
         Serial.println();
 
-        addPacket(snifferPacket, len);
+        buffer_obj.pcapAdd(snifferPacket, len);
       }
       else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_WAR_DRIVE) {
         #ifdef HAS_GPS
@@ -2876,7 +2876,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
               }
               String wardrive_line = (String)addr + "," + essid + "," + wifi_scan_obj.security_int_to_string(snifferPacket->rx_ctrl.channel) + "," + gps_obj.getDatetime() + "," + (String)snifferPacket->rx_ctrl.channel + "," + (String)snifferPacket->rx_ctrl.rssi + "," + gps_obj.getLat() + "," + gps_obj.getLon() + "," + gps_obj.getAlt() + "," + gps_obj.getAccuracy() + ",WIFI";
               Serial.println(wardrive_line);
-              //evil_portal_obj.addLog(wardrive_line, wardrive_line.length());
+              //buffer_obj.logAdd(wardrive_line);
             }
           }
         #endif
@@ -3040,7 +3040,7 @@ void WiFiScan::stationSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t typ
 
   access_points->set(ap_index, ap);
 
-  addPacket(snifferPacket, len);
+  buffer_obj.pcapAdd(snifferPacket, len);
 }
 
 void WiFiScan::rawSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
@@ -3141,7 +3141,7 @@ void WiFiScan::rawSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 
   Serial.println();
 
-  addPacket(snifferPacket, len);
+  buffer_obj.pcapAdd(snifferPacket, len);
 }
 
 void WiFiScan::deauthSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
@@ -3205,7 +3205,7 @@ void WiFiScan::deauthSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
       
       Serial.println();
 
-      addPacket(snifferPacket, len);
+      buffer_obj.pcapAdd(snifferPacket, len);
     }
   }
 }
@@ -3277,7 +3277,7 @@ void WiFiScan::probeSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
         
         Serial.println();    
 
-        addPacket(snifferPacket, len);
+        buffer_obj.pcapAdd(snifferPacket, len);
       }
       else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_STATION_WAR_DRIVE) {
         #ifdef HAS_GPS
@@ -3332,7 +3332,7 @@ void WiFiScan::probeSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
             if (do_save) {
               String wardrive_line = (String)addr + "," + (String)addr + ",," + gps_obj.getDatetime() + "," + (String)snifferPacket->rx_ctrl.channel + "," + (String)snifferPacket->rx_ctrl.rssi + "," + gps_obj.getLat() + "," + gps_obj.getLon() + "," + gps_obj.getAlt() + "," + gps_obj.getAccuracy() + ",WIFI";
               Serial.println(wardrive_line);
-              evil_portal_obj.addLog(wardrive_line, wardrive_line.length());
+              buffer_obj.logAdd(wardrive_line);
             }
           }
         #endif
@@ -3423,7 +3423,7 @@ void WiFiScan::beaconListSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t 
       
       Serial.println();    
 
-      addPacket(snifferPacket, len);
+      buffer_obj.pcapAdd(snifferPacket, len);
     }
   }
 }
@@ -3884,7 +3884,7 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
       #endif
     #endif
 
-    addPacket(snifferPacket, len);
+    buffer_obj.pcapAdd(snifferPacket, len);
   }
 }
 
@@ -3972,7 +3972,7 @@ void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
     #endif
   }
 
-  addPacket(snifferPacket, len);
+  buffer_obj.pcapAdd(snifferPacket, len);
 }
 
 void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
@@ -4058,20 +4058,7 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
 
   }
 
-  addPacket(snifferPacket, len);
-}
-
-void WiFiScan::addPacket(wifi_promiscuous_pkt_t *snifferPacket, int len) {
-  bool save_packet = settings_obj.loadSetting<bool>(text_table4[7]);
-  if (save_packet) {
-    #ifdef WRITE_PACKETS_SERIAL
-      buffer_obj.addPacket(snifferPacket->payload, len);
-    #elif defined(HAS_SD)
-      sd_obj.addPacket(snifferPacket->payload, len);
-    #else
-      return;
-    #endif
-  }
+  buffer_obj.pcapAdd(snifferPacket, len);
 }
 
 #ifdef HAS_SCREEN

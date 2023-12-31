@@ -73,8 +73,6 @@ bool SDInterface::initSD() {
         this->card_sz = sz;
       }
 
-      buffer_obj = Buffer();
-    
       if (!SD.exists("/SCRIPTS")) {
         Serial.println("/SCRIPTS does not exist. Creating...");
 
@@ -139,12 +137,6 @@ void SDInterface::listDir(String str_dir){
       Serial.println(entry.size());
       entry.close();
     }
-  }
-}
-
-void SDInterface::addPacket(uint8_t* buf, uint32_t len, bool log) {
-  if (this->supported) {
-    buffer_obj.addPacket(buf, len, log);
   }
 }
 

