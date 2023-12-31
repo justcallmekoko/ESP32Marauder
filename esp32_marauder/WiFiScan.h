@@ -389,7 +389,10 @@ class WiFiScan
     void StartScan(uint8_t scan_mode, uint16_t color = 0);
     void StopScan(uint8_t scan_mode);
     const char* generateRandomName();
-    
+
+    void startPcap(String file_name);
+    void startLog(String file_name);
+
     static void getMAC(char *addr, uint8_t* data, uint16_t offset);
     static void pwnSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);

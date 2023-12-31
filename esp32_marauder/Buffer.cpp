@@ -6,17 +6,17 @@ Buffer::Buffer(){
   bufB = (uint8_t*)malloc(BUF_SIZE);
 }
 
-void Buffer::createPcapFile(fs::FS* fs, String fn, bool log){
+void Buffer::createFile(String name, bool is_pcap){
   int i=0;
-  if (!log) {
+  if (is_pcap) {
     do{
-      fileName = "/"+fn+"_"+(String)i+".pcap";
+      fileName = "/"+name+"_"+(String)i+".pcap";
       i++;
     } while(fs->exists(fileName));
   }
   else {
     do{
-      fileName = "/"+fn+"_"+(String)i+".log";
+      fileName = "/"+name+"_"+(String)i+".log";
       i++;
     } while(fs->exists(fileName));
   }
@@ -27,7 +27,7 @@ void Buffer::createPcapFile(fs::FS* fs, String fn, bool log){
   file.close();
 }
 
-void Buffer::open(bool log){
+void Buffer::open(bool is_pcap){
   bufSizeA = 0;
   bufSizeB = 0;
 
@@ -35,7 +35,7 @@ void Buffer::open(bool log){
 
   writing = true;
 
-  if (!log) {
+  if (is_pcap) {
     write(uint32_t(0xa1b2c3d4)); // magic number
     write(uint16_t(2)); // major version number
     write(uint16_t(4)); // minor version number
@@ -46,11 +46,29 @@ void Buffer::open(bool log){
   }
 }
 
-void Buffer::close(fs::FS* fs){
-  if(!writing) return;
-  forceSave(fs);
-  writing = false;
-  Serial.println(text01);
+void Buffer::openFile(String file_name, fs::FS* fs, bool serial, bool is_pcap) {
+  bool save_pcap = settings_obj.loadSetting<bool>("SavePCAP");
+  if (!save_pcap) {
+    this->fs = NULL;
+    this->serial = false;
+    return;
+  }
+  this->fs = fs;
+  this->serial = serial;
+  if (this->fs) {
+    createFile(file_name, is_pcap);
+  }
+  if (this->fs || this->serial) {
+    open(is_pcap);
+  }
+}
+
+void Buffer::pcapOpen(String file_name, fs::FS* fs, bool serial) {
+  openFile(file_name, fs, serial, true);
+}
+
+void Buffer::logOpen(String file_name, fs::FS* fs, bool serial) {
+  openFile(file_name, fs, serial, false);
 }
 
 void Buffer::add(const uint8_t* buf, uint32_t len, bool is_pcap){

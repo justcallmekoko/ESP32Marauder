@@ -930,15 +930,41 @@ String WiFiScan::freeRAM()
   return String(s);
 }
 
+void WiFiScan::startPcap(String file_name) {
+  buffer_obj.pcapOpen(
+    file_name,
+    #if defined(HAS_SD)
+      sd_obj.supported ? &SD :
+    #endif
+    NULL,
+    // TODO: make commandline options
+    #ifdef WRITE_PACKETS_SERIAL
+      true
+    #else
+      false
+    #endif
+  );
+}
+
+void WiFiScan::startLog(String file_name) {
+  buffer_obj.logOpen(
+    file_name,
+    #if defined(HAS_SD)
+      sd_obj.supported ? &SD :
+    #endif
+    NULL,
+    // TODO: make commandline options
+    #ifdef WRITE_PACKETS_SERIAL
+      true
+    #else
+      false
+    #endif
+  );
+}
+
 void WiFiScan::RunEvilPortal(uint8_t scan_mode, uint16_t color)
 {
-  #ifdef WRITE_PACKETS_SERIAL
-    buffer_obj.open();
-  #elif defined(HAS_SD)
-    sd_obj.openLog("evil_portal");
-  #else
-    return;
-  #endif
+  startLog("evil_portal");
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
@@ -981,13 +1007,7 @@ void WiFiScan::RunEvilPortal(uint8_t scan_mode, uint16_t color)
 // Function to start running a beacon scan
 void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
 {
-  #ifdef WRITE_PACKETS_SERIAL
-    buffer_obj.open();
-  #elif defined(HAS_SD)
-    sd_obj.openCapture("ap");
-  #else
-    return;
-  #endif
+  startPcap("ap");
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
@@ -1428,13 +1448,7 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
     led_obj.setMode(MODE_SNIFF);
   #endif
 
-  #ifdef WRITE_PACKETS_SERIAL
-    buffer_obj.open();
-  #elif defined(HAS_SD)
-    sd_obj.openCapture("packet_monitor");
-  #else
-    return;
-  #endif
+  startPcap("packet_monitor");
 
   #ifdef HAS_ILI9341
     
@@ -1522,11 +1536,7 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
       display_obj.tft.fillScreen(TFT_BLACK);
     #endif
   
-    #ifdef WRITE_PACKETS_SERIAL
-      buffer_obj.open();
-    #elif defined(HAS_SD)
-      sd_obj.openCapture("eapol");
-    #endif
+    startPcap("eapol");
   
     #ifdef HAS_SCREEN
       #ifdef TFT_SHIELD
@@ -1551,13 +1561,7 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
       display_obj.tftDrawExitScaleButtons();
     #endif
   #else
-    #ifdef WRITE_PACKETS_SERIAL
-      buffer_obj.open();
-    #elif defined(HAS_SD)
-      sd_obj.openCapture("eapol");
-    #else
-      return;
-    #endif
+    startPcap("eapol");
     
     #ifdef HAS_SCREEN
       display_obj.TOP_FIXED_AREA_2 = 48;
@@ -1652,13 +1656,7 @@ void WiFiScan::RunMimicFlood(uint8_t scan_mode, uint16_t color) {
 
 void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color)
 {
-  #ifdef WRITE_PACKETS_SERIAL
-    buffer_obj.open();
-  #elif defined(HAS_SD)
-    sd_obj.openCapture("pwnagotchi");
-  #else
-    return;
-  #endif
+  startPcap("pwnagotchi");
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
@@ -1837,23 +1835,21 @@ void WiFiScan::executeWarDrive() {
 // Function to start running a beacon scan
 void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color)
 {
-  #ifdef WRITE_PACKETS_SERIAL
-    buffer_obj.open();
-  #elif defined(HAS_SD)
-    if (scan_mode == WIFI_SCAN_AP)
-      sd_obj.openCapture("beacon");
-    else if (scan_mode == WIFI_SCAN_WAR_DRIVE) {
-      #ifdef HAS_GPS
-        if (gps_obj.getGpsModuleStatus()) {
-          sd_obj.openLog("wardrive");
-          String header_line = "WigleWifi-1.4,appRelease=" + (String)MARAUDER_VERSION + ",model=ESP32 Marauder,release=" + (String)MARAUDER_VERSION + ",device=ESP32 Marauder,display=SPI TFT,board=ESP32 Marauder,brand=JustCallMeKoko\nMAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\n";
-          buffer_obj.logAdd(header_line);
-        }
-      #endif
-    }
-  #else
-    return;
-  #endif
+  if (scan_mode == WIFI_SCAN_AP)
+    startPcap("beacon");
+  else if (scan_mode == WIFI_SCAN_WAR_DRIVE) {
+    #ifdef HAS_GPS
+      if (gps_obj.getGpsModuleStatus()) {
+        startLog("wardrive");
+        String header_line = "WigleWifi-1.4,appRelease=" + (String)MARAUDER_VERSION + ",model=ESP32 Marauder,release=" + (String)MARAUDER_VERSION + ",device=ESP32 Marauder,display=SPI TFT,board=ESP32 Marauder,brand=JustCallMeKoko\nMAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\n";
+        buffer_obj.logAdd(header_line);
+      } else {
+        return;
+      }
+    #else
+      return;
+    #endif
+  }
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
@@ -1912,13 +1908,7 @@ void WiFiScan::startWardriverWiFi() {
 
 void WiFiScan::RunStationScan(uint8_t scan_mode, uint16_t color)
 {
-  #ifdef WRITE_PACKETS_SERIAL
-    buffer_obj.open();
-  #elif defined(HAS_SD)
-    sd_obj.openCapture("station");
-  #else
-    return;
-  #endif
+  startPcap("station");
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
@@ -1961,14 +1951,8 @@ void WiFiScan::RunStationScan(uint8_t scan_mode, uint16_t color)
 
 void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color)
 {
-  #ifdef WRITE_PACKETS_SERIAL
-    buffer_obj.open();
-  #elif defined(HAS_SD)
-    if (scan_mode != WIFI_SCAN_SIG_STREN)
-      sd_obj.openCapture("raw");
-  #else
-    return;
-  #endif
+  if (scan_mode != WIFI_SCAN_SIG_STREN)
+    startPcap("raw");
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
@@ -2014,13 +1998,7 @@ void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color)
 
 void WiFiScan::RunDeauthScan(uint8_t scan_mode, uint16_t color)
 {
-  #ifdef WRITE_PACKETS_SERIAL
-    buffer_obj.open();
-  #elif defined(HAS_SD)
-    sd_obj.openCapture("deauth");
-  #else
-    return;
-  #endif
+  startPcap("deauth");
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
@@ -2065,23 +2043,21 @@ void WiFiScan::RunDeauthScan(uint8_t scan_mode, uint16_t color)
 // Function for running probe request scan
 void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
 {
-  #ifdef WRITE_PACKETS_SERIAL
-    buffer_obj.open();
-  #elif defined(HAS_SD)
-    if (scan_mode == WIFI_SCAN_PROBE)
-      sd_obj.openCapture("probe");
-    else if (scan_mode == WIFI_SCAN_STATION_WAR_DRIVE) {
-      #ifdef HAS_GPS
-        if (gps_obj.getGpsModuleStatus()) {
-          sd_obj.openLog("station_wardrive");
-          String header_line = "WigleWifi-1.4,appRelease=" + (String)MARAUDER_VERSION + ",model=ESP32 Marauder,release=" + (String)MARAUDER_VERSION + ",device=ESP32 Marauder,display=SPI TFT,board=ESP32 Marauder,brand=JustCallMeKoko\nMAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\n";
-          buffer_obj.logAdd(header_line);
-        }
-      #endif
-    }
-  #else
-    return;
-  #endif
+  if (scan_mode == WIFI_SCAN_PROBE)
+    startPcap("probe");
+  else if (scan_mode == WIFI_SCAN_STATION_WAR_DRIVE) {
+    #ifdef HAS_GPS
+      if (gps_obj.getGpsModuleStatus()) {
+        startLog("station_wardrive");
+        String header_line = "WigleWifi-1.4,appRelease=" + (String)MARAUDER_VERSION + ",model=ESP32 Marauder,release=" + (String)MARAUDER_VERSION + ",device=ESP32 Marauder,display=SPI TFT,board=ESP32 Marauder,brand=JustCallMeKoko\nMAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\n";
+        buffer_obj.logAdd(header_line);
+      } else {
+        return;
+      }
+    #else
+      return;
+    #endif
+  }
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
@@ -2212,25 +2188,19 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
       pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), false);
     }
     else if ((scan_mode == BT_SCAN_WAR_DRIVE) || (scan_mode == BT_SCAN_WAR_DRIVE_CONT)) {
-      #ifdef WRITE_PACKETS_SERIAL
-        buffer_obj.open();
-      #elif defined(HAS_SD)
-        #ifdef HAS_GPS
-          if (gps_obj.getGpsModuleStatus()) {
-            if (scan_mode == BT_SCAN_WAR_DRIVE) {
-              #ifdef HAS_SD
-                sd_obj.openLog("bt_wardrive");
-              #endif
-            }
-            else if (scan_mode == BT_SCAN_WAR_DRIVE_CONT) {
-              #ifdef HAS_SD
-                sd_obj.openLog("bt_wardrive_cont");
-              #endif
-            }
-            String header_line = "WigleWifi-1.4,appRelease=" + (String)MARAUDER_VERSION + ",model=ESP32 Marauder,release=" + (String)MARAUDER_VERSION + ",device=ESP32 Marauder,display=SPI TFT,board=ESP32 Marauder,brand=JustCallMeKoko\nMAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\n";
-            buffer_obj.logAdd(header_line);
+      #ifdef HAS_GPS
+        if (gps_obj.getGpsModuleStatus()) {
+          if (scan_mode == BT_SCAN_WAR_DRIVE) {
+            startLog("bt_wardrive");
           }
-        #endif
+          else if (scan_mode == BT_SCAN_WAR_DRIVE_CONT) {
+            startLog("bt_wardrive_cont");
+          }
+          String header_line = "WigleWifi-1.4,appRelease=" + (String)MARAUDER_VERSION + ",model=ESP32 Marauder,release=" + (String)MARAUDER_VERSION + ",device=ESP32 Marauder,display=SPI TFT,board=ESP32 Marauder,brand=JustCallMeKoko\nMAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\n";
+          buffer_obj.logAdd(header_line);
+        } else {
+          return;
+        }
       #else
         return;
       #endif

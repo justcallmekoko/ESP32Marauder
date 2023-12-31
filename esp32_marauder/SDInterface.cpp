@@ -140,22 +140,6 @@ void SDInterface::listDir(String str_dir){
   }
 }
 
-void SDInterface::openCapture(String file_name) {
-  bool save_pcap = settings_obj.loadSetting<bool>("SavePCAP");
-  if ((this->supported) && (save_pcap)) {
-    buffer_obj.createPcapFile(&SD, file_name);
-    buffer_obj.open();
-  }
-}
-
-void SDInterface::openLog(String file_name) {
-  bool save_pcap = settings_obj.loadSetting<bool>("SavePCAP");
-  if ((this->supported) && (save_pcap)) {
-    buffer_obj.createPcapFile(&SD, file_name, true);
-    buffer_obj.open(true);
-  }
-}
-
 void SDInterface::runUpdate() {
   #ifdef HAS_SCREEN
     display_obj.tft.setTextWrap(false);

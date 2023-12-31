@@ -18,15 +18,17 @@ extern Settings settings_obj;
 class Buffer {
   public:
     Buffer();
-    void createPcapFile(fs::FS* fs, String fn = "", bool log = false);
-    void open(bool log = false);
-    void close(fs::FS* fs);
+    void pcapOpen(String file_name, fs::FS* fs, bool serial);
+    void logOpen(String file_name, fs::FS* fs, bool serial);
     void pcapAdd(wifi_promiscuous_pkt_t *packet, int len);
     void logAdd(String log);
     void save(fs::FS* fs);
     void forceSave(fs::FS* fs);
     void forceSaveSerial();
   private:
+    void createFile(String name, bool is_pcap);
+    void open(bool is_pcap);
+    void openFile(String file_name, fs::FS* fs, bool serial, bool is_pcap);
     void add(const uint8_t* buf, uint32_t len, bool is_pcap);
     void write(int32_t n);
     void write(uint32_t n);
@@ -45,6 +47,8 @@ class Buffer {
 
     String fileName = "/0.pcap";
     File file;
+    fs::FS* fs;
+    bool serial;
 };
 
 #endif
