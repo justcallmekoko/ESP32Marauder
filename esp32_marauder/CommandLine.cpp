@@ -386,7 +386,7 @@ void CommandLine::runCommand(String input) {
   else if (cmd_args.get(0) == LED_CMD) {
     int hex_arg = this->argSearch(&cmd_args, "-s");
     int pat_arg = this->argSearch(&cmd_args, "-p");
-    #ifdef PIN
+    #if defined(PIN) && defined(HAS_NEOPIXEL_LED)
       if (hex_arg != -1) {
         String hexstring = cmd_args.get(hex_arg + 1);
         int number = (int)strtol(&hexstring[1], NULL, 16);
