@@ -1688,6 +1688,7 @@ void MenuFunctions::RunSetup()
       gpsInfoMenu.parentMenu = &deviceMenu;
       this->addNodes(&gpsInfoMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
         wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
+        wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
         this->changeMenu(gpsInfoMenu.parentMenu);
       }); 
     }
