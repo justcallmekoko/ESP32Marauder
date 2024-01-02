@@ -20,8 +20,8 @@ class Buffer {
     Buffer();
     void pcapOpen(String file_name, fs::FS* fs, bool serial);
     void logOpen(String file_name, fs::FS* fs, bool serial);
-    void pcapAdd(wifi_promiscuous_pkt_t *packet, int len);
-    void logAdd(String log);
+    void append(wifi_promiscuous_pkt_t *packet, int len);
+    void append(String log);
     void save();
   private:
     void createFile(String name, bool is_pcap);
