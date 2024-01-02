@@ -61,6 +61,8 @@ void Buffer::openFile(String file_name, fs::FS* fs, bool serial, bool is_pcap) {
   }
   if (this->fs || this->serial) {
     open(is_pcap);
+  } else {
+    writing = false;
   }
 }
 
