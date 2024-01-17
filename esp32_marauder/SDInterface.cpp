@@ -32,9 +32,9 @@ bool SDInterface::initSD() {
                         -   CS (jumper to SD Card GND Pin)
       */
       enum { SPI_SCK = 0, SPI_MISO = 36, SPI_MOSI = 26 };
-      SPIClass SPI_EXT;
-      SPI_EXT.begin(SPI_SCK, SPI_MISO, SPI_MOSI, SD_CS);
-      if (!SD.begin(SD_CS, SPI_EXT)) {
+      this->spiExt = new SPIClass();
+      this->spiExt->begin(SPI_SCK, SPI_MISO, SPI_MOSI, SD_CS);
+      if (!SD.begin(SD_CS, *(this->spiExt))) {
     #else
       if (!SD.begin(SD_CS)) {
     #endif

@@ -891,29 +891,31 @@ void MenuFunctions::battery2(bool initial)
 #else
 void MenuFunctions::battery(bool initial)
 {
-  uint16_t the_color;
-  if (battery_obj.i2c_supported)
-  {
-    // Could use int compare maybe idk
-    if (((String)battery_obj.battery_level != "25") && ((String)battery_obj.battery_level != "0"))
-      the_color = TFT_GREEN;
-    else
-      the_color = TFT_RED;
+  #ifdef HAS_BATTERY
+    uint16_t the_color;
+    if (battery_obj.i2c_supported)
+    {
+      // Could use int compare maybe idk
+      if (((String)battery_obj.battery_level != "25") && ((String)battery_obj.battery_level != "0"))
+        the_color = TFT_GREEN;
+      else
+        the_color = TFT_RED;
 
-    if ((battery_obj.battery_level != battery_obj.old_level) || (initial)) {
-      battery_obj.old_level = battery_obj.battery_level;
-      display_obj.tft.fillRect(204, 0, SCREEN_WIDTH, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
-      display_obj.tft.setCursor(0, 1);
-      display_obj.tft.drawXBitmap(186,
-                                  0,
-                                  menu_icons[STATUS_BAT],
-                                  16,
-                                  16,
-                                  STATUSBAR_COLOR,
-                                  the_color);
-      display_obj.tft.drawString((String)battery_obj.battery_level + "%", 204, 0, 2);
+      if ((battery_obj.battery_level != battery_obj.old_level) || (initial)) {
+        battery_obj.old_level = battery_obj.battery_level;
+        display_obj.tft.fillRect(204, 0, SCREEN_WIDTH, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+        display_obj.tft.setCursor(0, 1);
+        display_obj.tft.drawXBitmap(186,
+                                    0,
+                                    menu_icons[STATUS_BAT],
+                                    16,
+                                    16,
+                                    STATUSBAR_COLOR,
+                                    the_color);
+        display_obj.tft.drawString((String)battery_obj.battery_level + "%", 204, 0, 2);
+      }
     }
-  }
+  #endif
 }
 void MenuFunctions::battery2(bool initial)
 {
