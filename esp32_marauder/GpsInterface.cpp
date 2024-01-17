@@ -16,6 +16,19 @@ MicroNMEA nmea(nmeaBuffer, sizeof(nmeaBuffer));
 
 void GpsInterface::begin() {
 
+  #ifdef MARAUDER_MINI
+    pinMode(26, OUTPUT);
+
+    delay(1);
+
+    analogWrite(26, 243);
+    delay(1);
+
+    Serial.println("Activated GPS");
+    delay(100);
+  #endif
+
+  
   #ifndef GPS_SOFTWARE_SERIAL
     Serial2.begin(9600, SERIAL_8N1, GPS_TX, GPS_RX);
   #else
@@ -27,7 +40,7 @@ void GpsInterface::begin() {
 
   MicroNMEA::sendSentence(Serial2, "$PSTMSRR");
 
-  delay(4000);
+  delay(3900);
 
   if (Serial2.available()) {
     Serial.println("GPS Attached Successfully");
@@ -35,11 +48,17 @@ void GpsInterface::begin() {
     while (Serial2.available())
       Serial2.read();
   }
+  else {
+    this->gps_enabled = false;
+    Serial.println("GPS Not Found");
+  }
+  
 
   this->type_flag=GPSTYPE_NATIVE; //enforce default
   this->disable_queue(); //init the queue, disabled, kill NULLs
 
   nmea.setUnknownSentenceHandler(gps_nmea_notimp);
+
 }
 
 //passthrough for other objects
