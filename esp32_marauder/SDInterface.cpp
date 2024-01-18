@@ -73,8 +73,6 @@ bool SDInterface::initSD() {
         this->card_sz = sz;
       }
 
-      buffer_obj = Buffer();
-    
       if (!SD.exists("/SCRIPTS")) {
         Serial.println("/SCRIPTS does not exist. Creating...");
 
@@ -139,28 +137,6 @@ void SDInterface::listDir(String str_dir){
       Serial.println(entry.size());
       entry.close();
     }
-  }
-}
-
-void SDInterface::addPacket(uint8_t* buf, uint32_t len, bool log) {
-  if ((this->supported) && (this->do_save)) {
-    buffer_obj.addPacket(buf, len, log);
-  }
-}
-
-void SDInterface::openCapture(String file_name) {
-  bool save_pcap = settings_obj.loadSetting<bool>("SavePCAP");
-  if ((this->supported) && (save_pcap)) {
-    buffer_obj.createPcapFile(&SD, file_name);
-    buffer_obj.open();
-  }
-}
-
-void SDInterface::openLog(String file_name) {
-  bool save_pcap = settings_obj.loadSetting<bool>("SavePCAP");
-  if ((this->supported) && (save_pcap)) {
-    buffer_obj.createPcapFile(&SD, file_name, true);
-    buffer_obj.open(true);
   }
 }
 
@@ -300,11 +276,7 @@ bool SDInterface::checkDetectPin() {
 }
 
 void SDInterface::main() {
-  if ((this->supported) && (this->do_save)) {
-    //Serial.println("Saving packet...");
-    buffer_obj.forceSave(&SD);
-  }
-  else if (!this->supported) {
+  if (!this->supported) {
     if (checkDetectPin()) {
       delay(100);
       this->initSD();

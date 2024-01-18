@@ -993,14 +993,10 @@ void MenuFunctions::updateStatusBar()
 
 
   // Draw SD info
-  #ifndef WRITE_PACKETS_SERIAL
-    if (sd_obj.supported)
-      the_color = TFT_GREEN;
-    else
-      the_color = TFT_RED;
-  #else
+  if (sd_obj.supported)
+    the_color = TFT_GREEN;
+  else
     the_color = TFT_RED;
-  #endif
 
   #ifdef HAS_ILI9341
     display_obj.tft.drawXBitmap(170,
@@ -1082,14 +1078,10 @@ void MenuFunctions::drawStatusBar()
   MenuFunctions::battery2(true);
 
   // Draw SD info
-  #ifndef WRITE_PACKETS_SERIAL
-    if (sd_obj.supported)
-      the_color = TFT_GREEN;
-    else
-      the_color = TFT_RED;
-  #else
+  if (sd_obj.supported)
+    the_color = TFT_GREEN;
+  else
     the_color = TFT_RED;
-  #endif
 
   #ifdef HAS_ILI9341
     display_obj.tft.drawXBitmap(170,
@@ -1723,12 +1715,10 @@ void MenuFunctions::RunSetup()
     wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
     this->changeMenu(whichUpdateMenu.parentMenu);
   });
-  #ifndef WRITE_PACKETS_SERIAL
-    if (sd_obj.supported) addNodes(&whichUpdateMenu, text_table1[40], TFT_MAGENTA, NULL, SD_UPDATE, [this]() {
-      wifi_scan_obj.currentScanMode = OTA_UPDATE;
-      this->changeMenu(&confirmMenu);
-    });
-  #endif
+  if (sd_obj.supported) addNodes(&whichUpdateMenu, text_table1[40], TFT_MAGENTA, NULL, SD_UPDATE, [this]() {
+    wifi_scan_obj.currentScanMode = OTA_UPDATE;
+    this->changeMenu(&confirmMenu);
+  });
 
   // Confirm SD update menu
   confirmMenu.parentMenu = &whichUpdateMenu;

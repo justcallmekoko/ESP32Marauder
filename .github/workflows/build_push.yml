@@ -3,7 +3,6 @@ name: Build and Push
 on:
   workflow_dispatch:
   pull_request:
-    types: [opened, reopened]
 
 jobs:
   # This workflow contains a single job called "build"
@@ -204,27 +203,6 @@ jobs:
       - name: Rename Marauder Flipper bin
         run: |
           mv ./esp32_marauder/build/esp32.esp32.esp32s2/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.esp32s2/esp32_marauder.flipper.bin
-          
-      - name: Configure SD Serial for Flipper Zero SD Serial
-        run: |
-          pwd
-          sed -i 's/^  \/\/#define WRITE_PACKETS_SERIAL/  #define WRITE_PACKETS_SERIAL/' esp32_marauder/configs.h
-          
-      - name: Build Marauder SD Serial for Flipper Zero WiFi Dev Board
-        uses: ArminJo/arduino-test-compile@v3.2.1
-        with:
-          sketch-names: esp32_marauder.ino
-          arduino-board-fqbn: esp32:esp32:esp32s2:PartitionScheme=min_spiffs,FlashSize=4M,PSRAM=enabled
-          extra-arduino-cli-args: "--warnings none"
-          
-      - name: Rename Marauder Flipper SD Serial bin
-        run: |
-          mv ./esp32_marauder/build/esp32.esp32.esp32s2/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.esp32s2/esp32_marauder.flipper_sd_serial.bin
-          
-      - name: Remove SD Serial
-        run: |
-          pwd
-          sed -i 's/^  #define WRITE_PACKETS_SERIAL/  \/\/#define WRITE_PACKETS_SERIAL/' esp32_marauder/configs.h
           
       - name: Build Marauder for Flipper Zero Multi Board
         uses: ArminJo/arduino-test-compile@v3.2.1
@@ -464,13 +442,6 @@ jobs:
           path: ./esp32_marauder/build/esp32.esp32.esp32s2/esp32_marauder.flipper.bin
           retention-days: 5
           
-      - name: 'Upload Flipper SD Serial Artifact'
-        uses: actions/upload-artifact@v3
-        with:
-          name: esp32_marauder.flipper_sd_serial.bin
-          path: ./esp32_marauder/build/esp32.esp32.esp32s2/esp32_marauder.flipper_sd_serial.bin
-          retention-days: 5
-          
       - name: 'Upload MultiboardS3 Artifact'
         uses: actions/upload-artifact@v3
         with:
@@ -555,18 +526,6 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./esp32_marauder/build/esp32.esp32.esp32s2/esp32_marauder.flipper.bin
           asset_name: esp32_marauder.flipper.bin
-          asset_content_type: application/bin
-        if: github.event_name != 'pull_request'
-          
-      - name: Upload Flipper SD Serial Asset
-        id: upload-flipper-sd-serial-release-asset 
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./esp32_marauder/build/esp32.esp32.esp32s2/esp32_marauder.flipper_sd_serial.bin
-          asset_name: esp32_marauder.flipper_sd_serial.bin
           asset_content_type: application/bin
         if: github.event_name != 'pull_request'
           

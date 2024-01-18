@@ -198,17 +198,6 @@ void setup()
 
   Serial.begin(115200);
 
-  // Starts a second serial channel to stream the captured packets
-  #ifdef WRITE_PACKETS_SERIAL
-    
-    #ifdef XIAO_ESP32_S3
-      Serial1.begin(115200, SERIAL_8N1, XIAO_RX1, XIAO_TX1);
-    #else
-      Serial1.begin(115200);
-    #endif
-    
-  #endif
-
   //Serial.println("\n\nHello, World!\n");
 
   Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
@@ -293,9 +282,8 @@ void setup()
     display_obj.tft.println(F(text_table0[2]));
   #endif
 
-  #ifdef WRITE_PACKETS_SERIAL
-    buffer_obj = Buffer();
-  #elif defined(HAS_SD)
+  buffer_obj = Buffer();
+  #if defined(HAS_SD)
     // Do some SD stuff
     if(sd_obj.initSD()) {
       #ifdef HAS_SCREEN
@@ -419,13 +407,13 @@ void loop()
     gps_obj.main();
   #endif
   
-  #ifdef WRITE_PACKETS_SERIAL
-    buffer_obj.forceSaveSerial();
-  #elif defined(HAS_SD)
+  // Detect SD card
+  #if defined(HAS_SD)
     sd_obj.main();
-  #else
-    return;
   #endif
+
+  // Save buffer to SD and/or serial
+  buffer_obj.save();
 
   #ifdef HAS_BATTERY
     battery_obj.main(currentTime);

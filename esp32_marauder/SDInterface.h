@@ -38,7 +38,6 @@ class SDInterface {
     uint64_t cardSizeMB;
     //uint64_t cardSizeGB;
     bool supported = false;
-    bool do_save = true;
 
     String card_sz;
   
@@ -47,13 +46,9 @@ class SDInterface {
     void listDir(String str_dir);
     void listDirToLinkedList(LinkedList<String>* file_names, String str_dir = "/", String ext = "");
     File getFile(String path);
-    void addPacket(uint8_t* buf, uint32_t len, bool log = false);
-    void openCapture(String file_name = "");
-    void openLog(String file_name = "");
     void runUpdate();
     void performUpdate(Stream &updateSource, size_t updateSize);
     void main();
-    //void savePacket(uint8_t* buf, uint32_t len);
 };
 
 #endif
