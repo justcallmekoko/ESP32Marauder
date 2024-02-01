@@ -8,11 +8,7 @@ char nmeaBuffer[100];
 
 MicroNMEA nmea(nmeaBuffer, sizeof(nmeaBuffer));
 
-#ifndef GPS_SOFTWARE_SERIAL
-  HardwareSerial Serial2(GPS_SERIAL_INDEX);
-#else
-  EspSoftwareSerial::UART Serial2;
-#endif
+HardwareSerial Serial2(GPS_SERIAL_INDEX);
 
 void GpsInterface::begin() {
 
@@ -29,11 +25,7 @@ void GpsInterface::begin() {
   #endif
 
   
-  #ifndef GPS_SOFTWARE_SERIAL
-    Serial2.begin(9600, SERIAL_8N1, GPS_TX, GPS_RX);
-  #else
-    Serial2.begin(9600, SWSERIAL_8N1, GPS_TX, GPS_RX);
-  #endif
+  Serial2.begin(9600, SERIAL_8N1, GPS_TX, GPS_RX);
 
   MicroNMEA::sendSentence(Serial2, "$PSTMSETPAR,1201,0x00000042");
   MicroNMEA::sendSentence(Serial2, "$PSTMSAVEPAR");
