@@ -8,26 +8,31 @@ char nmeaBuffer[100];
 
 MicroNMEA nmea(nmeaBuffer, sizeof(nmeaBuffer));
 
-#ifndef GPS_SOFTWARE_SERIAL
-  HardwareSerial Serial2(GPS_SERIAL_INDEX);
-#else
-  EspSoftwareSerial::UART Serial2;
-#endif
+HardwareSerial Serial2(GPS_SERIAL_INDEX);
 
 void GpsInterface::begin() {
 
-  #ifndef GPS_SOFTWARE_SERIAL
-    Serial2.begin(9600, SERIAL_8N1, GPS_TX, GPS_RX);
-  #else
-    Serial2.begin(9600, SWSERIAL_8N1, GPS_TX, GPS_RX);
+  #ifdef MARAUDER_MINI
+    pinMode(26, OUTPUT);
+
+    delay(1);
+
+    analogWrite(26, 243);
+    delay(1);
+
+    Serial.println("Activated GPS");
+    delay(100);
   #endif
+
+  
+  Serial2.begin(9600, SERIAL_8N1, GPS_TX, GPS_RX);
 
   MicroNMEA::sendSentence(Serial2, "$PSTMSETPAR,1201,0x00000042");
   MicroNMEA::sendSentence(Serial2, "$PSTMSAVEPAR");
 
   MicroNMEA::sendSentence(Serial2, "$PSTMSRR");
 
-  delay(4000);
+  delay(3900);
 
   if (Serial2.available()) {
     Serial.println("GPS Attached Successfully");
@@ -35,11 +40,17 @@ void GpsInterface::begin() {
     while (Serial2.available())
       Serial2.read();
   }
+  else {
+    this->gps_enabled = false;
+    Serial.println("GPS Not Found");
+  }
+  
 
   this->type_flag=GPSTYPE_NATIVE; //enforce default
   this->disable_queue(); //init the queue, disabled, kill NULLs
 
   nmea.setUnknownSentenceHandler(gps_nmea_notimp);
+
 }
 
 //passthrough for other objects
@@ -102,8 +113,8 @@ void GpsInterface::enqueue(MicroNMEA& nmea){
                     if(this->text_in){
                       int size=text_in->size();
                       if(size){
-                        #ifdef GPS_TEXT_MAXCOPIES
-                          if(this->text_cycles>=GPS_TEXT_MAXCOPIES){
+                        #ifdef GPS_TEXT_MAXCYCLES
+                          if(this->text_cycles>=GPS_TEXT_MAXCYCLES){
                         #else
                           if(this->text_cycles){
                         #endif
@@ -158,8 +169,8 @@ void GpsInterface::enqueue(MicroNMEA& nmea){
                   #else
                     if(size>=5){
                   #endif
-                      #ifdef GPS_TEXT_MAXCOPIES
-                        if(this->text_cycles>=GPS_TEXT_MAXCOPIES){
+                      #ifdef GPS_TEXT_MAXCYCLES
+                        if(this->text_cycles>=GPS_TEXT_MAXCYCLES){
                       #else
                         if(this->text_cycles){
                       #endif
@@ -196,11 +207,25 @@ void GpsInterface::enqueue(MicroNMEA& nmea){
       this->notparsed_nmea_sentence = nmea_sentence.c_str();
 
     if(this->queue_enabled_flag){
-      if(!this->queue) this->new_queue();
       if(enqueue){
-        String enqueue_me=nmea_sentence.c_str();
-        this->queue->add(enqueue_me);
+        nmea_sentence_t line = { unparsed, msg_id, nmea_sentence.c_str() };
+
+        if(this->queue){
+          #ifdef GPS_NMEA_MAXQUEUE
+            if(this->queue->size()>=GPS_NMEA_MAXQUEUE)
+          #else
+            if(this->queue->size()>=30)
+          #endif
+              this->flush_queue();
+        }
+        else
+           this->new_queue();
+
+        this->queue->add(line);
       }
+      else
+        if(!this->queue)
+          this->new_queue();
     }
     else
       this->flush_queue();
@@ -234,12 +259,12 @@ bool GpsInterface::queue_enabled(){
   return this->queue_enabled_flag;
 }
 
-LinkedList<String>* GpsInterface::get_queue(){
+LinkedList<nmea_sentence_t>* GpsInterface::get_queue(){
   return this->queue;
 }
 
 void GpsInterface::new_queue(){
-  this->queue=new LinkedList<String>;
+  this->queue=new LinkedList<nmea_sentence_t>;
 }
 
 void GpsInterface::flush_queue(){
@@ -250,7 +275,7 @@ void GpsInterface::flush_queue(){
 void GpsInterface::flush_queue_nmea(){
   if(this->queue){
     if(this->queue->size()){
-      LinkedList<String> *delme=this->queue;
+      LinkedList<nmea_sentence_t> *delme=this->queue;
       this->new_queue();
       delete delme;
     }
