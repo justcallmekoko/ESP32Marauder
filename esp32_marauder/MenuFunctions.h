@@ -71,6 +71,7 @@ extern Settings settings_obj;
 #define LANGUAGE 31
 #define STATUS_GPS 32
 #define GPS_MENU 33
+#define DISABLE_TOUCH 34
 
 PROGMEM void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p);
 PROGMEM bool my_touchpad_read(lv_indev_drv_t * indev_driver, lv_indev_data_t * data);
@@ -121,7 +122,6 @@ class MenuFunctions
     uint32_t initTime = 0;
     uint8_t menu_start_index = 0;
 
-
     // Main menu stuff
     Menu mainMenu;
 
@@ -163,7 +163,6 @@ class MenuFunctions
 
 
     void addNodes(Menu* menu, String name, uint16_t color, Menu* child, int place, std::function<void()> callable, bool selected = false, String command = "");
-    void updateStatusBar();
     void battery(bool initial = false);
     void battery2(bool initial = false);
     void showMenuList(Menu* menu, int layer);
@@ -192,11 +191,14 @@ class MenuFunctions
     uint16_t x = -1, y = -1;
     boolean pressed = false;
 
+    bool disable_touch;
+
     String loaded_file = "";
 
     void initLVGL();
     void deinitLVGL();
     void selectEPHTMLGFX();
+    void updateStatusBar();
     void addSSIDGFX();
     void addAPGFX();
     void addStationGFX();

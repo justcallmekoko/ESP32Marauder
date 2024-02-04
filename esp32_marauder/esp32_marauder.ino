@@ -387,6 +387,22 @@ void loop()
     mini = true;
   #endif
 
+  #ifdef HAS_ILI9341
+    #ifdef HAS_BUTTONS
+      if (c_btn.isHeld()) {
+        if (menu_function_obj.disable_touch)
+          menu_function_obj.disable_touch = false;
+        else
+          menu_function_obj.disable_touch = true;
+
+        menu_function_obj.updateStatusBar();
+
+        while (!c_btn.justReleased())
+          delay(1);
+      }
+    #endif
+  #endif
+
   // Update all of our objects
   /*#ifdef HAS_SCREEN
     bool do_draw = display_obj.draw_tft;
