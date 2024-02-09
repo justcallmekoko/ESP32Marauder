@@ -13,17 +13,12 @@
   #include "Display.h"
   #include <LinkedList.h>
 #endif
-#ifndef WRITE_PACKETS_SERIAL
-  #include "SDInterface.h"
-#else
-  #include "Buffer.h"
-#endif
+#include "SDInterface.h"
+#include "Buffer.h"
 #include "lang_var.h"
 
 extern Settings settings_obj;
-#ifndef WRITE_PACKETS_SERIAL
-  extern SDInterface sd_obj;
-#endif
+extern SDInterface sd_obj;
 #ifdef HAS_SCREEN
   extern Display display_obj;
 #endif
@@ -93,7 +88,6 @@ class EvilPortal {
     void setupServer();
     void startPortal();
     void startAP();
-    void convertStringToUint8Array(const String& str, uint8_t*& buf, uint32_t& len);
     void sendToDisplay(String msg);
 
   public:
@@ -107,7 +101,6 @@ class EvilPortal {
     LinkedList<String>* html_files;
 
     void setup();
-    void addLog(String log, int len);
     bool begin(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_points);
     void main(uint8_t scan_mode);
     void setHtmlFromSerial();
