@@ -10,7 +10,7 @@
   //#define MARAUDER_M5STICKC
   //#define MARAUDER_MINI
   //#define MARAUDER_V4
-  #define MARAUDER_V6
+  //#define MARAUDER_V6
   //#define MARAUDER_V6_1
   //#define MARAUDER_KIT
   //#define GENERIC_ESP32
@@ -18,6 +18,7 @@
   //#define ESP32_LDDB
   //#define MARAUDER_DEV_BOARD_PRO
   //#define XIAO_ESP32_S3
+  #define MARAUDER_FEBERIS_BOARD
   //// END BOARD TARGETS
 
   #define MARAUDER_VERSION "v0.13.7"
@@ -43,6 +44,8 @@
     #define HARDWARE_NAME "Flipper Zero Dev Board Pro"
   #elif defined(XIAO_ESP32_S3)
     #define HARDWARE_NAME "XIAO ESP32 S3"
+  #elif defined(MARAUDER_FEBERIS_BOARD)
+    #define HARDWARE_NAME "BPM Circuits FEBERIS"
   #else
     #define HARDWARE_NAME "ESP32"
   #endif
@@ -185,6 +188,20 @@
     //#define HAS_PWR_MGMT
     //#define HAS_SCREEN
     //#define HAS_SD
+    //#define HAS_TEMP_SENSOR
+    //#define HAS_GPS
+  #endif
+
+  #ifdef MARAUDER_FEBERIS_BOARD
+    #define FLIPPER_ZERO_HAT
+    //#define HAS_BATTERY
+    #define HAS_BT
+    //#define HAS_BUTTONS
+    #define HAS_NEOPIXEL_LED
+    //#define HAS_PWR_MGMT
+    //#define HAS_SCREEN
+    //#define HAS_SD
+    //#define USE_SD
     //#define HAS_TEMP_SENSOR
     //#define HAS_GPS
   #endif
@@ -740,6 +757,8 @@
     #define MEM_LOWER_LIM 20000
   #elif defined(XIAO_ESP32_S3)
     #define MEM_LOWER_LIM 20000
+  #elif defined(MARAUDER_FEBERIS_BOARD)
+    #define MEM_LOWER_LIM 20000
   #endif
   //// END MEMORY LOWER LIMIT STUFF
 
@@ -778,6 +797,8 @@
     #define MAX_HTML_SIZE 20000
   #elif defined(XIAO_ESP32_S3)
     #define MAX_HTML_SIZE 20000
+  #elif defined(MARAUDER_FEBERIS_BOARD)
+    #define MAX_HTML_SIZE 11400
   #else
     #define MAX_HTML_SIZE 20000
   #endif
@@ -820,6 +841,11 @@
       #define GPS_TX 33
       #define GPS_RX 32
       #define mac_history_len 512
+    #elif defined(MARAUDER_FEBERIS_BOARD)
+      #define GPS_SERIAL_INDEX 2
+      #define GPS_TX 4
+      #define GPS_RX 13
+      #define mac_history_len 512
     #endif
   #else
     #define mac_history_len 512
@@ -834,6 +860,8 @@
   #elif defined(MARAUDER_KIT)
     #define MARAUDER_TITLE_BYTES 13578
   #elif defined(MARAUDER_MINI)
+    #define MARAUDER_TITLE_BYTES 13578
+  #elif defined(MARAUDER_FEBERIS_BOARD)
     #define MARAUDER_TITLE_BYTES 13578
   #else
     #define MARAUDER_TITLE_BYTES 13578

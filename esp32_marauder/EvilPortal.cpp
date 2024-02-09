@@ -92,6 +92,7 @@ bool EvilPortal::setHtml() {
     return true;
   }
   Serial.println("Setting HTML...");
+#ifdef HAS_SD
   File html_file = sd_obj.getFile("/" + this->target_html_name);
   if (!html_file) {
     #ifdef HAS_SCREEN
@@ -123,6 +124,7 @@ bool EvilPortal::setHtml() {
     html_file.close();
     return true;
   }
+#endif
 
 }
 
@@ -136,6 +138,7 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
       break;
     }
   }
+#ifdef HAS_SD
   // If there are no SSIDs and there are no APs selected, pull from file
   // This means the file is last resort
   if ((ssids->size() <= 0) && (temp_ap_name == "")) {
@@ -177,9 +180,10 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
       ap_config_file.close();
     }
   }
+#endif
   // There are SSIDs in the list but there could also be an AP selected
   // Priority is SSID list before AP selected and config file
-  else if (ssids->size() > 0) {
+  if (ssids->size() > 0) {
     ap_config = ssids->get(0).essid;
     if (ap_config.length() > MAX_AP_NAME_SIZE) {
       #ifdef HAS_SCREEN
