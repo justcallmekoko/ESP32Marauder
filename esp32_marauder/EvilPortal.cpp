@@ -268,7 +268,7 @@ void EvilPortal::main(uint8_t scan_mode) {
     if (this->something_received) {
       this->something_received = false;
       
-      if (this->params_log.length() > 0)
+      if (this->params_log.length() > 0) {
         this->params_log = this->params_log + "\n";
         Serial.print(this->params_log);
         buffer_obj.append(this->params_log);
