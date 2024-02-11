@@ -234,10 +234,13 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
 }
 
 void EvilPortal::startAP() {
+  const IPAddress AP_IP(172, 0, 0, 1);
+
   Serial.print("starting ap ");
   Serial.println(apName);
 
   WiFi.mode(WIFI_AP);
+  WiFi.softAPConfig(AP_IP, AP_IP, IPAddress(255, 255, 255, 0));
   WiFi.softAP(apName);
 
   #ifdef HAS_SCREEN
