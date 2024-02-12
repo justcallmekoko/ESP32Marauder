@@ -87,43 +87,44 @@ void EvilPortal::setHtmlFromSerial() {
 }
 
 bool EvilPortal::setHtml() {
-  if (this->using_serial_html) {
-    Serial.println("html previously set");
-    return true;
-  }
-  Serial.println("Setting HTML...");
-  File html_file = sd_obj.getFile("/" + this->target_html_name);
-  if (!html_file) {
-    #ifdef HAS_SCREEN
-      this->sendToDisplay("Could not find /" + this->target_html_name);
-      this->sendToDisplay("Touch to exit...");
-    #endif
-    Serial.println("Could not find /" + this->target_html_name + ". Use stopscan...");
-    return false;
-  }
-  else {
-    if (html_file.size() > MAX_HTML_SIZE) {
+  #ifdef HAS_SD
+    if (this->using_serial_html) {
+      Serial.println("html previously set");
+      return true;
+    }
+    Serial.println("Setting HTML...");
+    File html_file = sd_obj.getFile("/" + this->target_html_name);
+    if (!html_file) {
       #ifdef HAS_SCREEN
-        this->sendToDisplay("The given HTML is too large.");
-        this->sendToDisplay("The Byte limit is " + (String)MAX_HTML_SIZE);
+        this->sendToDisplay("Could not find /" + this->target_html_name);
         this->sendToDisplay("Touch to exit...");
       #endif
-      Serial.println("The provided HTML is too large. Byte limit is " + (String)MAX_HTML_SIZE + "\nUse stopscan...");
+      Serial.println("Could not find /" + this->target_html_name + ". Use stopscan...");
       return false;
     }
-    String html = "";
-    while (html_file.available()) {
-      char c = html_file.read();
-      if (isPrintable(c))
-        html.concat(c);
+    else {
+      if (html_file.size() > MAX_HTML_SIZE) {
+        #ifdef HAS_SCREEN
+          this->sendToDisplay("The given HTML is too large.");
+          this->sendToDisplay("The Byte limit is " + (String)MAX_HTML_SIZE);
+          this->sendToDisplay("Touch to exit...");
+        #endif
+        Serial.println("The provided HTML is too large. Byte limit is " + (String)MAX_HTML_SIZE + "\nUse stopscan...");
+        return false;
+      }
+      String html = "";
+      while (html_file.available()) {
+        char c = html_file.read();
+        if (isPrintable(c))
+          html.concat(c);
+      }
+      strncpy(index_html, html.c_str(), strlen(html.c_str()));
+      this->has_html = true;
+      Serial.println("html set");
+      html_file.close();
+      return true;
     }
-    strncpy(index_html, html.c_str(), strlen(html.c_str()));
-    this->has_html = true;
-    Serial.println("html set");
-    html_file.close();
-    return true;
-  }
-
+  #endif
 }
 
 bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_points) {
@@ -139,43 +140,48 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
   // If there are no SSIDs and there are no APs selected, pull from file
   // This means the file is last resort
   if ((ssids->size() <= 0) && (temp_ap_name == "")) {
-    File ap_config_file = sd_obj.getFile("/ap.config.txt");
-    // Could not open config file. return false
-    if (!ap_config_file) {
-      #ifdef HAS_SCREEN
-        this->sendToDisplay("Could not find /ap.config.txt.");
-        this->sendToDisplay("Touch to exit...");
-      #endif
-      Serial.println("Could not find /ap.config.txt. Use stopscan...");
+    #ifndef HAS_SD
+      Serial.println("SD support is disabled, cannot search for /ap.config.txt. \nUse stopscan...");
       return false;
-    }
-    // Config file good. Proceed
-    else {
-      // ap name too long. return false        
-      if (ap_config_file.size() > MAX_AP_NAME_SIZE) {
+    #else
+      File ap_config_file = sd_obj.getFile("/ap.config.txt");
+      // Could not open config file. return false
+      if (!ap_config_file) {
         #ifdef HAS_SCREEN
-          this->sendToDisplay("The given AP name is too large.");
-          this->sendToDisplay("The Byte limit is " + (String)MAX_AP_NAME_SIZE);
+          this->sendToDisplay("Could not find /ap.config.txt.");
           this->sendToDisplay("Touch to exit...");
         #endif
-        Serial.println("The provided AP name is too large. Byte limit is " + (String)MAX_AP_NAME_SIZE + "\nUse stopscan...");
+        Serial.println("Could not find /ap.config.txt. Use stopscan...");
         return false;
       }
-      // AP name length good. Read from file into var
-      while (ap_config_file.available()) {
-        char c = ap_config_file.read();
-        Serial.print(c);
-        if (isPrintable(c)) {
-          ap_config.concat(c);
+      // Config file good. Proceed
+      else {
+        // ap name too long. return false        
+        if (ap_config_file.size() > MAX_AP_NAME_SIZE) {
+          #ifdef HAS_SCREEN
+            this->sendToDisplay("The given AP name is too large.");
+            this->sendToDisplay("The Byte limit is " + (String)MAX_AP_NAME_SIZE);
+            this->sendToDisplay("Touch to exit...");
+          #endif
+          Serial.println("The provided AP name is too large. Byte limit is " + (String)MAX_AP_NAME_SIZE + "\nUse stopscan...");
+          return false;
         }
+        // AP name length good. Read from file into var
+        while (ap_config_file.available()) {
+          char c = ap_config_file.read();
+          Serial.print(c);
+          if (isPrintable(c)) {
+            ap_config.concat(c);
+          }
+        }
+        #ifdef HAS_SCREEN
+          this->sendToDisplay("AP name from config file");
+          this->sendToDisplay("AP name: " + ap_config);
+        #endif
+        Serial.println("AP name from config file: " + ap_config);
+        ap_config_file.close();
       }
-      #ifdef HAS_SCREEN
-        this->sendToDisplay("AP name from config file");
-        this->sendToDisplay("AP name: " + ap_config);
-      #endif
-      Serial.println("AP name from config file: " + ap_config);
-      ap_config_file.close();
-    }
+    #endif
   }
   // There are SSIDs in the list but there could also be an AP selected
   // Priority is SSID list before AP selected and config file
