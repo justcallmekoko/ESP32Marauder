@@ -87,43 +87,44 @@ void EvilPortal::setHtmlFromSerial() {
 }
 
 bool EvilPortal::setHtml() {
-  if (this->using_serial_html) {
-    Serial.println("html previously set");
-    return true;
-  }
-  Serial.println("Setting HTML...");
-  File html_file = sd_obj.getFile("/" + this->target_html_name);
-  if (!html_file) {
-    #ifdef HAS_SCREEN
-      this->sendToDisplay("Could not find /" + this->target_html_name);
-      this->sendToDisplay("Touch to exit...");
-    #endif
-    Serial.println("Could not find /" + this->target_html_name + ". Use stopscan...");
-    return false;
-  }
-  else {
-    if (html_file.size() > MAX_HTML_SIZE) {
+  #ifdef HAS_SD
+     if (this->using_serial_html) {
+      Serial.println("html previously set");
+      return true;
+    }
+    Serial.println("Setting HTML...");
+    File html_file = sd_obj.getFile("/" + this->target_html_name);
+    if (!html_file) {
       #ifdef HAS_SCREEN
-        this->sendToDisplay("The given HTML is too large.");
-        this->sendToDisplay("The Byte limit is " + (String)MAX_HTML_SIZE);
+        this->sendToDisplay("Could not find /" + this->target_html_name);
         this->sendToDisplay("Touch to exit...");
       #endif
-      Serial.println("The provided HTML is too large. Byte limit is " + (String)MAX_HTML_SIZE + "\nUse stopscan...");
+      Serial.println("Could not find /" + this->target_html_name + ". Use stopscan...");
       return false;
     }
-    String html = "";
-    while (html_file.available()) {
-      char c = html_file.read();
-      if (isPrintable(c))
-        html.concat(c);
+    else {
+      if (html_file.size() > MAX_HTML_SIZE) {
+        #ifdef HAS_SCREEN
+          this->sendToDisplay("The given HTML is too large.");
+          this->sendToDisplay("The Byte limit is " + (String)MAX_HTML_SIZE);
+          this->sendToDisplay("Touch to exit...");
+        #endif
+        Serial.println("The provided HTML is too large. Byte limit is " + (String)MAX_HTML_SIZE + "\nUse stopscan...");
+        return false;
+      }
+      String html = "";
+      while (html_file.available()) {
+        char c = html_file.read();
+        if (isPrintable(c))
+          html.concat(c);
+      }
+      strncpy(index_html, html.c_str(), strlen(html.c_str()));
+      this->has_html = true;
+      Serial.println("html set");
+      html_file.close();
+      return true;
     }
-    strncpy(index_html, html.c_str(), strlen(html.c_str()));
-    this->has_html = true;
-    Serial.println("html set");
-    html_file.close();
-    return true;
-  }
-
+  #endif
 }
 
 bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_points) {
@@ -136,6 +137,7 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
       break;
     }
   }
+  #ifdef HAS_SD
   // If there are no SSIDs and there are no APs selected, pull from file
   // This means the file is last resort
   if ((ssids->size() <= 0) && (temp_ap_name == "")) {
@@ -177,9 +179,10 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
       ap_config_file.close();
     }
   }
+  #endif
   // There are SSIDs in the list but there could also be an AP selected
   // Priority is SSID list before AP selected and config file
-  else if (ssids->size() > 0) {
+  if (ssids->size() > 0) {
     ap_config = ssids->get(0).essid;
     if (ap_config.length() > MAX_AP_NAME_SIZE) {
       #ifdef HAS_SCREEN
