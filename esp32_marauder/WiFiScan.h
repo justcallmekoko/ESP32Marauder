@@ -196,7 +196,6 @@ class WiFiScan
 
     //String connected_network = "";
     //const String alfa = "1234567890qwertyuiopasdfghjkklzxcvbnm QWERTYUIOPASDFGHJKLZXCVBNM_";
-    const String alfa = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789-=[];',./`\\_+{}:\"<>?~|!@#$%^&*()";
 
     const char* rick_roll[8] = {
       "01 Never gonna give you up",
@@ -356,6 +355,9 @@ class WiFiScan
     String dst_mac = "ff:ff:ff:ff:ff:ff";
     byte src_mac[6] = {};
 
+    String current_mini_kb_ssid = "";
+
+    const String alfa = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789-=[];',./`\\_+{}:\"<>?~|!@#$%^&*()";
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     wifi_config_t ap_config;
