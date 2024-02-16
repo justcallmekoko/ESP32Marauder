@@ -121,6 +121,7 @@ class MenuFunctions
 
     uint32_t initTime = 0;
     uint8_t menu_start_index = 0;
+    uint8_t mini_kb_index = 0;
 
     // Main menu stuff
     Menu mainMenu;
@@ -148,6 +149,7 @@ class MenuFunctions
 
     // WiFi General Menu
     Menu htmlMenu;
+    Menu miniKbMenu;
 
     // Bluetooth menu stuff
     Menu bluetoothSnifferMenu;
@@ -171,6 +173,9 @@ class MenuFunctions
     void displaySetting(String key, Menu* menu, int index);
     void buttonSelected(uint8_t b, int8_t x = -1);
     void buttonNotSelected(uint8_t b, int8_t x = -1);
+    #ifdef MARAUDER_MINI
+      void miniKeyboard(Menu * targetMenu);
+    #endif
 
     uint8_t updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold = 600);
 

@@ -1242,6 +1242,9 @@ void MenuFunctions::RunSetup()
 
   // WiFi HTML menu stuff
   htmlMenu.list = new LinkedList<MenuNode>();
+  #ifdef MARAUDER_MINI
+    miniKbMenu.list = new LinkedList<MenuNode>();
+  #endif
 
   // Bluetooth menu stuff
   bluetoothSnifferMenu.list = new LinkedList<MenuNode>();
@@ -1277,6 +1280,9 @@ void MenuFunctions::RunSetup()
     gpsInfoMenu.name = "GPS Data";
   #endif  
   htmlMenu.name = "EP HTML List";
+  #ifdef MARAUDER_MINI
+    miniKbMenu.name = "Mini Keyboard";
+  #endif
 
   // Build Main Menu
   mainMenu.parentMenu = NULL;
@@ -1457,6 +1463,12 @@ void MenuFunctions::RunSetup()
       addSSIDGFX();
     });
   #endif
+  #ifdef MARAUDER_MINI
+    this->addNodes(&wifiGeneralMenu, text_table1[1], TFT_NAVY, NULL, KEYBOARD_ICO, [this](){
+      this->changeMenu(&miniKbMenu);
+      this->miniKeyboard(&miniKbMenu);
+    });
+  #endif
   this->addNodes(&wifiGeneralMenu, text_table1[28], TFT_SILVER, NULL, CLEAR_ICO, [this]() {
     this->changeMenu(&clearSSIDsMenu);
     wifi_scan_obj.RunClearSSIDs();
@@ -1489,7 +1501,7 @@ void MenuFunctions::RunSetup()
       wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_RED);  
       selectEPHTMLGFX();
     });
-  #else
+  #else // Mini EP HTML select
     this->addNodes(&wifiGeneralMenu, "Select EP HTML File", TFT_CYAN, NULL, KEYBOARD_ICO, [this](){
       this->changeMenu(&htmlMenu);
       #ifdef HAS_BUTTONS
@@ -1501,7 +1513,6 @@ void MenuFunctions::RunSetup()
               else
                 evil_portal_obj.selected_html_index = evil_portal_obj.html_files->size() - 1;
 
-              //Serial.println("Setting button text as " + evil_portal_obj.html_files->get(evil_portal_obj.selected_html_index));
               this->htmlMenu.list->set(0, MenuNode{evil_portal_obj.html_files->get(evil_portal_obj.selected_html_index), false, TFT_CYAN, 0, NULL, true, NULL});
               this->buildButtons(&htmlMenu);
               this->displayCurrentMenu();
@@ -1513,7 +1524,6 @@ void MenuFunctions::RunSetup()
                 else
                   evil_portal_obj.selected_html_index = 0;
 
-                //Serial.println("Setting button text as " + evil_portal_obj.html_files->get(evil_portal_obj.selected_html_index));
                 this->htmlMenu.list->set(0, MenuNode{evil_portal_obj.html_files->get(evil_portal_obj.selected_html_index), false, TFT_CYAN, 0, NULL, true, NULL});
                 this->buildButtons(&htmlMenu, 0, evil_portal_obj.html_files->get(evil_portal_obj.selected_html_index));
                 this->displayCurrentMenu();
@@ -1531,6 +1541,11 @@ void MenuFunctions::RunSetup()
           }
         #endif
       #endif
+    });
+
+    miniKbMenu.parentMenu = &wifiGeneralMenu;
+    this->addNodes(&miniKbMenu, "a", TFT_CYAN, NULL, 0, [this]() {
+      this->changeMenu(miniKbMenu.parentMenu);
     });
 
     htmlMenu.parentMenu = &wifiGeneralMenu;
@@ -1796,6 +1811,124 @@ void MenuFunctions::RunSetup()
 
   this->initTime = millis();
 }
+
+#ifdef MARAUDER_MINI
+  void MenuFunctions::miniKeyboard(Menu * targetMenu) {
+    // Prepare a char array and reset temp SSID string
+    extern LinkedList<ssid>* ssids;
+
+    bool pressed = true;
+
+    wifi_scan_obj.current_mini_kb_ssid = "";
+
+    if (c_btn.isHeld()) {
+      while (!c_btn.justReleased())
+        delay(1);
+    }
+
+    int str_len = wifi_scan_obj.alfa.length() + 1; 
+
+    char char_array[str_len];
+
+    wifi_scan_obj.alfa.toCharArray(char_array, str_len);
+
+    // Button loop until hold center button
+    #ifdef HAS_BUTTONS
+      #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1))
+        while(true) {
+          #ifndef MARAUDER_M5STICKC
+            // Cycle char previous
+            if (l_btn.justPressed()) {
+              pressed = true;
+              if (this->mini_kb_index > 0)
+                this->mini_kb_index--;
+              else
+                this->mini_kb_index = str_len - 2;
+
+              targetMenu->list->set(0, MenuNode{String(char_array[this->mini_kb_index]).c_str(), false, TFT_CYAN, 0, NULL, true, NULL});
+              this->buildButtons(targetMenu);
+              //this->displayCurrentMenu();
+
+            }
+
+            // Add character
+            if (d_btn.justPressed()) {
+              pressed = true;
+              wifi_scan_obj.current_mini_kb_ssid.concat(String(char_array[this->mini_kb_index]).c_str());
+              while (!d_btn.justReleased())
+                delay(1);
+            }
+
+            // Remove character
+            if (u_btn.justPressed()) {
+              pressed = true;
+              wifi_scan_obj.current_mini_kb_ssid.remove(wifi_scan_obj.current_mini_kb_ssid.length() - 1);
+              while (!u_btn.justReleased())
+                delay(1);
+            }
+          #endif
+
+          // Cycle char next
+          if (r_btn.justPressed()) {
+            pressed = true;
+            if (this->mini_kb_index < str_len - 2)
+              this->mini_kb_index++;
+            else
+              this->mini_kb_index = 0;
+
+            targetMenu->list->set(0, MenuNode{String(char_array[this->mini_kb_index]).c_str(), false, TFT_CYAN, 0, NULL, true, NULL});
+            this->buildButtons(targetMenu, 0, String(char_array[this->mini_kb_index]).c_str());
+            //this->displayCurrentMenu();
+          }
+
+          // Add SSID
+          if (c_btn.justPressed()) {
+            while (!c_btn.justReleased()) {
+              c_btn.justPressed(); // Need to continue updating button hold status. My shitty library.
+
+              // Exit
+              if (c_btn.isHeld()) {
+                this->changeMenu(targetMenu->parentMenu);
+                return;
+              }
+              delay(1);
+            }
+            // If we have a string, add it to list of SSIDs
+            if (wifi_scan_obj.current_mini_kb_ssid != "") {
+              pressed = true;
+              ssid s = {wifi_scan_obj.current_mini_kb_ssid, random(1, 12), {random(256), random(256), random(256), random(256), random(256), random(256)}, false};
+              ssids->unshift(s);
+              wifi_scan_obj.current_mini_kb_ssid = "";
+            }
+          }
+
+          // Display info on screen
+          if (pressed) {
+            this->displayCurrentMenu();
+            display_obj.tft.setTextWrap(false);
+            display_obj.tft.fillRect(0, SCREEN_HEIGHT / 3, SCREEN_WIDTH, STATUS_BAR_WIDTH, TFT_BLACK);
+            display_obj.tft.fillRect(0, SCREEN_HEIGHT / 3 + TEXT_HEIGHT * 2, SCREEN_WIDTH, STATUS_BAR_WIDTH, TFT_BLACK);
+            display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+            display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+            display_obj.tft.println(wifi_scan_obj.current_mini_kb_ssid + "\n");
+            display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+
+            display_obj.tft.println(ssids->get(0).essid);
+
+            display_obj.tft.setTextColor(TFT_ORANGE, TFT_BLACK);
+            display_obj.tft.println("U - Remove Char");
+            display_obj.tft.println("D - Add Char");
+            display_obj.tft.println("L - Previous Char");
+            display_obj.tft.println("R - Next Char");
+            display_obj.tft.println("C - Save");
+            display_obj.tft.println("C(Hold) - Exit");
+            pressed = false;
+          }
+        }
+      #endif
+    #endif
+  }
+#endif
 
 // Function to change menu
 void MenuFunctions::changeMenu(Menu * menu)
