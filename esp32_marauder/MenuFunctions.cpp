@@ -1245,6 +1245,13 @@ void MenuFunctions::RunSetup()
   #ifdef MARAUDER_MINI
     miniKbMenu.list = new LinkedList<MenuNode>();
   #endif
+  #ifndef HAS_ILI9341
+    #ifdef HAS_BUTTONS
+      #ifdef HAS_SD
+        sdDeleteMenu.list = new LinkedList<MenuNode>();
+      #endif
+    #endif
+  #endif
 
   // Bluetooth menu stuff
   bluetoothSnifferMenu.list = new LinkedList<MenuNode>();
@@ -1282,6 +1289,9 @@ void MenuFunctions::RunSetup()
   htmlMenu.name = "EP HTML List";
   #ifdef MARAUDER_MINI
     miniKbMenu.name = "Mini Keyboard";
+  #endif
+  #ifndef HAS_ILI9341
+    sdDeleteMenu.name = "Delete SD Files";
   #endif
 
   // Build Main Menu
@@ -1553,17 +1563,6 @@ void MenuFunctions::RunSetup()
       this->changeMenu(htmlMenu.parentMenu);
     });
 
-    /*int loopLimit = min(evil_portal_obj.html_files->size(), BUTTON_ARRAY_LEN);
-
-    for (int i = 0; i < loopLimit - 1; i++) {
-      this->addNodes(&htmlMenu, evil_portal_obj.html_files->get(i), TFT_CYAN, NULL, 0, [this, i]() {
-        evil_portal_obj.target_html_name = (String)evil_portal_obj.html_files->get(i);
-        Serial.println("Set Evil Portal HTML as " + evil_portal_obj.target_html_name);
-        evil_portal_obj.using_serial_html = false;
-        this->changeMenu(htmlMenu.parentMenu);
-      });
-    }*/
-
     // Select APs on Mini
     this->addNodes(&wifiGeneralMenu, text_table1[56], TFT_NAVY, NULL, KEYBOARD_ICO, [this](){
       wifiAPMenu.list->clear();
@@ -1716,6 +1715,97 @@ void MenuFunctions::RunSetup()
   this->addNodes(&deviceMenu, text08, TFT_NAVY, NULL, KEYBOARD_ICO, [this]() {
     this->changeMenu(&settingsMenu);
   });
+  #ifdef HAS_SD
+    if (sd_obj.supported) {
+      this->addNodes(&deviceMenu, "Delete SD Files", TFT_CYAN, NULL, SD_UPDATE, [this]() {
+        #ifndef HAS_ILI9341
+          #ifdef HAS_BUTTONS
+            this->changeMenu(&sdDeleteMenu);
+            #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1))
+
+              bool deleting = true;
+
+              display_obj.tft.setTextWrap(false);
+              display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+              display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+              display_obj.tft.println("Loading...");
+
+              while (deleting) {
+                // Build list of files
+                sd_obj.sd_files->clear();
+                delete sd_obj.sd_files;
+
+                sd_obj.sd_files = new LinkedList<String>();
+
+                sd_obj.sd_files->add("Back");
+
+                sd_obj.listDirToLinkedList(sd_obj.sd_files);
+
+                int sd_file_index = 0;
+
+                this->sdDeleteMenu.list->set(0, MenuNode{sd_obj.sd_files->get(sd_file_index), false, TFT_CYAN, 0, NULL, true, NULL});
+                this->buildButtons(&sdDeleteMenu);
+                this->displayCurrentMenu();
+
+                // Start button loop
+                while(true) {
+                  #ifndef MARAUDER_M5STICKC
+                    if (u_btn.justPressed()) {
+                      if (sd_file_index > 0)
+                        sd_file_index--;
+                      else
+                        sd_file_index = sd_obj.sd_files->size() - 1;
+
+                      this->sdDeleteMenu.list->set(0, MenuNode{sd_obj.sd_files->get(sd_file_index), false, TFT_CYAN, 0, NULL, true, NULL});
+                      this->buildButtons(&sdDeleteMenu);
+                      this->displayCurrentMenu();
+                    }
+                  #endif
+                  if (d_btn.justPressed()) {
+                    if (sd_file_index < sd_obj.sd_files->size() - 1)
+                      sd_file_index++;
+                    else
+                      sd_file_index = 0;
+
+                    this->sdDeleteMenu.list->set(0, MenuNode{sd_obj.sd_files->get(sd_file_index), false, TFT_CYAN, 0, NULL, true, NULL});
+                    this->buildButtons(&sdDeleteMenu, 0, sd_obj.sd_files->get(sd_file_index));
+                    this->displayCurrentMenu();
+                  }
+                  if (c_btn.justPressed()) {
+                    if (sd_obj.sd_files->get(sd_file_index) != "Back") {
+                      if (sd_obj.removeFile("/" + sd_obj.sd_files->get(sd_file_index)))
+                        Serial.println("Successfully Removed File: /" + sd_obj.sd_files->get(sd_file_index));
+                        display_obj.tft.setTextWrap(false);
+                        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+                        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+                        display_obj.tft.println("Deleting /" + sd_obj.sd_files->get(sd_file_index) + "...");
+                    }
+                    else {
+                      this->changeMenu(sdDeleteMenu.parentMenu);
+                      deleting = false;
+                    }
+                    break;
+                  }
+                }
+              }
+            #endif
+          #endif
+        #endif
+      });
+    }
+  #endif
+
+  #ifdef HAS_SD
+    #ifndef ILI9341
+      #ifdef HAS_BUTTONS
+        sdDeleteMenu.parentMenu = &deviceMenu;
+        this->addNodes(&sdDeleteMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+          this->changeMenu(sdDeleteMenu.parentMenu);
+        });
+      #endif
+    #endif
+  #endif
+
   // GPS Menu
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {

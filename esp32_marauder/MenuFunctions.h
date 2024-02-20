@@ -140,6 +140,7 @@ class MenuFunctions
     Menu specSettingMenu;
     Menu infoMenu;
     Menu languageMenu;
+    Menu sdDeleteMenu;
 
     // WiFi menu stuff
     Menu wifiSnifferMenu;
