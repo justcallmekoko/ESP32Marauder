@@ -41,7 +41,7 @@ https://www.online-utility.org/image/convert/to/XBM
   #include "xiaoLED.h"
 #elif defined(MARAUDER_M5STICKC)
   #include "stickcLED.h"
-#else
+#elif defined(HAS_NEOPIXEL_LED)
   #include "LedInterface.h"
 #endif
 
@@ -65,22 +65,22 @@ https://www.online-utility.org/image/convert/to/XBM
 #endif
 
 #ifdef HAS_BUTTONS
-  #include <SwitchLib.h>
+  #include "Switches.h"
   
   #if (U_BTN >= 0)
-    SwitchLib u_btn = SwitchLib(U_BTN, 1000, true);
+    Switches u_btn = Switches(U_BTN, 1000, U_PULL);
   #endif
   #if (D_BTN >= 0)
-    SwitchLib d_btn = SwitchLib(D_BTN, 1000, true);
+    Switches d_btn = Switches(D_BTN, 1000, D_PULL);
   #endif
   #if (L_BTN >= 0)
-    SwitchLib l_btn = SwitchLib(L_BTN, 1000, true);
+    Switches l_btn = Switches(L_BTN, 1000, L_PULL);
   #endif
   #if (R_BTN >= 0)
-    SwitchLib r_btn = SwitchLib(R_BTN, 1000, true);
+    Switches r_btn = Switches(R_BTN, 1000, R_PULL);
   #endif
   #if (C_BTN >= 0)
-    SwitchLib c_btn = SwitchLib(C_BTN, 1000, true);
+    Switches c_btn = Switches(C_BTN, 1000, C_PULL);
   #endif
 
 #endif

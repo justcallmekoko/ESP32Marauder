@@ -92,7 +92,11 @@ bool EvilPortal::setHtml() {
     return true;
   }
   Serial.println("Setting HTML...");
-  File html_file = sd_obj.getFile("/" + this->target_html_name);
+  #ifdef HAS_SD
+    File html_file = sd_obj.getFile("/" + this->target_html_name);
+  #else
+    File html_file;
+  #endif
   if (!html_file) {
     #ifdef HAS_SCREEN
       this->sendToDisplay("Could not find /" + this->target_html_name);
@@ -139,7 +143,11 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
   // If there are no SSIDs and there are no APs selected, pull from file
   // This means the file is last resort
   if ((ssids->size() <= 0) && (temp_ap_name == "")) {
-    File ap_config_file = sd_obj.getFile("/ap.config.txt");
+    #ifdef HAS_SD
+      File ap_config_file = sd_obj.getFile("/ap.config.txt");
+    #else
+      File ap_config_file;
+    #endif
     // Could not open config file. return false
     if (!ap_config_file) {
       #ifdef HAS_SCREEN

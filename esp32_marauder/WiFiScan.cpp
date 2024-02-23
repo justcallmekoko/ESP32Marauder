@@ -1058,7 +1058,9 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
       uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
       Serial.println("Using TFT DIY");
     #endif
-    display_obj.tft.setTouch(calData);
+    #ifdef HAS_ILI9341
+      display_obj.tft.setTouch(calData);
+    #endif
     
   
     lv_obj_t * scr = lv_cont_create(NULL, NULL);
@@ -4035,7 +4037,9 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
       uint16_t t_x = 0, t_y = 0; // To store the touch coordinates
   
       // Do the touch stuff
-      pressed = display_obj.tft.getTouch(&t_x, &t_y);
+      #ifdef HAS_ILI9341
+        pressed = display_obj.tft.getTouch(&t_x, &t_y);
+      #endif
   
       if (pressed) {
         Serial.print("Got touch | X: ");
@@ -4186,7 +4190,9 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
       uint16_t t_x = 0, t_y = 0; // To store the touch coordinates
   
       // Do the touch stuff
-      pressed = display_obj.tft.getTouch(&t_x, &t_y);
+      #ifdef HAS_ILI9341
+        pressed = display_obj.tft.getTouch(&t_x, &t_y);
+      #endif
   
       if (pressed) {
         Serial.print("Got touch | X: ");
