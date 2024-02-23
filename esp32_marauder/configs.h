@@ -92,7 +92,7 @@
     #define HAS_SD
     #define USE_SD
     #define HAS_TEMP_SENSOR
-    //#define HAS_GPS
+    #define HAS_GPS
   #endif
 
   #ifdef MARAUDER_V4
@@ -999,6 +999,11 @@
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 33
       #define GPS_RX 32
+      #define mac_history_len 512
+    #elif defined(MARAUDER_REV_FEATHER)
+      #define GPS_SERIAL_INDEX 1
+      #define GPS_TX 6
+      #define GPS_RX 9
       #define mac_history_len 512
     #endif
   #else

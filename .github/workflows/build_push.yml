@@ -61,7 +61,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: Bodmer/TFT_eSPI
-          ref: 2.5.34
+          ref: V2.5.34
           path: CustomTFT_eSPI
 
       - name: Install lv_arduino
