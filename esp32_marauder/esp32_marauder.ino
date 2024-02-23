@@ -12,7 +12,7 @@ https://www.online-utility.org/image/convert/to/XBM
   #define Display_h
 #endif
 
-#include <WiFi.h>
+#include <WiFiScan.h>
 //#include "Web.h"
 #include "EvilPortal.h"
 #include <Wire.h>
@@ -41,6 +41,8 @@ https://www.online-utility.org/image/convert/to/XBM
   #include "xiaoLED.h"
 #elif defined(MARAUDER_M5STICKC)
   #include "stickcLED.h"
+#elif defined(CHEAP_YELLOW_DISPLAY)
+  #include "cydLED.h"
 #else
   #include "LedInterface.h"
 #endif
@@ -121,6 +123,8 @@ CommandLine cli_obj;
 
 #ifdef MARAUDER_FLIPPER
   flipperLED flipper_led;
+#elif defined(CHEAP_YELLOW_DISPLAY)
+  cydLED cyd_LED;
 #elif defined(XIAO_ESP32_S3)
   xiaoLED xiao_led;
 #elif defined(MARAUDER_M5STICKC)
@@ -226,8 +230,9 @@ void setup()
 
   #ifdef HAS_SCREEN
     //showCenterText(version_number, 250);
+    //orig 250 not 305
     #ifndef MARAUDER_MINI
-      display_obj.tft.drawCentreString(display_obj.version_number, 120, 250, 2);
+      display_obj.tft.drawCentreString(display_obj.version_number, 120, 305, 2);
     #endif
   
     #ifdef MARAUDER_MINI
@@ -331,6 +336,8 @@ void setup()
   // Do some LED stuff
   #ifdef MARAUDER_FLIPPER
     flipper_led.RunSetup();
+  #elif defined(CHEAP_YELLOW_DISPLAY)
+    cyd_LED.RunSetup();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.RunSetup();
   #elif defined(MARAUDER_M5STICKC)
@@ -445,6 +452,8 @@ void loop()
   }
   #ifdef MARAUDER_FLIPPER
     flipper_led.main();
+  #elif defined(CHEAP_YELLOW_DISPLAY)
+    cyd_LED.main();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.main();
   #elif defined(MARAUDER_M5STICKC)
