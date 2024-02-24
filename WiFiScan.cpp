@@ -1062,7 +1062,7 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
     display_obj.tft.setRotation(1);
     
     #ifdef TFT_SHIELD
-      uint16_t calData[5] = { 391, 3491, 266, 3505, 7 }; // Landscape TFT Shield
+      uint16_t calData[5] = { 188, 3408, 286, 3498, 1 }; // Landscape TFT Shield
       Serial.println("Using TFT Shield");
     #else if defined(TFT_DIY)
       uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
@@ -1370,11 +1370,11 @@ void WiFiScan::RunInfo()
     display_obj.tft.setFreeFont(NULL);
     display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
     display_obj.tft.setTextSize(1);
-//
-//
-//
-//
-//
+    display_obj.tft.setTextColor(TFT_RED);
+    display_obj.tft.println("Changes by: zR_Crackiin,"); //added who fucked this firmware up
+    display_obj.tft.println("            Zardoz & Infosecredd"); //moved out for alignment
+    display_obj.tft.setTextColor(TFT_ORANGE);
+    display_obj.tft.println("Flashed by : https://fzeeflasher.com/");
     display_obj.tft.setTextColor(TFT_CYAN);
     display_obj.tft.println(text_table4[20]);
     display_obj.tft.println(text_table4[21] + display_obj.version_number);
@@ -1461,7 +1461,7 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
   
     #ifdef HAS_SCREEN
       #ifdef TFT_SHIELD
-        uint16_t calData[5] = { 391, 3491, 266, 3505, 7 }; // Landscape TFT Shield
+        uint16_t calData[5] = { 188, 3408, 286, 3498, 1 }; // Landscape TFT Shield
         Serial.println("Using TFT Shield");
       #else if defined(TFT_DIY)
         uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
@@ -1543,7 +1543,7 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
   
     #ifdef HAS_SCREEN
       #ifdef TFT_SHIELD
-        uint16_t calData[5] = { 391, 3491, 266, 3505, 7 }; // Landscape TFT Shield
+        uint16_t calData[5] = { 188, 3408, 286, 3498, 1 }; // Landscape TFT Shield
         //Serial.println("Using TFT Shield");
       #else if defined(TFT_DIY)
         uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
@@ -4103,7 +4103,7 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
           // Channel - button pressed
           if (b == 4) {
             if (set_channel > 1) {
-              Serial.println("Shift channel down");
+              Serial.println("Shit channel down");
               set_channel--;
               delay(70);
               display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
@@ -4117,7 +4117,7 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
           // Channel + button pressed
           else if (b == 5) {
             if (set_channel < MAX_CHANNEL) {
-              Serial.println("Shift channel up");
+              Serial.println("Shit channel up");
               set_channel++;
               delay(70);
               display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
@@ -4311,7 +4311,7 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
           // Channel - button pressed
           else if (b == 4) {
             if (set_channel > 1) {
-              Serial.println("Shift channel down");
+              Serial.println("Shit channel down");
               set_channel--;
               delay(70);
               display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
@@ -4327,7 +4327,7 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
           // Channel + button pressed
           else if (b == 5) {
             if (set_channel < MAX_CHANNEL) {
-              Serial.println("Shift channel up");
+              Serial.println("Shit channel up");
               set_channel++;
               delay(70);
               display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);

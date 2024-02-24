@@ -230,10 +230,7 @@ void setup()
 
   #ifdef HAS_SCREEN
     //showCenterText(version_number, 250);
-    #ifndef MARAUDER_MINI
-      display_obj.tft.drawCentreString(display_obj.version_number, 120, 250, 2);
-    #endif
-
+    //CYD - orig 250 not 305
     #ifdef CHEAP_YELLOW_DISPLAY
       display_obj.tft.drawCentreString(display_obj.version_number, 120, 305, 2);
     #endif
