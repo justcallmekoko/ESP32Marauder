@@ -12,7 +12,7 @@ https://www.online-utility.org/image/convert/to/XBM
   #define Display_h
 #endif
 
-#include <WiFiScan.h>
+#include <WiFi.h>
 //#include "Web.h"
 #include "EvilPortal.h"
 #include <Wire.h>
@@ -230,8 +230,11 @@ void setup()
 
   #ifdef HAS_SCREEN
     //showCenterText(version_number, 250);
-    //orig 250 not 305
     #ifndef MARAUDER_MINI
+      display_obj.tft.drawCentreString(display_obj.version_number, 120, 250, 2);
+    #endif
+
+    #ifdef CHEAP_YELLOW_DISPLAY
       display_obj.tft.drawCentreString(display_obj.version_number, 120, 305, 2);
     #endif
   
