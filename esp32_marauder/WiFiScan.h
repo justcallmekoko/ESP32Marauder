@@ -37,6 +37,8 @@
 #include "Assets.h"
 #ifdef MARAUDER_FLIPPER
   #include "flipperLED.h"
+#elif defined(CHEAP_YELLOW_DISPLAY)
+  #include "cydLED.h"
 #elif defined(XIAO_ESP32_S3)
   #include "xiaoLED.h"
 #elif defined(MARAUDER_M5STICKC)
@@ -115,6 +117,8 @@ extern Buffer buffer_obj;
 extern Settings settings_obj;
 #ifdef MARAUDER_FLIPPER
   extern flipperLED flipper_led;
+#elif defined(CHEAP_YELLOW_DISPLAY)
+  extern cydLED cyd_LED; 
 #elif defined(XIAO_ESP32_S3)
   extern xiaoLED xiao_led;
 #elif defined(MARAUDER_M5STICKC)

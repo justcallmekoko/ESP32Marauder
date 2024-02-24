@@ -645,6 +645,8 @@ void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_
   this->wifi_initialized = true;
   #ifdef MARAUDER_FLIPPER
     flipper_led.attackLED();
+  #elif defined(CHEAP_YELLOW_DISPLAY)
+    cyd_LED.attackLED();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.attackLED();
   #elif defined(MARAUDER_M5STICKC)
@@ -670,6 +672,8 @@ bool WiFiScan::shutdownWiFi() {
 
     #ifdef MARAUDER_FLIPPER
       flipper_led.offLED();
+    #elif defined(CHEAP_YELLOW_DISPLAY)
+      cyd_LED.offLED();
     #elif defined(XIAO_ESP32_S3)
       xiao_led.offLED();
     #elif defined(MARAUDER_M5STICKC)
@@ -697,6 +701,8 @@ bool WiFiScan::shutdownBLE() {
 
       #ifdef MARAUDER_FLIPPER
         flipper_led.offLED();
+      #elif defined(CHEAP_YELLOW_DISPLAY)
+        cyd_LED.offLED();
       #elif defined(XIAO_ESP32_S3)
         xiao_led.offLED();
       #elif defined(MARAUDER_M5STICKC)
@@ -958,6 +964,8 @@ void WiFiScan::RunEvilPortal(uint8_t scan_mode, uint16_t color)
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(CHEAP_YELLOW_DISPLAY)
+    cyd_LED.sniffLED();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.sniffLED();
   #elif defined(MARAUDER_M5STICKC)
@@ -1001,6 +1009,8 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(CHEAP_YELLOW_DISPLAY)
+    cyd_LED.sniffLED();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.sniffLED();
   #elif defined(MARAUDER_M5STICKC)
@@ -1360,6 +1370,11 @@ void WiFiScan::RunInfo()
     display_obj.tft.setFreeFont(NULL);
     display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
     display_obj.tft.setTextSize(1);
+//
+//
+//
+//
+//
     display_obj.tft.setTextColor(TFT_CYAN);
     display_obj.tft.println(text_table4[20]);
     display_obj.tft.println(text_table4[21] + display_obj.version_number);
@@ -1424,6 +1439,8 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
 {
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(CHEAP_YELLOW_DISPLAY)
+    cyd_LED.sniffLED();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.sniffLED();
   #elif defined(MARAUDER_M5STICKC)
@@ -1503,6 +1520,8 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
 {
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(CHEAP_YELLOW_DISPLAY)
+    cyd_LED.sniffLED();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.sniffLED();
   #elif defined(MARAUDER_M5STICKC)
@@ -1644,6 +1663,8 @@ void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color)
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(CHEAP_YELLOW_DISPLAY)
+    cyd_LED.sniffLED();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.sniffLED();
   #elif defined(MARAUDER_M5STICKC)
@@ -1837,6 +1858,8 @@ void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color)
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(CHEAP_YELLOW_DISPLAY)
+    cyd_LED.sniffLED();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.sniffLED();
   #elif defined(MARAUDER_M5STICKC)
@@ -1896,6 +1919,8 @@ void WiFiScan::RunStationScan(uint8_t scan_mode, uint16_t color)
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(CHEAP_YELLOW_DISPLAY)
+    cyd_LED.sniffLED();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.sniffLED();
   #elif defined(MARAUDER_M5STICKC)
@@ -1940,6 +1965,8 @@ void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color)
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(CHEAP_YELLOW_DISPLAY)
+    cyd_LED.sniffLED();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.sniffLED();
   #elif defined(MARAUDER_M5STICKC)
@@ -1986,6 +2013,8 @@ void WiFiScan::RunDeauthScan(uint8_t scan_mode, uint16_t color)
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(CHEAP_YELLOW_DISPLAY)
+    cyd_LED.sniffLED();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.sniffLED();
   #elif defined(MARAUDER_M5STICKC)
@@ -2045,6 +2074,8 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
 
   #ifdef MARAUDER_FLIPPER
     flipper_led.sniffLED();
+  #elif defined(CHEAP_YELLOW_DISPLAY)
+    cyd_LED.sniffLED();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.sniffLED();
   #elif defined(MARAUDER_M5STICKC)
@@ -4072,7 +4103,7 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
           // Channel - button pressed
           if (b == 4) {
             if (set_channel > 1) {
-              Serial.println("Shit channel down");
+              Serial.println("Shift channel down");
               set_channel--;
               delay(70);
               display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
@@ -4086,7 +4117,7 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
           // Channel + button pressed
           else if (b == 5) {
             if (set_channel < MAX_CHANNEL) {
-              Serial.println("Shit channel up");
+              Serial.println("Shift channel up");
               set_channel++;
               delay(70);
               display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
@@ -4280,7 +4311,7 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
           // Channel - button pressed
           else if (b == 4) {
             if (set_channel > 1) {
-              Serial.println("Shit channel down");
+              Serial.println("Shift channel down");
               set_channel--;
               delay(70);
               display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
@@ -4296,7 +4327,7 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
           // Channel + button pressed
           else if (b == 5) {
             if (set_channel < MAX_CHANNEL) {
-              Serial.println("Shit channel up");
+              Serial.println("Shift channel up");
               set_channel++;
               delay(70);
               display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
