@@ -927,6 +927,8 @@ void MenuFunctions::battery2(bool initial)
 void MenuFunctions::updateStatusBar()
 {
   display_obj.tft.setTextSize(1);
+
+  bool status_changed = false;
   
   #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
     display_obj.tft.setFreeFont(NULL);
@@ -937,6 +939,7 @@ void MenuFunctions::updateStatusBar()
   if (this->old_gps_sat_count != gps_obj.getNumSats()) {
     this->old_gps_sat_count = gps_obj.getNumSats();
     display_obj.tft.fillRect(0, 0, 240, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+    status_changed = true;
   }
 
   // GPS Stuff
@@ -968,9 +971,13 @@ void MenuFunctions::updateStatusBar()
   display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR);
 
   // WiFi Channel Stuff
-  if (wifi_scan_obj.set_channel != wifi_scan_obj.old_channel) {
+  if ((wifi_scan_obj.set_channel != wifi_scan_obj.old_channel) || (status_changed)) {
     wifi_scan_obj.old_channel = wifi_scan_obj.set_channel;
-    display_obj.tft.fillRect(50, 0, TFT_WIDTH * 0.21, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+    #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+      display_obj.tft.fillRect(43, 0, TFT_WIDTH * 0.21, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+    #else
+      display_obj.tft.fillRect(50, 0, TFT_WIDTH * 0.21, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+    #endif
     #ifdef HAS_ILI9341
       display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.set_channel, 50, 0, 2);
     #endif
@@ -1077,7 +1084,11 @@ void MenuFunctions::drawStatusBar()
 
   // WiFi Channel Stuff
   wifi_scan_obj.old_channel = wifi_scan_obj.set_channel;
-  display_obj.tft.fillRect(50, 0, 50, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+  #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+    display_obj.tft.fillRect(43, 0, TFT_WIDTH * 0.21, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+  #else
+    display_obj.tft.fillRect(50, 0, TFT_WIDTH * 0.21, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+  #endif
   #ifdef HAS_ILI9341
     display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.set_channel, 50, 0, 2);
   #endif
