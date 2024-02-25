@@ -934,6 +934,11 @@ void MenuFunctions::updateStatusBar()
   
   uint16_t the_color; 
 
+  if (this->old_gps_sat_count != gps_obj.getNumSats()) {
+    this->old_gps_sat_count = gps_obj.getNumSats();
+    display_obj.tft.fillRect(0, 0, 240, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+  }
+
   // GPS Stuff
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
@@ -1292,8 +1297,10 @@ void MenuFunctions::RunSetup()
   #if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
     miniKbMenu.name = "Mini Keyboard";
   #endif
-  #ifndef HAS_ILI9341
-    sdDeleteMenu.name = "Delete SD Files";
+  #ifdef HAS_SD
+    #ifndef HAS_ILI9341
+      sdDeleteMenu.name = "Delete SD Files";
+    #endif
   #endif
 
   // Build Main Menu
@@ -1719,6 +1726,7 @@ void MenuFunctions::RunSetup()
   this->addNodes(&deviceMenu, text08, TFT_NAVY, NULL, KEYBOARD_ICO, [this]() {
     this->changeMenu(&settingsMenu);
   });
+
   #ifdef HAS_SD
     if (sd_obj.supported) {
       this->addNodes(&deviceMenu, "Delete SD Files", TFT_CYAN, NULL, SD_UPDATE, [this]() {
@@ -1800,7 +1808,7 @@ void MenuFunctions::RunSetup()
   #endif
 
   #ifdef HAS_SD
-    #ifndef ILI9341
+    #ifndef HAS_ILI9341
       #ifdef HAS_BUTTONS
         sdDeleteMenu.parentMenu = &deviceMenu;
         this->addNodes(&sdDeleteMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {

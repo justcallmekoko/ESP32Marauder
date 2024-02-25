@@ -122,6 +122,7 @@ class MenuFunctions
     uint32_t initTime = 0;
     uint8_t menu_start_index = 0;
     uint8_t mini_kb_index = 0;
+    uint8_t old_gps_sat_count = 0;
 
     // Main menu stuff
     Menu mainMenu;

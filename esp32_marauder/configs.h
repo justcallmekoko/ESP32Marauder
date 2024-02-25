@@ -10,7 +10,7 @@
   //#define MARAUDER_M5STICKC
   //#define MARAUDER_MINI
   //#define MARAUDER_V4
-  //#define MARAUDER_V6
+  #define MARAUDER_V6
   //#define MARAUDER_V6_1
   //#define MARAUDER_KIT
   //#define GENERIC_ESP32
@@ -18,7 +18,7 @@
   //#define ESP32_LDDB
   //#define MARAUDER_DEV_BOARD_PRO
   //#define XIAO_ESP32_S3
-  #define MARAUDER_REV_FEATHER
+  //#define MARAUDER_REV_FEATHER
   //// END BOARD TARGETS
 
   #define MARAUDER_VERSION "v0.13.9"
