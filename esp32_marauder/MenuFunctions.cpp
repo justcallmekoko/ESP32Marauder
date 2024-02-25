@@ -989,7 +989,7 @@ void MenuFunctions::updateStatusBar()
 
   // RAM Stuff
   wifi_scan_obj.freeRAM();
-  if (wifi_scan_obj.free_ram != wifi_scan_obj.old_free_ram) {
+  if ((wifi_scan_obj.free_ram != wifi_scan_obj.old_free_ram) || (status_changed)) {
     wifi_scan_obj.old_free_ram = wifi_scan_obj.free_ram;
     display_obj.tft.fillRect(100, 0, 60, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
     #ifdef HAS_ILI9341
