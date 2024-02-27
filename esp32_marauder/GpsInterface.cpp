@@ -34,10 +34,6 @@ void GpsInterface::begin() {
 
   delay(3900);
 
-  MicroNMEA::sendSentence(Serial2, "$PSTMFORCESTANDBY,00006");
-
-  delay(100);
-
   if (Serial2.available()) {
     Serial.println("GPS Attached Successfully");
     this->gps_enabled = true;
@@ -46,10 +42,8 @@ void GpsInterface::begin() {
       char c = Serial2.read();
       //Serial.print(c);
       //Pass the character to the library
-      Serial.print(c);
       nmea.process(c);
     }
-    Serial.println(nmea.getSentence());
   }
   else {
     this->gps_enabled = false;
@@ -534,6 +528,10 @@ String GpsInterface::getDatetime() {
 
 String GpsInterface::getNumSatsString() {
   return (String)num_sats;
+}
+
+int GpsInterface::getNumSats() {
+  return num_sats;
 }
 
 bool GpsInterface::getFixStatus() {

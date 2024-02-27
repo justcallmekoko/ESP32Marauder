@@ -13,7 +13,6 @@ https://www.online-utility.org/image/convert/to/XBM
 #endif
 
 #include <WiFi.h>
-//#include "Web.h"
 #include "EvilPortal.h"
 #include <Wire.h>
 #include "esp_wifi.h"
@@ -41,11 +40,10 @@ https://www.online-utility.org/image/convert/to/XBM
   #include "xiaoLED.h"
 #elif defined(MARAUDER_M5STICKC)
   #include "stickcLED.h"
-#else
+#elif defined(HAS_NEOPIXEL_LED)
   #include "LedInterface.h"
 #endif
 
-//#include "esp_interface.h"
 #include "settings.h"
 #include "CommandLine.h"
 #include "lang_var.h"
@@ -54,42 +52,35 @@ https://www.online-utility.org/image/convert/to/XBM
   #include "BatteryInterface.h"
 #endif
 
-//#ifdef HAS_TEMP_SENSOR
-//  #include "TemperatureInterface.h"
-//#endif
-
 #ifdef HAS_SCREEN
   #include "Display.h"
   #include "MenuFunctions.h"
-  //#include "a32u4_interface.h"
 #endif
 
 #ifdef HAS_BUTTONS
-  #include <SwitchLib.h>
+  #include "Switches.h"
   
   #if (U_BTN >= 0)
-    SwitchLib u_btn = SwitchLib(U_BTN, 1000, true);
+    Switches u_btn = Switches(U_BTN, 1000, U_PULL);
   #endif
   #if (D_BTN >= 0)
-    SwitchLib d_btn = SwitchLib(D_BTN, 1000, true);
+    Switches d_btn = Switches(D_BTN, 1000, D_PULL);
   #endif
   #if (L_BTN >= 0)
-    SwitchLib l_btn = SwitchLib(L_BTN, 1000, true);
+    Switches l_btn = Switches(L_BTN, 1000, L_PULL);
   #endif
   #if (R_BTN >= 0)
-    SwitchLib r_btn = SwitchLib(R_BTN, 1000, true);
+    Switches r_btn = Switches(R_BTN, 1000, R_PULL);
   #endif
   #if (C_BTN >= 0)
-    SwitchLib c_btn = SwitchLib(C_BTN, 1000, true);
+    Switches c_btn = Switches(C_BTN, 1000, C_PULL);
   #endif
 
 #endif
 
 WiFiScan wifi_scan_obj;
 EvilPortal evil_portal_obj;
-//Web web_obj;
 Buffer buffer_obj;
-//EspInterface esp_obj;
 Settings settings_obj;
 CommandLine cli_obj;
 
@@ -101,14 +92,9 @@ CommandLine cli_obj;
   BatteryInterface battery_obj;
 #endif
 
-//#ifdef HAS_TEMP_SENSOR
-//  TemperatureInterface temp_obj;
-//#endif
-
 #ifdef HAS_SCREEN
   Display display_obj;
   MenuFunctions menu_function_obj;
-  //A32u4Interface a32u4_obj;
 #endif
 
 #ifdef HAS_SD
@@ -169,8 +155,6 @@ void setup()
     axp192_obj.begin();
   #endif
   
-  //pinMode(FLASH_BUTTON, INPUT);
-
   #ifdef HAS_SCREEN
     pinMode(TFT_BL, OUTPUT);
   #endif
@@ -198,15 +182,7 @@ void setup()
 
   Serial.begin(115200);
 
-  //Serial.println("\n\nHello, World!\n");
-
   Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
-
-  //#ifdef HAS_SCREEN
-  //  Serial.println("Has Screen");
-  //#else
-  //  Serial.println("Does not have screen");
-  //#endif
 
   #ifdef HAS_SCREEN
     display_obj.RunSetup();
@@ -225,7 +201,6 @@ void setup()
   #endif
 
   #ifdef HAS_SCREEN
-    //showCenterText(version_number, 250);
     #ifndef MARAUDER_MINI
       display_obj.tft.drawCentreString(display_obj.version_number, 120, 250, 2);
     #endif
@@ -264,19 +239,9 @@ void setup()
     display_obj.tft.println(text_table0[1]);
   #endif
 
-  //Serial.println("Internal Temp: " + (String)((temprature_sens_read() - 32) / 1.8));
-
   settings_obj.begin();
 
-  //Serial.println("This is a test Channel: " + (String)settings_obj.loadSetting<uint8_t>("Channel"));
-  //if (settings_obj.loadSetting<bool>( "Force PMKID"))
-  //  Serial.println("This is a test Force PMKID: true");
-  //else
-  //  Serial.println("This is a test Force PMKID: false");
-
   wifi_scan_obj.RunSetup();
-
-  //Serial.println(wifi_scan_obj.freeRAM());
 
   #ifdef HAS_SCREEN
     display_obj.tft.println(F(text_table0[2]));
@@ -309,23 +274,12 @@ void setup()
     display_obj.tft.println(F(text_table0[5]));
   #endif
 
-  // Temperature stuff
-  //#ifdef HAS_TEMP_SENSOR
-  //  temp_obj.RunSetup();
-  //#endif
-
   #ifdef HAS_SCREEN
     display_obj.tft.println(F(text_table0[6]));
   #endif
 
   #ifdef HAS_BATTERY
     battery_obj.battery_level = battery_obj.getBatteryLevel();
-  
-//    if (battery_obj.i2c_supported) {
-//      Serial.println(F("IP5306 I2C Supported: true"));
-//    }
-//    else
-//      Serial.println(F("IP5306 I2C Supported: false"));
   #endif
 
   // Do some LED stuff
@@ -366,12 +320,6 @@ void setup()
   #ifdef HAS_SCREEN
     menu_function_obj.RunSetup();
   #endif
-
-  //Serial.println(F("\n\n--------------------------------\n"));
-  //Serial.println(F("         ESP32 Marauder      \n"));
-  //Serial.println("            " + version_number + "\n");
-  //Serial.println(F("       By: justcallmekoko\n"));
-  //Serial.println(F("--------------------------------\n\n"));
   
   Serial.println(F("CLI Ready"));
   cli_obj.RunSetup();

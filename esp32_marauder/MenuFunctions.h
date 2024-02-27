@@ -15,12 +15,12 @@
 #include "settings.h"
 
 #ifdef HAS_BUTTONS
-  #include <SwitchLib.h>
-  extern SwitchLib u_btn;
-  extern SwitchLib d_btn;
-  extern SwitchLib l_btn;
-  extern SwitchLib r_btn;
-  extern SwitchLib c_btn;
+  #include "Switches.h"
+  extern Switches u_btn;
+  extern Switches d_btn;
+  extern Switches l_btn;
+  extern Switches r_btn;
+  extern Switches c_btn;
 #endif
 
 extern WiFiScan wifi_scan_obj;
@@ -122,6 +122,7 @@ class MenuFunctions
     uint32_t initTime = 0;
     uint8_t menu_start_index = 0;
     uint8_t mini_kb_index = 0;
+    uint8_t old_gps_sat_count = 0;
 
     // Main menu stuff
     Menu mainMenu;
@@ -140,6 +141,7 @@ class MenuFunctions
     Menu specSettingMenu;
     Menu infoMenu;
     Menu languageMenu;
+    Menu sdDeleteMenu;
 
     // WiFi menu stuff
     Menu wifiSnifferMenu;
@@ -173,7 +175,7 @@ class MenuFunctions
     void displaySetting(String key, Menu* menu, int index);
     void buttonSelected(uint8_t b, int8_t x = -1);
     void buttonNotSelected(uint8_t b, int8_t x = -1);
-    #ifdef MARAUDER_MINI
+    #if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
       void miniKeyboard(Menu * targetMenu);
     #endif
 
