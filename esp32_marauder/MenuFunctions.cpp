@@ -1542,12 +1542,12 @@ void MenuFunctions::RunSetup()
         #endif
       #endif
     });
-
+#ifdef MARAUDER_MINI
     miniKbMenu.parentMenu = &wifiGeneralMenu;
     this->addNodes(&miniKbMenu, "a", TFT_CYAN, NULL, 0, [this]() {
       this->changeMenu(miniKbMenu.parentMenu);
     });
-
+#endif
     htmlMenu.parentMenu = &wifiGeneralMenu;
     this->addNodes(&htmlMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
       this->changeMenu(htmlMenu.parentMenu);
