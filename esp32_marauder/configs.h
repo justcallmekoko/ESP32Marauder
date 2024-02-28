@@ -212,7 +212,7 @@
 
   //// POWER MANAGEMENT
   #ifdef HAS_PWR_MGMT
-    #ifdef MARAUDER_M5STICKC
+    #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
       #include "AXP192.h"
     #endif
         
@@ -402,7 +402,7 @@
     #endif
 
  #if defined(MARAUDER_M5STICKCP2)
-      #define MARAUDER_M5STICKC // From now on, everything is the same, except for one check in esp32_marauder.ino
+      #define MARAUDER_M5STICKC // From now on, everything is the same, except for one check in esp32_marauder.ino amd stickc_led.cpp/h
 
       #define SCREEN_CHAR_WIDTH 40
       #define TFT_MOSI 15
