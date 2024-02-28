@@ -724,7 +724,7 @@ jobs:
         if: github.event_name != 'pull_request'
 
       - name: Upload Marauder M5StickC Plus 2 Asset
-        id: upload-m5stickc-plus-release-asset 
+        id: upload-m5stickc-plus-2-release-asset 
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
