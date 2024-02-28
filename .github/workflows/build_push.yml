@@ -437,7 +437,7 @@ jobs:
         run: |
           mv ./esp32_marauder/build/esp32.esp32.m5stick-c/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.m5stick-c/esp32_marauder.m5stickc_plus.bin
 
-      - name: Configure TFT_eSPI and configs.h for Marauder M5StickCP2
+      - name: Configure TFT_eSPI and configs.h for Marauder M5StickC Plus 2
         run: |
           pwd
           # Remove files from the previous build
@@ -462,14 +462,14 @@ jobs:
           sed -i 's/^  #define MARAUDER_M5STICKC/  \/\/#define MARAUDER_M5STICKC/' esp32_marauder/configs.h
           sed -i 's/^  \/\/#define MARAUDER_M5STICKCP2/  #define MARAUDER_M5STICKCP2/' esp32_marauder/configs.h
           
-      - name: Build Marauder for Marauder M5StickC
+      - name: Build Marauder for Marauder M5StickC Plus 2
         uses: ArminJo/arduino-test-compile@v3.2.1
         with:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: esp32:esp32:m5stick-c:PartitionScheme=min_spiffs
           extra-arduino-cli-args: "--warnings none"
           
-      - name: Rename Marauder M5StickCP2 bin
+      - name: Rename Marauder M5StickC Plus 2 bin
         run: |
           mv ./esp32_marauder/build/esp32.esp32.m5stick-c/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.m5stick-c/esp32_marauder.m5stickc_plus2.bin
           
