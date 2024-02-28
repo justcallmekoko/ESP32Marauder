@@ -154,6 +154,11 @@ void setup()
   #ifdef MARAUDER_M5STICKC
     axp192_obj.begin();
   #endif
+
+  #if defined(MARAUDER_M5STICKCP2) // Prevent StickCP2 from turning off when disconnect USB cable
+    pinMode(POWER_HOLD_PIN, OUTPUT);
+    digitalWrite(POWER_HOLD_PIN, HIGH);
+  #endif
   
   #ifdef HAS_SCREEN
     pinMode(TFT_BL, OUTPUT);
@@ -193,10 +198,10 @@ void setup()
 
   // Draw the title screen
   #ifdef HAS_SCREEN
-    #ifndef MARAUDER_MINI
-      display_obj.drawJpeg("/marauder3L.jpg", 0 , 0);     // 240 x 320 image
+    #if defined(MARAUDER_M5STICKC)
+      display_obj.drawJpeg("/marauder240_135.jpg", 0 , -90); // 240 x 135 image
     #else
-      display_obj.drawJpeg("/marauder3L.jpg", 0, 0);
+      display_obj.drawJpeg("/marauder3L.jpg", 0 , 0);     // 240 x 320 image
     #endif
   #endif
 
