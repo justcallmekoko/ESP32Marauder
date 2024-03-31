@@ -625,9 +625,15 @@ void Display::jpegInfo() {
 //   Open a Jpeg file and send it to the Serial port in a C array compatible format
 //====================================================================================
 void createArray(const char *filename) {
+  fs::File jpgFile;
 
   // Open the named file
-  fs::File jpgFile = SPIFFS.open( filename, "r");    // File handle reference for SPIFFS
+  #ifndef USE_FFAT
+  jpgFile = SPIFFS.open( filename, "r");    // File handle reference for SPIFFS
+  #else
+  jpgFile = FFat.open( filename, "r");    // File handle reference for FFat
+  #endif
+  
   //  File jpgFile = SD.open( filename, FILE_READ);  // or, file handle reference for SD library
 
   if ( !jpgFile ) {
@@ -673,9 +679,14 @@ void createArray(const char *filename) {
 #ifdef ESP8266
 void Display::listFiles(void) {
   Serial.println();
-  Serial.println(F("SPIFFS files found:"));
+  Serial.println(F("Files found:"));
 
+  #ifndef USE_FFAT
   fs::Dir dir = SPIFFS.openDir("/"); // Root directory
+  #else
+  fs::Dir dir = FFat.openDir("/"); // Root directory
+  #endif
+
   String  line = "=====================================";
 
   Serial.println(line);
@@ -706,13 +717,17 @@ void Display::listFiles(void) {
 #ifdef ESP32
 
 void Display::listFiles(void) {
+  #ifndef USE_FFAT
   listDir(SPIFFS, "/", 0);
+  #else
+  listDir(FFat, "/", 0);
+  #endif
 }
 
 void Display::listDir(fs::FS &fs, const char * dirname, uint8_t levels) {
 
   Serial.println();
-  Serial.println(F("SPIFFS files found:"));
+  Serial.println(F("Files found:"));
 
   Serial.printf("Listing directory: %s\n", "/");
   String  line = "=====================================";

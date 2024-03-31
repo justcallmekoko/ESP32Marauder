@@ -45,7 +45,11 @@ class Buffer {
     bool useA = true; // writing to bufA or bufB
     bool saving = false; // currently saving onto the SD card
 
+    #ifdef USE_FFAT
+    String fileName = "/0.cap";
+    #else
     String fileName = "/0.pcap";
+    #endif
     File file;
     fs::FS* fs;
     bool serial;
