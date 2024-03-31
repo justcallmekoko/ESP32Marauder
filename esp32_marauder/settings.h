@@ -5,7 +5,11 @@
 
 #include "configs.h"
 
+#ifndef USE_FFAT
 #include "SPIFFS.h"
+#else
+#include "FFat.h"
+#endif
 #include <FS.h>
 #include <ArduinoJson.h>
 

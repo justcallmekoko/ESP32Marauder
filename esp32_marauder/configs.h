@@ -140,6 +140,7 @@
     #define USE_SD
     #define HAS_TEMP_SENSOR
     //#define HAS_GPS
+    #define USE_FFAT
   #endif
 
   #ifdef MARAUDER_KIT

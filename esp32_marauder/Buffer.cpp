@@ -10,11 +10,7 @@ void Buffer::createFile(String name, bool is_pcap){
   int i=0;
   if (is_pcap) {
     do{
-      #ifdef USE_FFAT
-      fileName = "/"+name+"_"+(String)i+".cap";
-      #else
       fileName = "/"+name+"_"+(String)i+".pcap";
-      #endif
       i++;
     } while(fs->exists(fileName));
   }
