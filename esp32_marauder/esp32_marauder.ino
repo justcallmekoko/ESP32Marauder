@@ -289,7 +289,7 @@ void setup()
     xiao_led.RunSetup();
   #elif defined(MARAUDER_M5STICKC)
     stickc_led.RunSetup();
-  #else
+  #else defined(HAS_NEOPIXEL_LED)
     led_obj.RunSetup();
   #endif
 
