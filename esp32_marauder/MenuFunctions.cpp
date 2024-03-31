@@ -745,7 +745,7 @@ void MenuFunctions::main(uint32_t currentTime)
 
   #ifdef HAS_BUTTONS
     #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1))
-      #ifndef MARAUDER_M5STICKC
+      #ifdef HAS_U
         if (u_btn.justPressed()){
           if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
               (wifi_scan_obj.currentScanMode == OTA_UPDATE)) {
@@ -781,6 +781,7 @@ void MenuFunctions::main(uint32_t currentTime)
           }
         }
       #endif
+      #ifdef HAS_D
       if (d_btn.justPressed()){
         if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
             (wifi_scan_obj.currentScanMode == OTA_UPDATE)) {
@@ -815,6 +816,7 @@ void MenuFunctions::main(uint32_t currentTime)
             wifi_scan_obj.changeChannel(14);
         }
       }
+      #endif
       if(c_btn_press){
         current_menu->list->get(current_menu->selected).callable();
       }
@@ -930,11 +932,14 @@ void MenuFunctions::updateStatusBar()
 
   bool status_changed = false;
   
-  #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+  #if defined(LILYGO_T_DISPLAY_S3R8) || defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
     display_obj.tft.setFreeFont(NULL);
   #endif
   
   uint16_t the_color; 
+
+  // GPS Stuff
+  #ifdef HAS_GPS
 
   if (this->old_gps_sat_count != gps_obj.getNumSats()) {
     this->old_gps_sat_count = gps_obj.getNumSats();
@@ -942,15 +947,14 @@ void MenuFunctions::updateStatusBar()
     status_changed = true;
   }
 
-  // GPS Stuff
-  #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
       if (gps_obj.getFixStatus())
         the_color = TFT_GREEN;
       else
         the_color = TFT_RED;
         
-      #ifdef HAS_ILI9341
+      #if 1
+      //#ifdef HAS_ILI9341
         display_obj.tft.drawXBitmap(4,
                                     0,
                                     menu_icons[STATUS_GPS],
@@ -973,7 +977,7 @@ void MenuFunctions::updateStatusBar()
   // WiFi Channel Stuff
   if ((wifi_scan_obj.set_channel != wifi_scan_obj.old_channel) || (status_changed)) {
     wifi_scan_obj.old_channel = wifi_scan_obj.set_channel;
-    #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+    #if defined(LILYGO_T_DISPLAY_S3R8) || defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
       display_obj.tft.fillRect(43, 0, TFT_WIDTH * 0.21, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
     #else
       display_obj.tft.fillRect(50, 0, TFT_WIDTH * 0.21, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
@@ -982,7 +986,7 @@ void MenuFunctions::updateStatusBar()
       display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.set_channel, 50, 0, 2);
     #endif
 
-    #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+    #if defined(LILYGO_T_DISPLAY_S3R8) || defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
       display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.set_channel, TFT_WIDTH/4, 0, 1);
     #endif
   }
@@ -996,7 +1000,7 @@ void MenuFunctions::updateStatusBar()
       display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", 100, 0, 2);
     #endif
 
-    #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+    #if defined(LILYGO_T_DISPLAY_S3R8) || defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
       display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", TFT_WIDTH/1.75, 0, 1);
     #endif
   }
@@ -1028,7 +1032,8 @@ void MenuFunctions::updateStatusBar()
     else
       the_color = TFT_RED;
 
-    #ifdef HAS_ILI9341
+    #if 1
+    //#ifdef HAS_ILI9341
       display_obj.tft.drawXBitmap(170,
                                   0,
                                   menu_icons[STATUS_SD],
@@ -1039,7 +1044,7 @@ void MenuFunctions::updateStatusBar()
     #endif
   #endif
 
-  #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+  #if defined(LILYGO_T_DISPLAY_S3R8) || defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
     display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR);
     display_obj.tft.drawString("SD", TFT_WIDTH - 12, 0, 1);
   #endif
@@ -1048,7 +1053,7 @@ void MenuFunctions::updateStatusBar()
 void MenuFunctions::drawStatusBar()
 {
   display_obj.tft.setTextSize(1);
-  #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+  #if defined(LILYGO_T_DISPLAY_S3R8) || defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
     display_obj.tft.setFreeFont(NULL);
   #endif
   display_obj.tft.fillRect(0, 0, 240, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
@@ -1063,7 +1068,7 @@ void MenuFunctions::drawStatusBar()
         the_color = TFT_GREEN;
       else
         the_color = TFT_RED;
-        
+
       #ifdef HAS_ILI9341
         display_obj.tft.drawXBitmap(4,
                                     0,
@@ -1084,7 +1089,7 @@ void MenuFunctions::drawStatusBar()
 
   // WiFi Channel Stuff
   wifi_scan_obj.old_channel = wifi_scan_obj.set_channel;
-  #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+  #if defined(LILYGO_T_DISPLAY_S3R8) || defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
     display_obj.tft.fillRect(43, 0, TFT_WIDTH * 0.21, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
   #else
     display_obj.tft.fillRect(50, 0, TFT_WIDTH * 0.21, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
@@ -1093,7 +1098,7 @@ void MenuFunctions::drawStatusBar()
     display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.set_channel, 50, 0, 2);
   #endif
 
-  #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+  #if defined(LILYGO_T_DISPLAY_S3R8) || defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
     display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.set_channel, TFT_WIDTH/4, 0, 1);
   #endif
 
@@ -1105,7 +1110,7 @@ void MenuFunctions::drawStatusBar()
     display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", 100, 0, 2);
   #endif
 
-  #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+  #if defined(LILYGO_T_DISPLAY_S3R8) || defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
     display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", TFT_WIDTH/1.75, 0, 1);
   #endif
 
@@ -1147,7 +1152,7 @@ void MenuFunctions::drawStatusBar()
     #endif
   #endif
 
-  #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+  #if defined(LILYGO_T_DISPLAY_S3R8) || defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
     display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR);
     display_obj.tft.drawString("SD", TFT_WIDTH - 12, 0, 1);
   #endif
@@ -1340,7 +1345,7 @@ void MenuFunctions::RunSetup()
   this->addNodes(&wifiMenu, text_table1[32], TFT_RED, NULL, ATTACKS, [this]() {
     this->changeMenu(&wifiAttackMenu);
   });
-  this->addNodes(&wifiMenu, text_table1[33], TFT_PURPLE, NULL, GENERAL_APPS, [this]() {
+  this->addNodes(&wifiMenu, text_table1[33], TFT_BLUE, NULL, GENERAL_APPS, [this]() {
     this->changeMenu(&wifiGeneralMenu);
   });
 
@@ -1487,14 +1492,14 @@ void MenuFunctions::RunSetup()
     wifi_scan_obj.RunGenerateSSIDs();
   });
   #ifdef HAS_ILI9341
-    this->addNodes(&wifiGeneralMenu, text_table1[1], TFT_NAVY, NULL, KEYBOARD_ICO, [this](){
+    this->addNodes(&wifiGeneralMenu, text_table1[1], TFT_BLUE, NULL, KEYBOARD_ICO, [this](){
       display_obj.clearScreen(); 
       wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_YELLOW); 
       addSSIDGFX();
     });
   #endif
   #if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
-    this->addNodes(&wifiGeneralMenu, text_table1[1], TFT_NAVY, NULL, KEYBOARD_ICO, [this](){
+    this->addNodes(&wifiGeneralMenu, text_table1[1], TFT_BLUE, NULL, KEYBOARD_ICO, [this](){
       this->changeMenu(&miniKbMenu);
       this->miniKeyboard(&miniKbMenu);
     });
@@ -1537,6 +1542,7 @@ void MenuFunctions::RunSetup()
       #if (defined(HAS_BUTTONS) && defined(HAS_SD)) 
         #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1))
           while(true) {
+            #ifdef HAS_D
             if (d_btn.justPressed()) {
               if (evil_portal_obj.selected_html_index > 0)
                 evil_portal_obj.selected_html_index--;
@@ -1547,7 +1553,8 @@ void MenuFunctions::RunSetup()
               this->buildButtons(&htmlMenu);
               this->displayCurrentMenu();
             }
-            #ifndef MARAUDER_M5STICKC
+            #endif
+            #ifdef HAS_U
               if (u_btn.justPressed()) {
                 if (evil_portal_obj.selected_html_index < evil_portal_obj.html_files->size() - 1)
                   evil_portal_obj.selected_html_index++;
@@ -1581,7 +1588,7 @@ void MenuFunctions::RunSetup()
     #endif
 
     htmlMenu.parentMenu = &wifiGeneralMenu;
-    this->addNodes(&htmlMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+    this->addNodes(&htmlMenu, text09, TFT_RED, NULL, 0, [this]() {
       this->changeMenu(htmlMenu.parentMenu);
     });
 
@@ -1703,7 +1710,7 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_ATTACK_SAMSUNG_SPAM, TFT_RED);
   });
-  this->addNodes(&bluetoothAttackMenu, "Google BLE Spam", TFT_PURPLE, NULL, LANGUAGE, [this]() {
+  this->addNodes(&bluetoothAttackMenu, "Google BLE Spam", TFT_BLUE, NULL, LANGUAGE, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_ATTACK_GOOGLE_SPAM, TFT_RED);
@@ -1772,7 +1779,7 @@ void MenuFunctions::RunSetup()
 
                 // Start button loop
                 while(true) {
-                  #ifndef MARAUDER_M5STICKC
+                  #ifdef HAS_U
                     if (u_btn.justPressed()) {
                       if (sd_file_index > 0)
                         sd_file_index--;
@@ -1784,6 +1791,7 @@ void MenuFunctions::RunSetup()
                       this->displayCurrentMenu();
                     }
                   #endif
+                  #ifdef HAS_D
                   if (d_btn.justPressed()) {
                     if (sd_file_index < sd_obj.sd_files->size() - 1)
                       sd_file_index++;
@@ -1794,6 +1802,7 @@ void MenuFunctions::RunSetup()
                     this->buildButtons(&sdDeleteMenu, 0, sd_obj.sd_files->get(sd_file_index));
                     this->displayCurrentMenu();
                   }
+                  #endif
                   if (c_btn.justPressed()) {
                     if (sd_obj.sd_files->get(sd_file_index) != "Back") {
                       if (sd_obj.removeFile("/" + sd_obj.sd_files->get(sd_file_index)))
@@ -2188,7 +2197,7 @@ void MenuFunctions::displayCurrentMenu(uint8_t start_index)
       display_obj.tft.setFreeFont(MENU_FONT);
     #endif
 
-    #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+    #if defined(LILYGO_T_DISPLAY_S3R8) || defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
       display_obj.tft.setFreeFont(NULL);
       display_obj.tft.setTextSize(1);
     #endif
@@ -2211,14 +2220,21 @@ void MenuFunctions::displayCurrentMenu(uint8_t start_index)
 
       #endif
 
-      #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
-        if ((current_menu->selected == i) || (current_menu->list->get(i).selected))
+      #if defined(LILYGO_T_DISPLAY_S3R8) || defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+        if ((current_menu->selected == i) || (current_menu->list->get(i).selected)) {
           display_obj.key[i - start_index].drawButton(true, current_menu->list->get(i).name);
-        else 
+        }
+        else
+        {
           display_obj.key[i - start_index].drawButton(false, current_menu->list->get(i).name);
+        }
       #endif
     }
     display_obj.tft.setFreeFont(NULL);
+  }
+  else
+  {
+    Serial.println("Current list is null");
   }
 }
 
