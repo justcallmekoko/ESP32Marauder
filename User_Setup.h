@@ -15,8 +15,6 @@
 //
 // ##################################################################################
 
-include "Setup206_LilyGo_T_Display_S3.h"
-
 // Only define one driver, the other ones must be commented out
 #define ILI9341_DRIVER
 //#define ST7735_DRIVER      // Define additional parameters below for this display

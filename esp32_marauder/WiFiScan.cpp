@@ -338,7 +338,7 @@ void WiFiScan::RunSetup() {
       {0x20, "Green Watch6 Classic 43m"},
     };
     
-    NimBLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DEVICE);
+    NimBLEDevice::setScanFilterMode(0);
     NimBLEDevice::setScanDuplicateCacheSize(200);
     NimBLEDevice::init("");
     pBLEScan = NimBLEDevice::getScan(); //create new scan
@@ -1063,11 +1063,11 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
       display_obj.tft.setTouch(calData);
     #endif
     
-    #ifdef LILYGO_T_DISPLAY_S3R8
-    lv_obj_t * scr = lv_menu_cont_create(NULL);
-    #else
+    //#ifdef LILYGO_T_DISPLAY_S3R8
+    //lv_obj_t * scr = lv_menu_cont_create(NULL);
+    //#else
     lv_obj_t * scr = lv_cont_create(NULL, NULL);
-    #endif
+    //#endif
     lv_disp_load_scr(scr);
   
   }
@@ -2154,7 +2154,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
     #endif
   
     if (scan_mode != BT_SCAN_WAR_DRIVE_CONT) {
-      NimBLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DEVICE);
+      NimBLEDevice::setScanFilterMode(0);
       NimBLEDevice::setScanDuplicateCacheSize(200);
     }
     NimBLEDevice::init("");

@@ -13,7 +13,7 @@ jobs:
     
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         
       - name: Install ESP32 Boards and Compile TestFile
         uses: ArminJo/arduino-test-compile@v3.2.1
@@ -23,77 +23,77 @@ jobs:
           platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.10/package_esp32_dev_index.json
         
       - name: Pull arduino-esp32 v2.0.4
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           repository: espressif/arduino-esp32
           ref: 2.0.4
           path: 2.0.4arduino-esp32
           
       - name: Pull arduino-esp32 v2.0.10
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           repository: espressif/arduino-esp32
           ref: 2.0.10
           path: 2.0.10
           
       - name: Install AsyncTCP
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           repository: me-no-dev/AsyncTCP
           ref: master
           path: CustomAsyncTCP
           
       - name: Install MicroNMEA
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           repository: stevemarple/MicroNMEA
           ref: v2.0.6
           path: CustomMicroNMEA
           
       - name: Install ESPAsyncWebServer
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           repository: bigbrodude6119/ESPAsyncWebServer
           ref: master
           path: CustomESPAsyncWebServer
           
       - name: Install TFT_eSPI
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           repository: Bodmer/TFT_eSPI
           ref: V2.5.34
           path: CustomTFT_eSPI
 
       - name: Install lv_arduino
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           repository: lvgl/lv_arduino
           ref: 3.0.0
           path: Customlv_arduino
 
       - name: Install JPEGDecoder
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           repository: Bodmer/JPEGDecoder
           ref: 1.8.0
           path: CustomJPEGDecoder
 
       - name: Install NimBLE-Arduino
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           repository: h2zero/NimBLE-Arduino
-          ref: 1.2.0
+          ref: 1.4.1
           path: CustomNimBLE-Arduino
 
       - name: Install Adafruit_NeoPixel
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           repository: adafruit/Adafruit_NeoPixel
           ref: 1.10.7
           path: CustomAdafruit_NeoPixel
 
       - name: Install ArduinoJson
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           repository: bblanchon/ArduinoJson
           ref: v6.18.2
@@ -107,14 +107,14 @@ jobs:
       #    path: CustomSwitchLib
           
       - name: Install LinkedList
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           repository: ivanseidel/LinkedList
           ref: v1.3.3
           path: CustomLinkedList
           
       - name: Install EspSoftwareSerial
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           repository: plerup/espsoftwareserial
           ref: 8.1.0
@@ -127,6 +127,7 @@ jobs:
       - name: Configure TFT_eSPI
         run: |
           rm -f CustomTFT_eSPI/User_Setup_Select.h
+          cp Setup206_LilyGo_T_Display_S3.h CustomTFT_eSPI/
           cp User_Setup_Select.h CustomTFT_eSPI/
           cp User_Setup_marauder_mini.h CustomTFT_eSPI/
           cp User_Setup_og_marauder.h CustomTFT_eSPI/
@@ -184,6 +185,7 @@ jobs:
           sed -i 's/^  #define MARAUDER_V6_1/  \/\/#define MARAUDER_V6_1/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_KIT/  \/\/#define MARAUDER_KIT/' esp32_marauder/configs.h
           sed -i 's/^  #define GENERIC_ESP32/  \/\/#define GENERIC_ESP32/' esp32_marauder/configs.h
+          sed -i 's/^  #define LILYGO_T_DISPLAY_S3R8/  \/\/#define LILYGO_T_DISPLAY_S3R8/' esp32_marauder/configs.h
           sed -i 's/^  \/\/#define MARAUDER_FLIPPER/  #define MARAUDER_FLIPPER/' esp32_marauder/configs.h
           sed -i 's/^  #define ESP32_LDDB/  \/\/#define ESP32_LDDB/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_DEV_BOARD_PRO/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
@@ -216,6 +218,7 @@ jobs:
           find /home/runner/ -name "*TFT_eSPI*"     
           sed -i 's/^#include <User_Setup_marauder_rev_feather.h>/\/\/#include <User_Setup_marauder_rev_feather.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h          
           sed -i 's/^#include <User_Setup_marauder_mini.h>/\/\/#include <User_Setup_marauder_mini.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
+          sed -i 's/^#include <Setup206_LilyGo_T_Display_S3.h>/\/\/#include <Setup206_LilyGo_T_Display_S3.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
           sed -i 's/^\/\/#include <User_Setup_og_marauder.h>/#include <User_Setup_og_marauder.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
           sed -i 's/^  #define MARAUDER_REV_FEATHER/  \/\/#define MARAUDER_REV_FEATHER/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_MINI/  \/\/#define MARAUDER_MINI/' esp32_marauder/configs.h
@@ -224,6 +227,7 @@ jobs:
           sed -i 's/^  #define MARAUDER_V6_1/  \/\/#define MARAUDER_V6_1/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_KIT/  \/\/#define MARAUDER_KIT/' esp32_marauder/configs.h
           sed -i 's/^  #define GENERIC_ESP32/  \/\/#define GENERIC_ESP32/' esp32_marauder/configs.h
+          sed -i 's/^  #define LILYGO_T_DISPLAY_S3R8/  \/\/#define LILYGO_T_DISPLAY_S3R8/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_FLIPPER/  \/\/#define MARAUDER_FLIPPER/' esp32_marauder/configs.h
           sed -i 's/^  #define ESP32_LDDB/  \/\/#define ESP32_LDDB/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_DEV_BOARD_PRO/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
@@ -239,10 +243,41 @@ jobs:
         run: |
           mv ./esp32_marauder/build/esp32.esp32.d32/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.d32/esp32_marauder.og.bin
           
+      - name: Configure configs.h for LILYGO T3 display
+        run: |
+          sed -i 's/^#include <User_Setup_marauder_rev_feather.h>/\/\/#include <User_Setup_marauder_rev_feather.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
+          sed -i 's/^#include <User_Setup_marauder_mini.h>/\/\/#include <User_Setup_marauder_mini.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
+          sed -i 's/^\/\/#include <Setup206_LilyGo_T_Display_S3.h>/#include <Setup206_LilyGo_T_Display_S3.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
+          sed -i 's/^#include <User_Setup_og_marauder.h>/\/\/#include <User_Setup_og_marauder.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
+          sed -i 's/^  #define MARAUDER_REV_FEATHER/  \/\/#define MARAUDER_REV_FEATHER/' esp32_marauder/configs.h
+          sed -i 's/^  #define MARAUDER_M5STICKC/  \/\/#define MARAUDER_M5STICKC/' esp32_marauder/configs.h
+          sed -i 's/^  #define MARAUDER_MINI/  \/\/#define MARAUDER_MINI/' esp32_marauder/configs.h
+          sed -i 's/^  #define MARAUDER_V4/  \/\/#define MARAUDER_V4/' esp32_marauder/configs.h
+          sed -i 's/^  #define MARAUDER_V6/  \/\/#define MARAUDER_V6/' esp32_marauder/configs.h
+          sed -i 's/^  #define MARAUDER_V6_1/  \/\/#define MARAUDER_V6_1/' esp32_marauder/configs.h
+          sed -i 's/^  #define MARAUDER_KIT/  \/\/#define MARAUDER_KIT/' esp32_marauder/configs.h
+          sed -i 's/^  #define GENERIC_ESP32/  \/\/#define GENERIC_ESP32/' esp32_marauder/configs.h
+          sed -i 's/^  #define MARAUDER_FLIPPER/  \/\/#define MARAUDER_FLIPPER/' esp32_marauder/configs.h
+          sed -i 's/^  \/\/#define LILYGO_T_DISPLAY_S3R8/  #define LILYGO_T_DISPLAY_S3R8/' esp32_marauder/configs.h
+          sed -i 's/^  #define ESP32_LDDB/  \/\/#define ESP32_LDDB/' esp32_marauder/configs.h
+          sed -i 's/^  #define MARAUDER_DEV_BOARD_PRO/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
+                    
+      - name: Build Marauder for Lilygo T3-display
+        uses: ArminJo/arduino-test-compile@v3.2.1
+        with:
+          sketch-names: esp32_marauder.ino
+          arduino-board-fqbn: esp32:esp32:lilygo_t_display_s3:PartitionScheme=app3M_fat9M_16MB
+          extra-arduino-cli-args: "--warnings none"
+          
+      - name: Rename Marauder Lilygo T3 display bin
+        run: |
+          mv ./esp32_marauder/build/esp32.esp32.lilygo_t_display_s3/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.lilygo_t_display_s3/esp32_marauder.t3_display.bin
+
       - name: Configure TFT_eSPI and configs.h for Marauder v6
         run: |
           sed -i 's/^#include <User_Setup_marauder_rev_feather.h>/\/\/#include <User_Setup_marauder_rev_feather.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
           sed -i 's/^#include <User_Setup_marauder_mini.h>/\/\/#include <User_Setup_marauder_mini.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
+          sed -i 's/^#include <Setup206_LilyGo_T_Display_S3.h>/\/\/#include <Setup206_LilyGo_T_Display_S3.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
           sed -i 's/^\/\/#include <User_Setup_og_marauder.h>/#include <User_Setup_og_marauder.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
           sed -i 's/^  #define MARAUDER_REV_FEATHER/  \/\/#define MARAUDER_REV_FEATHER/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_MINI/  \/\/#define MARAUDER_MINI/' esp32_marauder/configs.h
@@ -251,6 +286,7 @@ jobs:
           sed -i 's/^  #define MARAUDER_V6_1/  \/\/#define MARAUDER_V6_1/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_KIT/  \/\/#define MARAUDER_KIT/' esp32_marauder/configs.h
           sed -i 's/^  #define GENERIC_ESP32/  \/\/#define GENERIC_ESP32/' esp32_marauder/configs.h
+          sed -i 's/^  #define LILYGO_T_DISPLAY_S3R8/  \/\/#define LILYGO_T_DISPLAY_S3R8/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_FLIPPER/  \/\/#define MARAUDER_FLIPPER/' esp32_marauder/configs.h
           sed -i 's/^  #define ESP32_LDDB/  \/\/#define ESP32_LDDB/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_DEV_BOARD_PRO/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
@@ -292,6 +328,7 @@ jobs:
           sed -i 's/^  \/\/#define MARAUDER_V6_1/  #define MARAUDER_V6_1/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_KIT/  \/\/#define MARAUDER_KIT/' esp32_marauder/configs.h
           sed -i 's/^  #define GENERIC_ESP32/  \/\/#define GENERIC_ESP32/' esp32_marauder/configs.h
+          sed -i 's/^  #define LILYGO_T_DISPLAY_S3R8/  \/\/#define LILYGO_T_DISPLAY_S3R8/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_FLIPPER/  \/\/#define MARAUDER_FLIPPER/' esp32_marauder/configs.h
           sed -i 's/^  #define ESP32_LDDB/  \/\/#define ESP32_LDDB/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_DEV_BOARD_PRO/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
@@ -311,6 +348,7 @@ jobs:
         run: |
           sed -i 's/^#include <User_Setup_marauder_mini.h>/\/\/#include <User_Setup_marauder_mini.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
           sed -i 's/^\/\/#include <User_Setup_og_marauder.h>/#include <User_Setup_og_marauder.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
+          sed -i 's/^#include <Setup206_LilyGo_T_Display_S3.h>/\/\/#include <Setup206_LilyGo_T_Display_S3.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
           sed -i 's/^  #define MARAUDER_REV_FEATHER/  \/\/#define MARAUDER_REV_FEATHER/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_MINI/  \/\/#define MARAUDER_MINI/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_V4/  \/\/#define MARAUDER_V4/' esp32_marauder/configs.h
@@ -318,6 +356,7 @@ jobs:
           sed -i 's/^  #define MARAUDER_V6_1/  \/\/#define MARAUDER_V6_1/' esp32_marauder/configs.h
           sed -i 's/^  \/\/#define MARAUDER_KIT/  #define MARAUDER_KIT/' esp32_marauder/configs.h
           sed -i 's/^  #define GENERIC_ESP32/  \/\/#define GENERIC_ESP32/' esp32_marauder/configs.h
+          sed -i 's/^  #define LILYGO_T_DISPLAY_S3R8/  \/\/#define LILYGO_T_DISPLAY_S3R8/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_FLIPPER/  \/\/#define MARAUDER_FLIPPER/' esp32_marauder/configs.h
           sed -i 's/^  #define ESP32_LDDB/  \/\/#define ESP32_LDDB/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_DEV_BOARD_PRO/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
@@ -337,6 +376,7 @@ jobs:
         run: |
           sed -i 's/^\/\/#include <User_Setup_marauder_mini.h>/#include <User_Setup_marauder_mini.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
           sed -i 's/^#include <User_Setup_og_marauder.h>/\/\/#include <User_Setup_og_marauder.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
+          sed -i 's/^#include <Setup206_LilyGo_T_Display_S3.h>/\/\/#include <Setup206_LilyGo_T_Display_S3.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
           sed -i 's/^  #define MARAUDER_REV_FEATHER/  \/\/#define MARAUDER_REV_FEATHER/' esp32_marauder/configs.h
           sed -i 's/^  \/\/#define MARAUDER_MINI/  #define MARAUDER_MINI/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_V4/  \/\/#define MARAUDER_V4/' esp32_marauder/configs.h
@@ -344,6 +384,7 @@ jobs:
           sed -i 's/^  #define MARAUDER_V6_1/  \/\/#define MARAUDER_V6_1/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_KIT/  \/\/#define MARAUDER_KIT/' esp32_marauder/configs.h
           sed -i 's/^  #define GENERIC_ESP32/  \/\/#define GENERIC_ESP32/' esp32_marauder/configs.h
+          sed -i 's/^  #define LILYGO_T_DISPLAY_S3R8/  \/\/#define LILYGO_T_DISPLAY_S3R8/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_FLIPPER/  \/\/#define MARAUDER_FLIPPER/' esp32_marauder/configs.h
           sed -i 's/^  #define ESP32_LDDB/  \/\/#define ESP32_LDDB/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_DEV_BOARD_PRO/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
@@ -368,6 +409,7 @@ jobs:
           sed -i 's/^  #define MARAUDER_V6_1/  \/\/#define MARAUDER_V6_1/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_KIT/  \/\/#define MARAUDER_KIT/' esp32_marauder/configs.h
           sed -i 's/^  #define GENERIC_ESP32/  \/\/#define GENERIC_ESP32/' esp32_marauder/configs.h
+          sed -i 's/^  #define LILYGO_T_DISPLAY_S3R8/  \/\/#define LILYGO_T_DISPLAY_S3R8/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_FLIPPER/  \/\/#define MARAUDER_FLIPPER/' esp32_marauder/configs.h
           sed -i 's/^  \/\/#define ESP32_LDDB/  #define ESP32_LDDB/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_DEV_BOARD_PRO/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
@@ -392,6 +434,7 @@ jobs:
           sed -i 's/^  #define MARAUDER_V6_1/  \/\/#define MARAUDER_V6_1/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_KIT/  \/\/#define MARAUDER_KIT/' esp32_marauder/configs.h
           sed -i 's/^  #define GENERIC_ESP32/  \/\/#define GENERIC_ESP32/' esp32_marauder/configs.h
+          sed -i 's/^  #define LILYGO_T_DISPLAY_S3R8/  \/\/#define LILYGO_T_DISPLAY_S3R8/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_FLIPPER/  \/\/#define MARAUDER_FLIPPER/' esp32_marauder/configs.h
           sed -i 's/^  #define ESP32_LDDB/  \/\/#define ESP32_LDDB/' esp32_marauder/configs.h
           sed -i 's/^  \/\/#define MARAUDER_DEV_BOARD_PRO/  #define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
@@ -413,6 +456,7 @@ jobs:
           find /home/runner/ -name "*TFT_eSPI*"          
           sed -i 's/^#include <User_Setup_marauder_mini.h>/\/\/#include <User_Setup_marauder_mini.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
           sed -i 's/^\/\/#include <User_Setup_marauder_m5stickc.h>/#include <User_Setup_marauder_m5stickc.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
+          sed -i 's/^#include <Setup206_LilyGo_T_Display_S3.h>/\/\/#include <Setup206_LilyGo_T_Display_S3.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
           sed -i 's/^  #define MARAUDER_REV_FEATHER/  \/\/#define MARAUDER_REV_FEATHER/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_MINI/  \/\/#define MARAUDER_MINI/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_V4/  \/\/#define MARAUDER_V4/' esp32_marauder/configs.h
@@ -420,6 +464,7 @@ jobs:
           sed -i 's/^  #define MARAUDER_V6_1/  \/\/#define MARAUDER_V6_1/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_KIT/  \/\/#define MARAUDER_KIT/' esp32_marauder/configs.h
           sed -i 's/^  #define GENERIC_ESP32/  \/\/#define GENERIC_ESP32/' esp32_marauder/configs.h
+          sed -i 's/^  #define LILYGO_T_DISPLAY_S3R8/  \/\/#define LILYGO_T_DISPLAY_S3R8/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_FLIPPER/  \/\/#define MARAUDER_FLIPPER/' esp32_marauder/configs.h
           sed -i 's/^  #define ESP32_LDDB/  \/\/#define ESP32_LDDB/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_DEV_BOARD_PRO/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
@@ -443,6 +488,7 @@ jobs:
           sed -i 's/^\/\/#include <User_Setup_marauder_rev_feather.h>/#include <User_Setup_marauder_rev_feather.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
           sed -i 's/^#include <User_Setup_marauder_mini.h>/\/\/#include <User_Setup_marauder_mini.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
           sed -i 's/^#include <User_Setup_marauder_m5stickc.h>/\/\/#include <User_Setup_marauder_m5stickc.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
+          sed -i 's/^#include <Setup206_LilyGo_T_Display_S3.h>/\/\/#include <Setup206_LilyGo_T_Display_S3.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
           sed -i 's/^  \/\/#define MARAUDER_REV_FEATHER/  #define MARAUDER_REV_FEATHER/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_MINI/  \/\/#define MARAUDER_MINI/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_V4/  \/\/#define MARAUDER_V4/' esp32_marauder/configs.h
@@ -450,6 +496,7 @@ jobs:
           sed -i 's/^  #define MARAUDER_V6_1/  \/\/#define MARAUDER_V6_1/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_KIT/  \/\/#define MARAUDER_KIT/' esp32_marauder/configs.h
           sed -i 's/^  #define GENERIC_ESP32/  \/\/#define GENERIC_ESP32/' esp32_marauder/configs.h
+          sed -i 's/^  #define LILYGO_T_DISPLAY_S3R8/  \/\/#define LILYGO_T_DISPLAY_S3R8/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_FLIPPER/  \/\/#define MARAUDER_FLIPPER/' esp32_marauder/configs.h
           sed -i 's/^  #define ESP32_LDDB/  \/\/#define ESP32_LDDB/' esp32_marauder/configs.h
           sed -i 's/^  #define MARAUDER_DEV_BOARD_PRO/  \/\/#define MARAUDER_DEV_BOARD_PRO/' esp32_marauder/configs.h
@@ -469,6 +516,13 @@ jobs:
       - name: Display finished bins
         run: |
           find ./esp32_marauder/build -name "*.bin"
+          
+      - name: 'Upload Lilygo T3 display Artifact'
+        uses: actions/upload-artifact@v3
+        with:
+          name: esp32_marauder.t3_display.bin
+          path: ./esp32_marauder/build/esp32.esp32.lilygo_t_display_s3/esp32_marauder.t3_display.bin
+          retention-days: 5
           
       - name: 'Upload Flipper Artifact'
         uses: actions/upload-artifact@v3
