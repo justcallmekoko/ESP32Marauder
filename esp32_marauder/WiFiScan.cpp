@@ -952,9 +952,73 @@ void WiFiScan::startLog(String file_name) {
   );
 }
 
+void WiFiScan::parseBSSID(const char* bssidStr, uint8_t* bssid) {
+  sscanf(bssidStr, "%02X:%02X:%02X:%02X:%02X:%02X",
+         &bssid[0], &bssid[1], &bssid[2],
+         &bssid[3], &bssid[4], &bssid[5]);
+}
+
 void WiFiScan::RunLoadAPList() {
   #ifdef HAS_SD
+    File file = sd_obj.getFile("/APs_0.log");
+    if (!file) {
+      Serial.println("Could not open /APs_0.log");
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setFreeFont(NULL);
+        display_obj.tft.setCursor(0, 100);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_CYAN);
+      
+        display_obj.tft.println("Could not open /APs_0.log");
+      #endif
+      return;
+    }
 
+    DynamicJsonDocument doc(10048);
+    DeserializationError error = deserializeJson(doc, file);
+    if (error) {
+      Serial.print("JSON deserialize error: ");
+      Serial.println(error.c_str());
+      file.close();
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setFreeFont(NULL);
+        display_obj.tft.setCursor(0, 100);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_CYAN);
+      
+        display_obj.tft.println("Could not deserialize JSON");
+        display_obj.tft.println(error.c_str());
+      #endif
+      return;
+    }
+
+    JsonArray array = doc.as<JsonArray>();
+    for (JsonObject obj : array) {
+      AccessPoint ap;
+      ap.essid = obj["essid"].as<String>();
+      ap.channel = obj["channel"];
+      ap.selected = false;
+      parseBSSID(obj["bssid"], ap.bssid);
+      ap.stations = new LinkedList<uint8_t>();
+      access_points->add(ap);
+    }
+
+    file.close();
+
+    //doc.clear();
+
+    #ifdef HAS_SCREEN
+      display_obj.tft.setTextWrap(false);
+      display_obj.tft.setFreeFont(NULL);
+      display_obj.tft.setCursor(0, 100);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextColor(TFT_CYAN);
+    
+      display_obj.tft.print("Loaded APs: ");
+      display_obj.tft.println((String)access_points->size());
+    #endif
   #endif
 }
 
@@ -963,6 +1027,39 @@ void WiFiScan::RunSaveAPList(bool save_as) {
     sd_obj.removeFile("/APs_0.log");
 
     this->startLog("APs");
+
+    DynamicJsonDocument jsonDocument(2048);
+
+    JsonArray jsonArray = jsonDocument.to<JsonArray>();
+    
+    for (int i = 0; i < access_points->size(); i++) {
+      const AccessPoint& ap = access_points->get(i);
+      JsonObject jsonAp = jsonArray.createNestedObject();
+      jsonAp["essid"] = ap.essid;
+      jsonAp["channel"] = ap.channel;
+
+      char bssidStr[18];
+      sprintf(bssidStr, "%02X:%02X:%02X:%02X:%02X:%02X",
+              ap.bssid[0], ap.bssid[1], ap.bssid[2],
+              ap.bssid[3], ap.bssid[4], ap.bssid[5]);
+      jsonAp["bssid"] = bssidStr;
+    }
+
+    String jsonString;
+    serializeJson(jsonArray, jsonString);
+
+    buffer_obj.append(jsonString);
+
+    #ifdef HAS_SCREEN
+      display_obj.tft.setTextWrap(false);
+      display_obj.tft.setFreeFont(NULL);
+      display_obj.tft.setCursor(0, 100);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextColor(TFT_CYAN);
+    
+      display_obj.tft.print("Saved APs: ");
+      display_obj.tft.println((String)access_points->size());
+    #endif
   }
 }
 

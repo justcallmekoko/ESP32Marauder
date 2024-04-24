@@ -331,6 +331,7 @@ class WiFiScan
     void RunLvJoinWiFi(uint8_t scan_mode, uint16_t color);
     void RunEvilPortal(uint8_t scan_mode, uint16_t color);
     bool checkMem();
+    void parseBSSID(const char* bssidStr, uint8_t* bssid);
 
 
   public:
