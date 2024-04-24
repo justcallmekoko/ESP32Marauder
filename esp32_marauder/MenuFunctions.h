@@ -152,7 +152,13 @@ class MenuFunctions
     // WiFi General Menu
     Menu htmlMenu;
     Menu miniKbMenu;
+    Menu saveFileMenu;
+
+    // Save Files Menu
     Menu saveSSIDsMenu;
+    Menu loadSSIDsMenu;
+    Menu saveAPsMenu;
+    Menu loadAPsMenu;
 
     // Bluetooth menu stuff
     Menu bluetoothSnifferMenu;

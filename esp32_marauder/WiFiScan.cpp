@@ -952,6 +952,56 @@ void WiFiScan::startLog(String file_name) {
   );
 }
 
+void WiFiScan::RunLoadAPList() {
+  #ifdef HAS_SD
+
+  #endif
+}
+
+void WiFiScan::RunSaveAPList(bool save_as) {
+  if (save_as) {
+    sd_obj.removeFile("/APs_0.log");
+
+    this->startLog("APs");
+  }
+}
+
+void WiFiScan::RunLoadSSIDList() {
+  #ifdef HAS_SD
+    File log_file = sd_obj.getFile("/SSIDs_0.log");
+    if (!log_file) {
+      Serial.println("Could not open /SSIDs_0.log");
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setFreeFont(NULL);
+        display_obj.tft.setCursor(0, 100);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_CYAN);
+      
+        display_obj.tft.println("Could not open /SSIDs_0.log");
+      #endif
+      return;
+    }
+    while (log_file.available()) {
+      String line = log_file.readStringUntil('\n'); // Read until newline character
+      this->addSSID(line);
+    }
+
+    #ifdef HAS_SCREEN
+      display_obj.tft.setTextWrap(false);
+      display_obj.tft.setFreeFont(NULL);
+      display_obj.tft.setCursor(0, 100);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextColor(TFT_CYAN);
+    
+      display_obj.tft.print("Loaded SSIDs: ");
+      display_obj.tft.println((String)ssids->size());
+    #endif
+
+    log_file.close();
+  #endif
+}
+
 void WiFiScan::RunSaveSSIDList(bool save_as) {
   if (save_as) {
     sd_obj.removeFile("/SSIDs_0.log");

@@ -1279,7 +1279,12 @@ void MenuFunctions::RunSetup()
   generateSSIDsMenu.list = new LinkedList<MenuNode>();
   clearSSIDsMenu.list = new LinkedList<MenuNode>();
   clearAPsMenu.list = new LinkedList<MenuNode>();
+  saveFileMenu.list = new LinkedList<MenuNode>();
+
   saveSSIDsMenu.list = new LinkedList<MenuNode>();
+  loadSSIDsMenu.list = new LinkedList<MenuNode>();
+  saveAPsMenu.list = new LinkedList<MenuNode>();
+  loadAPsMenu.list = new LinkedList<MenuNode>();
 
   // Work menu names
   mainMenu.name = text_table1[6];
@@ -1296,7 +1301,11 @@ void MenuFunctions::RunSetup()
   wifiSnifferMenu.name = text_table1[20];
   wifiAttackMenu.name = text_table1[21];
   wifiGeneralMenu.name = text_table1[22];
+  saveFileMenu.name = "Save Files";
   saveSSIDsMenu.name = "Save SSIDs";
+  loadSSIDsMenu.name = "Load SSIDs";
+  saveAPsMenu.name = "Save APs";
+  loadAPsMenu.name = "Load APs";
   bluetoothSnifferMenu.name = text_table1[23];
   bluetoothAttackMenu.name = "Bluetooth Attacks";
   generateSSIDsMenu.name = text_table1[27];
@@ -1488,9 +1497,8 @@ void MenuFunctions::RunSetup()
     this->changeMenu(&generateSSIDsMenu);
     wifi_scan_obj.RunGenerateSSIDs();
   });
-  this->addNodes(&wifiGeneralMenu, "Save SSIDs", TFT_CYAN, NULL, SD_UPDATE, [this]() {
-    this->changeMenu(&saveSSIDsMenu);
-    wifi_scan_obj.RunSaveSSIDList(true);
+  this->addNodes(&wifiGeneralMenu, "Save Files", TFT_CYAN, NULL, SD_UPDATE, [this]() {
+    this->changeMenu(&saveFileMenu);
   });
   #ifdef HAS_ILI9341
     this->addNodes(&wifiGeneralMenu, text_table1[1], TFT_NAVY, NULL, KEYBOARD_ICO, [this](){
@@ -1591,9 +1599,46 @@ void MenuFunctions::RunSetup()
       this->changeMenu(htmlMenu.parentMenu);
     });
 
-    saveSSIDsMenu.parentMenu = &wifiGeneralMenu;
+    // Save Files Menu
+    saveFileMenu.parentMenu = &wifiGeneralMenu;
+    this->addNodes(&saveFileMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+      this->changeMenu(saveFileMenu.parentMenu);
+    });
+    this->addNodes(&saveFileMenu, "Save SSIDs", TFT_CYAN, NULL, SD_UPDATE, [this]() {
+      this->changeMenu(&saveSSIDsMenu);
+      wifi_scan_obj.RunSaveSSIDList(true);
+    });
+    this->addNodes(&saveFileMenu, "Load SSIDs", TFT_SKYBLUE, NULL, SD_UPDATE, [this]() {
+      this->changeMenu(&loadSSIDsMenu);
+      wifi_scan_obj.RunLoadSSIDList();
+    });
+    this->addNodes(&saveFileMenu, "Save APs", TFT_NAVY, NULL, SD_UPDATE, [this]() {
+      this->changeMenu(&saveAPsMenu);
+      //wifi_scan_obj.RunLoadSSIDList();
+    });
+    this->addNodes(&saveFileMenu, "Load APs", TFT_BLUE, NULL, SD_UPDATE, [this]() {
+      this->changeMenu(&loadAPsMenu);
+      //wifi_scan_obj.RunLoadSSIDList();
+    });
+
+    saveSSIDsMenu.parentMenu = &saveFileMenu;
     this->addNodes(&saveSSIDsMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
       this->changeMenu(saveSSIDsMenu.parentMenu);
+    });
+
+    loadSSIDsMenu.parentMenu = &saveFileMenu;
+    this->addNodes(&loadSSIDsMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+      this->changeMenu(loadSSIDsMenu.parentMenu);
+    });
+
+    saveAPsMenu.parentMenu = &saveFileMenu;
+    this->addNodes(&saveAPsMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+      this->changeMenu(saveAPsMenu.parentMenu);
+    });
+
+    loadAPsMenu.parentMenu = &saveFileMenu;
+    this->addNodes(&loadAPsMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+      this->changeMenu(loadAPsMenu.parentMenu);
     });
 
     // Select APs on Mini
