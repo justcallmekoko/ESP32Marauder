@@ -385,6 +385,7 @@ class WiFiScan
     void RunClearSSIDs();
     void RunClearAPs();
     void RunClearStations();
+    void RunSaveSSIDList(bool save_as = true);
     void channelHop();
     uint8_t currentScanMode = 0;
     void main(uint32_t currentTime);

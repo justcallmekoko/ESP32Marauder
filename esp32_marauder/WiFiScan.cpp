@@ -952,6 +952,32 @@ void WiFiScan::startLog(String file_name) {
   );
 }
 
+void WiFiScan::RunSaveSSIDList(bool save_as) {
+  if (save_as) {
+    sd_obj.removeFile("/SSIDs_0.log");
+
+    this->startLog("SSIDs");
+
+    for (int i = 0; i < ssids->size(); i++) {
+      if (i < ssids->size() - 1)
+        buffer_obj.append(ssids->get(i).essid + "\n");
+      else
+        buffer_obj.append(ssids->get(i).essid);
+    }
+
+    #ifdef HAS_SCREEN
+      display_obj.tft.setTextWrap(false);
+      display_obj.tft.setFreeFont(NULL);
+      display_obj.tft.setCursor(0, 100);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextColor(TFT_CYAN);
+    
+      display_obj.tft.print("Saved SSIDs: ");
+      display_obj.tft.println((String)ssids->size());
+    #endif
+  }
+}
+
 void WiFiScan::RunEvilPortal(uint8_t scan_mode, uint16_t color)
 {
   startLog("evil_portal");

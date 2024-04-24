@@ -1279,6 +1279,7 @@ void MenuFunctions::RunSetup()
   generateSSIDsMenu.list = new LinkedList<MenuNode>();
   clearSSIDsMenu.list = new LinkedList<MenuNode>();
   clearAPsMenu.list = new LinkedList<MenuNode>();
+  saveSSIDsMenu.list = new LinkedList<MenuNode>();
 
   // Work menu names
   mainMenu.name = text_table1[6];
@@ -1295,6 +1296,7 @@ void MenuFunctions::RunSetup()
   wifiSnifferMenu.name = text_table1[20];
   wifiAttackMenu.name = text_table1[21];
   wifiGeneralMenu.name = text_table1[22];
+  saveSSIDsMenu.name = "Save SSIDs";
   bluetoothSnifferMenu.name = text_table1[23];
   bluetoothAttackMenu.name = "Bluetooth Attacks";
   generateSSIDsMenu.name = text_table1[27];
@@ -1486,6 +1488,10 @@ void MenuFunctions::RunSetup()
     this->changeMenu(&generateSSIDsMenu);
     wifi_scan_obj.RunGenerateSSIDs();
   });
+  this->addNodes(&wifiGeneralMenu, "Save SSIDs", TFT_CYAN, NULL, SD_UPDATE, [this]() {
+    this->changeMenu(&saveSSIDsMenu);
+    wifi_scan_obj.RunSaveSSIDList(true);
+  });
   #ifdef HAS_ILI9341
     this->addNodes(&wifiGeneralMenu, text_table1[1], TFT_NAVY, NULL, KEYBOARD_ICO, [this](){
       display_obj.clearScreen(); 
@@ -1583,6 +1589,11 @@ void MenuFunctions::RunSetup()
     htmlMenu.parentMenu = &wifiGeneralMenu;
     this->addNodes(&htmlMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
       this->changeMenu(htmlMenu.parentMenu);
+    });
+
+    saveSSIDsMenu.parentMenu = &wifiGeneralMenu;
+    this->addNodes(&saveSSIDsMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+      this->changeMenu(saveSSIDsMenu.parentMenu);
     });
 
     // Select APs on Mini
