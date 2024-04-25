@@ -2601,16 +2601,25 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
         Serial.print(snifferPacket->rx_ctrl.channel);
         Serial.print(" BSSID: ");
         Serial.print(addr);
-        display_string.concat(addr);
+        //display_string.concat(addr);
+        //Serial.print(" ESSID: ");
+        //display_string.concat(" -> ");
+        //for (int i = 0; i < snifferPacket->payload[37]; i++)
+        //{
+        //  Serial.print((char)snifferPacket->payload[i + 38]);
+        //  display_string.concat((char)snifferPacket->payload[i + 38]);
+        //  essid.concat((char)snifferPacket->payload[i + 38]);
+        //}
         Serial.print(" ESSID: ");
-        display_string.concat(" -> ");
-        for (int i = 0; i < snifferPacket->payload[37]; i++)
-        {
-          Serial.print((char)snifferPacket->payload[i + 38]);
-          display_string.concat((char)snifferPacket->payload[i + 38]);
-          essid.concat((char)snifferPacket->payload[i + 38]);
-
-          
+        if (snifferPacket->payload[37] <= 0)
+          display_string.concat(addr);
+        else {
+          for (int i = 0; i < snifferPacket->payload[37]; i++)
+          {
+            Serial.print((char)snifferPacket->payload[i + 38]);
+            display_string.concat((char)snifferPacket->payload[i + 38]);
+            essid.concat((char)snifferPacket->payload[i + 38]);
+          }
         }
 
         bssid.concat(addr);
@@ -2910,13 +2919,15 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
         char addr[] = "00:00:00:00:00:00";
         getMAC(addr, snifferPacket->payload, 10);
         Serial.print(addr);
-        display_string.concat(addr);
         Serial.print(" ESSID: ");
-        display_string.concat(" -> ");
-        for (int i = 0; i < snifferPacket->payload[37]; i++)
-        {
-          Serial.print((char)snifferPacket->payload[i + 38]);
-          display_string.concat((char)snifferPacket->payload[i + 38]);
+        if (snifferPacket->payload[37] <= 0)
+          display_string.concat(addr);
+        else {
+          for (int i = 0; i < snifferPacket->payload[37]; i++)
+          {
+            Serial.print((char)snifferPacket->payload[i + 38]);
+            display_string.concat((char)snifferPacket->payload[i + 38]);
+          }
         }
 
         int temp_len = display_string.length();
