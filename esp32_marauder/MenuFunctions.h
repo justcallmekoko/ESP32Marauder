@@ -152,6 +152,7 @@ class MenuFunctions
     // WiFi General Menu
     Menu htmlMenu;
     Menu miniKbMenu;
+    Menu saveFileMenu;
 
     // Bluetooth menu stuff
     Menu bluetoothSnifferMenu;
@@ -187,6 +188,12 @@ class MenuFunctions
     Menu* current_menu;
     Menu clearSSIDsMenu;
     Menu clearAPsMenu;
+    
+    // Save Files Menu
+    Menu saveSSIDsMenu;
+    Menu loadSSIDsMenu;
+    Menu saveAPsMenu;
+    Menu loadAPsMenu;
 
     #ifdef HAS_GPS
       // GPS Menu
