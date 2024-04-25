@@ -154,12 +154,6 @@ class MenuFunctions
     Menu miniKbMenu;
     Menu saveFileMenu;
 
-    // Save Files Menu
-    Menu saveSSIDsMenu;
-    Menu loadSSIDsMenu;
-    Menu saveAPsMenu;
-    Menu loadAPsMenu;
-
     // Bluetooth menu stuff
     Menu bluetoothSnifferMenu;
     Menu bluetoothAttackMenu;
@@ -194,6 +188,12 @@ class MenuFunctions
     Menu* current_menu;
     Menu clearSSIDsMenu;
     Menu clearAPsMenu;
+    
+    // Save Files Menu
+    Menu saveSSIDsMenu;
+    Menu loadSSIDsMenu;
+    Menu saveAPsMenu;
+    Menu loadAPsMenu;
 
     #ifdef HAS_GPS
       // GPS Menu

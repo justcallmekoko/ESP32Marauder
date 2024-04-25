@@ -1019,6 +1019,8 @@ void WiFiScan::RunLoadAPList() {
       display_obj.tft.print("Loaded APs: ");
       display_obj.tft.println((String)access_points->size());
     #endif
+    Serial.print("Loaded APs:");
+    Serial.println((String)access_points->size());
   #endif
 }
 
@@ -1060,6 +1062,8 @@ void WiFiScan::RunSaveAPList(bool save_as) {
       display_obj.tft.print("Saved APs: ");
       display_obj.tft.println((String)access_points->size());
     #endif
+    Serial.print("Saved APs:");
+    Serial.println((String)access_points->size());
   }
 }
 
@@ -1096,6 +1100,9 @@ void WiFiScan::RunLoadSSIDList() {
     #endif
 
     log_file.close();
+
+    Serial.print("Loaded SSIDs: ");
+    Serial.println((String)ssids->size());
   #endif
 }
 
@@ -1122,6 +1129,8 @@ void WiFiScan::RunSaveSSIDList(bool save_as) {
       display_obj.tft.print("Saved SSIDs: ");
       display_obj.tft.println((String)ssids->size());
     #endif
+    Serial.print("Saved SSIDs: ");
+    Serial.println((String)ssids->size());
   }
 }
 
