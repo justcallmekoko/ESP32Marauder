@@ -181,6 +181,30 @@ jobs:
             cat "$i" | grep compiler.c.elf.libs.esp32
           done
 
+      - name: Configure TFT_eSPI and configs.h for Marauder M5Cardputer
+        run: |
+          # Configure TFT_eSPI
+          sed -i 's/^#include <User_Setup.h>/\/\/#include <User_Setup.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
+          sed -i 's/^\/\/#include <User_setup_marauder_m5cardputer.h>/#include <User_setup_marauder_m5cardputer.h>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
+            
+          # Configure configs.h
+          sed -i 's/^  #define MARAUDER_REV_FEATHER/  \/\/#define MARAUDER_REV_FEATHER/' esp32_marauder/configs.h
+          sed -i 's/^  #define MARAUDER_MINI/  \/\/#define MARAUDER_MINI/' esp32_marauder/configs.h
+          sed -i 's/^  #define MARAUDER_V4/  \/\/#define MARAUDER_V4/' esp32_marauder/configs.h
+          sed -i 's/^  #define MARAUDER_V6/  \/\/#define MARAUDER_V6/' esp32_marauder/configs.h
+          sed -i 's/^  \/\/#define MARAUDER_M5CARDPUTER/  #define MARAUDER_M5CARDPUTER/' esp32_marauder/configs.h      
+  
+      - name: Build Marauder for M5Cardputer
+        uses: ArminJo/arduino-test-compile@v3.2.1
+        with:
+          sketch-names: esp32_marauder.ino
+          arduino-board-fqbn: esp32:esp32:esp32s2:PartitionScheme=min_spiffs,FlashSize=4M,PSRAM=enabled
+          extra-arduino-cli-args: "--warnings none"
+  
+      - name: Rename Marauder M5Cardputer bin
+        run: |
+          mv ./esp32_marauder/build/esp32.esp32.esp32s2/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.esp32s2/esp32_marauder.m5cardputer.bin
+
       - name: Configure configs.h for Flipper Zero WiFi Dev Board
         run: |
           sed -i 's/^  #define MARAUDER_REV_FEATHER/  \/\/#define MARAUDER_REV_FEATHER/' esp32_marauder/configs.h
@@ -552,6 +576,13 @@ jobs:
         with:
           name: esp32_marauder.rev_feather.bin
           path: ./esp32_marauder/build/esp32.esp32.esp32s2/esp32_marauder.rev_feather.bin
+          retention-days: 5
+
+      - name: "Upload M5Cardputer Artifact"
+        uses: actions/upload-artifact@v3
+        with:
+          name: esp32_marauder.m5cardputer.bin
+          path: ./esp32_marauder/build/esp32.esp32.esp32s2/esp32_marauder.m5cardputer.bin
           retention-days: 5
 
       - name: Create Release
