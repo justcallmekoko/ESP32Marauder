@@ -12,6 +12,13 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+      - name: Install BleKeyboard Library
+        uses: actions/checkout@v2
+        with:
+          repository: T-vK/ESP32-BLE-Keyboard
+          ref: master
+          path: lib/BleKeyboard
+
       - name: Checkout Code
         uses: actions/checkout@v3
         
