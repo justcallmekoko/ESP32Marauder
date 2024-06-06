@@ -8,10 +8,10 @@
 
   //// BOARD TARGETS
   //#define MARAUDER_M5STICKC
-  #define MARAUDER_MINI
+  //#define MARAUDER_MINI
   //#define MARAUDER_V4
   //#define MARAUDER_V6
-  //#define MARAUDER_V6_1
+  #define MARAUDER_V6_1
   //#define MARAUDER_KIT
   //#define GENERIC_ESP32
   //#define MARAUDER_FLIPPER
@@ -21,7 +21,7 @@
   //#define MARAUDER_REV_FEATHER
   //// END BOARD TARGETS
 
-  #define MARAUDER_VERSION "v0.13.10"
+  #define MARAUDER_VERSION "v0.13.11"
 
   //// HARDWARE NAMES
   #ifdef MARAUDER_M5STICKC
