@@ -305,6 +305,14 @@ WiFiScan::WiFiScan()
 {
 }
 
+String WiFiScan::macToString(const Station& station) {
+  char macStr[18]; // 6 pairs of hex digits + 5 colons + null terminator
+  snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
+           station.mac[0], station.mac[1], station.mac[2],
+           station.mac[3], station.mac[4], station.mac[5]);
+  return String(macStr);
+}
+
 void WiFiScan::RunSetup() {
   if (ieee80211_raw_frame_sanity_check(31337, 0, 0) == 1)
     this->wsl_bypass_enabled = true;
