@@ -24,7 +24,7 @@ jobs:
           
       - name: Show Arduino dir structure
         run: |
-          find /home/runner/.arduino15/packages/esp32/hardware/
+          find /home/runner/.arduino15/packages/esp32/ -type f -exec grep -l "-lefuse" {} +
         
       - name: Pull arduino-esp32 v2.0.4
         uses: actions/checkout@v2
