@@ -19,7 +19,6 @@ extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32
 
 extern "C" {
   uint8_t esp_base_mac_addr[6];
-  esp_err_t esp_base_mac_addr_set(const uint8_t *addr);
   esp_err_t esp_ble_gap_set_rand_addr(const uint8_t *rand_addr);
 }
 
@@ -1928,11 +1927,9 @@ void WiFiScan::executeSwiftpairSpam(EBLEPayloadType type) {
     //NimBLEAdvertisementData advertisementData = getSwiftAdvertisementData();
     NimBLEAdvertisementData advertisementData = this->GetUniversalAdvertisementData(type);
     pAdvertising->setAdvertisementData(advertisementData);
-    Serial.println("Advertising...");
     pAdvertising->start();
     delay(10);
     pAdvertising->stop();
-    Serial.println("Advertising stop");
 
     NimBLEDevice::deinit();
   #endif
@@ -2364,7 +2361,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
         display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
         display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
       #endif
-      pBLEScan->setScanCallbacks(new bluetoothScanAllCallback(), false);
+      pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), false);
     }
     else if ((scan_mode == BT_SCAN_WAR_DRIVE) || (scan_mode == BT_SCAN_WAR_DRIVE_CONT)) {
       #ifdef HAS_GPS
@@ -2401,9 +2398,9 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
         display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
       #endif
       if (scan_mode != BT_SCAN_WAR_DRIVE_CONT)
-        pBLEScan->setScanCallbacks(new bluetoothScanAllCallback(), false);
+        pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), false);
       else
-        pBLEScan->setScanCallbacks(new bluetoothScanAllCallback(), true);
+        pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), true);
     }
     else if (scan_mode == BT_SCAN_SKIMMERS)
     {
@@ -2420,13 +2417,13 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
         display_obj.tft.setTextColor(TFT_BLACK, TFT_DARKGREY);
         display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
       #endif
-      pBLEScan->setScanCallbacks(new bluetoothScanSkimmersCallback(), false);
+      pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanSkimmersCallback(), false);
     }
     pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
     pBLEScan->setInterval(97);
     pBLEScan->setWindow(37);  // less or equal setInterval value
     pBLEScan->setMaxResults(0);
-    pBLEScan->start(0, false);
+    pBLEScan->start(0, scanCompleteCB, false);
     Serial.println("Started BLE Scan");
     this->ble_initialized = true;
     initTime = millis();
