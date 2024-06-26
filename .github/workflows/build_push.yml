@@ -24,7 +24,7 @@ jobs:
           
       - name: Show Arduino dir structure
         run: |
-          find /home/runner/.arduino15/packages/esp32/ -type f -exec grep -l "-lefuse" {} +
+          find /home/runner/.arduino15/packages/esp32/hardware/
         
       - name: Pull arduino-esp32 v2.0.4
         uses: actions/checkout@v2
@@ -166,15 +166,9 @@ jobs:
           
       - name: Modify platform.txt
         run: |
-          for i in $(find /home/runner/.arduino15/packages/esp32/hardware/esp32/ -name "platform.txt"); do
-            sed -i 's/compiler.c.elf.libs.esp32c3=/compiler.c.elf.libs.esp32c3=-zmuldefs /' "$i"
-            sed -i 's/compiler.c.elf.libs.esp32s3=/compiler.c.elf.libs.esp32s3=-zmuldefs /' "$i"
-            sed -i 's/compiler.c.elf.libs.esp32s2=/compiler.c.elf.libs.esp32s2=-zmuldefs /' "$i"
-            sed -i 's/compiler.c.elf.libs.esp32=/compiler.c.elf.libs.esp32=-zmuldefs /' "$i"
-            cat "$i" | grep compiler.c.elf.libs.esp32c3
-            cat "$i" | grep compiler.c.elf.libs.esp32s3
-            cat "$i" | grep compiler.c.elf.libs.esp32s2
-            cat "$i" | grep compiler.c.elf.libs.esp32
+          for i in $(find /home/runner/.arduino15/packages/esp32/ -name "ld_libs"); do
+            sed -i 's/-lxtensa/-lxtensa -zmuldefs /' "$i"
+            cat "$i"
           done
           
       - name: Configure configs.h for Flipper Zero WiFi Dev Board
