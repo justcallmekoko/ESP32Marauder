@@ -1928,9 +1928,11 @@ void WiFiScan::executeSwiftpairSpam(EBLEPayloadType type) {
     //NimBLEAdvertisementData advertisementData = getSwiftAdvertisementData();
     NimBLEAdvertisementData advertisementData = this->GetUniversalAdvertisementData(type);
     pAdvertising->setAdvertisementData(advertisementData);
+    Serial.println("Advertising...");
     pAdvertising->start();
     delay(10);
     pAdvertising->stop();
+    Serial.println("Advertising stop");
 
     NimBLEDevice::deinit();
   #endif
@@ -2362,7 +2364,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
         display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
         display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
       #endif
-      pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), false);
+      pBLEScan->setScanCallbacks(new bluetoothScanAllCallback(), false);
     }
     else if ((scan_mode == BT_SCAN_WAR_DRIVE) || (scan_mode == BT_SCAN_WAR_DRIVE_CONT)) {
       #ifdef HAS_GPS
@@ -2399,9 +2401,9 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
         display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
       #endif
       if (scan_mode != BT_SCAN_WAR_DRIVE_CONT)
-        pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), false);
+        pBLEScan->setScanCallbacks(new bluetoothScanAllCallback(), false);
       else
-        pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), true);
+        pBLEScan->setScanCallbacks(new bluetoothScanAllCallback(), true);
     }
     else if (scan_mode == BT_SCAN_SKIMMERS)
     {
@@ -2418,13 +2420,13 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
         display_obj.tft.setTextColor(TFT_BLACK, TFT_DARKGREY);
         display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
       #endif
-      pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanSkimmersCallback(), false);
+      pBLEScan->setScanCallbacks(new bluetoothScanSkimmersCallback(), false);
     }
     pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
     pBLEScan->setInterval(97);
     pBLEScan->setWindow(37);  // less or equal setInterval value
     pBLEScan->setMaxResults(0);
-    pBLEScan->start(0, scanCompleteCB, false);
+    pBLEScan->start(0, false);
     Serial.println("Started BLE Scan");
     this->ble_initialized = true;
     initTime = millis();
