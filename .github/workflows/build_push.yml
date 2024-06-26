@@ -54,12 +54,12 @@ jobs:
           ref: v2.0.6
           path: CustomMicroNMEA
           
-      #- name: Install ESPAsyncWebServer
-      #  uses: actions/checkout@v2
-      #  with:
-      #    repository: bigbrodude6119/ESPAsyncWebServer
-      #    ref: master
-      #    path: CustomESPAsyncWebServer
+      - name: Install ESPAsyncWebServer
+        uses: actions/checkout@v2
+        with:
+          repository: bigbrodude6119/ESPAsyncWebServer
+          ref: master
+          path: CustomESPAsyncWebServer
           
       - name: Install TFT_eSPI
         uses: actions/checkout@v2
@@ -86,7 +86,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: h2zero/NimBLE-Arduino
-          ref: master
+          ref: 1.2.0
           path: CustomNimBLE-Arduino
 
       - name: Install Adafruit_NeoPixel
@@ -102,6 +102,13 @@ jobs:
           repository: bblanchon/ArduinoJson
           ref: v6.18.2
           path: CustomArduinoJson
+
+      #- name: Install SwitchLib
+      #  uses: actions/checkout@v2
+      #  with:
+      #    repository: justcallmekoko/SwitchLib
+      #    ref: main
+      #    path: CustomSwitchLib
           
       - name: Install LinkedList
         uses: actions/checkout@v2
@@ -159,9 +166,15 @@ jobs:
           
       - name: Modify platform.txt
         run: |
-          for i in $(find /home/runner/.arduino15/packages/esp32/ -name "ld_libs"); do
-            sed -i 's/-lxtensa /-lxtensa -zmuldefs /' "$i"
-            cat "$i"
+          for i in $(find /home/runner/.arduino15/packages/esp32/hardware/esp32/ -name "platform.txt"); do
+            sed -i 's/compiler.c.elf.libs.esp32c3=/compiler.c.elf.libs.esp32c3=-zmuldefs /' "$i"
+            sed -i 's/compiler.c.elf.libs.esp32s3=/compiler.c.elf.libs.esp32s3=-zmuldefs /' "$i"
+            sed -i 's/compiler.c.elf.libs.esp32s2=/compiler.c.elf.libs.esp32s2=-zmuldefs /' "$i"
+            sed -i 's/compiler.c.elf.libs.esp32=/compiler.c.elf.libs.esp32=-zmuldefs /' "$i"
+            cat "$i" | grep compiler.c.elf.libs.esp32c3
+            cat "$i" | grep compiler.c.elf.libs.esp32s3
+            cat "$i" | grep compiler.c.elf.libs.esp32s2
+            cat "$i" | grep compiler.c.elf.libs.esp32
           done
           
       - name: Configure configs.h for Flipper Zero WiFi Dev Board
