@@ -24,6 +24,10 @@ void Buffer::createFile(String name, bool is_pcap){
   Serial.println(fileName);
   
   file = fs->open(fileName, FILE_WRITE);
+  if(!file) {
+    Serial.println("failed to create file " + fileName);
+    return;
+  }
   file.close();
 }
 
@@ -49,6 +53,7 @@ void Buffer::open(bool is_pcap){
 void Buffer::openFile(String file_name, fs::FS* fs, bool serial, bool is_pcap) {
   bool save_pcap = settings_obj.loadSetting<bool>("SavePCAP");
   if (!save_pcap) {
+    Serial.println("Save pcap disabled");
     this->fs = NULL;
     this->serial = false;
     writing = false;
@@ -57,11 +62,15 @@ void Buffer::openFile(String file_name, fs::FS* fs, bool serial, bool is_pcap) {
   this->fs = fs;
   this->serial = serial;
   if (this->fs) {
+    Serial.print("Creating file ");
+    Serial.println(file_name);
     createFile(file_name, is_pcap);
   }
   if (this->fs || this->serial) {
     open(is_pcap);
+    Serial.println("File open");
   } else {
+    Serial.println("Writing disabled");
     writing = false;
   }
 }

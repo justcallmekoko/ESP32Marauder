@@ -6,6 +6,7 @@ LedInterface::LedInterface() {
 
 void LedInterface::RunSetup() {
   //Serial.println("Setting neopixel to black...");
+  #ifdef HAS_NEOPIXEL_LED
   strip.setBrightness(0);
   strip.begin();
   strip.setPixelColor(0, strip.Color(0, 0, 0));
@@ -15,9 +16,11 @@ void LedInterface::RunSetup() {
   strip.setPixelColor(0, strip.Color(0, 0, 0));
   strip.show();
   this->initTime = millis();
+  #endif
 }
 
 void LedInterface::main(uint32_t currentTime) {
+  #ifdef HAS_NEOPIXEL_LED
   if ((!settings_obj.loadSetting<bool>("EnableLED")) ||
       (this->current_mode == MODE_OFF)) {
     this->ledOff();
@@ -39,6 +42,7 @@ void LedInterface::main(uint32_t currentTime) {
   else {
     this->ledOff();
   }
+  #endif
 };
 
 void LedInterface::setMode(uint8_t new_mode) {
@@ -50,23 +54,32 @@ uint8_t LedInterface::getMode() {
 }
 
 void LedInterface::setColor(int r, int g, int b) {
+  #ifdef HAS_NEOPIXEL_LED
   strip.setPixelColor(0, strip.Color(r, g, b));
   strip.show();  
+  #endif
 }
 
 void LedInterface::sniffLed() {
+  #ifdef HAS_NEOPIXEL_LED
   this->setColor(0, 0, 255);
+  #endif
 }
 
 void LedInterface::attackLed() {
+  #ifdef HAS_NEOPIXEL_LED
   this->setColor(255, 0, 0);
+  #endif
 }
 
 void LedInterface::ledOff() {
+  #ifdef HAS_NEOPIXEL_LED
   this->setColor(0, 0, 0);
+  #endif
 }
 
 void LedInterface::rainbow() {
+  #ifdef HAS_NEOPIXEL_LED
   strip.setPixelColor(0, this->Wheel((0 * 256 / 100 + this->wheel_pos) % 256));
   strip.show();
 
@@ -75,9 +88,11 @@ void LedInterface::rainbow() {
   this->wheel_pos = this->wheel_pos - this->wheel_speed;
   if (this->wheel_pos < 0)
     this->wheel_pos = 255;
+  #endif
 }
 
 uint32_t LedInterface::Wheel(byte WheelPos) {
+  #ifdef HAS_NEOPIXEL_LED
   WheelPos = 255 - WheelPos;
   if(WheelPos < 85) {
     return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
@@ -88,4 +103,5 @@ uint32_t LedInterface::Wheel(byte WheelPos) {
   }
   WheelPos -= 170;
   return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+  #endif
 }

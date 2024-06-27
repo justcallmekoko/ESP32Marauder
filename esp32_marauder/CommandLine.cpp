@@ -474,7 +474,11 @@ void CommandLine::runCommand(String input) {
     int da_sw = this->argSearch(&cmd_args, "disable"); // disable setting
 
     if (re_sw != -1) {
-      settings_obj.createDefaultSettings(SPIFFS);
+      #ifndef USE_FFAT
+        settings_obj.createDefaultSettings(SPIFFS);
+      #else
+        settings_obj.createDefaultSettings(FFat);
+      #endif
       return;
     }
 

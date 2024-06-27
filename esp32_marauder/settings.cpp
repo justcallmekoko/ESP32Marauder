@@ -5,34 +5,58 @@ String Settings::getSettingsString() {
 }
 
 bool Settings::begin() {
+  #ifndef USE_FFAT
   if(!SPIFFS.begin(FORMAT_SPIFFS_IF_FAILED)){
     Serial.println("Settings SPIFFS Mount Failed");
     return false;
   }
+  #else
+  if(!FFat.begin(FORMAT_SPIFFS_IF_FAILED)){
+        return false;
+  }
+  Serial.println("Using FFat"); 
+
+  File root = FFat.open("/");
+  if(!root){
+    Serial.println("failed to open root directory - formatiing");
+      FFat.format();
+    }
+  else {
+    Serial.println("FFat root good");
+    root.close();
+  }
+  Serial.println("Found default fs FFat");
+  #endif
 
   File settingsFile;
 
   //SPIFFS.remove("/settings.json"); // NEED TO REMOVE THIS LINE
 
+  #ifndef USE_FFAT
   if (SPIFFS.exists("/settings.json")) {
-    settingsFile = SPIFFS.open("/settings.json", FILE_READ);
-    
-    if (!settingsFile) {
+    settingsFile = SPIFFS.open("/settings.json", FILE_READ);    
+  }
+  #else 
+  if(FFat.exists("/settings.json")) {
+    settingsFile = FFat.open("/settings.json", FILE_READ);    
+  }
+  #endif
+
+  if (!settingsFile) {
       settingsFile.close();
       Serial.println(F("Could not find settings file"));
+      #ifndef USE_FFAT
       if (this->createDefaultSettings(SPIFFS))
         return true;
+      #else 
+      if (this->createDefaultSettings(FFat))
+        return true;
+      #endif
       else
-        return false;    
-    }
+        return false;
   }
-  else {
-    Serial.println("Settings file does not exist");
-    if (this->createDefaultSettings(SPIFFS))
-      return true;
-    else
-      return false;
-  }
+
+  Serial.println("Created settings file");
 
   String json_string;
   DynamicJsonDocument jsonBuffer(1024);
@@ -131,6 +155,7 @@ bool Settings::saveSetting<bool>(String key, bool value) {
   }
 
   String settings_string;
+  File settingsFile;
 
   for (int i = 0; i < json["Settings"].size(); i++) {
     if (json["Settings"][i]["name"].as<String>() == key) {
@@ -138,10 +163,15 @@ bool Settings::saveSetting<bool>(String key, bool value) {
 
       Serial.println("Saving setting...");
 
-      File settingsFile = SPIFFS.open("/settings.json", FILE_WRITE);
-
+      #ifndef USE_FFAT
+      settingsFile = SPIFFS.open("/settings.json", FILE_WRITE);
+      #else
+      settingsFile = FFat.open("/settings.json", FILE_WRITE);
+      #endif
+      
       if (!settingsFile) {
-        Serial.println(F("Failed to create settings file"));
+        Serial.print(F("Failed to create settings file - "));
+        Serial.println(settingsFile, DEC);
         return false;
       }
 
@@ -245,7 +275,8 @@ bool Settings::createDefaultSettings(fs::FS &fs) {
   File settingsFile = fs.open("/settings.json", FILE_WRITE);
 
   if (!settingsFile) {
-    Serial.println(F("Failed to create settings file"));
+    Serial.print(F("Failed to create settings file - "));
+    Serial.println(settingsFile, DEC);
     return false;
   }
 

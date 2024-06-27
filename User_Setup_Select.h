@@ -25,6 +25,7 @@
 //#include <User_Setup_marauder_mini.h>
 //#include <User_Setup_marauder_m5stickc.h>
 //#include <User_Setup_marauder_rev_feather.h>
+//#include <Setup206_LilyGo_T_Display_S3.h>
 
 //#include <User_Setups/Setup1_ILI9341.h>  // Setup file configured for my ILI9341
 //#include <User_Setups/Setup2_ST7735.h>   // Setup file configured for my ST7735

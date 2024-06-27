@@ -1,6 +1,8 @@
 #include "SDInterface.h"
 #include "lang_var.h"
-
+#ifdef LILYGO_T_DISPLAY_S3R8
+#include "SD_MMC.h"
+#endif
 
 bool SDInterface::initSD() {
   #ifdef HAS_SD
@@ -33,8 +35,12 @@ bool SDInterface::initSD() {
       */
       enum { SPI_SCK = 0, SPI_MISO = 36, SPI_MOSI = 26 };
       this->spiExt = new SPIClass();
-      this->spiExt->begin(SPI_SCK, SPI_MISO, SPI_MOSI, SD_CS);
+      this->spiExt->begin(SPI_SCK, SPI_MOSI, SPI_MISO, SD_CS);
       if (!SD.begin(SD_CS, *(this->spiExt))) {
+    #elif defined(LILYGO_T_DISPLAY_S3R8)
+      enum { SPI_SCK = 11, SPI_MISO = 12, SPI_MOSI = 13 };
+      SD_MMC.setPins(SPI_SCK, SPI_MOSI, SPI_MISO);
+      if (!SD_MMC.begin("/sdcard", true, true)) {
     #else
       if (!SD.begin(SD_CS)) {
     #endif
@@ -44,7 +50,13 @@ bool SDInterface::initSD() {
     }
     else {
       this->supported = true;
+      #ifdef LILYGO_T_DISPLAY_S3R8
+      this->cardType = SD_MMC.cardType();
+      this->cardSizeMB = SD_MMC.cardSize() / (1024 * 1024);
+      #else
       this->cardType = SD.cardType();
+      this->cardSizeMB = SD.cardSize() / (1024 * 1024);
+      #endif
       //if (cardType == CARD_MMC)
       //  Serial.println(F("SD: MMC Mounted"));
       //else if(cardType == CARD_SD)
@@ -53,8 +65,6 @@ bool SDInterface::initSD() {
       //    Serial.println(F("SD: SDHC Mounted"));
       //else
       //    Serial.println(F("SD: UNKNOWN Card Mounted"));
-
-      this->cardSizeMB = SD.cardSize() / (1024 * 1024);
     
       //Serial.printf("SD Card Size: %lluMB\n", this->cardSizeMB);
 
@@ -73,10 +83,13 @@ bool SDInterface::initSD() {
         this->card_sz = sz;
       }
 
+      #ifdef LILYGO_T_DISPLAY_S3R8
+      if (!SD_MMC.exists("/SCRIPTS")) {
+        SD_MMC.mkdir("/SCRIPTS");
+      #else
       if (!SD.exists("/SCRIPTS")) {
-        Serial.println("/SCRIPTS does not exist. Creating...");
-
         SD.mkdir("/SCRIPTS");
+      #endif
         Serial.println("/SCRIPTS created");
       }
 
@@ -95,7 +108,11 @@ bool SDInterface::initSD() {
 
 File SDInterface::getFile(String path) {
   if (this->supported) {
+    #ifdef LILYGO_T_DISPLAY_S3R8
+    File file = SD_MMC.open(path, FILE_READ);
+    #else
     File file = SD.open(path, FILE_READ);
+    #endif
 
     //if (file)
     return file;
@@ -103,7 +120,11 @@ File SDInterface::getFile(String path) {
 }
 
 bool SDInterface::removeFile(String file_path) {
+  #ifdef LILYGO_T_DISPLAY_S3R8
+  if (SD_MMC.remove(file_path))
+  #else
   if (SD.remove(file_path))
+  #endif
     return true;
   else
     return false;
@@ -111,7 +132,11 @@ bool SDInterface::removeFile(String file_path) {
 
 void SDInterface::listDirToLinkedList(LinkedList<String>* file_names, String str_dir, String ext) {
   if (this->supported) {
+    #ifdef LILYGO_T_DISPLAY_S3R8
+    File dir = SD_MMC.open(str_dir);
+    #else
     File dir = SD.open(str_dir);
+    #endif
     while (true)
     {
       File entry = dir.openNextFile();
@@ -137,7 +162,11 @@ void SDInterface::listDirToLinkedList(LinkedList<String>* file_names, String str
 
 void SDInterface::listDir(String str_dir){
   if (this->supported) {
+    #ifdef LILYGO_T_DISPLAY_S3R8
+    File dir = SD_MMC.open(str_dir);
+    #else
     File dir = SD.open(str_dir);
+    #endif
     while (true)
     {
       File entry = dir.openNextFile();
@@ -167,7 +196,11 @@ void SDInterface::runUpdate() {
   
     display_obj.tft.println(F(text15));
   #endif
+  #ifdef LILYGO_T_DISPLAY_S3R8
+  File updateBin = SD_MMC.open("/update.bin");
+  #else
   File updateBin = SD.open("/update.bin");
+  #endif
   if (updateBin) {
     if(updateBin.isDirectory()){
       #ifdef HAS_SCREEN
@@ -210,7 +243,7 @@ void SDInterface::runUpdate() {
       display_obj.tft.println(F(text_table2[3]));
     #endif
     Serial.println(F("rebooting..."));
-    //SD.remove("/update.bin");      
+    //SD.remove("/update.bin");
     delay(1000);
     ESP.restart();
   }

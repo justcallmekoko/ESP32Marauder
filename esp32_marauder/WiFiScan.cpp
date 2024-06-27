@@ -1,5 +1,8 @@
 #include "WiFiScan.h"
 #include "lang_var.h"
+#ifdef LILYGO_T_DISPLAY_S3R8
+#include "SD_MMC.h"
+#endif
 
 int num_beacon = 0;
 int num_deauth = 0;
@@ -9,13 +12,6 @@ int num_eapol = 0;
 LinkedList<ssid>* ssids;
 LinkedList<AccessPoint>* access_points;
 LinkedList<Station>* stations;
-
-extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3){
-    if (arg == 31337)
-      return 1;
-    else
-      return 0;
-}
 
 extern "C" {
   uint8_t esp_base_mac_addr[6];
@@ -314,10 +310,7 @@ String WiFiScan::macToString(const Station& station) {
 }
 
 void WiFiScan::RunSetup() {
-  if (ieee80211_raw_frame_sanity_check(31337, 0, 0) == 1)
-    this->wsl_bypass_enabled = true;
-  else
-    this->wsl_bypass_enabled = false;
+  this->wsl_bypass_enabled = true;
     
   ssids = new LinkedList<ssid>();
   access_points = new LinkedList<AccessPoint>();
@@ -353,7 +346,7 @@ void WiFiScan::RunSetup() {
       {0x20, "Green Watch6 Classic 43m"},
     };
     
-    NimBLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DEVICE);
+    NimBLEDevice::setScanFilterMode(0);
     NimBLEDevice::setScanDuplicateCacheSize(200);
     NimBLEDevice::init("");
     pBLEScan = NimBLEDevice::getScan(); //create new scan
@@ -942,7 +935,11 @@ void WiFiScan::startPcap(String file_name) {
   buffer_obj.pcapOpen(
     file_name,
     #if defined(HAS_SD)
+      #ifdef LILYGO_T_DISPLAY_S3R8
+      sd_obj.supported ? &SD_MMC :
+      #else
       sd_obj.supported ? &SD :
+      #endif
     #endif
     NULL,
     save_serial // Set with commandline options
@@ -953,7 +950,11 @@ void WiFiScan::startLog(String file_name) {
   buffer_obj.logOpen(
     file_name,
     #if defined(HAS_SD)
+      #ifdef LILYGO_T_DISPLAY_S3R8
+      sd_obj.supported ? &SD_MMC :
+      #else
       sd_obj.supported ? &SD :
+      #endif
     #endif
     NULL,
     save_serial // Set with commandline options
@@ -1252,8 +1253,11 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
       display_obj.tft.setTouch(calData);
     #endif
     
-  
+    //#ifdef LILYGO_T_DISPLAY_S3R8
+    //lv_obj_t * scr = lv_menu_cont_create(NULL);
+    //#else
     lv_obj_t * scr = lv_cont_create(NULL, NULL);
+    //#endif
     lv_disp_load_scr(scr);
   
   }
@@ -2340,7 +2344,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
     #endif
   
     if (scan_mode != BT_SCAN_WAR_DRIVE_CONT) {
-      NimBLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DEVICE);
+      NimBLEDevice::setScanFilterMode(0);
       NimBLEDevice::setScanDuplicateCacheSize(200);
     }
     NimBLEDevice::init("");
