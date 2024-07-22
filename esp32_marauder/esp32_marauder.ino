@@ -196,23 +196,27 @@ void setup()
   backlightOff();
 
   // Draw the title screen
+
 #ifdef HAS_SCREEN
     #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5CARDPUTER)
       display_obj.drawJpeg("/marauder240_135.jpg", 0 , -90); // 240 x 135 image
+
+  /*
+  #ifdef HAS_SCREEN
+    #ifndef MARAUDER_MINI
+      display_obj.drawJpeg("/marauder3L.jpg", 0 , 0);     // 240 x 320 image
     #else
       display_obj.drawJpeg("/marauder3L.jpg", 0, 0); // 240 x 320 image
     #endif
   #endif
+  */
 
   #ifdef HAS_SCREEN
-    #ifndef MARAUDER_MINI
-      display_obj.tft.drawCentreString(display_obj.version_number, 120, 250, 2);
-    #endif
-  
-    #ifdef MARAUDER_MINI
-      display_obj.tft.drawCentreString(display_obj.version_number, TFT_WIDTH/2, TFT_HEIGHT, 1);
-    #endif
+    display_obj.tft.drawCentreString("ESP32 Marauder", TFT_WIDTH/2, TFT_HEIGHT * 0.33, 1);
+    display_obj.tft.drawCentreString("JustCallMeKoko", TFT_WIDTH/2, TFT_HEIGHT * 0.5, 1);
+    display_obj.tft.drawCentreString(display_obj.version_number, TFT_WIDTH/2, TFT_HEIGHT * 0.66, 1);
   #endif
+
 
   backlightOn(); // Need this
 

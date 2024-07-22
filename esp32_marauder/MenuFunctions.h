@@ -163,6 +163,9 @@ class MenuFunctions
     Menu wifiAttackMenu;
     Menu wifiGeneralMenu;
     Menu wifiAPMenu;
+    #ifndef HAS_ILI9341
+      Menu wifiStationMenu;
+    #endif
 
     // WiFi General Menu
     Menu htmlMenu;
