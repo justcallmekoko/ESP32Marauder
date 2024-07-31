@@ -19,6 +19,7 @@
   //#define MARAUDER_DEV_BOARD_PRO
   //#define XIAO_ESP32_S3
   //#define MARAUDER_REV_FEATHER
+  #define BPMCIRCUITS_FEBERIS
   //// END BOARD TARGETS
 
   #define MARAUDER_VERSION "v1.0.0"
@@ -44,6 +45,8 @@
     #define HARDWARE_NAME "ESP32 LDDB"
   #elif defined(MARAUDER_DEV_BOARD_PRO)
     #define HARDWARE_NAME "Flipper Zero Dev Board Pro"
+  #elif defined(BPMCIRCUITS_FEBERIS)
+    #define HARDWARE_NAME "BPM Circuits FEBERIS"
   #elif defined(XIAO_ESP32_S3)
     #define HARDWARE_NAME "XIAO ESP32 S3"
   #else
@@ -199,6 +202,19 @@
     #define HAS_BT
     //#define HAS_BUTTONS
     //#define HAS_NEOPIXEL_LED
+    //#define HAS_PWR_MGMT
+    //#define HAS_SCREEN
+    //#define HAS_SD
+    //#define HAS_TEMP_SENSOR
+    //#define HAS_GPS
+  #endif
+
+  #ifdef BPMCIRCUITS_FEBERIS
+    #define FLIPPER_ZERO_HAT
+    //#define HAS_BATTERY
+    #define HAS_BT
+    //#define HAS_BUTTONS
+    #define HAS_NEOPIXEL_LED
     //#define HAS_PWR_MGMT
     //#define HAS_SCREEN
     //#define HAS_SD
@@ -915,6 +931,8 @@
   #elif defined(MARAUDER_DEV_BOARD_PRO)
     #define MEM_LOWER_LIM 20000
   #elif defined(XIAO_ESP32_S3)
+    #define MEM_LOWER_LIM 20000
+  #elif defined(BPMCIRCUITS_FEBERIS)
     #define MEM_LOWER_LIM 20000
   #endif
   //// END MEMORY LOWER LIMIT STUFF
