@@ -1,5 +1,21 @@
 #include "LedInterface.h"
 
+#ifndef HAS_NEOPIXEL_LED
+
+LedInterface::LedInterface(){}
+void LedInterface::RunSetup(){}
+void LedInterface::main(uint32_t currentTime){}
+void LedInterface::setMode(uint8_t new_mode){}
+uint8_t LedInterface::getMode(){}
+void LedInterface::setColor(int r, int g, int b){}
+void LedInterface::sniffLed(){}
+void LedInterface::attackLed(){}
+void LedInterface::ledOff(){}
+void LedInterface::rainbow(){}
+uint32_t LedInterface::Wheel(byte WheelPos){}
+
+#else
+
 LedInterface::LedInterface() {
 
 }
@@ -51,7 +67,7 @@ uint8_t LedInterface::getMode() {
 
 void LedInterface::setColor(int r, int g, int b) {
   strip.setPixelColor(0, strip.Color(r, g, b));
-  strip.show();  
+  strip.show();
 }
 
 void LedInterface::sniffLed() {
@@ -89,3 +105,4 @@ uint32_t LedInterface::Wheel(byte WheelPos) {
   WheelPos -= 170;
   return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
 }
+#endif
