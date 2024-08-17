@@ -59,7 +59,7 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #ifdef HAS_BUTTONS
   #include "Switches.h"
-  
+
   #if (U_BTN >= 0)
     Switches u_btn = Switches(U_BTN, 1000, U_PULL);
   #endif
@@ -129,7 +129,7 @@ void backlightOn() {
     #ifdef MARAUDER_MINI
       digitalWrite(TFT_BL, LOW);
     #endif
-  
+
     #ifndef MARAUDER_MINI
       digitalWrite(TFT_BL, HIGH);
     #endif
@@ -141,7 +141,7 @@ void backlightOff() {
     #ifdef MARAUDER_MINI
       digitalWrite(TFT_BL, HIGH);
     #endif
-  
+
     #ifndef MARAUDER_MINI
       digitalWrite(TFT_BL, LOW);
     #endif
@@ -151,32 +151,37 @@ void backlightOff() {
 
 void setup()
 {
-  Serial.begin(115200);
+  #ifdef LILYGO_T8_ESP32S2
+    Serial.begin(115200, SERIAL_8N1, 18, 17);
+  #else
+    Serial.begin(115200);
+  #endif
+
   Serial.print("Setup started");
   #ifdef MARAUDER_M5STICKC
     axp192_obj.begin();
   #endif
-  
+
   #ifdef HAS_SCREEN
     pinMode(TFT_BL, OUTPUT);
   #endif
-  
+
   backlightOff();
 #if BATTERY_ANALOG_ON == 1
   pinMode(BATTERY_PIN, OUTPUT);
   pinMode(CHARGING_PIN, INPUT);
 #endif
-  
+
   // Preset SPI CS pins to avoid bus conflicts
   #ifdef HAS_SCREEN
     digitalWrite(TFT_CS, HIGH);
   #endif
-  
+
   #ifdef HAS_SD
     pinMode(SD_CS, OUTPUT);
 
     delay(10);
-  
+
     digitalWrite(SD_CS, HIGH);
 
     delay(10);
@@ -227,15 +232,15 @@ void setup()
     #endif
 
     display_obj.clearScreen();
-  
+
     display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-  
+
     display_obj.tft.println(text_table0[0]);
-  
+
     delay(2000);
-  
+
     display_obj.tft.println("Marauder " + display_obj.version_number + "\n");
-  
+
     display_obj.tft.println(text_table0[1]);
   #endif
 
@@ -269,7 +274,7 @@ void setup()
   #ifdef HAS_BATTERY
     battery_obj.RunSetup();
   #endif
-  
+
   #ifdef HAS_SCREEN
     display_obj.tft.println(F(text_table0[5]));
   #endif
@@ -311,16 +316,16 @@ void setup()
 
   #ifdef HAS_SCREEN
     display_obj.tft.println(F(text_table0[8]));
-  
+
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  
+
     delay(2000);
   #endif
 
   #ifdef HAS_SCREEN
     menu_function_obj.RunSetup();
   #endif
-  
+
   Serial.println(F("CLI Ready"));
   cli_obj.RunSetup();
 }
@@ -357,7 +362,7 @@ void loop()
   #else
     bool do_draw = false;
   #endif*/
-  
+
   //if ((!do_draw) && (wifi_scan_obj.currentScanMode != ESP_UPDATE))
   //{
   cli_obj.main(currentTime);
@@ -370,7 +375,7 @@ void loop()
   #ifdef HAS_GPS
     gps_obj.main();
   #endif
-  
+
   // Detect SD card
   #if defined(HAS_SD)
     sd_obj.main();
@@ -422,7 +427,7 @@ void loop()
     #else
       led_obj.main(currentTime);
     #endif
-    
+
     //cli_obj.main(currentTime);
     delay(1);
   }*/
