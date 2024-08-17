@@ -21,6 +21,10 @@ bool SDInterface::initSD() {
     pinMode(SD_CS, OUTPUT);
 
     delay(10);
+    #ifdef LILYGO_T8_ESP32S2
+    pinMode(14, INPUT_PULLUP);
+    #endif
+
     #if defined(MARAUDER_M5STICKC)
       /* Set up SPI SD Card using external pin header
       StickCPlus Header - SPI SD Card Reader
@@ -55,7 +59,7 @@ bool SDInterface::initSD() {
       //    Serial.println(F("SD: UNKNOWN Card Mounted"));
 
       this->cardSizeMB = SD.cardSize() / (1024 * 1024);
-    
+
       //Serial.printf("SD Card Size: %lluMB\n", this->cardSizeMB);
 
       if (this->supported) {
@@ -69,7 +73,7 @@ bool SDInterface::initSD() {
             sz[i] = '0' + (this->cardSizeMB % 10);
             display_string.concat((String)sz[i]);
         }
-  
+
         this->card_sz = sz;
       }
 
@@ -83,7 +87,7 @@ bool SDInterface::initSD() {
       this->sd_files = new LinkedList<String>();
 
       this->sd_files->add("Back");
-    
+
       return true;
   }
 
@@ -164,7 +168,7 @@ void SDInterface::runUpdate() {
     display_obj.tft.setCursor(0, TFT_HEIGHT / 3);
     display_obj.tft.setTextSize(1);
     display_obj.tft.setTextColor(TFT_WHITE);
-  
+
     display_obj.tft.println(F(text15));
   #endif
   File updateBin = SD.open("/update.bin");
@@ -204,13 +208,13 @@ void SDInterface::runUpdate() {
     }
 
     updateBin.close();
-    
+
       // whe finished remove the binary from sd card to indicate end of the process
     #ifdef HAS_SCREEN
       display_obj.tft.println(F(text_table2[3]));
     #endif
     Serial.println(F("rebooting..."));
-    //SD.remove("/update.bin");      
+    //SD.remove("/update.bin");
     delay(1000);
     ESP.restart();
   }
@@ -227,7 +231,7 @@ void SDInterface::runUpdate() {
 }
 
 void SDInterface::performUpdate(Stream &updateSource, size_t updateSize) {
-  if (Update.begin(updateSize)) {   
+  if (Update.begin(updateSize)) {
     #ifdef HAS_SCREEN
       display_obj.tft.println(text_table2[5] + String(updateSize));
       display_obj.tft.println(F(text_table2[6]));

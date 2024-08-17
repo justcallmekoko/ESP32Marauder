@@ -151,6 +151,8 @@ void backlightOff() {
 
 void setup()
 {
+  Serial.begin(115200);
+  Serial.print("Setup started");
   #ifdef MARAUDER_M5STICKC
     axp192_obj.begin();
   #endif
@@ -180,7 +182,6 @@ void setup()
     delay(10);
   #endif
 
-  Serial.begin(115200);
 
   Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
 
