@@ -21,11 +21,12 @@ bool SDInterface::initSD() {
     pinMode(SD_CS, OUTPUT);
 
     delay(10);
-    #ifdef LILYGO_T8_ESP32S2
-    pinMode(14, INPUT_PULLUP);
-    #endif
 
-    #if defined(MARAUDER_M5STICKC)
+    #if defined(LILYGO_T8_ESP32S2)
+      // setup custom spi pins for Lilygo T8
+      pinMode(14, INPUT_PULLUP);
+      enum { SPI_SCK = 12, SPI_MISO = 13, SPI_MOSI = 11 };
+    #elif defined(MARAUDER_M5STICKC)
       /* Set up SPI SD Card using external pin header
       StickCPlus Header - SPI SD Card Reader
                   3v3   -   3v3
@@ -36,6 +37,9 @@ bool SDInterface::initSD() {
                         -   CS (jumper to SD Card GND Pin)
       */
       enum { SPI_SCK = 0, SPI_MISO = 36, SPI_MOSI = 26 };
+    #endif
+
+    #if defined(MARAUDER_M5STICKC) || defined(LILYGO_T8_ESP32S2)
       this->spiExt = new SPIClass();
       this->spiExt->begin(SPI_SCK, SPI_MISO, SPI_MOSI, SD_CS);
       if (!SD.begin(SD_CS, *(this->spiExt))) {
