@@ -26,7 +26,7 @@ extern Settings settings_obj;
 class SDInterface {
 
   private:
-#if defined(MARAUDER_M5STICKC)
+#if defined(MARAUDER_M5STICKC) || defined(LILYGO_T8_ESP32S2) 
   SPIClass *spiExt;
 #endif
     bool checkDetectPin();

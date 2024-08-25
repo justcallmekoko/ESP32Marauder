@@ -21,7 +21,12 @@ bool SDInterface::initSD() {
     pinMode(SD_CS, OUTPUT);
 
     delay(10);
-    #if defined(MARAUDER_M5STICKC)
+
+    #if defined(LILYGO_T8_ESP32S2)
+      // setup custom spi pins for Lilygo T8
+      pinMode(14, INPUT_PULLUP);
+      enum { SPI_SCK = 12, SPI_MISO = 13, SPI_MOSI = 11 };
+    #elif defined(MARAUDER_M5STICKC)
       /* Set up SPI SD Card using external pin header
       StickCPlus Header - SPI SD Card Reader
                   3v3   -   3v3
@@ -32,6 +37,9 @@ bool SDInterface::initSD() {
                         -   CS (jumper to SD Card GND Pin)
       */
       enum { SPI_SCK = 0, SPI_MISO = 36, SPI_MOSI = 26 };
+    #endif
+
+    #if defined(MARAUDER_M5STICKC) || defined(LILYGO_T8_ESP32S2)
       this->spiExt = new SPIClass();
       this->spiExt->begin(SPI_SCK, SPI_MISO, SPI_MOSI, SD_CS);
       if (!SD.begin(SD_CS, *(this->spiExt))) {
@@ -55,7 +63,7 @@ bool SDInterface::initSD() {
       //    Serial.println(F("SD: UNKNOWN Card Mounted"));
 
       this->cardSizeMB = SD.cardSize() / (1024 * 1024);
-    
+
       //Serial.printf("SD Card Size: %lluMB\n", this->cardSizeMB);
 
       if (this->supported) {
@@ -69,7 +77,7 @@ bool SDInterface::initSD() {
             sz[i] = '0' + (this->cardSizeMB % 10);
             display_string.concat((String)sz[i]);
         }
-  
+
         this->card_sz = sz;
       }
 
@@ -83,7 +91,7 @@ bool SDInterface::initSD() {
       this->sd_files = new LinkedList<String>();
 
       this->sd_files->add("Back");
-    
+
       return true;
   }
 
@@ -164,7 +172,7 @@ void SDInterface::runUpdate() {
     display_obj.tft.setCursor(0, TFT_HEIGHT / 3);
     display_obj.tft.setTextSize(1);
     display_obj.tft.setTextColor(TFT_WHITE);
-  
+
     display_obj.tft.println(F(text15));
   #endif
   File updateBin = SD.open("/update.bin");
@@ -204,13 +212,13 @@ void SDInterface::runUpdate() {
     }
 
     updateBin.close();
-    
+
       // whe finished remove the binary from sd card to indicate end of the process
     #ifdef HAS_SCREEN
       display_obj.tft.println(F(text_table2[3]));
     #endif
     Serial.println(F("rebooting..."));
-    //SD.remove("/update.bin");      
+    //SD.remove("/update.bin");
     delay(1000);
     ESP.restart();
   }
@@ -227,7 +235,7 @@ void SDInterface::runUpdate() {
 }
 
 void SDInterface::performUpdate(Stream &updateSource, size_t updateSize) {
-  if (Update.begin(updateSize)) {   
+  if (Update.begin(updateSize)) {
     #ifdef HAS_SCREEN
       display_obj.tft.println(text_table2[5] + String(updateSize));
       display_obj.tft.println(F(text_table2[6]));
