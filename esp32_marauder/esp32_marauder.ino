@@ -22,9 +22,11 @@ https://www.online-utility.org/image/convert/to/XBM
 #include "freertos/task.h"
 #include "esp_system.h"
 #include <Arduino.h>
+#include "calebGPSInterface.h"
 
 #ifdef HAS_GPS
   #include "GpsInterface.h"
+  #include "calebGPSInterface.h"
 #endif
 
 #include "Assets.h"
@@ -83,6 +85,7 @@ EvilPortal evil_portal_obj;
 Buffer buffer_obj;
 Settings settings_obj;
 CommandLine cli_obj;
+CalebGPSInterface gpsInterface;
 
 #ifdef HAS_GPS
   GpsInterface gps_obj;
@@ -183,6 +186,7 @@ void setup()
   Serial.begin(115200);
 
   Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
+  gpsInterface.begin();
 
   #ifdef HAS_SCREEN
     display_obj.RunSetup();
@@ -327,6 +331,12 @@ void setup()
 
 void loop()
 {
+  gpsInterface.updateGPS();
+  Serial.print("Latitude: ");
+  Serial.println(gpsInterface.getLatitude());
+  Serial.print("Longitude: ");
+  Serial.println(gpsInterface.getLongitude());
+
   currentTime = millis();
   bool mini = false;
 
