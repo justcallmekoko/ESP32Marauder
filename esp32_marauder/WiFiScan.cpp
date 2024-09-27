@@ -20,6 +20,7 @@ extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32
 extern "C" {
   uint8_t esp_base_mac_addr[6];
   esp_err_t esp_ble_gap_set_rand_addr(const uint8_t *rand_addr);
+  esp_err_t esp_base_mac_addr_set(const uint8_t *addr);
 }
 
 #ifdef HAS_BT

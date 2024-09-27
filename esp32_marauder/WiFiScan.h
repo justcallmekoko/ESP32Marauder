@@ -208,8 +208,6 @@ class WiFiScan
       "08 and hurt you"
     };
 
-    char* prefix = "G";
-
     typedef struct
     {
       int16_t fctl;

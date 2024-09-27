@@ -3,7 +3,7 @@
 
 
 bool SDInterface::initSD() {
-  #ifdef HAS_SD
+  #if defined HAS_SD && !defined USE_SD_MMC_INTERFACE
     String display_string = "";
 
     #ifdef KIT
@@ -86,7 +86,6 @@ bool SDInterface::initSD() {
     
       return true;
   }
-
   #else
     Serial.println("SD support disabled, skipping init");
     return false;
