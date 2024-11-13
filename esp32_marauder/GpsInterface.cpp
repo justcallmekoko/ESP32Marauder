@@ -32,7 +32,7 @@ void GpsInterface::begin() {
 
   MicroNMEA::sendSentence(Serial2, "$PSTMSRR");
 
-  delay(3900);
+  delay(1900);
 
   if (Serial2.available()) {
     Serial.println("GPS Attached Successfully");

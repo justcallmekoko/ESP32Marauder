@@ -909,6 +909,18 @@ void CommandLine::runCommand(String input) {
             Serial.println("Bluetooth not supported");
           #endif
         }
+        else if (bt_type == "flipper") {
+          #ifdef HAS_BT
+            Serial.println("Starting Flipper Spam attack. Stop with " + (String)STOPSCAN_CMD);
+            #ifdef HAS_SCREEN
+              display_obj.clearScreen();
+              menu_function_obj.drawStatusBar();
+            #endif
+            wifi_scan_obj.StartScan(BT_ATTACK_FLIPPER_SPAM, TFT_ORANGE);
+          #else
+            Serial.println("Bluetooth not supported");
+          #endif
+        }
         else if (bt_type == "all") {
           #ifdef HAS_BT
             Serial.println("Starting BT Spam All attack. Stop with " + (String)STOPSCAN_CMD);

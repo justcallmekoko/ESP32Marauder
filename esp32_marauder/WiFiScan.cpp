@@ -126,6 +126,55 @@ extern "C" {
         AdvData.addData(std::string((char *)AdvData_Raw, 14));
         break;
       }
+      case FlipperZero: {
+        // Generate a random 5-letter name for the advertisement
+        char Name[6];  // 5 characters + null terminator
+        generateRandomName(Name, sizeof(Name));
+
+        uint8_t name_len = strlen(Name);
+
+        // Allocate space for the full Advertisement Data section based on the hex dump
+        AdvData_Raw = new uint8_t[31];  // Adjusted to the specific length of the data in the dump
+
+        // Advertisement Data from the hex dump
+        AdvData_Raw[i++] = 0x02;  // Flags length
+        AdvData_Raw[i++] = 0x01;  // Flags type
+        AdvData_Raw[i++] = 0x06;  // Flags value
+
+        AdvData_Raw[i++] = 0x06;  // Name length (5 + type)
+        AdvData_Raw[i++] = 0x09;  // Complete Local Name type
+
+        // Add the randomized 5-letter name
+        memcpy(&AdvData_Raw[i], Name, name_len);
+        i += name_len;
+
+        AdvData_Raw[i++] = 0x03;  // Incomplete List of 16-bit Service UUIDs length
+        AdvData_Raw[i++] = 0x02;  // Incomplete List of 16-bit Service UUIDs type
+        AdvData_Raw[i++] = 0x81;  // Service UUID (part of hex dump)
+        AdvData_Raw[i++] = 0x30;
+
+        AdvData_Raw[i++] = 0x02;  // TX Power level length
+        AdvData_Raw[i++] = 0x0A;  // TX Power level type
+        AdvData_Raw[i++] = 0x00;  // TX Power level value
+
+        // Manufacturer specific data based on your hex dump
+        AdvData_Raw[i++] = 0x05;  // Length of Manufacturer Specific Data section
+        AdvData_Raw[i++] = 0xFF;  // Manufacturer Specific Data type
+        AdvData_Raw[i++] = 0xBA;  // LSB of Manufacturer ID (Flipper Zero: 0x0FBA)
+        AdvData_Raw[i++] = 0x0F;  // MSB of Manufacturer ID
+
+        AdvData_Raw[i++] = 0x4C;  // Example data (remaining as in your dump)
+        AdvData_Raw[i++] = 0x75;
+        AdvData_Raw[i++] = 0x67;
+        AdvData_Raw[i++] = 0x26;
+        AdvData_Raw[i++] = 0xE1;
+        AdvData_Raw[i++] = 0x80;
+
+        // Add the constructed Advertisement Data to the BLE advertisement
+        AdvData.addData(std::string((char *)AdvData_Raw, i));
+
+        break;
+      }
       default: {
         Serial.println("Please Provide a Company Type");
         break;
@@ -578,7 +627,8 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
   else if ((scan_mode == BT_ATTACK_SWIFTPAIR_SPAM) || 
            (scan_mode == BT_ATTACK_SPAM_ALL) ||
            (scan_mode == BT_ATTACK_SAMSUNG_SPAM) ||
-           (scan_mode == BT_ATTACK_GOOGLE_SPAM)) {
+           (scan_mode == BT_ATTACK_GOOGLE_SPAM) ||
+           (scan_mode == BT_ATTACK_FLIPPER_SPAM)) {
     #ifdef HAS_BT
       RunSwiftpairSpam(scan_mode, color);
     #endif
@@ -764,6 +814,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   (currentScanMode == BT_ATTACK_SPAM_ALL) ||
   (currentScanMode == BT_ATTACK_SAMSUNG_SPAM) ||
   (currentScanMode == BT_ATTACK_GOOGLE_SPAM) ||
+  (currentScanMode == BT_ATTACK_FLIPPER_SPAM) ||
   (currentScanMode == BT_SCAN_WAR_DRIVE) ||
   (currentScanMode == BT_SCAN_WAR_DRIVE_CONT) ||
   (currentScanMode == BT_SCAN_SKIMMERS))
@@ -1890,6 +1941,19 @@ void WiFiScan::executeSourApple() {
   #endif
 }
 
+void WiFiScan::generateRandomName(char *name, size_t length) {
+    static const char alphabet[] = "abcdefghijklmnopqrstuvwxyz";
+    
+    // Generate the first character as uppercase
+    name[0] = 'A' + (rand() % 26);
+    
+    // Generate the remaining characters as lowercase
+    for (size_t i = 1; i < length - 1; ++i) {
+        name[i] = alphabet[rand() % (sizeof(alphabet) - 1)];
+    }
+    name[length - 1] = '\0';  // Null-terminate the string
+}
+
 const char* WiFiScan::generateRandomName() {
   const char* charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
   int len = rand() % 10 + 1; // Generate a random length between 1 and 10
@@ -2321,6 +2385,8 @@ void WiFiScan::RunSwiftpairSpam(uint8_t scan_mode, uint16_t color) {
           display_obj.tft.drawCentreString("BLE Spam Samsung",120,16,2);
         else if (scan_mode == BT_ATTACK_GOOGLE_SPAM)
           display_obj.tft.drawCentreString("BLE Spam Google",120,16,2);
+        else if (scan_mode == BT_ATTACK_FLIPPER_SPAM)
+          display_obj.tft.drawCentreString("BLE Spam Flipper", 120, 16, 2);
         display_obj.touchToExit();
       #endif
       display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
@@ -4666,7 +4732,8 @@ void WiFiScan::main(uint32_t currentTime)
            (currentScanMode == BT_ATTACK_SOUR_APPLE) ||
            (currentScanMode == BT_ATTACK_SPAM_ALL) ||
            (currentScanMode == BT_ATTACK_SAMSUNG_SPAM) ||
-           (currentScanMode == BT_ATTACK_GOOGLE_SPAM)) {
+           (currentScanMode == BT_ATTACK_GOOGLE_SPAM) ||
+           (currentScanMode == BT_ATTACK_FLIPPER_SPAM)) {
     #ifdef HAS_BT
       if (currentTime - initTime >= 1000) {
         initTime = millis();
@@ -4693,10 +4760,15 @@ void WiFiScan::main(uint32_t currentTime)
       if ((currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
           (currentScanMode == BT_ATTACK_SPAM_ALL))
         this->executeSwiftpairSpam(Microsoft);
+        //this->executeSwiftpairSpam(FlipperZero);
 
       if ((currentScanMode == BT_ATTACK_SOUR_APPLE) ||
           (currentScanMode == BT_ATTACK_SPAM_ALL))
         this->executeSourApple();
+
+      if ((currentScanMode == BT_ATTACK_FLIPPER_SPAM) ||
+          (currentScanMode == BT_ATTACK_SPAM_ALL))
+        this->executeSwiftpairSpam(FlipperZero);
     #endif
   }
   else if (currentScanMode == WIFI_SCAN_WAR_DRIVE) {

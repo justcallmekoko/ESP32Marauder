@@ -10,7 +10,7 @@ void LedInterface::RunSetup() {
   strip.begin();
   strip.setPixelColor(0, strip.Color(0, 0, 0));
   strip.show();
-  delay(100);
+  //delay(100);
   strip.setBrightness(50);
   strip.setPixelColor(0, strip.Color(0, 0, 0));
   strip.show();

@@ -92,6 +92,7 @@
 #define BT_ATTACK_SAMSUNG_SPAM 39
 #define WIFI_SCAN_GPS_NMEA 40
 #define BT_ATTACK_GOOGLE_SPAM 41
+#define BT_ATTACK_FLIPPER_SPAM 42
 
 #define GRAPH_REFRESH 100
 
@@ -262,7 +263,8 @@ class WiFiScan
       Microsoft,
       Apple,
       Samsung,
-      Google
+      Google,
+      FlipperZero
     };
 
       #ifdef HAS_BT
@@ -294,6 +296,7 @@ class WiFiScan
     void executeSwiftpairSpam(EBLEPayloadType type);
     void startWardriverWiFi();
     void generateRandomMac(uint8_t* mac);
+    void generateRandomName(char *name, size_t length);
 
     void startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_string);
 
