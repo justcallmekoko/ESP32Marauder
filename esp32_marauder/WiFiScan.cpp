@@ -150,7 +150,7 @@ extern "C" {
 
         AdvData_Raw[i++] = 0x03;  // Incomplete List of 16-bit Service UUIDs length
         AdvData_Raw[i++] = 0x02;  // Incomplete List of 16-bit Service UUIDs type
-        AdvData_Raw[i++] = 0x81;  // Service UUID (part of hex dump)
+        AdvData_Raw[i++] = 0x80 + (rand() % 3) + 1;   // Service UUID (part of hex dump)
         AdvData_Raw[i++] = 0x30;
 
         AdvData_Raw[i++] = 0x02;  // TX Power level length
