@@ -1258,6 +1258,9 @@ void MenuFunctions::RunSetup()
   // WiFi menu stuff
   wifiSnifferMenu.list = new LinkedList<MenuNode>();
   wifiAttackMenu.list = new LinkedList<MenuNode>();
+  #ifdef HAS_GPS
+    wardrivingMenu.list = new LinkedList<MenuNode>();
+  #endif
   wifiGeneralMenu.list = new LinkedList<MenuNode>();
   wifiAPMenu.list = new LinkedList<MenuNode>();
   #ifndef HAS_ILI9341
@@ -1323,6 +1326,7 @@ void MenuFunctions::RunSetup()
   #endif
   #ifdef HAS_GPS
     gpsInfoMenu.name = "GPS Data";
+    wardrivingMenu.name = "Wardriving";
   #endif  
   htmlMenu.name = "EP HTML List";
   #if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
@@ -1356,6 +1360,9 @@ void MenuFunctions::RunSetup()
   });
   this->addNodes(&wifiMenu, text_table1[31], TFT_YELLOW, NULL, SNIFFERS, [this]() {
     this->changeMenu(&wifiSnifferMenu);
+  });
+  this->addNodes(&wifiMenu, "Wardriving", TFT_GREEN, NULL, BEACON_SNIFF, [this]() {
+    this->changeMenu(&wardrivingMenu);
   });
   this->addNodes(&wifiMenu, text_table1[32], TFT_RED, NULL, ATTACKS, [this]() {
     this->changeMenu(&wifiAttackMenu);
@@ -1403,13 +1410,13 @@ void MenuFunctions::RunSetup()
       wifi_scan_obj.StartScan(WIFI_PACKET_MONITOR, TFT_BLUE);
     });
   #endif
-  #ifndef HAS_ILI9341
-    this->addNodes(&wifiSnifferMenu, text_table1[47], TFT_RED, NULL, PWNAGOTCHI, [this]() {
-      display_obj.clearScreen();
-      this->drawStatusBar();
-      wifi_scan_obj.StartScan(WIFI_SCAN_PWN, TFT_RED);
-    });
-  #endif
+  //#ifndef HAS_ILI9341
+  this->addNodes(&wifiSnifferMenu, text_table1[47], TFT_RED, NULL, PWNAGOTCHI, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_SCAN_PWN, TFT_RED);
+  });
+  //#endif
   this->addNodes(&wifiSnifferMenu, text_table1[49], TFT_MAGENTA, NULL, BEACON_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
@@ -1432,9 +1439,15 @@ void MenuFunctions::RunSetup()
       wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_CYAN);
     });
   #endif
+
+  // Build Wardriving menu
+  wardrivingMenu.parentMenu = &wifiMenu; // Main Menu is second menu parent
+  this->addNodes(&wardrivingMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(wardrivingMenu.parentMenu);
+  });
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
-      this->addNodes(&wifiSnifferMenu, "Wardrive", TFT_GREEN, NULL, BEACON_SNIFF, [this]() {
+      this->addNodes(&wardrivingMenu, "Wardrive", TFT_GREEN, NULL, BEACON_SNIFF, [this]() {
         display_obj.clearScreen();
         this->drawStatusBar();
         wifi_scan_obj.StartScan(WIFI_SCAN_WAR_DRIVE, TFT_GREEN);
@@ -1443,7 +1456,7 @@ void MenuFunctions::RunSetup()
   #endif
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
-      this->addNodes(&wifiSnifferMenu, "Station Wardrive", TFT_ORANGE, NULL, PROBE_SNIFF, [this]() {
+      this->addNodes(&wardrivingMenu, "Station Wardrive", TFT_ORANGE, NULL, PROBE_SNIFF, [this]() {
         display_obj.clearScreen();
         this->drawStatusBar();
         wifi_scan_obj.StartScan(WIFI_SCAN_STATION_WAR_DRIVE, TFT_ORANGE);

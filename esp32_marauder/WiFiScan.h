@@ -297,6 +297,7 @@ class WiFiScan
     void startWardriverWiFi();
     void generateRandomMac(uint8_t* mac);
     void generateRandomName(char *name, size_t length);
+    String processPwnagotchiBeacon(const uint8_t* frame, int length);
 
     void startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_string);
 

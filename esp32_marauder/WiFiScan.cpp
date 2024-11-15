@@ -1918,7 +1918,7 @@ void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_start();
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
-  esp_wifi_set_promiscuous_rx_cb(&pwnSnifferCallback);
+  esp_wifi_set_promiscuous_rx_cb(&beaconSnifferCallback);
   esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   this->wifi_initialized = true;
   initTime = millis();
@@ -2907,6 +2907,74 @@ void WiFiScan::apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
   }
 }
 
+String WiFiScan::processPwnagotchiBeacon(const uint8_t* frame, int length) {
+  // Approximate the start of JSON payload within the beacon frame
+  int jsonStartIndex = 36; // Adjust based on actual frame structure if necessary
+  int jsonEndIndex = length;
+
+  // Locate the actual JSON boundaries by finding '{' and '}'
+  while (jsonStartIndex < length && frame[jsonStartIndex] != '{') jsonStartIndex++;
+  while (jsonEndIndex > jsonStartIndex && frame[jsonEndIndex - 1] != '}') jsonEndIndex--;
+
+  if (jsonStartIndex >= jsonEndIndex) {
+    Serial.println("JSON payload not found.");
+    return "";
+  }
+
+  // Extract JSON substring from frame directly
+  String jsonString = String((char*)frame + jsonStartIndex, jsonEndIndex - jsonStartIndex);
+
+  // Estimate an appropriate JSON document size based on payload length
+  size_t jsonCapacity = jsonString.length() * 1.5; // Adding buffer for ArduinoJson needs
+
+  // Check if we have enough memory before creating StaticJsonDocument
+  if (jsonCapacity > ESP.getFreeHeap()) {
+    Serial.println("Insufficient memory to parse JSON.");
+    return "";
+  }
+
+  // Parse JSON payload using ArduinoJson library
+  StaticJsonDocument<2048> doc;
+  DeserializationError error = deserializeJson(doc, jsonString);
+
+  if (error) {
+    Serial.print("Failed to parse JSON: ");
+    Serial.println(error.c_str());
+    return "";
+  }
+
+  // Check for Pwnagotchi keys "name" and "pwnd_tot"
+  if (doc.containsKey("name") && doc.containsKey("pwnd_tot")) {
+    const char* name = doc["name"];
+    const char* ver = doc["version"];
+    int pwnd_tot = doc["pwnd_tot"];
+    bool deauth = doc["policy"]["deauth"];
+    int uptime = doc["uptime"];
+
+    // Print and return the Pwnagotchi name and pwnd_tot
+    Serial.print("Pwnagotchi Name: ");
+    Serial.println(name);
+    Serial.print("Pwnd Totals: ");
+    Serial.println(pwnd_tot);
+
+    display_obj.display_buffer->add(String("Pwnagotchi: ") + name + ",                 ");
+    display_obj.display_buffer->add("      Pwnd: " + String(pwnd_tot) + ",             ");
+    display_obj.display_buffer->add("    Uptime: " + String(uptime) + ",               ");
+    if (deauth)
+      display_obj.display_buffer->add("    Deauth: true,                       ");
+    else
+      display_obj.display_buffer->add("    Deauth: false,                      ");
+
+    display_obj.display_buffer->add(String("       Ver: ") + ver + "                   ");
+
+    return String("Pwnagotchi: ") + name + ", \nPwnd: " + String(pwnd_tot) + ", \nVer: " + ver;
+  } else {
+    Serial.println("Not a Pwnagotchi frame.");
+    return "";
+  }
+}
+
+
 void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 {
   extern WiFiScan wifi_scan_obj;
@@ -2937,11 +3005,34 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
     #else
       int buff = 0;
     #endif
+
+    uint8_t target_mac[6] = {0xde, 0xad, 0xbe, 0xef, 0xde, 0xad};
+
     // It is a beacon
     if ((snifferPacket->payload[0] == 0x80) && (buff == 0))
     {
+      bool mac_match = true;
+      for (int i = 0; i < 6; i++) {
+        if (snifferPacket->payload[10 + i] != target_mac[i]) {
+          mac_match = false;
+          break;
+        }
+      }
+
+      // If MAC matches, call processPwnagotchiBeacon with frame data
+      if (mac_match) {
+        Serial.println("Pwnagotchi beacon detected!");
+        wifi_scan_obj.processPwnagotchiBeacon(snifferPacket->payload, len);
+        return;
+      }
+
+      if (wifi_scan_obj.currentScanMode == WIFI_SCAN_PWN) {
+        buffer_obj.append(snifferPacket, len);
+        return;
+      }
+      
       // Do signal strength stuff first
-      if (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN) {
+      else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN) {
         bool found = false;
         uint8_t targ_index = 0;
         AccessPoint targ_ap;
@@ -2993,6 +3084,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
         char addr[] = "00:00:00:00:00:00";
         getMAC(addr, snifferPacket->payload, 10);
         Serial.print(addr);
+        Serial.print(" ESSID Len: " + (String)snifferPacket->payload[37]);
         Serial.print(" ESSID: ");
         if (snifferPacket->payload[37] <= 0)
           display_string.concat(addr);
@@ -3014,12 +3106,12 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
     
           Serial.print(" ");
     
-          if (display_obj.display_buffer->size() == 0)
-          {
+          //if (display_obj.display_buffer->size() == 0)
+          //{
             display_obj.loading = true;
             display_obj.display_buffer->add(display_string);
             display_obj.loading = false;
-          }
+          //}
         #endif
 
         Serial.println();
