@@ -305,6 +305,14 @@ WiFiScan::WiFiScan()
 {
 }
 
+String WiFiScan::macToString(const Station& station) {
+  char macStr[18]; // 6 pairs of hex digits + 5 colons + null terminator
+  snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
+           station.mac[0], station.mac[1], station.mac[2],
+           station.mac[3], station.mac[4], station.mac[5]);
+  return String(macStr);
+}
+
 void WiFiScan::RunSetup() {
   if (ieee80211_raw_frame_sanity_check(31337, 0, 0) == 1)
     this->wsl_bypass_enabled = true;
@@ -952,6 +960,188 @@ void WiFiScan::startLog(String file_name) {
   );
 }
 
+void WiFiScan::parseBSSID(const char* bssidStr, uint8_t* bssid) {
+  sscanf(bssidStr, "%02X:%02X:%02X:%02X:%02X:%02X",
+         &bssid[0], &bssid[1], &bssid[2],
+         &bssid[3], &bssid[4], &bssid[5]);
+}
+
+void WiFiScan::RunLoadAPList() {
+  #ifdef HAS_SD
+    File file = sd_obj.getFile("/APs_0.log");
+    if (!file) {
+      Serial.println("Could not open /APs_0.log");
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setFreeFont(NULL);
+        display_obj.tft.setCursor(0, 100);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_CYAN);
+      
+        display_obj.tft.println("Could not open /APs_0.log");
+      #endif
+      return;
+    }
+
+    DynamicJsonDocument doc(10048);
+    DeserializationError error = deserializeJson(doc, file);
+    if (error) {
+      Serial.print("JSON deserialize error: ");
+      Serial.println(error.c_str());
+      file.close();
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setFreeFont(NULL);
+        display_obj.tft.setCursor(0, 100);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_CYAN);
+      
+        display_obj.tft.println("Could not deserialize JSON");
+        display_obj.tft.println(error.c_str());
+      #endif
+      return;
+    }
+
+    JsonArray array = doc.as<JsonArray>();
+    for (JsonObject obj : array) {
+      AccessPoint ap;
+      ap.essid = obj["essid"].as<String>();
+      ap.channel = obj["channel"];
+      ap.selected = false;
+      parseBSSID(obj["bssid"], ap.bssid);
+      ap.stations = new LinkedList<uint8_t>();
+      access_points->add(ap);
+    }
+
+    file.close();
+
+    //doc.clear();
+
+    #ifdef HAS_SCREEN
+      display_obj.tft.setTextWrap(false);
+      display_obj.tft.setFreeFont(NULL);
+      display_obj.tft.setCursor(0, 100);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextColor(TFT_CYAN);
+    
+      display_obj.tft.print("Loaded APs: ");
+      display_obj.tft.println((String)access_points->size());
+    #endif
+    Serial.print("Loaded APs:");
+    Serial.println((String)access_points->size());
+  #endif
+}
+
+void WiFiScan::RunSaveAPList(bool save_as) {
+  if (save_as) {
+    sd_obj.removeFile("/APs_0.log");
+
+    this->startLog("APs");
+
+    DynamicJsonDocument jsonDocument(2048);
+
+    JsonArray jsonArray = jsonDocument.to<JsonArray>();
+    
+    for (int i = 0; i < access_points->size(); i++) {
+      const AccessPoint& ap = access_points->get(i);
+      JsonObject jsonAp = jsonArray.createNestedObject();
+      jsonAp["essid"] = ap.essid;
+      jsonAp["channel"] = ap.channel;
+
+      char bssidStr[18];
+      sprintf(bssidStr, "%02X:%02X:%02X:%02X:%02X:%02X",
+              ap.bssid[0], ap.bssid[1], ap.bssid[2],
+              ap.bssid[3], ap.bssid[4], ap.bssid[5]);
+      jsonAp["bssid"] = bssidStr;
+    }
+
+    String jsonString;
+    serializeJson(jsonArray, jsonString);
+
+    buffer_obj.append(jsonString);
+
+    #ifdef HAS_SCREEN
+      display_obj.tft.setTextWrap(false);
+      display_obj.tft.setFreeFont(NULL);
+      display_obj.tft.setCursor(0, 100);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextColor(TFT_CYAN);
+    
+      display_obj.tft.print("Saved APs: ");
+      display_obj.tft.println((String)access_points->size());
+    #endif
+    Serial.print("Saved APs:");
+    Serial.println((String)access_points->size());
+  }
+}
+
+void WiFiScan::RunLoadSSIDList() {
+  #ifdef HAS_SD
+    File log_file = sd_obj.getFile("/SSIDs_0.log");
+    if (!log_file) {
+      Serial.println("Could not open /SSIDs_0.log");
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setFreeFont(NULL);
+        display_obj.tft.setCursor(0, 100);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_CYAN);
+      
+        display_obj.tft.println("Could not open /SSIDs_0.log");
+      #endif
+      return;
+    }
+    while (log_file.available()) {
+      String line = log_file.readStringUntil('\n'); // Read until newline character
+      this->addSSID(line);
+    }
+
+    #ifdef HAS_SCREEN
+      display_obj.tft.setTextWrap(false);
+      display_obj.tft.setFreeFont(NULL);
+      display_obj.tft.setCursor(0, 100);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextColor(TFT_CYAN);
+    
+      display_obj.tft.print("Loaded SSIDs: ");
+      display_obj.tft.println((String)ssids->size());
+    #endif
+
+    log_file.close();
+
+    Serial.print("Loaded SSIDs: ");
+    Serial.println((String)ssids->size());
+  #endif
+}
+
+void WiFiScan::RunSaveSSIDList(bool save_as) {
+  if (save_as) {
+    sd_obj.removeFile("/SSIDs_0.log");
+
+    this->startLog("SSIDs");
+
+    for (int i = 0; i < ssids->size(); i++) {
+      if (i < ssids->size() - 1)
+        buffer_obj.append(ssids->get(i).essid + "\n");
+      else
+        buffer_obj.append(ssids->get(i).essid);
+    }
+
+    #ifdef HAS_SCREEN
+      display_obj.tft.setTextWrap(false);
+      display_obj.tft.setFreeFont(NULL);
+      display_obj.tft.setCursor(0, 100);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextColor(TFT_CYAN);
+    
+      display_obj.tft.print("Saved SSIDs: ");
+      display_obj.tft.println((String)ssids->size());
+    #endif
+    Serial.print("Saved SSIDs: ");
+    Serial.println((String)ssids->size());
+  }
+}
+
 void WiFiScan::RunEvilPortal(uint8_t scan_mode, uint16_t color)
 {
   startLog("evil_portal");
@@ -1058,7 +1248,9 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
       uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
       Serial.println("Using TFT DIY");
     #endif
-    display_obj.tft.setTouch(calData);
+    #ifdef HAS_ILI9341
+      display_obj.tft.setTouch(calData);
+    #endif
     
   
     lv_obj_t * scr = lv_cont_create(NULL, NULL);
@@ -2417,16 +2609,25 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
         Serial.print(snifferPacket->rx_ctrl.channel);
         Serial.print(" BSSID: ");
         Serial.print(addr);
-        display_string.concat(addr);
+        //display_string.concat(addr);
+        //Serial.print(" ESSID: ");
+        //display_string.concat(" -> ");
+        //for (int i = 0; i < snifferPacket->payload[37]; i++)
+        //{
+        //  Serial.print((char)snifferPacket->payload[i + 38]);
+        //  display_string.concat((char)snifferPacket->payload[i + 38]);
+        //  essid.concat((char)snifferPacket->payload[i + 38]);
+        //}
         Serial.print(" ESSID: ");
-        display_string.concat(" -> ");
-        for (int i = 0; i < snifferPacket->payload[37]; i++)
-        {
-          Serial.print((char)snifferPacket->payload[i + 38]);
-          display_string.concat((char)snifferPacket->payload[i + 38]);
-          essid.concat((char)snifferPacket->payload[i + 38]);
-
-          
+        if (snifferPacket->payload[37] <= 0)
+          display_string.concat(addr);
+        else {
+          for (int i = 0; i < snifferPacket->payload[37]; i++)
+          {
+            Serial.print((char)snifferPacket->payload[i + 38]);
+            display_string.concat((char)snifferPacket->payload[i + 38]);
+            essid.concat((char)snifferPacket->payload[i + 38]);
+          }
         }
 
         bssid.concat(addr);
@@ -2726,13 +2927,15 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
         char addr[] = "00:00:00:00:00:00";
         getMAC(addr, snifferPacket->payload, 10);
         Serial.print(addr);
-        display_string.concat(addr);
         Serial.print(" ESSID: ");
-        display_string.concat(" -> ");
-        for (int i = 0; i < snifferPacket->payload[37]; i++)
-        {
-          Serial.print((char)snifferPacket->payload[i + 38]);
-          display_string.concat((char)snifferPacket->payload[i + 38]);
+        if (snifferPacket->payload[37] <= 0)
+          display_string.concat(addr);
+        else {
+          for (int i = 0; i < snifferPacket->payload[37]; i++)
+          {
+            Serial.print((char)snifferPacket->payload[i + 38]);
+            display_string.concat((char)snifferPacket->payload[i + 38]);
+          }
         }
 
         int temp_len = display_string.length();
@@ -4035,7 +4238,9 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
       uint16_t t_x = 0, t_y = 0; // To store the touch coordinates
   
       // Do the touch stuff
-      pressed = display_obj.tft.getTouch(&t_x, &t_y);
+      #ifdef HAS_ILI9341
+        pressed = display_obj.tft.getTouch(&t_x, &t_y);
+      #endif
   
       if (pressed) {
         Serial.print("Got touch | X: ");
@@ -4186,7 +4391,9 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
       uint16_t t_x = 0, t_y = 0; // To store the touch coordinates
   
       // Do the touch stuff
-      pressed = display_obj.tft.getTouch(&t_x, &t_y);
+      #ifdef HAS_ILI9341
+        pressed = display_obj.tft.getTouch(&t_x, &t_y);
+      #endif
   
       if (pressed) {
         Serial.print("Got touch | X: ");

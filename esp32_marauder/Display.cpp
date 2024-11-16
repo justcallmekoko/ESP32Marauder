@@ -28,6 +28,10 @@ void Display::RunSetup()
     tft.setRotation(1);
   #endif
 
+  #ifdef MARAUDER_REV_FEATHER
+    tft.setRotation(1);
+  #endif
+
   tft.setCursor(0, 0);
 
   #ifdef HAS_ILI9341
@@ -52,6 +56,14 @@ void Display::RunSetup()
 
   #ifdef KIT
     pinMode(KIT_LED_BUILTIN, OUTPUT);
+  #endif
+
+  #ifdef MARAUDER_REV_FEATHER
+    pinMode(7, OUTPUT);
+
+    delay(10);
+
+    digitalWrite(7, HIGH);
   #endif
 }
 
@@ -410,6 +422,7 @@ void Display::scrollAddress(uint16_t vsp) {
 
 
 // JPEG_functions
+/*
 void Display::drawJpeg(const char *filename, int xpos, int ypos) {
 
   // Open the named file (the Jpeg decoder library will close it after rendering image)
@@ -440,6 +453,7 @@ void Display::drawJpeg(const char *filename, int xpos, int ypos) {
   //  Serial.println(F("Jpeg file format not supported!"));
   //}
 }
+*/
 
 /*void Display::setupDraw() {
   this->tft.drawLine(0, 0, 10, 0, TFT_MAGENTA);

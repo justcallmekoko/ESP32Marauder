@@ -196,7 +196,6 @@ class WiFiScan
 
     //String connected_network = "";
     //const String alfa = "1234567890qwertyuiopasdfghjkklzxcvbnm QWERTYUIOPASDFGHJKLZXCVBNM_";
-    const String alfa = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789-=[];',./`\\_+{}:\"<>?~|!@#$%^&*()";
 
     const char* rick_roll[8] = {
       "01 Never gonna give you up",
@@ -332,6 +331,7 @@ class WiFiScan
     void RunLvJoinWiFi(uint8_t scan_mode, uint16_t color);
     void RunEvilPortal(uint8_t scan_mode, uint16_t color);
     bool checkMem();
+    void parseBSSID(const char* bssidStr, uint8_t* bssid);
 
 
   public:
@@ -356,6 +356,9 @@ class WiFiScan
     String dst_mac = "ff:ff:ff:ff:ff:ff";
     byte src_mac[6] = {};
 
+    String current_mini_kb_ssid = "";
+
+    const String alfa = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789-=[];',./`\\_+{}:\"<>?~|!@#$%^&*()";
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     wifi_config_t ap_config;
@@ -383,6 +386,10 @@ class WiFiScan
     void RunClearSSIDs();
     void RunClearAPs();
     void RunClearStations();
+    void RunSaveSSIDList(bool save_as = true);
+    void RunLoadSSIDList();
+    void RunSaveAPList(bool save_as = true);
+    void RunLoadAPList();
     void channelHop();
     uint8_t currentScanMode = 0;
     void main(uint32_t currentTime);
@@ -393,6 +400,7 @@ class WiFiScan
     bool save_serial = false;
     void startPcap(String file_name);
     void startLog(String file_name);
+    String macToString(const Station& station);
 
     static void getMAC(char *addr, uint8_t* data, uint16_t offset);
     static void pwnSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);

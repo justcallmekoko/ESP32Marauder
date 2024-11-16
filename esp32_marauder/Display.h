@@ -110,7 +110,7 @@ class Display
     void buildBanner(String msg, int xpos);
     void clearScreen();
     void displayBuffer(bool do_clear = false);
-    void drawJpeg(const char *filename, int xpos, int ypos);
+    //void drawJpeg(const char *filename, int xpos, int ypos);
     void getTouchWhileFunction(bool pressed);
     void initScrollValues(bool tte = false);
     void jpegInfo();

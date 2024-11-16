@@ -1,0 +1,54 @@
+{
+  "name": "ESP Async WebServer",
+  "version": "2.10.4",
+  "description": "Asynchronous HTTP and WebSocket Server Library for ESP32. Supports: WebSocket, SSE, Authentication, Arduino Json 7, File Upload, Static File serving, URL Rewrite, URL Redirect, etc.",
+  "keywords": "http,async,websocket,webserver",
+  "homepage": "https://github.com/mathieucarbou/ESPAsyncWebServer",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mathieucarbou/ESPAsyncWebServer.git"
+  },
+  "authors": [
+    {
+      "name": "Hristo Gochkov"
+    },
+    {
+      "name": "Mathieu Carbou",
+      "maintainer": true
+    }
+  ],
+  "license": "LGPL-3.0",
+  "frameworks": "arduino",
+  "platforms": [
+    "espressif32",
+    "espressif8266"
+  ],
+  "dependencies": [
+    {
+      "owner": "mathieucarbou",
+      "name": "Async TCP",
+      "version": "^3.1.4",
+      "platforms": "espressif32"
+    },
+    {
+      "owner": "esphome",
+      "name": "ESPAsyncTCP-esphome",
+      "version": "^2.0.0",
+      "platforms": "espressif8266"
+    },
+    {
+      "name": "Hash",
+      "platforms": "espressif8266"
+    }
+  ],
+  "export": {
+    "include": [
+      "examples",
+      "src",
+      "library.json",
+      "library.properties",
+      "LICENSE",
+      "README.md"
+    ]
+  }
+}
