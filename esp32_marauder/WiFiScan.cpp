@@ -9,6 +9,7 @@ int num_eapol = 0;
 LinkedList<ssid>* ssids;
 LinkedList<AccessPoint>* access_points;
 LinkedList<Station>* stations;
+LinkedList<AirTag>* airtags;
 
 extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3){
     if (arg == 31337)
@@ -188,9 +189,9 @@ extern "C" {
   //// https://github.com/Spooks4576
 
 
-  class bluetoothScanAllCallback: public BLEAdvertisedDeviceCallbacks {
+  class bluetoothScanAllCallback: public NimBLEAdvertisedDeviceCallbacks {
   
-      void onResult(BLEAdvertisedDevice *advertisedDevice) {
+      void onResult(NimBLEAdvertisedDevice *advertisedDevice) {
 
         extern WiFiScan wifi_scan_obj;
   
@@ -202,7 +203,66 @@ extern "C" {
           
         String display_string = "";
 
-        if (wifi_scan_obj.currentScanMode == BT_SCAN_ALL) {
+        if (wifi_scan_obj.currentScanMode == BT_SCAN_AIRTAG) {
+          uint8_t* payLoad = advertisedDevice->getPayload();
+          size_t len = advertisedDevice->getPayloadLength();
+
+          bool match = false;
+          for (int i = 0; i <= len - 4; i++) {
+            if (payLoad[i] == 0x1E && payLoad[i+1] == 0xFF && payLoad[i+2] == 0x4C && payLoad[i+3] == 0x00) {
+              match = true;
+              break;
+            }
+            if (payLoad[i] == 0x4C && payLoad[i+1] == 0x00 && payLoad[i+2] == 0x12 && payLoad[i+3] == 0x19) {
+              match = true;
+              break;
+            }
+          }
+
+          if (match) {
+            String mac = advertisedDevice->getAddress().toString().c_str();
+            mac.toUpperCase();
+
+            for (int i = 0; i < airtags->size(); i++) {
+              if (mac == airtags->get(i).mac)
+                return;
+            }
+
+            int rssi = advertisedDevice->getRSSI();
+            Serial.print("RSSI: ");
+            Serial.print(rssi);
+            Serial.print(" MAC: ");
+            Serial.println(mac);
+            Serial.print("Len: ");
+            Serial.print(len);
+            Serial.print(" Payload: ");
+            for (size_t i = 0; i < len; i++) {
+              Serial.printf("%02X ", payLoad[i]);
+            }
+            Serial.println("\n");
+
+            AirTag airtag;
+            airtag.mac = mac;
+            airtag.payload.assign(payLoad, payLoad + len);
+
+            airtags->add(airtag);
+
+
+            #ifdef HAS_SCREEN
+              //display_string.concat("RSSI: ");
+              display_string.concat((String)rssi);
+              display_string.concat(" MAC: ");
+              display_string.concat(mac);
+              uint8_t temp_len = display_string.length();
+              for (uint8_t i = 0; i < 40 - temp_len; i++)
+              {
+                display_string.concat(" ");
+              }
+              display_obj.display_buffer->add(display_string);
+            #endif
+          }
+        }
+        else if (wifi_scan_obj.currentScanMode == BT_SCAN_ALL) {
           if (buf >= 0)
           {
             display_string.concat(text_table4[0]);
@@ -371,6 +431,7 @@ void WiFiScan::RunSetup() {
   ssids = new LinkedList<ssid>();
   access_points = new LinkedList<AccessPoint>();
   stations = new LinkedList<Station>();
+  airtags = new LinkedList<AirTag>();
 
   #ifdef HAS_BT
     watch_models = new WatchModel[26] {
@@ -438,6 +499,14 @@ int WiFiScan::clearAPs() {
   while (access_points->size() > 0)
     access_points->remove(0);
   Serial.println("access_points: " + (String)access_points->size());
+  return num_cleared;
+}
+
+int WiFiScan::clearAirtags() {
+  int num_cleared = airtags->size();
+  while (airtags->size() > 0)
+    airtags->remove(0);
+  Serial.println("airtags: " + (String)airtags->size());
   return num_cleared;
 }
 
@@ -614,7 +683,7 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     this->startWiFiAttacks(scan_mode, color, text_table4[47]);
   else if (scan_mode == WIFI_ATTACK_AP_SPAM)
     this->startWiFiAttacks(scan_mode, color, " AP Beacon Spam ");
-  else if (scan_mode == BT_SCAN_ALL) {
+  else if ((scan_mode == BT_SCAN_ALL) || (BT_SCAN_AIRTAG)){
     #ifdef HAS_BT
       RunBluetoothScan(scan_mode, color);
     #endif
@@ -809,6 +878,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
 
   
   else if ((currentScanMode == BT_SCAN_ALL) ||
+  (currentScanMode == BT_SCAN_AIRTAG) ||
   (currentScanMode == BT_ATTACK_SOUR_APPLE) ||
   (currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
   (currentScanMode == BT_ATTACK_SPAM_ALL) ||
@@ -2411,7 +2481,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
     }
     NimBLEDevice::init("");
     pBLEScan = NimBLEDevice::getScan(); //create new scan
-    if (scan_mode == BT_SCAN_ALL)
+    if ((scan_mode == BT_SCAN_ALL) || (BT_SCAN_AIRTAG))
     {
       #ifdef HAS_SCREEN
         display_obj.TOP_FIXED_AREA_2 = 48;
@@ -2421,13 +2491,21 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
         display_obj.tft.setTextColor(TFT_BLACK, color);
         #ifdef HAS_ILI9341
           display_obj.tft.fillRect(0,16,240,16, color);
-          display_obj.tft.drawCentreString(text_table4[41],120,16,2);
+          if (scan_mode == BT_SCAN_ALL)
+            display_obj.tft.drawCentreString(text_table4[41],120,16,2);
+          else if (scan_mode == BT_SCAN_AIRTAG)
+            display_obj.tft.drawCentreString("Airtag Sniff",120,16,2);
           display_obj.touchToExit();
         #endif
         display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
         display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
       #endif
-      pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), false);
+      if (scan_mode == BT_SCAN_ALL)
+        pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), false);
+      else if (scan_mode == BT_SCAN_AIRTAG) {
+        this->clearAirtags();
+        pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), true);
+      }
     }
     else if ((scan_mode == BT_SCAN_WAR_DRIVE) || (scan_mode == BT_SCAN_WAR_DRIVE_CONT)) {
       #ifdef HAS_GPS
@@ -2486,8 +2564,8 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
       pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanSkimmersCallback(), false);
     }
     pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
-    pBLEScan->setInterval(97);
-    pBLEScan->setWindow(37);  // less or equal setInterval value
+    pBLEScan->setInterval(100);
+    pBLEScan->setWindow(99);  // less or equal setInterval value
     pBLEScan->setMaxResults(0);
     pBLEScan->start(0, scanCompleteCB, false);
     Serial.println("Started BLE Scan");

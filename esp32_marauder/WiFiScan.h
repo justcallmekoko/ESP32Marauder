@@ -7,6 +7,7 @@
 
 #include <ArduinoJson.h>
 #include <algorithm>
+#include <vector>
 
 #ifdef HAS_BT
   #include <NimBLEDevice.h>
@@ -93,6 +94,7 @@
 #define WIFI_SCAN_GPS_NMEA 40
 #define BT_ATTACK_GOOGLE_SPAM 41
 #define BT_ATTACK_FLIPPER_SPAM 42
+#define BT_SCAN_AIRTAG 43
 
 #define GRAPH_REFRESH 100
 
@@ -151,6 +153,11 @@ struct mac_addr {
 struct Station {
   uint8_t mac[6];
   bool selected;
+};
+
+struct AirTag {
+    String mac;                  // MAC address of the AirTag
+    std::vector<uint8_t> payload; // Payload data
 };
 
 class WiFiScan
@@ -372,6 +379,7 @@ class WiFiScan
     void RunSetup();
     int clearSSIDs();
     int clearAPs();
+    int clearAirtags();
     int clearStations();
     bool addSSID(String essid);
     int generateSSIDs(int count = 20);
