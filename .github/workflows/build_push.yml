@@ -31,7 +31,6 @@ jobs:
 
       - name: Install Arduino-ESP32 Core v2.0.11
         run: |
-          # Install Arduino-ESP32 v2.0.11 explicitly
           arduino-cli core update-index
           arduino-cli core install esp32:esp32@2.0.11
 
@@ -43,6 +42,7 @@ jobs:
         with:
           sketch-names: TestFile.ino
           arduino-board-fqbn: esp32:esp32:esp32s2
+          platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.11/package_esp32_dev_index.json
 
       - name: Verify Installed Cores Again
         run: arduino-cli core list
