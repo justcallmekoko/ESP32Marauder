@@ -24,9 +24,8 @@ jobs:
           
       - name: Install Arduino CLI
         run: |
-          # Install arduino-cli
           curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sudo bash
-          sudo apt-get install arduino-cli
+          echo "$HOME/bin" >> $GITHUB_PATH
 
       - name: Install Arduino-ESP32 Core v2.0.11
         run: |
