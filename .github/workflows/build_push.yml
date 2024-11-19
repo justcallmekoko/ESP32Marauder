@@ -43,6 +43,9 @@ jobs:
           sketch-names: TestFile.ino
           arduino-board-fqbn: esp32:esp32:esp32s2
           platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.11/package_esp32_dev_index.json
+          extra-arduino-cli-args: |
+            core update-index
+            core install esp32:esp32@2.0.11
 
       - name: Verify Installed Cores Again
         run: arduino-cli core list
