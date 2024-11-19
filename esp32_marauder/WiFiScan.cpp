@@ -3035,15 +3035,18 @@ String WiFiScan::processPwnagotchiBeacon(const uint8_t* frame, int length) {
     Serial.print("Pwnd Totals: ");
     Serial.println(pwnd_tot);
 
-    display_obj.display_buffer->add(String("Pwnagotchi: ") + name + ",                 ");
-    display_obj.display_buffer->add("      Pwnd: " + String(pwnd_tot) + ",             ");
-    display_obj.display_buffer->add("    Uptime: " + String(uptime) + ",               ");
-    if (deauth)
-      display_obj.display_buffer->add("    Deauth: true,                       ");
-    else
-      display_obj.display_buffer->add("    Deauth: false,                      ");
+    #ifdef HAS_SCREEN
 
-    display_obj.display_buffer->add(String("       Ver: ") + ver + "                   ");
+      display_obj.display_buffer->add(String("Pwnagotchi: ") + name + ",                 ");
+      display_obj.display_buffer->add("      Pwnd: " + String(pwnd_tot) + ",             ");
+      display_obj.display_buffer->add("    Uptime: " + String(uptime) + ",               ");
+      if (deauth)
+        display_obj.display_buffer->add("    Deauth: true,                       ");
+      else
+        display_obj.display_buffer->add("    Deauth: false,                      ");
+
+      display_obj.display_buffer->add(String("       Ver: ") + ver + "                   ");
+    #endif
 
     return String("Pwnagotchi: ") + name + ", \nPwnd: " + String(pwnd_tot) + ", \nVer: " + ver;
   } else {

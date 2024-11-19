@@ -223,6 +223,8 @@ jobs:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: esp32:esp32:esp32s2:PartitionScheme=min_spiffs,FlashSize=4M,PSRAM=enabled
           extra-arduino-cli-args: "--warnings none"
+          arduino-platform: esp32:esp32@2.0.11
+          platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.11/package_esp32_dev_index.json
           
       - name: Rename Marauder Flipper bin
         run: |
@@ -234,6 +236,8 @@ jobs:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: esp32:esp32:esp32s3:PartitionScheme=min_spiffs,FlashSize=8M,PSRAM=enabled
           extra-arduino-cli-args: "--warnings none"
+          arduino-platform: esp32:esp32@2.0.11
+          platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.11/package_esp32_dev_index.json
           
       - name: Rename Marauder Multi Board bin
         run: |
@@ -263,6 +267,8 @@ jobs:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: esp32:esp32:d32:PartitionScheme=min_spiffs
           extra-arduino-cli-args: "--warnings none"
+          arduino-platform: esp32:esp32@2.0.11
+          platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.11/package_esp32_dev_index.json
           
       - name: Rename OG Marauder bin
         run: |
@@ -307,6 +313,8 @@ jobs:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: esp32:esp32:d32:PartitionScheme=min_spiffs
           extra-arduino-cli-args: "--warnings none"
+          arduino-platform: esp32:esp32@2.0.11
+          platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.11/package_esp32_dev_index.json
           
       - name: Rename v6 Marauder bin
         run: |
@@ -331,6 +339,8 @@ jobs:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: esp32:esp32:d32:PartitionScheme=min_spiffs
           extra-arduino-cli-args: "--warnings none"
+          arduino-platform: esp32:esp32@2.0.11
+          platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.11/package_esp32_dev_index.json
           
       - name: Rename v6 Marauder bin
         run: |
@@ -357,6 +367,8 @@ jobs:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: esp32:esp32:d32:PartitionScheme=min_spiffs
           extra-arduino-cli-args: "--warnings none"
+          arduino-platform: esp32:esp32@2.0.11
+          platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.11/package_esp32_dev_index.json
           
       - name: Rename Marauder Kit bin
         run: |
@@ -383,6 +395,8 @@ jobs:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: esp32:esp32:d32:PartitionScheme=min_spiffs
           extra-arduino-cli-args: "--warnings none"
+          arduino-platform: esp32:esp32@2.0.11
+          platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.11/package_esp32_dev_index.json
           
       - name: Rename Marauder Mini bin
         run: |
@@ -407,6 +421,8 @@ jobs:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: esp32:esp32:d32:PartitionScheme=min_spiffs
           extra-arduino-cli-args: "--warnings none"
+          arduino-platform: esp32:esp32@2.0.11
+          platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.11/package_esp32_dev_index.json
           
       - name: Rename Marauder ESP32 LDDB bin
         run: |
@@ -431,6 +447,8 @@ jobs:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: esp32:esp32:d32:PartitionScheme=min_spiffs
           extra-arduino-cli-args: "--warnings none"
+          arduino-platform: esp32:esp32@2.0.11
+          platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.11/package_esp32_dev_index.json
           
       - name: Rename Marauder for Marauder Dev Board Pro
         run: |
@@ -460,6 +478,8 @@ jobs:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: esp32:esp32:m5stick-c:PartitionScheme=min_spiffs
           extra-arduino-cli-args: "--warnings none"
+          arduino-platform: esp32:esp32@2.0.11
+          platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.11/package_esp32_dev_index.json
           
       - name: Rename Marauder M5StickC bin
         run: |
@@ -490,6 +510,8 @@ jobs:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: esp32:esp32:esp32s2:PartitionScheme=min_spiffs,FlashSize=4M,PSRAM=enabled
           extra-arduino-cli-args: "--warnings none"
+          arduino-platform: esp32:esp32@2.0.11
+          platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.11/package_esp32_dev_index.json
           
       - name: Rename Marauder Marauder Rev Feather
         run: |
