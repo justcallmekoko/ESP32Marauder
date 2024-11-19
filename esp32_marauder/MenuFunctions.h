@@ -146,6 +146,9 @@ class MenuFunctions
     // WiFi menu stuff
     Menu wifiSnifferMenu;
     Menu wifiAttackMenu;
+    #ifdef HAS_GPS
+      Menu wardrivingMenu;
+    #endif
     Menu wifiGeneralMenu;
     Menu wifiAPMenu;
     #ifndef HAS_ILI9341

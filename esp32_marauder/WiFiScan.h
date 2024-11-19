@@ -7,6 +7,7 @@
 
 #include <ArduinoJson.h>
 #include <algorithm>
+#include <vector>
 
 #ifdef HAS_BT
   #include <NimBLEDevice.h>
@@ -92,6 +93,8 @@
 #define BT_ATTACK_SAMSUNG_SPAM 39
 #define WIFI_SCAN_GPS_NMEA 40
 #define BT_ATTACK_GOOGLE_SPAM 41
+#define BT_ATTACK_FLIPPER_SPAM 42
+#define BT_SCAN_AIRTAG 43
 
 #define GRAPH_REFRESH 100
 
@@ -150,6 +153,11 @@ struct mac_addr {
 struct Station {
   uint8_t mac[6];
   bool selected;
+};
+
+struct AirTag {
+    String mac;                  // MAC address of the AirTag
+    std::vector<uint8_t> payload; // Payload data
 };
 
 class WiFiScan
@@ -262,7 +270,8 @@ class WiFiScan
       Microsoft,
       Apple,
       Samsung,
-      Google
+      Google,
+      FlipperZero
     };
 
       #ifdef HAS_BT
@@ -294,6 +303,8 @@ class WiFiScan
     void executeSwiftpairSpam(EBLEPayloadType type);
     void startWardriverWiFi();
     void generateRandomMac(uint8_t* mac);
+    void generateRandomName(char *name, size_t length);
+    String processPwnagotchiBeacon(const uint8_t* frame, int length);
 
     void startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_string);
 
@@ -368,6 +379,7 @@ class WiFiScan
     void RunSetup();
     int clearSSIDs();
     int clearAPs();
+    int clearAirtags();
     int clearStations();
     bool addSSID(String essid);
     int generateSSIDs(int count = 20);

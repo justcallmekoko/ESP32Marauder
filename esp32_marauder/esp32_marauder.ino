@@ -212,7 +212,7 @@ void setup()
   backlightOn(); // Need this
 
   #ifdef HAS_SCREEN
-    delay(2000);
+    //delay(2000);
 
     // Do some stealth mode stuff
     #ifdef HAS_BUTTONS
@@ -225,42 +225,47 @@ void setup()
       }
     #endif
 
-    display_obj.clearScreen();
+    //display_obj.clearScreen();
   
-    display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    //display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
   
-    display_obj.tft.println(text_table0[0]);
+    //display_obj.tft.println(text_table0[0]);
   
-    delay(2000);
+    //delay(2000);
   
-    display_obj.tft.println("Marauder " + display_obj.version_number + "\n");
+    //display_obj.tft.println("Marauder " + display_obj.version_number + "\n");
   
-    display_obj.tft.println(text_table0[1]);
+    //display_obj.tft.println(text_table0[1]);
   #endif
 
   settings_obj.begin();
 
   wifi_scan_obj.RunSetup();
 
-  #ifdef HAS_SCREEN
-    display_obj.tft.println(F(text_table0[2]));
-  #endif
+  //#ifdef HAS_SCREEN
+  //  display_obj.tft.println(F(text_table0[2]));
+  //#endif
 
   buffer_obj = Buffer();
   #if defined(HAS_SD)
     // Do some SD stuff
     if(sd_obj.initSD()) {
       #ifdef HAS_SCREEN
-        display_obj.tft.println(F(text_table0[3]));
+        //display_obj.tft.println(F(text_table0[3]));
       #endif
     } else {
       Serial.println(F("SD Card NOT Supported"));
       #ifdef HAS_SCREEN
-        display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
-        display_obj.tft.println(F(text_table0[4]));
-        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+        //display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+        //display_obj.tft.println(F(text_table0[4]));
+        //display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
       #endif
     }
+  #endif
+
+  #ifdef HAS_SCREEN
+    display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+    display_obj.tft.drawCentreString("Initializing...", TFT_WIDTH/2, TFT_HEIGHT * 0.82, 1);
   #endif
 
   evil_portal_obj.setup();
@@ -270,11 +275,11 @@ void setup()
   #endif
   
   #ifdef HAS_SCREEN
-    display_obj.tft.println(F(text_table0[5]));
+    //display_obj.tft.println(F(text_table0[5]));
   #endif
 
   #ifdef HAS_SCREEN
-    display_obj.tft.println(F(text_table0[6]));
+    //display_obj.tft.println(F(text_table0[6]));
   #endif
 
   #ifdef HAS_BATTERY
@@ -293,27 +298,27 @@ void setup()
   #endif
 
   #ifdef HAS_SCREEN
-    display_obj.tft.println(F(text_table0[7]));
+    //display_obj.tft.println(F(text_table0[7]));
 
-    delay(500);
+    //delay(500);
   #endif
 
   #ifdef HAS_GPS
     gps_obj.begin();
-    #ifdef HAS_SCREEN
-      if (gps_obj.getGpsModuleStatus())
-        display_obj.tft.println("GPS Module connected");
-      else
-        display_obj.tft.println("GPS Module NOT connected");
-    #endif
+    //#ifdef HAS_SCREEN
+      //if (gps_obj.getGpsModuleStatus())
+        //display_obj.tft.println("GPS Module connected");
+      //else
+        //display_obj.tft.println("GPS Module NOT connected");
+    //#endif
   #endif
 
   #ifdef HAS_SCREEN
-    display_obj.tft.println(F(text_table0[8]));
+    //display_obj.tft.println(F(text_table0[8]));
   
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
   
-    delay(2000);
+    //delay(2000);
   #endif
 
   #ifdef HAS_SCREEN
