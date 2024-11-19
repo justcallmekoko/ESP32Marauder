@@ -15,30 +15,54 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
         
-      - name: Install ESP32 Boards and Compile TestFile
+#      - name: Install ESP32 Boards and Compile TestFile
+#        uses: ArminJo/arduino-test-compile@v3.2.1
+#        with:
+#          sketch-names: TestFile.ino
+#          arduino-board-fqbn: esp32:esp32:esp32s2
+#          platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.10/package_esp32_dev_index.json
+          
+      - name: Install Arduino CLI
+        run: |
+          # Install arduino-cli
+          curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sudo bash
+          sudo apt-get install arduino-cli
+
+      - name: Install Arduino-ESP32 Core v2.0.11
+        run: |
+          # Install Arduino-ESP32 v2.0.11 explicitly
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32@2.0.11
+
+      - name: Verify Installed Cores
+        run: arduino-cli core list
+
+      - name: Build TestFile with ESP32 v2.0.11
         uses: ArminJo/arduino-test-compile@v3.2.1
         with:
           sketch-names: TestFile.ino
           arduino-board-fqbn: esp32:esp32:esp32s2
-          platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.10/package_esp32_dev_index.json
+
+      - name: Verify Installed Cores Again
+        run: arduino-cli core list
           
       - name: Show Arduino dir structure
         run: |
           find /home/runner/.arduino15/packages/esp32/hardware/
         
-      - name: Pull arduino-esp32 v2.0.4
-        uses: actions/checkout@v2
-        with:
-          repository: espressif/arduino-esp32
-          ref: 2.0.4
-          path: 2.0.4arduino-esp32
+#      - name: Pull arduino-esp32 v2.0.4
+#        uses: actions/checkout@v2
+#        with:
+#          repository: espressif/arduino-esp32
+#          ref: 2.0.4
+#          path: 2.0.4arduino-esp32
           
-      - name: Pull arduino-esp32 v2.0.10
-        uses: actions/checkout@v2
-        with:
-          repository: espressif/arduino-esp32
-          ref: 2.0.10
-          path: 2.0.10
+#      - name: Pull arduino-esp32 v2.0.10
+#        uses: actions/checkout@v2
+#        with:
+#          repository: espressif/arduino-esp32
+#          ref: 2.0.10
+#          path: 2.0.10
           
       - name: Install AsyncTCP
         uses: actions/checkout@v2
