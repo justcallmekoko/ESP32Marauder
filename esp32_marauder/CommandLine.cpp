@@ -846,12 +846,33 @@ void CommandLine::runCommand(String input) {
     // Bluetooth scan
     if (cmd_args.get(0) == BT_SNIFF_CMD) {
       #ifdef HAS_BT
-        Serial.println("Starting Bluetooth scan. Stop with " + (String)STOPSCAN_CMD);
-        #ifdef HAS_SCREEN
-          display_obj.clearScreen();
-          menu_function_obj.drawStatusBar();
-        #endif
-        wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_GREEN);
+        int bt_type_sw = this->argSearch(&cmd_args, "-t");
+
+        // Specifying type of bluetooth sniff
+        if (bt_type_sw != -1) {
+          String bt_type = cmd_args.get(bt_type_sw + 1);
+
+          bt_type.toLowerCase();
+
+          // Airtag sniff
+          if (bt_type == "airtag") {
+            Serial.println("Starting Airtag sniff. Stop with " + (String)STOPSCAN_CMD);
+            #ifdef HAS_SCREEN
+              display_obj.clearScreen();
+              menu_function_obj.drawStatusBar();
+            #endif
+            wifi_scan_obj.StartScan(BT_SCAN_AIRTAG, TFT_WHITE);
+          }
+        }
+        // General bluetooth sniff
+        else {
+          Serial.println("Starting Bluetooth scan. Stop with " + (String)STOPSCAN_CMD);
+          #ifdef HAS_SCREEN
+            display_obj.clearScreen();
+            menu_function_obj.drawStatusBar();
+          #endif
+          wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_GREEN);
+        }
       #else
         Serial.println("Bluetooth not supported");
       #endif
