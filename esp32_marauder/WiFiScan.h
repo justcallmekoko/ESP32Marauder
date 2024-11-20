@@ -4,6 +4,7 @@
 #define WiFiScan_h
 
 #include "configs.h"
+#include "utils.h"
 
 #include <ArduinoJson.h>
 #include <algorithm>
@@ -146,18 +147,19 @@ esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx, const void *buffer, int len, b
 };*/
 
 
-struct mac_addr {
+/*struct mac_addr {
    unsigned char bytes[6];
 };
 
 struct Station {
   uint8_t mac[6];
   bool selected;
-};
+};*/
 
 struct AirTag {
     String mac;                  // MAC address of the AirTag
     std::vector<uint8_t> payload; // Payload data
+    bool selected;
 };
 
 class WiFiScan
@@ -302,8 +304,8 @@ class WiFiScan
     void executeSourApple();
     void executeSwiftpairSpam(EBLEPayloadType type);
     void startWardriverWiFi();
-    void generateRandomMac(uint8_t* mac);
-    void generateRandomName(char *name, size_t length);
+    //void generateRandomMac(uint8_t* mac);
+    //void generateRandomName(char *name, size_t length);
     String processPwnagotchiBeacon(const uint8_t* frame, int length);
 
     void startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_string);
@@ -407,12 +409,13 @@ class WiFiScan
     void main(uint32_t currentTime);
     void StartScan(uint8_t scan_mode, uint16_t color = 0);
     void StopScan(uint8_t scan_mode);
-    const char* generateRandomName();
+    void setBaseMacAddress(uint8_t macAddr[6]);
+    //const char* generateRandomName();
 
     bool save_serial = false;
     void startPcap(String file_name);
     void startLog(String file_name);
-    String macToString(const Station& station);
+    //String macToString(const Station& station);
 
     static void getMAC(char *addr, uint8_t* data, uint16_t offset);
     static void pwnSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
