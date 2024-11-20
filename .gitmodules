@@ -6,7 +6,7 @@
 	url = https://github.com/ivanseidel/LinkedList.git
 [submodule "esp32_marauder/libraries/TFT_eSPI"]
 	path = esp32_marauder/libraries/TFT_eSPI
-	url = https://github.com/justcallmekoko/TFT_eSPI.git
+	url = https://github.com/Bodmer/TFT_eSPI.git
 [submodule "esp32_marauder/libraries/JPEGDecoder"]
 	path = esp32_marauder/libraries/JPEGDecoder
 	url = https://github.com/Bodmer/JPEGDecoder.git

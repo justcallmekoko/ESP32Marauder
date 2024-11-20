@@ -26,9 +26,10 @@ extern Settings settings_obj;
 class SDInterface {
 
   private:
-#if defined(MARAUDER_M5STICKC)
+#if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5CARDPUTER)
   SPIClass *spiExt;
 #endif
+
     bool checkDetectPin();
 
   public:

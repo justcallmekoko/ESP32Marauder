@@ -41,6 +41,7 @@ https://www.online-utility.org/image/convert/to/XBM
 #elif defined(MARAUDER_M5STICKC)
   #include "stickcLED.h"
 #elif defined(HAS_NEOPIXEL_LED)
+#elif defined(HAS_NEOPIXEL_LED)
   #include "LedInterface.h"
 #endif
 
@@ -101,8 +102,10 @@ CommandLine cli_obj;
   SDInterface sd_obj;
 #endif
 
+#ifdef HAS_PWR_MGMT
 #ifdef MARAUDER_M5STICKC
   AXP192 axp192_obj;
+#endif
 #endif
 
 #ifdef MARAUDER_FLIPPER
@@ -111,8 +114,12 @@ CommandLine cli_obj;
   xiaoLED xiao_led;
 #elif defined(MARAUDER_M5STICKC)
   stickcLED stickc_led;
-#else
+#elif defined(HAS_NEOPIXEL_LED)
   LedInterface led_obj;
+#endif
+
+#ifdef HAS_SOFTWARE_SERIAL
+EspSoftwareSerial::UART softwareSerial;
 #endif
 
 const String PROGMEM version_number = MARAUDER_VERSION;
@@ -122,7 +129,6 @@ const String PROGMEM version_number = MARAUDER_VERSION;
 #endif
 
 uint32_t currentTime  = 0;
-
 
 void backlightOn() {
   #ifdef HAS_SCREEN
@@ -151,8 +157,10 @@ void backlightOff() {
 
 void setup()
 {
+  #ifdef HAS_PWR_MGMT
   #ifdef MARAUDER_M5STICKC
     axp192_obj.begin();
+  #endif
   #endif
   
   #ifdef HAS_SCREEN
@@ -182,6 +190,12 @@ void setup()
 
   Serial.begin(115200);
 
+  #ifdef HAS_SOFTWARE_SERIAL
+  
+  softwareSerial.begin(115200, EspSoftwareSerial::SWSERIAL_8N1, SOFTWARE_SERIAL_RX, SOFTWARE_SERIAL_TX, false);
+
+  #endif
+
   Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
 
   #ifdef HAS_SCREEN
@@ -194,10 +208,10 @@ void setup()
   // Draw the title screen
   /*
   #ifdef HAS_SCREEN
-    #ifndef MARAUDER_MINI
-      display_obj.drawJpeg("/marauder3L.jpg", 0 , 0);     // 240 x 320 image
+    #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5CARDPUTER)
+      display_obj.drawJpeg("/marauder240_135.jpg", 0 , -90); // 240 x 135 image
     #else
-      display_obj.drawJpeg("/marauder3L.jpg", 0, 0);
+      display_obj.drawJpeg("/marauder3L.jpg", 0, 0); // 240 x 320 image
     #endif
   #endif
   */
@@ -216,6 +230,7 @@ void setup()
 
     // Do some stealth mode stuff
     #ifdef HAS_BUTTONS
+    #if (C_BTN >= 0)
       if (c_btn.justPressed()) {
         display_obj.headless_mode = true;
 
@@ -223,6 +238,7 @@ void setup()
 
         Serial.println("Headless Mode enabled");
       }
+    #endif
     #endif
 
     //display_obj.clearScreen();
@@ -242,6 +258,10 @@ void setup()
 
   wifi_scan_obj.RunSetup();
 
+  String freeRAM = wifi_scan_obj.freeRAM();
+
+  Serial.println(freeRAM);
+
   //#ifdef HAS_SCREEN
   //  display_obj.tft.println(F(text_table0[2]));
   //#endif
@@ -250,6 +270,7 @@ void setup()
   #if defined(HAS_SD)
     // Do some SD stuff
     if(sd_obj.initSD()) {
+      Serial.println(F("Initialized SD Card"));
       #ifdef HAS_SCREEN
         //display_obj.tft.println(F(text_table0[3]));
       #endif
@@ -273,7 +294,6 @@ void setup()
   #ifdef HAS_BATTERY
     battery_obj.RunSetup();
   #endif
-  
   #ifdef HAS_SCREEN
     //display_obj.tft.println(F(text_table0[5]));
   #endif
@@ -293,7 +313,7 @@ void setup()
     xiao_led.RunSetup();
   #elif defined(MARAUDER_M5STICKC)
     stickc_led.RunSetup();
-  #else
+  #elif defined(HAS_NEOPIXEL_LED)
     led_obj.RunSetup();
   #endif
 
@@ -401,7 +421,7 @@ void loop()
     xiao_led.main();
   #elif defined(MARAUDER_M5STICKC)
     stickc_led.main();
-  #else
+  #elif defined(HAS_NEOPIXEL_LED)
     led_obj.main(currentTime);
   #endif
 
