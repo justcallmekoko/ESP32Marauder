@@ -304,8 +304,10 @@ MenuFunctions::MenuFunctions()
   }
   
   // GFX Function to build a list showing all APs scanned
-  void MenuFunctions::addAPGFX(){
+  void MenuFunctions::addAPGFX(String type){
+    extern WiFiScan wifi_scan_obj;
     extern LinkedList<AccessPoint>* access_points;
+    extern LinkedList<AirTag>* airtags;
   
     lv_obj_t * list1 = lv_list_create(lv_scr_act(), NULL);
     lv_obj_set_size(list1, 160, 200);
@@ -319,24 +321,110 @@ MenuFunctions::MenuFunctions()
     list_btn = lv_list_add_btn(list1, LV_SYMBOL_CLOSE, text09);
     lv_obj_set_event_cb(list_btn, ap_list_cb);
   
-    for (int i = 0; i < access_points->size(); i++) {
-      char buf[access_points->get(i).essid.length() + 1] = {};
-      access_points->get(i).essid.toCharArray(buf, access_points->get(i).essid.length() + 1);
-      
-      list_btn = lv_list_add_btn(list1, LV_SYMBOL_WIFI, buf);
-      lv_btn_set_checkable(list_btn, true);
-      lv_obj_set_event_cb(list_btn, ap_list_cb);
-  
-      if (access_points->get(i).selected)
-        lv_btn_toggle(list_btn);
+    if (type == "AP") {
+      for (int i = 0; i < access_points->size(); i++) {
+        char buf[access_points->get(i).essid.length() + 1] = {};
+        access_points->get(i).essid.toCharArray(buf, access_points->get(i).essid.length() + 1);
+        
+        list_btn = lv_list_add_btn(list1, LV_SYMBOL_WIFI, buf);
+        lv_btn_set_checkable(list_btn, true);
+        lv_obj_set_event_cb(list_btn, ap_list_cb);
+    
+        if (access_points->get(i).selected)
+          lv_btn_toggle(list_btn);
+      }
+    }
+    else if (type == "Airtag") {
+      for (int i = 0; i < airtags->size(); i++) {
+        char buf[airtags->get(i).mac.length() + 1] = {};
+        airtags->get(i).mac.toCharArray(buf, airtags->get(i).mac.length() + 1);
+        
+        list_btn = lv_list_add_btn(list1, LV_SYMBOL_WIFI, buf);
+        lv_btn_set_checkable(list_btn, true);
+        lv_obj_set_event_cb(list_btn, at_list_cb);
+    
+        //if (airtags->get(i).selected)
+        //  lv_btn_toggle(list_btn);
+      }
     }
   }
   
+  void at_list_cb(lv_obj_t * btn, lv_event_t event) {
+    extern MenuFunctions menu_function_obj;
+    extern WiFiScan wifi_scan_obj;
+    extern LinkedList<AirTag>* airtags;
+    extern Display display_obj;
   
+    String btn_text = lv_list_get_btn_text(btn);
+    String display_string = "";
+    
+    // Button is clicked
+    if (event == LV_EVENT_CLICKED) {
+      if (btn_text != text09) {
+      }
+      // It's the back button
+      else {
+        Serial.println("Exiting...");
+        lv_obj_del_async(lv_obj_get_parent(lv_obj_get_parent(btn)));
+  
+        for (int i = 0; i < airtags->size(); i++) {
+          if (airtags->get(i).selected) {
+            Serial.println("Selected: " + (String)airtags->get(i).mac);
+          }
+        }
+  
+        printf("LV_EVENT_CANCEL\n");
+        menu_function_obj.deinitLVGL();
+        wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+        display_obj.exit_draw = true; // set everything back to normal
+      }
+    }
+    
+    if (event == LV_EVENT_VALUE_CHANGED) {      
+      if (lv_btn_get_state(btn) == LV_BTN_STATE_CHECKED_RELEASED) {
+        bool do_that_thang = false;
+        for (int i = 0; i < airtags->size(); i++) {
+          if (airtags->get(i).mac == btn_text) {
+            Serial.println("Selecting Airtag: " + (String)airtags->get(i).mac);
+            AirTag at = airtags->get(i);
+            at.selected = true;
+            airtags->set(i, at);
+            do_that_thang = true;
+          }
+          else {
+            AirTag at = airtags->get(i);
+            at.selected = false;
+            airtags->set(i, at);
+          }
+        }
+        // Start spoofing airtag
+        if (do_that_thang) {
+          menu_function_obj.deinitLVGL();
+          wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+          menu_function_obj.orientDisplay();
+          display_obj.clearScreen();
+          menu_function_obj.drawStatusBar();
+          wifi_scan_obj.StartScan(BT_SPOOF_AIRTAG, TFT_WHITE);
+          return;
+        }
+      }
+      else {
+        for (int i = 0; i < airtags->size(); i++) {
+          if (airtags->get(i).mac == btn_text) {
+            Serial.println("Deselecting Airtag: " + (String)airtags->get(i).mac);
+            AirTag at = airtags->get(i);
+            at.selected = false;
+            airtags->set(i, at);
+          }
+        }
+      }
+    }
+  }
   
   void ap_list_cb(lv_obj_t * btn, lv_event_t event) {
     extern LinkedList<AccessPoint>* access_points;
     extern MenuFunctions menu_function_obj;
+    extern WiFiScan wifi_scan_obj;
   
     String btn_text = lv_list_get_btn_text(btn);
     String display_string = "";
@@ -1924,6 +2012,15 @@ void MenuFunctions::RunSetup()
     wifi_scan_obj.StartScan(BT_ATTACK_SPAM_ALL, TFT_MAGENTA);
   });
 
+  #ifdef HAS_ILI9341
+    this->addNodes(&bluetoothAttackMenu, "Spoof Airtag", TFT_WHITE, NULL, ATTACKS, [this](){
+      display_obj.clearScreen();
+      wifi_scan_obj.currentScanMode = LV_ADD_SSID;
+      wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_WHITE);
+      addAPGFX("Airtag");
+    });
+  #endif
+
   #ifndef HAS_ILI9341
     // Select Airtag on Mini
     this->addNodes(&bluetoothAttackMenu, "Spoof Airtag", TFT_WHITE, NULL, ATTACKS, [this](){
@@ -1940,8 +2037,6 @@ void MenuFunctions::RunSetup()
         menu_limit = airtags->size();
       else
         menu_limit = BUTTON_ARRAY_LEN;
-
-      Serial.println("Found " + (String)airtags->size() + " airtag(s)");
 
       // Create the menu nodes for all of the list items
       for (int i = 0; i < menu_limit; i++) {
