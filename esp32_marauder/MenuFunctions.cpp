@@ -339,7 +339,7 @@ MenuFunctions::MenuFunctions()
         char buf[airtags->get(i).mac.length() + 1] = {};
         airtags->get(i).mac.toCharArray(buf, airtags->get(i).mac.length() + 1);
         
-        list_btn = lv_list_add_btn(list1, LV_SYMBOL_WIFI, buf);
+        list_btn = lv_list_add_btn(list1, LV_SYMBOL_BLUETOOTH, buf);
         lv_btn_set_checkable(list_btn, true);
         lv_obj_set_event_cb(list_btn, at_list_cb);
     
@@ -401,6 +401,7 @@ MenuFunctions::MenuFunctions()
         if (do_that_thang) {
           menu_function_obj.deinitLVGL();
           wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+          display_obj.clearScreen();
           menu_function_obj.orientDisplay();
           display_obj.clearScreen();
           menu_function_obj.drawStatusBar();
