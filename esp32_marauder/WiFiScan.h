@@ -96,6 +96,7 @@
 #define BT_ATTACK_GOOGLE_SPAM 41
 #define BT_ATTACK_FLIPPER_SPAM 42
 #define BT_SCAN_AIRTAG 43
+#define BT_SPOOF_AIRTAG 44
 
 #define GRAPH_REFRESH 100
 
@@ -159,6 +160,7 @@ struct Station {
 struct AirTag {
     String mac;                  // MAC address of the AirTag
     std::vector<uint8_t> payload; // Payload data
+    uint16_t payloadSize;
     bool selected;
 };
 
@@ -273,7 +275,8 @@ class WiFiScan
       Apple,
       Samsung,
       Google,
-      FlipperZero
+      FlipperZero,
+      Airtag
     };
 
       #ifdef HAS_BT
@@ -302,6 +305,7 @@ class WiFiScan
     void clearMacHistory();
     void executeWarDrive();
     void executeSourApple();
+    void executeSpoofAirtag();
     void executeSwiftpairSpam(EBLEPayloadType type);
     void startWardriverWiFi();
     //void generateRandomMac(uint8_t* mac);

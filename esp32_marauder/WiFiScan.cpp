@@ -176,6 +176,18 @@ extern "C" {
 
         break;
       }
+
+      case Airtag: {
+        for (int i = 0; i < airtags->size(); i++) {
+          if (airtags->get(i).selected) {
+            AdvData.addData(std::string((char*)airtags->get(i).payload.data(), airtags->get(i).payloadSize));
+
+            break;
+          }
+        }
+
+        break;
+      }
       default: {
         Serial.println("Please Provide a Company Type");
         break;
@@ -244,6 +256,7 @@ extern "C" {
             AirTag airtag;
             airtag.mac = mac;
             airtag.payload.assign(payLoad, payLoad + len);
+            airtag.payloadSize = len;
 
             airtags->add(airtag);
 
@@ -697,7 +710,8 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
            (scan_mode == BT_ATTACK_SPAM_ALL) ||
            (scan_mode == BT_ATTACK_SAMSUNG_SPAM) ||
            (scan_mode == BT_ATTACK_GOOGLE_SPAM) ||
-           (scan_mode == BT_ATTACK_FLIPPER_SPAM)) {
+           (scan_mode == BT_ATTACK_FLIPPER_SPAM) ||
+           (scan_mode == BT_SPOOF_AIRTAG)) {
     #ifdef HAS_BT
       RunSwiftpairSpam(scan_mode, color);
     #endif
@@ -885,6 +899,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   (currentScanMode == BT_ATTACK_SAMSUNG_SPAM) ||
   (currentScanMode == BT_ATTACK_GOOGLE_SPAM) ||
   (currentScanMode == BT_ATTACK_FLIPPER_SPAM) ||
+  (currentScanMode == BT_SPOOF_AIRTAG) ||
   (currentScanMode == BT_SCAN_WAR_DRIVE) ||
   (currentScanMode == BT_SCAN_WAR_DRIVE_CONT) ||
   (currentScanMode == BT_SCAN_SKIMMERS))
@@ -2051,12 +2066,52 @@ void WiFiScan::setBaseMacAddress(uint8_t macAddr[6]) {
 
   // Check for success or handle errors
   if (err == ESP_OK) {
-    Serial.println("Base MAC address successfully set.");
+    return;
   } else if (err == ESP_ERR_INVALID_ARG) {
     Serial.println("Error: Invalid MAC address argument.");
   } else {
     Serial.printf("Error: Failed to set MAC address. Code: %d\n", err);
   }
+}
+
+void WiFiScan::executeSpoofAirtag() {
+  #ifdef HAS_BT
+    for (int i = 0; i < airtags->size(); i++) {
+      if (airtags->get(i).selected) {
+
+        uint8_t macAddr[6];
+
+        convertMacStringToUint8(airtags->get(i).mac, macAddr);
+
+        //macAddr[0] = 0x02;
+
+        macAddr[5] -= 2;
+
+        Serial.println("Using MAC: " + macToString(macAddr));
+
+        // Do this because ESP32 BT addr is Base MAC + 2
+        
+        this->setBaseMacAddress(macAddr);
+
+        NimBLEDevice::init("");
+
+        NimBLEServer *pServer = NimBLEDevice::createServer();
+
+        pAdvertising = pServer->getAdvertising();
+
+        //NimBLEAdvertisementData advertisementData = getSwiftAdvertisementData();
+        NimBLEAdvertisementData advertisementData = this->GetUniversalAdvertisementData(Airtag);
+        pAdvertising->setAdvertisementData(advertisementData);
+        pAdvertising->start();
+        delay(10);
+        pAdvertising->stop();
+
+        NimBLEDevice::deinit();
+
+        break;
+      }
+    }
+  #endif
 }
 
 void WiFiScan::executeSwiftpairSpam(EBLEPayloadType type) {
@@ -2473,6 +2528,8 @@ void WiFiScan::RunSwiftpairSpam(uint8_t scan_mode, uint16_t color) {
           display_obj.tft.drawCentreString("BLE Spam Google",120,16,2);
         else if (scan_mode == BT_ATTACK_FLIPPER_SPAM)
           display_obj.tft.drawCentreString("BLE Spam Flipper", 120, 16, 2);
+        else if (scan_mode == BT_SPOOF_AIRTAG)
+          display_obj.tft.drawCentreString("BLE Spoof Airtag", 120, 16, 2);
         display_obj.touchToExit();
       #endif
       display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
@@ -4922,7 +4979,8 @@ void WiFiScan::main(uint32_t currentTime)
            (currentScanMode == BT_ATTACK_SPAM_ALL) ||
            (currentScanMode == BT_ATTACK_SAMSUNG_SPAM) ||
            (currentScanMode == BT_ATTACK_GOOGLE_SPAM) ||
-           (currentScanMode == BT_ATTACK_FLIPPER_SPAM)) {
+           (currentScanMode == BT_ATTACK_FLIPPER_SPAM) ||
+           (currentScanMode == BT_SPOOF_AIRTAG)) {
     #ifdef HAS_BT
       if (currentTime - initTime >= 1000) {
         initTime = millis();
@@ -4958,6 +5016,10 @@ void WiFiScan::main(uint32_t currentTime)
       if ((currentScanMode == BT_ATTACK_FLIPPER_SPAM) ||
           (currentScanMode == BT_ATTACK_SPAM_ALL))
         this->executeSwiftpairSpam(FlipperZero);
+      
+      if (currentScanMode == BT_SPOOF_AIRTAG)
+        this->executeSpoofAirtag();
+
     #endif
   }
   else if (currentScanMode == WIFI_SCAN_WAR_DRIVE) {

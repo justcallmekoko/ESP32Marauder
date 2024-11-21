@@ -151,6 +151,9 @@ class MenuFunctions
     #endif
     Menu wifiGeneralMenu;
     Menu wifiAPMenu;
+    #ifdef HAS_BT
+      Menu airtagMenu;
+    #endif
     #ifndef HAS_ILI9341
       Menu wifiStationMenu;
     #endif

@@ -55,6 +55,14 @@ String macToString(const Station& station) {
   return String(macStr);
 }
 
+String macToString(uint8_t macAddr[6]) {
+  char macStr[18]; // 17 characters for "XX:XX:XX:XX:XX:XX" + 1 null terminator
+  snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X", 
+    macAddr[0], macAddr[1], macAddr[2], 
+    macAddr[3], macAddr[4], macAddr[5]);
+  return String(macStr);
+}
+
 void convertMacStringToUint8(const String& macStr, uint8_t macAddr[6]) {
     // Ensure the input string is in the format "XX:XX:XX:XX:XX:XX"
     if (macStr.length() != 17) {
