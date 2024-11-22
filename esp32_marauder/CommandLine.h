@@ -158,6 +158,7 @@ class CommandLine {
     bool hasSSIDs();
     void showCounts(int selected, int unselected = -1);
     int argSearch(LinkedList<String>* cmd_args, String key);
+    String cmdLine;
 
     const char* ascii_art =
     "\r\n"
