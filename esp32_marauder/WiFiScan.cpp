@@ -830,6 +830,7 @@ bool WiFiScan::shutdownWiFi() {
 bool WiFiScan::shutdownBLE() {
   #ifdef HAS_BT
     if (this->ble_initialized) {
+      Serial.println("Shutting down BLE");
       pAdvertising->stop();
       pBLEScan->stop();
       
@@ -2083,11 +2084,7 @@ void WiFiScan::executeSpoofAirtag() {
 
         convertMacStringToUint8(airtags->get(i).mac, macAddr);
 
-        //macAddr[0] = 0x02;
-
         macAddr[5] -= 2;
-
-        Serial.println("Using MAC: " + macToString(macAddr));
 
         // Do this because ESP32 BT addr is Base MAC + 2
         

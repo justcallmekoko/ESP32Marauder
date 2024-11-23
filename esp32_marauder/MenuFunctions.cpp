@@ -400,13 +400,13 @@ MenuFunctions::MenuFunctions()
         // Start spoofing airtag
         if (do_that_thang) {
           menu_function_obj.deinitLVGL();
+          lv_obj_del_async(lv_obj_get_parent(lv_obj_get_parent(btn)));
           wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
           display_obj.clearScreen();
           menu_function_obj.orientDisplay();
           display_obj.clearScreen();
           menu_function_obj.drawStatusBar();
           wifi_scan_obj.StartScan(BT_SPOOF_AIRTAG, TFT_WHITE);
-          return;
         }
       }
       else {
