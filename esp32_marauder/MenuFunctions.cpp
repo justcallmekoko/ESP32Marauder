@@ -675,6 +675,7 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_BEACON_LIST) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_ALL) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_AIRTAG) ||
+          (wifi_scan_obj.currentScanMode == BT_SCAN_FLIPPER) ||
           (wifi_scan_obj.currentScanMode == BT_ATTACK_SOUR_APPLE) ||
           (wifi_scan_obj.currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
           (wifi_scan_obj.currentScanMode == BT_ATTACK_SPAM_ALL) ||
@@ -742,6 +743,7 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_BEACON_LIST) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_ALL) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_AIRTAG) ||
+            (wifi_scan_obj.currentScanMode == BT_SCAN_FLIPPER) ||
             (wifi_scan_obj.currentScanMode == BT_ATTACK_SOUR_APPLE) ||
             (wifi_scan_obj.currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
             (wifi_scan_obj.currentScanMode == BT_ATTACK_SPAM_ALL) ||
@@ -1951,6 +1953,11 @@ void MenuFunctions::RunSetup()
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_GREEN);
+  });
+  this->addNodes(&bluetoothSnifferMenu, "Flipper Sniff", TFT_ORANGE, NULL, FLIPPER, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(BT_SCAN_FLIPPER, TFT_ORANGE);
   });
   this->addNodes(&bluetoothSnifferMenu, "Airtag Sniff", TFT_WHITE, NULL, BLUETOOTH_SNIFF, [this]() {
     display_obj.clearScreen();
