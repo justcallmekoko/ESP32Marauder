@@ -2030,53 +2030,55 @@ void MenuFunctions::RunSetup()
   #endif
 
   #ifndef HAS_ILI9341
+    #ifdef HAS_BT
     // Select Airtag on Mini
-    this->addNodes(&bluetoothAttackMenu, "Spoof Airtag", TFT_WHITE, NULL, ATTACKS, [this](){
-        // Clear nodes and add back button
-        airtagMenu.list->clear();
-        this->addNodes(&airtagMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-        this->changeMenu(airtagMenu.parentMenu);
+      this->addNodes(&bluetoothAttackMenu, "Spoof Airtag", TFT_WHITE, NULL, ATTACKS, [this](){
+          // Clear nodes and add back button
+          airtagMenu.list->clear();
+          this->addNodes(&airtagMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+          this->changeMenu(airtagMenu.parentMenu);
+        });
+
+        // Add buttons for all airtags
+        // Find out how big our menu is going to be
+        int menu_limit;
+        if (airtags->size() <= BUTTON_ARRAY_LEN)
+          menu_limit = airtags->size();
+        else
+          menu_limit = BUTTON_ARRAY_LEN;
+
+        // Create the menu nodes for all of the list items
+        for (int i = 0; i < menu_limit; i++) {
+          this->addNodes(&airtagMenu, airtags->get(i).mac, TFT_WHITE, NULL, BLUETOOTH, [this, i](){
+            AirTag new_at = airtags->get(i);
+            new_at.selected = true;
+
+            airtags->set(i, new_at);
+
+            // Set all other airtags to "Not Selected"
+            for (int x = 0; x < airtags->size(); x++) {
+              if (x != i) {
+                AirTag new_atx = airtags->get(x);
+                new_atx.selected = false;
+                airtags->set(x, new_atx);
+              }
+            }
+
+            // Start the spoof
+            display_obj.clearScreen();
+            this->drawStatusBar();
+            wifi_scan_obj.StartScan(BT_SPOOF_AIRTAG, TFT_WHITE);
+
+          });
+        }
+        this->changeMenu(&airtagMenu);
       });
 
-      // Add buttons for all airtags
-      // Find out how big our menu is going to be
-      int menu_limit;
-      if (airtags->size() <= BUTTON_ARRAY_LEN)
-        menu_limit = airtags->size();
-      else
-        menu_limit = BUTTON_ARRAY_LEN;
-
-      // Create the menu nodes for all of the list items
-      for (int i = 0; i < menu_limit; i++) {
-        this->addNodes(&airtagMenu, airtags->get(i).mac, TFT_WHITE, NULL, BLUETOOTH, [this, i](){
-          AirTag new_at = airtags->get(i);
-          new_at.selected = true;
-
-          airtags->set(i, new_at);
-
-          // Set all other airtags to "Not Selected"
-          for (int x = 0; x < airtags->size(); x++) {
-            if (x != i) {
-              AirTag new_atx = airtags->get(x);
-              new_atx.selected = false;
-              airtags->set(x, new_atx);
-            }
-          }
-
-          // Start the spoof
-          display_obj.clearScreen();
-          this->drawStatusBar();
-          wifi_scan_obj.StartScan(BT_SPOOF_AIRTAG, TFT_WHITE);
-
-        });
-      }
-      this->changeMenu(&airtagMenu);
-    });
-
-    airtagMenu.parentMenu = &bluetoothAttackMenu;
-    this->addNodes(&airtagMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-      this->changeMenu(airtagMenu.parentMenu);
-    });
+      airtagMenu.parentMenu = &bluetoothAttackMenu;
+      this->addNodes(&airtagMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+        this->changeMenu(airtagMenu.parentMenu);
+      });
+    #endif
 
   #endif
 
