@@ -10,6 +10,7 @@ LinkedList<ssid>* ssids;
 LinkedList<AccessPoint>* access_points;
 LinkedList<Station>* stations;
 LinkedList<AirTag>* airtags;
+LinkedList<Flipper>* flippers;
 
 extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3){
     if (arg == 31337)
@@ -38,7 +39,7 @@ extern "C" {
     switch (Type) {
       case Microsoft: {
         
-        const char* Name = this->generateRandomName();
+        const char* Name = generateRandomName();
 
         uint8_t name_len = strlen(Name);
 
@@ -176,6 +177,18 @@ extern "C" {
 
         break;
       }
+
+      case Airtag: {
+        for (int i = 0; i < airtags->size(); i++) {
+          if (airtags->get(i).selected) {
+            AdvData.addData(std::string((char*)airtags->get(i).payload.data(), airtags->get(i).payloadSize));
+
+            break;
+          }
+        }
+
+        break;
+      }
       default: {
         Serial.println("Please Provide a Company Type");
         break;
@@ -244,6 +257,7 @@ extern "C" {
             AirTag airtag;
             airtag.mac = mac;
             airtag.payload.assign(payLoad, payLoad + len);
+            airtag.payloadSize = len;
 
             airtags->add(airtag);
 
@@ -259,6 +273,76 @@ extern "C" {
                 display_string.concat(" ");
               }
               display_obj.display_buffer->add(display_string);
+            #endif
+          }
+        }
+        else if (wifi_scan_obj.currentScanMode == BT_SCAN_FLIPPER) {
+          uint8_t* payLoad = advertisedDevice->getPayload();
+          size_t len = advertisedDevice->getPayloadLength();
+
+          bool match = false;
+          String color = "";
+          for (int i = 0; i <= len - 4; i++) {
+            if (payLoad[i] == 0x81 && payLoad[i+1] == 0x30) {
+              match = true;
+              color = "Black";
+              break;
+            }
+            if (payLoad[i] == 0x82 && payLoad[i+1] == 0x30) {
+              match = true;
+              color = "White";
+              break;
+            }
+            if (payLoad[i] == 0x83 && payLoad[i+1] == 0x30) {
+              color = "Transparent";
+              match = true;
+              break;
+            }
+          }
+
+          if (match) {
+            String mac = advertisedDevice->getAddress().toString().c_str();
+            String name = advertisedDevice->getName().c_str();
+            mac.toUpperCase();
+
+            for (int i = 0; i < flippers->size(); i++) {
+              if (mac == flippers->get(i).mac)
+                return;
+            }
+
+            int rssi = advertisedDevice->getRSSI();
+            Serial.print("RSSI: ");
+            Serial.print(rssi);
+            Serial.print(" MAC: ");
+            Serial.println(mac);
+            Serial.print("Name: ");
+            Serial.println(name);
+
+            Flipper flipper;
+            flipper.mac = mac;
+            flipper.name = name;
+
+            flippers->add(flipper);
+
+
+            /*#ifdef HAS_SCREEN
+              //display_string.concat("RSSI: ");
+              display_string.concat((String)rssi);
+              display_string.concat(" Flipper: ");
+              display_string.concat(name);
+              uint8_t temp_len = display_string.length();
+              for (uint8_t i = 0; i < 40 - temp_len; i++)
+              {
+                display_string.concat(" ");
+              }
+              display_obj.display_buffer->add(display_string);
+            #endif*/
+
+            #ifdef HAS_SCREEN
+              display_obj.display_buffer->add(String("Flipper: ") + name + ",                 ");
+              display_obj.display_buffer->add("       MAC: " + String(mac) + ",             ");
+              display_obj.display_buffer->add("      RSSI: " + String(rssi) + ",               ");
+              display_obj.display_buffer->add("     Color: " + String(color) + "                ");
             #endif
           }
         }
@@ -414,13 +498,13 @@ WiFiScan::WiFiScan()
 {
 }
 
-String WiFiScan::macToString(const Station& station) {
+/*String WiFiScan::macToString(const Station& station) {
   char macStr[18]; // 6 pairs of hex digits + 5 colons + null terminator
   snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
            station.mac[0], station.mac[1], station.mac[2],
            station.mac[3], station.mac[4], station.mac[5]);
   return String(macStr);
-}
+}*/
 
 void WiFiScan::RunSetup() {
   if (ieee80211_raw_frame_sanity_check(31337, 0, 0) == 1)
@@ -432,6 +516,7 @@ void WiFiScan::RunSetup() {
   access_points = new LinkedList<AccessPoint>();
   stations = new LinkedList<Station>();
   airtags = new LinkedList<AirTag>();
+  flippers = new LinkedList<Flipper>();
 
   #ifdef HAS_BT
     watch_models = new WatchModel[26] {
@@ -507,6 +592,14 @@ int WiFiScan::clearAirtags() {
   while (airtags->size() > 0)
     airtags->remove(0);
   Serial.println("airtags: " + (String)airtags->size());
+  return num_cleared;
+}
+
+int WiFiScan::clearFlippers() {
+  int num_cleared = flippers->size();
+  while (flippers->size() > 0)
+    flippers->remove(0);
+  Serial.println("Flippers: " + (String)flippers->size());
   return num_cleared;
 }
 
@@ -683,7 +776,7 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     this->startWiFiAttacks(scan_mode, color, text_table4[47]);
   else if (scan_mode == WIFI_ATTACK_AP_SPAM)
     this->startWiFiAttacks(scan_mode, color, " AP Beacon Spam ");
-  else if ((scan_mode == BT_SCAN_ALL) || (BT_SCAN_AIRTAG)){
+  else if ((scan_mode == BT_SCAN_ALL) || (scan_mode == BT_SCAN_AIRTAG) || (scan_mode == BT_SCAN_FLIPPER)){
     #ifdef HAS_BT
       RunBluetoothScan(scan_mode, color);
     #endif
@@ -697,7 +790,8 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
            (scan_mode == BT_ATTACK_SPAM_ALL) ||
            (scan_mode == BT_ATTACK_SAMSUNG_SPAM) ||
            (scan_mode == BT_ATTACK_GOOGLE_SPAM) ||
-           (scan_mode == BT_ATTACK_FLIPPER_SPAM)) {
+           (scan_mode == BT_ATTACK_FLIPPER_SPAM) ||
+           (scan_mode == BT_SPOOF_AIRTAG)) {
     #ifdef HAS_BT
       RunSwiftpairSpam(scan_mode, color);
     #endif
@@ -816,6 +910,7 @@ bool WiFiScan::shutdownWiFi() {
 bool WiFiScan::shutdownBLE() {
   #ifdef HAS_BT
     if (this->ble_initialized) {
+      Serial.println("Shutting down BLE");
       pAdvertising->stop();
       pBLEScan->stop();
       
@@ -879,12 +974,14 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   
   else if ((currentScanMode == BT_SCAN_ALL) ||
   (currentScanMode == BT_SCAN_AIRTAG) ||
+  (currentScanMode == BT_SCAN_FLIPPER) ||
   (currentScanMode == BT_ATTACK_SOUR_APPLE) ||
   (currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
   (currentScanMode == BT_ATTACK_SPAM_ALL) ||
   (currentScanMode == BT_ATTACK_SAMSUNG_SPAM) ||
   (currentScanMode == BT_ATTACK_GOOGLE_SPAM) ||
   (currentScanMode == BT_ATTACK_FLIPPER_SPAM) ||
+  (currentScanMode == BT_SPOOF_AIRTAG) ||
   (currentScanMode == BT_SCAN_WAR_DRIVE) ||
   (currentScanMode == BT_SCAN_WAR_DRIVE_CONT) ||
   (currentScanMode == BT_SCAN_SKIMMERS))
@@ -2011,7 +2108,7 @@ void WiFiScan::executeSourApple() {
   #endif
 }
 
-void WiFiScan::generateRandomName(char *name, size_t length) {
+/*void WiFiScan::generateRandomName(char *name, size_t length) {
     static const char alphabet[] = "abcdefghijklmnopqrstuvwxyz";
     
     // Generate the first character as uppercase
@@ -2022,9 +2119,9 @@ void WiFiScan::generateRandomName(char *name, size_t length) {
         name[i] = alphabet[rand() % (sizeof(alphabet) - 1)];
     }
     name[length - 1] = '\0';  // Null-terminate the string
-}
+}*/
 
-const char* WiFiScan::generateRandomName() {
+/*const char* WiFiScan::generateRandomName() {
   const char* charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
   int len = rand() % 10 + 1; // Generate a random length between 1 and 10
   char* randomName = (char*)malloc((len + 1) * sizeof(char)); // Allocate memory for the random name
@@ -2033,9 +2130,9 @@ const char* WiFiScan::generateRandomName() {
   }
   randomName[len] = '\0'; // Null-terminate the string
   return randomName;
-}
+}*/
 
-void WiFiScan::generateRandomMac(uint8_t* mac) {
+/*void WiFiScan::generateRandomMac(uint8_t* mac) {
   // Set the locally administered bit and unicast bit for the first byte
   mac[0] = 0x02; // The locally administered bit is the second least significant bit
 
@@ -2043,6 +2140,56 @@ void WiFiScan::generateRandomMac(uint8_t* mac) {
   for (int i = 1; i < 6; i++) {
     mac[i] = random(0, 255);
   }
+}*/
+
+void WiFiScan::setBaseMacAddress(uint8_t macAddr[6]) {
+  // Use ESP-IDF function to set the base MAC address
+  esp_err_t err = esp_base_mac_addr_set(macAddr);
+
+  // Check for success or handle errors
+  if (err == ESP_OK) {
+    return;
+  } else if (err == ESP_ERR_INVALID_ARG) {
+    Serial.println("Error: Invalid MAC address argument.");
+  } else {
+    Serial.printf("Error: Failed to set MAC address. Code: %d\n", err);
+  }
+}
+
+void WiFiScan::executeSpoofAirtag() {
+  #ifdef HAS_BT
+    for (int i = 0; i < airtags->size(); i++) {
+      if (airtags->get(i).selected) {
+
+        uint8_t macAddr[6];
+
+        convertMacStringToUint8(airtags->get(i).mac, macAddr);
+
+        macAddr[5] -= 2;
+
+        // Do this because ESP32 BT addr is Base MAC + 2
+        
+        this->setBaseMacAddress(macAddr);
+
+        NimBLEDevice::init("");
+
+        NimBLEServer *pServer = NimBLEDevice::createServer();
+
+        pAdvertising = pServer->getAdvertising();
+
+        //NimBLEAdvertisementData advertisementData = getSwiftAdvertisementData();
+        NimBLEAdvertisementData advertisementData = this->GetUniversalAdvertisementData(Airtag);
+        pAdvertising->setAdvertisementData(advertisementData);
+        pAdvertising->start();
+        delay(10);
+        pAdvertising->stop();
+
+        NimBLEDevice::deinit();
+
+        break;
+      }
+    }
+  #endif
 }
 
 void WiFiScan::executeSwiftpairSpam(EBLEPayloadType type) {
@@ -2050,7 +2197,9 @@ void WiFiScan::executeSwiftpairSpam(EBLEPayloadType type) {
     uint8_t macAddr[6];
     generateRandomMac(macAddr);
 
-    esp_base_mac_addr_set(macAddr);
+    //esp_base_mac_addr_set(macAddr);
+
+    this->setBaseMacAddress(macAddr);
 
     NimBLEDevice::init("");
 
@@ -2457,6 +2606,8 @@ void WiFiScan::RunSwiftpairSpam(uint8_t scan_mode, uint16_t color) {
           display_obj.tft.drawCentreString("BLE Spam Google",120,16,2);
         else if (scan_mode == BT_ATTACK_FLIPPER_SPAM)
           display_obj.tft.drawCentreString("BLE Spam Flipper", 120, 16, 2);
+        else if (scan_mode == BT_SPOOF_AIRTAG)
+          display_obj.tft.drawCentreString("BLE Spoof Airtag", 120, 16, 2);
         display_obj.touchToExit();
       #endif
       display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
@@ -2481,7 +2632,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
     }
     NimBLEDevice::init("");
     pBLEScan = NimBLEDevice::getScan(); //create new scan
-    if ((scan_mode == BT_SCAN_ALL) || (BT_SCAN_AIRTAG))
+    if ((scan_mode == BT_SCAN_ALL) || (scan_mode == BT_SCAN_AIRTAG) || (scan_mode == BT_SCAN_FLIPPER))
     {
       #ifdef HAS_SCREEN
         display_obj.TOP_FIXED_AREA_2 = 48;
@@ -2495,6 +2646,8 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
             display_obj.tft.drawCentreString(text_table4[41],120,16,2);
           else if (scan_mode == BT_SCAN_AIRTAG)
             display_obj.tft.drawCentreString("Airtag Sniff",120,16,2);
+          else if (scan_mode == BT_SCAN_FLIPPER)
+            display_obj.tft.drawCentreString("Flipper Sniff", 120, 16, 2);
           display_obj.touchToExit();
         #endif
         display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
@@ -2504,6 +2657,10 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
         pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), false);
       else if (scan_mode == BT_SCAN_AIRTAG) {
         this->clearAirtags();
+        pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), true);
+      }
+      else if (scan_mode == BT_SCAN_FLIPPER) {
+        this->clearFlippers();
         pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), true);
       }
     }
@@ -4906,7 +5063,8 @@ void WiFiScan::main(uint32_t currentTime)
            (currentScanMode == BT_ATTACK_SPAM_ALL) ||
            (currentScanMode == BT_ATTACK_SAMSUNG_SPAM) ||
            (currentScanMode == BT_ATTACK_GOOGLE_SPAM) ||
-           (currentScanMode == BT_ATTACK_FLIPPER_SPAM)) {
+           (currentScanMode == BT_ATTACK_FLIPPER_SPAM) ||
+           (currentScanMode == BT_SPOOF_AIRTAG)) {
     #ifdef HAS_BT
       if (currentTime - initTime >= 1000) {
         initTime = millis();
@@ -4942,6 +5100,10 @@ void WiFiScan::main(uint32_t currentTime)
       if ((currentScanMode == BT_ATTACK_FLIPPER_SPAM) ||
           (currentScanMode == BT_ATTACK_SPAM_ALL))
         this->executeSwiftpairSpam(FlipperZero);
+      
+      if (currentScanMode == BT_SPOOF_AIRTAG)
+        this->executeSpoofAirtag();
+
     #endif
   }
   else if (currentScanMode == WIFI_SCAN_WAR_DRIVE) {
