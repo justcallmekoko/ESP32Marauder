@@ -2009,7 +2009,7 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_ATTACK_GOOGLE_SPAM, TFT_PURPLE);
   });
-  this->addNodes(&bluetoothAttackMenu, "Flipper BLE Spam", TFT_ORANGE, NULL, LANGUAGE, [this]() {
+  this->addNodes(&bluetoothAttackMenu, "Flipper BLE Spam", TFT_ORANGE, NULL, FLIPPER, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_ATTACK_FLIPPER_SPAM, TFT_ORANGE);
