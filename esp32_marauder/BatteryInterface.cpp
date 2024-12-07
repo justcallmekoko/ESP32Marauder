@@ -28,7 +28,27 @@ void BatteryInterface::RunSetup() {
 
   Serial.println("Checking for battery monitors...");
 
-  for(addr = 1; addr < 127; addr++ ) {
+  Wire.beginTransmission(IP5306_ADDR);
+  error = Wire.endTransmission();
+
+  if (error == 0) {
+    Serial.println("Detected IP5306");
+    this->has_ip5306 = true;
+    this->i2c_supported = true;
+  }
+
+  Wire.beginTransmission(MAX17048_ADDR);
+  error = Wire.endTransmission();
+
+  if (error == 0) {
+    if (maxlipo.begin()) {
+      Serial.println("Detected MAX17048");
+      this->has_max17048 = true;
+      this->i2c_supported = true;
+    }
+  }
+
+  /*for(addr = 1; addr < 127; addr++ ) {
     Wire.beginTransmission(addr);
     error = Wire.endTransmission();
 
@@ -54,7 +74,7 @@ void BatteryInterface::RunSetup() {
         }
       }
     }
-  }
+  }*/
 
   /*if (this->maxlipo.begin()) {
     Serial.println("Detected MAX17048");
