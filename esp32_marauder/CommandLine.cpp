@@ -70,7 +70,9 @@ String CommandLine::getSerialInput() {
     if (serial_buffer[i] == '\n' || serial_buffer[i] == '\r') {
       //Serial.println("Found \"newline\" at index: " + String(i));
       index_of_newline = i;
-      command_buffer[i] = '\0';
+      if (index_of_newline == 0) {
+        command_buffer[i] = index_of_newline == 0 ? '\n' : '\0';
+      }
     } else {
       command_buffer[i] = serial_buffer[i];
     }
@@ -107,9 +109,11 @@ String CommandLine::getSerialInput() {
 void CommandLine::main(uint32_t currentTime) {
   String input = this->getSerialInput();
 
-  this->runCommand(input);
+  if (input != "\n")
+    this->runCommand(input);
 
-  Serial.print("> ");
+  if (input != "")
+    Serial.print("> ");
 }
 
 LinkedList<String> CommandLine::parseCommand(String input, char* delim) {
@@ -277,7 +281,7 @@ void CommandLine::runCommand(String input) {
     if (input != STOPSCAN_CMD) return;
   }
   else
-    Serial.println("# " + input);
+    Serial.println("#" + input);
 
   LinkedList<String> cmd_args = this->parseCommand(input, " ");
 
