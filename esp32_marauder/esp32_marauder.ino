@@ -182,6 +182,9 @@ void setup()
 
   Serial.begin(115200);
 
+  while(!Serial)
+    delay(10);
+
   Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
 
   #ifdef HAS_SCREEN

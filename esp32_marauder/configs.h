@@ -21,7 +21,7 @@
   //#define MARAUDER_REV_FEATHER
   //// END BOARD TARGETS
 
-  #define MARAUDER_VERSION "v1.1.0"
+  #define MARAUDER_VERSION "v1.2.0"
 
   //// HARDWARE NAMES
   #ifdef MARAUDER_M5STICKC
@@ -1010,6 +1010,36 @@
     #define mac_history_len 512
   #endif
   //// END GPS STUFF
+
+  //// BATTERY STUFF
+  #ifdef HAS_BATTERY
+
+    #ifdef MARAUDER_V4
+      #define I2C_SDA 33
+      #define I2C_SCL 22
+    #endif
+
+    #ifdef MARAUDER_V6
+      #define I2C_SDA 33
+      #define I2C_SCL 22
+    #endif
+
+    #ifdef MARAUDER_V6_1
+      #define I2C_SDA 33
+      #define I2C_SCL 22
+    #endif
+
+    #ifdef MARAUDER_M5STICKC
+      #define I2C_SDA 33
+      #define I2C_SCL 22
+    #endif
+
+    #ifdef MARAUDER_KIT
+      #define I2C_SDA 33
+      #define I2C_SCL 22
+    #endif
+
+  #endif
 
   //// MARAUDER TITLE STUFF
   #ifdef MARAUDER_V4

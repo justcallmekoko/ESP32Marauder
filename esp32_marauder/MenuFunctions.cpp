@@ -1002,7 +1002,10 @@ void MenuFunctions::battery(bool initial)
       if ((battery_obj.battery_level != battery_obj.old_level) || (initial)) {
         battery_obj.old_level = battery_obj.battery_level;
         display_obj.tft.fillRect(204, 0, SCREEN_WIDTH, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
-        display_obj.tft.setCursor(0, 1);
+      }
+
+      display_obj.tft.setCursor(0, 1);
+      /*if (!this->disable_touch) {
         display_obj.tft.drawXBitmap(186,
                                     0,
                                     menu_icons[STATUS_BAT],
@@ -1010,8 +1013,8 @@ void MenuFunctions::battery(bool initial)
                                     16,
                                     STATUSBAR_COLOR,
                                     the_color);
-        display_obj.tft.drawString((String)battery_obj.battery_level + "%", 204, 0, 2);
-      }
+      }*/
+      display_obj.tft.drawString((String)battery_obj.battery_level + "%", 204, 0, 2);
     }
   #endif
 }
@@ -1099,14 +1102,15 @@ void MenuFunctions::updateStatusBar()
   }
 
   // Draw battery info
-  //MenuFunctions::battery(false);
-  display_obj.tft.fillRect(190, 0, SCREEN_WIDTH, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+  MenuFunctions::battery(false);
+  display_obj.tft.fillRect(186, 0, 16, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+
   
   #ifdef HAS_ILI9341
     #ifdef HAS_BUTTONS
       if (this->disable_touch) {
         display_obj.tft.setCursor(0, 1);
-        display_obj.tft.drawXBitmap(190,
+        display_obj.tft.drawXBitmap(186,
                                     0,
                                     menu_icons[DISABLE_TOUCH],
                                     16,
@@ -1207,14 +1211,15 @@ void MenuFunctions::drawStatusBar()
   #endif
 
 
-  //MenuFunctions::battery2(true);
-  display_obj.tft.fillRect(190, 0, SCREEN_WIDTH, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+  MenuFunctions::battery(true);
+  display_obj.tft.fillRect(186, 0, 16, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+
 
   #ifdef HAS_ILI9341
     #ifdef HAS_BUTTONS
       if (this->disable_touch) {
         display_obj.tft.setCursor(0, 1);
-        display_obj.tft.drawXBitmap(190,
+        display_obj.tft.drawXBitmap(186,
                                     0,
                                     menu_icons[DISABLE_TOUCH],
                                     16,
