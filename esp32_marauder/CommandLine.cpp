@@ -11,18 +11,69 @@ void CommandLine::RunSetup() {
   Serial.println("            " + version_number + "\n");
   Serial.println(F("       By: justcallmekoko\n"));
   Serial.println(F("--------------------------------\n\n"));
-  
+
   Serial.print("> ");
 }
 
 String CommandLine::getSerialInput() {
-  String input = "";
+  int bytes_received = 0;
+  int bytes_available = 0;
+  String command_line = "";
+  char command_buffer[255];
 
-  if (Serial.available() > 0)
-    input = Serial.readStringUntil('\n');
+  memset(command_buffer, '\0', 255);
 
-  input.trim();
-  return input;
+  if (Serial.available() > 0 && serial_buffer_idx < 255) {
+    bytes_available = Serial.available();
+    int bytes_to_read = bytes_available < (254 - serial_buffer_idx) ? bytes_available : (254 - serial_buffer_idx);
+    bytes_received = Serial.readBytes(&serial_buffer[serial_buffer_idx], bytes_to_read);
+    serial_buffer_idx += bytes_received;
+    if (serial_buffer_idx < 254) {
+      serial_buffer[serial_buffer_idx+1] = '\0';
+    } else if (serial_buffer_idx >= 254) {
+      Serial.println("Serial buffer overrun?");
+    }
+  }
+
+  int index_of_newline = -1;
+
+  for (int i = 0; i < serial_buffer_idx; i++) {
+    // this is mind boggling but hey. why not. :D
+    if (serial_buffer[i] == '\n' || serial_buffer[i] == '\r') {
+      //Serial.println("Found \"newline\" at index: " + String(i));
+      index_of_newline = i;
+      command_buffer[i] = '\0';
+    } else {
+      command_buffer[i] = serial_buffer[i];
+    }
+  }
+
+  command_line = command_buffer;
+
+  if (index_of_newline > -1) {
+    serial_buffer_idx = 0;
+          if (serial_buffer[index_of_newline] == '\r' && serial_buffer[index_of_newline+1] == '\n') {
+            index_of_newline++;
+          }
+
+    for (int i = index_of_newline + 1; i < 255; i++) {
+      if(serial_buffer[i] == '\0') {
+          break;
+      } else if (i > index_of_newline + 1 || i == 254) {
+        // Always zero extra bytes and null terminate no matter what
+        serial_buffer[i]='\0';
+      } else {
+        // Copy any characters we have after the newline
+        // but before the null terminator. If they exist.
+        serial_buffer[i - (index_of_newline + 1)] = serial_buffer[i];
+      }
+    }
+
+    command_line.trim();
+    return command_line;
+  } else {
+    return "";
+  }
 }
 
 void CommandLine::main(uint32_t currentTime) {

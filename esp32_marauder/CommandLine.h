@@ -148,9 +148,10 @@ const char PROGMEM HELP_BT_WARDRIVE_CMD[] = "btwardrive [-c]";
 const char PROGMEM HELP_BT_SKIM_CMD[] = "sniffskim";
 const char PROGMEM HELP_FOOT[] = "==================================";
 
-
 class CommandLine {
   private:
+    static char serial_buffer[255];
+    static int serial_buffer_idx;
     String getSerialInput();
     LinkedList<String> parseCommand(String input, char* delim);
     String toLowerCase(String str);
@@ -196,5 +197,8 @@ class CommandLine {
     void RunSetup();
     void main(uint32_t currentTime);
 };
+
+int CommandLine::serial_buffer_idx = 0;
+char CommandLine::serial_buffer[255];
 
 #endif
