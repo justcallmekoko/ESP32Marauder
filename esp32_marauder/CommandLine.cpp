@@ -109,8 +109,7 @@ void CommandLine::main(uint32_t currentTime) {
 
   this->runCommand(input);
 
-  if (input != "")
-    Serial.print("> ");
+  Serial.print("> ");
 }
 
 LinkedList<String> CommandLine::parseCommand(String input, char* delim) {
@@ -278,7 +277,7 @@ void CommandLine::runCommand(String input) {
     if (input != STOPSCAN_CMD) return;
   }
   else
-    Serial.println("#" + input);
+    Serial.println("# " + input);
 
   LinkedList<String> cmd_args = this->parseCommand(input, " ");
 
