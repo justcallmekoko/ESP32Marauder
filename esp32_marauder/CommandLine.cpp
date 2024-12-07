@@ -41,8 +41,8 @@ String CommandLine::getSerialInput() {
           } else {
             serial_buffer[j-1] = serial_buffer[j];
           }
-        serial_buffer_idx--;
         }
+        serial_buffer_idx--;
       }
       Serial.print(serial_buffer[i]);
     }
