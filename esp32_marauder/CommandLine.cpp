@@ -80,10 +80,6 @@ String CommandLine::getSerialInput() {
   int index_of_newline = -1;
 
   for (int i = 0; i < serial_buffer_idx; i++) {
-//    Serial.println("Checking character at: " + String(i) + " it appears to be: " + String(serial_buffer[i]));
-//    Serial.print("Hex value of character: ");
-//    Serial.print(serial_buffer[i], HEX);
-//    Serial.println();
     
     // This is mind boggling that we sometimes
     // just get \r and not \n and also not \r\n ... 
