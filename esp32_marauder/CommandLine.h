@@ -152,6 +152,7 @@ class CommandLine {
   private:
     static char serial_buffer[255];
     static int serial_buffer_idx;
+    static bool serial_buffer_initialized;
     String getSerialInput();
     LinkedList<String> parseCommand(String input, char* delim);
     String toLowerCase(String str);
@@ -198,7 +199,8 @@ class CommandLine {
     void main(uint32_t currentTime);
 };
 
-int CommandLine::serial_buffer_idx = 0;
 char CommandLine::serial_buffer[255];
+int CommandLine::serial_buffer_idx = 0;
+bool CommandLine::serial_buffer_initialized = false;
 
 #endif
