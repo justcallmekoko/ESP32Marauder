@@ -565,15 +565,49 @@ MenuFunctions::MenuFunctions()
 void MenuFunctions::buttonNotSelected(uint8_t b, int8_t x) {
   if (x == -1)
     x = b;
-  display_obj.tft.setFreeFont(NULL);
-  display_obj.key[b].drawButton(false, current_menu->list->get(x).name);
+
+  #ifdef HAS_MINI_SCREEN
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.key[b].drawButton(false, current_menu->list->get(x).name);
+  #endif
+
+  #ifdef HAS_FULL_SCREEN
+    display_obj.tft.setFreeFont(MENU_FONT);
+    display_obj.key[b].drawButton(false, current_menu->list->get(x).name);
+    if (current_menu->list->get(x).name != text09)
+          display_obj.tft.drawXBitmap(0,
+                                      KEY_Y + x * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
+                                      menu_icons[current_menu->list->get(x).icon],
+                                      ICON_W,
+                                      ICON_H,
+                                      TFT_BLACK,
+                                      current_menu->list->get(x).color);
+    display_obj.tft.setFreeFont(NULL);
+  #endif
 }
 
 void MenuFunctions::buttonSelected(uint8_t b, int8_t x) {
   if (x == -1)
     x = b;
-  display_obj.tft.setFreeFont(NULL);
-  display_obj.key[b].drawButton(true, current_menu->list->get(x).name);
+
+  #ifdef HAS_MINI_SCREEN
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.key[b].drawButton(true, current_menu->list->get(x).name);
+  #endif
+
+  #ifdef HAS_FULL_SCREEN
+    display_obj.tft.setFreeFont(MENU_FONT);
+    display_obj.key[b].drawButton(true, current_menu->list->get(x).name);
+    if (current_menu->list->get(x).name != text09)
+          display_obj.tft.drawXBitmap(0,
+                                      KEY_Y + x * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
+                                      menu_icons[current_menu->list->get(x).icon],
+                                      ICON_W,
+                                      ICON_H,
+                                      TFT_BLACK,
+                                      current_menu->list->get(x).color);
+    display_obj.tft.setFreeFont(NULL);
+  #endif
 }
 
 // Function to check menu input
@@ -1050,7 +1084,7 @@ void MenuFunctions::updateStatusBar()
       else
         the_color = TFT_RED;
         
-      #ifdef HAS_ILI9341
+      #ifdef HAS_FULL_SCREEN
         display_obj.tft.drawXBitmap(4,
                                     0,
                                     menu_icons[STATUS_GPS],
@@ -1078,11 +1112,11 @@ void MenuFunctions::updateStatusBar()
     #else
       display_obj.tft.fillRect(50, 0, TFT_WIDTH * 0.21, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
     #endif
-    #ifdef HAS_ILI9341
+    #ifdef HAS_FULL_SCREEN
       display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.set_channel, 50, 0, 2);
     #endif
 
-    #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+    #ifdef HAS_MINI_SCREEN
       display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.set_channel, TFT_WIDTH/4, 0, 1);
     #endif
   }
@@ -1092,11 +1126,11 @@ void MenuFunctions::updateStatusBar()
   if ((wifi_scan_obj.free_ram != wifi_scan_obj.old_free_ram) || (status_changed)) {
     wifi_scan_obj.old_free_ram = wifi_scan_obj.free_ram;
     display_obj.tft.fillRect(100, 0, 60, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
-    #ifdef HAS_ILI9341
+    #ifdef HAS_FULL_SCREEN
       display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", 100, 0, 2);
     #endif
 
-    #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+    #ifdef HAS_MINI_SCREEN
       display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", TFT_WIDTH/1.75, 0, 1);
     #endif
   }
@@ -1129,7 +1163,7 @@ void MenuFunctions::updateStatusBar()
     else
       the_color = TFT_RED;
 
-    #ifdef HAS_ILI9341
+    #ifdef HAS_FULL_SCREEN
       display_obj.tft.drawXBitmap(170,
                                   0,
                                   menu_icons[STATUS_SD],
@@ -1140,7 +1174,7 @@ void MenuFunctions::updateStatusBar()
     #endif
   #endif
 
-  #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+  #ifdef HAS_MINI_SCREEN
     display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR);
     display_obj.tft.drawString("SD", TFT_WIDTH - 12, 0, 1);
   #endif
@@ -1149,7 +1183,7 @@ void MenuFunctions::updateStatusBar()
 void MenuFunctions::drawStatusBar()
 {
   display_obj.tft.setTextSize(1);
-  #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+  #ifdef HAS_MINI_SCREEN
     display_obj.tft.setFreeFont(NULL);
   #endif
   display_obj.tft.fillRect(0, 0, 240, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
@@ -1165,7 +1199,7 @@ void MenuFunctions::drawStatusBar()
       else
         the_color = TFT_RED;
         
-      #ifdef HAS_ILI9341
+      #ifdef HAS_FULL_SCREEN
         display_obj.tft.drawXBitmap(4,
                                     0,
                                     menu_icons[STATUS_GPS],
@@ -1185,16 +1219,16 @@ void MenuFunctions::drawStatusBar()
 
   // WiFi Channel Stuff
   wifi_scan_obj.old_channel = wifi_scan_obj.set_channel;
-  #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+  #ifdef HAS_MINI_SCREEN
     display_obj.tft.fillRect(43, 0, TFT_WIDTH * 0.21, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
   #else
     display_obj.tft.fillRect(50, 0, TFT_WIDTH * 0.21, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
   #endif
-  #ifdef HAS_ILI9341
+  #ifdef HAS_FULL_SCREEN
     display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.set_channel, 50, 0, 2);
   #endif
 
-  #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+  #ifdef HAS_MINI_SCREEN
     display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.set_channel, TFT_WIDTH/4, 0, 1);
   #endif
 
@@ -1202,11 +1236,11 @@ void MenuFunctions::drawStatusBar()
   wifi_scan_obj.freeRAM();
   wifi_scan_obj.old_free_ram = wifi_scan_obj.free_ram;
   display_obj.tft.fillRect(100, 0, 60, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
-  #ifdef HAS_ILI9341
+  #ifdef HAS_FULL_SCREEN
     display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", 100, 0, 2);
   #endif
 
-  #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+  #ifdef HAS_MINI_SCREEN
     display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", TFT_WIDTH/1.75, 0, 1);
   #endif
 
@@ -1238,7 +1272,7 @@ void MenuFunctions::drawStatusBar()
       the_color = TFT_RED;
   
 
-    #ifdef HAS_ILI9341
+    #ifdef HAS_FULL_SCREEN
       display_obj.tft.drawXBitmap(170,
                                   0,
                                   menu_icons[STATUS_SD],
@@ -1249,7 +1283,7 @@ void MenuFunctions::drawStatusBar()
     #endif
   #endif
 
-  #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+  #ifdef HAS_MINI_SCREEN
     display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR);
     display_obj.tft.drawString("SD", TFT_WIDTH - 12, 0, 1);
   #endif
@@ -2557,21 +2591,24 @@ void MenuFunctions::displayCurrentMenu(uint8_t start_index)
 
   if (current_menu->list != NULL)
   {
-    #ifdef HAS_ILI9341
+    #ifdef HAS_FULL_SCREEN
       display_obj.tft.setFreeFont(MENU_FONT);
     #endif
 
-    #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+    #ifdef HAS_MINI_SCREEN
       display_obj.tft.setFreeFont(NULL);
       display_obj.tft.setTextSize(1);
     #endif
     for (uint8_t i = start_index; i < current_menu->list->size(); i++)
     {
-      #ifdef HAS_ILI9341
-        if (!current_menu->list->get(i).selected)
-          display_obj.key[i].drawButton(false, current_menu->list->get(i).name);
-        else
+      #ifdef HAS_FULL_SCREEN
+        if ((current_menu->list->get(i).selected) || (current_menu->selected == i)) {
+          Serial.println("Selected button: " + (String)current_menu->list->get(i).name);
           display_obj.key[i].drawButton(true, current_menu->list->get(i).name);
+        }
+        else {
+          display_obj.key[i].drawButton(false, current_menu->list->get(i).name);          
+        }
         
         if (current_menu->list->get(i).name != text09)
           display_obj.tft.drawXBitmap(0,
@@ -2584,7 +2621,7 @@ void MenuFunctions::displayCurrentMenu(uint8_t start_index)
 
       #endif
 
-      #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+      #ifdef HAS_MINI_SCREEN
         if ((current_menu->selected == i) || (current_menu->list->get(i).selected))
           display_obj.key[i - start_index].drawButton(true, current_menu->list->get(i).name);
         else 
