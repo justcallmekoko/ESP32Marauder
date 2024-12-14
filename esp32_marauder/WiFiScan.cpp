@@ -1186,6 +1186,111 @@ void WiFiScan::parseBSSID(const char* bssidStr, uint8_t* bssid) {
          &bssid[3], &bssid[4], &bssid[5]);
 }
 
+void WiFiScan::RunLoadATList() {
+  #ifdef HAS_SD
+    // Prepare to access the file
+    File file = sd_obj.getFile("/Airtags_0.log");
+    if (!file) {
+      Serial.println("Could not open /Airtags_0.log");
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setFreeFont(NULL);
+        display_obj.tft.setCursor(0, 100);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_CYAN);
+      
+        display_obj.tft.println("Could not open /Airtags_0.log");
+      #endif
+      return;
+    }
+
+    // Prepare JSON
+    DynamicJsonDocument doc(10048);
+    DeserializationError error = deserializeJson(doc, file);
+    if (error) {
+      Serial.print("JSON deserialize error: ");
+      Serial.println(error.c_str());
+      file.close();
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setFreeFont(NULL);
+        display_obj.tft.setCursor(0, 100);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_CYAN);
+      
+        display_obj.tft.println("Could not deserialize JSON");
+        display_obj.tft.println(error.c_str());
+      #endif
+      return;
+    }
+
+    JsonArray array = doc.as<JsonArray>();
+    for (JsonObject obj : array) {
+      AirTag at;
+      at.mac = obj["mac"].as<String>();
+      at.payloadSize = obj["payload_size"];
+      at.payload = hexStringToByteArray(obj["payload"].as<String>());
+      at.selected = false;
+      airtags->add(at);
+    }
+
+    file.close();
+
+    //doc.clear();
+
+    #ifdef HAS_SCREEN
+      display_obj.tft.setTextWrap(false);
+      display_obj.tft.setFreeFont(NULL);
+      display_obj.tft.setCursor(0, 100);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextColor(TFT_CYAN);
+    
+      display_obj.tft.print("Loaded Airtags: ");
+      display_obj.tft.println((String)airtags->size());
+    #endif
+    Serial.print("Loaded Airtags:");
+    Serial.println((String)airtags->size());
+  #endif
+}
+
+void WiFiScan::RunSaveATList(bool save_as) {
+  if (save_as) {
+    sd_obj.removeFile("/Airtags_0.log");
+
+    this->startLog("Airtags");
+
+    DynamicJsonDocument jsonDocument(2048);
+
+    JsonArray jsonArray = jsonDocument.to<JsonArray>();
+    
+    for (int i = 0; i < airtags->size(); i++) {
+      const AirTag& at = airtags->get(i);
+      JsonObject jsonAt = jsonArray.createNestedObject();
+      jsonAt["mac"] = at.mac;
+      jsonAt["payload"] = byteArrayToHexString(at.payload);
+      jsonAt["payload_size"] = at.payloadSize;
+    }
+
+    String jsonString;
+    serializeJson(jsonArray, jsonString);
+
+    buffer_obj.append(jsonString);
+
+    #ifdef HAS_SCREEN
+      display_obj.tft.setTextWrap(false);
+      display_obj.tft.setFreeFont(NULL);
+      display_obj.tft.setCursor(0, 100);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextColor(TFT_CYAN);
+    
+      display_obj.tft.print("Saved Airtags: ");
+      display_obj.tft.println((String)airtags->size());
+    #endif
+    Serial.print("Saved Airtags:");
+    Serial.println((String)airtags->size());
+  }
+}
+
 void WiFiScan::RunLoadAPList() {
   #ifdef HAS_SD
     File file = sd_obj.getFile("/APs_0.log");
