@@ -24,65 +24,68 @@ void BatteryInterface::RunSetup() {
   byte error;
   byte addr;
 
-  Wire.begin(I2C_SDA, I2C_SCL);
+  #ifdef HAS_BATTERY
 
-  Serial.println("Checking for battery monitors...");
+    Wire.begin(I2C_SDA, I2C_SCL);
 
-  Wire.beginTransmission(IP5306_ADDR);
-  error = Wire.endTransmission();
+    Serial.println("Checking for battery monitors...");
 
-  if (error == 0) {
-    Serial.println("Detected IP5306");
-    this->has_ip5306 = true;
-    this->i2c_supported = true;
-  }
+    Wire.beginTransmission(IP5306_ADDR);
+    error = Wire.endTransmission();
 
-  Wire.beginTransmission(MAX17048_ADDR);
-  error = Wire.endTransmission();
+    if (error == 0) {
+      Serial.println("Detected IP5306");
+      this->has_ip5306 = true;
+      this->i2c_supported = true;
+    }
 
-  if (error == 0) {
-    if (maxlipo.begin()) {
+    Wire.beginTransmission(MAX17048_ADDR);
+    error = Wire.endTransmission();
+
+    if (error == 0) {
+      if (maxlipo.begin()) {
+        Serial.println("Detected MAX17048");
+        this->has_max17048 = true;
+        this->i2c_supported = true;
+      }
+    }
+
+    /*for(addr = 1; addr < 127; addr++ ) {
+      Wire.beginTransmission(addr);
+      error = Wire.endTransmission();
+
+      if (error == 0)
+      {
+        Serial.print("I2C device found at address 0x");
+        
+        if (addr<16)
+          Serial.print("0");
+
+        Serial.println(addr,HEX);
+        
+        if (addr == IP5306_ADDR) {
+          this->has_ip5306 = true;
+          this->i2c_supported = true;
+        }
+
+        if (addr == MAX17048_ADDR) {
+          if (maxlipo.begin()) {
+            Serial.println("Detected MAX17048");
+            this->has_max17048 = true;
+            this->i2c_supported = true;
+          }
+        }
+      }
+    }*/
+
+    /*if (this->maxlipo.begin()) {
       Serial.println("Detected MAX17048");
       this->has_max17048 = true;
       this->i2c_supported = true;
-    }
-  }
-
-  /*for(addr = 1; addr < 127; addr++ ) {
-    Wire.beginTransmission(addr);
-    error = Wire.endTransmission();
-
-    if (error == 0)
-    {
-      Serial.print("I2C device found at address 0x");
-      
-      if (addr<16)
-        Serial.print("0");
-
-      Serial.println(addr,HEX);
-      
-      if (addr == IP5306_ADDR) {
-        this->has_ip5306 = true;
-        this->i2c_supported = true;
-      }
-
-      if (addr == MAX17048_ADDR) {
-        if (maxlipo.begin()) {
-          Serial.println("Detected MAX17048");
-          this->has_max17048 = true;
-          this->i2c_supported = true;
-        }
-      }
-    }
-  }*/
-
-  /*if (this->maxlipo.begin()) {
-    Serial.println("Detected MAX17048");
-    this->has_max17048 = true;
-    this->i2c_supported = true;
-  }*/
-  
-  this->initTime = millis();
+    }*/
+    
+    this->initTime = millis();
+  #endif
 }
 
 int8_t BatteryInterface::getBatteryLevel() {
