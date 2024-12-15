@@ -587,26 +587,28 @@ void MenuFunctions::buttonNotSelected(uint8_t b, int8_t x) {
 }
 
 void MenuFunctions::buttonSelected(uint8_t b, int8_t x) {
-  if (x == -1)
-    x = b;
+  #ifndef HAS_ILI9341
+    if (x == -1)
+      x = b;
 
-  #ifdef HAS_MINI_SCREEN
-    display_obj.tft.setFreeFont(NULL);
-    display_obj.key[b].drawButton(true, current_menu->list->get(x).name);
-  #endif
+    #ifdef HAS_MINI_SCREEN
+      display_obj.tft.setFreeFont(NULL);
+      display_obj.key[b].drawButton(true, current_menu->list->get(x).name);
+    #endif
 
-  #ifdef HAS_FULL_SCREEN
-    display_obj.tft.setFreeFont(MENU_FONT);
-    display_obj.key[b].drawButton(true, current_menu->list->get(x).name);
-    if (current_menu->list->get(x).name != text09)
-          display_obj.tft.drawXBitmap(0,
-                                      KEY_Y + x * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
-                                      menu_icons[current_menu->list->get(x).icon],
-                                      ICON_W,
-                                      ICON_H,
-                                      TFT_BLACK,
-                                      current_menu->list->get(x).color);
-    display_obj.tft.setFreeFont(NULL);
+    #ifdef HAS_FULL_SCREEN
+      display_obj.tft.setFreeFont(MENU_FONT);
+      display_obj.key[b].drawButton(true, current_menu->list->get(x).name);
+      if (current_menu->list->get(x).name != text09)
+            display_obj.tft.drawXBitmap(0,
+                                        KEY_Y + x * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
+                                        menu_icons[current_menu->list->get(x).icon],
+                                        ICON_W,
+                                        ICON_H,
+                                        TFT_BLACK,
+                                        current_menu->list->get(x).color);
+      display_obj.tft.setFreeFont(NULL);
+    #endif
   #endif
 }
 
@@ -2626,13 +2628,16 @@ void MenuFunctions::displayCurrentMenu(uint8_t start_index)
     for (uint8_t i = start_index; i < current_menu->list->size(); i++)
     {
       #ifdef HAS_FULL_SCREEN
-        if ((current_menu->list->get(i).selected) || (current_menu->selected == i)) {
-          Serial.println("Selected button: " + (String)current_menu->list->get(i).name);
-          display_obj.key[i].drawButton(true, current_menu->list->get(i).name);
-        }
-        else {
-          display_obj.key[i].drawButton(false, current_menu->list->get(i).name);          
-        }
+        #ifndef HAS_ILI9341
+          if ((current_menu->list->get(i).selected) || (current_menu->selected == i)) {
+            display_obj.key[i].drawButton(true, current_menu->list->get(i).name);
+          }
+          else {
+            display_obj.key[i].drawButton(false, current_menu->list->get(i).name);          
+          }
+        #else
+          display_obj.key[i].drawButton(false, current_menu->list->get(i).name); 
+        #endif
         
         if (current_menu->list->get(i).name != text09)
           display_obj.tft.drawXBitmap(0,
