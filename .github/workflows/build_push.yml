@@ -150,6 +150,13 @@ jobs:
           ref: 8.1.0
           path: CustomEspSoftwareSerial
           
+      - name: Install Adafruit_MAX1704X
+        uses: actions/checkout@v2
+        with:
+          repository: adafruit/Adafruit_MAX1704X
+          ref: 1.0.2
+          path: CustomAdafruit_MAX1704X
+          
       #- name: Search for SD lib in arduino-esp32 v2.0.4
       #  run: |
       #    find /home/runner/work/ESP32Marauder/ESP32Marauder/2.0.4arduino-esp32 -name "SD"
