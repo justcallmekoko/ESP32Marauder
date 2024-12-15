@@ -150,6 +150,13 @@ jobs:
           ref: 8.1.0
           path: CustomEspSoftwareSerial
           
+      - name: Install Adafruit_BusIO
+        uses: actions/checkout@v2
+        with:
+          repository: adafruit/Adafruit_BusIO
+          ref: 1.15.0
+          path: CustomAdafruit_BusIO
+          
       - name: Install Adafruit_MAX1704X
         uses: actions/checkout@v2
         with:
