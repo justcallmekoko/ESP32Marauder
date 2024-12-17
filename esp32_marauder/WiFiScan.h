@@ -415,6 +415,8 @@ class WiFiScan
     void RunLoadSSIDList();
     void RunSaveAPList(bool save_as = true);
     void RunLoadAPList();
+    void RunSaveATList(bool save_as = true);
+    void RunLoadATList();
     void channelHop();
     uint8_t currentScanMode = 0;
     void main(uint32_t currentTime);

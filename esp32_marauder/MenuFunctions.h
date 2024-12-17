@@ -205,6 +205,8 @@ class MenuFunctions
     Menu loadSSIDsMenu;
     Menu saveAPsMenu;
     Menu loadAPsMenu;
+    Menu saveATsMenu;
+    Menu loadATsMenu;
 
     #ifdef HAS_GPS
       // GPS Menu

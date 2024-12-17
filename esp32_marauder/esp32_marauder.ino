@@ -182,6 +182,9 @@ void setup()
 
   Serial.begin(115200);
 
+  while(!Serial)
+    delay(10);
+
   Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
 
   #ifdef HAS_SCREEN
@@ -324,6 +327,8 @@ void setup()
   #ifdef HAS_SCREEN
     menu_function_obj.RunSetup();
   #endif
+
+  wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
   
   Serial.println(F("CLI Ready"));
   cli_obj.RunSetup();

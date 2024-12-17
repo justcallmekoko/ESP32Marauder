@@ -3,6 +3,7 @@
 #define utils_h
 
 #include <Arduino.h>
+#include <vector>
 
 struct mac_addr {
    unsigned char bytes[6];
@@ -12,6 +13,56 @@ struct Station {
   uint8_t mac[6];
   bool selected;
 };
+
+String byteArrayToHexString(const std::vector<uint8_t>& byteArray) {
+  String result;
+
+  for (size_t i = 0; i < byteArray.size(); i++) {
+    // Append the byte in "0xXX" format
+    result += "0x";
+    if (byteArray[i] < 0x10) {
+      result += "0"; // Add leading zero for single-digit hex values
+    }
+    result += String(byteArray[i], HEX);
+
+    // Add a space between bytes, but not at the end
+    if (i < byteArray.size() - 1) {
+      result += " ";
+    }
+  }
+
+  return result;
+}
+
+std::vector<uint8_t> hexStringToByteArray(const String& hexString) {
+  std::vector<uint8_t> byteArray;
+
+  // Split the input string by spaces
+  int startIndex = 0;
+  while (startIndex < hexString.length()) {
+    // Find the next space or end of string
+    int spaceIndex = hexString.indexOf(' ', startIndex);
+
+    // If no space is found, process the last token
+    if (spaceIndex == -1) {
+      spaceIndex = hexString.length();
+    }
+
+    // Extract the "0xXX" part
+    String byteString = hexString.substring(startIndex, spaceIndex);
+
+    // Convert "0xXX" to an integer and store it in the vector
+    if (byteString.startsWith("0x") || byteString.startsWith("0X")) {
+      uint8_t byte = strtol(byteString.c_str() + 2, nullptr, 16);
+      byteArray.push_back(byte);
+    }
+
+    // Move the start index to the next byte
+    startIndex = spaceIndex + 1;
+  }
+
+  return byteArray;
+}
 
 void generateRandomName(char *name, size_t length) {
     static const char alphabet[] = "abcdefghijklmnopqrstuvwxyz";

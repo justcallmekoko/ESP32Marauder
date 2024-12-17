@@ -21,10 +21,14 @@
 
 //#include <User_Setup.h>           // Default setup is root library folder
 
-#include <User_Setup_og_marauder.h>
+//#include <User_Setup_og_marauder.h>
+//#include <User_Setup_id_receiver.h>
 //#include <User_Setup_marauder_mini.h>
-//#include <User_Setup_marauder_m5stickc.h>
 //#include <User_Setup_marauder_rev_feather.h>
+//#include <User_Setup_marauder_m5stickc.h>
+//#include <User_Setup_pocket_sdr.h>
+#include <User_Setup_dual_nrf24.h>
+//#include <User_Setup_pocket_sdr_2.h>
 
 //#include <User_Setups/Setup1_ILI9341.h>  // Setup file configured for my ILI9341
 //#include <User_Setups/Setup2_ST7735.h>   // Setup file configured for my ST7735
@@ -51,7 +55,8 @@
 //#include <User_Setups/Setup20_ILI9488.h>           // Setup file for ESP8266 and ILI9488 SPI bus TFT
 //#include <User_Setups/Setup21_ILI9488.h>           // Setup file for ESP32 and ILI9488 SPI bus TFT
 
-//#include <User_Setups/Setup22_TTGO_T4.h>           // Setup file for ESP32 and TTGO T4 (BTC) ILI9341 SPI bus TFT
+//#include <User_Setups/Setup22_TTGO_T4.h>           // Setup file for ESP32 and TTGO T4 version 1.2
+//#include <User_Setups/Setup22_TTGO_T4_v1.3.h>      // Setup file for ESP32 and TTGO T4 version 1.3
 //#include <User_Setups/Setup23_TTGO_TM.h>           // Setup file for ESP32 and TTGO TM ST7789 SPI bus TFT
 //#include <User_Setups/Setup24_ST7789.h>            // Setup file configured for ST7789 240 x 240
 //#include <User_Setups/Setup25_TTGO_T_Display.h>    // Setup file for ESP32 and TTGO T-Display ST7789V SPI bus TFT
@@ -63,9 +68,20 @@
 //#include <User_Setups/Setup29_ILI9341_STM32.h>          // Setup for Nucleo board
 //#include <User_Setups/Setup30_ILI9341_Parallel_STM32.h> // Setup for Nucleo board and parallel display
 //#include <User_Setups/Setup31_ST7796_Parallel_STM32.h>  // Setup for Nucleo board and parallel display
-//#include <User_Setups/Setup32_ILI9341_STM32F103.h>      // Setup for "Blue Pill"
+//#include <User_Setups/Setup32_ILI9341_STM32F103.h>      // Setup for "Blue/Black Pill"
+
+//#include <User_Setups/Setup33_RPi_ILI9486_STM32.h>      // Setup for Nucleo board
+
+//#include <User_Setups/Setup34_ILI9481_Parallel_STM32.h> // Setup for Nucleo board and parallel display
+//#include <User_Setups/Setup35_ILI9341_STM32_Port_Bus.h> // Setup for STM32 port A parallel display
+
+//#include <User_Setups/Setup36_RPi_touch_ILI9341.h>      // Setup file configured for ESP32 and RPi TFT with touch
 
 //#include <User_Setups/Setup43_ST7735.h>            // Setup file configured for my ST7735S 80x160
+//#include <User_Setups/Setup44_TTGO_CameraPlus.h>   // Setup file for ESP32 and TTGO T-CameraPlus ST7789 SPI bus TFT    240x240
+//#include <User_Setups/Setup45_TTGO_T_Watch.h>      // Setup file for ESP32 and TTGO T-Watch ST7789 SPI bus TFT  240x240
+
+//#include <User_Setups/Setup50_SSD1963_Parallel.h>  // Setup file for ESP32 and SSD1963 TFT display
 
 //#include <User_Setups/Setup135_ST7789.h>           // Setup file for ESP8266 and ST7789 135 x 240 TFT
 
@@ -149,8 +165,20 @@
 #elif defined (RM68140_DRIVER)
      #include "TFT_Drivers/RM68140_Defines.h"
      #define  TFT_DRIVER 0x6814
+#elif defined (SSD1963_480_DRIVER)
+     #include "TFT_Drivers/SSD1963_Defines.h"
+     #define  TFT_DRIVER 0x1963
+#elif defined (SSD1963_800_DRIVER)
+     #include "TFT_Drivers/SSD1963_Defines.h"
+     #define  TFT_DRIVER 0x1963
+#elif defined (SSD1963_800ALT_DRIVER)
+     #include "TFT_Drivers/SSD1963_Defines.h"
+     #define  TFT_DRIVER 0x1963
+#elif defined (SSD1963_800BD_DRIVER)
+     #include "TFT_Drivers/SSD1963_Defines.h"
+     #define  TFT_DRIVER 0x1963
                               // <<<<<<<<<<<<<<<<<<<<<<<< ADD NEW DRIVER HERE
-                              // XYZZY_init.h and XYZZY_rotation.h must also be added in TFT_eSPI.c
+                              // XYZZY_init.h and XYZZY_rotation.h must also be added in TFT_eSPI.cpp
 #elif defined (XYZZY_DRIVER)
      #include "TFT_Drivers/XYZZY_Defines.h"
      #define  TFT_DRIVER 0x0000
