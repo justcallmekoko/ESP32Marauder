@@ -242,6 +242,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_LIST_AP_CMD_A);
     Serial.println(HELP_LIST_AP_CMD_B);
     Serial.println(HELP_LIST_AP_CMD_C);
+    Serial.println(HELP_LIST_AP_CMD_D);
     Serial.println(HELP_SEL_CMD_A);
     Serial.println(HELP_SSID_CMD_A);
     Serial.println(HELP_SSID_CMD_B);
@@ -252,6 +253,7 @@ void CommandLine::runCommand(String input) {
     #ifdef HAS_BT
       Serial.println(HELP_BT_SNIFF_CMD);
       Serial.println(HELP_BT_SPAM_CMD);
+      Serial.println(HELP_BT_SPOOFAT_CMD);
       //Serial.println(HELP_BT_SWIFTPAIR_SPAM_CMD);
       //Serial.println(HELP_BT_SAMSUNG_SPAM_CMD);
       //Serial.println(HELP_BT_SPAM_ALL_CMD);
@@ -846,15 +848,72 @@ void CommandLine::runCommand(String input) {
     // Bluetooth scan
     if (cmd_args.get(0) == BT_SNIFF_CMD) {
       #ifdef HAS_BT
-        Serial.println("Starting Bluetooth scan. Stop with " + (String)STOPSCAN_CMD);
-        #ifdef HAS_SCREEN
-          display_obj.clearScreen();
-          menu_function_obj.drawStatusBar();
-        #endif
-        wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_GREEN);
+        int bt_type_sw = this->argSearch(&cmd_args, "-t");
+
+        // Specifying type of bluetooth sniff
+        if (bt_type_sw != -1) {
+          String bt_type = cmd_args.get(bt_type_sw + 1);
+
+          bt_type.toLowerCase();
+
+          // Airtag sniff
+          if (bt_type == "airtag") {
+            Serial.println("Starting Airtag sniff. Stop with " + (String)STOPSCAN_CMD);
+            #ifdef HAS_SCREEN
+              display_obj.clearScreen();
+              menu_function_obj.drawStatusBar();
+            #endif
+            wifi_scan_obj.StartScan(BT_SCAN_AIRTAG, TFT_WHITE);
+          }
+          else if (bt_type == "flipper") {
+            Serial.println("Starting Flipper sniff. Stop with " + (String)STOPSCAN_CMD);
+            #ifdef HAS_SCREEN
+              display_obj.clearScreen();
+              menu_function_obj.drawStatusBar();
+            #endif
+            wifi_scan_obj.StartScan(BT_SCAN_FLIPPER, TFT_ORANGE);
+          }
+        }
+        // General bluetooth sniff
+        else {
+          Serial.println("Starting Bluetooth scan. Stop with " + (String)STOPSCAN_CMD);
+          #ifdef HAS_SCREEN
+            display_obj.clearScreen();
+            menu_function_obj.drawStatusBar();
+          #endif
+          wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_GREEN);
+        }
       #else
         Serial.println("Bluetooth not supported");
       #endif
+    }
+    else if (cmd_args.get(0) == BT_SPOOFAT_CMD) {
+      int at_sw = this->argSearch(&cmd_args, "-t");
+      if (at_sw != -1) {
+        #ifdef HAS_BT
+          int target_mac = cmd_args.get(at_sw + 1).toInt();
+          if (target_mac < airtags->size()) {
+            for (int i = 0; i < airtags->size(); i++) {
+              AirTag at = airtags->get(i);
+              if (i == target_mac)
+                at.selected = true;
+              else
+                at.selected = false;
+              airtags->set(i, at);
+            }
+            Serial.println("Spoofing Airtag: " + airtags->get(target_mac).mac);
+            #ifdef HAS_SCREEN
+              display_obj.clearScreen();
+              menu_function_obj.drawStatusBar();
+            #endif
+            wifi_scan_obj.StartScan(BT_SPOOF_AIRTAG, TFT_WHITE);
+          }
+          else {
+            Serial.println("Provided index is out of range: " + (String)target_mac);
+            return;
+          }
+        #endif
+      }
     }
     else if (cmd_args.get(0) == BT_SPAM_CMD) {
       int bt_type_sw = this->argSearch(&cmd_args, "-t");
@@ -905,6 +964,18 @@ void CommandLine::runCommand(String input) {
               menu_function_obj.drawStatusBar();
             #endif
             wifi_scan_obj.StartScan(BT_ATTACK_GOOGLE_SPAM, TFT_CYAN);
+          #else
+            Serial.println("Bluetooth not supported");
+          #endif
+        }
+        else if (bt_type == "flipper") {
+          #ifdef HAS_BT
+            Serial.println("Starting Flipper Spam attack. Stop with " + (String)STOPSCAN_CMD);
+            #ifdef HAS_SCREEN
+              display_obj.clearScreen();
+              menu_function_obj.drawStatusBar();
+            #endif
+            wifi_scan_obj.StartScan(BT_ATTACK_FLIPPER_SPAM, TFT_ORANGE);
           #else
             Serial.println("Bluetooth not supported");
           #endif
@@ -1060,6 +1131,7 @@ void CommandLine::runCommand(String input) {
     int ap_sw = this->argSearch(&cmd_args, "-a");
     int ss_sw = this->argSearch(&cmd_args, "-s");
     int cl_sw = this->argSearch(&cmd_args, "-c");
+    int at_sw = this->argSearch(&cmd_args, "-t");
 
     // List APs
     if (ap_sw != -1) {
@@ -1105,6 +1177,12 @@ void CommandLine::runCommand(String input) {
         }
       }
       this->showCounts(count_selected);
+    }
+    // List airtags
+    else if (at_sw != -1) {
+      for (int i = 0; i < airtags->size(); i++) {
+        Serial.println("[" + (String)i + "]MAC: " + airtags->get(i).mac);
+      }
     }
     else {
       Serial.println("You did not specify which list to show");

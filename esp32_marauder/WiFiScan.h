@@ -4,9 +4,11 @@
 #define WiFiScan_h
 
 #include "configs.h"
+#include "utils.h"
 
 #include <ArduinoJson.h>
 #include <algorithm>
+#include <vector>
 
 #ifdef HAS_BT
   #include <NimBLEDevice.h>
@@ -92,6 +94,10 @@
 #define BT_ATTACK_SAMSUNG_SPAM 39
 #define WIFI_SCAN_GPS_NMEA 40
 #define BT_ATTACK_GOOGLE_SPAM 41
+#define BT_ATTACK_FLIPPER_SPAM 42
+#define BT_SCAN_AIRTAG 43
+#define BT_SPOOF_AIRTAG 44
+#define BT_SCAN_FLIPPER 45
 
 #define GRAPH_REFRESH 100
 
@@ -143,13 +149,25 @@ esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx, const void *buffer, int len, b
 };*/
 
 
-struct mac_addr {
+/*struct mac_addr {
    unsigned char bytes[6];
 };
 
 struct Station {
   uint8_t mac[6];
   bool selected;
+};*/
+
+struct AirTag {
+    String mac;                  // MAC address of the AirTag
+    std::vector<uint8_t> payload; // Payload data
+    uint16_t payloadSize;
+    bool selected;
+};
+
+struct Flipper {
+  String mac;
+  String name;
 };
 
 class WiFiScan
@@ -262,7 +280,9 @@ class WiFiScan
       Microsoft,
       Apple,
       Samsung,
-      Google
+      Google,
+      FlipperZero,
+      Airtag
     };
 
       #ifdef HAS_BT
@@ -291,9 +311,12 @@ class WiFiScan
     void clearMacHistory();
     void executeWarDrive();
     void executeSourApple();
+    void executeSpoofAirtag();
     void executeSwiftpairSpam(EBLEPayloadType type);
     void startWardriverWiFi();
-    void generateRandomMac(uint8_t* mac);
+    //void generateRandomMac(uint8_t* mac);
+    //void generateRandomName(char *name, size_t length);
+    String processPwnagotchiBeacon(const uint8_t* frame, int length);
 
     void startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_string);
 
@@ -368,6 +391,8 @@ class WiFiScan
     void RunSetup();
     int clearSSIDs();
     int clearAPs();
+    int clearAirtags();
+    int clearFlippers();
     int clearStations();
     bool addSSID(String essid);
     int generateSSIDs(int count = 20);
@@ -390,17 +415,20 @@ class WiFiScan
     void RunLoadSSIDList();
     void RunSaveAPList(bool save_as = true);
     void RunLoadAPList();
+    void RunSaveATList(bool save_as = true);
+    void RunLoadATList();
     void channelHop();
     uint8_t currentScanMode = 0;
     void main(uint32_t currentTime);
     void StartScan(uint8_t scan_mode, uint16_t color = 0);
     void StopScan(uint8_t scan_mode);
-    const char* generateRandomName();
+    void setBaseMacAddress(uint8_t macAddr[6]);
+    //const char* generateRandomName();
 
     bool save_serial = false;
     void startPcap(String file_name);
     void startLog(String file_name);
-    String macToString(const Station& station);
+    //String macToString(const Station& station);
 
     static void getMAC(char *addr, uint8_t* data, uint16_t offset);
     static void pwnSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
