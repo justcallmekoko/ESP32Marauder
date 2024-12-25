@@ -113,7 +113,6 @@ CommandLine cli_obj;
   stickcLED stickc_led;
 #elif defined(HAS_NEOPIXEL_LED)
   LedInterface led_obj;
-#else
 #endif
 
 const String PROGMEM version_number = MARAUDER_VERSION;
@@ -299,7 +298,6 @@ void setup()
     stickc_led.RunSetup();
   #elif defined(HAS_NEOPIXEL_LED)
     led_obj.RunSetup();
-  #else
   #endif
 
   #ifdef HAS_SCREEN
@@ -410,7 +408,6 @@ void loop()
     stickc_led.main();
   #elif defined(HAS_NEOPIXEL_LED)
     led_obj.main(currentTime);
-  #else
   #endif
 
   //if (wifi_scan_obj.currentScanMode == OTA_UPDATE)
