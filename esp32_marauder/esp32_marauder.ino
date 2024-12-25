@@ -111,8 +111,9 @@ CommandLine cli_obj;
   xiaoLED xiao_led;
 #elif defined(MARAUDER_M5STICKC)
   stickcLED stickc_led;
-#else
+#elif defined(HAS_NEOPIXEL_LED)
   LedInterface led_obj;
+#else
 #endif
 
 const String PROGMEM version_number = MARAUDER_VERSION;
@@ -296,8 +297,9 @@ void setup()
     xiao_led.RunSetup();
   #elif defined(MARAUDER_M5STICKC)
     stickc_led.RunSetup();
-  #else
+  #elif defined(HAS_NEOPIXEL_LED)
     led_obj.RunSetup();
+  #else
   #endif
 
   #ifdef HAS_SCREEN
@@ -406,8 +408,9 @@ void loop()
     xiao_led.main();
   #elif defined(MARAUDER_M5STICKC)
     stickc_led.main();
-  #else
+  #elif defined(HAS_NEOPIXEL_LED)
     led_obj.main(currentTime);
+  #else
   #endif
 
   //if (wifi_scan_obj.currentScanMode == OTA_UPDATE)

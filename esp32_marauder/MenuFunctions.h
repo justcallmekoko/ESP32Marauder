@@ -11,7 +11,9 @@
 
 #include "WiFiScan.h"
 #include "BatteryInterface.h"
-#include "SDInterface.h"
+#if defined(HAS_SD) || defined(USE_SD)
+  #include "SDInterface.h"
+#endif
 #include "settings.h"
 
 #ifdef HAS_BUTTONS
@@ -24,7 +26,9 @@
 #endif
 
 extern WiFiScan wifi_scan_obj;
-extern SDInterface sd_obj;
+#if defined(HAS_SD) || defined(USE_SD)
+  extern SDInterface sd_obj;
+#endif
 extern BatteryInterface battery_obj;
 extern Settings settings_obj;
 
@@ -164,19 +168,17 @@ class MenuFunctions
     Menu htmlMenu;
     Menu miniKbMenu;
     Menu saveFileMenu;
-
-    // Bluetooth menu stuff
-    Menu bluetoothSnifferMenu;
-    Menu bluetoothAttackMenu;
-
+    #ifdef HAS_BT
+      // Bluetooth menu stuff
+      Menu bluetoothSnifferMenu;
+      Menu bluetoothAttackMenu;
+    #endif
     // Settings things menus
     Menu generateSSIDsMenu;
 
     static void lv_tick_handler();
 
     // Menu icons
-
-
 
     void addNodes(Menu* menu, String name, uint16_t color, Menu* child, int place, std::function<void()> callable, bool selected = false, String command = "");
     void battery(bool initial = false);

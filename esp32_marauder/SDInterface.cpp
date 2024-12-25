@@ -3,94 +3,95 @@
 
 
 bool SDInterface::initSD() {
-  #ifdef HAS_SD
-    String display_string = "";
+    #ifdef HAS_SD
+      String display_string = "";
 
-    #ifdef KIT
-      pinMode(SD_DET, INPUT);
-      if (digitalRead(SD_DET) == LOW) {
-        Serial.println(F("SD Card Detect Pin Detected"));
-      }
-      else {
-        Serial.println(F("SD Card Detect Pin Not Detected"));
+      #ifdef KIT
+        pinMode(SD_DET, INPUT);
+        if (digitalRead(SD_DET) == LOW) {
+          Serial.println(F("SD Card Detect Pin Detected"));
+        }
+        else {
+          Serial.println(F("SD Card Detect Pin Not Detected"));
+          this->supported = false;
+          return false;
+        }
+      #endif
+
+      pinMode(SD_CS, OUTPUT);
+
+      delay(10);
+      #if defined(MARAUDER_M5STICKC)
+        /* Set up SPI SD Card using external pin header
+        StickCPlus Header - SPI SD Card Reader
+                    3v3   -   3v3
+                    GND   -   GND
+                    G0   -   CLK
+                G36/G25   -   MISO
+                    G26   -   MOSI
+                          -   CS (jumper to SD Card GND Pin)
+        */
+        enum { SPI_SCK = 0, SPI_MISO = 36, SPI_MOSI = 26 };
+        this->spiExt = new SPIClass();
+        this->spiExt->begin(SPI_SCK, SPI_MISO, SPI_MOSI, SD_CS);
+        if (!SD.begin(SD_CS, *(this->spiExt))) {
+      #else
+        if (!SD.begin(SD_CS)) {
+      #endif
+        Serial.println(F("Failed to mount SD Card"));
         this->supported = false;
         return false;
       }
-    #endif
+      else {
+        this->supported = true;
+        this->cardType = SD.cardType();
+        //if (cardType == CARD_MMC)
+        //  Serial.println(F("SD: MMC Mounted"));
+        //else if(cardType == CARD_SD)
+        //    Serial.println(F("SD: SDSC Mounted"));
+        //else if(cardType == CARD_SDHC)
+        //    Serial.println(F("SD: SDHC Mounted"));
+        //else
+        //    Serial.println(F("SD: UNKNOWN Card Mounted"));
 
-    pinMode(SD_CS, OUTPUT);
+        this->cardSizeMB = SD.cardSize() / (1024 * 1024);
+      
+        //Serial.printf("SD Card Size: %lluMB\n", this->cardSizeMB);
 
-    delay(10);
-    #if defined(MARAUDER_M5STICKC)
-      /* Set up SPI SD Card using external pin header
-      StickCPlus Header - SPI SD Card Reader
-                  3v3   -   3v3
-                  GND   -   GND
-                   G0   -   CLK
-              G36/G25   -   MISO
-                  G26   -   MOSI
-                        -   CS (jumper to SD Card GND Pin)
-      */
-      enum { SPI_SCK = 0, SPI_MISO = 36, SPI_MOSI = 26 };
-      this->spiExt = new SPIClass();
-      this->spiExt->begin(SPI_SCK, SPI_MISO, SPI_MOSI, SD_CS);
-      if (!SD.begin(SD_CS, *(this->spiExt))) {
-    #else
-      if (!SD.begin(SD_CS)) {
-    #endif
-      Serial.println(F("Failed to mount SD Card"));
-      this->supported = false;
-      return false;
-    }
-    else {
-      this->supported = true;
-      this->cardType = SD.cardType();
-      //if (cardType == CARD_MMC)
-      //  Serial.println(F("SD: MMC Mounted"));
-      //else if(cardType == CARD_SD)
-      //    Serial.println(F("SD: SDSC Mounted"));
-      //else if(cardType == CARD_SDHC)
-      //    Serial.println(F("SD: SDHC Mounted"));
-      //else
-      //    Serial.println(F("SD: UNKNOWN Card Mounted"));
+        if (this->supported) {
+          const int NUM_DIGITS = log10(this->cardSizeMB) + 1;
 
-      this->cardSizeMB = SD.cardSize() / (1024 * 1024);
+          char sz[NUM_DIGITS + 1];
+
+          sz[NUM_DIGITS] =  0;
+          for ( size_t i = NUM_DIGITS; i--; this->cardSizeMB /= 10)
+          {
+              sz[i] = '0' + (this->cardSizeMB % 10);
+              display_string.concat((String)sz[i]);
+          }
     
-      //Serial.printf("SD Card Size: %lluMB\n", this->cardSizeMB);
-
-      if (this->supported) {
-        const int NUM_DIGITS = log10(this->cardSizeMB) + 1;
-
-        char sz[NUM_DIGITS + 1];
-
-        sz[NUM_DIGITS] =  0;
-        for ( size_t i = NUM_DIGITS; i--; this->cardSizeMB /= 10)
-        {
-            sz[i] = '0' + (this->cardSizeMB % 10);
-            display_string.concat((String)sz[i]);
+          this->card_sz = sz;
         }
-  
-        this->card_sz = sz;
-      }
 
-      if (!SD.exists("/SCRIPTS")) {
-        Serial.println("/SCRIPTS does not exist. Creating...");
+        if (!SD.exists("/SCRIPTS")) {
+          Serial.println("/SCRIPTS does not exist. Creating...");
 
-        SD.mkdir("/SCRIPTS");
-        Serial.println("/SCRIPTS created");
-      }
+          SD.mkdir("/SCRIPTS");
+          Serial.println("/SCRIPTS created");
+        }
 
-      this->sd_files = new LinkedList<String>();
+        this->sd_files = new LinkedList<String>();
 
-      this->sd_files->add("Back");
-    
-      return true;
-  }
+        this->sd_files->add("Back");
+      
+        return true;
+    }
 
-  #else
-    Serial.println("SD support disabled, skipping init");
-    return false;
-  #endif
+    #else
+      Serial.println("SD support disabled, skipping init");
+      return false;
+    #endif
+
 }
 
 File SDInterface::getFile(String path) {

