@@ -299,7 +299,7 @@ void EvilPortal::main(uint8_t scan_mode) {
       String logValue1 =
           "u: " + this->user_name;
       String logValue2 = "p: " + this->password;
-      String full_string = logValue1 + " " + logValue2 + "\n";
+      String full_string = logValue1 + "\n" + logValue2 + "\n";
       Serial.print(full_string);
       buffer_obj.append(full_string);
       #ifdef HAS_SCREEN
