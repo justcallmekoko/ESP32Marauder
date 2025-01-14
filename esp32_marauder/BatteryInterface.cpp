@@ -110,6 +110,14 @@ int8_t BatteryInterface::getBatteryLevel() {
 
 
   if (this->has_max17048) {
-    return this->maxlipo.cellPercent();
+    float percent = this->maxlipo.cellPercent();
+
+    // Sometimes we dumb
+    if (percent >= 100)
+      return 100;
+    else if (percent <= 0)
+      return 0;
+    else
+      return percent;
   }
 }

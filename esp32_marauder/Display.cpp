@@ -287,8 +287,6 @@ void Display::displayBuffer(bool do_clear)
 {
   if (this->display_buffer->size() > 0)
   {
-    delay(1);
-
     while (display_buffer->size() > 0)
     {
 

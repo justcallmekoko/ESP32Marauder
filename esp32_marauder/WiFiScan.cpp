@@ -3040,7 +3040,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
 
       if (!in_list) {
       
-        delay(random(0, 10));
+        //delay(random(0, 10));
         Serial.print("RSSI: ");
         Serial.print(snifferPacket->rx_ctrl.rssi);
         Serial.print(" Ch: ");
@@ -3086,12 +3086,12 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
         Serial.print(" ");
 
         #ifdef HAS_SCREEN
-          if (display_obj.display_buffer->size() == 0)
-          {
-            display_obj.loading = true;
-            display_obj.display_buffer->add(display_string);
-            display_obj.loading = false;
-          }
+          //if (display_obj.display_buffer->size() == 0)
+          //{
+          //display_obj.loading = true;
+          display_obj.display_buffer->add(display_string);
+          //display_obj.loading = false;
+          //}
         #endif
         
         if (essid == "") {
@@ -3246,12 +3246,12 @@ void WiFiScan::apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
         Serial.print(" ");
 
         #ifdef HAS_SCREEN
-          if (display_obj.display_buffer->size() == 0)
-          {
-            display_obj.loading = true;
-            display_obj.display_buffer->add(display_string);
-            display_obj.loading = false;
-          }
+          //if (display_obj.display_buffer->size() == 0)
+          //{
+          //  display_obj.loading = true;
+          display_obj.display_buffer->add(display_string);
+          //  display_obj.loading = false;
+          //}
         #endif
         
         if (essid == "") {
