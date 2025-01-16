@@ -1999,7 +1999,7 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
       display_obj.tft.setTextColor(TFT_WHITE, color);
       #ifdef HAS_FULL_SCREEN
         display_obj.tft.fillRect(0,16,240,16, color);
-        display_obj.tft.drawCentreString(text_table4[38],120,16,2);
+        display_obj.tft.drawCentreString(text_table1[45],120,16,2);
       #endif
       #ifdef HAS_ILI9341
         display_obj.touchToExit();
@@ -4547,48 +4547,77 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
     const WifiMgmtHdr *hdr = &ipkt->hdr;
 
     // If we dont the buffer size is not 0, don't write or else we get CORRUPT_HEAP
-    #ifdef HAS_ILI9341
-      if (snifferPacket->payload[0] == 0x80)
-      {
-        num_beacon++;
-      }
-      else if ((snifferPacket->payload[0] == 0xA0 || snifferPacket->payload[0] == 0xC0 ))
-      {
-        num_deauth++;
-      }
-      else if (snifferPacket->payload[0] == 0x40)
-      {
-        num_probe++;
-      }
-    #endif
-
-    char addr[] = "00:00:00:00:00:00";
-    getMAC(addr, snifferPacket->payload, 10);
-    display_string.concat(addr);
-
-    int temp_len = display_string.length();
-
     #ifdef HAS_SCREEN
-      for (int i = 0; i < 40 - temp_len; i++)
-      {
-        display_string.concat(" ");
-      }
-    
-      //Serial.print(" ");
-    
-      #ifdef SCREEN_BUFFER
-        if (display_obj.display_buffer->size() == 0)
+      #ifdef HAS_ILI9341
+        if (snifferPacket->payload[0] == 0x80)
         {
-          display_obj.loading = true;
-          display_obj.display_buffer->add(display_string);
-          display_obj.loading = false;
-          Serial.println(display_string);
+          num_beacon++;
         }
+        else if ((snifferPacket->payload[0] == 0xA0 || snifferPacket->payload[0] == 0xC0 ))
+        {
+          num_deauth++;
+        }
+        else if (snifferPacket->payload[0] == 0x40)
+        {
+          num_probe++;
+        }
+      #else
+        if (snifferPacket->payload[0] == 0x80)
+          display_string.concat(";grn;");
+        else if ((snifferPacket->payload[0] == 0xA0 || snifferPacket->payload[0] == 0xC0 ))
+          display_string.concat(";red;");
+        else if (snifferPacket->payload[0] == 0x40)
+          display_string.concat(";cyn;");
+        else
+          display_string.concat(";mgn;");
       #endif
     #endif
-
-    buffer_obj.append(snifferPacket, len);
   }
+  else {
+    #ifdef HAS_SCREEN
+      #ifndef HAS_ILI9341
+        display_string.concat(";wht;");
+      #endif
+    #endif
+  }
+
+  char src_addr[] = "00:00:00:00:00:00";
+  char dst_addr[] = "00:00:00:00:00:00";
+  getMAC(src_addr, snifferPacket->payload, 10);
+  getMAC(dst_addr, snifferPacket->payload, 4);
+  display_string.concat(src_addr);
+  display_string.concat(" -> ");
+  display_string.concat(dst_addr);
+
+  int temp_len = display_string.length();
+
+  #ifdef HAS_SCREEN
+    // Fill blank space
+    for (int i = 0; i < 40 - temp_len; i++)
+    {
+      display_string.concat(" ");
+    }
+  
+    //Serial.print(" ");
+  
+    #ifdef SCREEN_BUFFER
+      //if (display_obj.display_buffer->size() == 0)
+      //{
+      //  display_obj.loading = true;
+        //while(display_obj.display_buffer->size() >= 10)
+        //  delay(10);
+        if (display_obj.display_buffer->size() >= 10)
+          return;
+
+        display_obj.display_buffer->add(display_string);
+      //  display_obj.loading = false;
+        Serial.println(display_string);
+      //}
+    #endif
+  #endif
+
+  buffer_obj.append(snifferPacket, len);
+  //}
 }
 
 void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
