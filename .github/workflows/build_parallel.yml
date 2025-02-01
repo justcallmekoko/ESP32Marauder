@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        boards:
+        board:
           - {
               name: "Flipper Zero WiFi Dev Board",
               flag: "-DMARAUDER_FLIPPER",
@@ -25,7 +25,7 @@ jobs:
               file_name: "flipper",
               tft: false,
               tft_file: ""
-          },
+            },
           - {
               name: "Flipper Zero Multi Board",
               flag: "-DMARAUDER_FLIPPER",
@@ -33,7 +33,7 @@ jobs:
               file_name: "multiboardS3"
               tft: false,
               tft_file: ""
-          },
+            },
           - {
               name: "OG Marauder",
               flag: "-DMARAUDER_V4",
@@ -41,7 +41,7 @@ jobs:
               file_name: "og",
               tft: true,
               tft_file: "User_Setup_og_marauder.h"
-          },
+            },
           - {
               name: "Marauder v6",
               flag: "-DMARAUDER_V6",
@@ -49,7 +49,7 @@ jobs:
               file_name: "v6",
               tft: true,
               tft_file: "User_Setup_og_marauder.h"
-          },
+            },
           - {
               name: "Marauder v6.1",
               flag: "-DMARAUDER_V6_1",
@@ -57,7 +57,7 @@ jobs:
               file_name: "v6_1",
               tft: true,
               tft_file: "User_Setup_og_marauder.h"
-          },
+            },
           - {
               name: "Marauder Kit",
               flag: "-DMARAUDER_KIT",
@@ -65,7 +65,7 @@ jobs:
               file_name: "kit",
               tft: true,
               tft_file: "User_Setup_og_marauder.h"
-          },
+            },
           - {
               name: "Marauder Mini",
               flag: "-DMARAUDER_MINI",
@@ -73,7 +73,7 @@ jobs:
               file_name: "mini",
               tft: true,
               tft_file: "User_Setup_marauder_mini.h"
-          },
+            },
           - {
               name: "ESP32 LDDB",
               flag: "-DESP32_LDDB",
@@ -81,7 +81,7 @@ jobs:
               file_name: "esp32_lddb",
               tft: false,
               tft_file: ""
-          },
+            },
           - {
               name: "Marauder Dev Board Pro",
               flag: "-DMARAUDER_DEV_BOARD_PRO",
@@ -89,7 +89,7 @@ jobs:
               file_name: "marauder_dev_board_pro",
               tft: false,
               tft_file: ""
-          },
+            },
           - {
               name: "M5StickCPlus",
               flag: "-DMARAUDER_M5STICKC",
@@ -97,7 +97,7 @@ jobs:
               file_name: "m5stickc_plus",
               tft: true,
               tft_file: "User_Setup_marauder_m5stickc.h"
-          },
+            },
           - {
               name: "M5StickCPlus 2",
               flag: "-DMARAUDER_M5STICKCP2",
@@ -105,7 +105,7 @@ jobs:
               file_name: "m5stickc_plus2",
               tft: true,
               tft_file: "User_Setup_marauder_m5stickcp2.h"
-          },
+            },
           - {
               name: "Rev Feather",
               flag: "MARAUDER_REV_FEATHER",
@@ -113,7 +113,7 @@ jobs:
               file_name: "rev_feather",
               tft: true,
               tft_file: "User_Setup_marauder_rev_feather.h"
-          },
+            },
           - {
               name: "Marauder v7",
               flag: "MARAUDER_V7",
@@ -121,7 +121,7 @@ jobs:
               file_name: "marauder_v7",
               tft: true,
               tft_file: "User_Setup_dual_nrf24.h"
-          }
+            }
           
     steps:
       - name: Checkout Code
@@ -272,29 +272,29 @@ jobs:
       - name: Configure TFT_eSPI (if needed)
         run: |
           pwd
-          if [[ ${{ matrix.boards.tft }} == true ]]; then
+          if [[ ${{ matrix.board.tft }} == true ]]; then
             find /home/runner/ -name "*TFT_eSPI*"
-            sed -i 's/^#include <${{ matrix.boards.tft_file }}>/\/\/#include <${{ matrix.boards.tft_file }}>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
+            sed -i 's/^#include <${{ matrix.board.tft_file }}>/\/\/#include <${{ matrix.board.tft_file }}>/' /home/runner/Arduino/libraries/CustomTFT_eSPI/User_Setup_Select.h
           fi
 
-      - name: Build Marauder for ${{ matrix.boards.name }}
+      - name: Build Marauder for ${{ matrix.board.name }}
         uses: ArminJo/arduino-test-compile@v3.2.1
         with:
           sketch-names: esp32_marauder.ino
-          arduino-board-fqbn: ${{ matrix.boards.fbqn }}
-          extra-arduino-cli-args: "--warnings none --build-property build.extra_flags=${{ matrix.boards.flag }}"
+          arduino-board-fqbn: ${{ matrix.board.fbqn }}
+          extra-arduino-cli-args: "--warnings none --build-property build.extra_flags=${{ matrix.board.flag }}"
           arduino-platform: esp32:esp32@2.0.11
           platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.11/package_esp32_dev_index.json
 
-      - name: Rename Marauder ${{ matrix.boards.name }} bin
+      - name: Rename Marauder ${{ matrix.board.name }} bin
         run: |
-          mv ./esp32_marauder/build/esp32.esp32.esp32s2/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.esp32s2/esp32_marauder.${{ matrix.boards.file_name }}.bin
+          mv ./esp32_marauder/build/esp32.esp32.esp32s2/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.esp32s2/esp32_marauder.${{ matrix.board.file_name }}.bin
 
-      - name: 'Upload ${{ matrix.boards.name }} Artifact'
+      - name: 'Upload ${{ matrix.board.name }} Artifact'
         uses: actions/upload-artifact@v4
         with:
-          name: esp32_marauder.${{ matrix.boards.file_name }}.bin
-          path: ./esp32_marauder/build/esp32.esp32.esp32s2/esp32_marauder.${{ matrix.boards.file_name }}.bin
+          name: esp32_marauder.${{ matrix.board.file_name }}.bin
+          path: ./esp32_marauder/build/esp32.esp32.esp32s2/esp32_marauder.${{ matrix.board.file_name }}.bin
           retention-days: 5
 
 post_compile_steps:
