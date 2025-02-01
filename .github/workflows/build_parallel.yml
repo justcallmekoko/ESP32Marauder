@@ -9,7 +9,6 @@ on:
       - "*"
   pull_request:
 
-
 jobs:
   compile_sketch:
     name: build ${{ matrix.board.name }}
@@ -18,110 +17,19 @@ jobs:
       fail-fast: false
       matrix:
         board:
-          - {
-              name: "Flipper Zero WiFi Dev Board",
-              flag: "-DMARAUDER_FLIPPER",
-              fbqn: "esp32:esp32:esp32s2:PartitionScheme=min_spiffs,FlashSize=4M,PSRAM=enabled",
-              file_name: "flipper",
-              tft: false,
-              tft_file: "",
-            }
-          - {
-              name: "Flipper Zero Multi Board",
-              flag: "-DMARAUDER_FLIPPER",
-              fbqn: "esp32:esp32:esp32s3:PartitionScheme=min_spiffs,FlashSize=8M,PSRAM=enabled",
-              file_name: "multiboardS3",
-              tft: false,
-              tft_file: "",
-            }
-          - {
-              name: "OG Marauder",
-              flag: "-DMARAUDER_V4",
-              fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",
-              file_name: "og",
-              tft: true,
-              tft_file: "User_Setup_og_marauder.h",
-            }
-          - {
-              name: "Marauder v6",
-              flag: "-DMARAUDER_V6",
-              fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",
-              file_name: "v6",
-              tft: true,
-              tft_file: "User_Setup_og_marauder.h",
-            }
-          - {
-              name: "Marauder v6.1",
-              flag: "-DMARAUDER_V6_1",
-              fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",
-              file_name: "v6_1",
-              tft: true,
-              tft_file: "User_Setup_og_marauder.h",
-            }
-          - {
-              name: "Marauder Kit",
-              flag: "-DMARAUDER_KIT",
-              fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",
-              file_name: "kit",
-              tft: true,
-              tft_file: "User_Setup_og_marauder.h",
-            }
-          - {
-              name: "Marauder Mini",
-              flag: "-DMARAUDER_MINI",
-              fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",
-              file_name: "mini",
-              tft: true,
-              tft_file: "User_Setup_marauder_mini.h",
-            }
-          - {
-              name: "ESP32 LDDB",
-              flag: "-DESP32_LDDB",
-              fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",
-              file_name: "esp32_lddb",
-              tft: false,
-              tft_file: "",
-            }
-          - {
-              name: "Marauder Dev Board Pro",
-              flag: "-DMARAUDER_DEV_BOARD_PRO",
-              fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",
-              file_name: "marauder_dev_board_pro",
-              tft: false,
-              tft_file: "",
-            }
-          - {
-              name: "M5StickCPlus",
-              flag: "-DMARAUDER_M5STICKC",
-              fbqn: "esp32:esp32:m5stick-c:PartitionScheme=min_spiffs",
-              file_name: "m5stickc_plus",
-              tft: true,
-              tft_file: "User_Setup_marauder_m5stickc.h",
-            }
-          - {
-              name: "M5StickCPlus 2",
-              flag: "-DMARAUDER_M5STICKCP2",
-              fbqn: "esp32:esp32:m5stick-c:PartitionScheme=min_spiffs",
-              file_name: "m5stickc_plus2",
-              tft: true,
-              tft_file: "User_Setup_marauder_m5stickcp2.h",
-            }
-          - {
-              name: "Rev Feather",
-              flag: "MARAUDER_REV_FEATHER",
-              fbqn: "esp32:esp32:esp32s2:PartitionScheme=min_spiffs,FlashSize=4M,PSRAM=enabled",
-              file_name: "rev_feather",
-              tft: true,
-              tft_file: "User_Setup_marauder_rev_feather.h",
-            }
-          - {
-              name: "Marauder v7",
-              flag: "MARAUDER_V7",
-              fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",
-              file_name: "marauder_v7",
-              tft: true,
-              tft_file: "User_Setup_dual_nrf24.h",
-            }
+          - { name: "Flipper Zero WiFi Dev Board", flag: "-DMARAUDER_FLIPPER", fbqn: "esp32:esp32:esp32s2:PartitionScheme=min_spiffs,FlashSize=4M,PSRAM=enabled", file_name: "flipper", tft: false, tft_file: "", build_dir: "esp32s2" }
+          - { name: "Flipper Zero Multi Board", flag: "-DMARAUDER_FLIPPER", fbqn: "esp32:esp32:esp32s3:PartitionScheme=min_spiffs,FlashSize=8M,PSRAM=enabled", file_name: "multiboardS3", tft: false, tft_file: "", build_dir: "esp32s3" }
+          - { name: "OG Marauder", flag: "-DMARAUDER_V4", fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs", file_name: "og", tft: true, tft_file: "User_Setup_og_marauder.h", build_dir: "d32" }
+          - { name: "Marauder v6", flag: "-DMARAUDER_V6", fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs", file_name: "v6", tft: true, tft_file: "User_Setup_og_marauder.h", build_dir: "d32" }
+          - { name: "Marauder v6.1", flag: "-DMARAUDER_V6_1", fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs", file_name: "v6_1", tft: true, tft_file: "User_Setup_og_marauder.h", build_dir: "d32" }
+          - { name: "Marauder Kit", flag: "-DMARAUDER_KIT", fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs", file_name: "kit", tft: true, tft_file: "User_Setup_og_marauder.h", build_dir: "d32" }
+          - { name: "Marauder Mini", flag: "-DMARAUDER_MINI", fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs", file_name: "mini", tft: true, tft_file: "User_Setup_marauder_mini.h", build_dir: "d32" }
+          - { name: "ESP32 LDDB", flag: "-DESP32_LDDB", fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs", file_name: "esp32_lddb", tft: false, tft_file: "", build_dir: "d32" }
+          - { name: "Marauder Dev Board Pro", flag: "-DMARAUDER_DEV_BOARD_PRO", fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs", file_name: "marauder_dev_board_pro", tft: false, tft_file: "", build_dir: "d32" }
+          - { name: "M5StickCPlus", flag: "-DMARAUDER_M5STICKC", fbqn: "esp32:esp32:m5stick-c:PartitionScheme=min_spiffs", file_name: "m5stickc_plus", tft: true, tft_file: "User_Setup_marauder_m5stickc.h", build_dir: "m5stick-c" }
+          - { name: "M5StickCPlus 2", flag: "-DMARAUDER_M5STICKCP2", fbqn: "esp32:esp32:m5stick-c:PartitionScheme=min_spiffs", file_name: "m5stickc_plus2", tft: true, tft_file: "User_Setup_marauder_m5stickcp2.h", build_dir: "m5stick-c" }
+          - { name: "Rev Feather", flag: "MARAUDER_REV_FEATHER", fbqn: "esp32:esp32:esp32s2:PartitionScheme=min_spiffs,FlashSize=4M,PSRAM=enabled", file_name: "rev_feather", tft: true, tft_file: "User_Setup_marauder_rev_feather.h", build_dir: "esp32s2" }
+          - { name: "Marauder v7", flag: "MARAUDER_V7", fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs", file_name: "marauder_v7", tft: true, tft_file: "User_Setup_dual_nrf24.h", build_dir: "d32" }
           
     steps:
       - name: Checkout Code
@@ -288,33 +196,30 @@ jobs:
 
       - name: Rename Marauder ${{ matrix.board.name }} bin
         run: |
-          mv ./esp32_marauder/build/esp32.esp32.esp32s2/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.esp32s2/esp32_marauder.${{ matrix.board.file_name }}.bin
+          mv ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.${{ matrix.board.file_name }}.bin
 
-      - name: 'Upload ${{ matrix.board.name }} Artifact'
+      - name: Upload ${{ matrix.board.name }} Artifact
         uses: actions/upload-artifact@v4
         with:
           name: esp32_marauder.${{ matrix.board.file_name }}.bin
-          path: ./esp32_marauder/build/esp32.esp32.esp32s2/esp32_marauder.${{ matrix.board.file_name }}.bin
+          path: ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.${{ matrix.board.file_name }}.bin
           retention-days: 5
 
   post_compile_steps:
     name: Create Release
     runs-on: ubuntu-latest
     needs: [compile_sketch]
-    if: github.ref_type == 'tag'
+    if: ${{ github.ref_type == 'tag' }}
     steps: 
       - uses: actions/checkout@v4
-      - name: Download Artifacts
-        id: create_release
       - uses: actions/download-artifact@v4
         with:
           merge-multiple: true
-
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          name: Marauder Release github.ref_name
-          tag_name: github.ref_name
+          name: "Marauder Release ${{ github.ref_name }}"
+          tag_name: ${{ github.ref_name }}
           generate_release_notes: true
           files: |
             esp32_marauder.*.bin
