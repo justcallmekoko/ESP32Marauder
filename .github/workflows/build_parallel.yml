@@ -303,17 +303,18 @@ jobs:
     needs: [compile_sketch]
     if: github.ref_type == 'tag'
     steps: 
-    - name: Download Artifacts
-      id: create_release
-    - uses: actions/download-artifact@v4
-      with:
-        merge-multiple: true
+      - uses: actions/checkout@v4
+      - name: Download Artifacts
+        id: create_release
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
 
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        name: Marauder Release github.ref_name
-        tag_name: github.ref_name
-        generate_release_notes: true
-        files: |
-          esp32_marauder.*.bin
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Marauder Release github.ref_name
+          tag_name: github.ref_name
+          generate_release_notes: true
+          files: |
+            esp32_marauder.*.bin
