@@ -308,13 +308,6 @@ post_compile_steps:
   - uses: actions/download-artifact@v4
     with:
       merge-multiple: true
-  - name: List all files
-        if: always()
-        run: |
-          set -x
-          pwd
-          ls -all
-          tree
 
   - name: Create Release
     uses: softprops/action-gh-release@v1
