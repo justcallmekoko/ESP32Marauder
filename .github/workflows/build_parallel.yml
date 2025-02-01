@@ -17,17 +17,17 @@ jobs:
       fail-fast: false
       matrix:
         board:
-          - { name: "Flipper Zero WiFi Dev Board", flag: "-DMARAUDER_FLIPPER", fbqn: "esp32:esp32:esp32s2:PartitionScheme=min_spiffs,FlashSize=4M,PSRAM=enabled", file_name: "flipper", tft: false, tft_file: "", build_dir: "esp32s2" }
-          - { name: "Flipper Zero Multi Board", flag: "-DMARAUDER_FLIPPER", fbqn: "esp32:esp32:esp32s3:PartitionScheme=min_spiffs,FlashSize=8M,PSRAM=enabled", file_name: "multiboardS3", tft: false, tft_file: "", build_dir: "esp32s3" }
-          - { name: "OG Marauder", flag: "-DMARAUDER_V4", fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs", file_name: "og", tft: true, tft_file: "User_Setup_og_marauder.h", build_dir: "d32" }
-          - { name: "Marauder v6", flag: "-DMARAUDER_V6", fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs", file_name: "v6", tft: true, tft_file: "User_Setup_og_marauder.h", build_dir: "d32" }
-          - { name: "Marauder v6.1", flag: "-DMARAUDER_V6_1", fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs", file_name: "v6_1", tft: true, tft_file: "User_Setup_og_marauder.h", build_dir: "d32" }
-          - { name: "Marauder Kit", flag: "-DMARAUDER_KIT", fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs", file_name: "kit", tft: true, tft_file: "User_Setup_og_marauder.h", build_dir: "d32" }
-          - { name: "Marauder Mini", flag: "-DMARAUDER_MINI", fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs", file_name: "mini", tft: true, tft_file: "User_Setup_marauder_mini.h", build_dir: "d32" }
-          - { name: "ESP32 LDDB", flag: "-DESP32_LDDB", fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs", file_name: "esp32_lddb", tft: false, tft_file: "", build_dir: "d32" }
-          - { name: "Marauder Dev Board Pro", flag: "-DMARAUDER_DEV_BOARD_PRO", fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs", file_name: "marauder_dev_board_pro", tft: false, tft_file: "", build_dir: "d32" }
-          - { name: "M5StickCPlus", flag: "-DMARAUDER_M5STICKC", fbqn: "esp32:esp32:m5stick-c:PartitionScheme=min_spiffs", file_name: "m5stickc_plus", tft: true, tft_file: "User_Setup_marauder_m5stickc.h", build_dir: "m5stick-c" }
-          - { name: "M5StickCPlus 2", flag: "-DMARAUDER_M5STICKCP2", fbqn: "esp32:esp32:m5stick-c:PartitionScheme=min_spiffs", file_name: "m5stickc_plus2", tft: true, tft_file: "User_Setup_marauder_m5stickcp2.h", build_dir: "m5stick-c" }
+          - { name: "Flipper Zero WiFi Dev Board", flag: "MARAUDER_FLIPPER", fbqn: "esp32:esp32:esp32s2:PartitionScheme=min_spiffs,FlashSize=4M,PSRAM=enabled", file_name: "flipper", tft: false, tft_file: "", build_dir: "esp32s2" }
+          - { name: "Flipper Zero Multi Board", flag: "MARAUDER_FLIPPER", fbqn: "esp32:esp32:esp32s3:PartitionScheme=min_spiffs,FlashSize=8M,PSRAM=enabled", file_name: "multiboardS3", tft: false, tft_file: "", build_dir: "esp32s3" }
+          - { name: "OG Marauder", flag: "MARAUDER_V4", fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs", file_name: "og", tft: true, tft_file: "User_Setup_og_marauder.h", build_dir: "d32" }
+          - { name: "Marauder v6", flag: "MARAUDER_V6", fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs", file_name: "v6", tft: true, tft_file: "User_Setup_og_marauder.h", build_dir: "d32" }
+          - { name: "Marauder v6.1", flag: "MARAUDER_V6_1", fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs", file_name: "v6_1", tft: true, tft_file: "User_Setup_og_marauder.h", build_dir: "d32" }
+          - { name: "Marauder Kit", flag: "MARAUDER_KIT", fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs", file_name: "kit", tft: true, tft_file: "User_Setup_og_marauder.h", build_dir: "d32" }
+          - { name: "Marauder Mini", flag: "MARAUDER_MINI", fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs", file_name: "mini", tft: true, tft_file: "User_Setup_marauder_mini.h", build_dir: "d32" }
+          - { name: "ESP32 LDDB", flag: "ESP32_LDDB", fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs", file_name: "esp32_lddb", tft: false, tft_file: "", build_dir: "d32" }
+          - { name: "Marauder Dev Board Pro", flag: "MARAUDER_DEV_BOARD_PRO", fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs", file_name: "marauder_dev_board_pro", tft: false, tft_file: "", build_dir: "d32" }
+          - { name: "M5StickCPlus", flag: "MARAUDER_M5STICKC", fbqn: "esp32:esp32:m5stick-c:PartitionScheme=min_spiffs", file_name: "m5stickc_plus", tft: true, tft_file: "User_Setup_marauder_m5stickc.h", build_dir: "m5stick-c" }
+          - { name: "M5StickCPlus 2", flag: "MARAUDER_M5STICKCP2", fbqn: "esp32:esp32:m5stick-c:PartitionScheme=min_spiffs", file_name: "m5stickc_plus2", tft: true, tft_file: "User_Setup_marauder_m5stickcp2.h", build_dir: "m5stick-c" }
           - { name: "Rev Feather", flag: "MARAUDER_REV_FEATHER", fbqn: "esp32:esp32:esp32s2:PartitionScheme=min_spiffs,FlashSize=4M,PSRAM=enabled", file_name: "rev_feather", tft: true, tft_file: "User_Setup_marauder_rev_feather.h", build_dir: "esp32s2" }
           - { name: "Marauder v7", flag: "MARAUDER_V7", fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs", file_name: "marauder_v7", tft: true, tft_file: "User_Setup_dual_nrf24.h", build_dir: "d32" }
           
@@ -190,7 +190,7 @@ jobs:
         with:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: ${{ matrix.board.fbqn }}
-          extra-arduino-cli-args: "--warnings none --build-property compiler.cpp.extra_flags='${{ matrix.board.flag }}'"
+          extra-arduino-cli-args: "--warnings none --build-property compiler.cpp.extra_flags='-D${{ matrix.board.flag }}'"
           arduino-platform: esp32:esp32@2.0.11
           platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.11/package_esp32_dev_index.json
 
