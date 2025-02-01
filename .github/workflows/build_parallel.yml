@@ -182,7 +182,7 @@ jobs:
           pwd
           if [[ ${{ matrix.board.tft }} == true ]]; then
             find /home/runner/ -name "*TFT_eSPI*"
-            sed -i 's/^#include <${{ matrix.board.tft_file }}>/\/\/#include <${{ matrix.board.tft_file }}>/' /home/runner/work/ESP32Marauder/ESP32Marauder/CustomTFT_eSPI/User_Setup_Select.h
+            sed -i 's/^\/\/#include <${{ matrix.board.tft_file }}>/#include <${{ matrix.board.tft_file }}>/' /home/runner/work/ESP32Marauder/ESP32Marauder/CustomTFT_eSPI/User_Setup_Select.h
           fi
 
       - name: Build Marauder for ${{ matrix.board.name }}
