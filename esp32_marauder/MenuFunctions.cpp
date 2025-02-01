@@ -878,7 +878,7 @@ void MenuFunctions::main(uint32_t currentTime)
 
   #ifdef HAS_BUTTONS
     #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1))
-      #ifndef MARAUDER_M5STICKC
+      #if !defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
         if (u_btn.justPressed()){
           if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
               (wifi_scan_obj.currentScanMode == OTA_UPDATE)) {
@@ -1730,7 +1730,7 @@ void MenuFunctions::RunSetup()
               this->buildButtons(&htmlMenu);
               this->displayCurrentMenu();
             }
-            #ifndef MARAUDER_M5STICKC
+            #if !defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
               if (u_btn.justPressed()) {
                 if (evil_portal_obj.selected_html_index < evil_portal_obj.html_files->size() - 1)
                   evil_portal_obj.selected_html_index++;
@@ -2145,7 +2145,7 @@ void MenuFunctions::RunSetup()
 
                 // Start button loop
                 while(true) {
-                  #ifndef MARAUDER_M5STICKC
+                  #if !defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
                     if (u_btn.justPressed()) {
                       if (sd_file_index > 0)
                         sd_file_index--;

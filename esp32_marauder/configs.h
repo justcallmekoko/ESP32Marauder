@@ -315,9 +315,9 @@
       #define L_BTN -1
       #define C_BTN 37
       #if defined(MARAUDER_M5STICKCP2)
-        #define U_BTN -1
-      #else
         #define U_BTN 35
+      #else
+        #define U_BTN -1
       #endif
       #define R_BTN -1
       #define D_BTN 39
