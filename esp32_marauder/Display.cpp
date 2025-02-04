@@ -317,7 +317,7 @@ void Display::displayBuffer(bool do_clear)
 {
   if (this->display_buffer->size() > 0)
   {
-    int print_count = 10;
+    int print_count = 1;
     while ((display_buffer->size() > 0) && (print_count > 0))
     {
 
@@ -347,8 +347,10 @@ void Display::displayBuffer(bool do_clear)
 
         for (int i = 0; i < this->screen_buffer->size(); i++) {
           tft.setCursor(xPos, (i * 12) + (SCREEN_HEIGHT / 6));
-          for (int x = 0; x < TFT_WIDTH / CHAR_WIDTH; x++)
-            tft.print(" ");
+          String spaces = String(' ', TFT_WIDTH / CHAR_WIDTH);
+          //for (int x = 0; x < TFT_WIDTH / CHAR_WIDTH; x++)
+          //  tft.print(" ");
+          tft.print(spaces);
           tft.setCursor(xPos, (i * 12) + (SCREEN_HEIGHT / 6));
 
           this->processAndPrintString(tft, this->screen_buffer->get(i));
