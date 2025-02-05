@@ -640,7 +640,7 @@ jobs:
       - name: 'Upload ESP32 LDDB Artifact'
         uses: actions/upload-artifact@v4
         with:
-          name: esp32_marauder.mini.bin
+          name: esp32_marauder.esp32_lddb.bin
           path: ./esp32_marauder/build/esp32.esp32.d32/esp32_marauder.esp32_lddb.bin
           retention-days: 5
           
