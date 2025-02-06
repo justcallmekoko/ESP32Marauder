@@ -200,11 +200,13 @@ jobs:
 
       - name: Rename Marauder ${{ matrix.board.name }} bin
         run: |
-          ls -la ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/
-          esptool.py --chip esp32s3 merge_bin -o ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.${{ matrix.board.file_name }}.bin \
-          ${{ matrix.board.addr }} ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.bootloader.bin \
-          0x8000 ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.partitions.bin \
-          0x10000 ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.bin
+          mv ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.${{ matrix.board.file_name }}.bin
+          
+          # ls -la ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/
+          # esptool.py --chip esp32s3 merge_bin -o ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.${{ matrix.board.file_name }}.bin \
+          # ${{ matrix.board.addr }} ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.bootloader.bin \
+          # 0x8000 ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.partitions.bin \
+          # 0x10000 ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.bin
 
       - name: Upload ${{ matrix.board.name }} Artifact
         uses: actions/upload-artifact@v4
