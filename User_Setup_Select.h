@@ -26,8 +26,9 @@
 //#include <User_Setup_marauder_mini.h>
 //#include <User_Setup_marauder_rev_feather.h>
 //#include <User_Setup_marauder_m5stickc.h>
+//#include <User_Setup_marauder_m5stickcp2.h>
 //#include <User_Setup_pocket_sdr.h>
-#include <User_Setup_dual_nrf24.h>
+//#include <User_Setup_dual_nrf24.h>
 //#include <User_Setup_pocket_sdr_2.h>
 
 //#include <User_Setups/Setup1_ILI9341.h>  // Setup file configured for my ILI9341
