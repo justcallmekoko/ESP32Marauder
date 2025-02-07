@@ -918,23 +918,23 @@ bool WiFiScan::shutdownBLE() {
       
       pBLEScan->clearResults();
       NimBLEDevice::deinit();
-
-      #ifdef MARAUDER_FLIPPER
-        flipper_led.offLED();
-      #elif defined(XIAO_ESP32_S3)
-        xiao_led.offLED();
-      #elif defined(MARAUDER_M5STICKC)
-        stickc_led.offLED();
-      #else
-        led_obj.setMode(MODE_OFF);
-      #endif
     
       this->ble_initialized = false;
-      return true;
     }
     else {
       return false;
     }
+
+    #ifdef MARAUDER_FLIPPER
+      flipper_led.offLED();
+    #elif defined(XIAO_ESP32_S3)
+      xiao_led.offLED();
+    #elif defined(MARAUDER_M5STICKC)
+      stickc_led.offLED();
+    #else
+      led_obj.setMode(MODE_OFF);
+    #endif
+
   #endif
 
   return true;
@@ -2712,6 +2712,17 @@ void WiFiScan::RunSourApple(uint8_t scan_mode, uint16_t color) {
     #endif
 
     this->ble_initialized;
+
+    #ifdef MARAUDER_FLIPPER
+      flipper_led.sniffLED();
+    #elif defined(XIAO_ESP32_S3)
+      xiao_led.sniffLED();
+    #elif defined(MARAUDER_M5STICKC)
+      stickc_led.sniffLED();
+    #else
+      led_obj.setMode(MODE_SNIFF);
+    #endif
+
   #endif
 }
 
@@ -2747,6 +2758,16 @@ void WiFiScan::RunSwiftpairSpam(uint8_t scan_mode, uint16_t color) {
     #endif
 
     this->ble_initialized;
+
+    #ifdef MARAUDER_FLIPPER
+      flipper_led.attackLED();
+    #elif defined(XIAO_ESP32_S3)
+      xiao_led.attackLED();
+    #elif defined(MARAUDER_M5STICKC)
+      stickc_led.attackLED();
+    #else
+      led_obj.setMode(MODE_ATTACK);
+    #endif
   #endif
 }
 
@@ -2864,6 +2885,17 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
     pBLEScan->start(0, scanCompleteCB, false);
     Serial.println("Started BLE Scan");
     this->ble_initialized = true;
+
+    #ifdef MARAUDER_FLIPPER
+      flipper_led.sniffLED();
+    #elif defined(XIAO_ESP32_S3)
+      xiao_led.sniffLED();
+    #elif defined(MARAUDER_M5STICKC)
+      stickc_led.sniffLED();
+    #else
+      led_obj.setMode(MODE_SNIFF);
+    #endif
+
     initTime = millis();
   #endif
 }
