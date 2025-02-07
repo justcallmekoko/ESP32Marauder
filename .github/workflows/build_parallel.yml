@@ -1,4 +1,4 @@
-name: Build and Push
+name: Build and Push Parallel
 
 on:
   workflow_dispatch:
