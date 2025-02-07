@@ -111,7 +111,7 @@ CommandLine cli_obj;
   xiaoLED xiao_led;
 #elif defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
   stickcLED stickc_led;
-#else
+#elif defined(HAS_NEOPIXEL_LED)
   LedInterface led_obj;
 #endif
 
@@ -301,7 +301,7 @@ void setup()
     xiao_led.RunSetup();
   #elif defined(MARAUDER_M5STICKC)
     stickc_led.RunSetup();
-  #else
+  #elif defined(HAS_NEOPIXEL_LED)
     led_obj.RunSetup();
   #endif
 
@@ -411,7 +411,7 @@ void loop()
     xiao_led.main();
   #elif defined(MARAUDER_M5STICKC)
     stickc_led.main();
-  #else
+  #elif defined(HAS_NEOPIXEL_LED)
     led_obj.main(currentTime);
   #endif
 

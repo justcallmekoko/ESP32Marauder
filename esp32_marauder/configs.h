@@ -1132,6 +1132,8 @@
     #define MEM_LOWER_LIM 20000
   #elif defined(XIAO_ESP32_S3)
     #define MEM_LOWER_LIM 20000
+  #else
+    #define MEM_LOWER_LIM 20000
   #endif
   //// END MEMORY LOWER LIMIT STUFF
 
