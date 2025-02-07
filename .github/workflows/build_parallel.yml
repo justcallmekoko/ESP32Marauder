@@ -1,4 +1,4 @@
-name: Build and Push
+name: Build and Push Parallel
 
 on:
   workflow_dispatch:
@@ -219,7 +219,7 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     needs: [compile_sketch]
-    if: ${{ github.ref_type == 'tag' }}
+    if: ${{ github.event_name != 'pull_request' }}
     steps: 
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -231,5 +231,6 @@ jobs:
           name: "Marauder Release ${{ github.ref_name }}"
           tag_name: ${{ github.ref_name }}
           generate_release_notes: true
+          draft: true
           files: |
             esp32_marauder.*.bin
