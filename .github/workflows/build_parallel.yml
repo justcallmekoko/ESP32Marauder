@@ -219,7 +219,7 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     needs: [compile_sketch]
-    if: ${{ github.event_name != 'pull_request' }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     steps: 
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
