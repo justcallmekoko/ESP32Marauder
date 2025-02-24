@@ -39,6 +39,12 @@
 #define LV_ADD_SSID 14
 #define WIFI_ATTACK_BEACON_LIST 15
 
+#define RED_KEY ";red;"
+#define GREEN_KEY ";grn;"
+#define CYAN_KEY ";cyn;"
+#define MAGENTA_KEY ";mgn;"
+#define WHITE_KEY ";wht;"
+
 class Display
 {
   private:
@@ -58,6 +64,7 @@ class Display
     #ifdef SCREEN_BUFFER
       void scrollScreenBuffer(bool down = false);
     #endif
+    void processAndPrintString(TFT_eSPI& tft, const String& originalString);
 
   public:
     Display();

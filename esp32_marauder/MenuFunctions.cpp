@@ -574,7 +574,7 @@ void MenuFunctions::buttonNotSelected(uint8_t b, int8_t x) {
   #ifdef HAS_FULL_SCREEN
     display_obj.tft.setFreeFont(MENU_FONT);
     display_obj.key[b].drawButton(false, current_menu->list->get(x).name);
-    if (current_menu->list->get(x).name != text09)
+    if ((current_menu->list->get(x).name != text09) && (current_menu->list->get(x).icon != 255))
           display_obj.tft.drawXBitmap(0,
                                       KEY_Y + x * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
                                       menu_icons[current_menu->list->get(x).icon],
@@ -599,7 +599,7 @@ void MenuFunctions::buttonSelected(uint8_t b, int8_t x) {
     #ifdef HAS_FULL_SCREEN
       display_obj.tft.setFreeFont(MENU_FONT);
       display_obj.key[b].drawButton(true, current_menu->list->get(x).name);
-      if (current_menu->list->get(x).name != text09)
+      if ((current_menu->list->get(x).name != text09) && (current_menu->list->get(x).icon != 255))
             display_obj.tft.drawXBitmap(0,
                                         KEY_Y + x * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
                                         menu_icons[current_menu->list->get(x).icon],
@@ -878,7 +878,7 @@ void MenuFunctions::main(uint32_t currentTime)
 
   #ifdef HAS_BUTTONS
     #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1))
-      #ifndef MARAUDER_M5STICKC
+      #if !defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
         if (u_btn.justPressed()){
           if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
               (wifi_scan_obj.currentScanMode == OTA_UPDATE)) {
@@ -1730,7 +1730,7 @@ void MenuFunctions::RunSetup()
               this->buildButtons(&htmlMenu);
               this->displayCurrentMenu();
             }
-            #ifndef MARAUDER_M5STICKC
+            #if !defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
               if (u_btn.justPressed()) {
                 if (evil_portal_obj.selected_html_index < evil_portal_obj.html_files->size() - 1)
                   evil_portal_obj.selected_html_index++;
@@ -1769,18 +1769,24 @@ void MenuFunctions::RunSetup()
     });
 
     // Select APs on Mini
-    this->addNodes(&wifiGeneralMenu, text_table1[56], TFT_NAVY, NULL, KEYBOARD_ICO, [this](){
+    this->addNodes(&wifiGeneralMenu, "Select APs", TFT_NAVY, NULL, KEYBOARD_ICO, [this](){
+      // Add the back button
       wifiAPMenu.list->clear();
         this->addNodes(&wifiAPMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
         this->changeMenu(wifiAPMenu.parentMenu);
       });
+
+      // Determine how big the whole menu is going to be
       int menu_limit;
       if (access_points->size() <= BUTTON_ARRAY_LEN)
         menu_limit = access_points->size();
       else
         menu_limit = BUTTON_ARRAY_LEN;
+
+      // Populate the menu with buttons
       for (int i = 0; i < menu_limit - 1; i++) {
-        this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFT_CYAN, NULL, KEYBOARD_ICO, [this, i](){
+        // This is the menu node
+        this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFT_CYAN, NULL, 255, [this, i](){
         AccessPoint new_ap = access_points->get(i);
         new_ap.selected = !access_points->get(i).selected;
 
@@ -2145,7 +2151,7 @@ void MenuFunctions::RunSetup()
 
                 // Start button loop
                 while(true) {
-                  #ifndef MARAUDER_M5STICKC
+                  #if !defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
                     if (u_btn.justPressed()) {
                       if (sd_file_index > 0)
                         sd_file_index--;
@@ -2630,18 +2636,18 @@ void MenuFunctions::displayCurrentMenu(uint8_t start_index)
       #ifdef HAS_FULL_SCREEN
         #ifndef HAS_ILI9341
           if ((current_menu->list->get(i).selected) || (current_menu->selected == i)) {
-            display_obj.key[i].drawButton(true, current_menu->list->get(i).name);
+            display_obj.key[i - start_index].drawButton(true, current_menu->list->get(i).name);
           }
           else {
-            display_obj.key[i].drawButton(false, current_menu->list->get(i).name);          
+            display_obj.key[i - start_index].drawButton(false, current_menu->list->get(i).name);          
           }
         #else
           display_obj.key[i].drawButton(false, current_menu->list->get(i).name); 
         #endif
         
-        if (current_menu->list->get(i).name != text09)
+        if ((current_menu->list->get(i).name != text09) && (current_menu->list->get(i).icon != 255))
           display_obj.tft.drawXBitmap(0,
-                                      KEY_Y + i * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
+                                      KEY_Y + (i - start_index) * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
                                       menu_icons[current_menu->list->get(i).icon],
                                       ICON_W,
                                       ICON_H,
