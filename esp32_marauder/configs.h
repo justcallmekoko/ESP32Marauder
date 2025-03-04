@@ -7,11 +7,12 @@
   #define POLISH_POTATO
 
   //// BOARD TARGETS
-  //#define MARAUDER_M5STICKC
+  //#define MARAUDER_M5STICKC 
+  //#define MARAUDER_M5STICKCP2
   //#define MARAUDER_MINI
   //#define MARAUDER_V4
   //#define MARAUDER_V6
-  #define MARAUDER_V6_1
+  //#define MARAUDER_V6_1
   //#define MARAUDER_V7
   //#define MARAUDER_KIT
   //#define GENERIC_ESP32
@@ -22,11 +23,13 @@
   //#define MARAUDER_REV_FEATHER
   //// END BOARD TARGETS
 
-  #define MARAUDER_VERSION "v1.2.0"
+  #define MARAUDER_VERSION "v1.2.1"
 
   //// HARDWARE NAMES
   #ifdef MARAUDER_M5STICKC
     #define HARDWARE_NAME "M5Stick-C Plus"
+  #elif defined(MARAUDER_M5STICKCP2)
+    #define HARDWARE_NAME "M5Stick-C Plus2"
   #elif defined(MARAUDER_MINI)
     #define HARDWARE_NAME "Marauder Mini"
   #elif defined(MARAUDER_V7)
@@ -56,7 +59,7 @@
   //// END HARDWARE NAMES
 
  //// BOARD FEATURES
-  #ifdef MARAUDER_M5STICKC
+  #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
     //#define FLIPPER_ZERO_HAT
     #define HAS_BATTERY
     #define HAS_BT
@@ -234,8 +237,13 @@
 
   //// POWER MANAGEMENT
   #ifdef HAS_PWR_MGMT
-    #ifdef MARAUDER_M5STICKC
+    #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
       #include "AXP192.h"
+    #endif
+
+    #ifdef MARAUDER_M5STICKCP2 
+        // Prevent StickCP2 from turning off when disconnect USB cable
+        #define POWER_HOLD_PIN 4
     #endif
   #endif
   //// END POWER MANAGEMENT
@@ -303,16 +311,22 @@
       #define D_PULL true
     #endif
 
-    #ifdef MARAUDER_M5STICKC
+    #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
       #define L_BTN -1
       #define C_BTN 37
-      #define U_BTN -1
+      #if defined(MARAUDER_M5STICKCP2)
+        #define U_BTN 35
+      #else
+        #define U_BTN -1
+      #endif
       #define R_BTN -1
       #define D_BTN 39
 
       //#define HAS_L
       //#define HAS_R
-      //#define HAS_U
+      #if defined(MARAUDER_M5STICKCP2)
+        #define HAS_U
+      #endif
       #define HAS_D
       #define HAS_C
 
@@ -436,6 +450,75 @@
       #define STATUSBAR_COLOR 0x4A49
 
     #endif
+
+#if defined(MARAUDER_M5STICKCP2)
+      #define MARAUDER_M5STICKC // From now on, everything is the same, except for one check in esp32_marauder.ino amd stickc_led.cpp/h
+
+      #define SCREEN_CHAR_WIDTH 40
+      #define TFT_MOSI 15
+      #define TFT_SCLK 13
+      #define TFT_CS 5
+      #define TFT_DC 14
+      #define TFT_RST 12
+      #define TFT_BL 27
+      #define TOUCH_CS -1
+
+      #define SCREEN_BUFFER
+
+      #define MAX_SCREEN_BUFFER 9
+
+      #define BANNER_TEXT_SIZE 1
+
+      #ifndef TFT_WIDTH
+        #define TFT_WIDTH 135
+      #endif
+
+      #ifndef TFT_HEIGHT
+        #define TFT_HEIGHT 240
+      #endif
+
+      #define CHAR_WIDTH 6
+      #define SCREEN_WIDTH TFT_HEIGHT // Originally 240
+      #define SCREEN_HEIGHT TFT_WIDTH // Originally 320
+      #define HEIGHT_1 TFT_WIDTH
+      #define WIDTH_1 TFT_WIDTH
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
+      #define TEXT_HEIGHT (TFT_HEIGHT/10) // Height of text to be printed and scrolled
+      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
+      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
+      #define YMAX TFT_HEIGHT // Bottom of screen area
+      #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
+      //#define MENU_FONT NULL
+      #define MENU_FONT &FreeMono9pt7b // Winner
+      //#define MENU_FONT &FreeMonoBold9pt7b
+      //#define MENU_FONT &FreeSans9pt7b
+      //#define MENU_FONT &FreeSansBold9pt7b
+      #define BUTTON_SCREEN_LIMIT 6
+      #define BUTTON_ARRAY_LEN 13
+      #define STATUS_BAR_WIDTH (TFT_HEIGHT/16)
+      #define LVGL_TICK_PERIOD 6
+
+      #define FRAME_X 100
+      #define FRAME_Y 64
+      #define FRAME_W 120
+      #define FRAME_H 50
+
+      // Red zone size
+      #define REDBUTTON_X FRAME_X
+      #define REDBUTTON_Y FRAME_Y
+      #define REDBUTTON_W (FRAME_W/2)
+      #define REDBUTTON_H FRAME_H
+
+      // Green zone size
+      #define GREENBUTTON_X (REDBUTTON_X + REDBUTTON_W)
+      #define GREENBUTTON_Y FRAME_Y
+      #define GREENBUTTON_W (FRAME_W/2)
+      #define GREENBUTTON_H FRAME_H
+
+      #define STATUSBAR_COLOR 0x4A49
+
+    #endif
+
 
     #ifdef MARAUDER_V4
       #define SCREEN_CHAR_WIDTH 40
