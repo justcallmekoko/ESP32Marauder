@@ -5365,11 +5365,11 @@ void WiFiScan::main(uint32_t currentTime)
     #endif
   }
   else if (currentScanMode == WIFI_SCAN_ACTIVE_LIST_EAPOL) {
-    if (currentTime - initTime >= this->channel_hop_delay * 1000)
-    {
-      initTime = millis();
-      channelHop();
-    }
+    // if (currentTime - initTime >= this->channel_hop_delay * 1000)
+    // {
+    //  initTime = millis();
+    //  channelHop();
+    // } for a better accuracy of eapol (pmkid) sniffing, probably it's better to avoid channelHopping, so we will keep "set_channel" fixed. We remember that with this scan_mode we will inject deauths only to selected network from list (to avoid "hitting" other networks that are probably in the same channel, as it can happen with the base version of active eapol scan).
     #ifdef HAS_SCREEN
       eapolMonitorMain(currentTime);
     #endif    

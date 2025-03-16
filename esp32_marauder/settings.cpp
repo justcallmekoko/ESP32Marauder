@@ -266,13 +266,13 @@ bool Settings::createDefaultSettings(fs::FS &fs) {
 
   jsonBuffer["Settings"][0]["name"] = "ForcePMKID";
   jsonBuffer["Settings"][0]["type"] = "bool";
-  jsonBuffer["Settings"][0]["value"] = true;
+  jsonBuffer["Settings"][0]["value"] = false; // as default it's better to not force the injection of deauth packets when we do passive sniff of EAPOL (pmkid)
   jsonBuffer["Settings"][0]["range"]["min"] = false;
   jsonBuffer["Settings"][0]["range"]["max"] = true;
 
   jsonBuffer["Settings"][1]["name"] = "ForceProbe";
   jsonBuffer["Settings"][1]["type"] = "bool";
-  jsonBuffer["Settings"][1]["value"] = true;
+  jsonBuffer["Settings"][1]["value"] = false; // as default it's better to not force the injection of deauth packets when we do passive sniff of PROBE packets
   jsonBuffer["Settings"][1]["range"]["min"] = false;
   jsonBuffer["Settings"][1]["range"]["max"] = true;
 
