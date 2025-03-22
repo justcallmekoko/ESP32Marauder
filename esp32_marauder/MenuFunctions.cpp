@@ -644,8 +644,28 @@ void MenuFunctions::main(uint32_t currentTime)
       if ((wifi_scan_obj.currentScanMode != LV_JOIN_WIFI) &&
           (wifi_scan_obj.currentScanMode != LV_ADD_SSID))
         this->updateStatusBar();
+      
+      // Do channel analyzer stuff
+      if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ANALYZER) {
+        this->setGraphScale(this->graphScaleCheck(wifi_scan_obj._analyzer_values));
+
+        this->drawGraph(wifi_scan_obj._analyzer_values);
+      }
     }
   }
+
+  // Do channel analyzer stuff
+  /*if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ANALYZER) {
+    if (currentTime - this->initTime >= GRAPH_REFRESH) {
+      Serial.println("Refreshing graph: " + (String)currentTime);
+
+      this->initTime = millis();
+
+      this->setGraphScale(this->graphScaleCheck(wifi_scan_obj._analyzer_values));
+
+      this->drawGraph(wifi_scan_obj._analyzer_values);
+    }
+  }*/
 
 
   boolean pressed = false;
@@ -793,7 +813,8 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_EAPOL) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_ACTIVE_EAPOL) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_ACTIVE_LIST_EAPOL) ||
-            (wifi_scan_obj.currentScanMode == WIFI_PACKET_MONITOR))
+            (wifi_scan_obj.currentScanMode == WIFI_PACKET_MONITOR) ||
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ANALYZER))
         {
           wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
     
@@ -906,7 +927,8 @@ void MenuFunctions::main(uint32_t currentTime)
             }
           }
           else if ((wifi_scan_obj.currentScanMode == WIFI_PACKET_MONITOR) ||
-                  (wifi_scan_obj.currentScanMode == WIFI_SCAN_EAPOL)) {
+                  (wifi_scan_obj.currentScanMode == WIFI_SCAN_EAPOL) ||
+                  (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ANALYZER)) {
             if (wifi_scan_obj.set_channel < 14)
               wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
             else
@@ -941,7 +963,8 @@ void MenuFunctions::main(uint32_t currentTime)
           }
         }
         else if ((wifi_scan_obj.currentScanMode == WIFI_PACKET_MONITOR) ||
-                (wifi_scan_obj.currentScanMode == WIFI_SCAN_EAPOL)) {
+                (wifi_scan_obj.currentScanMode == WIFI_SCAN_EAPOL) ||
+                (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ANALYZER)) {
           if (wifi_scan_obj.set_channel > 1)
             wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
           else
@@ -1557,6 +1580,12 @@ void MenuFunctions::RunSetup()
       this->drawStatusBar();
       wifi_scan_obj.StartScan(WIFI_PACKET_MONITOR, TFT_BLUE);
     });
+    this->addNodes(&wifiSnifferMenu, "Channel Analyzer", TFT_CYAN, NULL, PACKET_MONITOR, [this]() {
+      display_obj.clearScreen();
+      this->drawStatusBar();
+      this->renderGraphUI();
+      wifi_scan_obj.StartScan(WIFI_SCAN_CHAN_ANALYZER, TFT_CYAN);
+    });
   #endif
   //#ifndef HAS_ILI9341
   this->addNodes(&wifiSnifferMenu, text_table1[47], TFT_RED, NULL, PWNAGOTCHI, [this]() {
@@ -1876,7 +1905,7 @@ void MenuFunctions::RunSetup()
 
       for (int i = 0; i < menu_limit - 1; i++) {
         wifiStationMenu.list->clear();
-        this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFT_CYAN, NULL, KEYBOARD_ICO, [this, i](){
+        this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFT_CYAN, NULL, 255, [this, i](){
 
           wifiStationMenu.list->clear();
 
@@ -1889,7 +1918,7 @@ void MenuFunctions::RunSetup()
           for (int x = 0; x < access_points->get(i).stations->size(); x++) {
             int cur_ap_sta = access_points->get(i).stations->get(x);
 
-            this->addNodes(&wifiStationMenu, macToString(stations->get(cur_ap_sta)), TFT_CYAN, NULL, KEYBOARD_ICO, [this, i, cur_ap_sta, x](){
+            this->addNodes(&wifiStationMenu, macToString(stations->get(cur_ap_sta)), TFT_CYAN, NULL, 255, [this, i, cur_ap_sta, x](){
             Station new_sta = stations->get(cur_ap_sta);
             new_sta.selected = !stations->get(cur_ap_sta).selected;
 
@@ -2582,6 +2611,65 @@ void MenuFunctions::addNodes(Menu * menu, String name, uint16_t color, Menu * ch
   TFT_eSPI_Button new_button;
   menu->list->add(MenuNode{name, false, color, place, &new_button, selected, callable});
   //menu->list->add(MenuNode{name, false, color, place, selected, callable});
+}
+
+void MenuFunctions::setGraphScale(float scale) {
+  this->_graph_scale = scale;
+}
+
+float MenuFunctions::calculateGraphScale(uint8_t value) {
+  if (value < GRAPH_VERT_LIM) {
+    return 1.0;  // No scaling needed if the value is within the limit
+  }
+
+  // Calculate the multiplier proportionally
+  return (0.5 * GRAPH_VERT_LIM) / value;
+}
+
+float MenuFunctions::graphScaleCheck(const uint8_t array[TFT_WIDTH]) {
+  uint8_t maxValue = 0;
+
+  // Iterate through the array to find the highest value
+  for (uint8_t i = 0; i < TFT_WIDTH; i++) {
+    if (array[i] > maxValue) {
+      maxValue = array[i];
+    }
+  }
+
+  // If the highest value exceeds GRAPH_VERT_LIM, call calculateMultiplier
+  if (maxValue > GRAPH_VERT_LIM) {
+    return this->calculateGraphScale(maxValue);
+  }
+
+  // If the highest value does not exceed GRAPH_VERT_LIM, return 1.0
+  return 1.0;
+}
+
+void MenuFunctions::drawMaxLine(uint8_t value) {
+  display_obj.tft.drawLine(0, TFT_HEIGHT - (value * this->_graph_scale), TFT_WIDTH, TFT_HEIGHT - (value * this->_graph_scale), TFT_GREEN);
+  display_obj.tft.setCursor(0, TFT_HEIGHT - (value * this->_graph_scale));
+  display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+  display_obj.tft.setTextSize(1);
+  display_obj.tft.println((String)value);
+}
+
+void MenuFunctions::drawGraph(uint8_t *values) {
+  uint8_t maxValue = 0;
+  for (int i = 0; i < TFT_WIDTH; i++) {
+    if (values[i] > maxValue) {
+      maxValue = values[i];
+    }
+    display_obj.tft.drawLine(i, TFT_HEIGHT, i, TFT_HEIGHT - GRAPH_VERT_LIM, TFT_BLACK);
+    display_obj.tft.drawLine(i, TFT_HEIGHT, i, TFT_HEIGHT - (values[i] * this->_graph_scale), TFT_CYAN);
+  }
+
+  this->drawMaxLine(maxValue);
+}
+
+void MenuFunctions::renderGraphUI() {
+  display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  display_obj.tft.drawCentreString("Frames/" + (String)BANNER_TIME + "ms", TFT_WIDTH / 2, TFT_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2), 2);
+  display_obj.tft.drawLine(0, TFT_HEIGHT - GRAPH_VERT_LIM - 1, TFT_WIDTH, TFT_HEIGHT - GRAPH_VERT_LIM - 1, TFT_WHITE);
 }
 
 void MenuFunctions::buildButtons(Menu * menu, int starting_index, String button_name)

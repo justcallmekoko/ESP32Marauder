@@ -122,10 +122,13 @@ class MenuFunctions
 
     String u_result = "";
 
+
+    float _graph_scale = 1.0;
     uint32_t initTime = 0;
     uint8_t menu_start_index = 0;
     uint8_t mini_kb_index = 0;
     uint8_t old_gps_sat_count = 0;
+    uint8_t max_graph_value = 0;
 
     // Main menu stuff
     Menu mainMenu;
@@ -178,7 +181,11 @@ class MenuFunctions
     // Menu icons
 
 
-
+    void drawMaxLine(uint8_t value);
+    float calculateGraphScale(uint8_t value);
+    float graphScaleCheck(const uint8_t array[TFT_WIDTH]);
+    void drawGraph(uint8_t *values);
+    void renderGraphUI();
     void addNodes(Menu* menu, String name, uint16_t color, Menu* child, int place, std::function<void()> callable, bool selected = false, String command = "");
     void battery(bool initial = false);
     void battery2(bool initial = false);
@@ -223,6 +230,7 @@ class MenuFunctions
 
     String loaded_file = "";
 
+    void setGraphScale(float scale);
     void initLVGL();
     void deinitLVGL();
     void selectEPHTMLGFX();

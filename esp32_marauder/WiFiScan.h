@@ -98,10 +98,11 @@
 #define BT_SCAN_AIRTAG 43
 #define BT_SPOOF_AIRTAG 44
 #define BT_SCAN_FLIPPER 45
+#define WIFI_SCAN_CHAN_ANALYZER 46
 
-#define GRAPH_REFRESH 100
+#define BASE_MULTIPLIER 4
 
-#define MAX_CHANNEL 14
+#define MAX_CHANNEL     14
 
 extern EvilPortal evil_portal_obj;
 
@@ -175,6 +176,8 @@ class WiFiScan
   private:
     // Wardriver thanks to https://github.com/JosephHewitt
     struct mac_addr mac_history[mac_history_len];
+
+    uint8_t _analyzer_value = 0;
 
     // Settings
     uint mac_history_cursor = 0;
@@ -305,6 +308,7 @@ class WiFiScan
       NimBLEAdvertisementData GetUniversalAdvertisementData(EBLEPayloadType type);
     #endif
 
+    void addAnalyzerValue(uint8_t value, int rssi_avg, uint8_t target_array[], int array_size);
     bool seen_mac(unsigned char* mac);
     bool mac_cmp(struct mac_addr addr1, struct mac_addr addr2);
     void save_mac(unsigned char* mac);
@@ -320,6 +324,7 @@ class WiFiScan
 
     void startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_string);
 
+    void channelAnalyzerLoop(uint32_t tick);
     void packetMonitorMain(uint32_t currentTime);
     void eapolMonitorMain(uint32_t currentTime);
     void updateMidway();
@@ -378,6 +383,9 @@ class WiFiScan
 
     String dst_mac = "ff:ff:ff:ff:ff:ff";
     byte src_mac[6] = {};
+
+    uint8_t _analyzer_values[TFT_WIDTH];
+    uint8_t _temp_analyzer_values[TFT_WIDTH];
 
     String current_mini_kb_ssid = "";
 

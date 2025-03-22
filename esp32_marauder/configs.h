@@ -13,7 +13,7 @@
   //#define MARAUDER_V4
   //#define MARAUDER_V6
   //#define MARAUDER_V6_1
-  //#define MARAUDER_V7
+  #define MARAUDER_V7
   //#define MARAUDER_KIT
   //#define GENERIC_ESP32
   //#define MARAUDER_FLIPPER
@@ -23,7 +23,9 @@
   //#define MARAUDER_REV_FEATHER
   //// END BOARD TARGETS
 
-  #define MARAUDER_VERSION "v1.2.1"
+  #define MARAUDER_VERSION "v1.2.2"
+
+  #define GRAPH_REFRESH   100
 
   //// HARDWARE NAMES
   #ifdef MARAUDER_M5STICKC
@@ -409,6 +411,8 @@
         #define TFT_HEIGHT 240
       #endif
 
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+
       #define CHAR_WIDTH 6
       #define SCREEN_WIDTH TFT_HEIGHT // Originally 240
       #define SCREEN_HEIGHT TFT_WIDTH // Originally 320
@@ -451,7 +455,7 @@
 
     #endif
 
-#if defined(MARAUDER_M5STICKCP2)
+  #if defined(MARAUDER_M5STICKCP2)
       #define MARAUDER_M5STICKC // From now on, everything is the same, except for one check in esp32_marauder.ino amd stickc_led.cpp/h
 
       #define SCREEN_CHAR_WIDTH 40
@@ -476,6 +480,8 @@
       #ifndef TFT_HEIGHT
         #define TFT_HEIGHT 240
       #endif
+
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2
 
       #define CHAR_WIDTH 6
       #define SCREEN_WIDTH TFT_HEIGHT // Originally 240
@@ -534,6 +540,8 @@
       #endif
 
       #define TFT_SHIELD
+
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2
     
       #define SCREEN_WIDTH TFT_WIDTH
       #define SCREEN_HEIGHT TFT_HEIGHT
@@ -592,6 +600,8 @@
       #endif
 
       #define TFT_DIY
+
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2
     
       #define SCREEN_WIDTH TFT_WIDTH
       #define SCREEN_HEIGHT TFT_HEIGHT
@@ -648,6 +658,8 @@
       #ifndef TFT_HEIGHT
         #define TFT_HEIGHT 320
       #endif
+
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2
 
       #define TFT_DIY
 
@@ -711,6 +723,8 @@
       #ifndef TFT_HEIGHT
         #define TFT_HEIGHT 320
       #endif
+
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2
 
       #define TFT_DIY
       #define KIT
@@ -783,6 +797,8 @@
         #define TFT_HEIGHT 128
       #endif
 
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+
       #define CHAR_WIDTH 6
       #define SCREEN_WIDTH TFT_WIDTH // Originally 240
       #define SCREEN_HEIGHT TFT_HEIGHT // Originally 320
@@ -849,6 +865,8 @@
       #ifndef TFT_HEIGHT
         #define TFT_HEIGHT 135
       #endif
+
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2
 
       #define CHAR_WIDTH 6
       #define SCREEN_WIDTH TFT_WIDTH // Originally 240
@@ -1292,4 +1310,20 @@
   #endif
   //// END MARAUDER TITLE STUFF
 
+  //// PCAP BUFFER STUFF
+
+  #ifdef MARAUDER_V7
+    #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
+    #define SNAP_LEN 4096 // max len of each recieved packet
+  #elif defined(MARAUDER_MINI)
+    #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
+    #define SNAP_LEN 4096 // max len of each recieved packet
+  #elif defined(MARAUDER_REV_FEATHER)
+    #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
+    #define SNAP_LEN 4096 // max len of each recieved packet
+  #else
+    #define BUF_SIZE 3 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
+    #define SNAP_LEN 2324 // max len of each recieved packet
+  #endif
+  //// PCAP BUFFER STUFF
 #endif
