@@ -3135,7 +3135,12 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
           //if (display_obj.display_buffer->size() == 0)
           //{
           //display_obj.loading = true;
-          display_obj.display_buffer->add(display_string);
+          if (wifi_scan_obj.checkMem())
+            display_obj.display_buffer->add(display_string);
+          else {
+            String warning_str = "Mem limit reached " + display_string;
+            display_obj.display_buffer->add(warning_str);
+          }
           //display_obj.loading = false;
           //}
         #endif
@@ -3158,47 +3163,50 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
                           false,
                           NULL};*/
 
-        AccessPoint ap;
-        ap.essid = essid;
-        ap.channel = snifferPacket->rx_ctrl.channel;
-        ap.bssid[0] = snifferPacket->payload[10];
-        ap.bssid[1] = snifferPacket->payload[11];
-        ap.bssid[2] = snifferPacket->payload[12];
-        ap.bssid[3] = snifferPacket->payload[13];
-        ap.bssid[4] = snifferPacket->payload[14];
-        ap.bssid[5] = snifferPacket->payload[15];
-        ap.selected = false;
-        ap.stations = new LinkedList<uint8_t>();
-        
-        ap.beacon = new LinkedList<char>();
+        if (wifi_scan_obj.checkMem()) {
 
-        //for (int i = 0; i < len; i++) {
-        //  ap.beacon->add(snifferPacket->payload[i]);
-        //}
-        ap.beacon->add(snifferPacket->payload[34]);
-        ap.beacon->add(snifferPacket->payload[35]);
+          AccessPoint ap;
+          ap.essid = essid;
+          ap.channel = snifferPacket->rx_ctrl.channel;
+          ap.bssid[0] = snifferPacket->payload[10];
+          ap.bssid[1] = snifferPacket->payload[11];
+          ap.bssid[2] = snifferPacket->payload[12];
+          ap.bssid[3] = snifferPacket->payload[13];
+          ap.bssid[4] = snifferPacket->payload[14];
+          ap.bssid[5] = snifferPacket->payload[15];
+          ap.selected = false;
+          ap.stations = new LinkedList<uint8_t>();
+          
+          ap.beacon = new LinkedList<char>();
 
-        Serial.print("\nBeacon: ");
+          //for (int i = 0; i < len; i++) {
+          //  ap.beacon->add(snifferPacket->payload[i]);
+          //}
+          ap.beacon->add(snifferPacket->payload[34]);
+          ap.beacon->add(snifferPacket->payload[35]);
 
-        for (int i = 0; i < ap.beacon->size(); i++) {
-          char hexCar[4];
-          sprintf(hexCar, "%02X", ap.beacon->get(i));
-          Serial.print(hexCar);
-          if ((i + 1) % 16 == 0)
-            Serial.print("\n");
-          else
-            Serial.print(" ");
+          Serial.print("\nBeacon: ");
+
+          for (int i = 0; i < ap.beacon->size(); i++) {
+            char hexCar[4];
+            sprintf(hexCar, "%02X", ap.beacon->get(i));
+            Serial.print(hexCar);
+            if ((i + 1) % 16 == 0)
+              Serial.print("\n");
+            else
+              Serial.print(" ");
+          }
+
+          ap.rssi = snifferPacket->rx_ctrl.rssi;
+
+          access_points->add(ap);
+
+          Serial.print(access_points->size());
+          Serial.print(" ");
+          Serial.print(esp_get_free_heap_size());
+
+          Serial.println();
         }
-
-        ap.rssi = snifferPacket->rx_ctrl.rssi;
-
-        access_points->add(ap);
-
-        Serial.print(access_points->size());
-        Serial.print(" ");
-        Serial.print(esp_get_free_heap_size());
-
-        Serial.println();
 
         buffer_obj.append(snifferPacket, len);
       }
@@ -3635,10 +3643,13 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
 }
 
 void WiFiScan::stationSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) {
+  extern WiFiScan wifi_scan_obj;
   wifi_promiscuous_pkt_t *snifferPacket = (wifi_promiscuous_pkt_t*)buf;
   WifiMgmtHdr *frameControl = (WifiMgmtHdr*)snifferPacket->payload;
   wifi_pkt_rx_ctrl_t ctrl = (wifi_pkt_rx_ctrl_t)snifferPacket->rx_ctrl;
   int len = snifferPacket->rx_ctrl.sig_len;
+
+  bool mem_check = wifi_scan_obj.checkMem();
 
   String display_string = "";
   String mac = "";
@@ -3729,16 +3740,18 @@ void WiFiScan::stationSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t typ
     return;
   
   // Add to list of stations
-  Station sta = {
-                {snifferPacket->payload[frame_offset],
-                 snifferPacket->payload[frame_offset + 1],
-                 snifferPacket->payload[frame_offset + 2],
-                 snifferPacket->payload[frame_offset + 3],
-                 snifferPacket->payload[frame_offset + 4],
-                 snifferPacket->payload[frame_offset + 5]},
-                false};
+  if (mem_check) {
+    Station sta = {
+                  {snifferPacket->payload[frame_offset],
+                  snifferPacket->payload[frame_offset + 1],
+                  snifferPacket->payload[frame_offset + 2],
+                  snifferPacket->payload[frame_offset + 3],
+                  snifferPacket->payload[frame_offset + 4],
+                  snifferPacket->payload[frame_offset + 5]},
+                  false};
 
-  stations->add(sta);
+    stations->add(sta);
+  }
 
   // Print findings to serial
   Serial.print((String)stations->size() + ": ");
@@ -3776,7 +3789,12 @@ void WiFiScan::stationSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t typ
     if (display_obj.display_buffer->size() == 0)
     {
       display_obj.loading = true;
-      display_obj.display_buffer->add(display_string);
+      if (mem_check)
+        display_obj.display_buffer->add(display_string);
+      else {
+        String warning_str = "Memory lim reached " + display_string;
+        display_obj.display_buffer->add(warning_str);
+      }
       display_obj.loading = false;
     }
   #endif
@@ -3784,10 +3802,12 @@ void WiFiScan::stationSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t typ
   // Add station index to AP in list
   //access_points->get(ap_index).stations->add(stations->size() - 1);
 
-  AccessPoint ap = access_points->get(ap_index);
-  ap.stations->add(stations->size() - 1);
+  if (mem_check) {
+    AccessPoint ap = access_points->get(ap_index);
+    ap.stations->add(stations->size() - 1);
 
-  access_points->set(ap_index, ap);
+    access_points->set(ap_index, ap);
+  }
 
   buffer_obj.append(snifferPacket, len);
 }
