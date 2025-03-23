@@ -2617,7 +2617,7 @@ void MenuFunctions::setGraphScale(float scale) {
   this->_graph_scale = scale;
 }
 
-float MenuFunctions::calculateGraphScale(uint8_t value) {
+float MenuFunctions::calculateGraphScale(int16_t value) {
   if (value < GRAPH_VERT_LIM) {
     return 1.0;  // No scaling needed if the value is within the limit
   }
@@ -2626,11 +2626,11 @@ float MenuFunctions::calculateGraphScale(uint8_t value) {
   return (0.5 * GRAPH_VERT_LIM) / value;
 }
 
-float MenuFunctions::graphScaleCheck(const uint8_t array[TFT_WIDTH]) {
-  uint8_t maxValue = 0;
+float MenuFunctions::graphScaleCheck(const int16_t array[TFT_WIDTH]) {
+  int16_t maxValue = 0;
 
   // Iterate through the array to find the highest value
-  for (uint8_t i = 0; i < TFT_WIDTH; i++) {
+  for (int16_t i = 0; i < TFT_WIDTH; i++) {
     if (array[i] > maxValue) {
       maxValue = array[i];
     }
@@ -2645,31 +2645,53 @@ float MenuFunctions::graphScaleCheck(const uint8_t array[TFT_WIDTH]) {
   return 1.0;
 }
 
-void MenuFunctions::drawMaxLine(uint8_t value) {
-  display_obj.tft.drawLine(0, TFT_HEIGHT - (value * this->_graph_scale), TFT_WIDTH, TFT_HEIGHT - (value * this->_graph_scale), TFT_GREEN);
+void MenuFunctions::drawMaxLine(int16_t value, uint16_t color) {
+  display_obj.tft.drawLine(0, TFT_HEIGHT - (value * this->_graph_scale), TFT_WIDTH, TFT_HEIGHT - (value * this->_graph_scale), color);
   display_obj.tft.setCursor(0, TFT_HEIGHT - (value * this->_graph_scale));
-  display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+  display_obj.tft.setTextColor(color, TFT_BLACK);
   display_obj.tft.setTextSize(1);
   display_obj.tft.println((String)value);
 }
 
-void MenuFunctions::drawGraph(uint8_t *values) {
-  uint8_t maxValue = 0;
-  for (int i = 0; i < TFT_WIDTH; i++) {
-    if (values[i] > maxValue) {
-      maxValue = values[i];
+void MenuFunctions::drawGraph(int16_t *values) {
+  int16_t maxValue = 0;
+  int total = 0;
+  for (int i = TFT_WIDTH - 1; i >= 0; i--) {
+    if (values[i] >= 0) {
+      total = total + values[i];
+      if (values[i] > maxValue) {
+        maxValue = values[i];
+      }
+      display_obj.tft.drawLine(i, TFT_HEIGHT, i, TFT_HEIGHT - GRAPH_VERT_LIM, TFT_BLACK);
+      display_obj.tft.drawLine(i, TFT_HEIGHT, i, TFT_HEIGHT - (values[i] * this->_graph_scale), TFT_CYAN);
     }
-    display_obj.tft.drawLine(i, TFT_HEIGHT, i, TFT_HEIGHT - GRAPH_VERT_LIM, TFT_BLACK);
-    display_obj.tft.drawLine(i, TFT_HEIGHT, i, TFT_HEIGHT - (values[i] * this->_graph_scale), TFT_CYAN);
+    else {
+      int16_t ch_val = values[i] * -1;
+      display_obj.tft.drawLine(i, TFT_HEIGHT, i, TFT_HEIGHT - GRAPH_VERT_LIM, TFT_BLACK);
+      display_obj.tft.drawLine(i, TFT_HEIGHT, i, TFT_HEIGHT - GRAPH_VERT_LIM, TFT_RED);
+      display_obj.tft.setCursor(i, TFT_HEIGHT - GRAPH_VERT_LIM);
+      display_obj.tft.setTextColor(TFT_BLACK, TFT_RED);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.println((String)ch_val);
+    }
   }
 
-  this->drawMaxLine(maxValue);
+  this->drawMaxLine(maxValue, TFT_GREEN); // Draw max
+  this->drawMaxLine(total / TFT_WIDTH, TFT_ORANGE); // Draw average
 }
 
 void MenuFunctions::renderGraphUI() {
   display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  display_obj.tft.drawCentreString("Frames/" + (String)BANNER_TIME + "ms", TFT_WIDTH / 2, TFT_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2), 2);
+  display_obj.tft.drawCentreString("Frames/" + (String)BANNER_TIME + "ms", TFT_WIDTH / 2, TFT_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2), BANNER_TEXT_SIZE);
   display_obj.tft.drawLine(0, TFT_HEIGHT - GRAPH_VERT_LIM - 1, TFT_WIDTH, TFT_HEIGHT - GRAPH_VERT_LIM - 1, TFT_WHITE);
+  display_obj.tft.setCursor(0, TFT_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 8));
+  display_obj.tft.setTextSize(BANNER_TEXT_SIZE);
+  display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+  display_obj.tft.println("Max");
+  display_obj.tft.setTextColor(TFT_ORANGE, TFT_BLACK);
+  display_obj.tft.println("Average");
+  display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+  display_obj.tft.println("Channel Marker");
 }
 
 void MenuFunctions::buildButtons(Menu * menu, int starting_index, String button_name)

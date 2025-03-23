@@ -5242,6 +5242,8 @@ void WiFiScan::changeChannel(int chan) {
   this->set_channel = chan;
   esp_wifi_set_channel(this->set_channel, WIFI_SECOND_CHAN_NONE);
   delay(1);
+  if (this->currentScanMode == WIFI_SCAN_CHAN_ANALYZER)
+    this->addAnalyzerValue(this->set_channel * -1, -72, this->_analyzer_values, TFT_WIDTH);
 }
 
 void WiFiScan::changeChannel()
@@ -5268,7 +5270,7 @@ char* WiFiScan::stringToChar(String string) {
   return buf;
 }
 
-void WiFiScan::addAnalyzerValue(uint8_t value, int rssi_avg, uint8_t target_array[], int array_size) {
+void WiFiScan::addAnalyzerValue(int16_t value, int rssi_avg, int16_t target_array[], int array_size) {
   // Shift all elements up by one index
   for (int i = array_size - 1; i > 0; i--) {
     target_array[i] = target_array[i - 1];

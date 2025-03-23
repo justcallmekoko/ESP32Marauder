@@ -181,10 +181,11 @@ class MenuFunctions
     // Menu icons
 
 
-    void drawMaxLine(uint8_t value);
-    float calculateGraphScale(uint8_t value);
-    float graphScaleCheck(const uint8_t array[TFT_WIDTH]);
-    void drawGraph(uint8_t *values);
+    void drawAvgLine(int16_t value);
+    void drawMaxLine(int16_t value, uint16_t color);
+    float calculateGraphScale(int16_t value);
+    float graphScaleCheck(const int16_t array[TFT_WIDTH]);
+    void drawGraph(int16_t *values);
     void renderGraphUI();
     void addNodes(Menu* menu, String name, uint16_t color, Menu* child, int place, std::function<void()> callable, bool selected = false, String command = "");
     void battery(bool initial = false);

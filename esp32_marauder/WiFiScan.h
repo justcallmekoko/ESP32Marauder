@@ -177,7 +177,7 @@ class WiFiScan
     // Wardriver thanks to https://github.com/JosephHewitt
     struct mac_addr mac_history[mac_history_len];
 
-    uint8_t _analyzer_value = 0;
+    int16_t _analyzer_value = 0;
 
     // Settings
     uint mac_history_cursor = 0;
@@ -308,7 +308,7 @@ class WiFiScan
       NimBLEAdvertisementData GetUniversalAdvertisementData(EBLEPayloadType type);
     #endif
 
-    void addAnalyzerValue(uint8_t value, int rssi_avg, uint8_t target_array[], int array_size);
+    void addAnalyzerValue(int16_t value, int rssi_avg, int16_t target_array[], int array_size);
     bool seen_mac(unsigned char* mac);
     bool mac_cmp(struct mac_addr addr1, struct mac_addr addr2);
     void save_mac(unsigned char* mac);
@@ -384,8 +384,8 @@ class WiFiScan
     String dst_mac = "ff:ff:ff:ff:ff:ff";
     byte src_mac[6] = {};
 
-    uint8_t _analyzer_values[TFT_WIDTH];
-    uint8_t _temp_analyzer_values[TFT_WIDTH];
+    int16_t _analyzer_values[TFT_WIDTH];
+    int16_t _temp_analyzer_values[TFT_WIDTH];
 
     String current_mini_kb_ssid = "";
 
