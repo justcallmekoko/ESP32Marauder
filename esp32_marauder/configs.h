@@ -1098,6 +1098,26 @@
   #endif
   //// END SD DEFINITIONS
 
+  //// SPACE SAVING COLORS
+  #define TFTWHITE     1
+  #define TFTCYAN      2
+  #define TFTBLUE      3
+  #define TFTRED       4
+  #define TFTGREEN     5
+  #define TFTGREY      6
+  #define TFTGRAY      7
+  #define TFTMAGENTA   8
+  #define TFTVIOLET    9
+  #define TFTORANGE    10
+  #define TFTYELLOW    11
+  #define TFTLIGHTGREY 12
+  #define TFTPURPLE    13
+  #define TFTNAVY      14
+  #define TFTSILVER    15
+  #define TFTDARKGREY  16
+  #define TFTSKYBLUE   17
+  //// END SPACE SAVING COLORS
+
   //// SCREEN STUFF
   #ifndef HAS_SCREEN
 

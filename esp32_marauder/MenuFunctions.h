@@ -97,10 +97,20 @@ struct Menu;
 
 // Individual Nodes of a menu
 
-struct MenuNode {
+/*struct MenuNode {
   String name;
   bool command;
   uint16_t color;
+  uint8_t icon;
+  TFT_eSPI_Button* button;
+  bool selected;
+  std::function<void()> callable;
+};*/
+
+struct MenuNode {
+  String name;
+  bool command;
+  uint8_t color;
   uint8_t icon;
   TFT_eSPI_Button* button;
   bool selected;
@@ -181,13 +191,15 @@ class MenuFunctions
     // Menu icons
 
 
+    uint16_t getColor(uint16_t color);
     void drawAvgLine(int16_t value);
     void drawMaxLine(int16_t value, uint16_t color);
     float calculateGraphScale(int16_t value);
     float graphScaleCheck(const int16_t array[TFT_WIDTH]);
     void drawGraph(int16_t *values);
     void renderGraphUI();
-    void addNodes(Menu* menu, String name, uint16_t color, Menu* child, int place, std::function<void()> callable, bool selected = false, String command = "");
+    //void addNodes(Menu* menu, String name, uint16_t color, Menu* child, int place, std::function<void()> callable, bool selected = false, String command = "");
+    void addNodes(Menu* menu, String name, uint8_t color, Menu* child, int place, std::function<void()> callable, bool selected = false, String command = "");
     void battery(bool initial = false);
     void battery2(bool initial = false);
     void showMenuList(Menu* menu, int layer);
