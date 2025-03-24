@@ -392,6 +392,33 @@ class WiFiScan
     const String alfa = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789-=[];',./`\\_+{}:\"<>?~|!@#$%^&*()";
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+
+    wifi_init_config_t cfg2 = { \
+        .event_handler = &esp_event_send_internal, \
+        .osi_funcs = &g_wifi_osi_funcs, \
+        .wpa_crypto_funcs = g_wifi_default_wpa_crypto_funcs, \
+        .static_rx_buf_num = 6,\
+        .dynamic_rx_buf_num = 6,\
+        .tx_buf_type = 0,\
+        .static_tx_buf_num = 1,\
+        .dynamic_tx_buf_num = WIFI_DYNAMIC_TX_BUFFER_NUM,\
+        .cache_tx_buf_num = 0,\
+        .csi_enable = false,\
+        .ampdu_rx_enable = false,\
+        .ampdu_tx_enable = false,\
+        .amsdu_tx_enable = false,\
+        .nvs_enable = false,\
+        .nano_enable = WIFI_NANO_FORMAT_ENABLED,\
+        .rx_ba_win = 6,\
+        .wifi_task_core_id = WIFI_TASK_CORE_ID,\
+        .beacon_max_len = 752, \
+        .mgmt_sbuf_num = 8, \
+        .feature_caps = g_wifi_feature_caps, \
+        .sta_disconnected_pm = WIFI_STA_DISCONNECTED_PM_ENABLED,  \
+        .espnow_max_encrypt_num = 0, \
+        .magic = WIFI_INIT_CONFIG_MAGIC\
+    };
+
     wifi_config_t ap_config;
 
     String security_int_to_string(int security_type);
