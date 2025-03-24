@@ -122,7 +122,7 @@ struct Menu {
   String name;
   LinkedList<MenuNode>* list;
   Menu                * parentMenu;
-  uint8_t               selected = 0;
+  uint16_t               selected = 0;
 };
 
 
@@ -135,7 +135,7 @@ class MenuFunctions
 
     float _graph_scale = 1.0;
     uint32_t initTime = 0;
-    uint8_t menu_start_index = 0;
+    int menu_start_index = 0;
     uint8_t mini_kb_index = 0;
     uint8_t old_gps_sat_count = 0;
     uint8_t max_graph_value = 0;
@@ -206,8 +206,8 @@ class MenuFunctions
     String callSetting(String key);
     void runBoolSetting(String ley);
     void displaySetting(String key, Menu* menu, int index);
-    void buttonSelected(uint8_t b, int8_t x = -1);
-    void buttonNotSelected(uint8_t b, int8_t x = -1);
+    void buttonSelected(int b, int x = -1);
+    void buttonNotSelected(int b, int x = -1);
     #if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
       void miniKeyboard(Menu * targetMenu);
     #endif
@@ -254,7 +254,7 @@ class MenuFunctions
     void buildButtons(Menu* menu, int starting_index = 0, String button_name = "");
     void changeMenu(Menu* menu);
     void drawStatusBar();
-    void displayCurrentMenu(uint8_t start_index = 0);
+    void displayCurrentMenu(int start_index = 0);
     void main(uint32_t currentTime);
     void RunSetup();
     void orientDisplay();

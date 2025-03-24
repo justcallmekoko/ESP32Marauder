@@ -3144,6 +3144,11 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
         //  display_string.concat((char)snifferPacket->payload[i + 38]);
         //  essid.concat((char)snifferPacket->payload[i + 38]);
         //}
+        #ifdef HAS_SCREEN
+          display_string.concat("#");
+          display_string.concat(access_points->size());
+          display_string.concat(" ");
+        #endif
         #ifdef HAS_FULL_SCREEN
           display_string.concat(snifferPacket->rx_ctrl.rssi);
           display_string.concat(" ");
@@ -3247,8 +3252,9 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
           Serial.print(" ");
           Serial.print(esp_get_free_heap_size());
 
-          Serial.println();
         }
+
+        Serial.println();
 
         buffer_obj.append(snifferPacket, len);
       }

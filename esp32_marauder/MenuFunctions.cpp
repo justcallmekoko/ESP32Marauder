@@ -562,9 +562,12 @@ MenuFunctions::MenuFunctions()
 #endif
 //// END LV_ARDUINO STUFF
 
-void MenuFunctions::buttonNotSelected(uint8_t b, int8_t x) {
+void MenuFunctions::buttonNotSelected(int b, int x) {
   if (x == -1)
     x = b;
+
+  // Ensure b is within valid button index range
+  b = (x - menu_start_index) % BUTTON_SCREEN_LIMIT;
 
   #ifdef HAS_MINI_SCREEN
     display_obj.tft.setFreeFont(NULL);
@@ -578,7 +581,7 @@ void MenuFunctions::buttonNotSelected(uint8_t b, int8_t x) {
     display_obj.key[b].drawButton(false, current_menu->list->get(x).name);
     if ((current_menu->list->get(x).name != text09) && (current_menu->list->get(x).icon != 255))
           display_obj.tft.drawXBitmap(0,
-                                      KEY_Y + x * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
+                                      KEY_Y + (b * (KEY_H + KEY_SPACING_Y)) - (ICON_H / 2),
                                       menu_icons[current_menu->list->get(x).icon],
                                       ICON_W,
                                       ICON_H,
@@ -588,31 +591,32 @@ void MenuFunctions::buttonNotSelected(uint8_t b, int8_t x) {
   #endif
 }
 
-void MenuFunctions::buttonSelected(uint8_t b, int8_t x) {
-  #ifndef HAS_ILI9341
-    if (x == -1)
-      x = b;
+void MenuFunctions::buttonSelected(int b, int x) {
+  if (x == -1)
+    x = b;
 
-    uint16_t color = this->getColor(current_menu->list->get(x).color);
+  // Ensure b is within valid button index range
+  b = (x - menu_start_index) % BUTTON_SCREEN_LIMIT;
 
-    #ifdef HAS_MINI_SCREEN
-      display_obj.tft.setFreeFont(NULL);
-      display_obj.key[b].drawButton(true, current_menu->list->get(x).name);
-    #endif
+  uint16_t color = this->getColor(current_menu->list->get(x).color);
 
-    #ifdef HAS_FULL_SCREEN
-      display_obj.tft.setFreeFont(MENU_FONT);
-      display_obj.key[b].drawButton(true, current_menu->list->get(x).name);
-      if ((current_menu->list->get(x).name != text09) && (current_menu->list->get(x).icon != 255))
-            display_obj.tft.drawXBitmap(0,
-                                        KEY_Y + x * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
-                                        menu_icons[current_menu->list->get(x).icon],
-                                        ICON_W,
-                                        ICON_H,
-                                        TFT_BLACK,
-                                        color);
-      display_obj.tft.setFreeFont(NULL);
-    #endif
+  #ifdef HAS_MINI_SCREEN
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.key[b].drawButton(true, current_menu->list->get(x).name);
+  #endif
+
+  #ifdef HAS_FULL_SCREEN
+    display_obj.tft.setFreeFont(MENU_FONT);
+    display_obj.key[b].drawButton(true, current_menu->list->get(x).name);
+    if ((current_menu->list->get(x).name != text09) && (current_menu->list->get(x).icon != 255))
+          display_obj.tft.drawXBitmap(0,
+                                      KEY_Y + (b * (KEY_H + KEY_SPACING_Y)) - (ICON_H / 2),
+                                      menu_icons[current_menu->list->get(x).icon],
+                                      ICON_W,
+                                      ICON_H,
+                                      TFT_BLACK,
+                                      color);
+    display_obj.tft.setFreeFont(NULL);
   #endif
 }
 
@@ -903,6 +907,7 @@ void MenuFunctions::main(uint32_t currentTime)
     y = -1;
   #endif
 
+  // Menu navigation and paging
   #ifdef HAS_BUTTONS
     #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1))
       #if !defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
@@ -947,25 +952,34 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == OTA_UPDATE)) {
           if (current_menu->selected < current_menu->list->size() - 1) {
             current_menu->selected++;
-            this->buttonSelected(current_menu->selected - this->menu_start_index, current_menu->selected);
-            if (!current_menu->list->get(current_menu->selected - 1).selected)
-              this->buttonNotSelected(current_menu->selected - 1 - this->menu_start_index, current_menu->selected - 1);
             // Page down
             if (current_menu->selected - this->menu_start_index >= BUTTON_SCREEN_LIMIT) {
               this->buildButtons(current_menu, current_menu->selected + 1 - BUTTON_SCREEN_LIMIT);
               this->displayCurrentMenu(current_menu->selected + 1 - BUTTON_SCREEN_LIMIT);
             }
+            else
+              this->buttonSelected(current_menu->selected - this->menu_start_index, current_menu->selected);
+            if (!current_menu->list->get(current_menu->selected - 1).selected)
+              this->buttonNotSelected(current_menu->selected - 1 - this->menu_start_index, current_menu->selected - 1);
           }
           // Loop to beginning
           else {
             if (current_menu->selected >= BUTTON_SCREEN_LIMIT) {
+              current_menu->selected = 0;
               this->buildButtons(current_menu);
               this->displayCurrentMenu();
+              this->buttonSelected(current_menu->selected);
             }
-            current_menu->selected = 0;
-            this->buttonSelected(current_menu->selected);
-            if (!current_menu->list->get(current_menu->list->size() - 1).selected)
-              this->buttonNotSelected(current_menu->list->size() - 1);
+            else {
+              current_menu->selected = 0;
+              //this->buildButtons(current_menu);  // Ensure all buttons are refreshed
+              //this->displayCurrentMenu();
+              this->buttonSelected(current_menu->selected);
+              if (!current_menu->list->get(current_menu->list->size() - 1).selected)
+                this->buttonNotSelected(current_menu->list->size() - 1);
+              //if (!current_menu->list->get(current_menu->list->size() - 1).selected)
+              //  this->buttonNotSelected(BUTTON_SCREEN_LIMIT - 1, current_menu->list->size() - 1);
+            }
           }
         }
         else if ((wifi_scan_obj.currentScanMode == WIFI_PACKET_MONITOR) ||
@@ -1812,14 +1826,14 @@ void MenuFunctions::RunSetup()
       });
 
       // Determine how big the whole menu is going to be
-      int menu_limit;
-      if (access_points->size() <= BUTTON_ARRAY_LEN)
+      int menu_limit = access_points->size();
+      /*if (access_points->size() <= BUTTON_ARRAY_LEN)
         menu_limit = access_points->size();
       else
-        menu_limit = BUTTON_ARRAY_LEN;
+        menu_limit = BUTTON_ARRAY_LEN;*/
 
       // Populate the menu with buttons
-      for (int i = 0; i < menu_limit - 1; i++) {
+      for (int i = 0; i < menu_limit; i++) {
         // This is the menu node
         this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
         AccessPoint new_ap = access_points->get(i);
@@ -1830,12 +1844,6 @@ void MenuFunctions::RunSetup()
         new_node.selected = !current_menu->list->get(i + 1).selected;
         current_menu->list->set(i + 1, new_node);
 
-        // Change selection status of button key
-        //if (new_ap.selected) {
-        //  this->buttonSelected(i + 1);
-        //} else {
-        //  this->buttonNotSelected(i + 1);
-        //}
         access_points->set(i, new_ap);
         }, access_points->get(i).selected);
       }
@@ -1848,53 +1856,6 @@ void MenuFunctions::RunSetup()
     });
 
 
-    // Select Stations on Mini v1
-    /*
-    this->addNodes(&wifiGeneralMenu, "Select Stations", TFT_CYAN, NULL, KEYBOARD_ICO, [this](){
-      wifiStationMenu.list->clear();
-        this->addNodes(&wifiStationMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-        this->changeMenu(wifiStationMenu.parentMenu);
-      });
-      int menu_limit;
-
-      // Find out how many buttons we will need
-      if (stations->size() <= BUTTON_ARRAY_LEN)
-        menu_limit = stations->size();
-      else
-        menu_limit = BUTTON_ARRAY_LEN;
-
-      // Load buttons with stations
-      for (int i = 0; i < stations->size(); i++) {
-
-        // Check if there is even space left
-        if (current_menu->list->size() >= menu_limit)
-          break;
-          
-        int cur_ap_sta = i;
-
-        this->addNodes(&wifiStationMenu, wifi_scan_obj.macToString(stations->get(cur_ap_sta)), TFT_CYAN, NULL, KEYBOARD_ICO, [this, i, cur_ap_sta](){
-        Station new_sta = stations->get(cur_ap_sta);
-        new_sta.selected = !stations->get(cur_ap_sta).selected;
-
-        // Change selection status of menu node
-        MenuNode new_node = current_menu->list->get(i + 1);
-        new_node.selected = !current_menu->list->get(i + 1).selected;
-        current_menu->list->set(i + 1, new_node);
-
-        // Change selection status of button key
-        //if (new_sta.selected) {
-        //  this->buttonSelected(i + 1);
-        //} else {
-        //  this->buttonNotSelected(i + 1);
-        //}
-
-        stations->set(cur_ap_sta, new_sta);
-        }, stations->get(cur_ap_sta).selected);
-      }
-      this->changeMenu(&wifiStationMenu);
-    });
-    */
-
     // Select Stations on Mini v2
     this->addNodes(&wifiGeneralMenu, "Select Stations", TFTCYAN, NULL, KEYBOARD_ICO, [this](){
       wifiAPMenu.list->clear();
@@ -1902,14 +1863,14 @@ void MenuFunctions::RunSetup()
         this->changeMenu(wifiAPMenu.parentMenu);
       });
 
-      int menu_limit;
+      int menu_limit = access_points->size();
 
-      if (access_points->size() <= BUTTON_ARRAY_LEN)
+      /*if (access_points->size() <= BUTTON_ARRAY_LEN)
         menu_limit = access_points->size();
       else
-        menu_limit = BUTTON_ARRAY_LEN;
+        menu_limit = BUTTON_ARRAY_LEN;*/
 
-      for (int i = 0; i < menu_limit - 1; i++) {
+      for (int i = 0; i < menu_limit; i++) {
         wifiStationMenu.list->clear();
         this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
 
@@ -2588,19 +2549,6 @@ void MenuFunctions::RunSetup()
   }
 #endif
 
-// Function to change menu
-void MenuFunctions::changeMenu(Menu * menu)
-{
-  display_obj.initScrollValues();
-  display_obj.setupScrollArea(TOP_FIXED_AREA, BOT_FIXED_AREA);
-  display_obj.tft.init();
-  current_menu = menu;
-
-  buildButtons(menu);
-
-  displayCurrentMenu();
-}
-
 // Function to show all MenuNodes in a Menu
 void MenuFunctions::showMenuList(Menu * menu, int layer)
 {
@@ -2738,39 +2686,68 @@ uint16_t MenuFunctions::getColor(uint16_t color) {
   else return color;
 }
 
-void MenuFunctions::buildButtons(Menu * menu, int starting_index, String button_name)
+// Function to change menu
+void MenuFunctions::changeMenu(Menu * menu)
 {
-  if (menu->list != NULL)
-  {
-    this->menu_start_index = starting_index;
-    for (uint8_t i = 0; i < menu->list->size(); i++)
-    {
-      // Get color
-      uint16_t color = this->getColor(menu->list->get(starting_index + i).color);
+  display_obj.initScrollValues();
+  display_obj.setupScrollArea(TOP_FIXED_AREA, BOT_FIXED_AREA);
+  display_obj.tft.init();
+  current_menu = menu;
 
-      TFT_eSPI_Button new_button;
-      char buf[menu->list->get(starting_index + i).name.length() + 1] = {};
-      if (button_name != "")
-        menu->list->get(starting_index + i).name.toCharArray(buf, menu->list->get(starting_index + i).name.length() + 1);
-      else
-        button_name.toCharArray(buf, button_name.length() + 1);
-      display_obj.key[i].initButton(&display_obj.tft,
-                                    KEY_X + 0 * (KEY_W + KEY_SPACING_X),
-                                    KEY_Y + i * (KEY_H + KEY_SPACING_Y), // x, y, w, h, outline, fill, text
-                                    KEY_W,
-                                    KEY_H,
-                                    TFT_BLACK, // Outline
-                                    TFT_BLACK, // Fill
-                                    color, // Text
-                                    buf,
-                                    KEY_TEXTSIZE);
+  buildButtons(menu);
 
-      display_obj.key[i].setLabelDatum(BUTTON_PADDING - (KEY_W / 2), 2, ML_DATUM);
-    }
-  }
+  displayCurrentMenu();
 }
 
-void MenuFunctions::displayCurrentMenu(uint8_t start_index)
+void MenuFunctions::buildButtons(Menu *menu, int starting_index, String button_name) {
+  if (menu->list == NULL || menu->list->size() == 0)
+      return;
+
+  // Ensure starting index is within bounds
+  if (starting_index >= menu->list->size())
+    starting_index = menu->list->size() - BUTTON_SCREEN_LIMIT;
+  if (starting_index < 0)
+    starting_index = 0;
+
+  this->menu_start_index = starting_index;
+
+  // Determine the number of buttons to display (limited to screen capacity)
+  uint8_t visible_buttons = min(BUTTON_SCREEN_LIMIT, menu->list->size() - starting_index);
+
+  // Loop through and create only the visible buttons
+  for (uint8_t i = 0; i < visible_buttons; i++) {
+    uint16_t color = this->getColor(menu->list->get(starting_index + i).color);
+    
+    char buf[menu->list->get(starting_index + i).name.length() + 1] = {};
+    if (button_name != "")
+      menu->list->get(starting_index + i).name.toCharArray(buf, menu->list->get(starting_index + i).name.length() + 1);
+    else
+      button_name.toCharArray(buf, button_name.length() + 1);
+
+    if (i >= BUTTON_SCREEN_LIMIT) {
+      Serial.println("Error: Trying to access out-of-bounds button index " + (String)i);
+      break;
+    }
+
+    display_obj.key[i].initButton(&display_obj.tft,
+                                  KEY_X + 0 * (KEY_W + KEY_SPACING_X),
+                                  KEY_Y + i * (KEY_H + KEY_SPACING_Y), // Positioning buttons vertically
+                                  KEY_W,
+                                  KEY_H,
+                                  TFT_BLACK, // Outline
+                                  TFT_BLACK, // Fill
+                                  color, // Text color
+                                  buf,
+                                  KEY_TEXTSIZE);
+
+    
+    display_obj.key[i].setLabelDatum(BUTTON_PADDING - (KEY_W / 2), 2, ML_DATUM);
+
+  }
+
+}
+
+void MenuFunctions::displayCurrentMenu(int start_index)
 {
   //Serial.println(F("Displaying current menu..."));
   display_obj.clearScreen();
@@ -2788,8 +2765,10 @@ void MenuFunctions::displayCurrentMenu(uint8_t start_index)
       display_obj.tft.setFreeFont(NULL);
       display_obj.tft.setTextSize(1);
     #endif
-    for (uint8_t i = start_index; i < current_menu->list->size(); i++)
+    for (uint16_t i = start_index; i < min(start_index + BUTTON_SCREEN_LIMIT, current_menu->list->size()); i++)
     {
+      if (!current_menu || !current_menu->list || i >= current_menu->list->size())
+        continue;
       uint16_t color = this->getColor(current_menu->list->get(i).color);
       #ifdef HAS_FULL_SCREEN
         #ifndef HAS_ILI9341

@@ -1147,29 +1147,29 @@
   //// MEMORY LOWER LIMIT STUFF
   // These values are in bytes
   #ifdef MARAUDER_M5STICKC
-    #define MEM_LOWER_LIM 5000
+    #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_MINI)
-    #define MEM_LOWER_LIM 5000
+    #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_V7)
-    #define MEM_LOWER_LIM 5000
+    #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_REV_FEATHER)
-    #define MEM_LOWER_LIM 5000
+    #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_V4)
-    #define MEM_LOWER_LIM 8500
+    #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
-    #define MEM_LOWER_LIM 8500
+    #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_KIT)
-    #define MEM_LOWER_LIM 8500
+    #define MEM_LOWER_LIM 10000
   #elif defined(GENERIC_ESP32)
-    #define MEM_LOWER_LIM 5000
+    #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_FLIPPER)
-    #define MEM_LOWER_LIM 5000
+    #define MEM_LOWER_LIM 10000
   #elif defined(ESP32_LDDB)
-    #define MEM_LOWER_LIM 5000
+    #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_DEV_BOARD_PRO)
-    #define MEM_LOWER_LIM 5000
+    #define MEM_LOWER_LIM 10000
   #elif defined(XIAO_ESP32_S3)
-    #define MEM_LOWER_LIM 5000
+    #define MEM_LOWER_LIM 10000
   #endif
   //// END MEMORY LOWER LIMIT STUFF
 
