@@ -650,7 +650,8 @@ void MenuFunctions::main(uint32_t currentTime)
         this->updateStatusBar();
       
       // Do channel analyzer stuff
-      if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ANALYZER) {
+      if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ANALYZER) ||
+          (wifi_scan_obj.currentScanMode == BT_SCAN_ANALYZER)){
         this->setGraphScale(this->graphScaleCheck(wifi_scan_obj._analyzer_values));
 
         this->drawGraph(wifi_scan_obj._analyzer_values);
@@ -818,7 +819,8 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_ACTIVE_EAPOL) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_ACTIVE_LIST_EAPOL) ||
             (wifi_scan_obj.currentScanMode == WIFI_PACKET_MONITOR) ||
-            (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ANALYZER))
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ANALYZER) ||
+            (wifi_scan_obj.currentScanMode == BT_SCAN_ANALYZER))
         {
           wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
     
@@ -1587,7 +1589,7 @@ void MenuFunctions::RunSetup()
     this->addNodes(&wifiSnifferMenu, "Channel Analyzer", TFTCYAN, NULL, PACKET_MONITOR, [this]() {
       display_obj.clearScreen();
       this->drawStatusBar();
-      this->renderGraphUI();
+      this->renderGraphUI(WIFI_SCAN_CHAN_ANALYZER);
       wifi_scan_obj.StartScan(WIFI_SCAN_CHAN_ANALYZER, TFT_CYAN);
     });
   #endif
@@ -2022,6 +2024,12 @@ void MenuFunctions::RunSetup()
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_SCAN_SKIMMERS, TFT_MAGENTA);
+  });
+  this->addNodes(&bluetoothSnifferMenu, "Bluetooth Analyzer", TFTCYAN, NULL, PACKET_MONITOR, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    this->renderGraphUI(BT_SCAN_ANALYZER);
+    wifi_scan_obj.StartScan(BT_SCAN_ANALYZER, TFT_CYAN);
   });
 
   // Bluetooth Attack menu
@@ -2691,9 +2699,12 @@ void MenuFunctions::drawGraph(int16_t *values) {
   this->drawMaxLine(total / TFT_WIDTH, TFT_ORANGE); // Draw average
 }
 
-void MenuFunctions::renderGraphUI() {
+void MenuFunctions::renderGraphUI(uint8_t scan_mode) {
   display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  display_obj.tft.drawCentreString("Frames/" + (String)BANNER_TIME + "ms", TFT_WIDTH / 2, TFT_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2), 1);
+  if (scan_mode == WIFI_SCAN_CHAN_ANALYZER)
+    display_obj.tft.drawCentreString("Frames/" + (String)BANNER_TIME + "ms", TFT_WIDTH / 2, TFT_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2), 1);
+  else if (scan_mode == BT_SCAN_ANALYZER)
+    display_obj.tft.drawCentreString("BLE Beacons/" + (String)BANNER_TIME + "ms", TFT_WIDTH / 2, TFT_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2), 1);
   display_obj.tft.drawLine(0, TFT_HEIGHT - GRAPH_VERT_LIM - 1, TFT_WIDTH, TFT_HEIGHT - GRAPH_VERT_LIM - 1, TFT_WHITE);
   display_obj.tft.setCursor(0, TFT_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 8));
   display_obj.tft.setTextSize(1);
@@ -2702,7 +2713,8 @@ void MenuFunctions::renderGraphUI() {
   display_obj.tft.setTextColor(TFT_ORANGE, TFT_BLACK);
   display_obj.tft.println("Average");
   display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
-  display_obj.tft.println("Channel Marker");
+  if (scan_mode != BT_SCAN_ANALYZER)
+    display_obj.tft.println("Channel Marker");
 }
 
 uint16_t MenuFunctions::getColor(uint16_t color) {

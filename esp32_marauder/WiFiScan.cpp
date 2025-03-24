@@ -440,6 +440,9 @@ extern "C" {
             }
           #endif
         }
+        else if (wifi_scan_obj.currentScanMode == BT_SCAN_ANALYZER) {
+          wifi_scan_obj._analyzer_value++;
+        }
       }
   };
   
@@ -781,7 +784,7 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     this->startWiFiAttacks(scan_mode, color, text_table4[47]);
   else if (scan_mode == WIFI_ATTACK_AP_SPAM)
     this->startWiFiAttacks(scan_mode, color, " AP Beacon Spam ");
-  else if ((scan_mode == BT_SCAN_ALL) || (scan_mode == BT_SCAN_AIRTAG) || (scan_mode == BT_SCAN_FLIPPER)){
+  else if ((scan_mode == BT_SCAN_ALL) || (scan_mode == BT_SCAN_AIRTAG) || (scan_mode == BT_SCAN_FLIPPER) || (scan_mode == BT_SCAN_ANALYZER)){
     #ifdef HAS_BT
       RunBluetoothScan(scan_mode, color);
     #endif
@@ -905,6 +908,8 @@ bool WiFiScan::shutdownWiFi() {
     #else
       led_obj.setMode(MODE_OFF);
     #endif
+
+    this->_analyzer_value = 0;
   
     this->wifi_initialized = false;
     return true;
@@ -923,6 +928,8 @@ bool WiFiScan::shutdownBLE() {
       
       pBLEScan->clearResults();
       NimBLEDevice::deinit();
+
+      this->_analyzer_value = 0;
     
       this->ble_initialized = false;
     }
@@ -978,9 +985,11 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   {
     this->shutdownWiFi();
 
-    for (int i = 0; i < TFT_WIDTH; i++) {
-      this->_analyzer_values[i] = 0;
-    }
+    #ifdef HAS_SCREEN
+      for (int i = 0; i < TFT_WIDTH; i++) {
+        this->_analyzer_values[i] = 0;
+      }
+    #endif
   }
 
   
@@ -996,9 +1005,16 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   (currentScanMode == BT_SPOOF_AIRTAG) ||
   (currentScanMode == BT_SCAN_WAR_DRIVE) ||
   (currentScanMode == BT_SCAN_WAR_DRIVE_CONT) ||
-  (currentScanMode == BT_SCAN_SKIMMERS))
+  (currentScanMode == BT_SCAN_SKIMMERS) ||
+  (currentScanMode == BT_SCAN_ANALYZER))
   {
     #ifdef HAS_BT
+      #ifdef HAS_SCREEN
+        for (int i = 0; i < TFT_WIDTH; i++) {
+          this->_analyzer_values[i] = 0;
+        }
+      #endif
+
       this->shutdownBLE();
     #endif
   }
@@ -2800,6 +2816,9 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
       NimBLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DEVICE);
       NimBLEDevice::setScanDuplicateCacheSize(200);
     }
+    else if ((scan_mode == BT_SCAN_WAR_DRIVE_CONT) || (scan_mode == BT_SCAN_ANALYZER)) {
+      NimBLEDevice::setScanDuplicateCacheSize(0);
+    }
     NimBLEDevice::init("");
     pBLEScan = NimBLEDevice::getScan(); //create new scan
     if ((scan_mode == BT_SCAN_ALL) || (scan_mode == BT_SCAN_AIRTAG) || (scan_mode == BT_SCAN_FLIPPER))
@@ -2894,10 +2913,31 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
       #endif
       pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanSkimmersCallback(), false);
     }
+    else if (scan_mode == BT_SCAN_ANALYZER) {
+      #ifdef HAS_SCREEN
+        display_obj.TOP_FIXED_AREA_2 = 48;
+        display_obj.tteBar = true;
+        display_obj.initScrollValues(true);
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setTextColor(TFT_BLACK, color);
+        #ifdef HAS_FULL_SCREEN
+          display_obj.tft.fillRect(0,16,240,16, color);
+          display_obj.tft.drawCentreString("Bluetooth Analyzer", 120, 16, 2);
+          #ifdef HAS_ILI9341
+            display_obj.touchToExit();
+          #endif
+        #endif
+        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+        display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
+      #endif
+      pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), false);
+    }
     pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
     pBLEScan->setInterval(100);
     pBLEScan->setWindow(99);  // less or equal setInterval value
     pBLEScan->setMaxResults(0);
+    if ((scan_mode == BT_SCAN_WAR_DRIVE_CONT) || (scan_mode == BT_SCAN_ANALYZER))
+      pBLEScan->setDuplicateFilter(false);
     pBLEScan->start(0, scanCompleteCB, false);
     Serial.println("Started BLE Scan");
     this->ble_initialized = true;
@@ -5330,7 +5370,8 @@ void WiFiScan::main(uint32_t currentTime)
       channelHop();
     }
   }
-  else if ((currentScanMode == WIFI_SCAN_CHAN_ANALYZER)) {
+  else if ((currentScanMode == WIFI_SCAN_CHAN_ANALYZER) ||
+          (currentScanMode == BT_SCAN_ANALYZER)) {
     this->channelAnalyzerLoop(currentTime);
   }
   else if ((currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||

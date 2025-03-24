@@ -197,7 +197,7 @@ class MenuFunctions
     float calculateGraphScale(int16_t value);
     float graphScaleCheck(const int16_t array[TFT_WIDTH]);
     void drawGraph(int16_t *values);
-    void renderGraphUI();
+    void renderGraphUI(uint8_t scan_mode = 0);
     //void addNodes(Menu* menu, String name, uint16_t color, Menu* child, int place, std::function<void()> callable, bool selected = false, String command = "");
     void addNodes(Menu* menu, String name, uint8_t color, Menu* child, int place, std::function<void()> callable, bool selected = false, String command = "");
     void battery(bool initial = false);

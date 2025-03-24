@@ -99,6 +99,7 @@
 #define BT_SPOOF_AIRTAG 44
 #define BT_SCAN_FLIPPER 45
 #define WIFI_SCAN_CHAN_ANALYZER 46
+#define BT_SCAN_ANALYZER 47
 
 #define BASE_MULTIPLIER 4
 
@@ -176,8 +177,6 @@ class WiFiScan
   private:
     // Wardriver thanks to https://github.com/JosephHewitt
     struct mac_addr mac_history[mac_history_len];
-
-    int16_t _analyzer_value = 0;
 
     // Settings
     uint mac_history_cursor = 0;
@@ -372,6 +371,8 @@ class WiFiScan
     uint8_t set_channel = 1;
 
     uint8_t old_channel = 0;
+
+    int16_t _analyzer_value = 0;
 
     bool orient_display = false;
     bool wifi_initialized = false;
