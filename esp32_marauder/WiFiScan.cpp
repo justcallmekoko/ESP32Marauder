@@ -1360,7 +1360,7 @@ void WiFiScan::RunLoadAPList() {
       ap.channel = obj["channel"];
       ap.selected = false;
       parseBSSID(obj["bssid"], ap.bssid);
-      ap.stations = new LinkedList<uint8_t>();
+      ap.stations = new LinkedList<uint16_t>();
       access_points->add(ap);
     }
 
@@ -3222,7 +3222,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
           ap.bssid[4] = snifferPacket->payload[14];
           ap.bssid[5] = snifferPacket->payload[15];
           ap.selected = false;
-          ap.stations = new LinkedList<uint8_t>();
+          ap.stations = new LinkedList<uint16_t>();
           
           ap.beacon = new LinkedList<char>();
 
@@ -3372,7 +3372,7 @@ void WiFiScan::apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
                           false,
                           NULL,
                           snifferPacket->rx_ctrl.rssi,
-                          new LinkedList<uint8_t>()};
+                          new LinkedList<uint16_t>()};
 
         access_points->add(ap);
 
@@ -5310,8 +5310,10 @@ void WiFiScan::changeChannel(int chan) {
   this->set_channel = chan;
   esp_wifi_set_channel(this->set_channel, WIFI_SECOND_CHAN_NONE);
   delay(1);
-  if (this->currentScanMode == WIFI_SCAN_CHAN_ANALYZER)
-    this->addAnalyzerValue(this->set_channel * -1, -72, this->_analyzer_values, TFT_WIDTH);
+  #ifdef HAS_SCREEN
+    if (this->currentScanMode == WIFI_SCAN_CHAN_ANALYZER)
+      this->addAnalyzerValue(this->set_channel * -1, -72, this->_analyzer_values, TFT_WIDTH);
+  #endif
 }
 
 void WiFiScan::changeChannel()
@@ -5348,11 +5350,13 @@ void WiFiScan::addAnalyzerValue(int16_t value, int rssi_avg, int16_t target_arra
 }
 
 void WiFiScan::channelAnalyzerLoop(uint32_t tick) {
-  if (tick - this->initTime >= BANNER_TIME) {
-    this->initTime = millis();
-    this->addAnalyzerValue(this->_analyzer_value * BASE_MULTIPLIER, -72, this->_analyzer_values, TFT_WIDTH);
-    this->_analyzer_value = 0;
-  }
+  #ifdef HAS_SCREEN
+    if (tick - this->initTime >= BANNER_TIME) {
+      this->initTime = millis();
+      this->addAnalyzerValue(this->_analyzer_value * BASE_MULTIPLIER, -72, this->_analyzer_values, TFT_WIDTH);
+      this->_analyzer_value = 0;
+    }
+  #endif
 }
 
 

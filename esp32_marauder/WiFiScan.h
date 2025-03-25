@@ -385,8 +385,10 @@ class WiFiScan
     String dst_mac = "ff:ff:ff:ff:ff:ff";
     byte src_mac[6] = {};
 
-    int16_t _analyzer_values[TFT_WIDTH];
-    int16_t _temp_analyzer_values[TFT_WIDTH];
+    #ifdef HAS_SCREEN
+      int16_t _analyzer_values[TFT_WIDTH];
+      int16_t _temp_analyzer_values[TFT_WIDTH];
+    #endif
 
     String current_mini_kb_ssid = "";
 

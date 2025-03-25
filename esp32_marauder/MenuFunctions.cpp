@@ -656,9 +656,11 @@ void MenuFunctions::main(uint32_t currentTime)
       // Do channel analyzer stuff
       if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ANALYZER) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_ANALYZER)){
-        this->setGraphScale(this->graphScaleCheck(wifi_scan_obj._analyzer_values));
+        #ifdef HAS_SCREEN
+          this->setGraphScale(this->graphScaleCheck(wifi_scan_obj._analyzer_values));
 
-        this->drawGraph(wifi_scan_obj._analyzer_values);
+          this->drawGraph(wifi_scan_obj._analyzer_values);
+        #endif
       }
     }
   }
