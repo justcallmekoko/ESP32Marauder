@@ -542,7 +542,8 @@
       #define TFT_SHIELD
 
       #define GRAPH_VERT_LIM TFT_HEIGHT/2
-    
+
+      #define CHAR_WIDTH 12
       #define SCREEN_WIDTH TFT_WIDTH
       #define SCREEN_HEIGHT TFT_HEIGHT
       #define HEIGHT_1 TFT_WIDTH
@@ -603,6 +604,7 @@
 
       #define GRAPH_VERT_LIM TFT_HEIGHT/2
     
+      #define CHAR_WIDTH 12
       #define SCREEN_WIDTH TFT_WIDTH
       #define SCREEN_HEIGHT TFT_HEIGHT
       #define HEIGHT_1 TFT_WIDTH
@@ -729,6 +731,7 @@
       #define TFT_DIY
       #define KIT
     
+      #define CHAR_WIDTH 12
       #define SCREEN_WIDTH TFT_WIDTH
       #define SCREEN_HEIGHT TFT_HEIGHT
       #define HEIGHT_1 TFT_WIDTH
