@@ -148,9 +148,10 @@ void backlightOff() {
   #endif
 }
 
-
 void setup()
 {
+  //esp_spiram_init();
+
   #ifdef defined(MARAUDER_M5STICKC) && !defined(MARAUDER_M5STICKCP2)
     axp192_obj.begin();
   #endif
