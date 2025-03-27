@@ -442,6 +442,23 @@ extern "C" {
         }
         else if (wifi_scan_obj.currentScanMode == BT_SCAN_ANALYZER) {
           wifi_scan_obj._analyzer_value++;
+
+          if (wifi_scan_obj.analyzer_frames_recvd < 254)
+            wifi_scan_obj.analyzer_frames_recvd++;
+
+          if (wifi_scan_obj.analyzer_frames_recvd > ANALYZER_NAME_REFRESH) {
+            display_string.concat(advertisedDevice->getRSSI());
+            display_string.concat(" ");
+
+            if(advertisedDevice->getName().length() != 0)
+              display_string.concat(advertisedDevice->getName().c_str());
+            else
+              display_string.concat(advertisedDevice->getAddress().toString().c_str());
+
+            wifi_scan_obj.analyzer_frames_recvd = 0;
+            wifi_scan_obj.analyzer_name_string = display_string;
+            wifi_scan_obj.analyzer_name_update = true;
+          }
         }
       }
   };
@@ -989,6 +1006,8 @@ void WiFiScan::StopScan(uint8_t scan_mode)
       for (int i = 0; i < TFT_WIDTH; i++) {
         this->_analyzer_values[i] = 0;
       }
+      this->analyzer_name_string = "";
+      this->analyzer_name_update = true;
     #endif
   }
 
@@ -1013,6 +1032,8 @@ void WiFiScan::StopScan(uint8_t scan_mode)
         for (int i = 0; i < TFT_WIDTH; i++) {
           this->_analyzer_values[i] = 0;
         }
+        this->analyzer_name_string = "";
+        this->analyzer_name_update = true;
       #endif
 
       this->shutdownBLE();
@@ -4737,6 +4758,39 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
   }
   else {
     wifi_scan_obj._analyzer_value++;
+    if (wifi_scan_obj.analyzer_frames_recvd < 254)
+      wifi_scan_obj.analyzer_frames_recvd++;
+
+    if (wifi_scan_obj.analyzer_frames_recvd >= ANALYZER_NAME_REFRESH) {
+      if (type == WIFI_PKT_MGMT) { // It's management
+        len -= 4;
+        //int fctl = ntohs(frameControl->fctl);
+        //const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)snifferPacket->payload;
+        //const WifiMgmtHdr *hdr = &ipkt->hdr;
+        if ((snifferPacket->payload[0] == 0x80) && (buff == 0)) { // It's a beacon
+          // Get source addr
+          char addr[] = "00:00:00:00:00:00";
+          getMAC(addr, snifferPacket->payload, 10);
+
+          // Show us RSSI
+          display_string.concat(snifferPacket->rx_ctrl.rssi);
+          display_string.concat(" ");
+
+          // Get ESSID if exists else give BSSID to display string
+          if (snifferPacket->payload[37] <= 0) // There is no ESSID. Just add BSSID
+            display_string.concat(addr);
+          else { // There is an ESSID. Add it
+            for (int i = 0; i < snifferPacket->payload[37]; i++)
+            {
+              display_string.concat((char)snifferPacket->payload[i + 38]);
+            }
+          }
+        }
+        wifi_scan_obj.analyzer_name_string = display_string;
+        wifi_scan_obj.analyzer_frames_recvd = 0;
+        wifi_scan_obj.analyzer_name_update = true;
+      }
+    }
   }
 }
 
@@ -5355,7 +5409,26 @@ void WiFiScan::channelAnalyzerLoop(uint32_t tick) {
       this->initTime = millis();
       this->addAnalyzerValue(this->_analyzer_value * BASE_MULTIPLIER, -72, this->_analyzer_values, TFT_WIDTH);
       this->_analyzer_value = 0;
+      if (this->analyzer_name_update) {
+        this->displayAnalyzerString(this->analyzer_name_string);
+        this->analyzer_name_update = false;
+      }
     }
+  #endif
+}
+
+void WiFiScan::displayAnalyzerString(String str) {
+  #ifdef HAS_SCREEN
+    display_obj.tft.fillRect(0, 
+                            TFT_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 4), 
+                            TFT_WIDTH, 
+                            CHAR_WIDTH + 2, 
+                            TFT_BLACK);
+    //display_obj.tft.drawCentreString("Frames/" + (String)BANNER_TIME + "ms", TFT_WIDTH / 2, TFT_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2), 1);
+    display_obj.tft.setCursor(0, TFT_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 4));
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    display_obj.tft.println(str);
   #endif
 }
 

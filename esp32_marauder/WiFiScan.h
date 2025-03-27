@@ -103,6 +103,8 @@
 
 #define BASE_MULTIPLIER 4
 
+#define ANALYZER_NAME_REFRESH 100 // Number of events to refresh the name
+
 #define MAX_CHANNEL     14
 
 extern EvilPortal evil_portal_obj;
@@ -368,6 +370,12 @@ class WiFiScan
 
     //LinkedList<ssid>* ssids;
 
+    String analyzer_name_string = "";
+    
+    uint8_t analyzer_frames_recvd = 0;
+
+    bool analyzer_name_update = false;
+
     uint8_t set_channel = 1;
 
     uint8_t old_channel = 0;
@@ -424,6 +432,7 @@ class WiFiScan
 
     wifi_config_t ap_config;
 
+    void displayAnalyzerString(String str);
     String security_int_to_string(int security_type);
     char* stringToChar(String string);
     void RunSetup();
