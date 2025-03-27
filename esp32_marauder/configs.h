@@ -13,7 +13,7 @@
   //#define MARAUDER_V4
   //#define MARAUDER_V6
   //#define MARAUDER_V6_1
-  #define MARAUDER_V7
+  //#define MARAUDER_V7
   //#define MARAUDER_KIT
   //#define GENERIC_ESP32
   //#define MARAUDER_FLIPPER
