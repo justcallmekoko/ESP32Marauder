@@ -12,6 +12,7 @@ struct mac_addr {
 struct Station {
   uint8_t mac[6];
   bool selected;
+  uint16_t packets;
 };
 
 const char apple_ouis[][9] PROGMEM = {

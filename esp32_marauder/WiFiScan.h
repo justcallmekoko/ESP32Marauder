@@ -100,6 +100,7 @@
 #define BT_SCAN_FLIPPER 45
 #define WIFI_SCAN_CHAN_ANALYZER 46
 #define BT_SCAN_ANALYZER 47
+#define WIFI_SCAN_PACKET_RATE 48
 
 #define BASE_MULTIPLIER 4
 
@@ -326,6 +327,7 @@ class WiFiScan
     void startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_string);
 
     void channelAnalyzerLoop(uint32_t tick);
+    void packetRateLoop(uint32_t tick);
     void packetMonitorMain(uint32_t currentTime);
     void eapolMonitorMain(uint32_t currentTime);
     void updateMidway();
@@ -432,6 +434,7 @@ class WiFiScan
 
     wifi_config_t ap_config;
 
+    void renderPacketRate();
     void displayAnalyzerString(String str);
     String security_int_to_string(int security_type);
     char* stringToChar(String string);

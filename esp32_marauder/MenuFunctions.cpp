@@ -827,6 +827,7 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_ACTIVE_LIST_EAPOL) ||
             (wifi_scan_obj.currentScanMode == WIFI_PACKET_MONITOR) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ANALYZER) ||
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_PACKET_RATE) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_ANALYZER))
         {
           wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
@@ -942,7 +943,9 @@ void MenuFunctions::main(uint32_t currentTime)
           }
           else if ((wifi_scan_obj.currentScanMode == WIFI_PACKET_MONITOR) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_EAPOL) ||
-                  (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ANALYZER)) {
+                  (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ANALYZER) ||
+                  (wifi_scan_obj.currentScanMode == WIFI_SCAN_PACKET_RATE) ||
+                  (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN)) {
             if (wifi_scan_obj.set_channel < 14)
               wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
             else
@@ -987,7 +990,9 @@ void MenuFunctions::main(uint32_t currentTime)
         }
         else if ((wifi_scan_obj.currentScanMode == WIFI_PACKET_MONITOR) ||
                 (wifi_scan_obj.currentScanMode == WIFI_SCAN_EAPOL) ||
-                (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ANALYZER)) {
+                (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ANALYZER) ||
+                (wifi_scan_obj.currentScanMode == WIFI_SCAN_PACKET_RATE) ||
+                (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN)) {
           if (wifi_scan_obj.set_channel > 1)
             wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
           else
@@ -1609,6 +1614,12 @@ void MenuFunctions::RunSetup()
       this->renderGraphUI(WIFI_SCAN_CHAN_ANALYZER);
       wifi_scan_obj.StartScan(WIFI_SCAN_CHAN_ANALYZER, TFT_CYAN);
     });
+    this->addNodes(&wifiSnifferMenu, "Packet Rate", TFTORANGE, NULL, PACKET_MONITOR, [this]() {
+      display_obj.clearScreen();
+      this->drawStatusBar();
+      wifi_scan_obj.StartScan(WIFI_SCAN_PACKET_RATE, TFT_ORANGE);
+      wifi_scan_obj.renderPacketRate();
+    });
   #endif
   //#ifndef HAS_ILI9341
   this->addNodes(&wifiSnifferMenu, text_table1[47], TFTRED, NULL, PWNAGOTCHI, [this]() {
@@ -1632,13 +1643,13 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_STATION, TFT_WHITE);
   });
-  #ifdef HAS_ILI9341
-    this->addNodes(&wifiSnifferMenu, "Signal Monitor", TFTCYAN, NULL, PACKET_MONITOR, [this]() {
-      display_obj.clearScreen();
-      this->drawStatusBar();
-      wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_CYAN);
-    });
-  #endif
+  //#ifdef HAS_ILI9341
+  this->addNodes(&wifiSnifferMenu, "Signal Monitor", TFTCYAN, NULL, PACKET_MONITOR, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_CYAN);
+  });
+  //#endif
 
   // Build Wardriving menu
   wardrivingMenu.parentMenu = &wifiMenu; // Main Menu is second menu parent
