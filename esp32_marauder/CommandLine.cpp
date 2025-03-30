@@ -220,6 +220,7 @@ void CommandLine::runCommand(String input) {
     
     // WiFi sniff/scan
     Serial.println(HELP_EVIL_PORTAL_CMD);
+    Serial.println(HELP_PACKET_COUNT_CMD);
     Serial.println(HELP_SIGSTREN_CMD);
     Serial.println(HELP_SCANAP_CMD);
     Serial.println(HELP_SCANSTA_CMD);
@@ -520,6 +521,16 @@ void CommandLine::runCommand(String input) {
         menu_function_obj.drawStatusBar();
       #endif
       wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_MAGENTA);
+      wifi_scan_obj.renderPacketRate();
+    }
+    // Packet count
+    else if (cmd_args.get(0) == PACKET_COUNT_CMD) {
+      Serial.println("Starting Packet Count Scan. Stop with " + (String)STOPSCAN_CMD);
+      #ifdef HAS_SCREEN
+        display_obj.clearScreen();
+        menu_function_obj.drawStatusBar();
+      #endif
+      wifi_scan_obj.StartScan(WIFI_SCAN_PACKET_RATE, TFT_ORANGE);
     }
     // Wardrive
     else if (cmd_args.get(0) == WARDRIVE_CMD) {
