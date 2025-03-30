@@ -54,6 +54,7 @@ const char PROGMEM NMEA_CMD[] = "nmea";
 
 // WiFi sniff/scan
 const char PROGMEM EVIL_PORTAL_CMD[] = "evilportal";
+const char PROGMEM PACKET_COUNT_CMD[] = "packetcount";
 const char PROGMEM SIGSTREN_CMD[] = "sigmon";
 const char PROGMEM SCANAP_CMD[] = "scanap";
 const char PROGMEM SCANSTA_CMD[] = "scansta";
@@ -109,6 +110,7 @@ const char PROGMEM HELP_NMEA_CMD[] = "nmea";
 
 // WiFi sniff/scan
 const char PROGMEM HELP_EVIL_PORTAL_CMD[] = "evilportal [-c start [-w html.html]/sethtml <html.html>]";
+const char PROGMEM HELP_PACKET_COUNT_CMD[] = "packetcount";
 const char PROGMEM HELP_SIGSTREN_CMD[] = "sigmon";
 const char PROGMEM HELP_SCANAP_CMD[] = "scanap";
 const char PROGMEM HELP_SCANSTA_CMD[] = "scansta";

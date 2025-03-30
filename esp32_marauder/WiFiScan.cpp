@@ -5525,27 +5525,29 @@ void WiFiScan::displayAnalyzerString(String str) {
 }
 
 void WiFiScan::renderPacketRate() {
-  uint8_t line_count = 0;
-  display_obj.tft.fillRect(0,
-                          (STATUS_BAR_WIDTH * 2) + 1,
-                          TFT_WIDTH,
-                          TFT_HEIGHT - STATUS_BAR_WIDTH + 1,
-                          TFT_BLACK);
-  display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH);
-  display_obj.tft.setTextSize(1);
-  display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  for (int i = 0; i < access_points->size(); i++) {
-    if (access_points->get(i).selected) {
-      display_obj.tft.println(access_points->get(i).essid + ": " + (String)access_points->get(i).packets);
-      Serial.println(access_points->get(i).essid + ": " + (String)access_points->get(i).packets);
+  #ifdef HAS_SCREEN
+    uint8_t line_count = 0;
+    display_obj.tft.fillRect(0,
+                            (STATUS_BAR_WIDTH * 2) + 1,
+                            TFT_WIDTH,
+                            TFT_HEIGHT - STATUS_BAR_WIDTH + 1,
+                            TFT_BLACK);
+    display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH);
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    for (int i = 0; i < access_points->size(); i++) {
+      if (access_points->get(i).selected) {
+        display_obj.tft.println(access_points->get(i).essid + ": " + (String)access_points->get(i).packets);
+        Serial.println(access_points->get(i).essid + ": " + (String)access_points->get(i).packets);
+      }
     }
-  }
-  for (int i = 0; i < stations->size(); i++) {
-    if (stations->get(i).selected) {
-      display_obj.tft.println(macToString(stations->get(i).mac) + ": " + (String)stations->get(i).packets);
-      Serial.println(macToString(stations->get(i).mac) + ": " + (String)stations->get(i).packets);
+    for (int i = 0; i < stations->size(); i++) {
+      if (stations->get(i).selected) {
+        display_obj.tft.println(macToString(stations->get(i).mac) + ": " + (String)stations->get(i).packets);
+        Serial.println(macToString(stations->get(i).mac) + ": " + (String)stations->get(i).packets);
+      }
     }
-  }
+  #endif
 }
 
 void WiFiScan::packetRateLoop(uint32_t tick) {

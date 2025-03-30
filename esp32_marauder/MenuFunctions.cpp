@@ -1614,7 +1614,7 @@ void MenuFunctions::RunSetup()
       this->renderGraphUI(WIFI_SCAN_CHAN_ANALYZER);
       wifi_scan_obj.StartScan(WIFI_SCAN_CHAN_ANALYZER, TFT_CYAN);
     });
-    this->addNodes(&wifiSnifferMenu, "Packet Rate", TFTORANGE, NULL, PACKET_MONITOR, [this]() {
+    this->addNodes(&wifiSnifferMenu, "Packet Count", TFTORANGE, NULL, PACKET_MONITOR, [this]() {
       display_obj.clearScreen();
       this->drawStatusBar();
       wifi_scan_obj.StartScan(WIFI_SCAN_PACKET_RATE, TFT_ORANGE);
