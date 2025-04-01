@@ -1919,9 +1919,11 @@ void WiFiScan::RunGPSNmea() {
 }
 
 void WiFiScan::RunAPInfo(uint16_t index) {
-  display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH + KEY_H);
-  display_obj.tft.setTextSize(1);
-  display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  #ifdef HAS_SCREEN
+    display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH + KEY_H);
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  #endif
 
   Serial.println("   ESSID: " + (String)access_points->get(index).essid);
   Serial.println("   BSSID: " + (String)macToString(access_points->get(index).bssid));
@@ -1930,20 +1932,26 @@ void WiFiScan::RunAPInfo(uint16_t index) {
   Serial.println("  Frames: " + (String)access_points->get(index).packets);
   Serial.println("Stations: " + (String)access_points->get(index).stations->size());
 
-  display_obj.tft.println("   ESSID: " + (String)access_points->get(index).essid);
-  display_obj.tft.println("   BSSID: " + (String)macToString(access_points->get(index).bssid));
-  display_obj.tft.println(" Channel: " + (String)access_points->get(index).channel);
-  display_obj.tft.println("    RSSI: " + (String)access_points->get(index).rssi);
-  display_obj.tft.println("  Frames: " + (String)access_points->get(index).packets);
-  display_obj.tft.println("Stations: " + (String)access_points->get(index).stations->size());
+  #ifdef HAS_SCREEN
+    display_obj.tft.println("   ESSID: " + (String)access_points->get(index).essid);
+    display_obj.tft.println("   BSSID: " + (String)macToString(access_points->get(index).bssid));
+    display_obj.tft.println(" Channel: " + (String)access_points->get(index).channel);
+    display_obj.tft.println("    RSSI: " + (String)access_points->get(index).rssi);
+    display_obj.tft.println("  Frames: " + (String)access_points->get(index).packets);
+    display_obj.tft.println("Stations: " + (String)access_points->get(index).stations->size());
+  #endif
 
   if (!access_points->get(index).selected) {
     Serial.println("Selected: false");
-    display_obj.tft.println("Selected: false");
+    #ifdef HAS_SCREEN
+      display_obj.tft.println("Selected: false");
+    #endif
   }
   else {
     Serial.println("Selected: true");
-    display_obj.tft.println("Selected: true");
+    #ifdef HAS_SCREEN
+      display_obj.tft.println("Selected: true");
+    #endif
   }
 
 }
