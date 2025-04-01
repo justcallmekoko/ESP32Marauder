@@ -1918,6 +1918,44 @@ void WiFiScan::RunGPSNmea() {
   #endif
 }
 
+void WiFiScan::RunAPInfo(uint16_t index) {
+  #ifdef HAS_SCREEN
+    display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH + KEY_H);
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  #endif
+
+  Serial.println("   ESSID: " + (String)access_points->get(index).essid);
+  Serial.println("   BSSID: " + (String)macToString(access_points->get(index).bssid));
+  Serial.println(" Channel: " + (String)access_points->get(index).channel);
+  Serial.println("    RSSI: " + (String)access_points->get(index).rssi);
+  Serial.println("  Frames: " + (String)access_points->get(index).packets);
+  Serial.println("Stations: " + (String)access_points->get(index).stations->size());
+
+  #ifdef HAS_SCREEN
+    display_obj.tft.println("   ESSID: " + (String)access_points->get(index).essid);
+    display_obj.tft.println("   BSSID: " + (String)macToString(access_points->get(index).bssid));
+    display_obj.tft.println(" Channel: " + (String)access_points->get(index).channel);
+    display_obj.tft.println("    RSSI: " + (String)access_points->get(index).rssi);
+    display_obj.tft.println("  Frames: " + (String)access_points->get(index).packets);
+    display_obj.tft.println("Stations: " + (String)access_points->get(index).stations->size());
+  #endif
+
+  if (!access_points->get(index).selected) {
+    Serial.println("Selected: false");
+    #ifdef HAS_SCREEN
+      display_obj.tft.println("Selected: false");
+    #endif
+  }
+  else {
+    Serial.println("Selected: true");
+    #ifdef HAS_SCREEN
+      display_obj.tft.println("Selected: true");
+    #endif
+  }
+
+}
+
 void WiFiScan::RunInfo()
 {
   String sta_mac = this->getStaMAC();
@@ -3147,28 +3185,21 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
         }
         if (mac_match) {
           in_list = true;
+          AccessPoint ap = access_points->get(i);
+          ap.packets = ap.packets + 1;
+          access_points->set(i, ap);
           break;
         }
       }
 
       if (!in_list) {
       
-        //delay(random(0, 10));
         Serial.print("RSSI: ");
         Serial.print(snifferPacket->rx_ctrl.rssi);
         Serial.print(" Ch: ");
         Serial.print(snifferPacket->rx_ctrl.channel);
         Serial.print(" BSSID: ");
         Serial.print(addr);
-        //display_string.concat(addr);
-        //Serial.print(" ESSID: ");
-        //display_string.concat(" -> ");
-        //for (int i = 0; i < snifferPacket->payload[37]; i++)
-        //{
-        //  Serial.print((char)snifferPacket->payload[i + 38]);
-        //  display_string.concat((char)snifferPacket->payload[i + 38]);
-        //  essid.concat((char)snifferPacket->payload[i + 38]);
-        //}
         #ifdef HAS_SCREEN
           display_string.concat("#");
           display_string.concat(access_points->size());
