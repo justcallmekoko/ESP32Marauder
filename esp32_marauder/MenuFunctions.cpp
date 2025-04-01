@@ -1451,6 +1451,7 @@ void MenuFunctions::RunSetup()
   #endif
   wifiGeneralMenu.list = new LinkedList<MenuNode>();
   wifiAPMenu.list = new LinkedList<MenuNode>();
+  apInfoMenu.list = new LinkedList<MenuNode>();
   #ifdef HAS_BT
     airtagMenu.list = new LinkedList<MenuNode>();
   #endif
@@ -1517,6 +1518,7 @@ void MenuFunctions::RunSetup()
   clearSSIDsMenu.name = text_table1[28];
   clearAPsMenu.name = text_table1[29];
   wifiAPMenu.name = "Access Points";
+  apInfoMenu.name = "AP Info";
   #ifdef HAS_BT
     airtagMenu.name = "Select Airtag";
   #endif
@@ -1839,15 +1841,8 @@ void MenuFunctions::RunSetup()
         this->changeMenu(wifiAPMenu.parentMenu);
       });
 
-      // Determine how big the whole menu is going to be
-      int menu_limit = access_points->size();
-      /*if (access_points->size() <= BUTTON_ARRAY_LEN)
-        menu_limit = access_points->size();
-      else
-        menu_limit = BUTTON_ARRAY_LEN;*/
-
       // Populate the menu with buttons
-      for (int i = 0; i < menu_limit; i++) {
+      for (int i = 0; i < access_points->size(); i++) {
         // This is the menu node
         this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
         AccessPoint new_ap = access_points->get(i);
@@ -1862,6 +1857,29 @@ void MenuFunctions::RunSetup()
         }, access_points->get(i).selected);
       }
       this->changeMenu(&wifiAPMenu);
+    });
+
+    this->addNodes(&wifiGeneralMenu, "View AP Info", TFTCYAN, NULL, KEYBOARD_ICO, [this](){
+      // Add the back button
+      wifiAPMenu.list->clear();
+        this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+        this->changeMenu(wifiAPMenu.parentMenu);
+      });
+
+      // Populate the menu with buttons
+      for (int i = 0; i < access_points->size(); i++) {
+        // This is the menu node
+        this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
+          this->changeMenu(&apInfoMenu);
+          wifi_scan_obj.RunAPInfo(i);
+        });
+      }
+      this->changeMenu(&wifiAPMenu);
+    });
+
+    apInfoMenu.parentMenu = &wifiAPMenu;
+    this->addNodes(&apInfoMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+      this->changeMenu(apInfoMenu.parentMenu);
     });
 
     wifiAPMenu.parentMenu = &wifiGeneralMenu;

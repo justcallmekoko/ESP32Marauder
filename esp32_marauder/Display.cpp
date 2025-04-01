@@ -270,8 +270,13 @@ void Display::touchToExit()
 void Display::clearScreen()
 {
   //Serial.println(F("clearScreen()"));
-  tft.fillScreen(TFT_BLACK);
-  tft.setCursor(0, 0);
+  #ifndef MARAUDER_V7
+    tft.fillScreen(TFT_BLACK);
+    tft.setCursor(0, 0);
+  #else
+    tft.fillRect(0, 0, TFT_WIDTH, TFT_HEIGHT, TFT_BLACK);
+    tft.setCursor(0, 0);
+  #endif
 }
 
 #ifdef SCREEN_BUFFER
