@@ -2726,6 +2726,8 @@ void MenuFunctions::changeMenu(Menu * menu)
   display_obj.tft.init();
   current_menu = menu;
 
+  current_menu->selected = 0;
+
   buildButtons(menu);
 
   displayCurrentMenu();
