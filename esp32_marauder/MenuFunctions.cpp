@@ -1456,6 +1456,7 @@ void MenuFunctions::RunSetup()
   wifiGeneralMenu.list = new LinkedList<MenuNode>();
   wifiAPMenu.list = new LinkedList<MenuNode>();
   apInfoMenu.list = new LinkedList<MenuNode>();
+  genAPMacMenu.list = new LinkedList<MenuNode>();
   #ifdef HAS_BT
     airtagMenu.list = new LinkedList<MenuNode>();
   #endif
@@ -1523,6 +1524,7 @@ void MenuFunctions::RunSetup()
   clearAPsMenu.name = text_table1[29];
   wifiAPMenu.name = "Access Points";
   apInfoMenu.name = "AP Info";
+  genAPMacMenu.name = "Generate AP MAC";
   #ifdef HAS_BT
     airtagMenu.name = "Select Airtag";
   #endif
@@ -1940,6 +1942,17 @@ void MenuFunctions::RunSetup()
       this->changeMenu(wifiStationMenu.parentMenu);
     });
   #endif
+
+  /*this->addNodes(&wifiGeneralMenu, "Generate AP MAC", TFTLIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(genAPMacMenu.parentMenu);
+    wifi_scan_obj.RunGenerateRandomMac(true);
+  });*/
+
+  // Menu for generating and setting access point MAC
+  genAPMacMenu.parentMenu = &wifiGeneralMenu;
+  this->addNodes(&genAPMacMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(genAPMacMenu.parentMenu);
+  });
 
   // Build generate ssids menu
   generateSSIDsMenu.parentMenu = &wifiGeneralMenu;

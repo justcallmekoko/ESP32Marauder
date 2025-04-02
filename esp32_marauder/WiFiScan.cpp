@@ -1072,7 +1072,7 @@ String WiFiScan::getStaMAC()
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
   esp_wifi_start();
-  esp_err_t mac_status = esp_wifi_get_mac(WIFI_IF_AP, mac);
+  esp_err_t mac_status = esp_wifi_get_mac(WIFI_IF_STA, mac);
   this->wifi_initialized = true;
   sprintf(macAddrChr, 
           "%02X:%02X:%02X:%02X:%02X:%02X",
@@ -1697,6 +1697,42 @@ void WiFiScan::RunClearSSIDs() {
     display_obj.tft.println(text_table4[12] + (String)this->clearSSIDs());
   #else
     this->clearSSIDs();
+  #endif
+}
+
+void WiFiScan::RunGenerateRandomMac(bool ap) {
+  uint8_t custom_mac[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
+  generateRandomMac(custom_mac);
+  esp_err_t result;
+
+  String custom_mac_str = macToString(custom_mac);
+
+  Serial.println("Setting custom MAC: " + (String)custom_mac_str);
+  //esp_wifi_init(&cfg);
+  //esp_wifi_start();
+  //this->wifi_initialized = true;
+
+  if (ap) result = esp_wifi_set_mac(WIFI_IF_AP, custom_mac);
+  else result = esp_wifi_set_mac(WIFI_IF_STA, custom_mac);
+
+  //this->shutdownWiFi();
+
+  if (result == ESP_OK) {
+    Serial.printf("[SUCCESS] Changed MAC for %s to %02X:%02X:%02X:%02X:%02X:%02X\n",
+                  (!ap) ? "STA" : "AP",
+                  custom_mac[0], custom_mac[1], custom_mac[2], custom_mac[3], custom_mac[4], custom_mac[5]);
+  } else {
+    Serial.printf("[ERROR] Failed to change MAC for %s. Error code: 0x%X\n",
+                  (!ap) ? "STA" : "AP", result);
+  }
+
+  #ifdef HAS_DISPLAY
+    display_obj.tft.setTextWrap(false);
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.tft.setCursor(0, 100);
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextColor(TFT_CYAN);
+    display_obj.tft.println("Set MAC: " + (String)custom_mac_str);
   #endif
 }
 

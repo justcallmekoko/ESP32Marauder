@@ -464,6 +464,7 @@ class WiFiScan
     void RunAPInfo(uint16_t index, bool do_display = true);
     void RunInfo();
     //void RunShutdownBLE();
+    void RunGenerateRandomMac(bool ap = true);
     void RunGenerateSSIDs(int count = 20);
     void RunClearSSIDs();
     void RunClearAPs();

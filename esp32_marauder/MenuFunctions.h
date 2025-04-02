@@ -178,6 +178,7 @@ class MenuFunctions
     Menu miniKbMenu;
     Menu saveFileMenu;
     Menu apInfoMenu;
+    Menu genAPMacMenu;
 
     // Bluetooth menu stuff
     Menu bluetoothSnifferMenu;
