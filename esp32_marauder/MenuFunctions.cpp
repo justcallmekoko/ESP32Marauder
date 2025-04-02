@@ -1790,44 +1790,25 @@ void MenuFunctions::RunSetup()
     });
   #else // Mini EP HTML select
     this->addNodes(&wifiGeneralMenu, "Select EP HTML File", TFTCYAN, NULL, KEYBOARD_ICO, [this](){
+      // Add the back button
+      htmlMenu.list->clear();
+        this->addNodes(&htmlMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+        this->changeMenu(htmlMenu.parentMenu);
+      });
+
+      // Populate the menu with buttons
+      for (int i = 0; i < evil_portal_obj.html_files->size(); i++) {
+        // This is the menu node
+        this->addNodes(&htmlMenu, evil_portal_obj.html_files->get(i), TFTCYAN, NULL, 255, [this, i](){
+          evil_portal_obj.selected_html_index = i;
+          evil_portal_obj.target_html_name = evil_portal_obj.html_files->get(evil_portal_obj.selected_html_index);
+          Serial.println("Set Evil Portal HTML as " + evil_portal_obj.target_html_name);
+          evil_portal_obj.using_serial_html = false;
+          this->changeMenu(htmlMenu.parentMenu);
+          return;
+        });
+      }
       this->changeMenu(&htmlMenu);
-      #if (defined(HAS_BUTTONS) && defined(HAS_SD)) 
-        #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1))
-          while(true) {
-            if (d_btn.justPressed()) {
-              if (evil_portal_obj.selected_html_index > 0)
-                evil_portal_obj.selected_html_index--;
-              else
-                evil_portal_obj.selected_html_index = evil_portal_obj.html_files->size() - 1;
-
-              this->htmlMenu.list->set(0, MenuNode{evil_portal_obj.html_files->get(evil_portal_obj.selected_html_index), false, TFTCYAN, 0, NULL, true, NULL});
-              this->buildButtons(&htmlMenu);
-              this->displayCurrentMenu();
-            }
-            #if !defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
-              if (u_btn.justPressed()) {
-                if (evil_portal_obj.selected_html_index < evil_portal_obj.html_files->size() - 1)
-                  evil_portal_obj.selected_html_index++;
-                else
-                  evil_portal_obj.selected_html_index = 0;
-
-                this->htmlMenu.list->set(0, MenuNode{evil_portal_obj.html_files->get(evil_portal_obj.selected_html_index), false, TFTCYAN, 0, NULL, true, NULL});
-                this->buildButtons(&htmlMenu, 0, evil_portal_obj.html_files->get(evil_portal_obj.selected_html_index));
-                this->displayCurrentMenu();
-              }
-            #endif
-            if (c_btn.justPressed()) {
-              if (evil_portal_obj.html_files->get(evil_portal_obj.selected_html_index) != "Back") {
-                evil_portal_obj.target_html_name = evil_portal_obj.html_files->get(evil_portal_obj.selected_html_index);
-                Serial.println("Set Evil Portal HTML as " + evil_portal_obj.target_html_name);
-                evil_portal_obj.using_serial_html = false;
-              }
-              this->changeMenu(htmlMenu.parentMenu);
-              break;
-            }
-          }
-        #endif
-      #endif
     });
 
     #if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
