@@ -3178,7 +3178,9 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
     #endif
     if ((snifferPacket->payload[0] == 0x80) && (buf == 0))
     {
-      display_string = GREEN_KEY;
+      #ifdef HAS_SCREEN
+        display_string = GREEN_KEY;
+      #endif
       char addr[] = "00:00:00:00:00:00";
       getMAC(addr, snifferPacket->payload, 10);
 
@@ -3336,7 +3338,9 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
     }
   }
   if ((snifferPacket->payload[0] != 0x80) && (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA)) {
-    display_string = CYAN_KEY;
+    #ifdef HAS_SCREEN
+      display_string = CYAN_KEY;
+    #endif
     // Setup our ap and destination addrs
     char ap_addr[] = "00:00:00:00:00:00";
     char dst_addr[] = "00:00:00:00:00:00";
@@ -5740,11 +5744,12 @@ void WiFiScan::renderRawStats() {
     display_obj.tft.println("Stats\n");
 
     display_obj.tft.println("Mgmt: " + (String)this->mgmt_frames);
-    display_obj.tft.println("Data: " + (String)this->mgmt_frames);
+    display_obj.tft.println("Data: " + (String)this->data_frames);
     display_obj.tft.println("Chan: " + (String)this->set_channel);
 
     Serial.println("Mgmt: " + (String)this->mgmt_frames);
-    Serial.println("Data: " + (String)this->mgmt_frames);
+    Serial.println("Data: " + (String)this->data_frames);
+    Serial.println("Chan: " + (String)this->set_channel);
   #endif
 }
 
