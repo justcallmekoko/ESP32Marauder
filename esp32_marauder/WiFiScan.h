@@ -101,6 +101,7 @@
 #define WIFI_SCAN_CHAN_ANALYZER 46
 #define BT_SCAN_ANALYZER 47
 #define WIFI_SCAN_PACKET_RATE 48
+#define WIFI_SCAN_AP_STA 49
 
 #define BASE_MULTIPLIER 4
 
@@ -372,6 +373,10 @@ class WiFiScan
 
     //LinkedList<ssid>* ssids;
 
+    // Stuff for RAW stats
+    uint32_t mgmt_frames = 0;
+    uint32_t data_frames = 0;
+
     String analyzer_name_string = "";
     
     uint8_t analyzer_frames_recvd = 0;
@@ -434,6 +439,7 @@ class WiFiScan
 
     wifi_config_t ap_config;
 
+    void renderRawStats();
     void renderPacketRate();
     void displayAnalyzerString(String str);
     String security_int_to_string(int security_type);
