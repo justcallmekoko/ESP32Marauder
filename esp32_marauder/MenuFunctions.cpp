@@ -727,6 +727,7 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_TARGET_AP) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_TARGET_AP_FULL) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_PWN) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_ESPRESSIF) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_ALL) ||
@@ -796,6 +797,7 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_TARGET_AP) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_TARGET_AP_FULL) ||
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_PWN) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_ESPRESSIF) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_ALL) ||
@@ -945,6 +947,7 @@ void MenuFunctions::main(uint32_t currentTime)
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_EAPOL) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ANALYZER) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_PACKET_RATE) ||
+                  (wifi_scan_obj.currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN)) {
             if (wifi_scan_obj.set_channel < 14)
               wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
@@ -992,6 +995,7 @@ void MenuFunctions::main(uint32_t currentTime)
                 (wifi_scan_obj.currentScanMode == WIFI_SCAN_EAPOL) ||
                 (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ANALYZER) ||
                 (wifi_scan_obj.currentScanMode == WIFI_SCAN_PACKET_RATE) ||
+                (wifi_scan_obj.currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
                 (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN)) {
           if (wifi_scan_obj.set_channel > 1)
             wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
@@ -1599,7 +1603,7 @@ void MenuFunctions::RunSetup()
     this->addNodes(&wifiSnifferMenu, text_table1[45], TFTBLUE, NULL, PACKET_MONITOR, [this]() {
       wifi_scan_obj.StartScan(WIFI_PACKET_MONITOR, TFT_BLUE);
     });
-  #else
+  #else // No touch
     this->addNodes(&wifiSnifferMenu, text_table1[46], TFTVIOLET, NULL, EAPOL, [this]() {
       display_obj.clearScreen();
       this->drawStatusBar();
@@ -1622,6 +1626,11 @@ void MenuFunctions::RunSetup()
       wifi_scan_obj.StartScan(WIFI_SCAN_PACKET_RATE, TFT_ORANGE);
       wifi_scan_obj.renderPacketRate();
     });
+    this->addNodes(&wifiSnifferMenu, text_table1[58], TFTWHITE, NULL, PACKET_MONITOR, [this]() {
+      display_obj.clearScreen();
+      this->drawStatusBar();
+      wifi_scan_obj.StartScan(WIFI_SCAN_RAW_CAPTURE, TFT_WHITE);
+    });
   #endif
   //#ifndef HAS_ILI9341
   this->addNodes(&wifiSnifferMenu, text_table1[47], TFTRED, NULL, PWNAGOTCHI, [this]() {
@@ -1635,10 +1644,10 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_TARGET_AP, TFT_MAGENTA);
   });
-  this->addNodes(&wifiSnifferMenu, text_table1[58], TFTWHITE, NULL, PACKET_MONITOR, [this]() {
+  this->addNodes(&wifiSnifferMenu, "Scan All", TFTLIME, NULL, BEACON_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_RAW_CAPTURE, TFT_WHITE);
+    wifi_scan_obj.StartScan(WIFI_SCAN_AP_STA, 0x97e0);
   });
   this->addNodes(&wifiSnifferMenu, text_table1[59], TFTORANGE, NULL, PACKET_MONITOR, [this]() {
     display_obj.clearScreen();
@@ -2715,6 +2724,7 @@ uint16_t MenuFunctions::getColor(uint16_t color) {
   else if (color == TFTSILVER) return TFT_SILVER;
   else if (color == TFTDARKGREY) return TFT_DARKGREY;
   else if (color == TFTSKYBLUE) return TFT_SKYBLUE;
+  else if (color == TFTLIME) return 0x97e0;
   else return color;
 }
 

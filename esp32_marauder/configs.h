@@ -1119,6 +1119,7 @@
   #define TFTSILVER    15
   #define TFTDARKGREY  16
   #define TFTSKYBLUE   17
+  #define TFTLIME      18
   //// END SPACE SAVING COLORS
 
   //// SCREEN STUFF
