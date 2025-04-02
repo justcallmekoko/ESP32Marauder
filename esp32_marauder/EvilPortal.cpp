@@ -14,8 +14,6 @@ void EvilPortal::setup() {
 
   html_files = new LinkedList<String>();
 
-  html_files->add("Back");
-
   #ifdef HAS_SD
     if (sd_obj.supported) {
       sd_obj.listDirToLinkedList(html_files, "/", "html");
