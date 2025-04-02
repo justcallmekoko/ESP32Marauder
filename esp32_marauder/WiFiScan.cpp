@@ -1932,11 +1932,13 @@ void WiFiScan::RunGPSNmea() {
   #endif
 }
 
-void WiFiScan::RunAPInfo(uint16_t index) {
+void WiFiScan::RunAPInfo(uint16_t index, bool do_display) {
   #ifdef HAS_SCREEN
-    display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH + KEY_H);
-    display_obj.tft.setTextSize(1);
-    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    if (do_display) {
+      display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH + KEY_H);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    }
   #endif
 
   Serial.println("   ESSID: " + (String)access_points->get(index).essid);
@@ -1947,24 +1949,30 @@ void WiFiScan::RunAPInfo(uint16_t index) {
   Serial.println("Stations: " + (String)access_points->get(index).stations->size());
 
   #ifdef HAS_SCREEN
-    display_obj.tft.println("   ESSID: " + (String)access_points->get(index).essid);
-    display_obj.tft.println("   BSSID: " + (String)macToString(access_points->get(index).bssid));
-    display_obj.tft.println(" Channel: " + (String)access_points->get(index).channel);
-    display_obj.tft.println("    RSSI: " + (String)access_points->get(index).rssi);
-    display_obj.tft.println("  Frames: " + (String)access_points->get(index).packets);
-    display_obj.tft.println("Stations: " + (String)access_points->get(index).stations->size());
+    if (do_display) {
+      display_obj.tft.println("   ESSID: " + (String)access_points->get(index).essid);
+      display_obj.tft.println("   BSSID: " + (String)macToString(access_points->get(index).bssid));
+      display_obj.tft.println(" Channel: " + (String)access_points->get(index).channel);
+      display_obj.tft.println("    RSSI: " + (String)access_points->get(index).rssi);
+      display_obj.tft.println("  Frames: " + (String)access_points->get(index).packets);
+      display_obj.tft.println("Stations: " + (String)access_points->get(index).stations->size());
+    }
   #endif
 
   if (!access_points->get(index).selected) {
     Serial.println("Selected: false");
     #ifdef HAS_SCREEN
-      display_obj.tft.println("Selected: false");
+      if (do_display) {
+        display_obj.tft.println("Selected: false");
+      }
     #endif
   }
   else {
     Serial.println("Selected: true");
     #ifdef HAS_SCREEN
-      display_obj.tft.println("Selected: true");
+      if (do_display) {
+        display_obj.tft.println("Selected: true");
+      }
     #endif
   }
 
@@ -1990,15 +1998,22 @@ void WiFiScan::RunInfo()
     display_obj.tft.println(text_table4[22] + (String)esp_get_idf_version());
   #endif
 
+  Serial.println(text_table4[20]);
+  Serial.println(text_table4[21] + display_obj.version_number);
+  Serial.println("Hardware: " + (String)HARDWARE_NAME);
+  Serial.println(text_table4[22] + (String)esp_get_idf_version());
+
   if (this->wsl_bypass_enabled) {
     #ifdef HAS_SCREEN
       display_obj.tft.println(text_table4[23]);
     #endif
+    Serial.println(text_table4[23]);
   }
   else {
     #ifdef HAS_SCREEN
       display_obj.tft.println(text_table4[24]);
     #endif
+    Serial.println(text_table4[24]);
   }
 
   #ifdef HAS_SCREEN
@@ -2006,6 +2021,9 @@ void WiFiScan::RunInfo()
     display_obj.tft.println(text_table4[26] + ap_mac);
     display_obj.tft.println(text_table4[27] + free_ram);
   #endif
+  Serial.println(text_table4[25] + sta_mac);
+  Serial.println(text_table4[26] + ap_mac);
+  Serial.println(text_table4[27] + free_ram);
 
   #if defined(HAS_SD)
     if (sd_obj.supported) {
@@ -2015,11 +2033,17 @@ void WiFiScan::RunInfo()
         display_obj.tft.print(sd_obj.card_sz);
         display_obj.tft.println("MB");
       #endif
+      Serial.println(text_table4[28]);
+      Serial.print(text_table4[29]);
+      Serial.print(sd_obj.card_sz);
+      Serial.println("MB");
     } else {
       #ifdef HAS_SCREEN
         display_obj.tft.println(text_table4[30]);
         display_obj.tft.println(text_table4[31]);
       #endif
+      Serial.println(text_table4[30]);
+      Serial.println(text_table4[31]);
     }
   #endif
 
@@ -2030,11 +2054,14 @@ void WiFiScan::RunInfo()
         display_obj.tft.println(text_table4[32]);
         display_obj.tft.println(text_table4[33] + (String)battery_obj.battery_level + "%");
       #endif
+      Serial.println(text_table4[32]);
+      Serial.println(text_table4[33] + (String)battery_obj.battery_level + "%");
     }
     else {
       #ifdef HAS_SCREEN
         display_obj.tft.println(text_table4[34]);
       #endif
+      Serial.println(text_table4[34]);
     }
   #endif
   

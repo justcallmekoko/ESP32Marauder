@@ -461,7 +461,7 @@ class WiFiScan
     String freeRAM();
     void changeChannel();
     void changeChannel(int chan);
-    void RunAPInfo(uint16_t index);
+    void RunAPInfo(uint16_t index, bool do_display = true);
     void RunInfo();
     //void RunShutdownBLE();
     void RunGenerateSSIDs(int count = 20);

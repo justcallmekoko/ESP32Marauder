@@ -155,7 +155,6 @@ class MenuFunctions
     Menu updateMenu;
     Menu settingsMenu;
     Menu specSettingMenu;
-    Menu infoMenu;
     Menu languageMenu;
     Menu sdDeleteMenu;
 
@@ -234,6 +233,8 @@ class MenuFunctions
       // GPS Menu
       Menu gpsInfoMenu;
     #endif
+
+    Menu infoMenu;
 
     Ticker tick;
 
