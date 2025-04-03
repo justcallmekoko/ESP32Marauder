@@ -1456,6 +1456,7 @@ void MenuFunctions::RunSetup()
   wifiGeneralMenu.list = new LinkedList<MenuNode>();
   wifiAPMenu.list = new LinkedList<MenuNode>();
   apInfoMenu.list = new LinkedList<MenuNode>();
+  setMacMenu.list = new LinkedList<MenuNode>();
   genAPMacMenu.list = new LinkedList<MenuNode>();
   #ifdef HAS_BT
     airtagMenu.list = new LinkedList<MenuNode>();
@@ -1524,6 +1525,7 @@ void MenuFunctions::RunSetup()
   clearAPsMenu.name = text_table1[29];
   wifiAPMenu.name = "Access Points";
   apInfoMenu.name = "AP Info";
+  setMacMenu.name = "Set MACs";
   genAPMacMenu.name = "Generate AP MAC";
   #ifdef HAS_BT
     airtagMenu.name = "Select Airtag";
@@ -1944,12 +1946,30 @@ void MenuFunctions::RunSetup()
     });
   #endif
 
-  this->addNodes(&wifiGeneralMenu, "Generate AP MAC", TFTLIGHTGREY, NULL, 0, [this]() {
+  this->addNodes(&wifiGeneralMenu, "Set MACs", TFTLIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(&setMacMenu);
+  });
+
+
+  // Menu for generating and setting MAC addrs for AP and STA
+  setMacMenu.parentMenu = &wifiGeneralMenu;
+  this->addNodes(&setMacMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(setMacMenu.parentMenu);
+  });
+
+  // Generate random MAC for AP
+  this->addNodes(&setMacMenu, "Generate AP MAC", TFTLIME, NULL, 0, [this]() {
     this->changeMenu(&genAPMacMenu);
     wifi_scan_obj.RunGenerateRandomMac(true);
   });
 
-  // Menu for generating and setting access point MAC
+  // Generate random MAC for AP
+  this->addNodes(&setMacMenu, "Generate STA MAC", TFTCYAN, NULL, 0, [this]() {
+    this->changeMenu(&genAPMacMenu);
+    wifi_scan_obj.RunGenerateRandomMac(false);
+  });
+
+  // Menu for generating and setting access point MAC (just goes bacK)
   genAPMacMenu.parentMenu = &wifiGeneralMenu;
   this->addNodes(&genAPMacMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
     this->changeMenu(genAPMacMenu.parentMenu);

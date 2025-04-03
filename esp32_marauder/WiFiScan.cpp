@@ -1078,9 +1078,9 @@ String WiFiScan::getStaMAC()
   char *buf;
   uint8_t mac[6];
   char macAddrChr[18] = {0};
-  esp_wifi_init(&cfg);
+  esp_wifi_init(&cfg2);
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
-  esp_wifi_set_mode(WIFI_MODE_NULL);
+  esp_wifi_set_mode(WIFI_MODE_STA);
   esp_wifi_start();
   this->setMac();
   esp_err_t mac_status = esp_wifi_get_mac(WIFI_IF_STA, mac);
@@ -1102,9 +1102,9 @@ String WiFiScan::getApMAC()
   char *buf;
   uint8_t mac[6];
   char macAddrChr[18] = {0};
-  esp_wifi_init(&cfg);
+  esp_wifi_init(&cfg2);
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
-  esp_wifi_set_mode(WIFI_MODE_NULL);
+  esp_wifi_set_mode(WIFI_MODE_AP);
   esp_wifi_start();
   this->setMac();
   esp_err_t mac_status = esp_wifi_get_mac(WIFI_IF_AP, mac);
@@ -1730,7 +1730,7 @@ void WiFiScan::RunGenerateRandomMac(bool ap) {
   if (ap) Serial.println("Setting AP MAC: " + macToString(this->ap_mac));
   else Serial.println("Setting STA MAC: " + macToString(this->sta_mac));
 
-  #ifdef HAS_DISPLAY
+  #ifdef HAS_SCREEN
     display_obj.tft.setTextWrap(false);
     display_obj.tft.setFreeFont(NULL);
     display_obj.tft.setCursor(0, 100);
