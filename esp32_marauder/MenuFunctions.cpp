@@ -1969,6 +1969,27 @@ void MenuFunctions::RunSetup()
     wifi_scan_obj.RunGenerateRandomMac(false);
   });
 
+  // Clone AP MAC to ESP32 for button folks
+  #ifndef HAS_ILI9341
+    this->addNodes(&setMacMenu, "Clone AP MAC", TFTRED, NULL, CLEAR_ICO, [this](){
+      // Add the back button
+      wifiAPMenu.list->clear();
+        this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+        this->changeMenu(wifiAPMenu.parentMenu);
+      });
+
+      // Populate the menu with buttons
+      for (int i = 0; i < access_points->size(); i++) {
+        // This is the menu node
+        this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
+          this->changeMenu(&genAPMacMenu);
+          wifi_scan_obj.RunSetMac(access_points->get(i).bssid, true);
+        });
+      }
+      this->changeMenu(&wifiAPMenu);
+    });
+  #endif
+
   // Menu for generating and setting access point MAC (just goes bacK)
   genAPMacMenu.parentMenu = &wifiGeneralMenu;
   this->addNodes(&genAPMacMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
