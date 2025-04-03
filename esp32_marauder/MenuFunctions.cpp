@@ -1717,6 +1717,7 @@ void MenuFunctions::RunSetup()
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_EVIL_PORTAL, TFT_ORANGE);
+    wifi_scan_obj.setMac();
   });
   this->addNodes(&wifiAttackMenu, text_table1[54], TFTRED, NULL, DEAUTH_SNIFF, [this]() {
     display_obj.clearScreen();
@@ -1943,10 +1944,10 @@ void MenuFunctions::RunSetup()
     });
   #endif
 
-  /*this->addNodes(&wifiGeneralMenu, "Generate AP MAC", TFTLIGHTGREY, NULL, 0, [this]() {
-    this->changeMenu(genAPMacMenu.parentMenu);
+  this->addNodes(&wifiGeneralMenu, "Generate AP MAC", TFTLIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(&genAPMacMenu);
     wifi_scan_obj.RunGenerateRandomMac(true);
-  });*/
+  });
 
   // Menu for generating and setting access point MAC
   genAPMacMenu.parentMenu = &wifiGeneralMenu;
