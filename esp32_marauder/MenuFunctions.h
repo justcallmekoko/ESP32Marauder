@@ -179,6 +179,7 @@ class MenuFunctions
     Menu saveFileMenu;
     Menu apInfoMenu;
     Menu genAPMacMenu;
+    Menu cloneAPMacMenu;
     Menu setMacMenu;
 
     // Bluetooth menu stuff

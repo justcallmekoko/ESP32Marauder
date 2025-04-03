@@ -1723,6 +1723,32 @@ void WiFiScan::setMac() {
   else Serial.println("Successfully set STA MAC: " + macToString(this->sta_mac));
 }
 
+void WiFiScan::RunSetMac(uint8_t * mac, bool ap) {
+  if (ap) {
+    for (int i = 0; i < 6; i++) {
+      this->ap_mac[i] = mac[i];
+    }
+  }
+  else {
+    for (int i = 0; i < 6; i++) {
+      this->sta_mac[i] = mac[i];
+    }
+  }
+
+  if (ap) Serial.println("Setting AP MAC: " + macToString(this->ap_mac));
+  else Serial.println("Setting STA MAC: " + macToString(this->sta_mac));
+
+  #ifdef HAS_SCREEN
+    display_obj.tft.setTextWrap(false);
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.tft.setCursor(0, 100);
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    if (ap) display_obj.tft.println("Setting AP MAC: " + macToString(this->ap_mac));
+    else display_obj.tft.println("Setting STA MAC: " + macToString(this->sta_mac));
+  #endif
+}
+
 void WiFiScan::RunGenerateRandomMac(bool ap) {
   if (ap) generateRandomMac(this->ap_mac);
   else generateRandomMac(this->sta_mac);
