@@ -222,6 +222,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_EVIL_PORTAL_CMD);
     Serial.println(HELP_PACKET_COUNT_CMD);
     Serial.println(HELP_SIGSTREN_CMD);
+    Serial.println(HELP_SCAN_ALL_CMD);
     Serial.println(HELP_SCANAP_CMD);
     Serial.println(HELP_SCANSTA_CMD);
     Serial.println(HELP_SNIFF_RAW_CMD);
@@ -240,6 +241,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_ATTACK_CMD);
     
     // WiFi Aux
+    Serial.println(HELP_INFO_CMD);
     Serial.println(HELP_LIST_AP_CMD_A);
     Serial.println(HELP_LIST_AP_CMD_B);
     Serial.println(HELP_LIST_AP_CMD_C);
@@ -603,6 +605,10 @@ void CommandLine::runCommand(String input) {
 
         }
       }
+    }
+    else if (cmd_args.get(0) == SCAN_ALL_CMD) {
+      Serial.println("Scanning for APs and Stations. Stop with " + (String)STOPSCAN_CMD);
+      wifi_scan_obj.StartScan(WIFI_SCAN_AP_STA, TFT_MAGENTA);
     }
     else if (cmd_args.get(0) == SCANAP_CMD) {
       int full_sw = -1;
@@ -1198,6 +1204,21 @@ void CommandLine::runCommand(String input) {
     else {
       Serial.println("You did not specify which list to show");
       return;
+    }
+  }
+  else if (cmd_args.get(0) == INFO_CMD) {
+    int ap_sw = this->argSearch(&cmd_args, "-a");
+
+    if (ap_sw != -1) {
+      int filter_ap = cmd_args.get(ap_sw + 1).toInt();
+      wifi_scan_obj.RunAPInfo(filter_ap, false);
+    }
+    else {
+      wifi_scan_obj.currentScanMode = SHOW_INFO;
+      #ifdef HAS_SCREEN
+        menu_function_obj.changeMenu(&menu_function_obj.infoMenu);
+      #endif
+      wifi_scan_obj.RunInfo();
     }
   }
   // Select access points or stations

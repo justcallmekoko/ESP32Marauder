@@ -575,6 +575,15 @@ void WiFiScan::RunSetup() {
     this->ble_initialized = true;
     
     this->shutdownBLE();
+    esp_wifi_init(&cfg);
+    esp_wifi_set_mode(WIFI_AP_STA);
+    esp_wifi_start();
+    this->wifi_initialized = true;
+    esp_wifi_get_mac(WIFI_IF_STA, this->sta_mac);
+    delay(10);
+    esp_wifi_get_mac(WIFI_IF_AP, this->ap_mac);
+    this->setMac();
+    this->shutdownWiFi();
   #endif
 
   this->initWiFi(1);
@@ -882,6 +891,7 @@ void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_
   esp_wifi_set_mode(WIFI_MODE_AP);
   esp_wifi_set_config(WIFI_IF_AP, &ap_config);
   esp_wifi_start();
+  this->setMac();
   esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   
   //WiFi.mode(WIFI_AP_STA);
@@ -1068,11 +1078,12 @@ String WiFiScan::getStaMAC()
   char *buf;
   uint8_t mac[6];
   char macAddrChr[18] = {0};
-  esp_wifi_init(&cfg);
+  esp_wifi_init(&cfg2);
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
-  esp_wifi_set_mode(WIFI_MODE_NULL);
+  esp_wifi_set_mode(WIFI_MODE_STA);
   esp_wifi_start();
-  esp_err_t mac_status = esp_wifi_get_mac(WIFI_IF_AP, mac);
+  this->setMac();
+  esp_err_t mac_status = esp_wifi_get_mac(WIFI_IF_STA, mac);
   this->wifi_initialized = true;
   sprintf(macAddrChr, 
           "%02X:%02X:%02X:%02X:%02X:%02X",
@@ -1091,10 +1102,11 @@ String WiFiScan::getApMAC()
   char *buf;
   uint8_t mac[6];
   char macAddrChr[18] = {0};
-  esp_wifi_init(&cfg);
+  esp_wifi_init(&cfg2);
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
-  esp_wifi_set_mode(WIFI_MODE_NULL);
+  esp_wifi_set_mode(WIFI_MODE_AP);
   esp_wifi_start();
+  this->setMac();
   esp_err_t mac_status = esp_wifi_get_mac(WIFI_IF_AP, mac);
   this->wifi_initialized = true;
   sprintf(macAddrChr, 
@@ -1617,6 +1629,7 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
   esp_wifi_start();
+  this->setMac();
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
   //if (scan_mode == WIFI_SCAN_TARGET_AP_FULL)
@@ -1697,6 +1710,34 @@ void WiFiScan::RunClearSSIDs() {
     display_obj.tft.println(text_table4[12] + (String)this->clearSSIDs());
   #else
     this->clearSSIDs();
+  #endif
+}
+
+void WiFiScan::setMac() {
+  esp_err_t result;
+  result = esp_wifi_set_mac(WIFI_IF_AP, this->ap_mac);
+  if (result != ESP_OK) Serial.printf("Failed to set AP MAC: %s | 0x%X\n", macToString(this->ap_mac), result);
+  else Serial.println("Successfully set AP MAC: " + macToString(this->ap_mac));
+  result = esp_wifi_set_mac(WIFI_IF_STA, this->sta_mac);
+  if (result != ESP_OK) Serial.printf("Failed to set STA MAC: %s | 0x%X\n", macToString(this->sta_mac), result);
+  else Serial.println("Successfully set STA MAC: " + macToString(this->sta_mac));
+}
+
+void WiFiScan::RunGenerateRandomMac(bool ap) {
+  if (ap) generateRandomMac(this->ap_mac);
+  else generateRandomMac(this->sta_mac);
+
+  if (ap) Serial.println("Setting AP MAC: " + macToString(this->ap_mac));
+  else Serial.println("Setting STA MAC: " + macToString(this->sta_mac));
+
+  #ifdef HAS_SCREEN
+    display_obj.tft.setTextWrap(false);
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.tft.setCursor(0, 100);
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    if (ap) display_obj.tft.println("Setting AP MAC: " + macToString(this->ap_mac));
+    else display_obj.tft.println("Setting STA MAC: " + macToString(this->sta_mac));
   #endif
 }
 
@@ -1932,11 +1973,13 @@ void WiFiScan::RunGPSNmea() {
   #endif
 }
 
-void WiFiScan::RunAPInfo(uint16_t index) {
+void WiFiScan::RunAPInfo(uint16_t index, bool do_display) {
   #ifdef HAS_SCREEN
-    display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH + KEY_H);
-    display_obj.tft.setTextSize(1);
-    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    if (do_display) {
+      display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH + KEY_H);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    }
   #endif
 
   Serial.println("   ESSID: " + (String)access_points->get(index).essid);
@@ -1947,24 +1990,30 @@ void WiFiScan::RunAPInfo(uint16_t index) {
   Serial.println("Stations: " + (String)access_points->get(index).stations->size());
 
   #ifdef HAS_SCREEN
-    display_obj.tft.println("   ESSID: " + (String)access_points->get(index).essid);
-    display_obj.tft.println("   BSSID: " + (String)macToString(access_points->get(index).bssid));
-    display_obj.tft.println(" Channel: " + (String)access_points->get(index).channel);
-    display_obj.tft.println("    RSSI: " + (String)access_points->get(index).rssi);
-    display_obj.tft.println("  Frames: " + (String)access_points->get(index).packets);
-    display_obj.tft.println("Stations: " + (String)access_points->get(index).stations->size());
+    if (do_display) {
+      display_obj.tft.println("   ESSID: " + (String)access_points->get(index).essid);
+      display_obj.tft.println("   BSSID: " + (String)macToString(access_points->get(index).bssid));
+      display_obj.tft.println(" Channel: " + (String)access_points->get(index).channel);
+      display_obj.tft.println("    RSSI: " + (String)access_points->get(index).rssi);
+      display_obj.tft.println("  Frames: " + (String)access_points->get(index).packets);
+      display_obj.tft.println("Stations: " + (String)access_points->get(index).stations->size());
+    }
   #endif
 
   if (!access_points->get(index).selected) {
     Serial.println("Selected: false");
     #ifdef HAS_SCREEN
-      display_obj.tft.println("Selected: false");
+      if (do_display) {
+        display_obj.tft.println("Selected: false");
+      }
     #endif
   }
   else {
     Serial.println("Selected: true");
     #ifdef HAS_SCREEN
-      display_obj.tft.println("Selected: true");
+      if (do_display) {
+        display_obj.tft.println("Selected: true");
+      }
     #endif
   }
 
@@ -1990,15 +2039,22 @@ void WiFiScan::RunInfo()
     display_obj.tft.println(text_table4[22] + (String)esp_get_idf_version());
   #endif
 
+  Serial.println(text_table4[20]);
+  Serial.println(text_table4[21] + (String)MARAUDER_VERSION);
+  Serial.println("Hardware: " + (String)HARDWARE_NAME);
+  Serial.println(text_table4[22] + (String)esp_get_idf_version());
+
   if (this->wsl_bypass_enabled) {
     #ifdef HAS_SCREEN
       display_obj.tft.println(text_table4[23]);
     #endif
+    Serial.println(text_table4[23]);
   }
   else {
     #ifdef HAS_SCREEN
       display_obj.tft.println(text_table4[24]);
     #endif
+    Serial.println(text_table4[24]);
   }
 
   #ifdef HAS_SCREEN
@@ -2006,6 +2062,9 @@ void WiFiScan::RunInfo()
     display_obj.tft.println(text_table4[26] + ap_mac);
     display_obj.tft.println(text_table4[27] + free_ram);
   #endif
+  Serial.println(text_table4[25] + sta_mac);
+  Serial.println(text_table4[26] + ap_mac);
+  Serial.println(text_table4[27] + free_ram);
 
   #if defined(HAS_SD)
     if (sd_obj.supported) {
@@ -2015,11 +2074,17 @@ void WiFiScan::RunInfo()
         display_obj.tft.print(sd_obj.card_sz);
         display_obj.tft.println("MB");
       #endif
+      Serial.println(text_table4[28]);
+      Serial.print(text_table4[29]);
+      Serial.print(sd_obj.card_sz);
+      Serial.println("MB");
     } else {
       #ifdef HAS_SCREEN
         display_obj.tft.println(text_table4[30]);
         display_obj.tft.println(text_table4[31]);
       #endif
+      Serial.println(text_table4[30]);
+      Serial.println(text_table4[31]);
     }
   #endif
 
@@ -2030,11 +2095,14 @@ void WiFiScan::RunInfo()
         display_obj.tft.println(text_table4[32]);
         display_obj.tft.println(text_table4[33] + (String)battery_obj.battery_level + "%");
       #endif
+      Serial.println(text_table4[32]);
+      Serial.println(text_table4[33] + (String)battery_obj.battery_level + "%");
     }
     else {
       #ifdef HAS_SCREEN
         display_obj.tft.println(text_table4[34]);
       #endif
+      Serial.println(text_table4[34]);
     }
   #endif
   
@@ -2122,6 +2190,7 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
   esp_wifi_start();
+  this->setMac();
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
   esp_wifi_set_promiscuous_rx_cb(&wifiSnifferCallback);
@@ -2227,6 +2296,7 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
   }
 
   esp_wifi_start();
+  this->setMac();
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
   if (scan_mode == WIFI_SCAN_ACTIVE_EAPOL)
@@ -2266,6 +2336,7 @@ void WiFiScan::RunMimicFlood(uint8_t scan_mode, uint16_t color) {
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_AP_STA);
   esp_wifi_start();
+  this->setMac();
   esp_wifi_set_promiscuous_filter(NULL);
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_max_tx_power(78);
@@ -2310,6 +2381,7 @@ void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
   esp_wifi_start();
+  this->setMac();
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
   esp_wifi_set_promiscuous_rx_cb(&beaconSnifferCallback);
@@ -2577,6 +2649,7 @@ void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color)
     esp_wifi_set_storage(WIFI_STORAGE_RAM);
     esp_wifi_set_mode(WIFI_MODE_NULL);
     esp_wifi_start();
+    this->setMac();
     esp_wifi_set_promiscuous(true);
     esp_wifi_set_promiscuous_filter(&filt);
     esp_wifi_set_promiscuous_rx_cb(&beaconSnifferCallback);
@@ -2632,6 +2705,7 @@ void WiFiScan::RunStationScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
   esp_wifi_start();
+  this->setMac();
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
   esp_wifi_set_promiscuous_rx_cb(&stationSnifferCallback);
@@ -2681,6 +2755,7 @@ void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
   esp_wifi_start();
+  this->setMac();
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
   esp_wifi_set_promiscuous_rx_cb(&rawSnifferCallback);
@@ -2726,6 +2801,7 @@ void WiFiScan::RunDeauthScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
   esp_wifi_start();
+  this->setMac();
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
   esp_wifi_set_promiscuous_rx_cb(&deauthSnifferCallback);
@@ -2787,6 +2863,7 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
   esp_wifi_start();
+  this->setMac();
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
   esp_wifi_set_promiscuous_rx_cb(&probeSnifferCallback);

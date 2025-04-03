@@ -883,7 +883,7 @@ void MenuFunctions::main(uint32_t currentTime)
                                         menu_icons[current_menu->list->get(b).icon],
                                         ICON_W,
                                         ICON_H,
-                                        current_menu->list->get(b).color,
+                                        this->getColor(current_menu->list->get(b).color),
                                         TFT_BLACK);
         }
   
@@ -903,7 +903,7 @@ void MenuFunctions::main(uint32_t currentTime)
                                         ICON_W,
                                         ICON_H,
                                         TFT_BLACK,
-                                        current_menu->list->get(b).color);
+                                        this->getColor(current_menu->list->get(b).color));
         }
   
         display_obj.tft.setFreeFont(NULL);
@@ -1456,6 +1456,8 @@ void MenuFunctions::RunSetup()
   wifiGeneralMenu.list = new LinkedList<MenuNode>();
   wifiAPMenu.list = new LinkedList<MenuNode>();
   apInfoMenu.list = new LinkedList<MenuNode>();
+  setMacMenu.list = new LinkedList<MenuNode>();
+  genAPMacMenu.list = new LinkedList<MenuNode>();
   #ifdef HAS_BT
     airtagMenu.list = new LinkedList<MenuNode>();
   #endif
@@ -1523,6 +1525,8 @@ void MenuFunctions::RunSetup()
   clearAPsMenu.name = text_table1[29];
   wifiAPMenu.name = "Access Points";
   apInfoMenu.name = "AP Info";
+  setMacMenu.name = "Set MACs";
+  genAPMacMenu.name = "Generate AP MAC";
   #ifdef HAS_BT
     airtagMenu.name = "Select Airtag";
   #endif
@@ -1715,6 +1719,7 @@ void MenuFunctions::RunSetup()
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_EVIL_PORTAL, TFT_ORANGE);
+    wifi_scan_obj.setMac();
   });
   this->addNodes(&wifiAttackMenu, text_table1[54], TFTRED, NULL, DEAUTH_SNIFF, [this]() {
     display_obj.clearScreen();
@@ -1940,6 +1945,35 @@ void MenuFunctions::RunSetup()
       this->changeMenu(wifiStationMenu.parentMenu);
     });
   #endif
+
+  this->addNodes(&wifiGeneralMenu, "Set MACs", TFTLIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(&setMacMenu);
+  });
+
+
+  // Menu for generating and setting MAC addrs for AP and STA
+  setMacMenu.parentMenu = &wifiGeneralMenu;
+  this->addNodes(&setMacMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(setMacMenu.parentMenu);
+  });
+
+  // Generate random MAC for AP
+  this->addNodes(&setMacMenu, "Generate AP MAC", TFTLIME, NULL, 0, [this]() {
+    this->changeMenu(&genAPMacMenu);
+    wifi_scan_obj.RunGenerateRandomMac(true);
+  });
+
+  // Generate random MAC for AP
+  this->addNodes(&setMacMenu, "Generate STA MAC", TFTCYAN, NULL, 0, [this]() {
+    this->changeMenu(&genAPMacMenu);
+    wifi_scan_obj.RunGenerateRandomMac(false);
+  });
+
+  // Menu for generating and setting access point MAC (just goes bacK)
+  genAPMacMenu.parentMenu = &wifiGeneralMenu;
+  this->addNodes(&genAPMacMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(genAPMacMenu.parentMenu);
+  });
 
   // Build generate ssids menu
   generateSSIDsMenu.parentMenu = &wifiGeneralMenu;

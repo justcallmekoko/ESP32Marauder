@@ -182,6 +182,9 @@ class WiFiScan
     // Wardriver thanks to https://github.com/JosephHewitt
     struct mac_addr mac_history[mac_history_len];
 
+    uint8_t ap_mac[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
+    uint8_t sta_mac[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
+
     // Settings
     uint mac_history_cursor = 0;
     uint8_t channel_hop_delay = 1;
@@ -439,6 +442,7 @@ class WiFiScan
 
     wifi_config_t ap_config;
 
+    void setMac();
     void renderRawStats();
     void renderPacketRate();
     void displayAnalyzerString(String str);
@@ -461,9 +465,10 @@ class WiFiScan
     String freeRAM();
     void changeChannel();
     void changeChannel(int chan);
-    void RunAPInfo(uint16_t index);
+    void RunAPInfo(uint16_t index, bool do_display = true);
     void RunInfo();
     //void RunShutdownBLE();
+    void RunGenerateRandomMac(bool ap = true);
     void RunGenerateSSIDs(int count = 20);
     void RunClearSSIDs();
     void RunClearAPs();

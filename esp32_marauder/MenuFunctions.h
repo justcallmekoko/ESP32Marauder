@@ -155,7 +155,6 @@ class MenuFunctions
     Menu updateMenu;
     Menu settingsMenu;
     Menu specSettingMenu;
-    Menu infoMenu;
     Menu languageMenu;
     Menu sdDeleteMenu;
 
@@ -179,6 +178,8 @@ class MenuFunctions
     Menu miniKbMenu;
     Menu saveFileMenu;
     Menu apInfoMenu;
+    Menu genAPMacMenu;
+    Menu setMacMenu;
 
     // Bluetooth menu stuff
     Menu bluetoothSnifferMenu;
@@ -234,6 +235,8 @@ class MenuFunctions
       // GPS Menu
       Menu gpsInfoMenu;
     #endif
+
+    Menu infoMenu;
 
     Ticker tick;
 
