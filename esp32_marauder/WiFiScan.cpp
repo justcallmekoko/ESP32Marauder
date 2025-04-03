@@ -2040,7 +2040,7 @@ void WiFiScan::RunInfo()
   #endif
 
   Serial.println(text_table4[20]);
-  Serial.println(text_table4[21] + display_obj.version_number);
+  Serial.println(text_table4[21] + (String)MARAUDER_VERSION);
   Serial.println("Hardware: " + (String)HARDWARE_NAME);
   Serial.println(text_table4[22] + (String)esp_get_idf_version());
 
