@@ -1981,9 +1981,27 @@ void MenuFunctions::RunSetup()
       // Populate the menu with buttons
       for (int i = 0; i < access_points->size(); i++) {
         // This is the menu node
-        this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
+        this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTLIME, NULL, 255, [this, i](){
           this->changeMenu(&genAPMacMenu);
           wifi_scan_obj.RunSetMac(access_points->get(i).bssid, true);
+        });
+      }
+      this->changeMenu(&wifiAPMenu);
+    });
+
+    this->addNodes(&setMacMenu, "Clone STA MAC", TFTMAGENTA, NULL, CLEAR_ICO, [this](){
+      // Add the back button
+      wifiAPMenu.list->clear();
+        this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+        this->changeMenu(wifiAPMenu.parentMenu);
+      });
+
+      // Populate the menu with buttons
+      for (int i = 0; i < stations->size(); i++) {
+        // This is the menu node
+        this->addNodes(&wifiAPMenu, macToString(stations->get(i).mac), TFTMAGENTA, NULL, 255, [this, i](){
+          this->changeMenu(&genAPMacMenu);
+          wifi_scan_obj.RunSetMac(stations->get(i).mac, false);
         });
       }
       this->changeMenu(&wifiAPMenu);
