@@ -883,7 +883,7 @@ void MenuFunctions::main(uint32_t currentTime)
                                         menu_icons[current_menu->list->get(b).icon],
                                         ICON_W,
                                         ICON_H,
-                                        current_menu->list->get(b).color,
+                                        this->getColor(current_menu->list->get(b).color),
                                         TFT_BLACK);
         }
   
@@ -903,7 +903,7 @@ void MenuFunctions::main(uint32_t currentTime)
                                         ICON_W,
                                         ICON_H,
                                         TFT_BLACK,
-                                        current_menu->list->get(b).color);
+                                        this->getColor(current_menu->list->get(b).color));
         }
   
         display_obj.tft.setFreeFont(NULL);
