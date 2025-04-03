@@ -222,21 +222,36 @@ void Display::tftDrawChannelScaleButtons(int set_channel)
   key[5].drawButton();
 }
 
-void Display::tftDrawExitScaleButtons()
+void Display::tftDrawExitScaleButtons(bool lnd_an)
 {
   //tft.drawFastVLine(178, 0, 20, TFT_WHITE);
   //tft.setCursor(145, 21); tft.setTextColor(TFT_WHITE); tft.setTextSize(1); tft.print("Channel:"); tft.print(set_channel);
+  if (lnd_an) {
 
-  key[6].initButton(&tft, // Exit box
-                        137,
-                        10, // x, y, w, h, outline, fill, text
-                        20,
-                        20,
-                        TFT_ORANGE, // Outline
-                        TFT_RED, // Fill
-                        TFT_BLACK, // Text
-                        "X",
-                        2);
+    key[6].initButton(&tft, // Exit box
+                      137,
+                      10, // x, y, w, h, outline, fill, text
+                      20,
+                      20,
+                      TFT_ORANGE, // Outline
+                      TFT_RED, // Fill
+                      TFT_BLACK, // Text
+                      "X",
+                      2);
+  }
+
+  else {
+    key[6].initButton(&tft, // Exit box
+                      EXT_BUTTON_WIDTH / 2,
+                      (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH - 1, // x, y, w, h, outline, fill, text
+                      EXT_BUTTON_WIDTH,
+                      EXT_BUTTON_WIDTH,
+                      TFT_ORANGE, // Outline
+                      TFT_RED, // Fill
+                      TFT_BLACK, // Text
+                      "X",
+                      2);
+  }
 
   key[6].setLabelDatum(1, 5, MC_DATUM);
 

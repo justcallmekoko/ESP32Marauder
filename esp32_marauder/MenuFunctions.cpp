@@ -321,14 +321,17 @@ MenuFunctions::MenuFunctions()
     list_btn = lv_list_add_btn(list1, LV_SYMBOL_CLOSE, text09);
     lv_obj_set_event_cb(list_btn, ap_list_cb);
   
-    if (type == "AP") {
+    if ((type == "AP") || (type == "AP Info")) {
       for (int i = 0; i < access_points->size(); i++) {
         char buf[access_points->get(i).essid.length() + 1] = {};
         access_points->get(i).essid.toCharArray(buf, access_points->get(i).essid.length() + 1);
         
         list_btn = lv_list_add_btn(list1, LV_SYMBOL_WIFI, buf);
         lv_btn_set_checkable(list_btn, true);
-        lv_obj_set_event_cb(list_btn, ap_list_cb);
+        if (type == "AP")
+          lv_obj_set_event_cb(list_btn, ap_list_cb);
+        else if (type == "AP Info")
+          lv_obj_set_event_cb(list_btn, ap_info_list_cb);
     
         if (access_points->get(i).selected)
           lv_btn_toggle(list_btn);
@@ -470,6 +473,43 @@ MenuFunctions::MenuFunctions()
             access_points->set(i, ap);
           }
         }
+      }
+    }
+  }
+
+  void ap_info_list_cb(lv_obj_t * btn, lv_event_t event) {
+    extern LinkedList<AccessPoint>* access_points;
+    extern MenuFunctions menu_function_obj;
+    extern WiFiScan wifi_scan_obj;
+  
+    String btn_text = lv_list_get_btn_text(btn);
+    String display_string = "";
+    
+    // Exit function
+    if (event == LV_EVENT_CLICKED) {
+      if (btn_text != text09) {
+        for (int i = 0; i < access_points->size(); i++) {
+          if (access_points->get(i).essid == btn_text) {
+            lv_obj_del_async(lv_obj_get_parent(lv_obj_get_parent(btn)));
+  
+            printf("LV_EVENT_CANCEL\n");
+            menu_function_obj.deinitLVGL();
+            wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+            //display_obj.exit_draw = true; // set everything back to normal
+            menu_function_obj.orientDisplay();
+            menu_function_obj.changeMenu(&menu_function_obj.apInfoMenu);
+            wifi_scan_obj.RunAPInfo(i);
+          }
+        }
+      }
+      else {
+        Serial.println("Exiting...");
+        lv_obj_del_async(lv_obj_get_parent(lv_obj_get_parent(btn)));
+  
+        printf("LV_EVENT_CANCEL\n");
+        menu_function_obj.deinitLVGL();
+        wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+        display_obj.exit_draw = true; // set everything back to normal
       }
     }
   }
@@ -1600,6 +1640,12 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_DEAUTH, TFT_RED);
   });
+  this->addNodes(&wifiSnifferMenu, "Packet Count", TFTORANGE, NULL, PACKET_MONITOR, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_SCAN_PACKET_RATE, TFT_ORANGE);
+    wifi_scan_obj.renderPacketRate();
+  });
   #ifdef HAS_ILI9341
     this->addNodes(&wifiSnifferMenu, text_table1[46], TFTVIOLET, NULL, EAPOL, [this]() {
       wifi_scan_obj.StartScan(WIFI_SCAN_EAPOL, TFT_VIOLET);
@@ -1624,12 +1670,12 @@ void MenuFunctions::RunSetup()
       this->renderGraphUI(WIFI_SCAN_CHAN_ANALYZER);
       wifi_scan_obj.StartScan(WIFI_SCAN_CHAN_ANALYZER, TFT_CYAN);
     });
-    this->addNodes(&wifiSnifferMenu, "Packet Count", TFTORANGE, NULL, PACKET_MONITOR, [this]() {
+    /*this->addNodes(&wifiSnifferMenu, "Packet Count", TFTORANGE, NULL, PACKET_MONITOR, [this]() {
       display_obj.clearScreen();
       this->drawStatusBar();
       wifi_scan_obj.StartScan(WIFI_SCAN_PACKET_RATE, TFT_ORANGE);
       wifi_scan_obj.renderPacketRate();
-    });
+    });*/
     this->addNodes(&wifiSnifferMenu, text_table1[58], TFTWHITE, NULL, PACKET_MONITOR, [this]() {
       display_obj.clearScreen();
       this->drawStatusBar();
@@ -1793,6 +1839,10 @@ void MenuFunctions::RunSetup()
       wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_RED);  
       selectEPHTMLGFX();
     });
+    apInfoMenu.parentMenu = &wifiGeneralMenu;
+    this->addNodes(&apInfoMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+      this->changeMenu(apInfoMenu.parentMenu);
+    });
   #else // Mini EP HTML select
     this->addNodes(&wifiGeneralMenu, "Select EP HTML File", TFTCYAN, NULL, KEYBOARD_ICO, [this](){
       // Add the back button
@@ -1943,6 +1993,15 @@ void MenuFunctions::RunSetup()
     wifiStationMenu.parentMenu = &wifiAPMenu;
     this->addNodes(&wifiStationMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
       this->changeMenu(wifiStationMenu.parentMenu);
+    });
+  #endif
+
+  #ifdef HAS_ILI9341
+    this->addNodes(&wifiGeneralMenu, "View AP Info", TFTLIGHTGREY, NULL, 0, [this]() {
+      display_obj.clearScreen();
+      wifi_scan_obj.currentScanMode = LV_ADD_SSID;
+      wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_WHITE);
+      addAPGFX("AP Info");
     });
   #endif
 
