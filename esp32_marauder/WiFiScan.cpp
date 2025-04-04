@@ -2153,7 +2153,8 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
     startPcap("packet_monitor");
 
   #ifdef HAS_ILI9341
-    if (scan_mode != WIFI_SCAN_PACKET_RATE) {
+    if ((scan_mode != WIFI_SCAN_PACKET_RATE) &&
+        (scan_mode != WIFI_SCAN_CHAN_ANALYZER)) {
       #ifdef HAS_SCREEN
         display_obj.tft.init();
         display_obj.tft.setRotation(1);
@@ -2198,8 +2199,10 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
         display_obj.tft.fillRect(0,16,240,16, color);
         if (scan_mode == WIFI_PACKET_MONITOR)
           display_obj.tft.drawCentreString(text_table1[45],120,16,2);
-        else if (scan_mode == WIFI_SCAN_CHAN_ANALYZER)
+        else if (scan_mode == WIFI_SCAN_CHAN_ANALYZER) {
+          display_obj.tft.setTextColor(TFT_BLACK, color);
           display_obj.tft.drawCentreString("Channel Analyzer", 120, 16, 2);
+        }
         else if (scan_mode == WIFI_SCAN_PACKET_RATE)
           display_obj.tft.drawCentreString("Packet Rate", 120, 16, 2);
       #endif
@@ -5830,6 +5833,36 @@ void WiFiScan::channelAnalyzerLoop(uint32_t tick) {
         this->analyzer_name_update = false;
       }
     }
+
+    #ifdef HAS_ILI9341
+      int8_t b = this->checkAnalyzerButtons(millis());
+
+      if (b == 6) {
+        this->StartScan(WIFI_SCAN_OFF);
+        this->orient_display = true;
+        return;
+      }
+      else if (b == 4) {
+        if (set_channel > 1) {
+          set_channel--;
+          display_obj.tftDrawChannelScaleButtons(set_channel, false);
+          display_obj.tftDrawExitScaleButtons(false);
+          changeChannel();
+          return;
+        }
+      }
+
+      // Channel + button pressed
+      else if (b == 5) {
+        if (set_channel < MAX_CHANNEL) {
+          set_channel++;
+          display_obj.tftDrawChannelScaleButtons(set_channel, false);
+          display_obj.tftDrawExitScaleButtons(false);
+          changeChannel();
+          return;
+        }
+      }
+    #endif
   #endif
 }
 
