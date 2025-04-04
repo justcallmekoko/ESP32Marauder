@@ -2203,6 +2203,8 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
         else if (scan_mode == WIFI_SCAN_PACKET_RATE)
           display_obj.tft.drawCentreString("Packet Rate", 120, 16, 2);
       #endif
+
+      // Setup up portrait analyzer buttons
       display_obj.tft.setFreeFont(NULL);
       display_obj.tft.setTextSize(1);
       display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
@@ -2457,40 +2459,6 @@ void WiFiScan::executeSourApple() {
     pAdvertising->stop();
   #endif
 }
-
-/*void WiFiScan::generateRandomName(char *name, size_t length) {
-    static const char alphabet[] = "abcdefghijklmnopqrstuvwxyz";
-    
-    // Generate the first character as uppercase
-    name[0] = 'A' + (rand() % 26);
-    
-    // Generate the remaining characters as lowercase
-    for (size_t i = 1; i < length - 1; ++i) {
-        name[i] = alphabet[rand() % (sizeof(alphabet) - 1)];
-    }
-    name[length - 1] = '\0';  // Null-terminate the string
-}*/
-
-/*const char* WiFiScan::generateRandomName() {
-  const char* charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  int len = rand() % 10 + 1; // Generate a random length between 1 and 10
-  char* randomName = (char*)malloc((len + 1) * sizeof(char)); // Allocate memory for the random name
-  for (int i = 0; i < len; ++i) {
-    randomName[i] = charset[rand() % strlen(charset)]; // Select random characters from the charset
-  }
-  randomName[len] = '\0'; // Null-terminate the string
-  return randomName;
-}*/
-
-/*void WiFiScan::generateRandomMac(uint8_t* mac) {
-  // Set the locally administered bit and unicast bit for the first byte
-  mac[0] = 0x02; // The locally administered bit is the second least significant bit
-
-  // Generate the rest of the MAC address
-  for (int i = 1; i < 6; i++) {
-    mac[i] = random(0, 255);
-  }
-}*/
 
 void WiFiScan::setBaseMacAddress(uint8_t macAddr[6]) {
   // Use ESP-IDF function to set the base MAC address
@@ -2792,14 +2760,26 @@ void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color)
       display_obj.tft.fillRect(0,16,240,16, color);
       if (scan_mode != WIFI_SCAN_SIG_STREN)
         display_obj.tft.drawCentreString(text_table1[58],120,16,2);
-      else
+      else {
         display_obj.tft.drawCentreString("Signal Monitor", 120, 16, 2);
-      #ifdef HAS_ILI9341
-        display_obj.touchToExit();
-      #endif
+        #ifdef HAS_ILI9341
+          display_obj.touchToExit();
+        #endif
+      }
     #endif
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
     display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
+
+    #ifdef HAS_ILI9341
+      if (scan_mode == WIFI_SCAN_RAW_CAPTURE) {
+        display_obj.tft.setFreeFont(NULL);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+        display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
+        display_obj.tftDrawChannelScaleButtons(set_channel, false);
+        display_obj.tftDrawExitScaleButtons(false);
+      }
+    #endif
   #endif
   
   esp_wifi_init(&cfg2);
@@ -5916,9 +5896,6 @@ void WiFiScan::renderPacketRate() {
       }
     }
 
-    /*#ifdef HAS_ILI9341
-      display_obj.key[6].drawButton();
-    #endif*/
   #endif
 }
 
