@@ -330,6 +330,7 @@ class WiFiScan
 
     void startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_string);
 
+    void signalAnalyzerLoop(uint32_t tick);
     void channelAnalyzerLoop(uint32_t tick);
     void packetRateLoop(uint32_t tick);
     void packetMonitorMain(uint32_t currentTime);

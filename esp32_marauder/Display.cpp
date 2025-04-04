@@ -386,7 +386,7 @@ void Display::displayBuffer(bool do_clear)
           blank[(18+(yStart - TOP_FIXED_AREA_2) / TEXT_HEIGHT)%19] = xPos;
       #else
         xPos = 0;
-        if (this->screen_buffer->size() >= MAX_SCREEN_BUFFER) 
+        if (this->screen_buffer->size() >= MAX_SCREEN_BUFFER)
           this->scrollScreenBuffer();
 
         screen_buffer->add(display_buffer->shift());
@@ -394,14 +394,10 @@ void Display::displayBuffer(bool do_clear)
         for (int i = 0; i < this->screen_buffer->size(); i++) {
           tft.setCursor(xPos, (i * 12) + (SCREEN_HEIGHT / 6));
           String spaces = String(' ', TFT_WIDTH / CHAR_WIDTH);
-          //for (int x = 0; x < TFT_WIDTH / CHAR_WIDTH; x++)
-          //  tft.print(" ");
           tft.print(spaces);
           tft.setCursor(xPos, (i * 12) + (SCREEN_HEIGHT / 6));
 
           this->processAndPrintString(tft, this->screen_buffer->get(i));
-          //tft.setTextColor(TFT_GREEN, TFT_BLACK);
-          //tft.print(this->screen_buffer->get(i));
         }
       #endif
 
