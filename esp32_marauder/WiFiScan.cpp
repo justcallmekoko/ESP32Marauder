@@ -5872,11 +5872,11 @@ void WiFiScan::renderRawStats() {
   #ifdef HAS_SCREEN
     uint8_t line_count = 0;
     display_obj.tft.fillRect(0,
-                            (STATUS_BAR_WIDTH * 2) + 1,
+                            (STATUS_BAR_WIDTH * 2) + 1 + EXT_BUTTON_WIDTH,
                             TFT_WIDTH,
                             TFT_HEIGHT - STATUS_BAR_WIDTH + 1,
                             TFT_BLACK);
-    display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH);
+    display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH + EXT_BUTTON_WIDTH);
     display_obj.tft.setTextSize(1);
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
