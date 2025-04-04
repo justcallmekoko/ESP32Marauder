@@ -23,7 +23,7 @@
   //#define MARAUDER_REV_FEATHER
   //// END BOARD TARGETS
 
-  #define MARAUDER_VERSION "v1.3.1"
+  #define MARAUDER_VERSION "v1.4.0"
 
   #define GRAPH_REFRESH   100
 
