@@ -85,6 +85,7 @@ PROGMEM static void ta_event_cb(lv_obj_t * ta, lv_event_t event);
 PROGMEM static void add_ssid_keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event);
 PROGMEM static void html_list_cb(lv_obj_t * btn, lv_event_t event);
 PROGMEM static void ap_list_cb(lv_obj_t * btn, lv_event_t event);
+PROGMEM static void ap_info_list_cb(lv_obj_t * btn, lv_event_t event);
 PROGMEM static void at_list_cb(lv_obj_t * btn, lv_event_t event);
 PROGMEM static void station_list_cb(lv_obj_t * btn, lv_event_t event);
 PROGMEM static void setting_dropdown_cb(lv_obj_t * btn, lv_event_t event);
@@ -177,7 +178,6 @@ class MenuFunctions
     Menu htmlMenu;
     Menu miniKbMenu;
     Menu saveFileMenu;
-    Menu apInfoMenu;
     Menu genAPMacMenu;
     Menu cloneAPMacMenu;
     Menu setMacMenu;
@@ -238,6 +238,7 @@ class MenuFunctions
     #endif
 
     Menu infoMenu;
+    Menu apInfoMenu;
 
     Ticker tick;
 

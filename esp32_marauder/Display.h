@@ -112,8 +112,8 @@ class Display
     void tftDrawColorKey();
     void tftDrawXScaleButtons(byte x_scale);
     void tftDrawYScaleButtons(byte y_scale);
-    void tftDrawChannelScaleButtons(int set_channel);
-    void tftDrawExitScaleButtons();
+    void tftDrawChannelScaleButtons(int set_channel, bool lnd_an = true);
+    void tftDrawExitScaleButtons(bool lnd_an = true);
     void buildBanner(String msg, int xpos);
     void clearScreen();
     void displayBuffer(bool do_clear = false);

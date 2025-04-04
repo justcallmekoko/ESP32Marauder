@@ -399,7 +399,7 @@ void loop()
     //temp_obj.main(currentTime);
   #endif
   settings_obj.main(currentTime);
-  if (((wifi_scan_obj.currentScanMode != WIFI_PACKET_MONITOR) && (wifi_scan_obj.currentScanMode != WIFI_SCAN_EAPOL)) ||
+  if (((wifi_scan_obj.currentScanMode != WIFI_PACKET_MONITOR) && (wifi_scan_obj.currentScanMode != WIFI_SCAN_EAPOL)) || 
       (mini)) {
     #ifdef HAS_SCREEN
       menu_function_obj.main(currentTime);

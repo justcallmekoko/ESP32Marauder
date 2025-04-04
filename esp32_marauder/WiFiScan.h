@@ -442,6 +442,9 @@ class WiFiScan
 
     wifi_config_t ap_config;
 
+    #ifdef HAS_SCREEN
+      int8_t checkAnalyzerButtons(uint32_t currentTime);
+    #endif
     void setMac();
     void renderRawStats();
     void renderPacketRate();

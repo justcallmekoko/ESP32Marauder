@@ -413,6 +413,8 @@
 
       #define GRAPH_VERT_LIM TFT_HEIGHT/2
 
+      #define EXT_BUTTON_WIDTH 0
+
       #define CHAR_WIDTH 6
       #define SCREEN_WIDTH TFT_HEIGHT // Originally 240
       #define SCREEN_HEIGHT TFT_WIDTH // Originally 320
@@ -483,6 +485,8 @@
 
       #define GRAPH_VERT_LIM TFT_HEIGHT/2
 
+      #define EXT_BUTTON_WIDTH 0
+
       #define CHAR_WIDTH 6
       #define SCREEN_WIDTH TFT_HEIGHT // Originally 240
       #define SCREEN_HEIGHT TFT_WIDTH // Originally 320
@@ -542,6 +546,8 @@
       #define TFT_SHIELD
 
       #define GRAPH_VERT_LIM TFT_HEIGHT/2
+
+      #define EXT_BUTTON_WIDTH 20
 
       #define CHAR_WIDTH 12
       #define SCREEN_WIDTH TFT_WIDTH
@@ -603,6 +609,8 @@
       #define TFT_DIY
 
       #define GRAPH_VERT_LIM TFT_HEIGHT/2
+
+      #define EXT_BUTTON_WIDTH 20
     
       #define CHAR_WIDTH 12
       #define SCREEN_WIDTH TFT_WIDTH
@@ -668,6 +676,8 @@
       #define SCREEN_BUFFER
 
       #define MAX_SCREEN_BUFFER 22
+
+      #define EXT_BUTTON_WIDTH 0
     
       #define CHAR_WIDTH 12
       #define SCREEN_WIDTH TFT_WIDTH
@@ -730,6 +740,8 @@
 
       #define TFT_DIY
       #define KIT
+
+      #define EXT_BUTTON_WIDTH 20
     
       #define CHAR_WIDTH 12
       #define SCREEN_WIDTH TFT_WIDTH
@@ -802,6 +814,8 @@
 
       #define GRAPH_VERT_LIM TFT_HEIGHT/2
 
+      #define EXT_BUTTON_WIDTH 0
+
       #define CHAR_WIDTH 6
       #define SCREEN_WIDTH TFT_WIDTH // Originally 240
       #define SCREEN_HEIGHT TFT_HEIGHT // Originally 320
@@ -870,6 +884,8 @@
       #endif
 
       #define GRAPH_VERT_LIM TFT_HEIGHT/2
+
+      #define EXT_BUTTON_WIDTH 0
 
       #define CHAR_WIDTH 6
       #define SCREEN_WIDTH TFT_WIDTH // Originally 240
