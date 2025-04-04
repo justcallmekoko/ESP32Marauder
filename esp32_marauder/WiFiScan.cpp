@@ -3874,7 +3874,9 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
           {
             display_string.concat(" ");
           }
-          display_obj.display_buffer->add(display_string);
+          #ifdef HAS_SCREEN
+            display_obj.display_buffer->add(display_string);
+          #endif
           return;
         }
       }
@@ -4237,7 +4239,9 @@ void WiFiScan::rawSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
       {
         display_string.concat(" ");
       }
-      display_obj.display_buffer->add(display_string);
+      #ifdef HAS_SCREEN
+        display_obj.display_buffer->add(display_string);
+      #endif
     }
     else
       return;
