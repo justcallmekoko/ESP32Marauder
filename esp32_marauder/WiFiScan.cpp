@@ -5914,7 +5914,6 @@ void WiFiScan::packetRateLoop(uint32_t tick) {
       int8_t b = this->checkAnalyzerButtons(millis());
 
       if (b == 6) {
-        Serial.println("Exiting packet monitor...");
         this->StartScan(WIFI_SCAN_OFF);
         this->orient_display = true;
         return;
@@ -5922,7 +5921,6 @@ void WiFiScan::packetRateLoop(uint32_t tick) {
       else if (b == 4) {
         if (set_channel > 1) {
           set_channel--;
-          delay(70);
           display_obj.tftDrawChannelScaleButtons(set_channel, false);
           display_obj.tftDrawExitScaleButtons(false);
           changeChannel();
@@ -5934,7 +5932,6 @@ void WiFiScan::packetRateLoop(uint32_t tick) {
       else if (b == 5) {
         if (set_channel < MAX_CHANNEL) {
           set_channel++;
-          delay(70);
           display_obj.tftDrawChannelScaleButtons(set_channel, false);
           display_obj.tftDrawExitScaleButtons(false);
           changeChannel();
