@@ -2203,9 +2203,11 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
         else if (scan_mode == WIFI_SCAN_PACKET_RATE)
           display_obj.tft.drawCentreString("Packet Rate", 120, 16, 2);
       #endif
+      display_obj.tft.setFreeFont(NULL);
+      display_obj.tft.setTextSize(1);
       display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
       display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
-      display_obj.tftDrawChannelScaleButtons(set_channel);
+      display_obj.tftDrawChannelScaleButtons(set_channel, false);
       display_obj.tftDrawExitScaleButtons(false);
     }
   #else // Non touch
@@ -5391,6 +5393,37 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
 }
 
 #ifdef HAS_SCREEN
+  int8_t WiFiScan::checkAnalyzerButtons(uint32_t currentTime) {
+    boolean pressed = false;
+  
+    uint16_t t_x = 0, t_y = 0; // To store the touch coordinates
+
+    // Do the touch stuff
+    #ifdef HAS_ILI9341
+      pressed = display_obj.tft.getTouch(&t_x, &t_y);
+    #endif
+
+    // Check buttons for presses
+    for (int8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
+    {
+      if (pressed && display_obj.key[b].contains(t_x, t_y))
+      {
+        display_obj.key[b].press(true);
+      } else {
+        display_obj.key[b].press(false);
+      }
+    }
+
+    // Which buttons pressed
+    for (int8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
+    {  
+      if (display_obj.key[b].justReleased()) return b;
+    }
+    return -1;
+  }
+#endif
+
+#ifdef HAS_SCREEN
   void WiFiScan::eapolMonitorMain(uint32_t currentTime)
   {
     //---------MAIN 'FOR' LOOP! THIS IS WHERE ALL THE ACTION HAPPENS! HAS TO BE FAST!!!!!---------\\
@@ -5405,7 +5438,7 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
       y_pos_x = 0;
       y_pos_y = 0;
       y_pos_z = 0;
-      boolean pressed = false;
+      /*boolean pressed = false;
   
       uint16_t t_x = 0, t_y = 0; // To store the touch coordinates
   
@@ -5413,14 +5446,6 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
       #ifdef HAS_ILI9341
         pressed = display_obj.tft.getTouch(&t_x, &t_y);
       #endif
-  
-      if (pressed) {
-        Serial.print("Got touch | X: ");
-        Serial.print(t_x);
-        Serial.print(" Y: ");
-        Serial.println(t_y);
-      }
-  
   
       // Check buttons for presses
       for (uint8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
@@ -5431,20 +5456,16 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
         } else {
           display_obj.key[b].press(false);
         }
-      }
+      }*/
   
       // Which buttons pressed
-      for (uint8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
-      {
-        if (display_obj.key[b].justPressed())
-        {
-          Serial.println("Bro, key pressed");
-          //do_break = true;
-        }
-  
-        if (display_obj.key[b].justReleased())
-        {
-          do_break = true;
+      //for (uint8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
+      //{  
+      //  if (display_obj.key[b].justReleased())
+      //  {
+       //   do_break = true;
+
+          int8_t b = this->checkAnalyzerButtons(currentTime);
   
           // Channel - button pressed
           if (b == 4) {
@@ -5480,8 +5501,8 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
             this->orient_display = true;
             return;
           }
-        }
-      }
+      //  }
+      //}
   
       if (currentTime - initTime >= (GRAPH_REFRESH * 5)) {
         x_pos += x_scale;
@@ -5558,7 +5579,7 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
       y_pos_x = 0;
       y_pos_y = 0;
       y_pos_z = 0;
-      boolean pressed = false;
+      /*boolean pressed = false;
       
       uint16_t t_x = 0, t_y = 0; // To store the touch coordinates
   
@@ -5584,20 +5605,17 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
         } else {
           display_obj.key[b].press(false);
         }
-      }
+      }*/
       
       // Which buttons pressed
-      for (uint8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
-      {
-        if (display_obj.key[b].justPressed())
-        {
-          Serial.println("Bro, key pressed");
-          //do_break = true;
-        }
+      //for (uint8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
+      //{
   
-        if (display_obj.key[b].justReleased())
-        {
-          do_break = true;
+      //  if (display_obj.key[b].justReleased())
+      //  {
+      //    do_break = true;
+
+      int8_t b = this->checkAnalyzerButtons(currentTime);
           
           // X - button pressed
           if (b == 0) {
@@ -5694,8 +5712,8 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
             this->orient_display = true;
             return;
           }
-        }
-      }
+      //  }
+      //}
   
       if (currentTime - initTime >= GRAPH_REFRESH) {
         //Serial.println("-----------------------------------------");
@@ -5777,11 +5795,6 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
     display_obj.tftDrawGraphObjects(x_scale);
   }
 #endif
-
-//void WiFiScan::sniffer_callback(void* buf, wifi_promiscuous_pkt_type_t type) {
-//  wifi_promiscuous_pkt_t *snifferPacket = (wifi_promiscuous_pkt_t*)buf;
-//  showMetadata(snifferPacket, type);
-//}
 
 void WiFiScan::changeChannel(int chan) {
   this->set_channel = chan;
@@ -5903,9 +5916,9 @@ void WiFiScan::renderPacketRate() {
       }
     }
 
-    #ifdef HAS_ILI9341
+    /*#ifdef HAS_ILI9341
       display_obj.key[6].drawButton();
-    #endif
+    #endif*/
   #endif
 }
 
@@ -5918,11 +5931,40 @@ void WiFiScan::packetRateLoop(uint32_t tick) {
       else if (this->currentScanMode == WIFI_SCAN_RAW_CAPTURE)
         this->renderRawStats();
 
-      #ifdef HAS_ILI9341
-        initTime = millis();
-        channelHop();
-      #endif
     }
+
+    #ifdef HAS_ILI9341
+      int8_t b = this->checkAnalyzerButtons(millis());
+
+      if (b == 6) {
+        Serial.println("Exiting packet monitor...");
+        this->StartScan(WIFI_SCAN_OFF);
+        this->orient_display = true;
+        return;
+      }
+      else if (b == 4) {
+        if (set_channel > 1) {
+          set_channel--;
+          delay(70);
+          display_obj.tftDrawChannelScaleButtons(set_channel, false);
+          display_obj.tftDrawExitScaleButtons(false);
+          changeChannel();
+          return;
+        }
+      }
+
+      // Channel + button pressed
+      else if (b == 5) {
+        if (set_channel < MAX_CHANNEL) {
+          set_channel++;
+          delay(70);
+          display_obj.tftDrawChannelScaleButtons(set_channel, false);
+          display_obj.tftDrawExitScaleButtons(false);
+          changeChannel();
+          return;
+        }
+      }
+    #endif
   #endif
 }
 
