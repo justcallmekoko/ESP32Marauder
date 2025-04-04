@@ -611,6 +611,10 @@
       #define GRAPH_VERT_LIM TFT_HEIGHT/2
 
       #define EXT_BUTTON_WIDTH 20
+
+      #define SCREEN_BUFFER
+
+      #define MAX_SCREEN_BUFFER 22
     
       #define CHAR_WIDTH 12
       #define SCREEN_WIDTH TFT_WIDTH

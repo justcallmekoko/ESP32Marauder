@@ -750,7 +750,6 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_WAR_DRIVE) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_EVIL_PORTAL) ||
-          (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_TARGET_AP) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_TARGET_AP_FULL) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA) ||
@@ -892,6 +891,7 @@ void MenuFunctions::main(uint32_t currentTime)
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_PACKET_RATE) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_RAW_CAPTURE) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_CHAN_ANALYZER) &&
+        (wifi_scan_obj.currentScanMode != WIFI_SCAN_SIG_STREN) &&
         (wifi_scan_obj.currentScanMode != WIFI_ATTACK_RICK_ROLL))
     {
       // Need this to set all keys to false
