@@ -98,13 +98,10 @@
 #define BT_SCAN_AIRTAG 43
 #define BT_SPOOF_AIRTAG 44
 #define BT_SCAN_FLIPPER 45
-<<<<<<< HEAD
-=======
 #define WIFI_SCAN_CHAN_ANALYZER 46
 #define BT_SCAN_ANALYZER 47
 #define WIFI_SCAN_PACKET_RATE 48
 #define WIFI_SCAN_AP_STA 49
->>>>>>> refs/remotes/origin/feberis
 
 #define BASE_MULTIPLIER 4
 

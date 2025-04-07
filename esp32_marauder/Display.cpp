@@ -394,20 +394,10 @@ void Display::displayBuffer(bool do_clear)
         for (int i = 0; i < this->screen_buffer->size(); i++) {
           tft.setCursor(xPos, (i * 12) + (SCREEN_HEIGHT / 6));
           String spaces = String(' ', TFT_WIDTH / CHAR_WIDTH);
-<<<<<<< HEAD
-          //for (int x = 0; x < TFT_WIDTH / CHAR_WIDTH; x++)
-          //  tft.print(" ");
-=======
->>>>>>> refs/remotes/origin/feberis
           tft.print(spaces);
           tft.setCursor(xPos, (i * 12) + (SCREEN_HEIGHT / 6));
 
           this->processAndPrintString(tft, this->screen_buffer->get(i));
-<<<<<<< HEAD
-          //tft.setTextColor(TFT_GREEN, TFT_BLACK);
-          //tft.print(this->screen_buffer->get(i));
-=======
->>>>>>> refs/remotes/origin/feberis
         }
       #endif
 

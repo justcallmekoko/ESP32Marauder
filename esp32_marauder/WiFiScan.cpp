@@ -813,11 +813,7 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     this->startWiFiAttacks(scan_mode, color, text_table4[47]);
   else if (scan_mode == WIFI_ATTACK_AP_SPAM)
     this->startWiFiAttacks(scan_mode, color, " AP Beacon Spam ");
-<<<<<<< HEAD
-  else if ((scan_mode == BT_SCAN_ALL) || (scan_mode == BT_SCAN_AIRTAG) || (scan_mode == BT_SCAN_FLIPPER)){
-=======
   else if ((scan_mode == BT_SCAN_ALL) || (scan_mode == BT_SCAN_AIRTAG) || (scan_mode == BT_SCAN_FLIPPER) || (scan_mode == BT_SCAN_ANALYZER)){
->>>>>>> refs/remotes/origin/feberis
     #ifdef HAS_BT
       RunBluetoothScan(scan_mode, color);
     #endif
@@ -962,11 +958,8 @@ bool WiFiScan::shutdownBLE() {
       
       pBLEScan->clearResults();
       NimBLEDevice::deinit();
-<<<<<<< HEAD
-=======
 
       this->_analyzer_value = 0;
->>>>>>> refs/remotes/origin/feberis
     
       this->ble_initialized = false;
     }
@@ -1328,14 +1321,9 @@ void WiFiScan::RunLoadATList() {
 
 void WiFiScan::RunSaveATList(bool save_as) {
   if (save_as) {
-<<<<<<< HEAD
-    #ifdef HAS_SD
+    #if defined(HAS_SD)
       sd_obj.removeFile("/Airtags_0.log");
     #endif
-=======
-    sd_obj.removeFile("/Airtags_0.log");
-
->>>>>>> refs/remotes/origin/feberis
     this->startLog("Airtags");
 
     DynamicJsonDocument jsonDocument(2048);
@@ -1438,7 +1426,7 @@ void WiFiScan::RunLoadAPList() {
 
 void WiFiScan::RunSaveAPList(bool save_as) {
   if (save_as) {
-    #ifdef HAS_SD
+    #if defined(HAS_SD)
       sd_obj.removeFile("/APs_0.log");
     #endif
     this->startLog("APs");
@@ -1521,7 +1509,7 @@ void WiFiScan::RunLoadSSIDList() {
 
 void WiFiScan::RunSaveSSIDList(bool save_as) {
   if (save_as) {
-    #ifdef HAS_SD
+    #if defined(HAS_SD)
       sd_obj.removeFile("/SSIDs_0.log");
     #endif
     this->startLog("SSIDs");
@@ -1618,12 +1606,6 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
     display_obj.print_delay_2 = 10;
     display_obj.initScrollValues(true);
     display_obj.tft.setTextWrap(false);
-<<<<<<< HEAD
-    display_obj.tft.setTextColor(TFT_WHITE, color);
-    #ifdef HAS_FULL_SCREEN
-      display_obj.tft.fillRect(0,16,240,16, color);
-      display_obj.tft.drawCentreString(text_table4[44],120,16,2);
-=======
     if (scan_mode != WIFI_SCAN_AP_STA)
       display_obj.tft.setTextColor(TFT_WHITE, color);
     else
@@ -1634,7 +1616,6 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
         display_obj.tft.drawCentreString(text_table4[44],120,16,2);
       else
         display_obj.tft.drawCentreString("Scan AP/STA",120,16,2);
->>>>>>> refs/remotes/origin/feberis
     #endif
     #ifdef HAS_ILI9341
       display_obj.touchToExit();
@@ -2248,16 +2229,12 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
       display_obj.tft.setTextColor(TFT_WHITE, color);
       #ifdef HAS_FULL_SCREEN
         display_obj.tft.fillRect(0,16,240,16, color);
-<<<<<<< HEAD
-        display_obj.tft.drawCentreString(text_table1[45],120,16,2);
-=======
         if (scan_mode == WIFI_PACKET_MONITOR)
           display_obj.tft.drawCentreString(text_table1[45],120,16,2);
         else if (scan_mode == WIFI_SCAN_CHAN_ANALYZER)
           display_obj.tft.drawCentreString("Channel Analyzer", 120, 16, 2);
         else if (scan_mode == WIFI_SCAN_PACKET_RATE)
           display_obj.tft.drawCentreString("Packet Rate", 120, 16, 2);
->>>>>>> refs/remotes/origin/feberis
       #endif
       #ifdef HAS_ILI9341
         display_obj.touchToExit();
@@ -2489,41 +2466,6 @@ void WiFiScan::executeSourApple() {
   #endif
 }
 
-<<<<<<< HEAD
-/*void WiFiScan::generateRandomName(char *name, size_t length) {
-    static const char alphabet[] = "abcdefghijklmnopqrstuvwxyz";
-    
-    // Generate the first character as uppercase
-    name[0] = 'A' + (rand() % 26);
-    
-    // Generate the remaining characters as lowercase
-    for (size_t i = 1; i < length - 1; ++i) {
-        name[i] = alphabet[rand() % (sizeof(alphabet) - 1)];
-    }
-    name[length - 1] = '\0';  // Null-terminate the string
-}*/
-
-/*const char* WiFiScan::generateRandomName() {
-  const char* charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  int len = rand() % 10 + 1; // Generate a random length between 1 and 10
-  char* randomName = (char*)malloc((len + 1) * sizeof(char)); // Allocate memory for the random name
-  for (int i = 0; i < len; ++i) {
-    randomName[i] = charset[rand() % strlen(charset)]; // Select random characters from the charset
-  }
-  randomName[len] = '\0'; // Null-terminate the string
-  return randomName;
-}*/
-
-/*void WiFiScan::generateRandomMac(uint8_t* mac) {
-  // Set the locally administered bit and unicast bit for the first byte
-  mac[0] = 0x02; // The locally administered bit is the second least significant bit
-
-  // Generate the rest of the MAC address
-  for (int i = 1; i < 6; i++) {
-    mac[i] = random(0, 255);
-  }
-}*/
-
 void WiFiScan::setBaseMacAddress(uint8_t macAddr[6]) {
   // Use ESP-IDF function to set the base MAC address
   esp_err_t err = esp_base_mac_addr_set(macAddr);
@@ -2543,27 +2485,6 @@ void WiFiScan::executeSpoofAirtag() {
     for (int i = 0; i < airtags->size(); i++) {
       if (airtags->get(i).selected) {
 
-=======
-void WiFiScan::setBaseMacAddress(uint8_t macAddr[6]) {
-  // Use ESP-IDF function to set the base MAC address
-  esp_err_t err = esp_base_mac_addr_set(macAddr);
-
-  // Check for success or handle errors
-  if (err == ESP_OK) {
-    return;
-  } else if (err == ESP_ERR_INVALID_ARG) {
-    Serial.println("Error: Invalid MAC address argument.");
-  } else {
-    Serial.printf("Error: Failed to set MAC address. Code: %d\n", err);
-  }
-}
-
-void WiFiScan::executeSpoofAirtag() {
-  #ifdef HAS_BT
-    for (int i = 0; i < airtags->size(); i++) {
-      if (airtags->get(i).selected) {
-
->>>>>>> refs/remotes/origin/feberis
         uint8_t macAddr[6];
 
         convertMacStringToUint8(airtags->get(i).mac, macAddr);
@@ -2850,13 +2771,7 @@ void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color)
       else {
         display_obj.tft.setTextColor(TFT_BLACK, color);
         display_obj.tft.drawCentreString("Signal Monitor", 120, 16, 2);
-<<<<<<< HEAD
-      #ifdef HAS_ILI9341
-        display_obj.touchToExit();
-      #endif
-=======
       }
->>>>>>> refs/remotes/origin/feberis
     #endif
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
     display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
@@ -3407,33 +3322,17 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
 
       if (!in_list) {
       
-<<<<<<< HEAD
-        //delay(random(0, 10));
-=======
->>>>>>> refs/remotes/origin/feberis
         Serial.print("RSSI: ");
         Serial.print(snifferPacket->rx_ctrl.rssi);
         Serial.print(" Ch: ");
         Serial.print(snifferPacket->rx_ctrl.channel);
         Serial.print(" BSSID: ");
         Serial.print(addr);
-<<<<<<< HEAD
-        //display_string.concat(addr);
-        //Serial.print(" ESSID: ");
-        //display_string.concat(" -> ");
-        //for (int i = 0; i < snifferPacket->payload[37]; i++)
-        //{
-        //  Serial.print((char)snifferPacket->payload[i + 38]);
-        //  display_string.concat((char)snifferPacket->payload[i + 38]);
-        //  essid.concat((char)snifferPacket->payload[i + 38]);
-        //}
-=======
         #ifdef HAS_SCREEN
           display_string.concat("#");
           display_string.concat(access_points->size());
           display_string.concat(" ");
         #endif
->>>>>>> refs/remotes/origin/feberis
         #ifdef HAS_FULL_SCREEN
           display_string.concat(snifferPacket->rx_ctrl.rssi);
           display_string.concat(" ");
@@ -3464,21 +3363,12 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
         Serial.print(" ");
 
         #ifdef HAS_SCREEN
-<<<<<<< HEAD
-          //if (display_obj.display_buffer->size() == 0)
-          //{
-          //display_obj.loading = true;
-          display_obj.display_buffer->add(display_string);
-          //display_obj.loading = false;
-          //}
-=======
           if (wifi_scan_obj.checkMem())
             display_obj.display_buffer->add(display_string);
           else {
             String warning_str = "Mem limit reached " + display_string;
             display_obj.display_buffer->add(warning_str);
           }
->>>>>>> refs/remotes/origin/feberis
         #endif
         
         if (essid == "") {
@@ -3778,16 +3668,7 @@ void WiFiScan::apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
         Serial.print(" ");
 
         #ifdef HAS_SCREEN
-<<<<<<< HEAD
-          //if (display_obj.display_buffer->size() == 0)
-          //{
-          //  display_obj.loading = true;
           display_obj.display_buffer->add(display_string);
-          //  display_obj.loading = false;
-          //}
-=======
-          display_obj.display_buffer->add(display_string);
->>>>>>> refs/remotes/origin/feberis
         #endif
         
         if (essid == "") {
@@ -4041,16 +3922,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
     
           Serial.print(" ");
     
-<<<<<<< HEAD
-          //if (display_obj.display_buffer->size() == 0)
-          //{
-            display_obj.loading = true;
-            display_obj.display_buffer->add(display_string);
-            display_obj.loading = false;
-          //}
-=======
           display_obj.display_buffer->add(display_string);
->>>>>>> refs/remotes/origin/feberis
         #endif
 
         Serial.println();
@@ -5054,32 +4926,6 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
   if ((wifi_scan_obj.currentScanMode != WIFI_SCAN_CHAN_ANALYZER) &&
       (wifi_scan_obj.currentScanMode != WIFI_SCAN_PACKET_RATE)) {
 
-<<<<<<< HEAD
-    // If we dont the buffer size is not 0, don't write or else we get CORRUPT_HEAP
-    #ifdef HAS_SCREEN
-      #ifdef HAS_ILI9341
-        if (snifferPacket->payload[0] == 0x80)
-        {
-          num_beacon++;
-        }
-        else if ((snifferPacket->payload[0] == 0xA0 || snifferPacket->payload[0] == 0xC0 ))
-        {
-          num_deauth++;
-        }
-        else if (snifferPacket->payload[0] == 0x40)
-        {
-          num_probe++;
-        }
-      #else
-        if (snifferPacket->payload[0] == 0x80)
-          display_string.concat(";grn;");
-        else if ((snifferPacket->payload[0] == 0xA0 || snifferPacket->payload[0] == 0xC0 ))
-          display_string.concat(";red;");
-        else if (snifferPacket->payload[0] == 0x40)
-          display_string.concat(";cyn;");
-        else
-          display_string.concat(";mgn;");
-=======
     if (type == WIFI_PKT_MGMT)
     {
       len -= 4;
@@ -5149,57 +4995,11 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
           display_obj.display_buffer->add(display_string);
           Serial.println(display_string);
         #endif
->>>>>>> refs/remotes/origin/feberis
       #endif
     #endif
+
+    buffer_obj.append(snifferPacket, len);
   }
-<<<<<<< HEAD
-  else {
-    #ifdef HAS_SCREEN
-      #ifndef HAS_ILI9341
-        display_string.concat(";wht;");
-      #endif
-    #endif
-  }
-
-  char src_addr[] = "00:00:00:00:00:00";
-  char dst_addr[] = "00:00:00:00:00:00";
-  getMAC(src_addr, snifferPacket->payload, 10);
-  getMAC(dst_addr, snifferPacket->payload, 4);
-  display_string.concat(src_addr);
-  display_string.concat(" -> ");
-  display_string.concat(dst_addr);
-
-  int temp_len = display_string.length();
-
-  #ifdef HAS_SCREEN
-    // Fill blank space
-    for (int i = 0; i < 40 - temp_len; i++)
-    {
-      display_string.concat(" ");
-    }
-  
-    //Serial.print(" ");
-  
-    #ifdef SCREEN_BUFFER
-      //if (display_obj.display_buffer->size() == 0)
-      //{
-      //  display_obj.loading = true;
-        //while(display_obj.display_buffer->size() >= 10)
-        //  delay(10);
-        if (display_obj.display_buffer->size() >= 10)
-          return;
-
-        display_obj.display_buffer->add(display_string);
-      //  display_obj.loading = false;
-        Serial.println(display_string);
-      //}
-    #endif
-  #endif
-
-  buffer_obj.append(snifferPacket, len);
-  //}
-=======
   else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ANALYZER) {
     wifi_scan_obj._analyzer_value++;
     if (wifi_scan_obj.analyzer_frames_recvd < 254)
@@ -5318,7 +5118,6 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
       return;
     }
   }
->>>>>>> refs/remotes/origin/feberis
 }
 
 void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)

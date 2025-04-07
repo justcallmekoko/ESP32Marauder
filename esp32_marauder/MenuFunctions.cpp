@@ -321,25 +321,17 @@ MenuFunctions::MenuFunctions()
     list_btn = lv_list_add_btn(list1, LV_SYMBOL_CLOSE, text09);
     lv_obj_set_event_cb(list_btn, ap_list_cb);
   
-<<<<<<< HEAD
-    if (type == "AP") {
-=======
     if ((type == "AP") || (type == "AP Info")) {
->>>>>>> refs/remotes/origin/feberis
       for (int i = 0; i < access_points->size(); i++) {
         char buf[access_points->get(i).essid.length() + 1] = {};
         access_points->get(i).essid.toCharArray(buf, access_points->get(i).essid.length() + 1);
         
         list_btn = lv_list_add_btn(list1, LV_SYMBOL_WIFI, buf);
         lv_btn_set_checkable(list_btn, true);
-<<<<<<< HEAD
-        lv_obj_set_event_cb(list_btn, ap_list_cb);
-=======
         if (type == "AP")
           lv_obj_set_event_cb(list_btn, ap_list_cb);
         else if (type == "AP Info")
           lv_obj_set_event_cb(list_btn, ap_info_list_cb);
->>>>>>> refs/remotes/origin/feberis
     
         if (access_points->get(i).selected)
           lv_btn_toggle(list_btn);
@@ -614,70 +606,31 @@ void MenuFunctions::buttonNotSelected(int b, int x) {
   if (x == -1)
     x = b;
 
-<<<<<<< HEAD
-=======
   // Ensure b is within valid button index range
   b = (x - menu_start_index) % BUTTON_SCREEN_LIMIT;
 
->>>>>>> refs/remotes/origin/feberis
   #ifdef HAS_MINI_SCREEN
     display_obj.tft.setFreeFont(NULL);
     display_obj.key[b].drawButton(false, current_menu->list->get(x).name);
   #endif
 
-<<<<<<< HEAD
-=======
   uint16_t color = this->getColor(current_menu->list->get(x).color);
 
->>>>>>> refs/remotes/origin/feberis
   #ifdef HAS_FULL_SCREEN
     display_obj.tft.setFreeFont(MENU_FONT);
     display_obj.key[b].drawButton(false, current_menu->list->get(x).name);
     if ((current_menu->list->get(x).name != text09) && (current_menu->list->get(x).icon != 255))
           display_obj.tft.drawXBitmap(0,
-<<<<<<< HEAD
-                                      KEY_Y + x * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
-=======
                                       KEY_Y + (b * (KEY_H + KEY_SPACING_Y)) - (ICON_H / 2),
->>>>>>> refs/remotes/origin/feberis
                                       menu_icons[current_menu->list->get(x).icon],
                                       ICON_W,
                                       ICON_H,
                                       TFT_BLACK,
-<<<<<<< HEAD
-                                      current_menu->list->get(x).color);
-=======
                                       color);
->>>>>>> refs/remotes/origin/feberis
     display_obj.tft.setFreeFont(NULL);
   #endif
 }
 
-<<<<<<< HEAD
-void MenuFunctions::buttonSelected(uint8_t b, int8_t x) {
-  #ifndef HAS_ILI9341
-    if (x == -1)
-      x = b;
-
-    #ifdef HAS_MINI_SCREEN
-      display_obj.tft.setFreeFont(NULL);
-      display_obj.key[b].drawButton(true, current_menu->list->get(x).name);
-    #endif
-
-    #ifdef HAS_FULL_SCREEN
-      display_obj.tft.setFreeFont(MENU_FONT);
-      display_obj.key[b].drawButton(true, current_menu->list->get(x).name);
-      if ((current_menu->list->get(x).name != text09) && (current_menu->list->get(x).icon != 255))
-            display_obj.tft.drawXBitmap(0,
-                                        KEY_Y + x * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
-                                        menu_icons[current_menu->list->get(x).icon],
-                                        ICON_W,
-                                        ICON_H,
-                                        TFT_BLACK,
-                                        current_menu->list->get(x).color);
-      display_obj.tft.setFreeFont(NULL);
-    #endif
-=======
 void MenuFunctions::buttonSelected(int b, int x) {
   if (x == -1)
     x = b;
@@ -704,7 +657,6 @@ void MenuFunctions::buttonSelected(int b, int x) {
                                       TFT_BLACK,
                                       color);
     display_obj.tft.setFreeFont(NULL);
->>>>>>> refs/remotes/origin/feberis
   #endif
 }
 
@@ -1534,12 +1486,9 @@ void MenuFunctions::RunSetup()
   #endif
   wifiGeneralMenu.list = new LinkedList<MenuNode>();
   wifiAPMenu.list = new LinkedList<MenuNode>();
-<<<<<<< HEAD
-=======
   apInfoMenu.list = new LinkedList<MenuNode>();
   setMacMenu.list = new LinkedList<MenuNode>();
   genAPMacMenu.list = new LinkedList<MenuNode>();
->>>>>>> refs/remotes/origin/feberis
   #ifdef HAS_BT
     airtagMenu.list = new LinkedList<MenuNode>();
   #endif
@@ -1606,12 +1555,9 @@ void MenuFunctions::RunSetup()
   clearSSIDsMenu.name = text_table1[28];
   clearAPsMenu.name = text_table1[29];
   wifiAPMenu.name = "Access Points";
-<<<<<<< HEAD
-=======
   apInfoMenu.name = "AP Info";
   setMacMenu.name = "Set MACs";
   genAPMacMenu.name = "Generate AP MAC";
->>>>>>> refs/remotes/origin/feberis
   #ifdef HAS_BT
     airtagMenu.name = "Select Airtag";
   #endif
@@ -1655,17 +1601,10 @@ void MenuFunctions::RunSetup()
   this->addNodes(&wifiMenu, text_table1[31], TFTYELLOW, NULL, SNIFFERS, [this]() {
     this->changeMenu(&wifiSnifferMenu);
   });
-<<<<<<< HEAD
-  this->addNodes(&wifiMenu, "Wardriving", TFT_GREEN, NULL, BEACON_SNIFF, [this]() {
-    this->changeMenu(&wardrivingMenu);
-  });
-  this->addNodes(&wifiMenu, text_table1[32], TFT_RED, NULL, ATTACKS, [this]() {
-=======
   this->addNodes(&wifiMenu, "Wardriving", TFTGREEN, NULL, BEACON_SNIFF, [this]() {
     this->changeMenu(&wardrivingMenu);
   });
   this->addNodes(&wifiMenu, text_table1[32], TFTRED, NULL, ATTACKS, [this]() {
->>>>>>> refs/remotes/origin/feberis
     this->changeMenu(&wifiAttackMenu);
   });
   this->addNodes(&wifiMenu, text_table1[33], TFTPURPLE, NULL, GENERAL_APPS, [this]() {
@@ -1692,37 +1631,7 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_DEAUTH, TFT_RED);
   });
-<<<<<<< HEAD
-  #ifdef HAS_ILI9341
-    this->addNodes(&wifiSnifferMenu, text_table1[46], TFT_VIOLET, NULL, EAPOL, [this]() {
-      wifi_scan_obj.StartScan(WIFI_SCAN_EAPOL, TFT_VIOLET);
-    });
-    this->addNodes(&wifiSnifferMenu, text_table1[45], TFT_BLUE, NULL, PACKET_MONITOR, [this]() {
-      wifi_scan_obj.StartScan(WIFI_PACKET_MONITOR, TFT_BLUE);
-    });
-  #else
-    this->addNodes(&wifiSnifferMenu, text_table1[46], TFT_VIOLET, NULL, EAPOL, [this]() {
-      display_obj.clearScreen();
-      this->drawStatusBar();
-      wifi_scan_obj.StartScan(WIFI_SCAN_EAPOL, TFT_VIOLET);
-    });
-    this->addNodes(&wifiSnifferMenu, text_table1[45], TFT_BLUE, NULL, PACKET_MONITOR, [this]() {
-      display_obj.clearScreen();
-      this->drawStatusBar();
-      wifi_scan_obj.StartScan(WIFI_PACKET_MONITOR, TFT_BLUE);
-    });
-  #endif
-  //#ifndef HAS_ILI9341
-  this->addNodes(&wifiSnifferMenu, text_table1[47], TFT_RED, NULL, PWNAGOTCHI, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_PWN, TFT_RED);
-  });
-  //#endif
-  this->addNodes(&wifiSnifferMenu, text_table1[49], TFT_MAGENTA, NULL, BEACON_SNIFF, [this]() {
-=======
   this->addNodes(&wifiSnifferMenu, "Packet Count", TFTORANGE, NULL, PACKET_MONITOR, [this]() {
->>>>>>> refs/remotes/origin/feberis
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_PACKET_RATE, TFT_ORANGE);
@@ -1778,12 +1687,6 @@ void MenuFunctions::RunSetup()
       wifi_scan_obj.StartScan(WIFI_SCAN_TARGET_AP, TFT_MAGENTA);
     });
   #endif
-<<<<<<< HEAD
-
-  // Build Wardriving menu
-  wardrivingMenu.parentMenu = &wifiMenu; // Main Menu is second menu parent
-  this->addNodes(&wardrivingMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-=======
   this->addNodes(&wifiSnifferMenu, "Scan All", TFTLIME, NULL, BEACON_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
@@ -1807,16 +1710,11 @@ void MenuFunctions::RunSetup()
   // Build Wardriving menu
   wardrivingMenu.parentMenu = &wifiMenu; // Main Menu is second menu parent
   this->addNodes(&wardrivingMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
->>>>>>> refs/remotes/origin/feberis
     this->changeMenu(wardrivingMenu.parentMenu);
   });
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
-<<<<<<< HEAD
-      this->addNodes(&wardrivingMenu, "Wardrive", TFT_GREEN, NULL, BEACON_SNIFF, [this]() {
-=======
       this->addNodes(&wardrivingMenu, "Wardrive", TFTGREEN, NULL, BEACON_SNIFF, [this]() {
->>>>>>> refs/remotes/origin/feberis
         display_obj.clearScreen();
         this->drawStatusBar();
         wifi_scan_obj.StartScan(WIFI_SCAN_WAR_DRIVE, TFT_GREEN);
@@ -1825,11 +1723,7 @@ void MenuFunctions::RunSetup()
   #endif
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
-<<<<<<< HEAD
-      this->addNodes(&wardrivingMenu, "Station Wardrive", TFT_ORANGE, NULL, PROBE_SNIFF, [this]() {
-=======
       this->addNodes(&wardrivingMenu, "Station Wardrive", TFTORANGE, NULL, PROBE_SNIFF, [this]() {
->>>>>>> refs/remotes/origin/feberis
         display_obj.clearScreen();
         this->drawStatusBar();
         wifi_scan_obj.StartScan(WIFI_SCAN_STATION_WAR_DRIVE, TFT_ORANGE);
@@ -1965,46 +1859,6 @@ void MenuFunctions::RunSetup()
         });
       }
       this->changeMenu(&htmlMenu);
-<<<<<<< HEAD
-      #if (defined(HAS_BUTTONS) && defined(HAS_SD)) 
-        #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1))
-          while(true) {
-            if (d_btn.justPressed()) {
-              if (evil_portal_obj.selected_html_index > 0)
-                evil_portal_obj.selected_html_index--;
-              else
-                evil_portal_obj.selected_html_index = evil_portal_obj.html_files->size() - 1;
-
-              this->htmlMenu.list->set(0, MenuNode{evil_portal_obj.html_files->get(evil_portal_obj.selected_html_index), false, TFT_CYAN, 0, NULL, true, NULL});
-              this->buildButtons(&htmlMenu);
-              this->displayCurrentMenu();
-            }
-            #if !defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
-              if (u_btn.justPressed()) {
-                if (evil_portal_obj.selected_html_index < evil_portal_obj.html_files->size() - 1)
-                  evil_portal_obj.selected_html_index++;
-                else
-                  evil_portal_obj.selected_html_index = 0;
-
-                this->htmlMenu.list->set(0, MenuNode{evil_portal_obj.html_files->get(evil_portal_obj.selected_html_index), false, TFT_CYAN, 0, NULL, true, NULL});
-                this->buildButtons(&htmlMenu, 0, evil_portal_obj.html_files->get(evil_portal_obj.selected_html_index));
-                this->displayCurrentMenu();
-              }
-            #endif
-            if (c_btn.justPressed()) {
-              if (evil_portal_obj.html_files->get(evil_portal_obj.selected_html_index) != "Back") {
-                evil_portal_obj.target_html_name = evil_portal_obj.html_files->get(evil_portal_obj.selected_html_index);
-                Serial.println("Set Evil Portal HTML as " + evil_portal_obj.target_html_name);
-                evil_portal_obj.using_serial_html = false;
-              }
-              this->changeMenu(htmlMenu.parentMenu);
-              break;
-            }
-          }
-        #endif
-      #endif
-=======
->>>>>>> refs/remotes/origin/feberis
     });
 
     #if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
@@ -2020,35 +1874,17 @@ void MenuFunctions::RunSetup()
     });
 
     // Select APs on Mini
-<<<<<<< HEAD
-    this->addNodes(&wifiGeneralMenu, "Select APs", TFT_NAVY, NULL, KEYBOARD_ICO, [this](){
-=======
     this->addNodes(&wifiGeneralMenu, "Select APs", TFTNAVY, NULL, KEYBOARD_ICO, [this](){
->>>>>>> refs/remotes/origin/feberis
       // Add the back button
       wifiAPMenu.list->clear();
         this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
         this->changeMenu(wifiAPMenu.parentMenu);
       });
 
-<<<<<<< HEAD
-      // Determine how big the whole menu is going to be
-      int menu_limit;
-      if (access_points->size() <= BUTTON_ARRAY_LEN)
-        menu_limit = access_points->size();
-      else
-        menu_limit = BUTTON_ARRAY_LEN;
-
-      // Populate the menu with buttons
-      for (int i = 0; i < menu_limit - 1; i++) {
-        // This is the menu node
-        this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFT_CYAN, NULL, 255, [this, i](){
-=======
       // Populate the menu with buttons
       for (int i = 0; i < access_points->size(); i++) {
         // This is the menu node
         this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
->>>>>>> refs/remotes/origin/feberis
         AccessPoint new_ap = access_points->get(i);
         new_ap.selected = !access_points->get(i).selected;
 
@@ -2063,66 +1899,8 @@ void MenuFunctions::RunSetup()
       this->changeMenu(&wifiAPMenu);
     });
 
-<<<<<<< HEAD
-    wifiAPMenu.parentMenu = &wifiGeneralMenu;
-    this->addNodes(&wifiAPMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-      this->changeMenu(wifiAPMenu.parentMenu);
-    });
-
-
-    // Select Stations on Mini v1
-    /*
-    this->addNodes(&wifiGeneralMenu, "Select Stations", TFT_CYAN, NULL, KEYBOARD_ICO, [this](){
-      wifiStationMenu.list->clear();
-        this->addNodes(&wifiStationMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-        this->changeMenu(wifiStationMenu.parentMenu);
-      });
-      int menu_limit;
-
-      // Find out how many buttons we will need
-      if (stations->size() <= BUTTON_ARRAY_LEN)
-        menu_limit = stations->size();
-      else
-        menu_limit = BUTTON_ARRAY_LEN;
-
-      // Load buttons with stations
-      for (int i = 0; i < stations->size(); i++) {
-
-        // Check if there is even space left
-        if (current_menu->list->size() >= menu_limit)
-          break;
-          
-        int cur_ap_sta = i;
-
-        this->addNodes(&wifiStationMenu, wifi_scan_obj.macToString(stations->get(cur_ap_sta)), TFT_CYAN, NULL, KEYBOARD_ICO, [this, i, cur_ap_sta](){
-        Station new_sta = stations->get(cur_ap_sta);
-        new_sta.selected = !stations->get(cur_ap_sta).selected;
-
-        // Change selection status of menu node
-        MenuNode new_node = current_menu->list->get(i + 1);
-        new_node.selected = !current_menu->list->get(i + 1).selected;
-        current_menu->list->set(i + 1, new_node);
-
-        // Change selection status of button key
-        //if (new_sta.selected) {
-        //  this->buttonSelected(i + 1);
-        //} else {
-        //  this->buttonNotSelected(i + 1);
-        //}
-
-        stations->set(cur_ap_sta, new_sta);
-        }, stations->get(cur_ap_sta).selected);
-      }
-      this->changeMenu(&wifiStationMenu);
-    });
-    */
-
-    // Select Stations on Mini v2
-    this->addNodes(&wifiGeneralMenu, "Select Stations", TFT_CYAN, NULL, KEYBOARD_ICO, [this](){
-=======
     this->addNodes(&wifiGeneralMenu, "View AP Info", TFTCYAN, NULL, KEYBOARD_ICO, [this](){
       // Add the back button
->>>>>>> refs/remotes/origin/feberis
       wifiAPMenu.list->clear();
         this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
         this->changeMenu(wifiAPMenu.parentMenu);
@@ -2179,11 +1957,7 @@ void MenuFunctions::RunSetup()
           for (int x = 0; x < access_points->get(i).stations->size(); x++) {
             int cur_ap_sta = access_points->get(i).stations->get(x);
 
-<<<<<<< HEAD
-            this->addNodes(&wifiStationMenu, macToString(stations->get(cur_ap_sta)), TFT_CYAN, NULL, KEYBOARD_ICO, [this, i, cur_ap_sta, x](){
-=======
             this->addNodes(&wifiStationMenu, macToString(stations->get(cur_ap_sta)), TFTCYAN, NULL, 255, [this, i, cur_ap_sta, x](){
->>>>>>> refs/remotes/origin/feberis
             Station new_sta = stations->get(cur_ap_sta);
             new_sta.selected = !stations->get(cur_ap_sta).selected;
 
@@ -2332,20 +2106,12 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_GREEN);
   });
-<<<<<<< HEAD
-  this->addNodes(&bluetoothSnifferMenu, "Flipper Sniff", TFT_ORANGE, NULL, FLIPPER, [this]() {
-=======
   this->addNodes(&bluetoothSnifferMenu, "Flipper Sniff", TFTORANGE, NULL, FLIPPER, [this]() {
->>>>>>> refs/remotes/origin/feberis
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_SCAN_FLIPPER, TFT_ORANGE);
   });
-<<<<<<< HEAD
-  this->addNodes(&bluetoothSnifferMenu, "Airtag Sniff", TFT_WHITE, NULL, BLUETOOTH_SNIFF, [this]() {
-=======
   this->addNodes(&bluetoothSnifferMenu, "Airtag Sniff", TFTWHITE, NULL, BLUETOOTH_SNIFF, [this]() {
->>>>>>> refs/remotes/origin/feberis
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_SCAN_AIRTAG, TFT_WHITE);
@@ -2400,14 +2166,6 @@ void MenuFunctions::RunSetup()
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_ATTACK_GOOGLE_SPAM, TFT_PURPLE);
-<<<<<<< HEAD
-  });
-  this->addNodes(&bluetoothAttackMenu, "Flipper BLE Spam", TFT_ORANGE, NULL, FLIPPER, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(BT_ATTACK_FLIPPER_SPAM, TFT_ORANGE);
-=======
->>>>>>> refs/remotes/origin/feberis
   });
   this->addNodes(&bluetoothAttackMenu, "Flipper BLE Spam", TFTORANGE, NULL, FLIPPER, [this]() {
     display_obj.clearScreen();
@@ -2421,11 +2179,7 @@ void MenuFunctions::RunSetup()
   });
 
   #ifdef HAS_ILI9341
-<<<<<<< HEAD
-    this->addNodes(&bluetoothAttackMenu, "Spoof Airtag", TFT_WHITE, NULL, ATTACKS, [this](){
-=======
     this->addNodes(&bluetoothAttackMenu, "Spoof Airtag", TFTWHITE, NULL, ATTACKS, [this](){
->>>>>>> refs/remotes/origin/feberis
       display_obj.clearScreen();
       wifi_scan_obj.currentScanMode = LV_ADD_SSID;
       wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_WHITE);
@@ -2436,11 +2190,7 @@ void MenuFunctions::RunSetup()
   #ifndef HAS_ILI9341
     #ifdef HAS_BT
     // Select Airtag on Mini
-<<<<<<< HEAD
-      this->addNodes(&bluetoothAttackMenu, "Spoof Airtag", TFT_WHITE, NULL, ATTACKS, [this](){
-=======
       this->addNodes(&bluetoothAttackMenu, "Spoof Airtag", TFTWHITE, NULL, ATTACKS, [this](){
->>>>>>> refs/remotes/origin/feberis
           // Clear nodes and add back button
           airtagMenu.list->clear();
           this->addNodes(&airtagMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
@@ -2457,11 +2207,7 @@ void MenuFunctions::RunSetup()
 
         // Create the menu nodes for all of the list items
         for (int i = 0; i < menu_limit; i++) {
-<<<<<<< HEAD
-          this->addNodes(&airtagMenu, airtags->get(i).mac, TFT_WHITE, NULL, BLUETOOTH, [this, i](){
-=======
           this->addNodes(&airtagMenu, airtags->get(i).mac, TFTWHITE, NULL, BLUETOOTH, [this, i](){
->>>>>>> refs/remotes/origin/feberis
             AirTag new_at = airtags->get(i);
             new_at.selected = true;
 
@@ -2487,11 +2233,7 @@ void MenuFunctions::RunSetup()
       });
 
       airtagMenu.parentMenu = &bluetoothAttackMenu;
-<<<<<<< HEAD
-      this->addNodes(&airtagMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-=======
       this->addNodes(&airtagMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
->>>>>>> refs/remotes/origin/feberis
         this->changeMenu(airtagMenu.parentMenu);
       });
     #endif
@@ -2508,19 +2250,11 @@ void MenuFunctions::RunSetup()
     this->changeMenu(&whichUpdateMenu);
   });
 
-<<<<<<< HEAD
-  this->addNodes(&deviceMenu, "Save/Load Files", TFT_CYAN, NULL, SD_UPDATE, [this]() {
-    this->changeMenu(&saveFileMenu);
-  });
-
-  this->addNodes(&deviceMenu, text_table1[16], TFT_GREEN, NULL, LANGUAGE, [this]() {
-=======
   this->addNodes(&deviceMenu, "Save/Load Files", TFTCYAN, NULL, SD_UPDATE, [this]() {
     this->changeMenu(&saveFileMenu);
   });
 
   this->addNodes(&deviceMenu, text_table1[16], TFTGREEN, NULL, LANGUAGE, [this]() {
->>>>>>> refs/remotes/origin/feberis
 
     wifi_scan_obj.currentScanMode = SHOW_INFO;
     this->changeMenu(&languageMenu);   
@@ -2627,32 +2361,6 @@ void MenuFunctions::RunSetup()
 
   // Save Files Menu
   saveFileMenu.parentMenu = &deviceMenu;
-<<<<<<< HEAD
-  this->addNodes(&saveFileMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-    this->changeMenu(saveFileMenu.parentMenu);
-  });
-  this->addNodes(&saveFileMenu, "Save SSIDs", TFT_CYAN, NULL, SD_UPDATE, [this]() {
-    this->changeMenu(&saveSSIDsMenu);
-    wifi_scan_obj.RunSaveSSIDList(true);
-  });
-  this->addNodes(&saveFileMenu, "Load SSIDs", TFT_SKYBLUE, NULL, SD_UPDATE, [this]() {
-    this->changeMenu(&loadSSIDsMenu);
-    wifi_scan_obj.RunLoadSSIDList();
-  });
-  this->addNodes(&saveFileMenu, "Save APs", TFT_NAVY, NULL, SD_UPDATE, [this]() {
-    this->changeMenu(&saveAPsMenu);
-    wifi_scan_obj.RunSaveAPList();
-  });
-  this->addNodes(&saveFileMenu, "Load APs", TFT_BLUE, NULL, SD_UPDATE, [this]() {
-    this->changeMenu(&loadAPsMenu);
-    wifi_scan_obj.RunLoadAPList();
-  });
-  this->addNodes(&saveFileMenu, "Save Airtags", TFT_WHITE, NULL, SD_UPDATE, [this]() {
-    this->changeMenu(&saveAPsMenu);
-    wifi_scan_obj.RunSaveATList();
-  });
-  this->addNodes(&saveFileMenu, "Load Airtags", TFT_WHITE, NULL, SD_UPDATE, [this]() {
-=======
   this->addNodes(&saveFileMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
     this->changeMenu(saveFileMenu.parentMenu);
   });
@@ -2677,62 +2385,37 @@ void MenuFunctions::RunSetup()
     wifi_scan_obj.RunSaveATList();
   });
   this->addNodes(&saveFileMenu, "Load Airtags", TFTWHITE, NULL, SD_UPDATE, [this]() {
->>>>>>> refs/remotes/origin/feberis
     this->changeMenu(&loadAPsMenu);
     wifi_scan_obj.RunLoadATList();
   });
 
   saveSSIDsMenu.parentMenu = &saveFileMenu;
-<<<<<<< HEAD
-  this->addNodes(&saveSSIDsMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-=======
   this->addNodes(&saveSSIDsMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
->>>>>>> refs/remotes/origin/feberis
     this->changeMenu(saveSSIDsMenu.parentMenu);
   });
 
   loadSSIDsMenu.parentMenu = &saveFileMenu;
-<<<<<<< HEAD
-  this->addNodes(&loadSSIDsMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-=======
   this->addNodes(&loadSSIDsMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
->>>>>>> refs/remotes/origin/feberis
     this->changeMenu(loadSSIDsMenu.parentMenu);
   });
 
   saveAPsMenu.parentMenu = &saveFileMenu;
-<<<<<<< HEAD
-  this->addNodes(&saveAPsMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-=======
   this->addNodes(&saveAPsMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
->>>>>>> refs/remotes/origin/feberis
     this->changeMenu(saveAPsMenu.parentMenu);
   });
 
   loadAPsMenu.parentMenu = &saveFileMenu;
-<<<<<<< HEAD
-  this->addNodes(&loadAPsMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-=======
   this->addNodes(&loadAPsMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
->>>>>>> refs/remotes/origin/feberis
     this->changeMenu(loadAPsMenu.parentMenu);
   });
 
   saveATsMenu.parentMenu = &saveFileMenu;
-<<<<<<< HEAD
-  this->addNodes(&saveATsMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-=======
   this->addNodes(&saveATsMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
->>>>>>> refs/remotes/origin/feberis
     this->changeMenu(saveATsMenu.parentMenu);
   });
 
   loadATsMenu.parentMenu = &saveFileMenu;
-<<<<<<< HEAD
-  this->addNodes(&loadATsMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-=======
   this->addNodes(&loadATsMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
->>>>>>> refs/remotes/origin/feberis
     this->changeMenu(loadATsMenu.parentMenu);
   });
 
@@ -3236,12 +2919,9 @@ void MenuFunctions::displayCurrentMenu(int start_index)
     #endif
     for (uint16_t i = start_index; i < min(start_index + BUTTON_SCREEN_LIMIT, current_menu->list->size()); i++)
     {
-<<<<<<< HEAD
-=======
       if (!current_menu || !current_menu->list || i >= current_menu->list->size())
         continue;
       uint16_t color = this->getColor(current_menu->list->get(i).color);
->>>>>>> refs/remotes/origin/feberis
       #ifdef HAS_FULL_SCREEN
         #ifndef HAS_ILI9341
           if ((current_menu->list->get(i).selected) || (current_menu->selected == i)) {

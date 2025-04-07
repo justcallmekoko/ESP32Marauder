@@ -12,8 +12,6 @@ struct mac_addr {
 struct Station {
   uint8_t mac[6];
   bool selected;
-<<<<<<< HEAD
-=======
   uint16_t packets;
 };
 
@@ -144,7 +142,6 @@ const char tplink_ouis[][9] PROGMEM = {
 const char xiaomi_ouis[][9] PROGMEM = {
   "04:CF:8C", "18:59:36", "38:1A:2D", "64:B4:73", "78:02:F8", 
   "90:4E:91", "C4:0B:CB", "D0:DB:32"
->>>>>>> refs/remotes/origin/feberis
 };
 
 String byteArrayToHexString(const std::vector<uint8_t>& byteArray) {
@@ -260,8 +257,6 @@ void convertMacStringToUint8(const String& macStr, uint8_t macAddr[6]) {
     }
 }
 
-<<<<<<< HEAD
-=======
 // Function to check if the given MAC address matches any known OUI
 const char* getManufacturer(const char *addr) {
   static char oui[9]; // Temporary buffer for extracted OUI
@@ -321,5 +316,4 @@ String replaceOUIWithManufacturer(const char *sta_addr) {
   return String(manufacturer) + mac_suffix;
 }
 
->>>>>>> refs/remotes/origin/feberis
 #endif

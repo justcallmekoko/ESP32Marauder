@@ -150,11 +150,8 @@ void backlightOff() {
 
 void setup()
 {
-<<<<<<< HEAD
-=======
   esp_spiram_init();
 
->>>>>>> refs/remotes/origin/feberis
   #ifdef defined(MARAUDER_M5STICKC) && !defined(MARAUDER_M5STICKCP2)
     axp192_obj.begin();
   #endif
