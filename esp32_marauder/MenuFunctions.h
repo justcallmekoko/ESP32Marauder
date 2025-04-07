@@ -85,6 +85,10 @@ PROGMEM static void ta_event_cb(lv_obj_t * ta, lv_event_t event);
 PROGMEM static void add_ssid_keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event);
 PROGMEM static void html_list_cb(lv_obj_t * btn, lv_event_t event);
 PROGMEM static void ap_list_cb(lv_obj_t * btn, lv_event_t event);
+<<<<<<< HEAD
+=======
+PROGMEM static void ap_info_list_cb(lv_obj_t * btn, lv_event_t event);
+>>>>>>> refs/remotes/origin/feberis
 PROGMEM static void at_list_cb(lv_obj_t * btn, lv_event_t event);
 PROGMEM static void station_list_cb(lv_obj_t * btn, lv_event_t event);
 PROGMEM static void setting_dropdown_cb(lv_obj_t * btn, lv_event_t event);
@@ -97,10 +101,20 @@ struct Menu;
 
 // Individual Nodes of a menu
 
-struct MenuNode {
+/*struct MenuNode {
   String name;
   bool command;
   uint16_t color;
+  uint8_t icon;
+  TFT_eSPI_Button* button;
+  bool selected;
+  std::function<void()> callable;
+};*/
+
+struct MenuNode {
+  String name;
+  bool command;
+  uint8_t color;
   uint8_t icon;
   TFT_eSPI_Button* button;
   bool selected;
@@ -112,7 +126,7 @@ struct Menu {
   String name;
   LinkedList<MenuNode>* list;
   Menu                * parentMenu;
-  uint8_t               selected = 0;
+  uint16_t               selected = 0;
 };
 
 
@@ -122,10 +136,13 @@ class MenuFunctions
 
     String u_result = "";
 
+
+    float _graph_scale = 1.0;
     uint32_t initTime = 0;
-    uint8_t menu_start_index = 0;
+    int menu_start_index = 0;
     uint8_t mini_kb_index = 0;
     uint8_t old_gps_sat_count = 0;
+    uint8_t max_graph_value = 0;
 
     // Main menu stuff
     Menu mainMenu;
@@ -142,7 +159,6 @@ class MenuFunctions
     Menu updateMenu;
     Menu settingsMenu;
     Menu specSettingMenu;
-    Menu infoMenu;
     Menu languageMenu;
     Menu sdDeleteMenu;
 
@@ -165,6 +181,9 @@ class MenuFunctions
     Menu htmlMenu;
     Menu miniKbMenu;
     Menu saveFileMenu;
+    Menu genAPMacMenu;
+    Menu cloneAPMacMenu;
+    Menu setMacMenu;
 
     // Bluetooth menu stuff
     Menu bluetoothSnifferMenu;
@@ -178,16 +197,23 @@ class MenuFunctions
     // Menu icons
 
 
-
-    void addNodes(Menu* menu, String name, uint16_t color, Menu* child, int place, std::function<void()> callable, bool selected = false, String command = "");
+    uint16_t getColor(uint16_t color);
+    void drawAvgLine(int16_t value);
+    void drawMaxLine(int16_t value, uint16_t color);
+    float calculateGraphScale(int16_t value);
+    float graphScaleCheck(const int16_t array[TFT_WIDTH]);
+    void drawGraph(int16_t *values);
+    void renderGraphUI(uint8_t scan_mode = 0);
+    //void addNodes(Menu* menu, String name, uint16_t color, Menu* child, int place, std::function<void()> callable, bool selected = false, String command = "");
+    void addNodes(Menu* menu, String name, uint8_t color, Menu* child, int place, std::function<void()> callable, bool selected = false, String command = "");
     void battery(bool initial = false);
     void battery2(bool initial = false);
     void showMenuList(Menu* menu, int layer);
     String callSetting(String key);
     void runBoolSetting(String ley);
     void displaySetting(String key, Menu* menu, int index);
-    void buttonSelected(uint8_t b, int8_t x = -1);
-    void buttonNotSelected(uint8_t b, int8_t x = -1);
+    void buttonSelected(int b, int x = -1);
+    void buttonNotSelected(int b, int x = -1);
     #if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
       void miniKeyboard(Menu * targetMenu);
     #endif
@@ -214,6 +240,9 @@ class MenuFunctions
       Menu gpsInfoMenu;
     #endif
 
+    Menu infoMenu;
+    Menu apInfoMenu;
+
     Ticker tick;
 
     uint16_t x = -1, y = -1;
@@ -223,6 +252,7 @@ class MenuFunctions
 
     String loaded_file = "";
 
+    void setGraphScale(float scale);
     void initLVGL();
     void deinitLVGL();
     void selectEPHTMLGFX();
@@ -233,7 +263,7 @@ class MenuFunctions
     void buildButtons(Menu* menu, int starting_index = 0, String button_name = "");
     void changeMenu(Menu* menu);
     void drawStatusBar();
-    void displayCurrentMenu(uint8_t start_index = 0);
+    void displayCurrentMenu(int start_index = 0);
     void main(uint32_t currentTime);
     void RunSetup();
     void orientDisplay();

@@ -7,9 +7,10 @@
 #include "FS.h"
 #include "settings.h"
 #include "esp_wifi_types.h"
+#include "configs.h"
 
-#define BUF_SIZE 3 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
-#define SNAP_LEN 2324 // max len of each recieved packet
+//#define BUF_SIZE 3 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
+//#define SNAP_LEN 2324 // max len of each recieved packet
 
 //extern bool useSD;
 

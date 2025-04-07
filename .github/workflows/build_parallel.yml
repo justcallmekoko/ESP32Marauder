@@ -1,0 +1,236 @@
+name: Build and Push Parallel
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    tags:
+      - "*"
+  pull_request:
+
+jobs:
+  compile_sketch:
+    name: build ${{ matrix.board.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        board:
+          - { name: "Flipper Zero WiFi Dev Board",  flag: "MARAUDER_FLIPPER",         fbqn: "esp32:esp32:esp32s2:PartitionScheme=min_spiffs,FlashSize=4M,PSRAM=enabled",  file_name: "flipper",                 tft: false, tft_file: "",                                   build_dir: "esp32s2", addr: "0x1000" }
+          - { name: "Flipper Zero Multi Board",     flag: "MARAUDER_FLIPPER",         fbqn: "esp32:esp32:esp32s3:PartitionScheme=min_spiffs,FlashSize=8M,PSRAM=enabled",  file_name: "multiboardS3",            tft: false, tft_file: "",                                   build_dir: "esp32s3", addr: "0x0" }
+          - { name: "OG Marauder",                  flag: "MARAUDER_V4",              fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                 file_name: "og",                      tft: true,  tft_file: "User_Setup_og_marauder.h",           build_dir: "d32",     addr: "0x1000" }
+          - { name: "Marauder v6",                  flag: "MARAUDER_V6",              fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                 file_name: "v6",                      tft: true,  tft_file: "User_Setup_og_marauder.h",           build_dir: "d32",     addr: "0x1000" }
+          - { name: "Marauder v6.1",                flag: "MARAUDER_V6_1",            fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                 file_name: "v6_1",                    tft: true,  tft_file: "User_Setup_og_marauder.h",           build_dir: "d32",     addr: "0x1000" }
+          - { name: "Marauder Kit",                 flag: "MARAUDER_KIT",             fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                 file_name: "kit",                     tft: true,  tft_file: "User_Setup_og_marauder.h",           build_dir: "d32",     addr: "0x1000" }
+          - { name: "Marauder Mini",                flag: "MARAUDER_MINI",            fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                 file_name: "mini",                    tft: true,  tft_file: "User_Setup_marauder_mini.h",         build_dir: "d32",     addr: "0x1000" }
+          - { name: "ESP32 LDDB",                   flag: "ESP32_LDDB",               fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                 file_name: "esp32_lddb",              tft: false, tft_file: "",                                   build_dir: "d32",     addr: "0x1000" }
+          - { name: "Marauder Dev Board Pro",       flag: "MARAUDER_DEV_BOARD_PRO",   fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                 file_name: "marauder_dev_board_pro",  tft: false, tft_file: "",                                   build_dir: "d32",     addr: "0x1000" }
+          - { name: "M5StickCPlus",                 flag: "MARAUDER_M5STICKC",        fbqn: "esp32:esp32:m5stick-c:PartitionScheme=min_spiffs",                           file_name: "m5stickc_plus",           tft: true,  tft_file: "User_Setup_marauder_m5stickc.h",     build_dir: "m5stick-c", addr: "0x1000" }
+          - { name: "M5StickCPlus 2",               flag: "MARAUDER_M5STICKCP2",      fbqn: "esp32:esp32:m5stick-c:PartitionScheme=min_spiffs",                           file_name: "m5stickc_plus2",          tft: true,  tft_file: "User_Setup_marauder_m5stickcp2.h",   build_dir: "m5stick-c", addr: "0x1000" }
+          - { name: "Rev Feather",                  flag: "MARAUDER_REV_FEATHER",     fbqn: "esp32:esp32:esp32s2:PartitionScheme=min_spiffs,FlashSize=4M,PSRAM=enabled",  file_name: "rev_feather",             tft: true,  tft_file: "User_Setup_marauder_rev_feather.h",  build_dir: "esp32s2", addr: "0x1000" }
+          - { name: "Marauder v7",                  flag: "MARAUDER_V7",              fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                 file_name: "marauder_v7",             tft: true,  tft_file: "User_Setup_dual_nrf24.h",            build_dir: "d32",     addr: "0x1000" }
+          
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+          
+      - name: Install Arduino CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
+          echo "/home/runner/work/ESP32Marauder/ESP32Marauder/bin" >> $GITHUB_PATH
+          export PATH=$PATH:/home/runner/work/ESP32Marauder/ESP32Marauder/bin
+          arduino-cli version
+
+      - name: Install Arduino-ESP32 Core v2.0.11
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32@2.0.11
+
+      - name: Verify Installed Cores
+        run: arduino-cli core list
+
+      - name: Build TestFile with ESP32 v2.0.11
+        uses: ArminJo/arduino-test-compile@v3.2.1
+        with:
+          sketch-names: TestFile.ino
+          arduino-board-fqbn: esp32:esp32:esp32s2
+          arduino-platform: esp32:esp32@2.0.11
+          platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.11/package_esp32_dev_index.json
+
+      - name: Verify Installed Cores Again
+        run: arduino-cli core list
+          
+      - name: Show Arduino dir structure
+        run: |
+          find /home/runner/.arduino15/packages/esp32/hardware/
+          
+      - name: Install AsyncTCP
+        uses: actions/checkout@v2
+        with:
+          repository: me-no-dev/AsyncTCP
+          ref: master
+          path: CustomAsyncTCP
+          
+      - name: Install MicroNMEA
+        uses: actions/checkout@v2
+        with:
+          repository: stevemarple/MicroNMEA
+          ref: v2.0.6
+          path: CustomMicroNMEA
+          
+      - name: Install ESPAsyncWebServer
+        uses: actions/checkout@v2
+        with:
+          repository: bigbrodude6119/ESPAsyncWebServer
+          ref: master
+          path: CustomESPAsyncWebServer
+          
+      - name: Install TFT_eSPI
+        uses: actions/checkout@v2
+        with:
+          repository: Bodmer/TFT_eSPI
+          ref: V2.5.34
+          path: CustomTFT_eSPI
+
+      - name: Install lv_arduino
+        uses: actions/checkout@v2
+        with:
+          repository: lvgl/lv_arduino
+          ref: 3.0.0
+          path: Customlv_arduino
+
+      - name: Install JPEGDecoder
+        uses: actions/checkout@v2
+        with:
+          repository: Bodmer/JPEGDecoder
+          ref: 1.8.0
+          path: CustomJPEGDecoder
+
+      - name: Install NimBLE-Arduino
+        uses: actions/checkout@v2
+        with:
+          repository: h2zero/NimBLE-Arduino
+          ref: 1.3.5
+          path: CustomNimBLE-Arduino
+
+      - name: Install Adafruit_NeoPixel
+        uses: actions/checkout@v2
+        with:
+          repository: adafruit/Adafruit_NeoPixel
+          ref: 1.10.7
+          path: CustomAdafruit_NeoPixel
+
+      - name: Install ArduinoJson
+        uses: actions/checkout@v2
+        with:
+          repository: bblanchon/ArduinoJson
+          ref: v6.18.2
+          path: CustomArduinoJson
+          
+      - name: Install LinkedList
+        uses: actions/checkout@v2
+        with:
+          repository: ivanseidel/LinkedList
+          ref: v1.3.3
+          path: CustomLinkedList
+          
+      - name: Install EspSoftwareSerial
+        uses: actions/checkout@v2
+        with:
+          repository: plerup/espsoftwareserial
+          ref: 8.1.0
+          path: CustomEspSoftwareSerial
+          
+      - name: Install Adafruit_BusIO
+        uses: actions/checkout@v2
+        with:
+          repository: adafruit/Adafruit_BusIO
+          ref: 1.15.0
+          path: CustomAdafruit_BusIO
+          
+      - name: Install Adafruit_MAX1704X
+        uses: actions/checkout@v2
+        with:
+          repository: adafruit/Adafruit_MAX1704X
+          ref: 1.0.2
+          path: CustomAdafruit_MAX1704X
+          
+      - name: Configure TFT_eSPI
+        run: |
+          rm -f CustomTFT_eSPI/User_Setup_Select.h
+          cp User*.h CustomTFT_eSPI/
+          pwd
+          ls -la
+          ls -la CustomTFT_eSPI
+
+      - name: Install Esptool
+        run: |
+          pip install esptool
+
+      - name: Modify platform.txt
+        run: |
+          for i in $(find /home/runner/.arduino15/packages/esp32/hardware/esp32/ -name "platform.txt"); do
+            sed -i 's/compiler.c.elf.libs.esp32c3=/compiler.c.elf.libs.esp32c3=-zmuldefs /' "$i"
+            sed -i 's/compiler.c.elf.libs.esp32s3=/compiler.c.elf.libs.esp32s3=-zmuldefs /' "$i"
+            sed -i 's/compiler.c.elf.libs.esp32s2=/compiler.c.elf.libs.esp32s2=-zmuldefs /' "$i"
+            sed -i 's/compiler.c.elf.libs.esp32=/compiler.c.elf.libs.esp32=-zmuldefs /' "$i"
+            cat "$i" | grep compiler.c.elf.libs.esp32c3
+            cat "$i" | grep compiler.c.elf.libs.esp32s3
+            cat "$i" | grep compiler.c.elf.libs.esp32s2
+            cat "$i" | grep compiler.c.elf.libs.esp32
+          done
+          
+      - name: Configure TFT_eSPI (if needed)
+        run: |
+          pwd
+          if [[ ${{ matrix.board.tft }} == true ]]; then
+            find /home/runner/ -name "*TFT_eSPI*"
+            sed -i 's/^\/\/#include <${{ matrix.board.tft_file }}>/#include <${{ matrix.board.tft_file }}>/' /home/runner/work/ESP32Marauder/ESP32Marauder/CustomTFT_eSPI/User_Setup_Select.h
+          fi
+
+      - name: Build Marauder for ${{ matrix.board.name }}
+        uses: ArminJo/arduino-test-compile@v3.2.1
+        with:
+          sketch-names: esp32_marauder.ino
+          arduino-board-fqbn: ${{ matrix.board.fbqn }}
+          extra-arduino-cli-args: "--warnings none --build-property compiler.cpp.extra_flags='-D${{ matrix.board.flag }}'"
+          arduino-platform: esp32:esp32@2.0.11
+          platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.11/package_esp32_dev_index.json
+
+      - name: Rename Marauder ${{ matrix.board.name }} bin
+        run: |
+          mv ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.${{ matrix.board.file_name }}.bin
+          
+          # ls -la ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/
+          # esptool.py --chip esp32s3 merge_bin -o ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.${{ matrix.board.file_name }}.bin \
+          # ${{ matrix.board.addr }} ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.bootloader.bin \
+          # 0x8000 ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.partitions.bin \
+          # 0x10000 ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.bin
+
+      - name: Upload ${{ matrix.board.name }} Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: esp32_marauder.${{ matrix.board.file_name }}.bin
+          path: ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.${{ matrix.board.file_name }}.bin
+          retention-days: 5
+
+  post_compile_steps:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [compile_sketch]
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    steps: 
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: "Marauder Release ${{ github.ref_name }}"
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          draft: true
+          files: |
+            esp32_marauder.*.bin

@@ -98,10 +98,19 @@
 #define BT_SCAN_AIRTAG 43
 #define BT_SPOOF_AIRTAG 44
 #define BT_SCAN_FLIPPER 45
+<<<<<<< HEAD
+=======
+#define WIFI_SCAN_CHAN_ANALYZER 46
+#define BT_SCAN_ANALYZER 47
+#define WIFI_SCAN_PACKET_RATE 48
+#define WIFI_SCAN_AP_STA 49
+>>>>>>> refs/remotes/origin/feberis
 
-#define GRAPH_REFRESH 100
+#define BASE_MULTIPLIER 4
 
-#define MAX_CHANNEL 14
+#define ANALYZER_NAME_REFRESH 100 // Number of events to refresh the name
+
+#define MAX_CHANNEL     14
 
 extern EvilPortal evil_portal_obj;
 
@@ -175,6 +184,9 @@ class WiFiScan
   private:
     // Wardriver thanks to https://github.com/JosephHewitt
     struct mac_addr mac_history[mac_history_len];
+
+    uint8_t ap_mac[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
+    uint8_t sta_mac[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 
     // Settings
     uint mac_history_cursor = 0;
@@ -305,6 +317,7 @@ class WiFiScan
       NimBLEAdvertisementData GetUniversalAdvertisementData(EBLEPayloadType type);
     #endif
 
+    void addAnalyzerValue(int16_t value, int rssi_avg, int16_t target_array[], int array_size);
     bool seen_mac(unsigned char* mac);
     bool mac_cmp(struct mac_addr addr1, struct mac_addr addr2);
     void save_mac(unsigned char* mac);
@@ -320,6 +333,9 @@ class WiFiScan
 
     void startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_string);
 
+    void signalAnalyzerLoop(uint32_t tick);
+    void channelAnalyzerLoop(uint32_t tick);
+    void packetRateLoop(uint32_t tick);
     void packetMonitorMain(uint32_t currentTime);
     void eapolMonitorMain(uint32_t currentTime);
     void updateMidway();
@@ -364,9 +380,21 @@ class WiFiScan
 
     //LinkedList<ssid>* ssids;
 
+    // Stuff for RAW stats
+    uint32_t mgmt_frames = 0;
+    uint32_t data_frames = 0;
+
+    String analyzer_name_string = "";
+    
+    uint8_t analyzer_frames_recvd = 0;
+
+    bool analyzer_name_update = false;
+
     uint8_t set_channel = 1;
 
     uint8_t old_channel = 0;
+
+    int16_t _analyzer_value = 0;
 
     bool orient_display = false;
     bool wifi_initialized = false;
@@ -379,13 +407,52 @@ class WiFiScan
     String dst_mac = "ff:ff:ff:ff:ff:ff";
     byte src_mac[6] = {};
 
+    #ifdef HAS_SCREEN
+      int16_t _analyzer_values[TFT_WIDTH];
+      int16_t _temp_analyzer_values[TFT_WIDTH];
+    #endif
+
     String current_mini_kb_ssid = "";
 
     const String alfa = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789-=[];',./`\\_+{}:\"<>?~|!@#$%^&*()";
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+
+    wifi_init_config_t cfg2 = { \
+        .event_handler = &esp_event_send_internal, \
+        .osi_funcs = &g_wifi_osi_funcs, \
+        .wpa_crypto_funcs = g_wifi_default_wpa_crypto_funcs, \
+        .static_rx_buf_num = 6,\
+        .dynamic_rx_buf_num = 6,\
+        .tx_buf_type = 0,\
+        .static_tx_buf_num = 1,\
+        .dynamic_tx_buf_num = WIFI_DYNAMIC_TX_BUFFER_NUM,\
+        .cache_tx_buf_num = 0,\
+        .csi_enable = false,\
+        .ampdu_rx_enable = false,\
+        .ampdu_tx_enable = false,\
+        .amsdu_tx_enable = false,\
+        .nvs_enable = false,\
+        .nano_enable = WIFI_NANO_FORMAT_ENABLED,\
+        .rx_ba_win = 6,\
+        .wifi_task_core_id = WIFI_TASK_CORE_ID,\
+        .beacon_max_len = 752, \
+        .mgmt_sbuf_num = 8, \
+        .feature_caps = g_wifi_feature_caps, \
+        .sta_disconnected_pm = WIFI_STA_DISCONNECTED_PM_ENABLED,  \
+        .espnow_max_encrypt_num = 0, \
+        .magic = WIFI_INIT_CONFIG_MAGIC\
+    };
+
     wifi_config_t ap_config;
 
+    #ifdef HAS_SCREEN
+      int8_t checkAnalyzerButtons(uint32_t currentTime);
+    #endif
+    void setMac();
+    void renderRawStats();
+    void renderPacketRate();
+    void displayAnalyzerString(String str);
     String security_int_to_string(int security_type);
     char* stringToChar(String string);
     void RunSetup();
@@ -405,8 +472,11 @@ class WiFiScan
     String freeRAM();
     void changeChannel();
     void changeChannel(int chan);
+    void RunAPInfo(uint16_t index, bool do_display = true);
     void RunInfo();
     //void RunShutdownBLE();
+    void RunSetMac(uint8_t * mac, bool ap = true);
+    void RunGenerateRandomMac(bool ap = true);
     void RunGenerateSSIDs(int count = 20);
     void RunClearSSIDs();
     void RunClearAPs();

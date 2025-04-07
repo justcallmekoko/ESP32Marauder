@@ -7,7 +7,11 @@
   #define POLISH_POTATO
 
   //// BOARD TARGETS
+<<<<<<< HEAD
   //#define MARAUDER_M5STICKC
+=======
+  //#define MARAUDER_M5STICKC 
+>>>>>>> refs/remotes/origin/feberis
   //#define MARAUDER_M5STICKCP2
   //#define MARAUDER_MINI
   //#define MARAUDER_V4
@@ -24,7 +28,13 @@
   #define BPMCIRCUITS_FEBERIS
   //// END BOARD TARGETS
 
+<<<<<<< HEAD
   #define MARAUDER_VERSION "v1.2.1"
+=======
+  #define MARAUDER_VERSION "v1.4.1"
+
+  #define GRAPH_REFRESH   100
+>>>>>>> refs/remotes/origin/feberis
 
   //// HARDWARE NAMES
   #ifdef MARAUDER_M5STICKC
@@ -257,7 +267,11 @@
       #include "AXP192.h"
     #endif
 
+<<<<<<< HEAD
     #ifdef MARAUDER_M5STICKCP2
+=======
+    #ifdef MARAUDER_M5STICKCP2 
+>>>>>>> refs/remotes/origin/feberis
         // Prevent StickCP2 from turning off when disconnect USB cable
         #define POWER_HOLD_PIN 4
     #endif
@@ -327,16 +341,26 @@
       #define D_PULL true
     #endif
 
+<<<<<<< HEAD
     #ifdef MARAUDER_M5STICKC
+=======
+    #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
+>>>>>>> refs/remotes/origin/feberis
       #define L_BTN -1
       #define C_BTN 37
-      #define U_BTN -1
+      #if defined(MARAUDER_M5STICKCP2)
+        #define U_BTN 35
+      #else
+        #define U_BTN -1
+      #endif
       #define R_BTN -1
       #define D_BTN 39
 
       //#define HAS_L
       //#define HAS_R
-      //#define HAS_U
+      #if defined(MARAUDER_M5STICKCP2)
+        #define HAS_U
+      #endif
       #define HAS_D
       #define HAS_C
 
@@ -419,6 +443,10 @@
         #define TFT_HEIGHT 240
       #endif
 
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+
+      #define EXT_BUTTON_WIDTH 0
+
       #define CHAR_WIDTH 6
       #define SCREEN_WIDTH TFT_HEIGHT // Originally 240
       #define SCREEN_HEIGHT TFT_WIDTH // Originally 320
@@ -436,7 +464,7 @@
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
       #define BUTTON_SCREEN_LIMIT 6
-      #define BUTTON_ARRAY_LEN 100
+      #define BUTTON_ARRAY_LEN BUTTON_SCREEN_LIMIT
       #define STATUS_BAR_WIDTH (TFT_HEIGHT/16)
       #define LVGL_TICK_PERIOD 6
 
@@ -461,6 +489,79 @@
 
     #endif
 
+  #if defined(MARAUDER_M5STICKCP2)
+      #define MARAUDER_M5STICKC // From now on, everything is the same, except for one check in esp32_marauder.ino amd stickc_led.cpp/h
+
+      #define SCREEN_CHAR_WIDTH 40
+      #define TFT_MOSI 15
+      #define TFT_SCLK 13
+      #define TFT_CS 5
+      #define TFT_DC 14
+      #define TFT_RST 12
+      #define TFT_BL 27
+      #define TOUCH_CS -1
+
+      #define SCREEN_BUFFER
+
+      #define MAX_SCREEN_BUFFER 9
+
+      #define BANNER_TEXT_SIZE 1
+
+      #ifndef TFT_WIDTH
+        #define TFT_WIDTH 135
+      #endif
+
+      #ifndef TFT_HEIGHT
+        #define TFT_HEIGHT 240
+      #endif
+
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+
+      #define EXT_BUTTON_WIDTH 0
+
+      #define CHAR_WIDTH 6
+      #define SCREEN_WIDTH TFT_HEIGHT // Originally 240
+      #define SCREEN_HEIGHT TFT_WIDTH // Originally 320
+      #define HEIGHT_1 TFT_WIDTH
+      #define WIDTH_1 TFT_WIDTH
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
+      #define TEXT_HEIGHT (TFT_HEIGHT/10) // Height of text to be printed and scrolled
+      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
+      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
+      #define YMAX TFT_HEIGHT // Bottom of screen area
+      #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
+      //#define MENU_FONT NULL
+      #define MENU_FONT &FreeMono9pt7b // Winner
+      //#define MENU_FONT &FreeMonoBold9pt7b
+      //#define MENU_FONT &FreeSans9pt7b
+      //#define MENU_FONT &FreeSansBold9pt7b
+      #define BUTTON_SCREEN_LIMIT 6
+      #define BUTTON_ARRAY_LEN BUTTON_SCREEN_LIMIT
+      #define STATUS_BAR_WIDTH (TFT_HEIGHT/16)
+      #define LVGL_TICK_PERIOD 6
+
+      #define FRAME_X 100
+      #define FRAME_Y 64
+      #define FRAME_W 120
+      #define FRAME_H 50
+
+      // Red zone size
+      #define REDBUTTON_X FRAME_X
+      #define REDBUTTON_Y FRAME_Y
+      #define REDBUTTON_W (FRAME_W/2)
+      #define REDBUTTON_H FRAME_H
+
+      // Green zone size
+      #define GREENBUTTON_X (REDBUTTON_X + REDBUTTON_W)
+      #define GREENBUTTON_Y FRAME_Y
+      #define GREENBUTTON_W (FRAME_W/2)
+      #define GREENBUTTON_H FRAME_H
+
+      #define STATUSBAR_COLOR 0x4A49
+
+    #endif
+
+
     #ifdef MARAUDER_V4
       #define SCREEN_CHAR_WIDTH 40
       #define HAS_ILI9341
@@ -476,6 +577,14 @@
 
       #define TFT_SHIELD
 
+<<<<<<< HEAD
+=======
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+
+      #define EXT_BUTTON_WIDTH 20
+
+      #define CHAR_WIDTH 12
+>>>>>>> refs/remotes/origin/feberis
       #define SCREEN_WIDTH TFT_WIDTH
       #define SCREEN_HEIGHT TFT_HEIGHT
       #define HEIGHT_1 TFT_WIDTH
@@ -492,7 +601,7 @@
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
       #define BUTTON_SCREEN_LIMIT 12
-      #define BUTTON_ARRAY_LEN 12
+      #define BUTTON_ARRAY_LEN BUTTON_SCREEN_LIMIT
       #define STATUS_BAR_WIDTH 16
       #define LVGL_TICK_PERIOD 6
 
@@ -534,6 +643,18 @@
 
       #define TFT_DIY
 
+<<<<<<< HEAD
+=======
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+
+      #define EXT_BUTTON_WIDTH 20
+
+      #define SCREEN_BUFFER
+
+      #define MAX_SCREEN_BUFFER 22
+    
+      #define CHAR_WIDTH 12
+>>>>>>> refs/remotes/origin/feberis
       #define SCREEN_WIDTH TFT_WIDTH
       #define SCREEN_HEIGHT TFT_HEIGHT
       #define HEIGHT_1 TFT_WIDTH
@@ -550,7 +671,7 @@
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
       #define BUTTON_SCREEN_LIMIT 12
-      #define BUTTON_ARRAY_LEN 12
+      #define BUTTON_ARRAY_LEN BUTTON_SCREEN_LIMIT
       #define STATUS_BAR_WIDTH 16
       #define LVGL_TICK_PERIOD 6
 
@@ -639,10 +760,15 @@
       #define KIT_LED_BUILTIN 13
     #endif
 
-    #ifdef MARAUDER_KIT
+    #ifdef MARAUDER_V7
       #define SCREEN_CHAR_WIDTH 40
+<<<<<<< HEAD
       #define HAS_ILI9341
 
+=======
+      //#define HAS_ILI9341
+    
+>>>>>>> refs/remotes/origin/feberis
       #define BANNER_TEXT_SIZE 2
 
       #ifndef TFT_WIDTH
@@ -653,9 +779,22 @@
         #define TFT_HEIGHT 320
       #endif
 
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+
       #define TFT_DIY
+<<<<<<< HEAD
       #define KIT
 
+=======
+
+      #define SCREEN_BUFFER
+
+      #define MAX_SCREEN_BUFFER 22
+
+      #define EXT_BUTTON_WIDTH 0
+    
+      #define CHAR_WIDTH 12
+>>>>>>> refs/remotes/origin/feberis
       #define SCREEN_WIDTH TFT_WIDTH
       #define SCREEN_HEIGHT TFT_HEIGHT
       #define HEIGHT_1 TFT_WIDTH
@@ -672,7 +811,71 @@
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
       #define BUTTON_SCREEN_LIMIT 12
-      #define BUTTON_ARRAY_LEN 12
+      #define BUTTON_ARRAY_LEN BUTTON_SCREEN_LIMIT
+      #define STATUS_BAR_WIDTH 16
+      #define LVGL_TICK_PERIOD 6
+
+      #define FRAME_X 100
+      #define FRAME_Y 64
+      #define FRAME_W 120
+      #define FRAME_H 50
+    
+      // Red zone size
+      #define REDBUTTON_X FRAME_X
+      #define REDBUTTON_Y FRAME_Y
+      #define REDBUTTON_W (FRAME_W/2)
+      #define REDBUTTON_H FRAME_H
+    
+      // Green zone size
+      #define GREENBUTTON_X (REDBUTTON_X + REDBUTTON_W)
+      #define GREENBUTTON_Y FRAME_Y
+      #define GREENBUTTON_W (FRAME_W/2)
+      #define GREENBUTTON_H FRAME_H
+    
+      #define STATUSBAR_COLOR 0x4A49
+    
+      #define KIT_LED_BUILTIN 13
+    #endif
+
+    #ifdef MARAUDER_KIT
+      #define SCREEN_CHAR_WIDTH 40
+      #define HAS_ILI9341
+    
+      #define BANNER_TEXT_SIZE 2
+
+      #ifndef TFT_WIDTH
+        #define TFT_WIDTH 240
+      #endif
+
+      #ifndef TFT_HEIGHT
+        #define TFT_HEIGHT 320
+      #endif
+
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+
+      #define TFT_DIY
+      #define KIT
+
+      #define EXT_BUTTON_WIDTH 20
+    
+      #define CHAR_WIDTH 12
+      #define SCREEN_WIDTH TFT_WIDTH
+      #define SCREEN_HEIGHT TFT_HEIGHT
+      #define HEIGHT_1 TFT_WIDTH
+      #define WIDTH_1 TFT_HEIGHT
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
+      #define TEXT_HEIGHT 16 // Height of text to be printed and scrolled
+      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
+      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
+      #define YMAX 320 // Bottom of screen area
+      #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
+      //#define MENU_FONT NULL
+      #define MENU_FONT &FreeMono9pt7b // Winner
+      //#define MENU_FONT &FreeMonoBold9pt7b
+      //#define MENU_FONT &FreeSans9pt7b
+      //#define MENU_FONT &FreeSansBold9pt7b
+      #define BUTTON_SCREEN_LIMIT 12
+      #define BUTTON_ARRAY_LEN BUTTON_SCREEN_LIMIT
       #define STATUS_BAR_WIDTH 16
       #define LVGL_TICK_PERIOD 6
 
@@ -724,6 +927,10 @@
         #define TFT_HEIGHT 128
       #endif
 
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+
+      #define EXT_BUTTON_WIDTH 0
+
       #define CHAR_WIDTH 6
       #define SCREEN_WIDTH TFT_WIDTH // Originally 240
       #define SCREEN_HEIGHT TFT_HEIGHT // Originally 320
@@ -741,7 +948,7 @@
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
       #define BUTTON_SCREEN_LIMIT 10
-      #define BUTTON_ARRAY_LEN 100
+      #define BUTTON_ARRAY_LEN BUTTON_SCREEN_LIMIT
       #define STATUS_BAR_WIDTH (TFT_HEIGHT/16)
       #define LVGL_TICK_PERIOD 6
 
@@ -791,6 +998,10 @@
         #define TFT_HEIGHT 135
       #endif
 
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+
+      #define EXT_BUTTON_WIDTH 0
+
       #define CHAR_WIDTH 6
       #define SCREEN_WIDTH TFT_WIDTH // Originally 240
       #define SCREEN_HEIGHT TFT_HEIGHT // Originally 320
@@ -808,7 +1019,7 @@
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
       #define BUTTON_SCREEN_LIMIT 5
-      #define BUTTON_ARRAY_LEN 100
+      #define BUTTON_ARRAY_LEN BUTTON_SCREEN_LIMIT
       #define STATUS_BAR_WIDTH (TFT_HEIGHT/16)
       #define LVGL_TICK_PERIOD 6
 
@@ -879,6 +1090,25 @@
 
     #define COMMAND_PREFIX "!"
 
+    // Keypad start position, key sizes and spacing
+    #define KEY_X 120 // Centre of key
+    #define KEY_Y 50
+    #define KEY_W 240 // Width and height
+    #define KEY_H 22
+    #define KEY_SPACING_X 0 // X and Y gap
+    #define KEY_SPACING_Y 1
+    #define KEY_TEXTSIZE 1   // Font size multiplier
+    #define ICON_W 22
+    #define ICON_H 22
+    #define BUTTON_PADDING 22
+    //#define BUTTON_ARRAY_LEN 5
+  #endif
+
+  #ifdef MARAUDER_V7
+    #define BANNER_TIME 100
+    
+    #define COMMAND_PREFIX "!"
+    
     // Keypad start position, key sizes and spacing
     #define KEY_X 120 // Centre of key
     #define KEY_Y 50
@@ -1021,6 +1251,27 @@
   #endif
   //// END SD DEFINITIONS
 
+  //// SPACE SAVING COLORS
+  #define TFTWHITE     1
+  #define TFTCYAN      2
+  #define TFTBLUE      3
+  #define TFTRED       4
+  #define TFTGREEN     5
+  #define TFTGREY      6
+  #define TFTGRAY      7
+  #define TFTMAGENTA   8
+  #define TFTVIOLET    9
+  #define TFTORANGE    10
+  #define TFTYELLOW    11
+  #define TFTLIGHTGREY 12
+  #define TFTPURPLE    13
+  #define TFTNAVY      14
+  #define TFTSILVER    15
+  #define TFTDARKGREY  16
+  #define TFTSKYBLUE   17
+  #define TFTLIME      18
+  //// END SPACE SAVING COLORS
+
   //// SCREEN STUFF
   #ifndef HAS_SCREEN
 
@@ -1050,31 +1301,41 @@
   //// MEMORY LOWER LIMIT STUFF
   // These values are in bytes
   #ifdef MARAUDER_M5STICKC
-    #define MEM_LOWER_LIM 20000
+    #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_MINI)
+<<<<<<< HEAD
     #define MEM_LOWER_LIM 20000
   #elif defined(MARAUDER_V7)
     #define MEM_LOWER_LIM 20000
+=======
+    #define MEM_LOWER_LIM 10000
+  #elif defined(MARAUDER_V7)
+    #define MEM_LOWER_LIM 10000
+>>>>>>> refs/remotes/origin/feberis
   #elif defined(MARAUDER_REV_FEATHER)
-    #define MEM_LOWER_LIM 20000
+    #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_V4)
-    #define MEM_LOWER_LIM 20000
+    #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
-    #define MEM_LOWER_LIM 20000
+    #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_KIT)
-    #define MEM_LOWER_LIM 20000
+    #define MEM_LOWER_LIM 10000
   #elif defined(GENERIC_ESP32)
-    #define MEM_LOWER_LIM 20000
+    #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_FLIPPER)
-    #define MEM_LOWER_LIM 20000
+    #define MEM_LOWER_LIM 10000
   #elif defined(ESP32_LDDB)
-    #define MEM_LOWER_LIM 20000
+    #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_DEV_BOARD_PRO)
+<<<<<<< HEAD
     #define MEM_LOWER_LIM 20000
   #elif defined(BPMCIRCUITS_FEBERIS)
     #define MEM_LOWER_LIM 20000
+=======
+    #define MEM_LOWER_LIM 10000
+>>>>>>> refs/remotes/origin/feberis
   #elif defined(XIAO_ESP32_S3)
-    #define MEM_LOWER_LIM 20000
+    #define MEM_LOWER_LIM 10000
   #endif
   //// END MEMORY LOWER LIMIT STUFF
 
@@ -1130,50 +1391,58 @@
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 4
       #define GPS_RX 13
-      #define mac_history_len 512
+      #define mac_history_len 100
     #elif defined(MARAUDER_V4)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 4
       #define GPS_RX 13
-      #define mac_history_len 512
+      #define mac_history_len 100
     #elif defined(MARAUDER_KIT)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 4
       #define GPS_RX 13
-      #define mac_history_len 512
+      #define mac_history_len 100
     #elif defined(MARAUDER_DEV_BOARD_PRO)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 21
       #define GPS_RX 17
-      #define mac_history_len 512
+      #define mac_history_len 100
     #elif defined(MARAUDER_MINI)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 21
       #define GPS_RX 22
+<<<<<<< HEAD
       #define mac_history_len 512
+=======
+      #define mac_history_len 100
+>>>>>>> refs/remotes/origin/feberis
     #elif defined(MARAUDER_V7)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 21
       #define GPS_RX 22
+<<<<<<< HEAD
       #define mac_history_len 512
+=======
+      #define mac_history_len 100
+>>>>>>> refs/remotes/origin/feberis
     #elif defined(MARAUDER_FLIPPER)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 9
       #define GPS_RX 21
-      #define mac_history_len 512
+      #define mac_history_len 100
     #elif defined(MARAUDER_M5STICKC)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 33
       #define GPS_RX 32
-      #define mac_history_len 512
+      #define mac_history_len 100
     #elif defined(MARAUDER_REV_FEATHER)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 6
       #define GPS_RX 9
-      #define mac_history_len 512
+      #define mac_history_len 100
     #endif
   #else
-    #define mac_history_len 512
+    #define mac_history_len 100
   #endif
   //// END GPS STUFF
 
@@ -1235,4 +1504,20 @@
   #endif
   //// END MARAUDER TITLE STUFF
 
+  //// PCAP BUFFER STUFF
+
+  #ifdef MARAUDER_V7
+    #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
+    #define SNAP_LEN 4096 // max len of each recieved packet
+  #elif defined(MARAUDER_MINI)
+    #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
+    #define SNAP_LEN 4096 // max len of each recieved packet
+  #elif defined(MARAUDER_REV_FEATHER)
+    #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
+    #define SNAP_LEN 4096 // max len of each recieved packet
+  #else
+    #define BUF_SIZE 3 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
+    #define SNAP_LEN 2324 // max len of each recieved packet
+  #endif
+  //// PCAP BUFFER STUFF
 #endif

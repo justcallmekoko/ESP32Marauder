@@ -3,12 +3,14 @@
     "active_layer": 44,
     "active_layer_preset": "",
     "auto_track_width": false,
+    "hidden_netclasses": [],
     "hidden_nets": [
       "+ext_3V3"
     ],
     "high_contrast_mode": 0,
     "net_color_mode": 1,
     "opacity": {
+      "images": 0.6,
       "pads": 1.0,
       "tracks": 1.0,
       "vias": 1.0,
