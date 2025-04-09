@@ -1345,26 +1345,43 @@ void CommandLine::runCommand(String input) {
       // Get list of indices
       LinkedList<String> ss_index = this->parseCommand(cmd_args.get(ss_sw + 1), ",");
 
-      // Mark APs as selected
-      for (int i = 0; i < ss_index.size(); i++) {
-        int index = ss_index.get(i).toInt();
-        if (!this->inRange(ssids->size(), index)) {
-          Serial.println("Index not in range: " + (String)index);
-          continue;
+      // Select ALL SSIDs
+      if (cmd_args.get(ss_sw + 1) == "all") {
+        for (int i = 0; i < ssids->size(); i++) {
+          if (ssids->get(i).selected) {
+            ssid new_ssid = ssids->get(i);
+            new_ssid.selected = false;
+            ssids->set(i, new_ssid);
+            count_unselected += 1;
+          }
+          else {
+            ssid new_ssid = ssids->get(i);
+            new_ssid.selected = true;
+            ssids->set(i, new_ssid);
+            count_selected += 1;
+          }
         }
-        if (ssids->get(index).selected) {
-          // Unselect "selected" ap
-          ssid new_ssid = ssids->get(index);
-          new_ssid.selected = false;
-          ssids->set(index, new_ssid);
-          count_unselected += 1;
-        }
-        else {
-          // Select "unselected" ap
-          ssid new_ssid = ssids->get(index);
-          new_ssid.selected = true;
-          ssids->set(index, new_ssid);
-          count_selected += 1;
+      }
+      else {
+      // Mark SSIDs as selected
+        for (int i = 0; i < ss_index.size(); i++) {
+          int index = ss_index.get(i).toInt();
+          if (!this->inRange(ssids->size(), index)) {
+            Serial.println("Index not in range: " + (String)index);
+            continue;
+          }
+          if (ssids->get(index).selected) {
+            ssid new_ssid = ssids->get(index);
+            new_ssid.selected = false;
+            ssids->set(index, new_ssid);
+            count_unselected += 1;
+          }
+          else {
+            ssid new_ssid = ssids->get(index);
+            new_ssid.selected = true;
+            ssids->set(index, new_ssid);
+            count_selected += 1;
+          }
         }
       }
       this->showCounts(count_selected, count_unselected);
