@@ -1324,6 +1324,7 @@ void WiFiScan::RunSaveATList(bool save_as) {
     #if defined(HAS_SD)
       sd_obj.removeFile("/Airtags_0.log");
     #endif
+
     this->startLog("Airtags");
 
     DynamicJsonDocument jsonDocument(2048);
