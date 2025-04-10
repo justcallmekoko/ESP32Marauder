@@ -1714,13 +1714,23 @@ void WiFiScan::RunClearSSIDs() {
 }
 
 void WiFiScan::setMac() {
+  wifi_mode_t currentWiFiMode;
+  esp_wifi_get_mode(&currentWiFiMode);
   esp_err_t result;
   result = esp_wifi_set_mac(WIFI_IF_AP, this->ap_mac);
-  if (result != ESP_OK) Serial.printf("Failed to set AP MAC: %s | 0x%X\n", macToString(this->ap_mac), result);
-  else Serial.println("Successfully set AP MAC: " + macToString(this->ap_mac));
+  if ((result != ESP_OK) &&
+      ((currentWiFiMode == WIFI_MODE_AP) || (currentWiFiMode == WIFI_MODE_APSTA) || (currentWiFiMode == WIFI_MODE_NULL)))
+        Serial.printf("Failed to set AP MAC: %s | 0x%X\n", macToString(this->ap_mac), result);
+  else if ((currentWiFiMode == WIFI_MODE_AP) || (currentWiFiMode == WIFI_MODE_APSTA) || (currentWiFiMode == WIFI_MODE_NULL))
+    Serial.println("Successfully set AP MAC: " + macToString(this->ap_mac));
+
+  // Do the station  
   result = esp_wifi_set_mac(WIFI_IF_STA, this->sta_mac);
-  if (result != ESP_OK) Serial.printf("Failed to set STA MAC: %s | 0x%X\n", macToString(this->sta_mac), result);
-  else Serial.println("Successfully set STA MAC: " + macToString(this->sta_mac));
+  if ((result != ESP_OK) &&
+      ((currentWiFiMode == WIFI_MODE_STA) || (currentWiFiMode == WIFI_MODE_APSTA)))
+        Serial.printf("Failed to set STA MAC: %s | 0x%X\n", macToString(this->sta_mac), result);
+  else if ((currentWiFiMode == WIFI_MODE_STA) || (currentWiFiMode == WIFI_MODE_APSTA))
+    Serial.println("Successfully set STA MAC: " + macToString(this->sta_mac));
 }
 
 void WiFiScan::RunSetMac(uint8_t * mac, bool ap) {
