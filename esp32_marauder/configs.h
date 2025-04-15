@@ -23,7 +23,7 @@
   //#define MARAUDER_REV_FEATHER
   //// END BOARD TARGETS
 
-  #define MARAUDER_VERSION "v1.4.2"
+  #define MARAUDER_VERSION "v1.4.3"
 
   #define GRAPH_REFRESH   100
 
@@ -1144,6 +1144,8 @@
 
   //// SCREEN STUFF
   #ifndef HAS_SCREEN
+
+    #define BANNER_TIME GRAPH_REFRESH
 
     #define TFT_WHITE 0
     #define TFT_CYAN 0

@@ -5820,8 +5820,8 @@ void WiFiScan::renderRawStats() {
 }
 
 void WiFiScan::renderPacketRate() {
+  uint8_t line_count = 0;
   #ifdef HAS_SCREEN
-    uint8_t line_count = 0;
     display_obj.tft.fillRect(0,
                             (STATUS_BAR_WIDTH * 2) + 1 + EXT_BUTTON_WIDTH,
                             TFT_WIDTH,
@@ -5830,62 +5830,65 @@ void WiFiScan::renderPacketRate() {
     display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH + EXT_BUTTON_WIDTH);
     display_obj.tft.setTextSize(1);
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    for (int i = 0; i < access_points->size(); i++) {
-      if (access_points->get(i).selected) {
-        display_obj.tft.println(access_points->get(i).essid + ": " + (String)access_points->get(i).packets);
-        Serial.println(access_points->get(i).essid + ": " + (String)access_points->get(i).packets);
-      }
-    }
-    for (int i = 0; i < stations->size(); i++) {
-      if (stations->get(i).selected) {
-        display_obj.tft.println(macToString(stations->get(i).mac) + ": " + (String)stations->get(i).packets);
-        Serial.println(macToString(stations->get(i).mac) + ": " + (String)stations->get(i).packets);
-      }
-    }
-
   #endif
+
+  for (int i = 0; i < access_points->size(); i++) {
+    if (access_points->get(i).selected) {
+      #ifdef HAS_SCREEN
+        display_obj.tft.println(access_points->get(i).essid + ": " + (String)access_points->get(i).packets);
+      #endif
+      Serial.println(access_points->get(i).essid + ": " + (String)access_points->get(i).packets);
+    }
+  }
+  for (int i = 0; i < stations->size(); i++) {
+    if (stations->get(i).selected) {
+      #ifdef HAS_SCREEN
+        display_obj.tft.println(macToString(stations->get(i).mac) + ": " + (String)stations->get(i).packets);
+      #endif
+      Serial.println(macToString(stations->get(i).mac) + ": " + (String)stations->get(i).packets);
+    }
+  }
+
 }
 
 void WiFiScan::packetRateLoop(uint32_t tick) {
-  #ifdef HAS_SCREEN
-    if (tick - this->initTime >= BANNER_TIME * 10) {
-      this->initTime = millis();
-      if (this->currentScanMode == WIFI_SCAN_PACKET_RATE)
-        this->renderPacketRate();
-      else if (this->currentScanMode == WIFI_SCAN_RAW_CAPTURE)
-        this->renderRawStats();
+  if (tick - this->initTime >= BANNER_TIME * 10) {
+    this->initTime = millis();
+    if (this->currentScanMode == WIFI_SCAN_PACKET_RATE)
+      this->renderPacketRate();
+    else if (this->currentScanMode == WIFI_SCAN_RAW_CAPTURE)
+      this->renderRawStats();
 
+  }
+
+  #ifdef HAS_ILI9341
+    int8_t b = this->checkAnalyzerButtons(millis());
+
+    if (b == 6) {
+      this->StartScan(WIFI_SCAN_OFF);
+      this->orient_display = true;
+      return;
     }
-
-    #ifdef HAS_ILI9341
-      int8_t b = this->checkAnalyzerButtons(millis());
-
-      if (b == 6) {
-        this->StartScan(WIFI_SCAN_OFF);
-        this->orient_display = true;
+    else if (b == 4) {
+      if (set_channel > 1) {
+        set_channel--;
+        display_obj.tftDrawChannelScaleButtons(set_channel, false);
+        display_obj.tftDrawExitScaleButtons(false);
+        changeChannel();
         return;
       }
-      else if (b == 4) {
-        if (set_channel > 1) {
-          set_channel--;
-          display_obj.tftDrawChannelScaleButtons(set_channel, false);
-          display_obj.tftDrawExitScaleButtons(false);
-          changeChannel();
-          return;
-        }
-      }
+    }
 
-      // Channel + button pressed
-      else if (b == 5) {
-        if (set_channel < MAX_CHANNEL) {
-          set_channel++;
-          display_obj.tftDrawChannelScaleButtons(set_channel, false);
-          display_obj.tftDrawExitScaleButtons(false);
-          changeChannel();
-          return;
-        }
+    // Channel + button pressed
+    else if (b == 5) {
+      if (set_channel < MAX_CHANNEL) {
+        set_channel++;
+        display_obj.tftDrawChannelScaleButtons(set_channel, false);
+        display_obj.tftDrawExitScaleButtons(false);
+        changeChannel();
+        return;
       }
-    #endif
+    }
   #endif
 }
 
