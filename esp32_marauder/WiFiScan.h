@@ -109,6 +109,17 @@
 
 #define MAX_CHANNEL     14
 
+#define WIFI_SECURITY_OPEN   0
+#define WIFI_SECURITY_WEP    1
+#define WIFI_SECURITY_WPA    2
+#define WIFI_SECURITY_WPA2   3
+#define WIFI_SECURITY_WPA3   4
+#define WIFI_SECURITY_WPA_WPA2_MIXED 5
+#define WIFI_SECURITY_WPA2_ENTERPRISE 6
+#define WIFI_SECURITY_WPA3_ENTERPRISE 7
+#define WIFI_SECURITY_WAPI 8
+#define WIFI_SECURITY_UNKNOWN 255
+
 extern EvilPortal evil_portal_obj;
 
 #ifdef HAS_SCREEN
@@ -314,6 +325,7 @@ class WiFiScan
       NimBLEAdvertisementData GetUniversalAdvertisementData(EBLEPayloadType type);
     #endif
 
+    uint8_t getSecurityType(const uint8_t* beacon, uint16_t len);
     void addAnalyzerValue(int16_t value, int rssi_avg, int16_t target_array[], int array_size);
     bool seen_mac(unsigned char* mac);
     bool mac_cmp(struct mac_addr addr1, struct mac_addr addr2);

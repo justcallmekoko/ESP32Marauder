@@ -1401,6 +1401,9 @@ void WiFiScan::RunLoadAPList() {
       ap.selected = false;
       parseBSSID(obj["bssid"], ap.bssid);
       ap.stations = new LinkedList<uint16_t>();
+      ap.rssi = obj["rssi"];
+      ap.packets = obj["packet"];
+      ap.sec = obj["sec"];
       access_points->add(ap);
     }
 
@@ -1444,6 +1447,9 @@ void WiFiScan::RunSaveAPList(bool save_as) {
               ap.bssid[0], ap.bssid[1], ap.bssid[2],
               ap.bssid[3], ap.bssid[4], ap.bssid[5]);
       jsonAp["bssid"] = bssidStr;
+      jsonAp["rssi"] = ap.rssi;
+      jsonAp["packets"] = ap.packets;
+      jsonAp["sec"] = ap.sec;
     }
 
     String jsonString;
@@ -2024,6 +2030,22 @@ void WiFiScan::RunAPInfo(uint16_t index, bool do_display) {
   Serial.println("    RSSI: " + (String)access_points->get(index).rssi);
   Serial.println("  Frames: " + (String)access_points->get(index).packets);
   Serial.println("Stations: " + (String)access_points->get(index).stations->size());
+  
+  uint8_t sec = access_points->get(index).sec;
+
+  Serial.print("Security: ");
+  switch (sec) {
+    case WIFI_SECURITY_OPEN:             Serial.println("Open"); break;
+    case WIFI_SECURITY_WEP:              Serial.println("WEP"); break;
+    case WIFI_SECURITY_WPA:              Serial.println("WPA"); break;
+    case WIFI_SECURITY_WPA2:             Serial.println("WPA2"); break;
+    case WIFI_SECURITY_WPA3:             Serial.println("WPA3"); break;
+    case WIFI_SECURITY_WPA_WPA2_MIXED:   Serial.println("WPA/WPA2 Mixed"); break;
+    case WIFI_SECURITY_WPA2_ENTERPRISE:  Serial.println("WPA2 Enterprise"); break;
+    case WIFI_SECURITY_WPA3_ENTERPRISE:  Serial.println("WPA3 Enterprise"); break;
+    case WIFI_SECURITY_WAPI:             Serial.println("WAPI"); break;
+    default:                             Serial.println("Unknown"); break;
+  }
 
   #ifdef HAS_SCREEN
     if (do_display) {
@@ -2033,6 +2055,20 @@ void WiFiScan::RunAPInfo(uint16_t index, bool do_display) {
       display_obj.tft.println("    RSSI: " + (String)access_points->get(index).rssi);
       display_obj.tft.println("  Frames: " + (String)access_points->get(index).packets);
       display_obj.tft.println("Stations: " + (String)access_points->get(index).stations->size());
+
+      display_obj.tft.print("Security: ");
+      switch (sec) {
+        case WIFI_SECURITY_OPEN:             display_obj.tft.println("Open"); break;
+        case WIFI_SECURITY_WEP:              display_obj.tft.println("WEP"); break;
+        case WIFI_SECURITY_WPA:              display_obj.tft.println("WPA"); break;
+        case WIFI_SECURITY_WPA2:             display_obj.tft.println("WPA2"); break;
+        case WIFI_SECURITY_WPA3:             display_obj.tft.println("WPA3"); break;
+        case WIFI_SECURITY_WPA_WPA2_MIXED:   display_obj.tft.println("WPA/WPA2 Mixed"); break;
+        case WIFI_SECURITY_WPA2_ENTERPRISE:  display_obj.tft.println("WPA2 Enterprise"); break;
+        case WIFI_SECURITY_WPA3_ENTERPRISE:  display_obj.tft.println("WPA3 Enterprise"); break;
+        case WIFI_SECURITY_WAPI:             display_obj.tft.println("WAPI"); break;
+        default:                             display_obj.tft.println("Unknown"); break;
+      }
     }
   #endif
 
@@ -3383,18 +3419,45 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
           Serial.print(essid + " ");
         }
 
-        //LinkedList<char> beacon = new LinkedList<char>();
-        
-        /*AccessPoint ap = {essid,
-                          snifferPacket->rx_ctrl.channel,
-                          {snifferPacket->payload[10],
-                           snifferPacket->payload[11],
-                           snifferPacket->payload[12],
-                           snifferPacket->payload[13],
-                           snifferPacket->payload[14],
-                           snifferPacket->payload[15]},
-                          false,
-                          NULL};*/
+        // Get security info
+        uint8_t security_type = wifi_scan_obj.getSecurityType(snifferPacket->payload, snifferPacket->rx_ctrl.sig_len);
+        /*uint8_t* data = snifferPacket->payload;
+        int pos = 36;
+
+        uint8_t security_type = WIFI_SECURITY_OPEN;
+        bool has_rsn = false;
+        bool has_wpa = false;
+        bool has_privacy = (data[34] & 0x10);
+
+        while (pos < snifferPacket->rx_ctrl.sig_len - 2) {
+          uint8_t tag_number = data[pos];
+          uint8_t tag_len = data[pos + 1];
+
+          // WPA (Vendor Specific)
+          if (tag_number == 221 && tag_len >= 8 && data[pos + 2] == 0x00 &&
+              data[pos + 3] == 0x50 && data[pos + 4] == 0xF2 && data[pos + 5] == 0x01) {
+            has_wpa = true;
+          }
+
+          // RSN (WPA2)
+          if (tag_number == 48) {
+            has_rsn = true;
+          }
+
+          pos += 2 + tag_len;
+        }
+
+        if (!has_privacy) {
+          security_type = WIFI_SECURITY_OPEN;
+        } else if (has_wpa && !has_rsn) {
+          security_type = WIFI_SECURITY_WPA;
+        } else if (has_rsn && !has_wpa) {
+          security_type = WIFI_SECURITY_WPA2;
+        } else if (has_rsn && has_wpa) {
+          security_type = WIFI_SECURITY_WPA2; // Mixed WPA/WPA2
+        } else {
+          security_type = has_privacy ? WIFI_SECURITY_WEP : WIFI_SECURITY_OPEN;
+        }*/
 
         if (wifi_scan_obj.checkMem()) {
 
@@ -3431,6 +3494,8 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
           }
 
           ap.rssi = snifferPacket->rx_ctrl.rssi;
+
+          ap.sec = security_type;
 
           access_points->add(ap);
 
@@ -3594,6 +3659,77 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
   }
 }
 
+uint8_t WiFiScan::getSecurityType(const uint8_t* beacon, uint16_t len) {
+  const uint8_t* frame = beacon;
+  const uint8_t* ies = beacon + 36; // Start of tagged parameters
+  uint16_t ies_len = len - 36;
+
+  bool hasRSN = false;
+  bool hasWPA = false;
+  bool hasWEP = false;
+  bool isEnterprise = false;
+  bool isWPA3 = false;
+  bool isWAPI = false;
+
+  uint16_t i = 0;
+  while (i + 2 <= ies_len) {
+    uint8_t tag_id = ies[i];
+    uint8_t tag_len = ies[i + 1];
+
+    if (i + 2 + tag_len > ies_len) break;
+
+    const uint8_t* tag_data = ies + i + 2;
+
+    // Check for RSN (WPA2)
+    if (tag_id == 48) {
+      hasRSN = true;
+
+      // WPA2-Enterprise usually uses 802.1X AKM (type 1)
+      if (tag_len >= 20 && tag_data[14] == 0x01 && tag_data[15] == 0x00 && tag_data[16] == 0x00 && tag_data[17] == 0x0f && tag_data[18] == 0xac) {
+        isEnterprise = true;
+      }
+
+      // WPA3 typically uses SAE (type 8)
+      if (tag_len >= 20 && tag_data[14] == 0x01 && tag_data[15] == 0x00 && tag_data[16] == 0x00 && tag_data[17] == 0x0f && tag_data[18] == 0xac && tag_data[19] == 0x08) {
+        isWPA3 = true;
+      }
+    }
+
+    // Check for WPA (in vendor specific tag)
+    else if (tag_id == 221 && tag_len >= 8 &&
+        tag_data[0] == 0x00 && tag_data[1] == 0x50 && tag_data[2] == 0xF2 && tag_data[3] == 0x01) {
+      hasWPA = true;
+
+      // WPA-Enterprise (AKM 1)
+      if (tag_len >= 20 && tag_data[14] == 0x01 && tag_data[15] == 0x00 && tag_data[16] == 0x00 && tag_data[17] == 0x50 && tag_data[18] == 0xf2) {
+        isEnterprise = true;
+      }
+    }
+
+    // Check for WAPI (Chinese standard)
+    else if (tag_id == 221 && tag_len >= 4 &&
+        tag_data[0] == 0x00 && tag_data[1] == 0x14 && tag_data[2] == 0x72 && tag_data[3] == 0x01) {
+      isWAPI = true;
+    }
+
+    i += 2 + tag_len;
+  }
+
+  // Decision tree
+  if (isWAPI) return WIFI_SECURITY_WAPI;
+  if (hasRSN && isWPA3) return WIFI_SECURITY_WPA3;
+  if (hasRSN && isEnterprise) return WIFI_SECURITY_WPA2_ENTERPRISE;
+  if (hasRSN && hasWPA) return WIFI_SECURITY_WPA_WPA2_MIXED;
+  if (hasRSN) return WIFI_SECURITY_WPA2;
+  if (hasWPA) return isEnterprise ? WIFI_SECURITY_WPA2_ENTERPRISE : WIFI_SECURITY_WPA;
+  
+  // WEP is identified via capability flags
+  uint16_t capab_info = ((uint16_t)frame[34] << 8) | frame[35];
+  if (capab_info & 0x0010) return WIFI_SECURITY_WEP;
+
+  return WIFI_SECURITY_OPEN;
+}
+
 void WiFiScan::apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 {
   extern WiFiScan wifi_scan_obj;
@@ -3682,6 +3818,46 @@ void WiFiScan::apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
           essid = bssid;
           Serial.print(essid + " ");
         }
+
+        // Get security info
+        uint8_t security_type = wifi_scan_obj.getSecurityType(snifferPacket->payload, snifferPacket->rx_ctrl.sig_len);
+        /*uint8_t* data = snifferPacket->payload;
+        int pos = 36;
+
+        uint8_t security_type = WIFI_SECURITY_OPEN;
+        bool has_rsn = false;
+        bool has_wpa = false;
+        bool has_privacy = (data[34] & 0x10);
+
+        while (pos < snifferPacket->rx_ctrl.sig_len - 2) {
+          uint8_t tag_number = data[pos];
+          uint8_t tag_len = data[pos + 1];
+
+          // WPA (Vendor Specific)
+          if (tag_number == 221 && tag_len >= 8 && data[pos + 2] == 0x00 &&
+              data[pos + 3] == 0x50 && data[pos + 4] == 0xF2 && data[pos + 5] == 0x01) {
+            has_wpa = true;
+          }
+
+          // RSN (WPA2)
+          if (tag_number == 48) {
+            has_rsn = true;
+          }
+
+          pos += 2 + tag_len;
+        }
+
+        if (!has_privacy) {
+          security_type = WIFI_SECURITY_OPEN;
+        } else if (has_wpa && !has_rsn) {
+          security_type = WIFI_SECURITY_WPA;
+        } else if (has_rsn && !has_wpa) {
+          security_type = WIFI_SECURITY_WPA2;
+        } else if (has_rsn && has_wpa) {
+          security_type = WIFI_SECURITY_WPA2; // Mixed WPA/WPA2
+        } else {
+          security_type = has_privacy ? WIFI_SECURITY_WEP : WIFI_SECURITY_OPEN;
+        }*/
         
         AccessPoint ap = {essid,
                           snifferPacket->rx_ctrl.channel,
@@ -3695,7 +3871,8 @@ void WiFiScan::apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
                           NULL,
                           snifferPacket->rx_ctrl.rssi,
                           new LinkedList<uint16_t>(),
-                          0};
+                          0,
+                          security_type};
 
         access_points->add(ap);
 
