@@ -1630,7 +1630,6 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
   delete access_points;
   access_points = new LinkedList<AccessPoint>();
 
-  //esp_wifi_init(&cfg);
   esp_wifi_init(&cfg2);
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
@@ -1638,10 +1637,7 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
   this->setMac();
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
-  //if (scan_mode == WIFI_SCAN_TARGET_AP_FULL)
   esp_wifi_set_promiscuous_rx_cb(&apSnifferCallbackFull);
-  //else
-  //  esp_wifi_set_promiscuous_rx_cb(&apSnifferCallback);
   esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   this->wifi_initialized = true;
   initTime = millis();
@@ -2030,8 +2026,10 @@ void WiFiScan::RunAPInfo(uint16_t index, bool do_display) {
   Serial.println("    RSSI: " + (String)access_points->get(index).rssi);
   Serial.println("  Frames: " + (String)access_points->get(index).packets);
   Serial.println("Stations: " + (String)access_points->get(index).stations->size());
+  Serial.println("   Brand: " + (String)access_points->get(index).man);
   
   uint8_t sec = access_points->get(index).sec;
+  bool wps = access_points->get(index).wps;
 
   Serial.print("Security: ");
   switch (sec) {
@@ -2047,6 +2045,13 @@ void WiFiScan::RunAPInfo(uint16_t index, bool do_display) {
     default:                             Serial.println("Unknown"); break;
   }
 
+  Serial.print("     WPS: ");
+  switch (wps) {
+    case true:                           Serial.println("true"); break;
+    case false:                          Serial.println("false"); break;
+    default:                             Serial.println("false"); break;
+  }
+
   #ifdef HAS_SCREEN
     if (do_display) {
       display_obj.tft.println("   ESSID: " + (String)access_points->get(index).essid);
@@ -2055,6 +2060,7 @@ void WiFiScan::RunAPInfo(uint16_t index, bool do_display) {
       display_obj.tft.println("    RSSI: " + (String)access_points->get(index).rssi);
       display_obj.tft.println("  Frames: " + (String)access_points->get(index).packets);
       display_obj.tft.println("Stations: " + (String)access_points->get(index).stations->size());
+      display_obj.tft.println("   Brand: " + (String)access_points->get(index).man);
 
       display_obj.tft.print("Security: ");
       switch (sec) {
@@ -2068,6 +2074,13 @@ void WiFiScan::RunAPInfo(uint16_t index, bool do_display) {
         case WIFI_SECURITY_WPA3_ENTERPRISE:  display_obj.tft.println("WPA3 Enterprise"); break;
         case WIFI_SECURITY_WAPI:             display_obj.tft.println("WAPI"); break;
         default:                             display_obj.tft.println("Unknown"); break;
+      }
+
+      display_obj.tft.print("     WPS: ");
+      switch (wps) {
+        case true:                           display_obj.tft.println("true"); break;
+        case false:                          display_obj.tft.println("false"); break;
+        default:                             display_obj.tft.println("false"); break;
       }
     }
   #endif
@@ -3307,6 +3320,68 @@ void WiFiScan::pwnSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
   }
 }
 
+int WiFiScan::checkMatchAP(char addr[]) {
+  for (int i = 0; i < access_points->size(); i++) {
+    bool mac_match = true;
+
+    for (int x = 0; x < 6; x++) {
+      if ((uint8_t)strtol(&addr[x * 3], NULL, 16) != access_points->get(i).bssid[x]) {
+        mac_match = false;
+        break;
+      }
+    }
+
+    if (mac_match) {
+      AccessPoint ap = access_points->get(i);
+      ap.packets += 1;
+      access_points->set(i, ap);
+      return i;
+    }
+  }
+  return -1;
+}
+
+String WiFiScan::extractManufacturer(const uint8_t* payload) {
+  const int fixedHeaderSize = 36; // 802.11 mgmt header (24) + fixed fields (12)
+  int pos = fixedHeaderSize;
+
+  while (pos < 512) { // safety bounds
+    uint8_t tagNumber = payload[pos];
+    uint8_t tagLength = payload[pos + 1];
+
+    // Check for vendor-specific IE (Tag number 221)
+    if (tagNumber == 0xdd && tagLength >= 4) {
+      const uint8_t* oui = &payload[pos + 2];
+      
+      // Check if OUI is 00:50:F2 (Microsoft WPS)
+      if (oui[0] == 0x00 && oui[1] == 0x50 && oui[2] == 0xF2) {
+        int wpsPos = pos + 6; // Skip: tag + len + OUI (2 + 1 + 3)
+        int end = pos + 2 + tagLength;
+
+        // Iterate through WPS sub-TLVs
+        while (wpsPos + 4 <= end) {
+          uint16_t type = (payload[wpsPos] << 8) | payload[wpsPos + 1];
+          uint16_t len = (payload[wpsPos + 2] << 8) | payload[wpsPos + 3];
+
+          if (type == 0x1021) { // Manufacturer
+            char buffer[65]; // reasonable max
+            int copyLen = len > 64 ? 64 : len;
+            memcpy(buffer, &payload[wpsPos + 4], copyLen);
+            buffer[copyLen] = '\0';
+            return String(buffer);
+          }
+
+          wpsPos += 4 + len;
+        }
+      }
+    }
+
+    pos += 2 + tagLength;
+  }
+
+  return String(""); // not found
+}
+
 void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type) {  
   extern WiFiScan wifi_scan_obj;
   wifi_promiscuous_pkt_t *snifferPacket = (wifi_promiscuous_pkt_t*)buf;
@@ -3323,47 +3398,62 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
   if (type == WIFI_PKT_MGMT)
   {
     len -= 4;
-    int fctl = ntohs(frameControl->fctl);
-    const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)snifferPacket->payload;
-    const WifiMgmtHdr *hdr = &ipkt->hdr;
+    //int fctl = ntohs(frameControl->fctl);
+    //const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)snifferPacket->payload;
+    //const WifiMgmtHdr *hdr = &ipkt->hdr;
 
-    // If we dont the buffer size is not 0, don't write or else we get CORRUPT_HEAP
-    #ifdef HAS_SCREEN
-      int buf = display_obj.display_buffer->size();
-    #else
-      int buf = 0;
-    #endif
+    int buf = 0;
+
+    bool wps = wifi_scan_obj.beaconHasWPS(snifferPacket->payload, len);
+
+    // We got a probe resp. Check for WPS configs
+    if (snifferPacket->payload[0] == 0x50) {
+
+      if (wps) {
+        char addr[] = "00:00:00:00:00:00";
+        getMAC(addr, snifferPacket->payload, 10);
+
+        int index = wifi_scan_obj.checkMatchAP(addr);
+
+        if ((index > 0) && (!access_points->get(index).wps)) {
+          AccessPoint new_ap = access_points->get(index);
+          new_ap.wps = true;
+          new_ap.man = wifi_scan_obj.extractManufacturer(snifferPacket->payload);
+          access_points->set(index, new_ap);
+          Serial.println((String)access_points->get(index).essid + ": RXd WPS Configs");
+
+          #ifdef HAS_SCREEN
+            display_string = RED_KEY;
+            display_string.concat((String)access_points->get(index).essid + ": RXd WPS Configs");
+            int temp_len = display_string.length();
+
+            for (int i = 0; i < 50 - temp_len; i++)
+              display_string.concat(" ");
+
+            display_obj.display_buffer->add(display_string);
+          #endif
+        }
+      }
+    }
+
+    // We got an AP. Check if in list and add if not
     if ((snifferPacket->payload[0] == 0x80) && (buf == 0))
     {
+      // Get security info
+      uint8_t security_type = wifi_scan_obj.getSecurityType(snifferPacket->payload, len);
+      
       #ifdef HAS_SCREEN
-        display_string = GREEN_KEY;
+        if (!wps)
+          display_string = GREEN_KEY;
+        else
+          display_string = RED_KEY;
       #endif
       char addr[] = "00:00:00:00:00:00";
       getMAC(addr, snifferPacket->payload, 10);
 
-      bool in_list = false;
-      bool mac_match = true;
+      int in_list = wifi_scan_obj.checkMatchAP(addr);
 
-      for (int i = 0; i < access_points->size(); i++) {
-        mac_match = true;
-
-        
-        for (int x = 0; x < 6; x++) {
-          if (snifferPacket->payload[x + 10] != access_points->get(i).bssid[x]) {
-            mac_match = false;
-            break;
-          }
-        }
-        if (mac_match) {
-          in_list = true;
-          AccessPoint ap = access_points->get(i);
-          ap.packets = ap.packets + 1;
-          access_points->set(i, ap);
-          break;
-        }
-      }
-
-      if (!in_list) {
+      if (in_list < 0) {
       
         Serial.print("RSSI: ");
         Serial.print(snifferPacket->rx_ctrl.rssi);
@@ -3419,46 +3509,6 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
           Serial.print(essid + " ");
         }
 
-        // Get security info
-        uint8_t security_type = wifi_scan_obj.getSecurityType(snifferPacket->payload, snifferPacket->rx_ctrl.sig_len);
-        /*uint8_t* data = snifferPacket->payload;
-        int pos = 36;
-
-        uint8_t security_type = WIFI_SECURITY_OPEN;
-        bool has_rsn = false;
-        bool has_wpa = false;
-        bool has_privacy = (data[34] & 0x10);
-
-        while (pos < snifferPacket->rx_ctrl.sig_len - 2) {
-          uint8_t tag_number = data[pos];
-          uint8_t tag_len = data[pos + 1];
-
-          // WPA (Vendor Specific)
-          if (tag_number == 221 && tag_len >= 8 && data[pos + 2] == 0x00 &&
-              data[pos + 3] == 0x50 && data[pos + 4] == 0xF2 && data[pos + 5] == 0x01) {
-            has_wpa = true;
-          }
-
-          // RSN (WPA2)
-          if (tag_number == 48) {
-            has_rsn = true;
-          }
-
-          pos += 2 + tag_len;
-        }
-
-        if (!has_privacy) {
-          security_type = WIFI_SECURITY_OPEN;
-        } else if (has_wpa && !has_rsn) {
-          security_type = WIFI_SECURITY_WPA;
-        } else if (has_rsn && !has_wpa) {
-          security_type = WIFI_SECURITY_WPA2;
-        } else if (has_rsn && has_wpa) {
-          security_type = WIFI_SECURITY_WPA2; // Mixed WPA/WPA2
-        } else {
-          security_type = has_privacy ? WIFI_SECURITY_WEP : WIFI_SECURITY_OPEN;
-        }*/
-
         if (wifi_scan_obj.checkMem()) {
 
           AccessPoint ap;
@@ -3497,6 +3547,12 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
 
           ap.sec = security_type;
 
+          ap.wps = wps;
+
+          ap.packets = 0;
+
+          ap.man = "";
+
           access_points->add(ap);
 
           Serial.print(access_points->size());
@@ -3513,6 +3569,8 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
       }
     }
   }
+
+  // We got a client possibly. Check for AP association
   if ((snifferPacket->payload[0] != 0x80) && (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA)) {
     #ifdef HAS_SCREEN
       display_string = CYAN_KEY;
@@ -3657,6 +3715,58 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
 
     buffer_obj.append(snifferPacket, len);
   }
+}
+
+bool WiFiScan::beaconHasWPS(const uint8_t* payload, int len) {
+  int i = 36; // skip radiotap + fixed 802.11 header
+
+  while (i < len - 2) {
+    uint8_t tagNumber = payload[i];
+    uint8_t tagLength = payload[i + 1];
+
+    if (i + 2 + tagLength > len) break; // prevent overflow
+    const uint8_t* tagData = &payload[i + 2];
+
+    // Look for Tag Number 0xDD (Vendor Specific)
+    if (tagNumber == 0xDD && tagLength >= 6) {
+      // Check for WPS OUI: 00:50:F2 and WPS type: 0x04
+      if (tagData[0] == 0x00 && tagData[1] == 0x50 && tagData[2] == 0xF2 && tagData[3] == 0x04) {
+        // Parse the WPS IE data starting after the OUI and type
+        int wpsLen = tagLength - 4;
+        const uint8_t* wpsData = &tagData[4];
+        int j = 0;
+
+        while (j + 4 <= wpsLen) {
+          uint16_t attrType = (wpsData[j] << 8) | wpsData[j + 1];
+          uint16_t attrLen  = (wpsData[j + 2] << 8) | wpsData[j + 3];
+
+          if (j + 4 + attrLen > wpsLen) break; // prevent overflow
+
+          if (attrType == 0x1008 && attrLen == 2) { // Config Methods attribute
+            uint16_t configMethods = (wpsData[j + 4] << 8) | wpsData[j + 5];
+
+            // Check for any vulnerable method
+            if (configMethods & (WPS_CONFIG_LABEL |
+                                 WPS_CONFIG_DISPLAY |
+                                 WPS_CONFIG_KEYPAD |
+                                 WPS_CONFIG_VIRT_DISPLAY |
+                                 WPS_CONFIG_PHY_DISPLAY |
+                                 WPS_CONFIG_PUSH_BUTTON |
+                                 WPS_CONFIG_VIRT_PUSH_BUTTON |
+                                 WPS_CONFIG_PHY_PUSH_BUTTON)) {
+              return true;
+            }
+          }
+
+          j += 4 + attrLen;
+        }
+      }
+    }
+
+    i += 2 + tagLength;
+  }
+
+  return false;
 }
 
 uint8_t WiFiScan::getSecurityType(const uint8_t* beacon, uint16_t len) {
@@ -3821,43 +3931,8 @@ void WiFiScan::apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 
         // Get security info
         uint8_t security_type = wifi_scan_obj.getSecurityType(snifferPacket->payload, snifferPacket->rx_ctrl.sig_len);
-        /*uint8_t* data = snifferPacket->payload;
-        int pos = 36;
-
-        uint8_t security_type = WIFI_SECURITY_OPEN;
-        bool has_rsn = false;
-        bool has_wpa = false;
-        bool has_privacy = (data[34] & 0x10);
-
-        while (pos < snifferPacket->rx_ctrl.sig_len - 2) {
-          uint8_t tag_number = data[pos];
-          uint8_t tag_len = data[pos + 1];
-
-          // WPA (Vendor Specific)
-          if (tag_number == 221 && tag_len >= 8 && data[pos + 2] == 0x00 &&
-              data[pos + 3] == 0x50 && data[pos + 4] == 0xF2 && data[pos + 5] == 0x01) {
-            has_wpa = true;
-          }
-
-          // RSN (WPA2)
-          if (tag_number == 48) {
-            has_rsn = true;
-          }
-
-          pos += 2 + tag_len;
-        }
-
-        if (!has_privacy) {
-          security_type = WIFI_SECURITY_OPEN;
-        } else if (has_wpa && !has_rsn) {
-          security_type = WIFI_SECURITY_WPA;
-        } else if (has_rsn && !has_wpa) {
-          security_type = WIFI_SECURITY_WPA2;
-        } else if (has_rsn && has_wpa) {
-          security_type = WIFI_SECURITY_WPA2; // Mixed WPA/WPA2
-        } else {
-          security_type = has_privacy ? WIFI_SECURITY_WEP : WIFI_SECURITY_OPEN;
-        }*/
+        
+        bool wps = wifi_scan_obj.beaconHasWPS(snifferPacket->payload, snifferPacket->rx_ctrl.sig_len);
         
         AccessPoint ap = {essid,
                           snifferPacket->rx_ctrl.channel,
@@ -3872,7 +3947,8 @@ void WiFiScan::apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
                           snifferPacket->rx_ctrl.rssi,
                           new LinkedList<uint16_t>(),
                           0,
-                          security_type};
+                          security_type,
+                          wps};
 
         access_points->add(ap);
 
