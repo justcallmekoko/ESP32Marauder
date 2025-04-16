@@ -1375,7 +1375,6 @@ void WiFiScan::RunLoadAPList() {
         display_obj.tft.setCursor(0, 100);
         display_obj.tft.setTextSize(1);
         display_obj.tft.setTextColor(TFT_CYAN);
-      
         display_obj.tft.println("Could not open /APs_0.log");
       #endif
       return;
@@ -1393,7 +1392,6 @@ void WiFiScan::RunLoadAPList() {
         display_obj.tft.setCursor(0, 100);
         display_obj.tft.setTextSize(1);
         display_obj.tft.setTextColor(TFT_CYAN);
-      
         display_obj.tft.println("Could not deserialize JSON");
         display_obj.tft.println(error.c_str());
       #endif
@@ -1403,22 +1401,29 @@ void WiFiScan::RunLoadAPList() {
     JsonArray array = doc.as<JsonArray>();
     for (JsonObject obj : array) {
       AccessPoint ap;
-      ap.essid = obj["essid"].as<String>();
-      ap.channel = obj["channel"];
+
+      ap.essid   = obj.containsKey("essid")   ? obj["essid"].as<String>()      : "";
+      ap.channel = obj.containsKey("channel") ? obj["channel"].as<uint8_t>()   : 1;
       ap.selected = false;
-      parseBSSID(obj["bssid"], ap.bssid);
+
+      if (obj.containsKey("bssid")) {
+        parseBSSID(obj["bssid"], ap.bssid);
+      } else {
+        memset(ap.bssid, 0, 6); // Zero BSSID if missing
+      }
+
       ap.stations = new LinkedList<uint16_t>();
-      ap.rssi = obj["rssi"];
-      ap.packets = obj["packet"];
-      ap.sec = obj["sec"];
-      ap.wps = obj["wps"];
-      ap.man = obj["man"].as<String>();
+      ap.rssi     = obj.containsKey("rssi")   ? obj["rssi"].as<int>()          : -127;
+      ap.packets  = obj.containsKey("packet") ? obj["packet"].as<uint32_t>()   : 0;
+      ap.sec      = obj.containsKey("sec")    ? obj["sec"].as<uint8_t>()       : 0;
+      ap.wps      = obj.containsKey("wps")    ? obj["wps"].as<bool>()          : false;
+      ap.man      = obj.containsKey("man")    ? obj["man"].as<String>()        : "Unknown";
+
       access_points->add(ap);
+      Serial.println("Got: " + ap.essid);
     }
 
     file.close();
-
-    //doc.clear();
 
     #ifdef HAS_SCREEN
       display_obj.tft.setTextWrap(false);
@@ -1426,7 +1431,6 @@ void WiFiScan::RunLoadAPList() {
       display_obj.tft.setCursor(0, 100);
       display_obj.tft.setTextSize(1);
       display_obj.tft.setTextColor(TFT_CYAN);
-    
       display_obj.tft.print("Loaded APs: ");
       display_obj.tft.println((String)access_points->size());
     #endif
