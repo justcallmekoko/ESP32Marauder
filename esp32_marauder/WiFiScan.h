@@ -409,6 +409,13 @@ class WiFiScan
     // Stuff for RAW stats
     uint32_t mgmt_frames = 0;
     uint32_t data_frames = 0;
+    uint32_t beacon_frames = 0;
+    uint32_t req_frames = 0;
+    uint32_t resp_frames = 0;
+    uint32_t deauth_frames = 0;
+    uint32_t eapol_frames = 0;
+    int8_t min_rssi = 0;
+    int8_t max_rssi = -128;
 
     String analyzer_name_string = "";
     
