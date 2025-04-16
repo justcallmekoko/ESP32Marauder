@@ -1025,6 +1025,13 @@ void WiFiScan::StopScan(uint8_t scan_mode)
       this->analyzer_name_update = true;
       this->mgmt_frames = 0;
       this->data_frames = 0;
+      this->beacon_frames = 0;
+      this->req_frames = 0;
+      this->resp_frames = 0;
+      this->deauth_frames = 0;
+      this->eapol_frames = 0;
+      this->min_rssi = 0;
+      this->max_rssi = -128;
     #endif
   }
 
@@ -1404,6 +1411,8 @@ void WiFiScan::RunLoadAPList() {
       ap.rssi = obj["rssi"];
       ap.packets = obj["packet"];
       ap.sec = obj["sec"];
+      ap.wps = obj["wps"];
+      ap.man = obj["man"].as<String>();
       access_points->add(ap);
     }
 
@@ -1450,6 +1459,8 @@ void WiFiScan::RunSaveAPList(bool save_as) {
       jsonAp["rssi"] = ap.rssi;
       jsonAp["packets"] = ap.packets;
       jsonAp["sec"] = ap.sec;
+      jsonAp["wps"] = ap.wps;
+      jsonAp["man"] = ap.man;
     }
 
     String jsonString;
@@ -3409,6 +3420,8 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
     // We got a probe resp. Check for WPS configs
     if (snifferPacket->payload[0] == 0x50) {
 
+      String man = wifi_scan_obj.extractManufacturer(snifferPacket->payload);
+
       if (wps) {
         char addr[] = "00:00:00:00:00:00";
         getMAC(addr, snifferPacket->payload, 10);
@@ -3418,7 +3431,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
         if ((index > 0) && (!access_points->get(index).wps)) {
           AccessPoint new_ap = access_points->get(index);
           new_ap.wps = true;
-          new_ap.man = wifi_scan_obj.extractManufacturer(snifferPacket->payload);
+          new_ap.man = man;
           access_points->set(index, new_ap);
           Serial.println((String)access_points->get(index).essid + ": RXd WPS Configs");
 
@@ -4452,6 +4465,25 @@ void WiFiScan::rawSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
     const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)snifferPacket->payload;
     const WifiMgmtHdr *hdr = &ipkt->hdr;
     wifi_scan_obj.mgmt_frames++;
+
+    // Do our counts
+    if (snifferPacket->payload[0] == 0x40) // Probe request
+      wifi_scan_obj.req_frames++;
+    else if (snifferPacket->payload[0] == 0x50) // Probe response
+      wifi_scan_obj.resp_frames++;
+    else if (snifferPacket->payload[0] == 0x80) // Beacon
+      wifi_scan_obj.beacon_frames++;
+    else if (snifferPacket->payload[0] == 0xC0) // Deauth
+      wifi_scan_obj.deauth_frames++;
+    else if (((snifferPacket->payload[30] == 0x88 && snifferPacket->payload[31] == 0x8e) || ( snifferPacket->payload[32] == 0x88 && snifferPacket->payload[33] == 0x8e))) // eapol
+      wifi_scan_obj.eapol_frames++;
+
+    // Get min/max rssi
+    if (snifferPacket->rx_ctrl.rssi < wifi_scan_obj.min_rssi)
+      wifi_scan_obj.min_rssi = snifferPacket->rx_ctrl.rssi;
+    
+    if (snifferPacket->rx_ctrl.rssi > wifi_scan_obj.max_rssi)
+      wifi_scan_obj.max_rssi = snifferPacket->rx_ctrl.rssi;
   }
   else {
     wifi_scan_obj.data_frames++;
@@ -6062,14 +6094,27 @@ void WiFiScan::renderRawStats() {
 
     display_obj.tft.println("Stats\n");
 
-    display_obj.tft.println("Mgmt: " + (String)this->mgmt_frames);
-    display_obj.tft.println("Data: " + (String)this->data_frames);
-    display_obj.tft.println("Chan: " + (String)this->set_channel);
+    display_obj.tft.println("     Mgmt: " + (String)this->mgmt_frames);
+    display_obj.tft.println("     Data: " + (String)this->data_frames);
+    display_obj.tft.println("  Channel: " + (String)this->set_channel);
+    display_obj.tft.println("   Beacon: " + (String)this->beacon_frames);
+    display_obj.tft.println("Probe Req: " + (String)this->req_frames);
+    display_obj.tft.println("Probe Res: " + (String)this->resp_frames);
+    display_obj.tft.println("   Deauth: " + (String)this->deauth_frames);
+    display_obj.tft.println("    EAPOL: " + (String)this->eapol_frames);
+    display_obj.tft.println("     RSSI: " + (String)this->min_rssi + " - " + (String)this->max_rssi);
 
-    Serial.println("Mgmt: " + (String)this->mgmt_frames);
-    Serial.println("Data: " + (String)this->data_frames);
-    Serial.println("Chan: " + (String)this->set_channel);
   #endif
+
+  Serial.println("     Mgmt: " + (String)this->mgmt_frames);
+  Serial.println("     Data: " + (String)this->data_frames);
+  Serial.println("  Channel: " + (String)this->set_channel);
+  Serial.println("   Beacon: " + (String)this->beacon_frames);
+  Serial.println("Probe Req: " + (String)this->req_frames);
+  Serial.println("Probe Res: " + (String)this->resp_frames);
+  Serial.println("   Deauth: " + (String)this->deauth_frames);
+  Serial.println("    EAPOL: " + (String)this->eapol_frames);
+  Serial.println("     RSSI: " + (String)this->min_rssi + " - " + (String)this->max_rssi);
 }
 
 void WiFiScan::renderPacketRate() {
