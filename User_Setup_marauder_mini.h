@@ -54,8 +54,8 @@
 // #define TFT_WIDTH  80
  #define TFT_WIDTH  128 // Marauder Mini
 // #define TFT_WIDTH  240 // ST7789 240 x 240 and 240 x 320
-// #define TFT_HEIGHT 160
- #define TFT_HEIGHT 128 // Marauder Mini
+#define TFT_HEIGHT 160
+ //#define TFT_HEIGHT 128 // Marauder Mini
 // #define TFT_HEIGHT 240 // ST7789 240 x 240
 // #define TFT_HEIGHT 320 // ST7789 240 x 320
 
