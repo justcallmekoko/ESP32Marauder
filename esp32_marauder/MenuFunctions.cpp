@@ -2734,9 +2734,12 @@ void MenuFunctions::setGraphScale(float scale) {
 }
 
 float MenuFunctions::calculateGraphScale(int16_t value) {
-  if (value < GRAPH_VERT_LIM) {
-    return 1.0;  // No scaling needed if the value is within the limit
+  if ((value * this->_graph_scale < GRAPH_VERT_LIM) && (value * this->_graph_scale > GRAPH_VERT_LIM * 0.75)) {
+    return this->_graph_scale;  // No scaling needed if the value is within the limit
   }
+
+  if (value < GRAPH_VERT_LIM)
+    return 1.0;
 
   // Calculate the multiplier proportionally
   return (0.75 * GRAPH_VERT_LIM) / value;
