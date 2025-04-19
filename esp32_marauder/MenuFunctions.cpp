@@ -2739,7 +2739,7 @@ float MenuFunctions::calculateGraphScale(int16_t value) {
   }
 
   // Calculate the multiplier proportionally
-  return (0.5 * GRAPH_VERT_LIM) / value;
+  return (0.75 * GRAPH_VERT_LIM) / value;
 }
 
 float MenuFunctions::graphScaleCheck(const int16_t array[TFT_WIDTH]) {
@@ -2766,7 +2766,7 @@ void MenuFunctions::drawMaxLine(int16_t value, uint16_t color) {
   display_obj.tft.setCursor(0, TFT_HEIGHT - (value * this->_graph_scale));
   display_obj.tft.setTextColor(color, TFT_BLACK);
   display_obj.tft.setTextSize(1);
-  display_obj.tft.println((String)value);
+  display_obj.tft.println((String)(value / BASE_MULTIPLIER));
 }
 
 void MenuFunctions::drawGraph(int16_t *values) {
