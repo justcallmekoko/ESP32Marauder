@@ -30,6 +30,7 @@ jobs:
           - { name: "M5StickCPlus 2",               flag: "MARAUDER_M5STICKCP2",      fbqn: "esp32:esp32:m5stick-c:PartitionScheme=min_spiffs",                           file_name: "m5stickc_plus2",          tft: true,  tft_file: "User_Setup_marauder_m5stickcp2.h",   build_dir: "m5stick-c", addr: "0x1000" }
           - { name: "Rev Feather",                  flag: "MARAUDER_REV_FEATHER",     fbqn: "esp32:esp32:esp32s2:PartitionScheme=min_spiffs,FlashSize=4M,PSRAM=enabled",  file_name: "rev_feather",             tft: true,  tft_file: "User_Setup_marauder_rev_feather.h",  build_dir: "esp32s2", addr: "0x1000" }
           - { name: "Marauder v7",                  flag: "MARAUDER_V7",              fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                 file_name: "marauder_v7",             tft: true,  tft_file: "User_Setup_dual_nrf24.h",            build_dir: "d32",     addr: "0x1000" }
+          - { name: "Marauder CYD 2432S028",        flag: "MARAUDER_CYD_MICRO",       fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                 file_name: "cyd_2432S028",            tft: true,  tft_file: "User_Setup_cyd_micro.h",             build_dir: "d32",     addr: "0x1000" }
           
     steps:
       - name: Checkout Code
@@ -92,6 +93,13 @@ jobs:
           repository: Bodmer/TFT_eSPI
           ref: V2.5.34
           path: CustomTFT_eSPI
+          
+      - name: Install XPT2046_Touchscreen
+        uses: actions/checkout@v2
+        with:
+          repository: PaulStoffregen/XPT2046_Touchscreen
+          ref: v1.4
+          path: CustomXPT2046_Touchscreen
 
       - name: Install lv_arduino
         uses: actions/checkout@v2
