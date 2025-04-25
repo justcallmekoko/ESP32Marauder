@@ -49,7 +49,7 @@ MenuFunctions::MenuFunctions()
     
     uint16_t touchX, touchY;
   
-    bool touched = display_obj.tft.getTouch(&touchX, &touchY, 600);
+    bool touched = display_obj.updateTouch(&touchX, &touchY, 600);
   
     if(!touched)
     {
@@ -672,11 +672,6 @@ void MenuFunctions::main(uint32_t currentTime)
       this->orientDisplay();
       wifi_scan_obj.orient_display = false;
     }
-    /*#ifdef HAS_ILI9341
-      if ((wifi_scan_obj.currentScanMode != LV_JOIN_WIFI) &&
-          (wifi_scan_obj.currentScanMode != LV_ADD_SSID))
-        display_obj.updateBanner(current_menu->name);
-    #endif*/
   }
 
   if (currentTime != 0) {
