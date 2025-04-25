@@ -21,7 +21,7 @@ bool SDInterface::initSD() {
     pinMode(SD_CS, OUTPUT);
 
     delay(10);
-    #if defined(MARAUDER_M5STICKC)
+    #if (defined(MARAUDER_M5STICKC)) || (defined(HAS_CYD_TOUCH))
       /* Set up SPI SD Card using external pin header
       StickCPlus Header - SPI SD Card Reader
                   3v3   -   3v3
@@ -31,7 +31,13 @@ bool SDInterface::initSD() {
                   G26   -   MOSI
                         -   CS (jumper to SD Card GND Pin)
       */
-      enum { SPI_SCK = 0, SPI_MISO = 36, SPI_MOSI = 26 };
+      #if defined(MARAUDER_M5STICKC)
+        enum { SPI_SCK = 0, SPI_MISO = 36, SPI_MOSI = 26 };
+      #elif defined(MARAUDER_CYD_MICRO)
+        enum { SPI_SCK = SD_SCK, SPI_MISO = SD_MISO, SPI_MOSI = SD_MOSI };
+      #else
+        enum { SPI_SCK = 0, SPI_MISO = 36, SPI_MOSI = 26 };
+      #endif
       this->spiExt = new SPIClass();
       this->spiExt->begin(SPI_SCK, SPI_MISO, SPI_MOSI, SD_CS);
       if (!SD.begin(SD_CS, *(this->spiExt))) {

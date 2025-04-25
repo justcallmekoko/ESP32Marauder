@@ -4,7 +4,51 @@
 #ifdef HAS_SCREEN
 
 Display::Display()
+#ifdef HAS_CYD_TOUCH
+  : touchscreenSPI(VSPI),
+    touchscreen(XPT2046_CS, XPT2046_IRQ)
+#endif
 {
+}
+
+uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
+  if (!this->headless_mode)
+    #ifndef HAS_CYD_TOUCH
+      return this->tft.getTouch(x, y, threshold);
+    #else
+      if (this->touchscreen.tirqTouched() && this->touchscreen.touched()) {
+        TS_Point p = this->touchscreen.getPoint();
+
+        //*x = map(p.x, 200, 3700, 1, TFT_WIDTH);
+        //*y = map(p.y, 240, 3800, 1, TFT_HEIGHT);
+
+        uint8_t rot = this->tft.getRotation();
+
+        switch (rot) {
+          case 0: // Standard Protrait
+            *x = map(p.x, 200, 3700, 1, TFT_WIDTH);
+            *y = map(p.y, 240, 3800, 1, TFT_HEIGHT);
+            break;
+          case 1:
+            *x = map(p.y, 143, 3715, 0, TFT_HEIGHT);     // Horizontal (Y axis in touch, X on screen)
+            *y = map(p.x, 3786, 216, 0, TFT_WIDTH);    // Vertical (X axis in touch, Y on screen)
+            break;
+          case 2:
+            *x = map(p.x, 3700, 200, 1, TFT_WIDTH);
+            *y = map(p.y, 3800, 240, 1, TFT_HEIGHT);
+            break;
+          case 3:
+            *x = map(p.y, 3800, 240, 1, TFT_WIDTH);
+            *y = map(p.x, 200, 3700, 1, TFT_HEIGHT);
+            break;
+        }
+        return 1;
+      }
+      else
+        return 0;
+    #endif
+  else
+    return !this->headless_mode;
 }
 
 // Function to prepare the display and the menus
@@ -17,6 +61,12 @@ void Display::RunSetup()
 
   #ifdef SCREEN_BUFFER
     screen_buffer = new LinkedList<String>();
+  #endif
+
+  #ifdef HAS_CYD_TOUCH
+    this->touchscreenSPI.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
+    this->touchscreen.begin(touchscreenSPI);
+    this->touchscreen.setRotation(0);
   #endif
   
   tft.init();
@@ -36,14 +86,16 @@ void Display::RunSetup()
 
   #ifdef HAS_ILI9341
 
-    #ifdef TFT_SHIELD
-      uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield
-      //Serial.println(F("Using TFT Shield"));
-    #else if defined(TFT_DIY)
-      uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // tft.setRotation(0); // Portrait with DIY TFT
-      //Serial.println(F("Using TFT DIY"));
+    #ifndef HAS_CYD_TOUCH
+      #ifdef TFT_SHIELD
+        uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield
+        //Serial.println(F("Using TFT Shield"));
+      #elif defined(TFT_DIY)
+        uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // tft.setRotation(0); // Portrait with DIY TFT
+        //Serial.println(F("Using TFT DIY"));
+      #endif
+      tft.setTouch(calData);
     #endif
-    tft.setTouch(calData);
 
   #endif
 
