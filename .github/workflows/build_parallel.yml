@@ -93,6 +93,13 @@ jobs:
           repository: Bodmer/TFT_eSPI
           ref: V2.5.34
           path: CustomTFT_eSPI
+          
+      - name: Install XPT2046_Touchscreen
+        uses: actions/checkout@v2
+        with:
+          repository: PaulStoffregen/XPT2046_Touchscreen
+          ref: v1.4
+          path: CustomXPT2046_Touchscreen
 
       - name: Install lv_arduino
         uses: actions/checkout@v2
