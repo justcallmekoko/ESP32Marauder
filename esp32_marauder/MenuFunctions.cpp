@@ -18,13 +18,6 @@ MenuFunctions::MenuFunctions()
 /* Interrupt driven periodic handler */
 
 #ifdef HAS_ILI9341
-  uint8_t MenuFunctions::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
-    if (!display_obj.headless_mode)
-      return display_obj.tft.getTouch(x, y, threshold);
-    else
-      return !display_obj.headless_mode;
-  }
-
   void MenuFunctions::lv_tick_handler()
   {
     lv_tick_inc(LVGL_TICK_PERIOD);
@@ -723,13 +716,11 @@ void MenuFunctions::main(uint32_t currentTime)
     display_obj.displayBuffer();
 
 
-  // Pressed will be set true is there is a valid touch on the screen
   int pre_getTouch = millis();
 
-  // getTouch causes a 10ms delay which makes beacon spam less effective
   #ifdef HAS_ILI9341
     if (!this->disable_touch)
-      pressed = this->updateTouch(&t_x, &t_y);
+      pressed = display_obj.updateTouch(&t_x, &t_y);
   #endif
 
 
@@ -946,7 +937,7 @@ void MenuFunctions::main(uint32_t currentTime)
 
   // Menu navigation and paging
   #ifdef HAS_BUTTONS
-    #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1))
+    #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_CYD_MICRO))
       #if !defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
         if (u_btn.justPressed()){
           if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
@@ -1158,11 +1149,13 @@ void MenuFunctions::updateStatusBar()
   
   uint16_t the_color; 
 
-  if (this->old_gps_sat_count != gps_obj.getNumSats()) {
-    this->old_gps_sat_count = gps_obj.getNumSats();
-    display_obj.tft.fillRect(0, 0, 240, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
-    status_changed = true;
-  }
+  #ifdef HAS_GPS
+    if (this->old_gps_sat_count != gps_obj.getNumSats()) {
+      this->old_gps_sat_count = gps_obj.getNumSats();
+      display_obj.tft.fillRect(0, 0, 240, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+      status_changed = true;
+    }
+  #endif
 
   // GPS Stuff
   #ifdef HAS_GPS
@@ -1386,13 +1379,17 @@ void MenuFunctions::orientDisplay()
   display_obj.tft.setCursor(0, 0);
 
   #ifdef HAS_ILI9341
-    #ifdef TFT_SHIELD
-      uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield
-    #else if defined(TFT_DIY)
-      uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // tft.setRotation(0); // Portrait with DIY TFT
-    #endif
+    #ifndef HAS_CYD_TOUCH
+      #ifdef TFT_SHIELD
+        uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield
+      #else if defined(TFT_DIY)
+        uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // tft.setRotation(0); // Portrait with DIY TFT
+      #endif
 
-    display_obj.tft.setTouch(calData);
+      display_obj.tft.setTouch(calData);
+    #else
+      display_obj.touchscreen.setRotation(0);
+    #endif
   #endif
 
   changeMenu(current_menu);
@@ -1601,9 +1598,11 @@ void MenuFunctions::RunSetup()
   this->addNodes(&wifiMenu, text_table1[31], TFTYELLOW, NULL, SNIFFERS, [this]() {
     this->changeMenu(&wifiSnifferMenu);
   });
-  this->addNodes(&wifiMenu, "Wardriving", TFTGREEN, NULL, BEACON_SNIFF, [this]() {
-    this->changeMenu(&wardrivingMenu);
-  });
+  #ifdef HAS_GPS
+    this->addNodes(&wifiMenu, "Wardriving", TFTGREEN, NULL, BEACON_SNIFF, [this]() {
+      this->changeMenu(&wardrivingMenu);
+    });
+  #endif
   this->addNodes(&wifiMenu, text_table1[32], TFTRED, NULL, ATTACKS, [this]() {
     this->changeMenu(&wifiAttackMenu);
   });
@@ -1708,11 +1707,11 @@ void MenuFunctions::RunSetup()
   //#endif
 
   // Build Wardriving menu
-  wardrivingMenu.parentMenu = &wifiMenu; // Main Menu is second menu parent
-  this->addNodes(&wardrivingMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
-    this->changeMenu(wardrivingMenu.parentMenu);
-  });
   #ifdef HAS_GPS
+    wardrivingMenu.parentMenu = &wifiMenu; // Main Menu is second menu parent
+    this->addNodes(&wardrivingMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+      this->changeMenu(wardrivingMenu.parentMenu);
+    });
     if (gps_obj.getGpsModuleStatus()) {
       this->addNodes(&wardrivingMenu, "Wardrive", TFTGREEN, NULL, BEACON_SNIFF, [this]() {
         display_obj.clearScreen();
@@ -2274,7 +2273,7 @@ void MenuFunctions::RunSetup()
         #ifndef HAS_ILI9341
           #ifdef HAS_BUTTONS
             this->changeMenu(&sdDeleteMenu);
-            #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1))
+            #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_CYD_MICRO))
 
               bool deleting = true;
 
@@ -2539,7 +2538,7 @@ void MenuFunctions::RunSetup()
 
     // Button loop until hold center button
     #ifdef HAS_BUTTONS
-      #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1))
+      #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_CYD_MICRO))
         while(true) {
           // Cycle char previous
           #ifdef HAS_L

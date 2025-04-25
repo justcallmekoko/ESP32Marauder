@@ -19,6 +19,10 @@
 
 #include <TFT_eSPI.h>
 
+#ifdef HAS_CYD_TOUCH
+  #include <XPT2046_Touchscreen.h>
+#endif
+
 // WiFi stuff
 #define OTA_UPDATE 100
 #define SHOW_INFO 101
@@ -72,6 +76,11 @@ class Display
     TFT_eSPI_Button key[BUTTON_ARRAY_LEN];
     const String PROGMEM version_number = MARAUDER_VERSION;
 
+    #ifdef HAS_CYD_TOUCH
+      SPIClass touchscreenSPI;
+      XPT2046_Touchscreen touchscreen;
+    #endif
+
     bool printing = false;
     bool loading = false;
     bool tteBar = false;
@@ -105,6 +114,7 @@ class Display
     // We can speed up scrolling of short text lines by just blanking the character we drew
     int blank[19]; // We keep all the strings pixel lengths to optimise the speed of the top line blanking
 
+    uint8_t updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold = 600);
     void tftDrawRedOnOffButton();
     void tftDrawGreenOnOffButton();
     void tftDrawGraphObjects(byte x_scale);

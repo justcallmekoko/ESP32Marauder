@@ -215,8 +215,6 @@ class MenuFunctions
       void miniKeyboard(Menu * targetMenu);
     #endif
 
-    uint8_t updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold = 600);
-
   public:
     MenuFunctions();
 

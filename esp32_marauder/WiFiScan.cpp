@@ -1327,41 +1327,43 @@ void WiFiScan::RunLoadATList() {
 }
 
 void WiFiScan::RunSaveATList(bool save_as) {
-  if (save_as) {
-    sd_obj.removeFile("/Airtags_0.log");
+  #ifdef HAS_SD
+    if (save_as) {
+      sd_obj.removeFile("/Airtags_0.log");
 
-    this->startLog("Airtags");
+      this->startLog("Airtags");
 
-    DynamicJsonDocument jsonDocument(2048);
+      DynamicJsonDocument jsonDocument(2048);
 
-    JsonArray jsonArray = jsonDocument.to<JsonArray>();
-    
-    for (int i = 0; i < airtags->size(); i++) {
-      const AirTag& at = airtags->get(i);
-      JsonObject jsonAt = jsonArray.createNestedObject();
-      jsonAt["mac"] = at.mac;
-      jsonAt["payload"] = byteArrayToHexString(at.payload);
-      jsonAt["payload_size"] = at.payloadSize;
+      JsonArray jsonArray = jsonDocument.to<JsonArray>();
+      
+      for (int i = 0; i < airtags->size(); i++) {
+        const AirTag& at = airtags->get(i);
+        JsonObject jsonAt = jsonArray.createNestedObject();
+        jsonAt["mac"] = at.mac;
+        jsonAt["payload"] = byteArrayToHexString(at.payload);
+        jsonAt["payload_size"] = at.payloadSize;
+      }
+
+      String jsonString;
+      serializeJson(jsonArray, jsonString);
+
+      buffer_obj.append(jsonString);
+
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setFreeFont(NULL);
+        display_obj.tft.setCursor(0, 100);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_CYAN);
+      
+        display_obj.tft.print("Saved Airtags: ");
+        display_obj.tft.println((String)airtags->size());
+      #endif
+      Serial.print("Saved Airtags:");
+      Serial.println((String)airtags->size());
     }
-
-    String jsonString;
-    serializeJson(jsonArray, jsonString);
-
-    buffer_obj.append(jsonString);
-
-    #ifdef HAS_SCREEN
-      display_obj.tft.setTextWrap(false);
-      display_obj.tft.setFreeFont(NULL);
-      display_obj.tft.setCursor(0, 100);
-      display_obj.tft.setTextSize(1);
-      display_obj.tft.setTextColor(TFT_CYAN);
-    
-      display_obj.tft.print("Saved Airtags: ");
-      display_obj.tft.println((String)airtags->size());
-    #endif
-    Serial.print("Saved Airtags:");
-    Serial.println((String)airtags->size());
-  }
+  #endif
 }
 
 void WiFiScan::RunLoadAPList() {
@@ -1440,51 +1442,53 @@ void WiFiScan::RunLoadAPList() {
 }
 
 void WiFiScan::RunSaveAPList(bool save_as) {
-  if (save_as) {
-    sd_obj.removeFile("/APs_0.log");
+  #ifdef HAS_SD
+    if (save_as) {
+      sd_obj.removeFile("/APs_0.log");
 
-    this->startLog("APs");
+      this->startLog("APs");
 
-    DynamicJsonDocument jsonDocument(2048);
+      DynamicJsonDocument jsonDocument(2048);
 
-    JsonArray jsonArray = jsonDocument.to<JsonArray>();
-    
-    for (int i = 0; i < access_points->size(); i++) {
-      const AccessPoint& ap = access_points->get(i);
-      JsonObject jsonAp = jsonArray.createNestedObject();
-      jsonAp["essid"] = ap.essid;
-      jsonAp["channel"] = ap.channel;
+      JsonArray jsonArray = jsonDocument.to<JsonArray>();
+      
+      for (int i = 0; i < access_points->size(); i++) {
+        const AccessPoint& ap = access_points->get(i);
+        JsonObject jsonAp = jsonArray.createNestedObject();
+        jsonAp["essid"] = ap.essid;
+        jsonAp["channel"] = ap.channel;
 
-      char bssidStr[18];
-      sprintf(bssidStr, "%02X:%02X:%02X:%02X:%02X:%02X",
-              ap.bssid[0], ap.bssid[1], ap.bssid[2],
-              ap.bssid[3], ap.bssid[4], ap.bssid[5]);
-      jsonAp["bssid"] = bssidStr;
-      jsonAp["rssi"] = ap.rssi;
-      jsonAp["packets"] = ap.packets;
-      jsonAp["sec"] = ap.sec;
-      jsonAp["wps"] = ap.wps;
-      jsonAp["man"] = ap.man;
+        char bssidStr[18];
+        sprintf(bssidStr, "%02X:%02X:%02X:%02X:%02X:%02X",
+                ap.bssid[0], ap.bssid[1], ap.bssid[2],
+                ap.bssid[3], ap.bssid[4], ap.bssid[5]);
+        jsonAp["bssid"] = bssidStr;
+        jsonAp["rssi"] = ap.rssi;
+        jsonAp["packets"] = ap.packets;
+        jsonAp["sec"] = ap.sec;
+        jsonAp["wps"] = ap.wps;
+        jsonAp["man"] = ap.man;
+      }
+
+      String jsonString;
+      serializeJson(jsonArray, jsonString);
+
+      buffer_obj.append(jsonString);
+
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setFreeFont(NULL);
+        display_obj.tft.setCursor(0, 100);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_CYAN);
+      
+        display_obj.tft.print("Saved APs: ");
+        display_obj.tft.println((String)access_points->size());
+      #endif
+      Serial.print("Saved APs:");
+      Serial.println((String)access_points->size());
     }
-
-    String jsonString;
-    serializeJson(jsonArray, jsonString);
-
-    buffer_obj.append(jsonString);
-
-    #ifdef HAS_SCREEN
-      display_obj.tft.setTextWrap(false);
-      display_obj.tft.setFreeFont(NULL);
-      display_obj.tft.setCursor(0, 100);
-      display_obj.tft.setTextSize(1);
-      display_obj.tft.setTextColor(TFT_CYAN);
-    
-      display_obj.tft.print("Saved APs: ");
-      display_obj.tft.println((String)access_points->size());
-    #endif
-    Serial.print("Saved APs:");
-    Serial.println((String)access_points->size());
-  }
+  #endif
 }
 
 void WiFiScan::RunLoadSSIDList() {
@@ -1527,31 +1531,33 @@ void WiFiScan::RunLoadSSIDList() {
 }
 
 void WiFiScan::RunSaveSSIDList(bool save_as) {
-  if (save_as) {
-    sd_obj.removeFile("/SSIDs_0.log");
+  #ifdef HAS_SD
+    if (save_as) {
+      sd_obj.removeFile("/SSIDs_0.log");
 
-    this->startLog("SSIDs");
+      this->startLog("SSIDs");
 
-    for (int i = 0; i < ssids->size(); i++) {
-      if (i < ssids->size() - 1)
-        buffer_obj.append(ssids->get(i).essid + "\n");
-      else
-        buffer_obj.append(ssids->get(i).essid);
+      for (int i = 0; i < ssids->size(); i++) {
+        if (i < ssids->size() - 1)
+          buffer_obj.append(ssids->get(i).essid + "\n");
+        else
+          buffer_obj.append(ssids->get(i).essid);
+      }
+
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setFreeFont(NULL);
+        display_obj.tft.setCursor(0, 100);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_CYAN);
+      
+        display_obj.tft.print("Saved SSIDs: ");
+        display_obj.tft.println((String)ssids->size());
+      #endif
+      Serial.print("Saved SSIDs: ");
+      Serial.println((String)ssids->size());
     }
-
-    #ifdef HAS_SCREEN
-      display_obj.tft.setTextWrap(false);
-      display_obj.tft.setFreeFont(NULL);
-      display_obj.tft.setCursor(0, 100);
-      display_obj.tft.setTextSize(1);
-      display_obj.tft.setTextColor(TFT_CYAN);
-    
-      display_obj.tft.print("Saved SSIDs: ");
-      display_obj.tft.println((String)ssids->size());
-    #endif
-    Serial.print("Saved SSIDs: ");
-    Serial.println((String)ssids->size());
-  }
+  #endif
 }
 
 void WiFiScan::RunEvilPortal(uint8_t scan_mode, uint16_t color)
@@ -1664,15 +1670,19 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
     display_obj.tft.init();
     display_obj.tft.setRotation(1);
     
-    #ifdef TFT_SHIELD
-      uint16_t calData[5] = { 391, 3491, 266, 3505, 7 }; // Landscape TFT Shield
-      Serial.println("Using TFT Shield");
-    #else if defined(TFT_DIY)
-      uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
-      Serial.println("Using TFT DIY");
-    #endif
-    #ifdef HAS_ILI9341
-      display_obj.tft.setTouch(calData);
+    #ifndef HAS_CYD_TOUCH
+      #ifdef TFT_SHIELD
+        uint16_t calData[5] = { 391, 3491, 266, 3505, 7 }; // Landscape TFT Shield
+        Serial.println("Using TFT Shield");
+      #else if defined(TFT_DIY)
+        uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
+        Serial.println("Using TFT DIY");
+      #endif
+      #ifdef HAS_ILI9341
+        display_obj.tft.setTouch(calData);
+      #endif
+    #else
+      display_obj.touchscreen.setRotation(1);
     #endif
     
   
@@ -2236,14 +2246,18 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
       #endif
     
       #ifdef HAS_SCREEN
-        #ifdef TFT_SHIELD
-          uint16_t calData[5] = { 391, 3491, 266, 3505, 7 }; // Landscape TFT Shield
-          Serial.println("Using TFT Shield");
-        #else if defined(TFT_DIY)
-          uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
-          Serial.println("Using TFT DIY");
+        #ifndef HAS_CYD_TOUCH
+          #ifdef TFT_SHIELD
+            uint16_t calData[5] = { 391, 3491, 266, 3505, 7 }; // Landscape TFT Shield
+            Serial.println("Using TFT Shield");
+          #else if defined(TFT_DIY)
+            uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
+            Serial.println("Using TFT DIY");
+          #endif
+          display_obj.tft.setTouch(calData);
+        #else
+          //display_obj.touchscreen.setRotation(1);
         #endif
-        display_obj.tft.setTouch(calData);
       
         //display_obj.tft.setFreeFont(1);
         display_obj.tft.setFreeFont(NULL);
@@ -2353,14 +2367,18 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
     startPcap("eapol");
   
     #ifdef HAS_SCREEN
-      #ifdef TFT_SHIELD
-        uint16_t calData[5] = { 391, 3491, 266, 3505, 7 }; // Landscape TFT Shield
-        //Serial.println("Using TFT Shield");
-      #else if defined(TFT_DIY)
-        uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
-        //Serial.println("Using TFT DIY");
+      #ifndef HAS_CYD_TOUCH
+        #ifdef TFT_SHIELD
+          uint16_t calData[5] = { 391, 3491, 266, 3505, 7 }; // Landscape TFT Shield
+          //Serial.println("Using TFT Shield");
+        #else if defined(TFT_DIY)
+          uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
+          //Serial.println("Using TFT DIY");
+        #endif
+        display_obj.tft.setTouch(calData);
+      #else
+        display_obj.touchscreen.setRotation(1);
       #endif
-      display_obj.tft.setTouch(calData);
     
       display_obj.tft.setFreeFont(NULL);
       display_obj.tft.setTextSize(1);
@@ -5594,7 +5612,8 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
 
     // Do the touch stuff
     #ifdef HAS_ILI9341
-      pressed = display_obj.tft.getTouch(&t_x, &t_y);
+      pressed = display_obj.updateTouch(&t_x, &t_y);
+      //pressed = display_obj.tft.getTouch(&t_x, &t_y);
     #endif
 
     // Check buttons for presses

@@ -123,7 +123,6 @@ const String PROGMEM version_number = MARAUDER_VERSION;
 
 uint32_t currentTime  = 0;
 
-
 void backlightOn() {
   #ifdef HAS_SCREEN
     #ifdef MARAUDER_MINI
@@ -166,10 +165,10 @@ void setup()
   #endif
   
   backlightOff();
-#if BATTERY_ANALOG_ON == 1
-  pinMode(BATTERY_PIN, OUTPUT);
-  pinMode(CHARGING_PIN, INPUT);
-#endif
+  #if BATTERY_ANALOG_ON == 1
+    pinMode(BATTERY_PIN, OUTPUT);
+    pinMode(CHARGING_PIN, INPUT);
+  #endif
   
   // Preset SPI CS pins to avoid bus conflicts
   #ifdef HAS_SCREEN
@@ -258,18 +257,9 @@ void setup()
   buffer_obj = Buffer();
   #if defined(HAS_SD)
     // Do some SD stuff
-    if(sd_obj.initSD()) {
-      #ifdef HAS_SCREEN
-        //display_obj.tft.println(F(text_table0[3]));
-      #endif
-    } else {
+    if(!sd_obj.initSD())
       Serial.println(F("SD Card NOT Supported"));
-      #ifdef HAS_SCREEN
-        //display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
-        //display_obj.tft.println(F(text_table0[4]));
-        //display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-      #endif
-    }
+
   #endif
 
   #ifdef HAS_SCREEN
