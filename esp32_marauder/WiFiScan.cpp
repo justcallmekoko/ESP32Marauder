@@ -1682,7 +1682,7 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
         display_obj.tft.setTouch(calData);
       #endif
     #else
-      display_obj.touchscreen.setRotation(1);
+      //display_obj.touchscreen.setRotation(1);
     #endif
     
   
@@ -2377,7 +2377,7 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
         #endif
         display_obj.tft.setTouch(calData);
       #else
-        display_obj.touchscreen.setRotation(1);
+        //display_obj.touchscreen.setRotation(1);
       #endif
     
       display_obj.tft.setFreeFont(NULL);
