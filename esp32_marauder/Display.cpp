@@ -12,43 +12,47 @@ Display::Display()
 }
 
 uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
-  if (!this->headless_mode)
-    #ifndef HAS_CYD_TOUCH
-      return this->tft.getTouch(x, y, threshold);
-    #else
-      if (this->touchscreen.tirqTouched() && this->touchscreen.touched()) {
-        TS_Point p = this->touchscreen.getPoint();
+  #ifdef HAS_ILI9341
+    if (!this->headless_mode)
+      #ifndef HAS_CYD_TOUCH
+        return this->tft.getTouch(x, y, threshold);
+      #else
+        if (this->touchscreen.tirqTouched() && this->touchscreen.touched()) {
+          TS_Point p = this->touchscreen.getPoint();
 
-        //*x = map(p.x, 200, 3700, 1, TFT_WIDTH);
-        //*y = map(p.y, 240, 3800, 1, TFT_HEIGHT);
+          //*x = map(p.x, 200, 3700, 1, TFT_WIDTH);
+          //*y = map(p.y, 240, 3800, 1, TFT_HEIGHT);
 
-        uint8_t rot = this->tft.getRotation();
+          uint8_t rot = this->tft.getRotation();
 
-        switch (rot) {
-          case 0: // Standard Protrait
-            *x = map(p.x, 200, 3700, 1, TFT_WIDTH);
-            *y = map(p.y, 240, 3800, 1, TFT_HEIGHT);
-            break;
-          case 1:
-            *x = map(p.y, 143, 3715, 0, TFT_HEIGHT);     // Horizontal (Y axis in touch, X on screen)
-            *y = map(p.x, 3786, 216, 0, TFT_WIDTH);    // Vertical (X axis in touch, Y on screen)
-            break;
-          case 2:
-            *x = map(p.x, 3700, 200, 1, TFT_WIDTH);
-            *y = map(p.y, 3800, 240, 1, TFT_HEIGHT);
-            break;
-          case 3:
-            *x = map(p.y, 3800, 240, 1, TFT_WIDTH);
-            *y = map(p.x, 200, 3700, 1, TFT_HEIGHT);
-            break;
+          switch (rot) {
+            case 0: // Standard Protrait
+              *x = map(p.x, 200, 3700, 1, TFT_WIDTH);
+              *y = map(p.y, 240, 3800, 1, TFT_HEIGHT);
+              break;
+            case 1:
+              *x = map(p.y, 143, 3715, 0, TFT_HEIGHT);     // Horizontal (Y axis in touch, X on screen)
+              *y = map(p.x, 3786, 216, 0, TFT_WIDTH);    // Vertical (X axis in touch, Y on screen)
+              break;
+            case 2:
+              *x = map(p.x, 3700, 200, 1, TFT_WIDTH);
+              *y = map(p.y, 3800, 240, 1, TFT_HEIGHT);
+              break;
+            case 3:
+              *x = map(p.y, 3800, 240, 1, TFT_WIDTH);
+              *y = map(p.x, 200, 3700, 1, TFT_HEIGHT);
+              break;
+          }
+          return 1;
         }
-        return 1;
-      }
-      else
-        return 0;
-    #endif
-  else
-    return !this->headless_mode;
+        else
+          return 0;
+      #endif
+    else
+      return !this->headless_mode;
+  #endif
+
+  return 0;
 }
 
 // Function to prepare the display and the menus
