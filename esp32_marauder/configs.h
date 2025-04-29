@@ -160,12 +160,13 @@
   #endif
 
   #ifdef MARAUDER_CYD_MICRO
+    #define HAS_FLIPPER_LED
     //#define FLIPPER_ZERO_HAT
     //#define HAS_BATTERY
     #define HAS_BT
     #define HAS_BT_REMOTE
     #define HAS_BUTTONS
-    #define HAS_NEOPIXEL_LED
+    //#define HAS_NEOPIXEL_LED
     //#define HAS_PWR_MGMT
     #define HAS_SCREEN
     #define HAS_FULL_SCREEN
@@ -1684,6 +1685,12 @@
       #define B_PIN 4
       #define G_PIN 5
       #define R_PIN 6
+    #endif
+
+    #ifdef MARAUDER_CYD_MICRO
+      #define B_PIN 17
+      #define G_PIN 16
+      #define R_PIN 4
     #endif
 
     #ifdef MARAUDER_CYD_GUITION
