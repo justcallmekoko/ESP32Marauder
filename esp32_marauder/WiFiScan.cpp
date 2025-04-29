@@ -904,7 +904,7 @@ void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_max_tx_power(82);
   this->wifi_initialized = true;
-  #ifdef MARAUDER_FLIPPER
+  #ifdef HAS_FLIPPER_LED
     flipper_led.attackLED();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.attackLED();
@@ -929,7 +929,7 @@ bool WiFiScan::shutdownWiFi() {
     esp_wifi_restore();
     esp_wifi_deinit();
 
-    #ifdef MARAUDER_FLIPPER
+    #ifdef HAS_FLIPPER_LED
       flipper_led.offLED();
     #elif defined(XIAO_ESP32_S3)
       xiao_led.offLED();
@@ -967,7 +967,7 @@ bool WiFiScan::shutdownBLE() {
       return false;
     }
 
-    #ifdef MARAUDER_FLIPPER
+    #ifdef HAS_FLIPPER_LED
       flipper_led.offLED();
     #elif defined(XIAO_ESP32_S3)
       xiao_led.offLED();
@@ -1564,7 +1564,7 @@ void WiFiScan::RunEvilPortal(uint8_t scan_mode, uint16_t color)
 {
   startLog("evil_portal");
 
-  #ifdef MARAUDER_FLIPPER
+  #ifdef HAS_FLIPPER_LED
     flipper_led.sniffLED();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.sniffLED();
@@ -1612,7 +1612,7 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
   else
     startPcap("ap_sta");
 
-  #ifdef MARAUDER_FLIPPER
+  #ifdef HAS_FLIPPER_LED
     flipper_led.sniffLED();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.sniffLED();
@@ -2223,7 +2223,7 @@ void WiFiScan::RunInfo()
 
 void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
 {
-  #ifdef MARAUDER_FLIPPER
+  #ifdef HAS_FLIPPER_LED
     flipper_led.sniffLED();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.sniffLED();
@@ -2345,7 +2345,7 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
 
 void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
 {
-  #ifdef MARAUDER_FLIPPER
+  #ifdef HAS_FLIPPER_LED
     flipper_led.sniffLED();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.sniffLED();
@@ -2496,7 +2496,7 @@ void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color)
 {
   startPcap("pwnagotchi");
 
-  #ifdef MARAUDER_FLIPPER
+  #ifdef HAS_FLIPPER_LED
     flipper_led.sniffLED();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.sniffLED();
@@ -2723,7 +2723,7 @@ void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color)
     #endif
   }
 
-  #ifdef MARAUDER_FLIPPER
+  #ifdef HAS_FLIPPER_LED
     flipper_led.sniffLED();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.sniffLED();
@@ -2785,7 +2785,7 @@ void WiFiScan::RunStationScan(uint8_t scan_mode, uint16_t color)
 {
   startPcap("station");
 
-  #ifdef MARAUDER_FLIPPER
+  #ifdef HAS_FLIPPER_LED
     flipper_led.sniffLED();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.sniffLED();
@@ -2833,7 +2833,7 @@ void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color)
   if (scan_mode != WIFI_SCAN_SIG_STREN)
     startPcap("raw");
 
-  #ifdef MARAUDER_FLIPPER
+  #ifdef HAS_FLIPPER_LED
     flipper_led.sniffLED();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.sniffLED();
@@ -2899,7 +2899,7 @@ void WiFiScan::RunDeauthScan(uint8_t scan_mode, uint16_t color)
 {
   startPcap("deauth");
 
-  #ifdef MARAUDER_FLIPPER
+  #ifdef HAS_FLIPPER_LED
     flipper_led.sniffLED();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.sniffLED();
@@ -2961,7 +2961,7 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
     #endif
   }
 
-  #ifdef MARAUDER_FLIPPER
+  #ifdef HAS_FLIPPER_LED
     flipper_led.sniffLED();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.sniffLED();
@@ -3030,7 +3030,7 @@ void WiFiScan::RunSourApple(uint8_t scan_mode, uint16_t color) {
 
     this->ble_initialized;
 
-    #ifdef MARAUDER_FLIPPER
+    #ifdef HAS_FLIPPER_LED
       flipper_led.sniffLED();
     #elif defined(XIAO_ESP32_S3)
       xiao_led.sniffLED();
@@ -3076,7 +3076,7 @@ void WiFiScan::RunSwiftpairSpam(uint8_t scan_mode, uint16_t color) {
 
     this->ble_initialized;
 
-    #ifdef MARAUDER_FLIPPER
+    #ifdef HAS_FLIPPER_LED
       flipper_led.attackLED();
     #elif defined(XIAO_ESP32_S3)
       xiao_led.attackLED();
@@ -3227,7 +3227,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
     Serial.println("Started BLE Scan");
     this->ble_initialized = true;
 
-    #ifdef MARAUDER_FLIPPER
+    #ifdef HAS_FLIPPER_LED
       flipper_led.sniffLED();
     #elif defined(XIAO_ESP32_S3)
       xiao_led.sniffLED();
