@@ -8,10 +8,6 @@
 
 #include <Arduino.h>
 
-#define B_PIN 4
-#define G_PIN 5
-#define R_PIN 6
-
 extern Settings settings_obj;
 
 class flipperLED {

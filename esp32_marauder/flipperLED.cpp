@@ -1,5 +1,7 @@
 #include "flipperLED.h"
 
+#ifdef HAS_FLIPPER_LED
+
 void flipperLED::RunSetup() {
   pinMode(B_PIN, OUTPUT);
   pinMode(G_PIN, OUTPUT);
@@ -59,3 +61,5 @@ void flipperLED::offLED() {
 void flipperLED::main() {
   // do nothing
 }
+
+#endif

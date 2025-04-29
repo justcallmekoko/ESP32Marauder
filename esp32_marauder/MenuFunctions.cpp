@@ -932,7 +932,7 @@ void MenuFunctions::main(uint32_t currentTime)
 
   // Menu navigation and paging
   #ifdef HAS_BUTTONS
-    #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_CYD_MICRO))
+    #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_CYD_MICRO) || defined(MARAUDER_CYD_GUITION))
       #if !defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
         if (u_btn.justPressed()){
           if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||

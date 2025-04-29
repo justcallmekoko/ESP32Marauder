@@ -37,7 +37,7 @@
 #endif
 #include "settings.h"
 #include "Assets.h"
-#ifdef MARAUDER_FLIPPER
+#ifdef HAS_FLIPPER_LED
   #include "flipperLED.h"
 #elif defined(XIAO_ESP32_S3)
   #include "xiaoLED.h"
@@ -150,7 +150,7 @@ extern Buffer buffer_obj;
   extern BatteryInterface battery_obj;
 #endif
 extern Settings settings_obj;
-#ifdef MARAUDER_FLIPPER
+#ifdef HAS_FLIPPER_LED
   extern flipperLED flipper_led;
 #elif defined(XIAO_ESP32_S3)
   extern xiaoLED xiao_led;
