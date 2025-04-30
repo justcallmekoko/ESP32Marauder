@@ -130,6 +130,7 @@
     #define USE_SD
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
+    #define HAS_PSRAM
   #endif
 
   #ifdef MARAUDER_REV_FEATHER
@@ -254,6 +255,7 @@
     #define HAS_GPS
     #define HAS_SD
     #define USE_SD
+    #define HAS_PSRAM
     //#define HAS_TEMP_SENSOR
   #endif
 
@@ -1608,8 +1610,6 @@
       #define PIN 33
     #elif defined(MARAUDER_CYD_MICRO)
       #define PIN 4
-    //#elif defined(MARAUDER_CYD_GUITION)
-    //  #define PIN 4
     #else
       #define PIN 25
     #endif
@@ -1618,103 +1618,71 @@
   //// END NEOPIXEL STUFF
 
   //// EVIL PORTAL STUFF
-  #ifdef MARAUDER_M5STICKC
-    #define MAX_HTML_SIZE 11400
-  #elif defined(MARAUDER_MINI)
-    #define MAX_HTML_SIZE 11400
-  #elif defined(MARAUDER_V7)
-    #define MAX_HTML_SIZE 11400
-  #elif defined(MARAUDER_V7_1)
-    #define MAX_HTML_SIZE 11400
-  #elif defined(MARAUDER_REV_FEATHER)
-    #define MAX_HTML_SIZE 11400
-  #elif defined(MARAUDER_V4)
-    #define MAX_HTML_SIZE 11400
-  #elif defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
-    #define MAX_HTML_SIZE 11400
-  #elif defined(MARAUDER_CYD_MICRO)
-    #define MAX_HTML_SIZE 11400
-  #elif defined(MARAUDER_CYD_GUITION)
-    #define MAX_HTML_SIZE 11400
-  #elif defined(MARAUDER_KIT)
-    #define MAX_HTML_SIZE 11400
-  #elif defined(GENERIC_ESP32)
-    #define MAX_HTML_SIZE 20000
-  #elif defined(MARAUDER_FLIPPER)
-    #define MAX_HTML_SIZE 20000
-  #elif defined(ESP32_LDDB)
-    #define MAX_HTML_SIZE 20000
-  #elif defined(MARAUDER_DEV_BOARD_PRO)
-    #define MAX_HTML_SIZE 20000
-  #elif defined(XIAO_ESP32_S3)
-    #define MAX_HTML_SIZE 20000
+
+  #ifdef HAS_PSRAM
+    #define MAX_HTML_SIZE 28000
   #else
-    #define MAX_HTML_SIZE 20000
+    #define MAX_HTML_SIZE 11400
   #endif
+
   //// END EVIL PORTAL STUFF
 
   //// GPS STUFF
   #ifdef HAS_GPS
+    #ifdef HAS_PSRAM
+      #define mac_history_len 1000
+    #else
+      #define mac_history_len 100
+    #endif
+
     #if defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 4
       #define GPS_RX 13
-      #define mac_history_len 100
     #elif defined(MARAUDER_CYD_MICRO)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 27 // Fits the extended I/O
       #define GPS_RX 22
-      #define mac_history_len 100
     #elif defined(MARAUDER_CYD_GUITION)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 21 // Fits the extended I/O
       #define GPS_RX 22
-      #define mac_history_len 100
     #elif defined(MARAUDER_V4)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 4
       #define GPS_RX 13
-      #define mac_history_len 100
     #elif defined(MARAUDER_KIT)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 4
       #define GPS_RX 13
-      #define mac_history_len 100
     #elif defined(MARAUDER_DEV_BOARD_PRO)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 21
       #define GPS_RX 17
-      #define mac_history_len 100
     #elif defined(MARAUDER_MINI)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 21
       #define GPS_RX 22
-      #define mac_history_len 100
     #elif defined(MARAUDER_V7)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 21
       #define GPS_RX 22
-      #define mac_history_len 100
     #elif defined(MARAUDER_V7_1)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 21
       #define GPS_RX 22
-      #define mac_history_len 100
     #elif defined(MARAUDER_FLIPPER)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 9
       #define GPS_RX 21
-      #define mac_history_len 100
     #elif defined(MARAUDER_M5STICKC)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 33
       #define GPS_RX 32
-      #define mac_history_len 100
     #elif defined(MARAUDER_REV_FEATHER)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 6
       #define GPS_RX 9
-      #define mac_history_len 100
     #endif
   #else
     #define mac_history_len 100
@@ -1791,23 +1759,18 @@
   //// END MARAUDER TITLE STUFF
 
   //// PCAP BUFFER STUFF
-
-  #ifdef MARAUDER_V7
-    #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
-    #define SNAP_LEN 4096 // max len of each recieved packet
-  #elif defined(MARAUDER_V7_1)
-    #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
-    #define SNAP_LEN 4096 // max len of each recieved packet
-  #elif defined(MARAUDER_MINI)
-    #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
-    #define SNAP_LEN 4096 // max len of each recieved packet
-  #elif defined(MARAUDER_REV_FEATHER)
+  
+  #ifdef HAS_PSRAM
+    #define BUF_SIZE 16 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
+    #define SNAP_LEN 2 * 4096 // max len of each recieved packet
+  #elif !defined(HAS_ILI9341)
     #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
     #define SNAP_LEN 4096 // max len of each recieved packet
   #else
     #define BUF_SIZE 3 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
     #define SNAP_LEN 2324 // max len of each recieved packet
   #endif
+
   //// PCAP BUFFER STUFF
 
   //// STUPID CYD STUFF
