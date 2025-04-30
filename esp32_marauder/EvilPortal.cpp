@@ -51,6 +51,10 @@ void EvilPortal::setupServer() {
     #endif
   });
 
+  server.on("/get-ap-name", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", WiFi.softAPSSID());
+  });
+
   server.on("/get", HTTP_GET, [this](AsyncWebServerRequest *request) {
     String inputMessage;
     String inputParam;
