@@ -1203,12 +1203,28 @@ void MenuFunctions::updateStatusBar()
     wifi_scan_obj.old_free_ram = wifi_scan_obj.free_ram;
     display_obj.tft.fillRect(100, 0, 60, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", 100, 0, 2);
+    //display_obj.tft.setCursor(100, 0);
+    //display_obj.tft.setFreeFont(2);
+    //display_obj.tft.print("D:" + String(getDRAMUsagePercent()) + "%");
+    #ifndef HAS_PSRAM
+      display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", 100, 0, 2);
+    #else
+      display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%" + " P:" + String(getPSRAMUsagePercent()) + "%", 100, 0, 1);
     #endif
+    //display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", 100, 0, 2);
+  #endif
 
-    #ifdef HAS_MINI_SCREEN
-      display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", TFT_WIDTH/1.75, 0, 1);
+  #ifdef HAS_MINI_SCREEN
+    //display_obj.tft.setCursor(TFT_WIDTH/1.75, 0);
+    //display_obj.tft.setFreeFont(1);
+    //display_obj.tft.print("D:" + String(getDRAMUsagePercent()) + "%");
+    #ifndef HAS_PSRAM
+      display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
+    #else
+      display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%" + " P:" + String(getPSRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
     #endif
+    //display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", TFT_WIDTH/1.75, 0, 1);
+  #endif
   }
 
   // Draw battery info
@@ -1313,11 +1329,27 @@ void MenuFunctions::drawStatusBar()
   wifi_scan_obj.old_free_ram = wifi_scan_obj.free_ram;
   display_obj.tft.fillRect(100, 0, 60, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
   #ifdef HAS_FULL_SCREEN
-    display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", 100, 0, 2);
+    //display_obj.tft.setCursor(100, 0);
+    //display_obj.tft.setFreeFont(2);
+    //display_obj.tft.print("D:" + String(getDRAMUsagePercent()) + "%");
+    #ifndef HAS_PSRAM
+      display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", 100, 0, 2);
+    #else
+      display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%" + " P:" + String(getPSRAMUsagePercent()) + "%", 100, 0, 1);
+    #endif
+    //display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", 100, 0, 2);
   #endif
 
   #ifdef HAS_MINI_SCREEN
-    display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", TFT_WIDTH/1.75, 0, 1);
+    //display_obj.tft.setCursor(TFT_WIDTH/1.75, 0);
+    //display_obj.tft.setFreeFont(1);
+    //display_obj.tft.print("D:" + String(getDRAMUsagePercent()) + "%");
+    #ifndef HAS_PSRAM
+      display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
+    #else
+      display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%" + " P:" + String(getPSRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
+    #endif
+    //display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", TFT_WIDTH/1.75, 0, 1);
   #endif
 
 

@@ -1,6 +1,10 @@
 #include "WiFiScan.h"
 #include "lang_var.h"
 
+#ifdef HAS_PSRAM
+  struct mac_addr* mac_history = nullptr;
+#endif
+
 int num_beacon = 0;
 int num_deauth = 0;
 int num_probe = 0;
@@ -531,12 +535,21 @@ void WiFiScan::RunSetup() {
     this->wsl_bypass_enabled = true;
   else
     this->wsl_bypass_enabled = false;
-    
-  ssids = new LinkedList<ssid>();
+
+  #ifdef HAS_PSRAM
+    ssids = new (ps_malloc(sizeof(LinkedList<ssid>))) LinkedList<ssid>();
+    new (ssids) LinkedList<ssid>();
+  #else
+    ssids = new LinkedList<ssid>();
+  #endif
   access_points = new LinkedList<AccessPoint>();
   stations = new LinkedList<Station>();
   airtags = new LinkedList<AirTag>();
   flippers = new LinkedList<Flipper>();
+
+  #ifdef HAS_PSRAM
+    mac_history = (struct mac_addr*) ps_malloc(mac_history_len * sizeof(struct mac_addr));
+  #endif
 
   #ifdef HAS_BT
     watch_models = new WatchModel[26] {
@@ -659,6 +672,13 @@ int WiFiScan::generateSSIDs(int count) {
     ssids->add(s);
     Serial.println(ssids->get(ssids->size() - 1).essid);
   }
+
+  Serial.print("Free Heap: ");
+  Serial.print(esp_get_free_heap_size());
+  #ifdef HAS_PSRAM
+    Serial.print(" Free PSRAM: ");
+    Serial.println(heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+  #endif
 
   return num_gen;
 }
@@ -928,6 +948,7 @@ bool WiFiScan::shutdownWiFi() {
     esp_wifi_stop();
     esp_wifi_restore();
     esp_wifi_deinit();
+    esp_netif_deinit(); 
 
     #ifdef HAS_FLIPPER_LED
       flipper_led.offLED();
@@ -1032,6 +1053,8 @@ void WiFiScan::StopScan(uint8_t scan_mode)
       this->eapol_frames = 0;
       this->min_rssi = 0;
       this->max_rssi = -128;
+
+      evil_portal_obj.cleanup();
     #endif
   }
 
@@ -1147,7 +1170,7 @@ bool WiFiScan::seen_mac(unsigned char* mac) {
   }
 
   for (int x = 0; x < mac_history_len; x++) {
-    if (this->mac_cmp(tmp, this->mac_history[x])) {
+    if (this->mac_cmp(tmp, mac_history[x])) {
       return true;
     }
   }
@@ -1164,7 +1187,7 @@ void WiFiScan::save_mac(unsigned char* mac) {
     tmp.bytes[x] = mac[x];
   }
 
-  this->mac_history[this->mac_history_cursor] = tmp;
+  mac_history[this->mac_history_cursor] = tmp;
   this->mac_history_cursor++;
 }
 
@@ -1219,7 +1242,7 @@ String WiFiScan::security_int_to_string(int security_type) {
 
 void WiFiScan::clearMacHistory() {
     for (int i = 0; i < mac_history_len; ++i) {
-        memset(this->mac_history[i].bytes, 0, sizeof(mac_history[i].bytes));
+        memset(mac_history[i].bytes, 0, sizeof(mac_history[i].bytes));
     }
 }
 
@@ -1650,6 +1673,9 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
 
   delete access_points;
   access_points = new LinkedList<AccessPoint>();
+
+  esp_netif_init();
+  esp_event_loop_create_default();
 
   esp_wifi_init(&cfg2);
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
@@ -2814,8 +2840,22 @@ void WiFiScan::RunStationScan(uint8_t scan_mode, uint16_t color)
     display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
   #endif
   
+  esp_netif_init();
+  esp_event_loop_create_default();
   //esp_wifi_init(&cfg);
-  esp_wifi_init(&cfg2);
+  esp_err_t err = esp_wifi_init(&cfg2);
+  if (err != ESP_OK) {
+    Serial.printf("Custom config failed (0x%04X), falling back to default...\n", err);
+    wifi_init_config_t default_cfg = WIFI_INIT_CONFIG_DEFAULT();
+    err = esp_wifi_init(&default_cfg);
+    if (err != ESP_OK) {
+      Serial.printf("Default config also failed (0x%04X)\n", err);
+    } else {
+      Serial.println("Wi-Fi init succeeded with default config.");
+    }
+  } else {
+    Serial.println("Wi-Fi init succeeded with custom config.");
+  }
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
   esp_wifi_start();
@@ -3435,7 +3475,12 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
     //const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)snifferPacket->payload;
     //const WifiMgmtHdr *hdr = &ipkt->hdr;
 
-    int buf = 0;
+    // If we dont the buffer size is not 0, don't write or else we get CORRUPT_HEAP
+    #ifdef HAS_SCREEN
+      int buf = display_obj.display_buffer->size();
+    #else
+      int buf = 0;
+    #endif
 
     bool wps = wifi_scan_obj.beaconHasWPS(snifferPacket->payload, len);
 
@@ -3558,19 +3603,22 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
           ap.selected = false;
           ap.stations = new LinkedList<uint16_t>();
           
-          ap.beacon = new LinkedList<char>();
+          //ap.beacon = new LinkedList<char>();
 
           //for (int i = 0; i < len; i++) {
           //  ap.beacon->add(snifferPacket->payload[i]);
           //}
-          ap.beacon->add(snifferPacket->payload[34]);
-          ap.beacon->add(snifferPacket->payload[35]);
+          ap.beacon[0] = snifferPacket->payload[34];
+          ap.beacon[1] = snifferPacket->payload[35];
+          //ap.beacon->add(snifferPacket->payload[34]);
+          //ap.beacon->add(snifferPacket->payload[35]);
 
           Serial.print("\nBeacon: ");
 
-          for (int i = 0; i < ap.beacon->size(); i++) {
+          for (int i = 0; i < 2; i++) {
             char hexCar[4];
-            sprintf(hexCar, "%02X", ap.beacon->get(i));
+            //sprintf(hexCar, "%02X", ap.beacon->get(i));
+            sprintf(hexCar, "%02X", ap.beacon[i]);
             Serial.print(hexCar);
             if ((i + 1) % 16 == 0)
               Serial.print("\n");
@@ -3593,6 +3641,10 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
           Serial.print(access_points->size());
           Serial.print(" ");
           Serial.print(esp_get_free_heap_size());
+          #ifdef HAS_PSRAM
+            Serial.print(" ");
+            Serial.print(heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+          #endif
 
         }
 
@@ -3969,7 +4021,7 @@ void WiFiScan::apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
         
         bool wps = wifi_scan_obj.beaconHasWPS(snifferPacket->payload, snifferPacket->rx_ctrl.sig_len);
         
-        AccessPoint ap = {essid,
+        /*AccessPoint ap = {essid,
                           snifferPacket->rx_ctrl.channel,
                           {snifferPacket->payload[10],
                            snifferPacket->payload[11],
@@ -3983,6 +4035,22 @@ void WiFiScan::apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
                           new LinkedList<uint16_t>(),
                           0,
                           security_type,
+                          wps};*/
+
+        AccessPoint ap = {essid,
+                          snifferPacket->rx_ctrl.channel,
+                          {snifferPacket->payload[10],
+                           snifferPacket->payload[11],
+                           snifferPacket->payload[12],
+                           snifferPacket->payload[13],
+                           snifferPacket->payload[14],
+                           snifferPacket->payload[15]},
+                          false,
+                          {snifferPacket->payload[34], snifferPacket->payload[35]},
+                          snifferPacket->rx_ctrl.rssi,
+                          new LinkedList<uint16_t>(),
+                          0,
+                          security_type,
                           wps};
 
         access_points->add(ap);
@@ -3990,6 +4058,10 @@ void WiFiScan::apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
         Serial.print(access_points->size());
         Serial.print(" ");
         Serial.print(esp_get_free_heap_size());
+        #ifdef HAS_PSRAM
+          Serial.print(" ");
+          Serial.print(heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+        #endif
 
         Serial.println();
 
@@ -4407,7 +4479,8 @@ void WiFiScan::stationSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t typ
                   snifferPacket->payload[frame_offset + 4],
                   snifferPacket->payload[frame_offset + 5]},
                   false,
-                  0};
+                  0,
+                  ap_index};
 
     stations->add(sta);
   }
@@ -4648,11 +4721,11 @@ void WiFiScan::probeSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 
 
     // If we dont the buffer size is not 0, don't write or else we get CORRUPT_HEAP
-    //#ifdef HAS_SCREEN
-    //  int buf = display_obj.display_buffer->size();
-    //#else
-    int buf = 0;
-    //#endif
+    #ifdef HAS_SCREEN
+      int buf = display_obj.display_buffer->size();
+    #else
+      int buf = 0;
+    #endif
     if ((snifferPacket->payload[0] == 0x40) && (buf == 0))
     {
       if (wifi_scan_obj.currentScanMode == WIFI_SCAN_PROBE) {
@@ -4833,8 +4906,8 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_s
   esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   delay(1);  
 
-  if (custom_ssid.beacon->size() == 0)
-    return;
+  //if (custom_ssid.beacon->size() == 0)
+  //  return;
 
 
   // Randomize SRC MAC
@@ -4876,8 +4949,10 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_s
   //for(int i = 0; i < 12; i++) 
   //  packet[38 + fullLen + i] = postSSID[i];
 
-  packet[34] = custom_ssid.beacon->get(0);
-  packet[35] = custom_ssid.beacon->get(1);
+  //packet[34] = custom_ssid.beacon->get(0);
+  //packet[35] = custom_ssid.beacon->get(1);
+  packet[34] = custom_ssid.beacon[0];
+  packet[35] = custom_ssid.beacon[1];
   
 
   esp_wifi_80211_tx(WIFI_IF_AP, packet, sizeof(packet), false);

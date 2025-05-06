@@ -192,6 +192,14 @@ void setup()
 
   Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
 
+  #ifdef HAS_PSRAM
+    if (psramInit()) {
+      Serial.println("PSRAM is correctly initialized");
+    } else {
+      Serial.println("PSRAM not available");
+    }
+  #endif
+
   #ifdef HAS_SCREEN
     display_obj.RunSetup();
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
