@@ -28,8 +28,10 @@ void EvilPortal::setup() {
 }
 
 void EvilPortal::cleanup() {
-  free(index_html);
-  index_html = nullptr;
+  #ifdef HAS_PSRAM
+    free(index_html);
+    index_html = nullptr;
+  #endif
 }
 
 bool EvilPortal::begin(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_points) {
