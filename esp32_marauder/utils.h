@@ -5,6 +5,10 @@
 #include <Arduino.h>
 #include <vector>
 
+#include "configs.h"
+
+#include "esp_heap_caps.h"
+
 struct mac_addr {
    unsigned char bytes[6];
 };
@@ -13,6 +17,7 @@ struct Station {
   uint8_t mac[6];
   bool selected;
   uint16_t packets;
+  uint16_t ap;
 };
 
 const char apple_ouis[][9] PROGMEM = {
@@ -143,6 +148,35 @@ const char xiaomi_ouis[][9] PROGMEM = {
   "04:CF:8C", "18:59:36", "38:1A:2D", "64:B4:73", "78:02:F8", 
   "90:4E:91", "C4:0B:CB", "D0:DB:32"
 };
+
+uint8_t getDRAMUsagePercent() {
+  //size_t total = heap_caps_get_total_size(MALLOC_CAP_8BIT);
+  //size_t free = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+  size_t free = ESP.getFreeHeap();
+  size_t total = ESP.getHeapSize();
+  
+  if (total == 0) return 0; // Avoid division by zero
+
+  size_t used = total - free;
+  uint8_t percent = (used * 100) / total;
+  return percent;
+}
+
+#ifdef HAS_PSRAM
+  uint8_t getPSRAMUsagePercent() {
+    //size_t total = heap_caps_get_total_size(MALLOC_CAP_SPIRAM);
+    //size_t free  = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
+
+    size_t total = ESP.getPsramSize();
+    size_t free = ESP.getFreePsram();
+
+    if (total == 0) return 0; // Avoid division by zero or PSRAM not available
+
+    size_t used = total - free;
+    uint8_t percent = (used * 100) / total;
+    return percent;
+  }
+#endif
 
 String byteArrayToHexString(const std::vector<uint8_t>& byteArray) {
   String result;

@@ -1620,7 +1620,7 @@
   //// EVIL PORTAL STUFF
 
   #ifdef HAS_PSRAM
-    #define MAX_HTML_SIZE 28000
+    #define MAX_HTML_SIZE 30000
   #else
     #define MAX_HTML_SIZE 11400
   #endif
@@ -1630,7 +1630,7 @@
   //// GPS STUFF
   #ifdef HAS_GPS
     #ifdef HAS_PSRAM
-      #define mac_history_len 1000
+      #define mac_history_len 500
     #else
       #define mac_history_len 100
     #endif
@@ -1761,8 +1761,8 @@
   //// PCAP BUFFER STUFF
   
   #ifdef HAS_PSRAM
-    #define BUF_SIZE 16 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
-    #define SNAP_LEN 2 * 4096 // max len of each recieved packet
+    #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
+    #define SNAP_LEN 1 * 4096 // max len of each recieved packet
   #elif !defined(HAS_ILI9341)
     #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
     #define SNAP_LEN 4096 // max len of each recieved packet

