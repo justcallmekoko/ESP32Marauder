@@ -11,6 +11,27 @@ Display::Display()
 {
 }
 
+int8_t Display::menuButton(uint16_t *x, uint16_t *y, bool pressed) {
+  #ifdef HAS_ILI9341
+    for (uint8_t b = BUTTON_ARRAY_LEN; b < BUTTON_ARRAY_LEN + 3; b++) {
+      if (pressed && this->key[b].contains(*x, *y)) {
+        this->key[b].press(true);  // tell the button it is pressed
+      } else {
+        this->key[b].press(false);  // tell the button it is NOT pressed
+      }
+    }
+
+    for (uint8_t b = BUTTON_ARRAY_LEN; b < BUTTON_ARRAY_LEN + 3; b++) {
+      if ((this->key[b].justReleased()) && (!pressed)) {
+        return b - BUTTON_ARRAY_LEN;
+      }
+    }
+
+  #endif
+
+  return -1;
+}
+
 uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
   #ifdef HAS_ILI9341
     if (!this->headless_mode)

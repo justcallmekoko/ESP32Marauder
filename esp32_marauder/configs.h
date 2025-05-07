@@ -26,7 +26,7 @@
   //#define MARAUDER_CYD_GUITION // ESP32-2432S024 GUITION
   //// END BOARD TARGETS
 
-  #define MARAUDER_VERSION "v1.4.6"
+  #define MARAUDER_VERSION "v1.5.0"
 
   #define GRAPH_REFRESH   100
 
@@ -1535,6 +1535,8 @@
   #define TFTSKYBLUE   17
   #define TFTLIME      18
   //// END SPACE SAVING COLORS
+
+  #define TFT_FARTGRAY 0x528a
 
   //// SCREEN STUFF
   #ifndef HAS_SCREEN
