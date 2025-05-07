@@ -654,37 +654,39 @@ void MenuFunctions::buttonSelected(int b, int x) {
 }
 
 void MenuFunctions::displayMenuButtons() {
-  // Draw lines to show each menu button
-  for (int i = 0; i < 3; i++) {
+  #ifdef HAS_ILI9341
+    // Draw lines to show each menu button
+    for (int i = 0; i < 3; i++) {
 
-    // Draw horizontal line on left
-    display_obj.tft.drawLine(0, 
-                            TFT_HEIGHT / 3 * (i),
-                            (TFT_WIDTH / 12) / 2,
-                            TFT_HEIGHT / 3 * (i),
-                            TFT_FARTGRAY);
+      // Draw horizontal line on left
+      display_obj.tft.drawLine(0, 
+                              TFT_HEIGHT / 3 * (i),
+                              (TFT_WIDTH / 12) / 2,
+                              TFT_HEIGHT / 3 * (i),
+                              TFT_FARTGRAY);
 
-    // Draw horizontal line on right
-    display_obj.tft.drawLine(TFT_WIDTH - 1 - ((TFT_WIDTH / 12) / 2), 
-                            TFT_HEIGHT / 3 * (i),
-                            TFT_WIDTH,
-                            TFT_HEIGHT / 3 * (i),
-                            TFT_FARTGRAY);
+      // Draw horizontal line on right
+      display_obj.tft.drawLine(TFT_WIDTH - 1 - ((TFT_WIDTH / 12) / 2), 
+                              TFT_HEIGHT / 3 * (i),
+                              TFT_WIDTH,
+                              TFT_HEIGHT / 3 * (i),
+                              TFT_FARTGRAY);
 
-    // Draw vertical line on left
-    display_obj.tft.drawLine(0, 
-                            (TFT_HEIGHT / 3 * (i)) - ((TFT_WIDTH / 12) / 2),
-                            0,
-                            (TFT_HEIGHT / 3 * (i)) + ((TFT_WIDTH / 12) / 2),
-                            TFT_FARTGRAY);
+      // Draw vertical line on left
+      display_obj.tft.drawLine(0, 
+                              (TFT_HEIGHT / 3 * (i)) - ((TFT_WIDTH / 12) / 2),
+                              0,
+                              (TFT_HEIGHT / 3 * (i)) + ((TFT_WIDTH / 12) / 2),
+                              TFT_FARTGRAY);
 
-    // Draw vertical line on right
-    display_obj.tft.drawLine(TFT_WIDTH - 1, 
-                            (TFT_HEIGHT / 3 * (i)) - ((TFT_WIDTH / 12) / 2),
-                            TFT_WIDTH - 1,
-                            (TFT_HEIGHT / 3 * (i)) + ((TFT_WIDTH / 12) / 2),
-                            TFT_FARTGRAY);
-  }
+      // Draw vertical line on right
+      display_obj.tft.drawLine(TFT_WIDTH - 1, 
+                              (TFT_HEIGHT / 3 * (i)) - ((TFT_WIDTH / 12) / 2),
+                              TFT_WIDTH - 1,
+                              (TFT_HEIGHT / 3 * (i)) + ((TFT_WIDTH / 12) / 2),
+                              TFT_FARTGRAY);
+    }
+  #endif
 }
 
 // Function to check menu input
