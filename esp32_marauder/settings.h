@@ -24,6 +24,7 @@ class Settings {
 
   public:
     bool begin();
+    bool begin(fs::FS fs, String filename);
 
     template <typename T>
     T loadSetting(String name);
@@ -50,6 +51,7 @@ class Settings {
 
     String getSettingsString();
     bool createDefaultSettings(fs::FS &fs);
+    bool createDefaultSettings(fs::FS &fs, String filename);
     void printJsonSettings(String json_string);
     void main(uint32_t currentTime);
 };
