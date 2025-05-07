@@ -193,6 +193,7 @@ class MenuFunctions
 
     // Menu icons
 
+    void displayMenuButtons();
     uint16_t getColor(uint16_t color);
     void drawAvgLine(int16_t value);
     void drawMaxLine(int16_t value, uint16_t color);
