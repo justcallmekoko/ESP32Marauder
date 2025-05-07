@@ -500,7 +500,7 @@ class WiFiScan
     int clearAirtags();
     int clearFlippers();
     int clearStations();
-    bool addSSID(String essid);
+    bool addSSID(String essid, String bssid_str = "");
     int generateSSIDs(int count = 20);
     bool shutdownWiFi();
     bool shutdownBLE();

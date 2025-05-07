@@ -1432,9 +1432,15 @@ void CommandLine::runCommand(String input) {
     int gen_sw = this->argSearch(&cmd_args, "-g");
     int spc_sw = this->argSearch(&cmd_args, "-n");
     int rem_sw = this->argSearch(&cmd_args, "-r");
+    int bsi_sw = this->argSearch(&cmd_args, "-s");
 
     // Add ssid
     if (add_sw != -1) {
+      // Parse bssid (blank will make random)
+      String bssid = "";
+      if (bsi_sw != -1)
+          bssid = cmd_args.get(bsi_sw + 1);
+
       // Generate random
       if (gen_sw != -1) {
         int gen_count = cmd_args.get(gen_sw + 1).toInt();
@@ -1443,7 +1449,7 @@ void CommandLine::runCommand(String input) {
       // Add specific
       else if (spc_sw != -1) {
         String essid = cmd_args.get(spc_sw + 1);
-        wifi_scan_obj.addSSID(essid);
+        wifi_scan_obj.addSSID(essid, bssid);
       }
       else {
         Serial.println("You did not specify how to add SSIDs");
