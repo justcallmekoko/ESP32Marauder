@@ -170,9 +170,9 @@ class MenuFunctions
     #ifdef HAS_BT
       Menu airtagMenu;
     #endif
-    #ifndef HAS_ILI9341
+    //#ifndef HAS_ILI9341
       Menu wifiStationMenu;
-    #endif
+    //#endif
 
     // WiFi General Menu
     Menu htmlMenu;
@@ -192,7 +192,6 @@ class MenuFunctions
     static void lv_tick_handler();
 
     // Menu icons
-
 
     uint16_t getColor(uint16_t color);
     void drawAvgLine(int16_t value);

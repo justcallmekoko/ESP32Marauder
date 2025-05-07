@@ -1536,6 +1536,8 @@
   #define TFTLIME      18
   //// END SPACE SAVING COLORS
 
+  #define TFT_FARTGRAY 0x528a
+
   //// SCREEN STUFF
   #ifndef HAS_SCREEN
 
