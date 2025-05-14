@@ -26,9 +26,9 @@ extern Settings settings_obj;
 class SDInterface {
 
   private:
-#if defined(MARAUDER_M5STICKC)
-  SPIClass *spiExt;
-#endif
+  #if (defined(MARAUDER_M5STICKC) || defined(HAS_CYD_TOUCH))
+    SPIClass *spiExt;
+  #endif
     bool checkDetectPin();
 
   public:
@@ -43,12 +43,15 @@ class SDInterface {
   
     bool initSD();
 
+    LinkedList<String>* sd_files;
+
     void listDir(String str_dir);
     void listDirToLinkedList(LinkedList<String>* file_names, String str_dir = "/", String ext = "");
     File getFile(String path);
     void runUpdate();
     void performUpdate(Stream &updateSource, size_t updateSize);
     void main();
+    bool removeFile(String file_path);
 };
 
 #endif

@@ -21,7 +21,7 @@ bool SDInterface::initSD() {
     pinMode(SD_CS, OUTPUT);
 
     delay(10);
-    #if defined(MARAUDER_M5STICKC)
+    #if (defined(MARAUDER_M5STICKC)) || (defined(HAS_CYD_TOUCH))
       /* Set up SPI SD Card using external pin header
       StickCPlus Header - SPI SD Card Reader
                   3v3   -   3v3
@@ -31,7 +31,13 @@ bool SDInterface::initSD() {
                   G26   -   MOSI
                         -   CS (jumper to SD Card GND Pin)
       */
-      enum { SPI_SCK = 0, SPI_MISO = 36, SPI_MOSI = 26 };
+      #if defined(MARAUDER_M5STICKC)
+        enum { SPI_SCK = 0, SPI_MISO = 36, SPI_MOSI = 26 };
+      #elif defined(MARAUDER_CYD_MICRO)
+        enum { SPI_SCK = SD_SCK, SPI_MISO = SD_MISO, SPI_MOSI = SD_MOSI };
+      #else
+        enum { SPI_SCK = 0, SPI_MISO = 36, SPI_MOSI = 26 };
+      #endif
       this->spiExt = new SPIClass();
       this->spiExt->begin(SPI_SCK, SPI_MISO, SPI_MOSI, SD_CS);
       if (!SD.begin(SD_CS, *(this->spiExt))) {
@@ -79,6 +85,10 @@ bool SDInterface::initSD() {
         SD.mkdir("/SCRIPTS");
         Serial.println("/SCRIPTS created");
       }
+
+      this->sd_files = new LinkedList<String>();
+
+      this->sd_files->add("Back");
     
       return true;
   }
@@ -98,6 +108,13 @@ File SDInterface::getFile(String path) {
   }
 }
 
+bool SDInterface::removeFile(String file_path) {
+  if (SD.remove(file_path))
+    return true;
+  else
+    return false;
+}
+
 void SDInterface::listDirToLinkedList(LinkedList<String>* file_names, String str_dir, String ext) {
   if (this->supported) {
     File dir = SD.open(str_dir);
@@ -108,12 +125,18 @@ void SDInterface::listDirToLinkedList(LinkedList<String>* file_names, String str
       {
         break;
       }
+
+      if (entry.isDirectory())
+        continue;
+
+      String file_name = entry.name();
       if (ext != "") {
-        String file_name = entry.name();
         if (file_name.endsWith(ext)) {
           file_names->add(file_name);
         }
       }
+      else
+        file_names->add(file_name);
     }
   }
 }
@@ -144,7 +167,7 @@ void SDInterface::runUpdate() {
   #ifdef HAS_SCREEN
     display_obj.tft.setTextWrap(false);
     display_obj.tft.setFreeFont(NULL);
-    display_obj.tft.setCursor(0, 100);
+    display_obj.tft.setCursor(0, TFT_HEIGHT / 3);
     display_obj.tft.setTextSize(1);
     display_obj.tft.setTextColor(TFT_WHITE);
   
