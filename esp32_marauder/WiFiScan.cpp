@@ -652,8 +652,12 @@ int WiFiScan::clearSSIDs() {
   return num_cleared;
 }
 
-bool WiFiScan::addSSID(String essid) {
-  ssid s = {essid, random(1, 12), {random(256), random(256), random(256), random(256), random(256), random(256)}, false};
+bool WiFiScan::addSSID(String essid, String bssid_str) {
+  uint8_t bssid[6] = {random(256), random(256), random(256), random(256), random(256), random(256)};
+  if(bssid_str.length() > 0)
+    parseBSSID(bssid_str.c_str(), bssid);
+
+  ssid s = {essid, random(1, 12), {bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]}, false};
   ssids->add(s);
   Serial.println(ssids->get(ssids->size() - 1).essid);
 
