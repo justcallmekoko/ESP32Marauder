@@ -4622,8 +4622,10 @@ void WiFiScan::rawSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
       access_points->set(targ_index, targ_ap);
       Serial.println((String)access_points->get(targ_index).essid + " RSSI: " + (String)access_points->get(targ_index).rssi);
       display_string.concat((String)access_points->get(targ_index).essid);
-      display_string.concat(" RSSI: ");
-      display_string.concat((String)access_points->get(targ_index).rssi);
+      #ifndef HAS_MINI_SCREEN
+        display_string.concat(" RSSI: ");
+        display_string.concat((String)access_points->get(targ_index).rssi);
+      #endif
       int temp_len = display_string.length();
       for (int i = 0; i < 50 - temp_len; i++)
       {
@@ -4631,6 +4633,17 @@ void WiFiScan::rawSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
       }
       #ifdef HAS_SCREEN
         display_obj.display_buffer->add(display_string);
+        #ifdef HAS_MINI_SCREEN
+          display_string = "";
+          display_string.concat("RSSI: ");
+          display_string.concat((String)access_points->get(targ_index).rssi);
+          temp_len = display_string.length();
+          for (int i = 0; i < 50 - temp_len; i++)
+          {
+            display_string.concat(" ");
+          }
+          display_obj.display_buffer->add(display_string);
+        #endif
       #endif
     }
     else
