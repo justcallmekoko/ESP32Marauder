@@ -229,6 +229,8 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_SNIFF_BEACON_CMD);
     Serial.println(HELP_SNIFF_PROBE_CMD);
     Serial.println(HELP_SNIFF_PWN_CMD);
+    Serial.println(HELP_SNIFF_PINESCAN_CMD);
+    Serial.println(HELP_SNIFF_MULTISSID_CMD);
     Serial.println(HELP_SNIFF_ESP_CMD);
     Serial.println(HELP_SNIFF_DEAUTH_CMD);
     Serial.println(HELP_SNIFF_PMKID_CMD);
@@ -682,6 +684,24 @@ void CommandLine::runCommand(String input) {
         menu_function_obj.drawStatusBar();
       #endif
       wifi_scan_obj.StartScan(WIFI_SCAN_PWN, TFT_MAGENTA);
+    }
+    // PineScan sniff
+    else if (cmd_args.get(0) == SNIFF_PINESCAN_CMD) {
+      Serial.println("Starting Pinescan sniff. Stop with " + (String)STOPSCAN_CMD);
+      #ifdef HAS_SCREEN
+        display_obj.clearScreen();
+        menu_function_obj.drawStatusBar();
+      #endif
+      wifi_scan_obj.StartScan(WIFI_SCAN_PINESCAN, TFT_MAGENTA);
+    }
+    // MultiSSID sniff
+    else if (cmd_args.get(0) == SNIFF_MULTISSID_CMD) {
+      Serial.println("Starting MultiSSID sniff. Stop with " + (String)STOPSCAN_CMD);
+      #ifdef HAS_SCREEN
+        display_obj.clearScreen();
+        menu_function_obj.drawStatusBar();
+      #endif
+      wifi_scan_obj.StartScan(WIFI_SCAN_MULTISSID, TFT_MAGENTA);
     }
     // Espressif sniff
     else if (cmd_args.get(0) == SNIFF_ESP_CMD) {
