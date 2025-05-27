@@ -2557,7 +2557,7 @@ void WiFiScan::RunPineScan(uint8_t scan_mode, uint16_t color)
 
   startPcap("pinescan");
 
-  #ifdef MARAUDER_FLIPPER
+  #ifdef HAS_FLIPPER_LED
     flipper_led.sniffLED();
   #elif defined(XIAO_ESP32_S3)
     xiao_led.sniffLED();
