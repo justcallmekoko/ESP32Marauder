@@ -546,6 +546,14 @@ void WiFiScan::RunSetup() {
   stations = new LinkedList<Station>();
   airtags = new LinkedList<AirTag>();
   flippers = new LinkedList<Flipper>();
+  // for Pinescan
+  pinescan_trackers = new LinkedList<PineScanTracker>();
+  confirmed_pinescan = new LinkedList<ConfirmedPineScan>();
+  pinescan_list_full_reported = false;
+  // for MultiSSID
+  multissid_trackers = new LinkedList<MultiSSIDTracker>();
+  confirmed_multissid = new LinkedList<ConfirmedMultiSSID>();
+  multissid_list_full_reported = false;
 
   #ifdef HAS_PSRAM
     mac_history = (struct mac_addr*) ps_malloc(mac_history_len * sizeof(struct mac_addr));
@@ -804,6 +812,10 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     RunAPScan(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_PWN)
     RunPwnScan(scan_mode, color);
+  else if (scan_mode == WIFI_SCAN_PINESCAN)
+    RunPineScan(scan_mode, color);
+  else if (scan_mode == WIFI_SCAN_MULTISSID)
+    RunMultiSSIDScan(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_DEAUTH)
     RunDeauthScan(scan_mode, color);
   else if (scan_mode == WIFI_PACKET_MONITOR) {
@@ -1003,6 +1015,24 @@ bool WiFiScan::shutdownBLE() {
   return true;
 }
 
+// Pinescan cleanup
+int WiFiScan::clearPineScanTrackers() {
+  int num_cleared = pinescan_trackers->size() + confirmed_pinescan->size();
+  pinescan_trackers->clear();
+  confirmed_pinescan->clear();
+  pinescan_list_full_reported = false;
+  return num_cleared;
+}
+
+// MultiSSID Cleanup
+int WiFiScan::clearMultiSSID() {
+  int num_cleared = multissid_trackers->size() + confirmed_multissid->size();
+  multissid_trackers->clear();
+  confirmed_multissid->clear();
+  multissid_list_full_reported = false;
+  return num_cleared;
+}
+
 // Function to stop all wifi scans
 void WiFiScan::StopScan(uint8_t scan_mode)
 {
@@ -1018,6 +1048,8 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   (currentScanMode == WIFI_SCAN_TARGET_AP_FULL) ||
   (currentScanMode == WIFI_SCAN_AP_STA) ||
   (currentScanMode == WIFI_SCAN_PWN) ||
+  (currentScanMode == WIFI_SCAN_PINESCAN) ||
+  (currentScanMode == WIFI_SCAN_MULTISSID) ||
   (currentScanMode == WIFI_SCAN_EAPOL) ||
   (currentScanMode == WIFI_SCAN_ACTIVE_EAPOL) ||
   (currentScanMode == WIFI_SCAN_ACTIVE_LIST_EAPOL) ||
@@ -2514,6 +2546,104 @@ void WiFiScan::RunMimicFlood(uint8_t scan_mode, uint16_t color) {
   esp_wifi_set_promiscuous_filter(NULL);
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_max_tx_power(78);
+  this->wifi_initialized = true;
+  initTime = millis();
+}
+
+// Pineapple
+void WiFiScan::RunPineScan(uint8_t scan_mode, uint16_t color)
+{
+  this->clearPineScanTrackers();
+
+  startPcap("pinescan");
+
+  #ifdef HAS_FLIPPER_LED
+    flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
+  #elif defined(MARAUDER_M5STICKC)
+    stickc_led.sniffLED();
+  #else
+    led_obj.setMode(MODE_SNIFF);
+  #endif
+  
+  #ifdef HAS_SCREEN
+    display_obj.TOP_FIXED_AREA_2 = 48;
+    display_obj.tteBar = true;
+    display_obj.print_delay_1 = 15;
+    display_obj.print_delay_2 = 10;
+    display_obj.initScrollValues(true);
+    display_obj.tft.setTextWrap(false);
+    display_obj.tft.setTextColor(TFT_BLACK, color);
+    #ifdef HAS_FULL_SCREEN
+      display_obj.tft.fillRect(0,16,240,16, color);
+      display_obj.tft.drawCentreString(text_table4[48],120,16,2);
+    #endif
+    #ifdef HAS_ILI9341
+      display_obj.touchToExit();
+    #endif
+    display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+    display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
+  #endif
+  
+  esp_wifi_init(&cfg2);
+  esp_wifi_set_storage(WIFI_STORAGE_RAM);
+  esp_wifi_set_mode(WIFI_MODE_NULL);
+  esp_wifi_start();
+  this->setMac();
+  esp_wifi_set_promiscuous(true);
+  esp_wifi_set_promiscuous_filter(&filt);
+  esp_wifi_set_promiscuous_rx_cb(&pineScanSnifferCallback);
+  esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
+  this->wifi_initialized = true;
+  initTime = millis();
+}
+
+// MultiSSID
+void WiFiScan::RunMultiSSIDScan(uint8_t scan_mode, uint16_t color)
+{
+  this->clearMultiSSID();
+
+  startPcap("multissid");
+
+  #ifdef HAS_FLIPPER_LED
+    flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
+  #elif defined(MARAUDER_M5STICKC)
+    stickc_led.sniffLED();
+  #else
+    led_obj.setMode(MODE_SNIFF);
+  #endif
+  
+  #ifdef HAS_SCREEN
+    display_obj.TOP_FIXED_AREA_2 = 48;
+    display_obj.tteBar = true;
+    display_obj.print_delay_1 = 15;
+    display_obj.print_delay_2 = 10;
+    display_obj.initScrollValues(true);
+    display_obj.tft.setTextWrap(false);
+    display_obj.tft.setTextColor(TFT_BLACK, color);
+    #ifdef HAS_FULL_SCREEN
+      display_obj.tft.fillRect(0,16,240,16, color);
+      display_obj.tft.drawCentreString(text_table4[49],120,16,2);
+    #endif
+    #ifdef HAS_ILI9341
+      display_obj.touchToExit();
+    #endif
+    display_obj.tft.setTextColor(TFT_BLUE, TFT_BLACK);
+    display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
+  #endif
+  
+  esp_wifi_init(&cfg2);
+  esp_wifi_set_storage(WIFI_STORAGE_RAM);
+  esp_wifi_set_mode(WIFI_MODE_NULL);
+  esp_wifi_start();
+  this->setMac();
+  esp_wifi_set_promiscuous(true);
+  esp_wifi_set_promiscuous_filter(&filt);
+  esp_wifi_set_promiscuous_rx_cb(&multiSSIDSnifferCallback);
+  esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   this->wifi_initialized = true;
   initTime = millis();
 }
@@ -4141,6 +4271,671 @@ String WiFiScan::processPwnagotchiBeacon(const uint8_t* frame, int length) {
   }
 }
 
+// PINEAPPLE LOGIC
+
+// Define lookup table for Pineapple OUIs
+
+const WiFiScan::SuspiciousVendor WiFiScan::suspicious_vendors[] = {
+    // Alfa
+    {"Alfa Inc", SUSPICIOUS_WHEN_OPEN, {0x00C0CA}, 1},
+    
+    // Orient Power (Pineapple MK7)
+    {"Orient Power Home Network Ltd", SUSPICIOUS_ALWAYS, {0x001337}, 1},
+    
+    // Shenzhen Century
+    {"Shenzhen Century Xinyang Technology Co Ltd", SUSPICIOUS_WHEN_OPEN, {0x1CBFCE}, 1},
+    
+    // IEEE
+    {"IEEE Registration Authority", SUSPICIOUS_WHEN_OPEN, {0x0CEFAF}, 1},
+    
+    // Hak5 (Locally Administered)
+    {"Hak5", SUSPICIOUS_WHEN_PROTECTED, {0x02C0CA, 0x021337}, 2},
+    
+    // MediaTek
+    {"MediaTek Inc", SUSPICIOUS_ALWAYS, {0x000A00, 0x000C43, 0x000CE7, 0x0017A5}, 4},
+    
+    // Panda Wireless
+    {"Panda Wireless Inc", SUSPICIOUS_ALWAYS, {0x9CEFD5, 0x9CE5D5}, 2},
+    
+    // Unassigned/Spoofed
+    {"Unassigned/Spoofed", SUSPICIOUS_ALWAYS, {0xDEADBE}, 1}
+};
+
+// Total OUI count: 13
+
+// Update the number of vendors constant
+const int WiFiScan::NUM_SUSPICIOUS_VENDORS = sizeof(WiFiScan::suspicious_vendors) / sizeof(WiFiScan::suspicious_vendors[0]);
+
+// This fixes picking up a AP on an adjacent channel.
+int WiFiScan::extractPineScanChannel(const uint8_t* payload, int len) {
+    if (len < 38) return -1; // Ensure we have enough data
+
+    // Jump to the element fields after the fixed beacon header and SSID field
+    int pos = 36 + payload[37] + 2; // 36 fixed header bytes + SSID length + 2 bytes for SSID tag info
+
+    // Search through the tags for the channel information (DS Parameter Set, tag number 3)
+    while (pos < len - 2) {
+        uint8_t tag_num = payload[pos];
+        uint8_t tag_len = payload[pos + 1];
+        
+        // Safety check to prevent buffer overruns
+        if (pos + 2 + tag_len > len) break;
+        
+        // Found DS Parameter Set (tag 3), channel is the next byte
+        if (tag_num == 3 && tag_len == 1) {
+            return payload[pos + 2]; // Return the channel
+        }
+        pos += tag_len + 2;
+    }
+    
+    // If channel not found in the beacon, return the one from rx_ctrl
+    return -1;
+}
+
+// Function to count tagged parameters in beacon frames
+bool countPineScanTaggedParameters(const uint8_t* payload, int len) {
+  int ssid_len = payload[37];
+  int pos = 36 + ssid_len + 2;
+  
+  // Check if next tag is the DS Parameter (channel info) - tag number 3
+  if (pos < len - 2 && payload[pos] == 3 && payload[pos+1] == 1) {
+    // Check for end of packet after DS Parameter (no more tags)
+    int next_pos = pos + 2 + payload[pos+1];
+    return (next_pos >= len || next_pos + 2 > len);
+  }
+  
+  return false;
+}
+
+void WiFiScan::pineScanSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) {
+  extern WiFiScan wifi_scan_obj;
+
+  wifi_promiscuous_pkt_t *snifferPacket = (wifi_promiscuous_pkt_t*)buf;
+  WifiMgmtHdr *frameControl = (WifiMgmtHdr*)snifferPacket->payload;
+  wifi_pkt_rx_ctrl_t ctrl = (wifi_pkt_rx_ctrl_t)snifferPacket->rx_ctrl;
+  int len = snifferPacket->rx_ctrl.sig_len;
+
+  String display_string = "";
+  String essid = "";
+
+  if (type == WIFI_PKT_MGMT) {
+    len -= 4;
+    int fctl = ntohs(frameControl->fctl);
+    const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)snifferPacket->payload;
+    const WifiMgmtHdr *hdr = &ipkt->hdr;
+  
+    #ifdef HAS_SCREEN
+      int buff = display_obj.display_buffer->size();
+    #else
+      int buff = 0;
+    #endif
+    
+    if ((snifferPacket->payload[0] == 0x80) && (buff == 0)) {
+      buffer_obj.append(snifferPacket, len); // Capture all beacons
+      
+      // Extract MAC address for Pineapple detection
+      uint8_t mac_addr[6];
+      for (int i = 0; i < 6; i++) {
+        mac_addr[i] = snifferPacket->payload[10 + i];
+      }
+
+      // Extract channel from the beacon frame
+      int ap_channel = WiFiScan::extractPineScanChannel(snifferPacket->payload, len);
+      if (ap_channel == -1) {
+        ap_channel = snifferPacket->rx_ctrl.channel;
+      }
+      
+      // Extract capability flags
+      uint16_t capab_info = ((uint16_t)snifferPacket->payload[34] | ((uint16_t)snifferPacket->payload[35] << 8));
+      bool suspicious_capability = (capab_info == 0x0001);
+      bool tag_count = countPineScanTaggedParameters(snifferPacket->payload, len);
+      bool tag_and_susp_cap = suspicious_capability && tag_count;
+
+      bool is_protected = (capab_info & 0x10) != 0;
+      bool is_open = !is_protected;
+      String auth_type = is_open ? "OPEN" : "PROTECTED";
+
+      // Check for suspicious OUIs
+      uint8_t oui[3] = {snifferPacket->payload[10], snifferPacket->payload[11], snifferPacket->payload[12]};
+      uint32_t oui_value = ((uint32_t)oui[0] << 16) | ((uint32_t)oui[1] << 8) | oui[2];
+      
+      bool suspicious_oui = false;
+      bool pinescan_match = false;
+      bool pinescan_match_by_oui = false;
+      const char* vendor_name = "Unknown";
+
+      // Check against suspicious vendors list
+      for (int i = 0; i < WiFiScan::NUM_SUSPICIOUS_VENDORS; i++) {
+        const WiFiScan::SuspiciousVendor& vendor = WiFiScan::suspicious_vendors[i];
+
+        // Check each OUI for this vendor
+        for (int j = 0; j < vendor.oui_count; j++) {
+          if (oui_value == vendor.ouis[j]) {
+            if ((vendor.security_flags & SUSPICIOUS_ALWAYS) || 
+                (is_open && (vendor.security_flags & SUSPICIOUS_WHEN_OPEN)) || 
+                (is_protected && (vendor.security_flags & SUSPICIOUS_WHEN_PROTECTED))) {
+              suspicious_oui = true;
+              pinescan_match = true;
+              vendor_name = vendor.vendor_name;
+              pinescan_match_by_oui = true;
+              break;
+            }
+          }
+        }
+        if (pinescan_match_by_oui) break;
+      }
+
+      pinescan_match = pinescan_match || tag_and_susp_cap;
+      
+      if ((tag_and_susp_cap) && !suspicious_oui) {
+        vendor_name = "Unknown";
+      }
+
+      // Check if we have already seen this MAC
+      int ap_index = -1;
+      bool already_tracked = false;
+      
+      // Find if have seen this MAC before in the tracking list
+      for (int i = 0; i < wifi_scan_obj.pinescan_trackers->size(); i++) {
+        bool mac_match = true;
+        for (int x = 0; x < 6; x++) {
+          if (mac_addr[x] != wifi_scan_obj.pinescan_trackers->get(i).mac[x]) {
+            mac_match = false;
+            break;
+          }
+        }
+        
+        if (mac_match) {
+          ap_index = i;
+          already_tracked = true;
+          break;
+        }
+      }
+
+      // Check if already in confirmed list
+      bool already_confirmed = false;
+      int confirmed_index = -1;
+      
+      for (int i = 0; i < wifi_scan_obj.confirmed_pinescan->size(); i++) {
+        bool mac_match = true;
+        for (int x = 0; x < 6; x++) {
+          if (mac_addr[x] != wifi_scan_obj.confirmed_pinescan->get(i).mac[x]) {
+            mac_match = false;
+            break;
+          }
+        }
+        if (mac_match) {
+          already_confirmed = true;
+          confirmed_index = i;
+          break;
+        }
+      }
+
+      // If already confirmed, just update it and return
+      if (already_confirmed) {
+        if (snifferPacket->payload[37] <= 0) {
+          essid = "[hidden]";
+        } else {
+          for (int i = 0; i < snifferPacket->payload[37]; i++) {
+            essid.concat((char)snifferPacket->payload[i + 38]);
+          }
+        }
+
+        ConfirmedPineScan confirmed = wifi_scan_obj.confirmed_pinescan->get(confirmed_index);
+        if (snifferPacket->rx_ctrl.rssi > confirmed.rssi) {
+          confirmed.rssi = snifferPacket->rx_ctrl.rssi;
+        }
+        if (essid != "" && essid != "[hidden]") {
+          confirmed.essid = essid;
+        }
+        wifi_scan_obj.confirmed_pinescan->set(confirmed_index, confirmed);
+        return;
+      }
+      
+      // Add to tracking list if new
+      if (!already_tracked) {
+        // Check if we've reached the maximum number of tracked APs
+        if (wifi_scan_obj.pinescan_trackers->size() >= MAX_AP_ENTRIES) {
+          if (!wifi_scan_obj.pinescan_list_full_reported) {
+            Serial.println("AP List Full - Clearing list to make room");
+            wifi_scan_obj.pinescan_list_full_reported = true;
+            wifi_scan_obj.pinescan_trackers->clear();
+            Serial.println("AP list cleared, continuing scan");
+          }
+          
+          // Add the current AP to the freshly cleared list
+          PineScanTracker new_tracker;
+          memcpy(new_tracker.mac, mac_addr, 6);
+          new_tracker.suspicious_oui = suspicious_oui;
+          new_tracker.tag_and_susp_cap = tag_and_susp_cap;
+          new_tracker.channel = ap_channel;
+          new_tracker.rssi = snifferPacket->rx_ctrl.rssi;
+          new_tracker.reported = false;
+          wifi_scan_obj.pinescan_trackers->add(new_tracker);
+          ap_index = wifi_scan_obj.pinescan_trackers->size() - 1;
+          
+          // Reset the full reported flag since we've made room
+          wifi_scan_obj.pinescan_list_full_reported = false;
+        } else {
+          // Add to tracking list when there is room
+          PineScanTracker new_tracker;
+          memcpy(new_tracker.mac, mac_addr, 6);
+          new_tracker.suspicious_oui = suspicious_oui;
+          new_tracker.tag_and_susp_cap = tag_and_susp_cap;
+          new_tracker.channel = ap_channel;
+          new_tracker.rssi = snifferPacket->rx_ctrl.rssi;
+          new_tracker.reported = false;
+          wifi_scan_obj.pinescan_trackers->add(new_tracker);
+          ap_index = wifi_scan_obj.pinescan_trackers->size() - 1;
+        }
+      } else {
+        // Update existing tracker
+        PineScanTracker tracker = wifi_scan_obj.pinescan_trackers->get(ap_index);
+				
+        if (snifferPacket->rx_ctrl.rssi > tracker.rssi) {
+          tracker.rssi = snifferPacket->rx_ctrl.rssi;
+        }
+        
+        if (!tracker.suspicious_oui && suspicious_oui) {
+          tracker.suspicious_oui = true;
+        }
+        
+        if (!tracker.tag_and_susp_cap && tag_and_susp_cap) {
+          tracker.tag_and_susp_cap = true;
+        }
+        
+        wifi_scan_obj.pinescan_trackers->set(ap_index, tracker);
+      }
+
+      // If we have a match and it is not already in the confirmed list, add it
+      if (pinescan_match) {
+        if (wifi_scan_obj.confirmed_pinescan->size() >= MAX_PINESCAN_ENTRIES) {
+          if (!wifi_scan_obj.pinescan_list_full_reported) {
+            Serial.println("Confirmed PineScan List Full - Cannot add more");
+            Serial.println("Stopping PineScan detection until scan is restarted");
+            wifi_scan_obj.pinescan_list_full_reported = true;
+          }
+          return; // Stop processing completely if list is full
+        }
+        
+        if (snifferPacket->payload[37] <= 0) {
+          essid = "[hidden]";
+        } else {
+          for (int i = 0; i < snifferPacket->payload[37]; i++) {
+            essid.concat((char)snifferPacket->payload[i + 38]);
+          }
+        }
+
+        String detection = "";
+        if (pinescan_match_by_oui) {
+          detection = "SUSP_OUI";
+        } else if (tag_and_susp_cap) {
+          detection = "TAG+SUSP_CAP";
+        } else {
+          detection = "OTHER";
+        }
+
+        char addr[18];
+        snprintf(addr, sizeof(addr), "%02X:%02X:%02X:%02X:%02X:%02X",
+                mac_addr[0], mac_addr[1], mac_addr[2], 
+                mac_addr[3], mac_addr[4], mac_addr[5]);
+
+        // Add to confirmed Pineapple list
+        ConfirmedPineScan new_confirmed;
+        memcpy(new_confirmed.mac, mac_addr, 6);
+        new_confirmed.detection_type = detection;
+        new_confirmed.essid = essid;
+        new_confirmed.channel = ap_channel;
+        new_confirmed.rssi = snifferPacket->rx_ctrl.rssi;
+        new_confirmed.displayed = false;
+        wifi_scan_obj.confirmed_pinescan->add(new_confirmed);
+
+        // Mark as reported in the tracker
+        if (already_tracked) {
+          PineScanTracker tracker = wifi_scan_obj.pinescan_trackers->get(ap_index);
+          tracker.reported = true;
+          wifi_scan_obj.pinescan_trackers->set(ap_index, tracker);
+        }
+
+        // Only display MAX_DISPLAY_ENTRIES entries per MAC
+        int displayed_count = 0;
+        for (int i = 0; i < wifi_scan_obj.confirmed_pinescan->size(); i++) {
+          bool mac_match = true;
+          for (int x = 0; x < 6; x++) {
+            if (mac_addr[x] != wifi_scan_obj.confirmed_pinescan->get(i).mac[x]) {
+              mac_match = false;
+              break;
+            }
+          }
+          
+          if (mac_match && wifi_scan_obj.confirmed_pinescan->get(i).displayed) {
+            displayed_count++;
+          }
+        }
+
+        // Only display if we have not hit the display limit for this MAC
+        if (displayed_count < MAX_DISPLAY_ENTRIES) {
+          int idx = wifi_scan_obj.confirmed_pinescan->size() - 1;
+          ConfirmedPineScan to_display = wifi_scan_obj.confirmed_pinescan->get(idx);
+          to_display.displayed = true;
+          wifi_scan_obj.confirmed_pinescan->set(idx, to_display);
+          
+          // Create display string
+          String log_line = "MAC: " + String(addr) + 
+                        " CH: " + String(ap_channel) +
+                        " RSSI: " + String(snifferPacket->rx_ctrl.rssi) + 
+                        " DET: " + detection +
+                        " SSID: " + essid;
+          log_line += "\n";
+          delay(random(0, 10));
+          Serial.print(log_line);
+
+          #ifdef HAS_FULL_SCREEN
+
+            display_string.concat("MAC: " + String(addr));
+            display_string.concat(" CH: " + String(ap_channel));
+            display_string.concat(" RSSI: " + String(snifferPacket->rx_ctrl.rssi));
+
+            int temp_len = display_string.length();
+            for (int i = 0; i < 40 - temp_len; i++) {
+              display_string.concat(" ");
+            }
+            
+            display_obj.display_buffer->add(display_string);
+
+            display_string = "";
+            display_string.concat("DET: " + detection);
+            display_string.concat(" SSID: " + essid);
+
+            temp_len = display_string.length();
+            for (int i = 0; i < 40 - temp_len; i++) {
+              display_string.concat(" ");
+            }
+
+            display_obj.display_buffer->add(display_string);
+
+            display_string = "";
+            for (int i = 0; i < 60; i++) {
+              display_string.concat("-");
+            }
+
+            display_obj.display_buffer->add(display_string);
+            
+          #elif defined(HAS_MINI_SCREEN)
+            // Add MAC and channel
+            display_string.concat("MAC: " + String(addr));
+            display_string.concat(" CH: " + String(ap_channel));
+
+            int temp_len = display_string.length();
+            for (int i = 0; i < 40 - temp_len; i++) {
+              display_string.concat(" ");
+            }
+            
+            display_obj.display_buffer->add(display_string);
+
+            // Add RSSI and Detection method
+            display_string = "";
+            display_string.concat("RSSI: " + String(snifferPacket->rx_ctrl.rssi));
+            display_string.concat(" DET: " + detection);
+
+            temp_len = display_string.length();
+            for (int i = 0; i < 40 - temp_len; i++) {
+              display_string.concat(" ");
+            }
+
+            display_obj.display_buffer->add(display_string);
+
+            // Add SSID
+            display_string = "";
+            display_string.concat("SSID: " + essid);
+
+            temp_len = display_string.length();
+            for (int i = 0; i < 40 - temp_len; i++) {
+              display_string.concat(" ");
+            }
+
+            display_obj.display_buffer->add(display_string);
+
+            // Add delin
+            display_string = "";
+            for (int i = 0; i < 60; i++) {
+              display_string.concat("-");
+            }
+
+            display_obj.display_buffer->add(display_string);
+          #endif
+        }
+      }
+    }
+  }
+}
+
+void WiFiScan::multiSSIDSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) {
+  extern WiFiScan wifi_scan_obj;
+
+  wifi_promiscuous_pkt_t *snifferPacket = (wifi_promiscuous_pkt_t*)buf;
+  WifiMgmtHdr *frameControl = (WifiMgmtHdr*)snifferPacket->payload;
+  wifi_pkt_rx_ctrl_t ctrl = (wifi_pkt_rx_ctrl_t)snifferPacket->rx_ctrl;
+  int len = snifferPacket->rx_ctrl.sig_len;
+
+  String display_string = "";
+  String essid = "";
+
+  if (type == WIFI_PKT_MGMT) {
+    len -= 4;
+    int fctl = ntohs(frameControl->fctl);
+    const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)snifferPacket->payload;
+    const WifiMgmtHdr *hdr = &ipkt->hdr;
+  
+    #ifdef HAS_SCREEN
+      int buff = display_obj.display_buffer->size();
+    #else
+      int buff = 0;
+    #endif
+    
+    if ((snifferPacket->payload[0] == 0x80) && (buff == 0)) {
+      buffer_obj.append(snifferPacket, len); // Capture all beacons
+      
+      // Extract MAC address
+      uint8_t mac_addr[6];
+      for (int i = 0; i < 6; i++) {
+        mac_addr[i] = snifferPacket->payload[10 + i];
+      }
+
+      // Extract channel from the beacon frame
+      int ap_channel = WiFiScan::extractPineScanChannel(snifferPacket->payload, len);
+      if (ap_channel == -1) {
+        ap_channel = snifferPacket->rx_ctrl.channel;
+      }
+      
+      // Process SSID and compute hash
+      uint16_t ssid_hash = 0;
+      if (snifferPacket->payload[37] > 0) {
+        // Compute Whole SSID hash directly from payload
+        for (int i = 0; i < (int)snifferPacket->payload[37]; i++) {
+          char c = snifferPacket->payload[i + 38];
+          ssid_hash = ((ssid_hash << 5) + ssid_hash) + c;
+        }
+      } else {
+        ssid_hash = 0xFFFF; // hash for hidden SSIDs
+      }
+      
+      // Check for multiple unique SSIDs from same MAC
+      bool multi_ssid_ap = false;
+      int ap_index = -1;
+      
+      // Find if have seen this MAC before
+      for (int i = 0; i < wifi_scan_obj.multissid_trackers->size(); i++) {
+        bool mac_match = true;
+        for (int x = 0; x < 6; x++) {
+          if (mac_addr[x] != wifi_scan_obj.multissid_trackers->get(i).mac[x]) {
+            mac_match = false;
+            break;
+          }
+        }
+        
+        if (mac_match) {
+          ap_index = i;
+          break;
+        }
+      }
+
+      bool already_confirmed = false;
+      int confirmed_index = -1;
+      for (int i = 0; i < wifi_scan_obj.confirmed_multissid->size(); i++) {
+        bool mac_match = true;
+        for (int x = 0; x < 6; x++) {
+          if (mac_addr[x] != wifi_scan_obj.confirmed_multissid->get(i).mac[x]) {
+            mac_match = false;
+            break;
+          }
+        }
+        if (mac_match) {
+          already_confirmed = true;
+          confirmed_index = i;
+          break;
+        }
+      }
+
+      // If already confirmed, just update and return
+      if (already_confirmed) {
+        if (snifferPacket->payload[37] <= 0) {
+          essid = "[hidden]";
+        } else {
+          for (int i = 0; i < snifferPacket->payload[37]; i++) {
+            essid.concat((char)snifferPacket->payload[i + 38]);
+          }
+        }
+
+        ConfirmedMultiSSID confirmed = wifi_scan_obj.confirmed_multissid->get(confirmed_index);
+        if (snifferPacket->rx_ctrl.rssi > confirmed.rssi) {
+          confirmed.rssi = snifferPacket->rx_ctrl.rssi;
+        }
+        if (essid != "" && essid != "[hidden]") {
+          confirmed.essid = essid;
+        }
+        wifi_scan_obj.confirmed_multissid->set(confirmed_index, confirmed);
+        return;
+      }
+      
+      if (ap_index == -1) {
+        if (wifi_scan_obj.confirmed_multissid->size() >= MAX_MULTISSID_ENTRIES) {
+          if (!wifi_scan_obj.multissid_list_full_reported) {
+            Serial.println("Confirmed MultiSSID List Full - Cannot add more");
+            Serial.println("Stopping MultiSSID detection until scan is restarted");
+            wifi_scan_obj.multissid_list_full_reported = true;
+          }
+          return; // Stop processing completely if list is full
+        }
+          
+        // Check if we have reached the maximum number of tracked APs
+        if (wifi_scan_obj.multissid_trackers->size() >= MAX_AP_ENTRIES) {
+          if (!wifi_scan_obj.multissid_list_full_reported) {
+            Serial.println("AP List Full - Clearing list to make room");
+            wifi_scan_obj.multissid_list_full_reported = true;
+            wifi_scan_obj.multissid_trackers->clear();
+            Serial.println("AP list cleared, continuing scan");
+          }
+          
+          // Add the current AP to the freshly cleared list
+          MultiSSIDTracker new_tracker;
+          memcpy(new_tracker.mac, mac_addr, 6);
+          new_tracker.ssid_hashes[0] = ssid_hash;
+          new_tracker.unique_ssid_count = 1;
+          new_tracker.reported = false;
+          wifi_scan_obj.multissid_trackers->add(new_tracker);
+          ap_index = wifi_scan_obj.multissid_trackers->size() - 1;
+          
+          // Reset the full reported flag since we've made room
+          wifi_scan_obj.multissid_list_full_reported = false;
+        } else {
+          // Add to tracking list when there is room
+          MultiSSIDTracker new_tracker;
+          memcpy(new_tracker.mac, mac_addr, 6);
+          new_tracker.ssid_hashes[0] = ssid_hash;
+          new_tracker.unique_ssid_count = 1;
+          new_tracker.reported = false;
+          wifi_scan_obj.multissid_trackers->add(new_tracker);
+          ap_index = wifi_scan_obj.multissid_trackers->size() - 1;
+        }
+      } else {
+        MultiSSIDTracker tracker = wifi_scan_obj.multissid_trackers->get(ap_index);
+        
+        // Check if we have already seen this SSID hash
+        bool hash_found = false;
+        for (int i = 0; i < min(MULTISSID_THRESHOLD, (int)tracker.unique_ssid_count); i++) {
+          if (tracker.ssid_hashes[i] == ssid_hash) {
+            hash_found = true;
+            break;
+          }
+        }
+        
+        // Add new hash if not seen before
+        if (!hash_found && tracker.unique_ssid_count < MULTISSID_THRESHOLD) {
+          int index = tracker.unique_ssid_count;
+          tracker.ssid_hashes[index] = ssid_hash;
+          tracker.unique_ssid_count = min(MULTISSID_THRESHOLD, tracker.unique_ssid_count + 1);
+          wifi_scan_obj.multissid_trackers->set(ap_index, tracker);
+        }
+
+        // Check if this MAC now has enough unique SSIDs
+        if (tracker.unique_ssid_count >= MULTISSID_THRESHOLD) {
+          multi_ssid_ap = true;
+        }
+      }
+
+      // If we found a multi SSID AP, report it
+      if (multi_ssid_ap) {
+        if (snifferPacket->payload[37] <= 0) {
+          essid = "[hidden]";
+        } else {
+          for (int i = 0; i < snifferPacket->payload[37]; i++) {
+            essid.concat((char)snifferPacket->payload[i + 38]);
+          }
+        }
+
+        char addr[18];
+        snprintf(addr, sizeof(addr), "%02X:%02X:%02X:%02X:%02X:%02X",
+                mac_addr[0], mac_addr[1], mac_addr[2], 
+                mac_addr[3], mac_addr[4], mac_addr[5]);
+
+        // Add to confirmed Multi SSID list
+        ConfirmedMultiSSID new_confirmed;
+        memcpy(new_confirmed.mac, mac_addr, 6);
+        new_confirmed.essid = essid;
+        new_confirmed.channel = ap_channel;
+        new_confirmed.rssi = snifferPacket->rx_ctrl.rssi;
+        new_confirmed.ssid_count = wifi_scan_obj.multissid_trackers->get(ap_index).unique_ssid_count;
+        new_confirmed.displayed = false;
+        wifi_scan_obj.confirmed_multissid->add(new_confirmed);
+
+        String log_line = "MAC: " + String(addr) + 
+                      " CH: " + String(ap_channel) +
+                      " RSSI: " + String(snifferPacket->rx_ctrl.rssi) + 
+                      " SSIDs: " + String(new_confirmed.ssid_count) +
+                      " SSID: " + essid;
+        log_line += "\n";
+        delay(random(0, 10));
+        Serial.print(log_line);
+
+        display_string.concat("MAC: " + String(addr));
+        display_string.concat(" CH: " + String(ap_channel));
+        display_string.concat(" RSSI: " + String(snifferPacket->rx_ctrl.rssi));
+        display_string.concat(" SSIDs: " + String(new_confirmed.ssid_count));
+        display_string.concat(" SSID: " + essid);
+
+        int temp_len = display_string.length();
+        for (int i = 0; i < 40 - temp_len; i++) {
+          display_string.concat(" ");
+        }
+        
+        #ifdef HAS_SCREEN
+          display_obj.display_buffer->add(display_string);
+        #endif
+      }
+    }
+  }
+}
 
 void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 {
@@ -4622,8 +5417,10 @@ void WiFiScan::rawSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
       access_points->set(targ_index, targ_ap);
       Serial.println((String)access_points->get(targ_index).essid + " RSSI: " + (String)access_points->get(targ_index).rssi);
       display_string.concat((String)access_points->get(targ_index).essid);
-      display_string.concat(" RSSI: ");
-      display_string.concat((String)access_points->get(targ_index).rssi);
+      #ifndef HAS_MINI_SCREEN
+        display_string.concat(" RSSI: ");
+        display_string.concat((String)access_points->get(targ_index).rssi);
+      #endif
       int temp_len = display_string.length();
       for (int i = 0; i < 50 - temp_len; i++)
       {
@@ -4631,6 +5428,17 @@ void WiFiScan::rawSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
       }
       #ifdef HAS_SCREEN
         display_obj.display_buffer->add(display_string);
+        #ifdef HAS_MINI_SCREEN
+          display_string = "";
+          display_string.concat("RSSI: ");
+          display_string.concat((String)access_points->get(targ_index).rssi);
+          temp_len = display_string.length();
+          for (int i = 0; i < 50 - temp_len; i++)
+          {
+            display_string.concat(" ");
+          }
+          display_obj.display_buffer->add(display_string);
+        #endif
       #endif
     }
     else
@@ -6299,6 +7107,8 @@ void WiFiScan::main(uint32_t currentTime)
   (currentScanMode == WIFI_SCAN_TARGET_AP) ||
   (currentScanMode == WIFI_SCAN_AP_STA) ||
   (currentScanMode == WIFI_SCAN_PWN) ||
+  (currentScanMode == WIFI_SCAN_PINESCAN) ||
+  (currentScanMode == WIFI_SCAN_MULTISSID) ||
   (currentScanMode == WIFI_SCAN_DEAUTH) ||
   (currentScanMode == WIFI_SCAN_STATION_WAR_DRIVE) ||
   (currentScanMode == WIFI_SCAN_ALL))
