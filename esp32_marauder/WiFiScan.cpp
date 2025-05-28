@@ -2574,7 +2574,7 @@ void WiFiScan::RunPineScan(uint8_t scan_mode, uint16_t color)
     display_obj.print_delay_2 = 10;
     display_obj.initScrollValues(true);
     display_obj.tft.setTextWrap(false);
-    display_obj.tft.setTextColor(TFT_WHITE, color);
+    display_obj.tft.setTextColor(TFT_BLACK, color);
     #ifdef HAS_FULL_SCREEN
       display_obj.tft.fillRect(0,16,240,16, color);
       display_obj.tft.drawCentreString(text_table4[48],120,16,2);
@@ -2623,7 +2623,7 @@ void WiFiScan::RunMultiSSIDScan(uint8_t scan_mode, uint16_t color)
     display_obj.print_delay_2 = 10;
     display_obj.initScrollValues(true);
     display_obj.tft.setTextWrap(false);
-    display_obj.tft.setTextColor(TFT_WHITE, color);
+    display_obj.tft.setTextColor(TFT_BLACK, color);
     #ifdef HAS_FULL_SCREEN
       display_obj.tft.fillRect(0,16,240,16, color);
       display_obj.tft.drawCentreString(text_table4[49],120,16,2);
@@ -4630,18 +4630,78 @@ void WiFiScan::pineScanSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t ty
           delay(random(0, 10));
           Serial.print(log_line);
 
-          display_string.concat("MAC: " + String(addr));
-          display_string.concat(" CH: " + String(ap_channel));
-          display_string.concat(" RSSI: " + String(snifferPacket->rx_ctrl.rssi));
-          display_string.concat(" DET: " + detection);
-          display_string.concat(" SSID: " + essid);
+          #ifdef HAS_FULL_SCREEN
 
-          int temp_len = display_string.length();
-          for (int i = 0; i < 40 - temp_len; i++) {
-            display_string.concat(" ");
-          }
-          
-          #ifdef HAS_SCREEN
+            display_string.concat("MAC: " + String(addr));
+            display_string.concat(" CH: " + String(ap_channel));
+            display_string.concat(" RSSI: " + String(snifferPacket->rx_ctrl.rssi));
+
+            int temp_len = display_string.length();
+            for (int i = 0; i < 40 - temp_len; i++) {
+              display_string.concat(" ");
+            }
+            
+            display_obj.display_buffer->add(display_string);
+
+            display_string = "";
+            display_string.concat("DET: " + detection);
+            display_string.concat(" SSID: " + essid);
+
+            temp_len = display_string.length();
+            for (int i = 0; i < 40 - temp_len; i++) {
+              display_string.concat(" ");
+            }
+
+            display_obj.display_buffer->add(display_string);
+
+            display_string = "";
+            for (int i = 0; i < 60; i++) {
+              display_string.concat("-");
+            }
+
+            display_obj.display_buffer->add(display_string);
+            
+          #elif defined(HAS_MINI_SCREEN)
+            // Add MAC and channel
+            display_string.concat("MAC: " + String(addr));
+            display_string.concat(" CH: " + String(ap_channel));
+
+            int temp_len = display_string.length();
+            for (int i = 0; i < 40 - temp_len; i++) {
+              display_string.concat(" ");
+            }
+            
+            display_obj.display_buffer->add(display_string);
+
+            // Add RSSI and Detection method
+            display_string = "";
+            display_string.concat("RSSI: " + String(snifferPacket->rx_ctrl.rssi));
+            display_string.concat(" DET: " + detection);
+
+            temp_len = display_string.length();
+            for (int i = 0; i < 40 - temp_len; i++) {
+              display_string.concat(" ");
+            }
+
+            display_obj.display_buffer->add(display_string);
+
+            // Add SSID
+            display_string = "";
+            display_string.concat("SSID: " + essid);
+
+            temp_len = display_string.length();
+            for (int i = 0; i < 40 - temp_len; i++) {
+              display_string.concat(" ");
+            }
+
+            display_obj.display_buffer->add(display_string);
+
+            // Add delin
+            display_string = "";
+            for (int i = 0; i < 60; i++) {
+              display_string.concat("-");
+            }
+
             display_obj.display_buffer->add(display_string);
           #endif
         }
