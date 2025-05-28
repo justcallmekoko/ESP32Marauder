@@ -1837,16 +1837,16 @@ void MenuFunctions::RunSetup()
     wifi_scan_obj.StartScan(WIFI_SCAN_PWN, TFT_RED);
   });
   
-  this->addNodes(&wifiSnifferMenu, text_table1[63], TFTRED, NULL, PINESCAN_SNIFF, [this]() {
+  this->addNodes(&wifiSnifferMenu, text_table1[63], TFTYELLOW, NULL, PINESCAN_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_PINESCAN, TFT_RED);
+    wifi_scan_obj.StartScan(WIFI_SCAN_PINESCAN, TFT_YELLOW);
   });
 
-  this->addNodes(&wifiSnifferMenu, text_table1[64], TFTRED, NULL, MULTISSID_SNIFF, [this]() {
+  this->addNodes(&wifiSnifferMenu, text_table1[64], TFTORANGE, NULL, MULTISSID_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_MULTISSID, TFT_RED);
+    wifi_scan_obj.StartScan(WIFI_SCAN_MULTISSID, TFT_ORANGE);
   });
   //#ifndef HAS_ILI9341
     this->addNodes(&wifiSnifferMenu, text_table1[49], TFTMAGENTA, NULL, BEACON_SNIFF, [this]() {
