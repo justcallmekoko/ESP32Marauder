@@ -6870,7 +6870,7 @@ void WiFiScan::changeChannel()
 void WiFiScan::channelHop()
 {
   this->set_channel = this->set_channel + 1;
-  if (this->set_channel > 13) {
+  if (this->set_channel > 14) {
     this->set_channel = 1;
   }
   esp_wifi_set_channel(this->set_channel, WIFI_SECOND_CHAN_NONE);
