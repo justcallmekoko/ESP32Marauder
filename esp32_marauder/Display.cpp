@@ -46,6 +46,10 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
 
           uint8_t rot = this->tft.getRotation();
 
+          //#ifdef HAS_CYD_PORTRAIT
+          //  rot = 0;
+          //#endif
+
           switch (rot) {
             case 0: // Standard Protrait
               *x = map(p.x, 200, 3700, 1, TFT_WIDTH);
@@ -95,8 +99,15 @@ void Display::RunSetup()
   #endif
   
   tft.init();
-  #ifndef MARAUDER_M5STICKC
+
+  tft.setRotation(SCREEN_ORIENTATION);
+
+  /*#ifndef MARAUDER_M5STICKC
     tft.setRotation(0); // Portrait
+  #endif
+
+  #ifdef HAS_CYD_PORTRAIT
+    tft.setRotation(3); // Bro these CYDs are so stupid
   #endif
 
   #ifdef MARAUDER_M5STICKC
@@ -105,7 +116,7 @@ void Display::RunSetup()
 
   #ifdef MARAUDER_REV_FEATHER
     tft.setRotation(1);
-  #endif
+  #endif*/
 
   tft.setCursor(0, 0);
 
@@ -553,7 +564,11 @@ void Display::setupScrollArea(uint16_t tfa, uint16_t bfa) {
   //Serial.println("   bfa: " + (String)bfa);
   //Serial.println("yStart: " + (String)this->yStart);
   #ifdef HAS_ILI9341
-    tft.writecommand(ILI9341_VSCRDEF); // Vertical scroll definition
+    #ifdef HAS_ST7789
+      tft.writecommand(ST7789_VSCRDEF); // Vertical scroll definition
+    #else
+      tft.writecommand(ILI9341_VSCRDEF);
+    #endif
     tft.writedata(tfa >> 8);           // Top Fixed Area line count
     tft.writedata(tfa);
     tft.writedata((YMAX-tfa-bfa)>>8);  // Vertical Scrolling Area line count
@@ -566,7 +581,11 @@ void Display::setupScrollArea(uint16_t tfa, uint16_t bfa) {
 
 void Display::scrollAddress(uint16_t vsp) {
   #ifdef HAS_ILI9341
-    tft.writecommand(ILI9341_VSCRSADD); // Vertical scrolling pointer
+    #ifdef HAS_ST7789
+      tft.writecommand(ST7789_VSCRDEF); // Vertical scroll definition
+    #else
+      tft.writecommand(ILI9341_VSCRDEF);
+    #endif
     tft.writedata(vsp>>8);
     tft.writedata(vsp);
   #endif

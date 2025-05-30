@@ -350,7 +350,7 @@ void loop()
     #endif
   #endif
 
-  #ifdef HAS_ILI9341
+  #if (defined(HAS_ILI9341) && !defined(MARAUDER_CYD_2USB))
     #ifdef HAS_BUTTONS
       if (c_btn.isHeld()) {
         if (menu_function_obj.disable_touch)

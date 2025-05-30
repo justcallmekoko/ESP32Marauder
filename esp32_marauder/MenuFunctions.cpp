@@ -1066,7 +1066,7 @@ void MenuFunctions::main(uint32_t currentTime)
 
   // Menu navigation and paging
   #ifdef HAS_BUTTONS
-    #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_CYD_MICRO) || defined(MARAUDER_CYD_GUITION))
+    #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_CYD_MICRO) || defined(MARAUDER_CYD_GUITION) || defined(MARAUDER_CYD_2USB))
       #if !defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
         if (u_btn.justPressed()){
           if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
@@ -1531,7 +1531,7 @@ void MenuFunctions::orientDisplay()
 {
   display_obj.tft.init();
 
-  display_obj.tft.setRotation(0); // Portrait
+  display_obj.tft.setRotation(SCREEN_ORIENTATION); // Portrait
 
   display_obj.tft.setCursor(0, 0);
 
