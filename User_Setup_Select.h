@@ -28,11 +28,11 @@
 //#include <User_Setup_marauder_m5stickc.h>
 //#include <User_Setup_marauder_m5stickcp2.h>
 //#include <User_Setup_pocket_sdr.h>
-//#include <User_Setup_dual_nrf24.h> // Marauder v7
-//#include <User_Setup_pocket_sdr_2.h> // Drone Signal Analyzer
+//#include <User_Setup_dual_nrf24.h>
+//#include <User_Setup_pocket_sdr_2.h>
 //#include <User_Setup_cyd_micro.h>
 //#include <User_Setup_cyd_guition.h>
-#include <User_Setup_cyd_2usb.h>
+//#include <User_Setup_cyd_2usb.h>
 
 //#include <User_Setups/Setup1_ILI9341.h>  // Setup file configured for my ILI9341
 //#include <User_Setups/Setup2_ST7735.h>   // Setup file configured for my ST7735
