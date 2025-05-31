@@ -203,7 +203,7 @@
   #ifdef MARAUDER_CYD_2USB
     #define HAS_FLIPPER_LED
     //#define FLIPPER_ZERO_HAT
-    //#define HAS_BATTERY
+    #define HAS_BATTERY
     #define HAS_BT
     #define HAS_BT_REMOTE
     #define HAS_BUTTONS
@@ -1806,8 +1806,8 @@
       #define GPS_RX 22
     #elif defined(MARAUDER_CYD_2USB)
       #define GPS_SERIAL_INDEX 2
-      #define GPS_TX 27 // Fits the extended I/O
-      #define GPS_RX 22
+      #define GPS_TX 1 // Changed to Fr4nkFletcher's Pinout for compatibility with custom expansion boards already developed. Allowing backwards compatibility. 
+      #define GPS_RX 3
     #elif defined(MARAUDER_CYD_GUITION)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 21 // Fits the extended I/O
@@ -1894,6 +1894,11 @@
 
     #ifdef MARAUDER_V7_1
       #define I2C_SDA 33
+      #define I2C_SCL 27
+    #endif
+
+    #ifdef MARAUDER_CYD_2USB
+      #define I2C_SDA 22
       #define I2C_SCL 27
     #endif
 
