@@ -23,7 +23,7 @@
   //#define XIAO_ESP32_S3
   //#define MARAUDER_REV_FEATHER
   //#define MARAUDER_CYD_MICRO // 2432S028
-  #define MARAUDER_CYD_2USB // Another 2432S028 but it has tWo UsBs OoOoOoO
+  //#define MARAUDER_CYD_2USB // Another 2432S028 but it has tWo UsBs OoOoOoO
   //#define MARAUDER_CYD_GUITION // ESP32-2432S024 GUITION
   //// END BOARD TARGETS
 
