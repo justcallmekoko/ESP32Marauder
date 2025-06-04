@@ -766,11 +766,19 @@ bool WiFiScan::joinWiFi(String ssid, String password)
     lv_obj_set_width(mbox1, 200);
     lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); //Align to the corner
   #endif
-  connected_network = ssid;
+  this->connected_network = ssid;
+  this->ip_addr = WiFi.localIP();
+  this->gateway = WiFi.gatewayIP();
+  this->subnet = WiFi.subnetMask();
   
   Serial.println("\nConnected to the WiFi network");
   Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
+  Serial.println(this->ip_addr);
+  Serial.print("Gateway: ");
+  Serial.println(this->gateway);
+  Serial.print("Netmask: ");
+  Serial.println(this->subnet);
+
   #ifdef HAS_SCREEN
     #ifdef HAS_MINI_KB
       display_obj.tft.println("\nConnected!");
@@ -1110,6 +1118,9 @@ void WiFiScan::StopScan(uint8_t scan_mode)
     this->shutdownWiFi();
 
     this->connected_network = "";
+    this->ip_addr = IPAddress(0, 0, 0, 0);
+    this->gateway = IPAddress(0, 0, 0, 0);
+    this->subnet = IPAddress(0, 0, 0, 0);
 
     #ifdef HAS_SCREEN
       for (int i = 0; i < TFT_WIDTH; i++) {
