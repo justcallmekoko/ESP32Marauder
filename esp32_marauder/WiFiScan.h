@@ -104,6 +104,7 @@
 #define WIFI_SCAN_AP_STA 49
 #define WIFI_SCAN_PINESCAN 50
 #define WIFI_SCAN_MULTISSID 51
+#define WIFI_CONNECTED 52
 
 #define BASE_MULTIPLIER 4
 
@@ -586,7 +587,7 @@ class WiFiScan
     bool shutdownWiFi();
     bool shutdownBLE();
     bool scanning();
-    void joinWiFi(String ssid, String password);
+    bool joinWiFi(String ssid, String password);
     String getStaMAC();
     String getApMAC();
     String freeRAM();

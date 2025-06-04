@@ -215,7 +215,7 @@ class MenuFunctions
     void buttonSelected(int b, int x = -1);
     void buttonNotSelected(int b, int x = -1);
     //#if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
-      void miniKeyboard(Menu * targetMenu);
+      String miniKeyboard(Menu * targetMenu, bool do_pass = false);
     //#endif
 
   public:
