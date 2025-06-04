@@ -608,6 +608,7 @@ MenuFunctions::MenuFunctions()
     // Create second label
     lv_obj_t * pw_label = lv_label_create(lv_scr_act(), NULL);
     lv_label_set_text(pw_label, "Password:");
+    lv_textarea_set_text(ta2, "");
     lv_obj_align(pw_label, ta2, LV_ALIGN_OUT_TOP_LEFT, 0, 0);
 
     // Create a keyboard and apply the styles
@@ -633,13 +634,18 @@ MenuFunctions::MenuFunctions()
       String ta2_text = lv_textarea_get_text(ta2);
       Serial.println(ta1_text);
       Serial.println(ta2_text);
-      wifi_scan_obj.joinWiFi(ta1_text, ta2_text);
+      if (wifi_scan_obj.joinWiFi(ta1_text, ta2_text))
+        wifi_scan_obj.currentScanMode = WIFI_CONNECTED;
+      else
+        wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
     }else if(event == LV_EVENT_CANCEL){
       printf("LV_EVENT_CANCEL\n");
       //lv_textarea_set_text(lv_keyboard_get_textarea(kb), "");
       menu_function_obj.deinitLVGL();
       //wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
       display_obj.exit_draw = true; // set everything back to normal
+      if (wifi_scan_obj.connected_network != "")
+        wifi_scan_obj.currentScanMode = WIFI_CONNECTED;
     }
   }
   
@@ -755,7 +761,8 @@ void MenuFunctions::main(uint32_t currentTime)
 {
   // Some function exited and we need to go back to normal
   if (display_obj.exit_draw) {
-    wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
+    if (wifi_scan_obj.currentScanMode != WIFI_CONNECTED)
+      wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
     display_obj.exit_draw = false;
     this->orientDisplay();
   }
@@ -1431,7 +1438,7 @@ void MenuFunctions::updateStatusBar()
   MenuFunctions::battery(false);
   display_obj.tft.fillRect(186, 0, 16, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
 
-  
+  // Disable touch stuff
   #ifdef HAS_ILI9341
     #ifdef HAS_BUTTONS
       if (this->disable_touch) {
@@ -1444,9 +1451,18 @@ void MenuFunctions::updateStatusBar()
                                     STATUSBAR_COLOR,
                                     TFT_RED);
       }
+      else {
+        display_obj.tft.setCursor(0, 1);
+        display_obj.tft.drawXBitmap(186,
+                                    0,
+                                    menu_icons[DISABLE_TOUCH],
+                                    16,
+                                    16,
+                                    STATUSBAR_COLOR,
+                                    TFT_DARKGREY);
+      }
     #endif
   #endif
-
 
   // Draw SD info
   #ifdef HAS_SD
@@ -1470,6 +1486,29 @@ void MenuFunctions::updateStatusBar()
     display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR);
     display_obj.tft.drawString("SD", TFT_WIDTH - 12, 0, 1);
   #endif
+
+  // WiFi connection status stuff
+  if (wifi_scan_obj.currentScanMode == WIFI_CONNECTED) {
+    #ifdef HAS_FULL_SCREEN
+      display_obj.tft.drawXBitmap(170 - 16,
+                                  0,
+                                  menu_icons[JOINED],
+                                  16,
+                                  16,
+                                  STATUSBAR_COLOR,
+                                  TFT_GREEN);
+    #endif
+  } else {
+    #ifdef HAS_FULL_SCREEN
+      display_obj.tft.drawXBitmap(170 - 16,
+                                  0,
+                                  menu_icons[JOINED],
+                                  16,
+                                  16,
+                                  STATUSBAR_COLOR,
+                                  TFT_DARKGREY);
+    #endif
+  }
 }
 
 void MenuFunctions::drawStatusBar()
@@ -1557,6 +1596,7 @@ void MenuFunctions::drawStatusBar()
   display_obj.tft.fillRect(186, 0, 16, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
 
 
+  // Disable touch stuff
   #ifdef HAS_ILI9341
     #ifdef HAS_BUTTONS
       if (this->disable_touch) {
@@ -1568,6 +1608,16 @@ void MenuFunctions::drawStatusBar()
                                     16,
                                     STATUSBAR_COLOR,
                                     TFT_RED);
+      }
+      else {
+        display_obj.tft.setCursor(0, 1);
+        display_obj.tft.drawXBitmap(186,
+                                    0,
+                                    menu_icons[DISABLE_TOUCH],
+                                    16,
+                                    16,
+                                    STATUSBAR_COLOR,
+                                    TFT_DARKGREY);
       }
     #endif
   #endif
@@ -1595,6 +1645,29 @@ void MenuFunctions::drawStatusBar()
     display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR);
     display_obj.tft.drawString("SD", TFT_WIDTH - 12, 0, 1);
   #endif
+
+  // WiFi connection status stuff
+  if (wifi_scan_obj.currentScanMode == WIFI_CONNECTED) {
+    #ifdef HAS_FULL_SCREEN
+      display_obj.tft.drawXBitmap(170 - 16,
+                                  0,
+                                  menu_icons[JOINED],
+                                  16,
+                                  16,
+                                  STATUSBAR_COLOR,
+                                  TFT_GREEN);
+    #endif
+  } else {
+    #ifdef HAS_FULL_SCREEN
+      display_obj.tft.drawXBitmap(170 - 16,
+                                  0,
+                                  menu_icons[JOINED],
+                                  16,
+                                  16,
+                                  STATUSBAR_COLOR,
+                                  TFT_DARKGREY);
+    #endif
+  }
 }
 
 void MenuFunctions::orientDisplay()
@@ -3180,7 +3253,7 @@ void MenuFunctions::RunSetup()
               // Reset the touch keys so we don't activate the keys when we go back
               display_obj.menuButton(&t_x, &t_y, display_obj.updateTouch(&t_x, &t_y));
               this->changeMenu(targetMenu->parentMenu);
-              return;
+              return wifi_scan_obj.current_mini_kb_ssid;
             }
 
             // If the screen is touched but none of the keys are used, don't refresh display
