@@ -691,7 +691,7 @@ int WiFiScan::generateSSIDs(int count) {
   return num_gen;
 }
 
-/*void WiFiScan::joinWiFi(String ssid, String password)
+void WiFiScan::joinWiFi(String ssid, String password)
 {
   static const char * btns[] ={text16, ""};
   int count = 0;
@@ -712,10 +712,10 @@ int WiFiScan::generateSSIDs(int count) {
     WiFi.disconnect();
   }
 
-  esp_wifi_init(&cfg);
-  esp_wifi_set_storage(WIFI_STORAGE_RAM);
-  esp_wifi_set_mode(WIFI_MODE_NULL);
-  esp_wifi_start();
+  //esp_wifi_init(&cfg);
+  //esp_wifi_set_storage(WIFI_STORAGE_RAM);
+  //esp_wifi_set_mode(WIFI_MODE_NULL);
+  //esp_wifi_start();
     
   WiFi.begin(ssid.c_str(), password.c_str());
 
@@ -724,7 +724,7 @@ int WiFiScan::generateSSIDs(int count) {
     delay(500);
     Serial.print(".");
     count++;
-    if (count == 10)
+    if (count == 20)
     {
       Serial.println("\nCould not connect to WiFi network");
       #ifdef HAS_SCREEN
@@ -753,7 +753,7 @@ int WiFiScan::generateSSIDs(int count) {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
   this->wifi_initialized = true;
-}*/
+}
 
 // Apply WiFi settings
 void WiFiScan::initWiFi(uint8_t scan_mode) {
@@ -877,6 +877,11 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     #endif
   }
   else if (scan_mode == LV_ADD_SSID) {
+    #ifdef HAS_SCREEN
+      RunLvJoinWiFi(scan_mode, color);
+    #endif
+  }
+  else if (scan_mode == LV_JOIN_WIFI) {
     #ifdef HAS_SCREEN
       RunLvJoinWiFi(scan_mode, color);
     #endif
@@ -1066,7 +1071,8 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   (currentScanMode == WIFI_PACKET_MONITOR) ||
   (currentScanMode == WIFI_SCAN_CHAN_ANALYZER) ||
   (currentScanMode == WIFI_SCAN_PACKET_RATE) ||
-  (currentScanMode == LV_JOIN_WIFI))
+  (currentScanMode == LV_JOIN_WIFI) ||
+  (this->wifi_initialized))
   {
     this->shutdownWiFi();
 
