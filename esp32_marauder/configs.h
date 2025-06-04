@@ -27,7 +27,7 @@
   //#define MARAUDER_CYD_GUITION // ESP32-2432S024 GUITION
   //// END BOARD TARGETS
 
-  #define MARAUDER_VERSION "v1.6.2"
+  #define MARAUDER_VERSION "v1.7.0"
 
   #define GRAPH_REFRESH   100
 
@@ -75,6 +75,7 @@
  //// BOARD FEATURES
   #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
     //#define FLIPPER_ZERO_HAT
+    #define HAS_MINI_KB
     #define HAS_BATTERY
     #define HAS_BT
     #define HAS_BUTTONS
@@ -91,6 +92,7 @@
   #ifdef MARAUDER_MINI
     //#define FLIPPER_ZERO_HAT
     //#define HAS_BATTERY
+    #define HAS_MINI_KB
     #define HAS_BT
     #define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
@@ -105,6 +107,7 @@
 
   #ifdef MARAUDER_V7
     //#define FLIPPER_ZERO_HAT
+    #define HAS_MINI_KB
     #define HAS_BATTERY
     #define HAS_BT
     #define HAS_BT_REMOTE
@@ -121,6 +124,7 @@
 
   #ifdef MARAUDER_V7_1
     //#define FLIPPER_ZERO_HAT
+    #define HAS_MINI_KB
     #define HAS_BATTERY
     #define HAS_BT
     #define HAS_BT_REMOTE
@@ -140,6 +144,7 @@
     //#define FLIPPER_ZERO_HAT
     //#define HAS_BATTERY
     //#define HAS_BT
+    #define HAS_MINI_KB
     #define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
     //#define HAS_PWR_MGMT
@@ -152,6 +157,7 @@
   #endif
 
   #ifdef MARAUDER_V4
+    #define HAS_TOUCH
     //#define FLIPPER_ZERO_HAT
     #define HAS_BATTERY
     #define HAS_BT
@@ -167,6 +173,7 @@
   #endif
 
   #if defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
+    #define HAS_TOUCH
     //#define FLIPPER_ZERO_HAT
     #define HAS_BATTERY
     #define HAS_BT
@@ -183,6 +190,7 @@
   #endif
 
   #ifdef MARAUDER_CYD_MICRO
+    #define HAS_TOUCH
     #define HAS_FLIPPER_LED
     //#define FLIPPER_ZERO_HAT
     //#define HAS_BATTERY
@@ -201,6 +209,7 @@
   #endif
 
   #ifdef MARAUDER_CYD_2USB
+    #define HAS_TOUCH
     #define HAS_FLIPPER_LED
     //#define FLIPPER_ZERO_HAT
     //#define HAS_BATTERY
@@ -220,6 +229,7 @@
   #endif
 
   #ifdef MARAUDER_CYD_GUITION
+    #define HAS_TOUCH
     #define HAS_FLIPPER_LED
     //#define FLIPPER_ZERO_HAT
     //#define HAS_BATTERY
@@ -238,6 +248,7 @@
   #endif
 
   #ifdef MARAUDER_KIT
+    #define HAS_TOUCH
     //#define FLIPPER_ZERO_HAT
     #define HAS_BATTERY
     #define HAS_BT
