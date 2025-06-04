@@ -780,8 +780,10 @@ bool WiFiScan::joinWiFi(String ssid, String password)
     #endif
   #endif
   this->wifi_initialized = true;
-  this->currentScanMode = WIFI_CONNECTED;
-  display_obj.tft.setTextWrap(false, false);
+  #ifndef HAS_TOUCH
+    this->currentScanMode = WIFI_CONNECTED;
+    display_obj.tft.setTextWrap(false, false);
+  #endif
   return true;
 }
 
@@ -1775,7 +1777,7 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
         Serial.println("Using TFT Shield");
       #else if defined(TFT_DIY)
         uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
-        Serial.println("Using TFT DIY");
+        Serial.println("Using TFT DIY (join wifi)");
       #endif
       #ifdef HAS_ILI9341
         display_obj.tft.setTouch(calData);

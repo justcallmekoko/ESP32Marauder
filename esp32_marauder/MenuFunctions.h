@@ -76,6 +76,7 @@ extern Settings settings_obj;
 #define BLANK 36
 #define PINESCAN_SNIFF 37 // Use blanks icon
 #define MULTISSID_SNIFF 37 // Use blanks icon
+#define JOINED 38
 
 PROGMEM void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p);
 PROGMEM bool my_touchpad_read(lv_indev_drv_t * indev_driver, lv_indev_data_t * data);
