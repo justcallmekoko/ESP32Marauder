@@ -523,6 +523,10 @@ class WiFiScan
     String old_free_ram = "";
     String connected_network = "";
 
+    IPAddress ip_addr;
+    IPAddress gateway;
+    IPAddress subnet;
+
     String dst_mac = "ff:ff:ff:ff:ff:ff";
     byte src_mac[6] = {};
 
