@@ -760,6 +760,7 @@ void MenuFunctions::main(uint32_t currentTime)
     this->orientDisplay();
   }
   if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
+      (wifi_scan_obj.currentScanMode == WIFI_CONNECTED) ||
       (wifi_scan_obj.currentScanMode == OTA_UPDATE) ||
       (wifi_scan_obj.currentScanMode == ESP_UPDATE) ||
       (wifi_scan_obj.currentScanMode == SHOW_INFO) ||
@@ -797,6 +798,7 @@ void MenuFunctions::main(uint32_t currentTime)
 
   // Get the display buffer out of the way
   if ((wifi_scan_obj.currentScanMode != WIFI_SCAN_OFF ) &&
+      (wifi_scan_obj.currentScanMode != WIFI_CONNECTED) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_BEACON_SPAM) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_AP_SPAM) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_AUTH) &&
@@ -820,6 +822,7 @@ void MenuFunctions::main(uint32_t currentTime)
   #ifdef HAS_ILI9341
     if ((wifi_scan_obj.currentScanMode != WIFI_SCAN_OFF) &&
         (pressed) &&
+        (wifi_scan_obj.currentScanMode != WIFI_CONNECTED) &&
         (wifi_scan_obj.currentScanMode != OTA_UPDATE) &&
         (wifi_scan_obj.currentScanMode != ESP_UPDATE) &&
         (wifi_scan_obj.currentScanMode != SHOW_INFO) &&
@@ -890,6 +893,7 @@ void MenuFunctions::main(uint32_t currentTime)
     
       if ((c_btn_press) &&
           (wifi_scan_obj.currentScanMode != WIFI_SCAN_OFF) &&
+          (wifi_scan_obj.currentScanMode != WIFI_CONNECTED) &&
           (wifi_scan_obj.currentScanMode != OTA_UPDATE) &&
           (wifi_scan_obj.currentScanMode != ESP_UPDATE) &&
           (wifi_scan_obj.currentScanMode != SHOW_INFO) &&
@@ -996,6 +1000,7 @@ void MenuFunctions::main(uint32_t currentTime)
       if (menu_button > -1) {
         if (menu_button == UP_BUTTON) {
           if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
+              (wifi_scan_obj.currentScanMode == WIFI_CONNECTED) ||
               (wifi_scan_obj.currentScanMode == OTA_UPDATE)) {
             if (current_menu->selected > 0) {
               current_menu->selected--;
@@ -1034,6 +1039,7 @@ void MenuFunctions::main(uint32_t currentTime)
         }
         if (menu_button == DOWN_BUTTON) {
           if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
+              (wifi_scan_obj.currentScanMode == WIFI_CONNECTED) ||
               (wifi_scan_obj.currentScanMode == OTA_UPDATE)) {
             if (current_menu->selected < current_menu->list->size() - 1) {
               current_menu->selected++;
@@ -1079,7 +1085,8 @@ void MenuFunctions::main(uint32_t currentTime)
           current_menu->list->get(current_menu->selected).callable();
         }
         else {
-          if (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF)
+          if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
+              (wifi_scan_obj.currentScanMode == WIFI_CONNECTED))
             this->displayMenuButtons();
         }
       }
@@ -1131,6 +1138,7 @@ void MenuFunctions::main(uint32_t currentTime)
       #if !defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
         if (u_btn.justPressed()){
           if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
+              (wifi_scan_obj.currentScanMode == WIFI_CONNECTED) ||
               (wifi_scan_obj.currentScanMode == OTA_UPDATE)) {
             if (current_menu->selected > 0) {
               current_menu->selected--;
@@ -1170,6 +1178,7 @@ void MenuFunctions::main(uint32_t currentTime)
       #endif
       if (d_btn.justPressed()){
         if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
+            (wifi_scan_obj.currentScanMode == WIFI_CONNECTED) ||
             (wifi_scan_obj.currentScanMode == OTA_UPDATE)) {
           if (current_menu->selected < current_menu->list->size() - 1) {
             current_menu->selected++;
@@ -2225,8 +2234,20 @@ void MenuFunctions::RunSetup()
       for (int i = 0; i < access_points->size(); i++) {
         // This is the menu node
         this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
-          //this->changeMenu(&miniKbMenu);
-          //this->miniKeyboard(&miniKbMenu);
+          // Join WiFi using mini keyboard
+          #ifdef HAS_MINI_KB
+            this->changeMenu(&miniKbMenu);
+            String password = this->miniKeyboard(&miniKbMenu, true);
+            if (password != "") {
+              Serial.println("Using SSID: " + (String)access_points->get(i).essid + " Password: " + (String)password);
+              wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
+              wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
+              wifi_scan_obj.joinWiFi(access_points->get(i).essid, password);
+              this->changeMenu(current_menu);
+            }
+          #endif
+
+          // Join WiFi using touch screen keyboard
           #ifdef HAS_TOUCH
             wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
             wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
@@ -2853,9 +2874,11 @@ void MenuFunctions::RunSetup()
 }
 
 //#if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
-  void MenuFunctions::miniKeyboard(Menu * targetMenu) {
+  String MenuFunctions::miniKeyboard(Menu * targetMenu, bool do_pass) {
     // Prepare a char array and reset temp SSID string
     extern LinkedList<ssid>* ssids;
+
+    String ret_val = "";
 
     bool pressed = true;
 
@@ -3002,16 +3025,19 @@ void MenuFunctions::RunSetup()
                   // Exit
                   if (c_btn.isHeld()) {
                     this->changeMenu(targetMenu->parentMenu);
-                    return;
+                    return wifi_scan_obj.current_mini_kb_ssid;
                   }
                   delay(1);
                 }
+
+                if (!do_pass) {
                 // If we have a string, add it to list of SSIDs
-                if (wifi_scan_obj.current_mini_kb_ssid != "") {
-                  pressed = true;
-                  ssid s = {wifi_scan_obj.current_mini_kb_ssid, random(1, 12), {random(256), random(256), random(256), random(256), random(256), random(256)}, false};
-                  ssids->unshift(s);
-                  wifi_scan_obj.current_mini_kb_ssid = "";
+                  if (wifi_scan_obj.current_mini_kb_ssid != "") {
+                    pressed = true;
+                    ssid s = {wifi_scan_obj.current_mini_kb_ssid, random(1, 12), {random(256), random(256), random(256), random(256), random(256), random(256)}, false};
+                    ssids->unshift(s);
+                    wifi_scan_obj.current_mini_kb_ssid = "";
+                  }
                 }
               }
             #endif
@@ -3180,8 +3206,13 @@ void MenuFunctions::RunSetup()
             #ifdef HAS_MINI_KB
               display_obj.tft.println("U/D - Rem/Add Char");
               display_obj.tft.println("L/R - Prev/Nxt Char");
-              display_obj.tft.println("C - Save");
-              display_obj.tft.println("C(Hold) - Exit");
+              if (!do_pass) {
+                display_obj.tft.println("C - Save");
+                display_obj.tft.println("C(Hold) - Exit");
+              }
+              else {
+                display_obj.tft.println("C(Hold) - Enter");
+              }
             #endif
 
             #ifdef HAS_TOUCH

@@ -253,6 +253,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_SSID_CMD_B);
     Serial.println(HELP_SAVE_CMD);
     Serial.println(HELP_LOAD_CMD);
+    Serial.println(HELP_JOIN_CMD);
     
     // Bluetooth sniff/scan
     #ifdef HAS_BT
@@ -1239,6 +1240,28 @@ void CommandLine::runCommand(String input) {
         menu_function_obj.changeMenu(&menu_function_obj.infoMenu);
       #endif
       wifi_scan_obj.RunInfo();
+    }
+  }
+  else if (cmd_args.get(0) == JOIN_CMD) {
+    int ap_sw = this->argSearch(&cmd_args, "-a");
+    int pw_sw = this->argSearch(&cmd_args, "-p");
+
+    if ((ap_sw != -1) && (pw_sw != -1)) {
+      int index = cmd_args.get(ap_sw + 1).toInt();
+      String password = cmd_args.get(pw_sw + 1);
+      Serial.println("Using SSID: " + (String)access_points->get(index).essid + " Password: " + (String)password);
+      wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
+      wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
+      wifi_scan_obj.joinWiFi(access_points->get(index).essid, password);
+      #ifdef HAS_SCREEN
+        #ifdef HAS_MINI_KB
+          menu_function_obj.changeMenu(menu_function_obj.current_menu);
+        #endif
+      #endif
+    }
+    else {
+      Serial.println("You did not provide the proper args");
+      return;
     }
   }
   // Select access points or stations
