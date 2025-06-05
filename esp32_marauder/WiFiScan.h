@@ -523,6 +523,7 @@ class WiFiScan
     bool orient_display = false;
     bool wifi_initialized = false;
     bool ble_initialized = false;
+    bool wifi_connected = false;
 
     String free_ram = "";
     String old_free_ram = "";
