@@ -836,7 +836,9 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui)
   this->wifi_initialized = true;
   #ifndef HAS_TOUCH
     this->currentScanMode = WIFI_CONNECTED;
-    display_obj.tft.setTextWrap(false, false);
+    #ifdef HAS_SCREEN
+      display_obj.tft.setTextWrap(false, false);
+    #endif
   #endif
   return true;
 }
