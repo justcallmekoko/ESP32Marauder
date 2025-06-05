@@ -19,19 +19,31 @@ String CommandLine::getSerialInput() {
   String input = "";
 
   if (Serial.available() > 0)
-    input = Serial.readStringUntil('\n');
+    input = Serial.readString();
 
-  input.trim();
   return input;
 }
 
 void CommandLine::main(uint32_t currentTime) {
   String input = this->getSerialInput();
 
-  this->runCommand(input);
+  if (input == "")
+    return;
 
-  if (input != "")
-    Serial.print("> ");
+  this->cmdLine = this->cmdLine + input;
+
+  for (int i=0; i<cmdLine.length(); i++) {
+    char c = cmdLine.charAt(i);
+    if (c == '\n' || c == '\r') {
+      this->runCommand(cmdLine.substring(0,i));
+      if (i < (cmdLine.length() - 1))
+        this->cmdLine = cmdLine.substring(i+1);
+      else
+        this->cmdLine = "";
+      Serial.print("> ");
+      return;
+    }
+  }
 }
 
 LinkedList<String> CommandLine::parseCommand(String input, char* delim) {
