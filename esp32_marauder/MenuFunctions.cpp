@@ -1490,7 +1490,7 @@ void MenuFunctions::updateStatusBar()
   #endif
 
   // WiFi connection status stuff
-  if (wifi_scan_obj.currentScanMode == WIFI_CONNECTED) {
+  if (wifi_scan_obj.wifi_connected) {
     #ifdef HAS_FULL_SCREEN
       display_obj.tft.drawXBitmap(170 - 16,
                                   0,
@@ -1649,7 +1649,7 @@ void MenuFunctions::drawStatusBar()
   #endif
 
   // WiFi connection status stuff
-  if (wifi_scan_obj.currentScanMode == WIFI_CONNECTED) {
+  if (wifi_scan_obj.wifi_connected) {
     #ifdef HAS_FULL_SCREEN
       display_obj.tft.drawXBitmap(170 - 16,
                                   0,
@@ -2358,6 +2358,8 @@ void MenuFunctions::RunSetup()
   });
 
   this->addNodes(&wifiGeneralMenu, "Shutdown WiFi", TFTRED, NULL, 0, [this]() {
+    WiFi.disconnect(true);
+    delay(100);
     wifi_scan_obj.StartScan(WIFI_SCAN_OFF, TFT_RED);
     this->changeMenu(current_menu);
   });

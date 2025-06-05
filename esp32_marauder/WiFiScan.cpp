@@ -719,6 +719,14 @@ bool WiFiScan::joinWiFi(String ssid, String password)
     Serial.println("Already connected. Disconnecting...");
     WiFi.disconnect();
   }
+
+  WiFi.disconnect(true);
+  delay(100);
+  WiFi.mode(WIFI_MODE_STA);
+
+  //esp_wifi_set_mode(WIFI_IF_STA);
+
+  this->setMac();
     
   WiFi.begin(ssid.c_str(), password.c_str());
 
@@ -785,11 +793,20 @@ bool WiFiScan::joinWiFi(String ssid, String password)
   Serial.println(this->gateway);
   Serial.print("Netmask: ");
   Serial.println(this->subnet);
+  Serial.print("MAC: ");
+  Serial.println(WiFi.macAddress());
 
   #ifdef HAS_SCREEN
     #ifdef HAS_MINI_KB
       display_obj.tft.println("\nConnected!");
-      display_obj.tft.println(WiFi.localIP());
+      display_obj.tft.print("IP address: ");
+      display_obj.tft.println(this->ip_addr);
+      display_obj.tft.print("Gateway: ");
+      display_obj.tft.println(this->gateway);
+      display_obj.tft.print("Netmask: ");
+      display_obj.tft.println(this->subnet);
+      display_obj.tft.print("MAC: ");
+      display_obj.tft.println(WiFi.macAddress());
       display_obj.tft.println("Returning...");
       delay(2000);
     #endif
@@ -1004,17 +1021,19 @@ void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_
 
 bool WiFiScan::shutdownWiFi() {
   if (this->wifi_initialized) {
-    esp_wifi_set_promiscuous(false);
-    WiFi.disconnect();
-    WiFi.mode(WIFI_OFF);
+    if (!this->wifi_connected) {
+      esp_wifi_set_promiscuous(false);
+      WiFi.disconnect();
+      WiFi.mode(WIFI_OFF);
 
-    dst_mac = "ff:ff:ff:ff:ff:ff";
-  
-    esp_wifi_set_mode(WIFI_MODE_NULL);
-    esp_wifi_stop();
-    esp_wifi_restore();
-    esp_wifi_deinit();
-    esp_netif_deinit(); 
+      dst_mac = "ff:ff:ff:ff:ff:ff";
+    
+      esp_wifi_set_mode(WIFI_MODE_NULL);
+      esp_wifi_stop();
+      esp_wifi_restore();
+      esp_wifi_deinit();
+      esp_netif_deinit(); 
+    }
 
     #ifdef HAS_FLIPPER_LED
       flipper_led.offLED();
@@ -1028,7 +1047,9 @@ bool WiFiScan::shutdownWiFi() {
 
     this->_analyzer_value = 0;
   
-    this->wifi_initialized = false;
+    if (!this->wifi_connected)
+      this->wifi_initialized = false;
+
     return true;
   }
   else {
@@ -7584,4 +7605,12 @@ void WiFiScan::main(uint32_t currentTime)
       if(gps_obj.queue_enabled())
         gps_obj.disable_queue();
   #endif
+
+  if (WiFi.status() == WL_CONNECTED) {
+    this->wifi_connected = true;
+    this->wifi_initialized = true;
+  }
+  else {
+    this->wifi_connected = false;
+  }
 }
