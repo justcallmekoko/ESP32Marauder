@@ -1709,6 +1709,7 @@
 
     #define BANNER_TIME GRAPH_REFRESH
 
+    #define TFT_BLACK 0
     #define TFT_WHITE 0
     #define TFT_CYAN 0
     #define TFT_BLUE 0
