@@ -15,6 +15,7 @@ LinkedList<AccessPoint>* access_points;
 LinkedList<Station>* stations;
 LinkedList<AirTag>* airtags;
 LinkedList<Flipper>* flippers;
+LinkedList<IPAddress>* ipList;
 
 extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3){
     if (arg == 31337)
@@ -546,6 +547,7 @@ void WiFiScan::RunSetup() {
   stations = new LinkedList<Station>();
   airtags = new LinkedList<AirTag>();
   flippers = new LinkedList<Flipper>();
+  ipList = new LinkedList<IPAddress>();
   // for Pinescan
   pinescan_trackers = new LinkedList<PineScanTracker>();
   confirmed_pinescan = new LinkedList<ConfirmedPineScan>();
@@ -641,6 +643,14 @@ int WiFiScan::clearAPs() {
   while (access_points->size() > 0)
     access_points->remove(0);
   Serial.println("access_points: " + (String)access_points->size());
+  return num_cleared;
+}
+
+int WiFiScan::clearIPs() {
+  int num_cleared = ipList->size();
+  while (ipList->size() > 0)
+    ipList->remove(0);
+  Serial.println("ipList: " + (String)ipList->size());
   return num_cleared;
 }
 
@@ -958,7 +968,7 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
   else if (scan_mode == WIFI_PING_SCAN)
     RunPingScan(scan_mode, color);
 
-  WiFiScan::currentScanMode = scan_mode;
+  this->currentScanMode = scan_mode;
 }
 
 void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_string) {
@@ -1148,10 +1158,12 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   {
     this->shutdownWiFi();
 
-    this->connected_network = "";
-    this->ip_addr = IPAddress(0, 0, 0, 0);
-    this->gateway = IPAddress(0, 0, 0, 0);
-    this->subnet = IPAddress(0, 0, 0, 0);
+    if (!this->wifi_connected) {
+      this->connected_network = "";
+      this->ip_addr = IPAddress(0, 0, 0, 0);
+      this->gateway = IPAddress(0, 0, 0, 0);
+      this->subnet = IPAddress(0, 0, 0, 0);
+    }
 
     #ifdef HAS_SCREEN
       for (int i = 0; i < TFT_WIDTH; i++) {
@@ -1430,6 +1442,16 @@ void WiFiScan::RunPingScan(uint8_t scan_mode, uint16_t color)
     display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
   #endif
   this->current_scan_ip = this->gateway;
+  Serial.println("Cleared IPs: " + (String)this->clearIPs());
+  Serial.println("Starting Ping Scan with...");
+  Serial.print("IP address: ");
+  Serial.println(this->ip_addr);
+  Serial.print("Gateway: ");
+  Serial.println(this->gateway);
+  Serial.print("Netmask: ");
+  Serial.println(this->subnet);
+  Serial.print("MAC: ");
+  Serial.println(WiFi.macAddress());
   initTime = millis();
 }
 
@@ -7224,6 +7246,7 @@ void WiFiScan::pingScan() {
     //Serial.print("Checking IP: ");
     //Serial.println(this->current_scan_ip);
     if (this->isHostAlive(this->current_scan_ip)) {
+      ipList->add(this->current_scan_ip);
       display_obj.display_buffer->add(this->current_scan_ip.toString());
       Serial.println(this->current_scan_ip);
     }

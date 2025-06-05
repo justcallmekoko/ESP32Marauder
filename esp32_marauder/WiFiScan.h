@@ -589,6 +589,7 @@ class WiFiScan
     void RunSetup();
     int clearSSIDs();
     int clearAPs();
+    int clearIPs();
     int clearAirtags();
     int clearFlippers();
     int clearStations();
