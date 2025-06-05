@@ -4,6 +4,7 @@
 
 #include <Arduino.h>
 #include <vector>
+#include <WiFi.h>
 
 #include "configs.h"
 
@@ -348,6 +349,31 @@ String replaceOUIWithManufacturer(const char *sta_addr) {
 
   // Construct the new address: manufacturer + the remaining MAC address (after the first 3 bytes)
   return String(manufacturer) + mac_suffix;
+}
+
+IPAddress getNextIP(IPAddress currentIP, IPAddress subnetMask) {
+  // Convert IPAddress to uint32_t
+  uint32_t ipInt = (currentIP[0] << 24) | (currentIP[1] << 16) | (currentIP[2] << 8) | currentIP[3];
+  uint32_t maskInt = (subnetMask[0] << 24) | (subnetMask[1] << 16) | (subnetMask[2] << 8) | subnetMask[3];
+
+  uint32_t networkBase = ipInt & maskInt;
+  uint32_t broadcast = networkBase | ~maskInt;
+
+  uint32_t nextIP = ipInt + 1;
+
+  if (nextIP <= networkBase) {
+    nextIP = networkBase + 1;
+  }
+  if (nextIP >= broadcast) {
+    return IPAddress(0, 0, 0, 0); // no more IPs
+  }
+
+  return IPAddress(
+    (nextIP >> 24) & 0xFF,
+    (nextIP >> 16) & 0xFF,
+    (nextIP >> 8) & 0xFF,
+    nextIP & 0xFF
+  );
 }
 
 #endif

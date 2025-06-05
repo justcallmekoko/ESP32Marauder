@@ -15,6 +15,7 @@
 #endif
 
 #include <WiFi.h>
+#include <ESP32Ping.h>
 #include "EvilPortal.h"
 #include <math.h>
 #include "esp_wifi.h"
@@ -105,6 +106,7 @@
 #define WIFI_SCAN_PINESCAN 50
 #define WIFI_SCAN_MULTISSID 51
 #define WIFI_CONNECTED 52
+#define WIFI_PING_SCAN 53
 
 #define BASE_MULTIPLIER 4
 
@@ -423,6 +425,8 @@ class WiFiScan
       NimBLEAdvertisementData GetUniversalAdvertisementData(EBLEPayloadType type);
     #endif
 
+    void pingScan();
+    bool isHostAlive(IPAddress ip);
     String extractManufacturer(const uint8_t* payload);
     int checkMatchAP(char addr[]);
     bool beaconHasWPS(const uint8_t* payload, int len);
@@ -481,6 +485,7 @@ class WiFiScan
     void RunSwiftpairSpam(uint8_t scan_mode, uint16_t color);
     void RunLvJoinWiFi(uint8_t scan_mode, uint16_t color);
     void RunEvilPortal(uint8_t scan_mode, uint16_t color);
+    void RunPingScan(uint8_t scan_mode, uint16_t color);
     bool checkMem();
     void parseBSSID(const char* bssidStr, uint8_t* bssid);
 
@@ -526,6 +531,8 @@ class WiFiScan
     IPAddress ip_addr;
     IPAddress gateway;
     IPAddress subnet;
+
+    IPAddress current_scan_ip;
 
     String dst_mac = "ff:ff:ff:ff:ff:ff";
     byte src_mac[6] = {};

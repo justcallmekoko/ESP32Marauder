@@ -69,6 +69,13 @@ jobs:
         run: |
           find /home/runner/.arduino15/packages/esp32/hardware/
           
+      - name: Install ESP32Ping
+        uses: actions/checkout@v2
+        with:
+          repository: marian-craciunescu/ESP32Ping
+          ref: 1.6
+          path: CustomESP32Ping
+          
       - name: Install AsyncTCP
         uses: actions/checkout@v2
         with:
