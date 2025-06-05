@@ -610,6 +610,13 @@ void WiFiScan::RunSetup() {
   this->initWiFi(1);
 }
 
+bool WiFiScan::isHostAlive(IPAddress ip) {
+  if (ip != IPAddress(0, 0, 0, 0))
+    return Ping.ping(ip, 1);  // 1 try, returns true if reply received
+  else
+    return false;
+}
+
 int WiFiScan::clearStations() {
   int num_cleared = stations->size();
   stations->clear();
@@ -931,6 +938,8 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
       gps_obj.enable_queue();
     #endif
   }
+  else if (scan_mode == WIFI_PING_SCAN)
+    RunPingScan(scan_mode, color);
 
   WiFiScan::currentScanMode = scan_mode;
 }
@@ -1092,6 +1101,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   (currentScanMode == WIFI_SCAN_TARGET_AP) ||
   (currentScanMode == WIFI_SCAN_TARGET_AP_FULL) ||
   (currentScanMode == WIFI_SCAN_AP_STA) ||
+  (currentScanMode == WIFI_PING_SCAN) ||
   (currentScanMode == WIFI_SCAN_PWN) ||
   (currentScanMode == WIFI_SCAN_PINESCAN) ||
   (currentScanMode == WIFI_SCAN_MULTISSID) ||
@@ -1364,6 +1374,42 @@ void WiFiScan::parseBSSID(const char* bssidStr, uint8_t* bssid) {
   sscanf(bssidStr, "%02X:%02X:%02X:%02X:%02X:%02X",
          &bssid[0], &bssid[1], &bssid[2],
          &bssid[3], &bssid[4], &bssid[5]);
+}
+
+void WiFiScan::RunPingScan(uint8_t scan_mode, uint16_t color)
+{
+  startPcap("pingscan");
+
+  #ifdef HAS_FLIPPER_LED
+    flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
+  #elif defined(MARAUDER_M5STICKC)
+    stickc_led.sniffLED();
+  #else
+    led_obj.setMode(MODE_SNIFF);
+  #endif
+  
+  #ifdef HAS_SCREEN
+    display_obj.TOP_FIXED_AREA_2 = 48;
+    display_obj.tteBar = true;
+    display_obj.print_delay_1 = 15;
+    display_obj.print_delay_2 = 10;
+    display_obj.initScrollValues(true);
+    display_obj.tft.setTextWrap(false);
+    display_obj.tft.setTextColor(TFT_BLACK, color);
+    #ifdef HAS_FULL_SCREEN
+      display_obj.tft.fillRect(0,16,240,16, color);
+      display_obj.tft.drawCentreString("Ping Scan",120,16,2);
+    #endif
+    #ifdef HAS_ILI9341
+      display_obj.touchToExit();
+    #endif
+    display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+    display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
+  #endif
+  this->current_scan_ip = this->gateway;
+  initTime = millis();
 }
 
 void WiFiScan::RunLoadATList() {
@@ -7151,6 +7197,18 @@ void WiFiScan::packetRateLoop(uint32_t tick) {
   #endif
 }
 
+void WiFiScan::pingScan() {
+  if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
+    this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
+    //Serial.print("Checking IP: ");
+    //Serial.println(this->current_scan_ip);
+    if (this->isHostAlive(this->current_scan_ip)) {
+      display_obj.display_buffer->add(this->current_scan_ip.toString());
+      Serial.println(this->current_scan_ip);
+    }
+  }
+}
+
 
 // Function for updating scan status
 void WiFiScan::main(uint32_t currentTime)
@@ -7173,6 +7231,9 @@ void WiFiScan::main(uint32_t currentTime)
       initTime = millis();
       channelHop();
     }
+  }
+  else if (currentScanMode == WIFI_PING_SCAN) {
+    this->pingScan();
   }
   else if (currentScanMode == WIFI_SCAN_SIG_STREN) {
     #ifdef HAS_ILI9341
