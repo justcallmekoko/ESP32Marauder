@@ -376,4 +376,8 @@ IPAddress getNextIP(IPAddress currentIP, IPAddress subnetMask) {
   );
 }
 
+uint16_t getNextPort(uint16_t port) {
+  return port + 1;
+}
+
 #endif
