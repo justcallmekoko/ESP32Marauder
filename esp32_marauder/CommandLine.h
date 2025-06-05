@@ -70,6 +70,7 @@ const char PROGMEM SNIFF_DEAUTH_CMD[] = "sniffdeauth";
 const char PROGMEM SNIFF_PMKID_CMD[] = "sniffpmkid";
 const char PROGMEM STOPSCAN_CMD[] = "stopscan";
 const char PROGMEM WARDRIVE_CMD[] = "wardrive";
+const char PROGMEM PING_CMD[] = "pingscan";
 
 // WiFi attack
 const char PROGMEM ATTACK_CMD[] = "attack";
@@ -85,6 +86,7 @@ const char PROGMEM SEL_CMD[] = "select";
 const char PROGMEM SSID_CMD[] = "ssid";
 const char PROGMEM SAVE_CMD[] = "save";
 const char PROGMEM LOAD_CMD[] = "load";
+const char PROGMEM JOIN_CMD[] = "join";
 
 // Bluetooth sniff/scan
 const char PROGMEM BT_SPAM_CMD[] = "blespam";
@@ -128,8 +130,9 @@ const char PROGMEM HELP_SNIFF_MULTISSID_CMD[] = "sniffmultissid";
 const char PROGMEM HELP_SNIFF_ESP_CMD[] = "sniffesp";
 const char PROGMEM HELP_SNIFF_DEAUTH_CMD[] = "sniffdeauth";
 const char PROGMEM HELP_SNIFF_PMKID_CMD[] = "sniffpmkid [-c <channel>][-d][-l]";
-const char PROGMEM HELP_STOPSCAN_CMD[] = "stopscan";
+const char PROGMEM HELP_STOPSCAN_CMD[] = "stopscan [-f]";
 const char PROGMEM HELP_WARDRIVE_CMD[] = "wardrive [-s]";
+const char PROGMEM HELP_PING_CMD[] = "pingscan";
 
 // WiFi attack
 const char PROGMEM HELP_ATTACK_CMD[] = "attack -t <beacon [-l/-r/-a]/deauth [-c]/[-s <src mac>] [-d <dst mac>]/probe/rickroll>";
@@ -145,6 +148,7 @@ const char PROGMEM HELP_SSID_CMD_A[] = "ssid -a [-g <count>/-n <name>]";
 const char PROGMEM HELP_SSID_CMD_B[] = "ssid -r <index>";
 const char PROGMEM HELP_SAVE_CMD[] = "save -a/-s";
 const char PROGMEM HELP_LOAD_CMD[] = "load -a/-s";
+const char PROGMEM HELP_JOIN_CMD[] = "join -a <index> -p <password>";
 
 // Bluetooth sniff/scan
 const char PROGMEM HELP_BT_SNIFF_CMD[] = "sniffbt [-t] <airtag/flipper>";

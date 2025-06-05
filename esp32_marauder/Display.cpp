@@ -11,7 +11,7 @@ Display::Display()
 {
 }
 
-int8_t Display::menuButton(uint16_t *x, uint16_t *y, bool pressed) {
+int8_t Display::menuButton(uint16_t *x, uint16_t *y, bool pressed, bool check_hold) {
   #ifdef HAS_ILI9341
     for (uint8_t b = BUTTON_ARRAY_LEN; b < BUTTON_ARRAY_LEN + 3; b++) {
       if (pressed && this->key[b].contains(*x, *y)) {
@@ -22,8 +22,15 @@ int8_t Display::menuButton(uint16_t *x, uint16_t *y, bool pressed) {
     }
 
     for (uint8_t b = BUTTON_ARRAY_LEN; b < BUTTON_ARRAY_LEN + 3; b++) {
-      if ((this->key[b].justReleased()) && (!pressed)) {
-        return b - BUTTON_ARRAY_LEN;
+      if (!check_hold) {
+        if ((this->key[b].justReleased()) && (!pressed)) {
+          return b - BUTTON_ARRAY_LEN;
+        }
+      }
+      else {
+        if ((this->key[b].isPressed())) {
+          return b - BUTTON_ARRAY_LEN;
+        }
       }
     }
 
@@ -78,6 +85,28 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
   #endif
 
   return 0;
+}
+
+bool Display::isTouchHeld(uint16_t threshold) {
+  static unsigned long touchStartTime = 0;
+  static bool touchHeld = false;
+  uint16_t x, y;
+
+  if (this->updateTouch(&x, &y, threshold)) {
+    // Touch detected
+    if (touchStartTime == 0) {
+      touchStartTime = millis();  // First touch timestamp
+    } else if (!touchHeld && millis() - touchStartTime >= 1000) {
+      touchHeld = true;  // Held for at least 1000ms
+      return true;
+    }
+  } else {
+    // Touch released
+    touchStartTime = 0;
+    touchHeld = false;
+  }
+
+  return false;
 }
 
 // Function to prepare the display and the menus

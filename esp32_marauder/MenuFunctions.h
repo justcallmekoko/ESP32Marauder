@@ -76,6 +76,7 @@ extern Settings settings_obj;
 #define BLANK 36
 #define PINESCAN_SNIFF 37 // Use blanks icon
 #define MULTISSID_SNIFF 37 // Use blanks icon
+#define JOINED 38
 
 PROGMEM void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p);
 PROGMEM bool my_touchpad_read(lv_indev_drv_t * indev_driver, lv_indev_data_t * data);
@@ -84,6 +85,7 @@ PROGMEM static lv_disp_buf_t disp_buf;
 PROGMEM static lv_color_t buf[LV_HOR_RES_MAX * 10];
 
 PROGMEM static void ta_event_cb(lv_obj_t * ta, lv_event_t event);
+PROGMEM static void join_wifi_keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event);
 PROGMEM static void add_ssid_keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event);
 PROGMEM static void html_list_cb(lv_obj_t * btn, lv_event_t event);
 PROGMEM static void ap_list_cb(lv_obj_t * btn, lv_event_t event);
@@ -213,9 +215,9 @@ class MenuFunctions
     void displaySetting(String key, Menu* menu, int index);
     void buttonSelected(int b, int x = -1);
     void buttonNotSelected(int b, int x = -1);
-    #if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
-      void miniKeyboard(Menu * targetMenu);
-    #endif
+    //#if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
+      String miniKeyboard(Menu * targetMenu, bool do_pass = false);
+    //#endif
 
   public:
     MenuFunctions();
@@ -249,6 +251,7 @@ class MenuFunctions
 
     String loaded_file = "";
 
+    void joinWiFiGFX(String essid);
     void setGraphScale(float scale);
     void initLVGL();
     void deinitLVGL();
