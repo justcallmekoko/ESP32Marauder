@@ -1,7 +1,41 @@
 #include "settings.h"
 
+#define DEFAULT_SETTING_FILE "/settings.json"
+
 String Settings::getSettingsString() {
   return this->json_settings_string;
+}
+
+bool Settings::begin(fs::FS fs, String filename) {
+  Serial.println("in maurader setting");
+  if (!fs.exists(filename))
+  {
+    Serial.println("not exist creating default");
+    if (!this->createDefaultSettings(fs, filename))
+    {
+      return false;
+    }
+  }
+
+  Serial.println("opening file setting");
+  File settingsFile = fs.open(filename, FILE_READ);
+  if (!settingsFile)
+  {
+    Serial.println("file bad");
+    return false;
+  }
+
+  Serial.println("deserialising setting");
+
+  String json_string;
+  DynamicJsonDocument jsonBuffer(1024);
+  DeserializationError error = deserializeJson(jsonBuffer, settingsFile);
+  serializeJson(jsonBuffer, json_string);
+  this->json_settings_string = json_string;
+  
+  Serial.println("finish maurader setting");
+
+  return true;
 }
 
 bool Settings::begin() {
@@ -12,10 +46,10 @@ bool Settings::begin() {
 
   File settingsFile;
 
-  //SPIFFS.remove("/settings.json"); // NEED TO REMOVE THIS LINE
+  //SPIFFS.remove(DEFAULT_SETTING_FILE); // NEED TO REMOVE THIS LINE
 
-  if (SPIFFS.exists("/settings.json")) {
-    settingsFile = SPIFFS.open("/settings.json", FILE_READ);
+  if (SPIFFS.exists(DEFAULT_SETTING_FILE)) {
+    settingsFile = SPIFFS.open(DEFAULT_SETTING_FILE, FILE_READ);
     
     if (!settingsFile) {
       settingsFile.close();
@@ -240,9 +274,13 @@ void Settings::printJsonSettings(String json_string) {
 }
 
 bool Settings::createDefaultSettings(fs::FS &fs) {
+  createDefaultSettings(fs, DEFAULT_SETTING_FILE);
+}
+
+bool Settings::createDefaultSettings(fs::FS &fs, String filename) {
   Serial.println(F("Creating default settings file: settings.json"));
   
-  File settingsFile = fs.open("/settings.json", FILE_WRITE);
+  File settingsFile = fs.open(filename, FILE_WRITE);
 
   if (!settingsFile) {
     Serial.println(F("Failed to create settings file"));
