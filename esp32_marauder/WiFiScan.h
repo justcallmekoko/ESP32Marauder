@@ -231,9 +231,6 @@ class WiFiScan
     // Settings
     uint mac_history_cursor = 0;
     uint8_t channel_hop_delay = 1;
-    bool force_pmkid = false;
-    bool force_probe = false;
-    bool save_pcap = false;
   
     int x_pos; //position along the graph x axis
     float y_pos_x; //current graph y axis position of X value
@@ -507,6 +504,10 @@ class WiFiScan
     uint32_t eapol_frames = 0;
     int8_t min_rssi = 0;
     int8_t max_rssi = -128;
+
+    bool force_pmkid = false;
+    bool force_probe = false;
+    bool save_pcap = false;
 
     String analyzer_name_string = "";
     

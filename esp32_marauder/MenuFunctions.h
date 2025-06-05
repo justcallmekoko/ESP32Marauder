@@ -77,6 +77,7 @@ extern Settings settings_obj;
 #define PINESCAN_SNIFF 37 // Use blanks icon
 #define MULTISSID_SNIFF 37 // Use blanks icon
 #define JOINED 38
+#define FORCE 39
 
 PROGMEM void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p);
 PROGMEM bool my_touchpad_read(lv_indev_drv_t * indev_driver, lv_indev_data_t * data);
@@ -165,12 +166,14 @@ class MenuFunctions
 
     // WiFi menu stuff
     Menu wifiSnifferMenu;
+    Menu wifiScannerMenu;
     Menu wifiAttackMenu;
     #ifdef HAS_GPS
       Menu wardrivingMenu;
     #endif
     Menu wifiGeneralMenu;
     Menu wifiAPMenu;
+    Menu wifiIPMenu;
     #ifdef HAS_BT
       Menu airtagMenu;
     #endif
