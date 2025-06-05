@@ -107,6 +107,7 @@
 #define WIFI_SCAN_MULTISSID 51
 #define WIFI_CONNECTED 52
 #define WIFI_PING_SCAN 53
+#define WIFI_PORT_SCAN_ALL 54
 
 #define BASE_MULTIPLIER 4
 
@@ -120,6 +121,8 @@
 #define MAX_PINESCAN_ENTRIES 100 // PineScan Max Entries
 
 #define MAX_CHANNEL     14
+
+#define MAX_PORT 65535
 
 #define WIFI_SECURITY_OPEN   0
 #define WIFI_SECURITY_WEP    1
@@ -246,6 +249,8 @@ class WiFiScan
     bool do_break = false;
 
     bool wsl_bypass_enabled = false;
+
+    bool scan_complete = false;
 
     //int num_beacon = 0; // GREEN
     //int num_probe = 0; // BLUE
@@ -423,7 +428,9 @@ class WiFiScan
     #endif
 
     void pingScan();
+    void portScan(uint8_t scan_mode = WIFI_PORT_SCAN_ALL);
     bool isHostAlive(IPAddress ip);
+    bool checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout = 100);
     String extractManufacturer(const uint8_t* payload);
     int checkMatchAP(char addr[]);
     bool beaconHasWPS(const uint8_t* payload, int len);
@@ -483,6 +490,7 @@ class WiFiScan
     void RunLvJoinWiFi(uint8_t scan_mode, uint16_t color);
     void RunEvilPortal(uint8_t scan_mode, uint16_t color);
     void RunPingScan(uint8_t scan_mode, uint16_t color);
+    void RunPortScanAll(uint8_t scan_mode, uint16_t color);
     bool checkMem();
     void parseBSSID(const char* bssidStr, uint8_t* bssid);
 
@@ -535,6 +543,8 @@ class WiFiScan
     IPAddress subnet;
 
     IPAddress current_scan_ip;
+
+    uint16_t current_scan_port = 1;
 
     String dst_mac = "ff:ff:ff:ff:ff:ff";
     byte src_mac[6] = {};
