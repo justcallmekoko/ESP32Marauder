@@ -221,6 +221,7 @@ void CommandLine::runCommand(String input) {
     // WiFi sniff/scan
     Serial.println(HELP_EVIL_PORTAL_CMD);
     Serial.println(HELP_PACKET_COUNT_CMD);
+    Serial.println(HELP_PING_CMD);
     Serial.println(HELP_SIGSTREN_CMD);
     Serial.println(HELP_SCAN_ALL_CMD);
     Serial.println(HELP_SCANAP_CMD);
@@ -283,8 +284,15 @@ void CommandLine::runCommand(String input) {
     //  web_obj.shutdownServer();
     //  return;
     //}
+
+    int f_arg = this->argSearch(&cmd_args, "-f");
     
     uint8_t old_scan_mode=wifi_scan_obj.currentScanMode;
+
+    if (f_arg != -1) {
+      WiFi.disconnect(true);
+      delay(100);
+    }
 
     wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
 
@@ -1161,6 +1169,18 @@ void CommandLine::runCommand(String input) {
     }
   }
 
+  if (wifi_scan_obj.wifi_connected) {
+    // Ping Scan
+    if (cmd_args.get(0) == PING_CMD) {
+      Serial.println("Starting Ping Scan. Stop with " + (String)STOPSCAN_CMD);
+      #ifdef HAS_SCREEN
+        display_obj.clearScreen();
+        menu_function_obj.drawStatusBar();
+      #endif
+      wifi_scan_obj.StartScan(WIFI_PING_SCAN, TFT_GREEN);
+    }
+  }
+
 
   int count_selected = 0;
   //// WiFi aux commands
@@ -1250,9 +1270,9 @@ void CommandLine::runCommand(String input) {
       int index = cmd_args.get(ap_sw + 1).toInt();
       String password = cmd_args.get(pw_sw + 1);
       Serial.println("Using SSID: " + (String)access_points->get(index).essid + " Password: " + (String)password);
-      wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
-      wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
-      wifi_scan_obj.joinWiFi(access_points->get(index).essid, password);
+      //wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
+      //wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
+      wifi_scan_obj.joinWiFi(access_points->get(index).essid, password, false);
       #ifdef HAS_SCREEN
         #ifdef HAS_MINI_KB
           menu_function_obj.changeMenu(menu_function_obj.current_menu);

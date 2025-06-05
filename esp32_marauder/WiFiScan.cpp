@@ -708,18 +708,20 @@ int WiFiScan::generateSSIDs(int count) {
   return num_gen;
 }
 
-bool WiFiScan::joinWiFi(String ssid, String password)
+bool WiFiScan::joinWiFi(String ssid, String password, bool gui)
 {
   static const char * btns[] ={text16, ""};
   int count = 0;
   
   if ((WiFi.status() == WL_CONNECTED) && (ssid == connected_network) && (ssid != "")) {
     #ifdef HAS_TOUCH
-      lv_obj_t * mbox1 = lv_msgbox_create(lv_scr_act(), NULL);
-      lv_msgbox_set_text(mbox1, text_table4[2]);
-      lv_msgbox_add_btns(mbox1, btns);
-      lv_obj_set_width(mbox1, 200);
-      lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); //Align to the corner
+      if (gui) {
+        lv_obj_t * mbox1 = lv_msgbox_create(lv_scr_act(), NULL);
+        lv_msgbox_set_text(mbox1, text_table4[2]);
+        lv_msgbox_add_btns(mbox1, btns);
+        lv_obj_set_width(mbox1, 200);
+        lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); //Align to the corner
+      }
     #endif
     this->wifi_initialized = true;
     this->currentScanMode = WIFI_CONNECTED;
@@ -742,11 +744,13 @@ bool WiFiScan::joinWiFi(String ssid, String password)
 
   #ifdef HAS_SCREEN
     #ifdef HAS_MINI_KB
-      display_obj.clearScreen();
-      display_obj.tft.setCursor(0, TFT_HEIGHT / 2);
-      display_obj.tft.setTextSize(1);
-      display_obj.tft.print("Connecting");
-      display_obj.tft.setTextWrap(true, false);
+      if (gui) {
+        display_obj.clearScreen();
+        display_obj.tft.setCursor(0, TFT_HEIGHT / 2);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.print("Connecting");
+        display_obj.tft.setTextWrap(true, false);
+      }
     #endif
   #endif
 
@@ -756,7 +760,9 @@ bool WiFiScan::joinWiFi(String ssid, String password)
     Serial.print(".");
     #ifdef HAS_SCREEN
       #ifdef HAS_MINI_KB
-        display_obj.tft.print(".");
+        if (gui) {
+          display_obj.tft.print(".");
+        }
       #endif
     #endif
     count++;
@@ -765,21 +771,27 @@ bool WiFiScan::joinWiFi(String ssid, String password)
       Serial.println("\nCould not connect to WiFi network");
       #ifdef HAS_SCREEN
         #ifdef HAS_MINI_KB
-          display_obj.tft.println("\nFailed to connect");
-          delay(1000);
+          if (gui) {
+            display_obj.tft.println("\nFailed to connect");
+            delay(1000);
+          }
         #endif
       #endif
       #ifdef HAS_TOUCH
-        lv_obj_t * mbox1 = lv_msgbox_create(lv_scr_act(), NULL);
-        lv_msgbox_set_text(mbox1, text_table4[3]);
-        lv_msgbox_add_btns(mbox1, btns);
-        lv_obj_set_width(mbox1, 200);
-        //lv_obj_set_event_cb(mbox1, event_handler);
-        lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); //Align to the corner
+        if (gui) {
+          lv_obj_t * mbox1 = lv_msgbox_create(lv_scr_act(), NULL);
+          lv_msgbox_set_text(mbox1, text_table4[3]);
+          lv_msgbox_add_btns(mbox1, btns);
+          lv_obj_set_width(mbox1, 200);
+          //lv_obj_set_event_cb(mbox1, event_handler);
+          lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); //Align to the corner
+        }
       #endif
       this->wifi_initialized = true;
       this->StartScan(WIFI_SCAN_OFF, TFT_BLACK);
-      display_obj.tft.setTextWrap(false, false);
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextWrap(false, false);
+      #endif
       return false;
     }
   }
@@ -7247,7 +7259,9 @@ void WiFiScan::pingScan() {
     //Serial.println(this->current_scan_ip);
     if (this->isHostAlive(this->current_scan_ip)) {
       ipList->add(this->current_scan_ip);
-      display_obj.display_buffer->add(this->current_scan_ip.toString());
+      #ifdef HAS_SCREEN
+        display_obj.display_buffer->add(this->current_scan_ip.toString());
+      #endif
       Serial.println(this->current_scan_ip);
     }
   }

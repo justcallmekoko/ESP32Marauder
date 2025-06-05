@@ -600,7 +600,7 @@ class WiFiScan
     bool shutdownWiFi();
     bool shutdownBLE();
     bool scanning();
-    bool joinWiFi(String ssid, String password);
+    bool joinWiFi(String ssid, String password, bool gui = true);
     String getStaMAC();
     String getApMAC();
     String freeRAM();
