@@ -1428,7 +1428,7 @@ void WiFiScan::parseBSSID(const char* bssidStr, uint8_t* bssid) {
 
 void WiFiScan::RunPingScan(uint8_t scan_mode, uint16_t color)
 {
-  startPcap("pingscan");
+  startLog("pingscan");
 
   #ifdef HAS_FLIPPER_LED
     flipper_led.sniffLED();
@@ -1469,13 +1469,26 @@ void WiFiScan::RunPingScan(uint8_t scan_mode, uint16_t color)
   Serial.println(this->subnet);
   Serial.print("MAC: ");
   Serial.println(WiFi.macAddress());
+
+  buffer_obj.append("Starting Ping Scan with...");
+  buffer_obj.append("\nSSID: " + (String)this->connected_network);
+  buffer_obj.append("\nIP address: ");
+  buffer_obj.append(this->ip_addr.toString());
+  buffer_obj.append("\nGateway: ");
+  buffer_obj.append(this->gateway.toString());
+  buffer_obj.append("\nNetmask: ");
+  buffer_obj.append(this->subnet.toString());
+  buffer_obj.append("\nMAC: ");
+  buffer_obj.append((String)WiFi.macAddress());
+  buffer_obj.append("\n");
+
   this->scan_complete = false;
   initTime = millis();
 }
 
 void WiFiScan::RunPortScanAll(uint8_t scan_mode, uint16_t color)
 {
-  startPcap("portscan");
+  startLog("portscan");
 
   #ifdef HAS_FLIPPER_LED
     flipper_led.sniffLED();
@@ -1517,6 +1530,19 @@ void WiFiScan::RunPortScanAll(uint8_t scan_mode, uint16_t color)
   Serial.println(this->subnet);
   Serial.print("MAC: ");
   Serial.println(WiFi.macAddress());
+
+  buffer_obj.append("Starting Port Scan with...");
+  buffer_obj.append("\nSSID: " + (String)this->connected_network);
+  buffer_obj.append("\nIP address: ");
+  buffer_obj.append(this->ip_addr.toString());
+  buffer_obj.append("\nGateway: ");
+  buffer_obj.append(this->gateway.toString());
+  buffer_obj.append("\nNetmask: ");
+  buffer_obj.append(this->subnet.toString());
+  buffer_obj.append("\nMAC: ");
+  buffer_obj.append((String)WiFi.macAddress());
+  buffer_obj.append("\n");
+
   this->scan_complete = false;
   initTime = millis();
 }
@@ -7321,16 +7347,26 @@ bool WiFiScan::checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout) {
 }
 
 void WiFiScan::pingScan() {
+  String display_string = "";
+  String output_line = "";
   if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
     this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
-    //Serial.print("Checking IP: ");
-    //Serial.println(this->current_scan_ip);
+    
+    // Check if IP is alive
     if (this->isHostAlive(this->current_scan_ip)) {
+      output_line = this->current_scan_ip.toString();
+      display_string.concat(output_line);
+      uint8_t temp_len = display_string.length();
+      for (uint8_t i = 0; i < 40 - temp_len; i++)
+      {
+        display_string.concat(" ");
+      }
       ipList->add(this->current_scan_ip);
       #ifdef HAS_SCREEN
-        display_obj.display_buffer->add(this->current_scan_ip.toString());
+        display_obj.display_buffer->add(display_string);
       #endif
-      Serial.println(this->current_scan_ip);
+      buffer_obj.append(output_line + "\n");
+      Serial.println(output_line);
     }
   }
   else {
@@ -7344,6 +7380,7 @@ void WiFiScan::pingScan() {
 }
 
 void WiFiScan::portScan(uint8_t scan_mode) {
+  String display_string = "";
   if (scan_mode == WIFI_PORT_SCAN_ALL) {
     if (this->current_scan_port < MAX_PORT) {
       this->current_scan_port = getNextPort(this->current_scan_port);
@@ -7354,10 +7391,18 @@ void WiFiScan::portScan(uint8_t scan_mode) {
         Serial.println(this->current_scan_port);
       }
       if (this->checkHostPort(this->current_scan_ip, this->current_scan_port, 100)) {
+        String output_line = this->current_scan_ip.toString() + ": " + (String)this->current_scan_port;
+        display_string.concat(output_line);
+        uint8_t temp_len = display_string.length();
+        for (uint8_t i = 0; i < 40 - temp_len; i++)
+        {
+          display_string.concat(" ");
+        }
         #ifdef HAS_SCREEN
-          display_obj.display_buffer->add(this->current_scan_ip.toString() + ": " + (String)this->current_scan_port);
+          display_obj.display_buffer->add(display_string);
         #endif
-        Serial.println(this->current_scan_ip.toString() + ": " + (String)this->current_scan_port);
+        Serial.println(output_line);
+        buffer_obj.append(output_line + "\n");
       }
     }
     else {
