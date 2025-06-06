@@ -847,6 +847,7 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_TARGET_AP_FULL) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA) ||
           (wifi_scan_obj.currentScanMode == WIFI_PING_SCAN) ||
+          (wifi_scan_obj.currentScanMode == WIFI_PORT_SCAN_ALL) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_PWN) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_PINESCAN) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_MULTISSID) ||
@@ -921,6 +922,7 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_TARGET_AP_FULL) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA) ||
             (wifi_scan_obj.currentScanMode == WIFI_PING_SCAN) ||
+            (wifi_scan_obj.currentScanMode == WIFI_PORT_SCAN_ALL) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_PWN) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_PINESCAN) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_MULTISSID) ||
@@ -1418,7 +1420,9 @@ void MenuFunctions::updateStatusBar()
     #ifndef HAS_PSRAM
       display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", 100, 0, 2);
     #else
-      display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%" + " P:" + String(getPSRAMUsagePercent()) + "%", 100, 0, 1);
+      //display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%" + " P:" + String(getPSRAMUsagePercent()) + "%", 100, 0, 1);
+      display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", 100, 0, 1);
+      display_obj.tft.drawString("P:" + String(getPSRAMUsagePercent()) + "%", 100, 8, 1);
     #endif
     //display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", 100, 0, 2);
   #endif
@@ -1511,6 +1515,29 @@ void MenuFunctions::updateStatusBar()
                                   TFT_DARKGREY);
     #endif
   }
+
+  // Force PMKID stuff
+  if (wifi_scan_obj.force_pmkid) {
+    #ifdef HAS_FULL_SCREEN
+      display_obj.tft.drawXBitmap(170 - (16 * 2),
+                                  0,
+                                  menu_icons[FORCE],
+                                  16,
+                                  16,
+                                  STATUSBAR_COLOR,
+                                  TFT_GREEN);
+    #endif
+  } else {
+    #ifdef HAS_FULL_SCREEN
+      display_obj.tft.drawXBitmap(170 - (16 * 2),
+                                  0,
+                                  menu_icons[FORCE],
+                                  16,
+                                  16,
+                                  STATUSBAR_COLOR,
+                                  TFT_DARKGREY);
+    #endif
+  }
 }
 
 void MenuFunctions::drawStatusBar()
@@ -1576,7 +1603,9 @@ void MenuFunctions::drawStatusBar()
     #ifndef HAS_PSRAM
       display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", 100, 0, 2);
     #else
-      display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%" + " P:" + String(getPSRAMUsagePercent()) + "%", 100, 0, 1);
+      //display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%" + " P:" + String(getPSRAMUsagePercent()) + "%", 100, 0, 1);
+      display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", 100, 0, 1);
+      display_obj.tft.drawString("P:" + String(getPSRAMUsagePercent()) + "%", 100, 8, 1);
     #endif
     //display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", 100, 0, 2);
   #endif
@@ -1670,6 +1699,29 @@ void MenuFunctions::drawStatusBar()
                                   TFT_DARKGREY);
     #endif
   }
+
+  // Force PMKID stuff
+  if (wifi_scan_obj.force_pmkid) {
+    #ifdef HAS_FULL_SCREEN
+      display_obj.tft.drawXBitmap(170 - (16 * 2),
+                                  0,
+                                  menu_icons[FORCE],
+                                  16,
+                                  16,
+                                  STATUSBAR_COLOR,
+                                  TFT_GREEN);
+    #endif
+  } else {
+    #ifdef HAS_FULL_SCREEN
+      display_obj.tft.drawXBitmap(170 - (16 * 2),
+                                  0,
+                                  menu_icons[FORCE],
+                                  16,
+                                  16,
+                                  STATUSBAR_COLOR,
+                                  TFT_DARKGREY);
+    #endif
+  }
 }
 
 void MenuFunctions::orientDisplay()
@@ -1747,6 +1799,7 @@ void MenuFunctions::RunSetup()
   extern LinkedList<AccessPoint>* access_points;
   extern LinkedList<Station>* stations;
   extern LinkedList<AirTag>* airtags;
+  extern LinkedList<IPAddress>* ipList;
 
   this->disable_touch = false;
   
@@ -1779,12 +1832,14 @@ void MenuFunctions::RunSetup()
 
   // WiFi menu stuff
   wifiSnifferMenu.list = new LinkedList<MenuNode>();
+  wifiScannerMenu.list = new LinkedList<MenuNode>();
   wifiAttackMenu.list = new LinkedList<MenuNode>();
   #ifdef HAS_GPS
     wardrivingMenu.list = new LinkedList<MenuNode>();
   #endif
   wifiGeneralMenu.list = new LinkedList<MenuNode>();
   wifiAPMenu.list = new LinkedList<MenuNode>();
+  wifiIPMenu.list = new LinkedList<MenuNode>();
   apInfoMenu.list = new LinkedList<MenuNode>();
   setMacMenu.list = new LinkedList<MenuNode>();
   genAPMacMenu.list = new LinkedList<MenuNode>();
@@ -1838,6 +1893,7 @@ void MenuFunctions::RunSetup()
   settingsMenu.name = text_table1[18];
   bluetoothMenu.name = text_table1[19];
   wifiSnifferMenu.name = text_table1[20];
+  wifiScannerMenu.name = "Scanners";
   wifiAttackMenu.name = text_table1[21];
   wifiGeneralMenu.name = text_table1[22];
   saveFileMenu.name = "Save/Load Files";
@@ -1854,6 +1910,7 @@ void MenuFunctions::RunSetup()
   clearSSIDsMenu.name = text_table1[28];
   clearAPsMenu.name = text_table1[29];
   wifiAPMenu.name = "Access Points";
+  wifiIPMenu.name = "Active IPs";
   apInfoMenu.name = "AP Info";
   setMacMenu.name = "Set MACs";
   genAPMacMenu.name = "Generate AP MAC";
@@ -1900,6 +1957,9 @@ void MenuFunctions::RunSetup()
   this->addNodes(&wifiMenu, text_table1[31], TFTYELLOW, NULL, SNIFFERS, [this]() {
     this->changeMenu(&wifiSnifferMenu);
   });
+  this->addNodes(&wifiMenu, "Scanners", TFTORANGE, NULL, SCANNERS, [this]() {
+    this->changeMenu(&wifiScannerMenu);
+  });
   #ifdef HAS_GPS
     this->addNodes(&wifiMenu, "Wardriving", TFTGREEN, NULL, BEACON_SNIFF, [this]() {
       this->changeMenu(&wardrivingMenu);
@@ -1910,6 +1970,37 @@ void MenuFunctions::RunSetup()
   });
   this->addNodes(&wifiMenu, text_table1[33], TFTPURPLE, NULL, GENERAL_APPS, [this]() {
     this->changeMenu(&wifiGeneralMenu);
+  });
+
+  // Build WiFi scanner Menu
+  wifiScannerMenu.parentMenu = &wifiMenu; // Main Menu is second menu parent
+  this->addNodes(&wifiScannerMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(wifiScannerMenu.parentMenu);
+  });
+  this->addNodes(&wifiScannerMenu, "Ping Scan", TFTGREEN, NULL, SCANNERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_PING_SCAN, TFT_CYAN);
+  });
+  this->addNodes(&wifiScannerMenu, "Port Scan All", TFTMAGENTA, NULL, BEACON_LIST, [this](){
+    // Add the back button
+    wifiIPMenu.list->clear();
+      this->addNodes(&wifiIPMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+      this->changeMenu(wifiIPMenu.parentMenu);
+    });
+
+    // Populate the menu with buttons
+    for (int i = 0; i < ipList->size(); i++) {
+      // This is the menu node
+      this->addNodes(&wifiIPMenu, ipList->get(i).toString(), TFTBLUE, NULL, 255, [this, i](){
+        Serial.println("Selected: " + ipList->get(i).toString());
+        wifi_scan_obj.current_scan_ip = ipList->get(i);
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_PORT_SCAN_ALL, TFT_BLUE);
+      });
+    }
+    this->changeMenu(&wifiIPMenu);
   });
 
   // Build WiFi sniffer Menu
@@ -2019,11 +2110,6 @@ void MenuFunctions::RunSetup()
     wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_CYAN);
   });
   //#endif
-  this->addNodes(&wifiSnifferMenu, "Ping Scan", TFTGREEN, NULL, PROBE_SNIFF, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_PING_SCAN, TFT_CYAN);
-  });
 
   // Build Wardriving menu
   #ifdef HAS_GPS
@@ -2243,6 +2329,11 @@ void MenuFunctions::RunSetup()
     wifiAPMenu.parentMenu = &wifiGeneralMenu;
     this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
       this->changeMenu(wifiAPMenu.parentMenu);
+    });
+
+    wifiIPMenu.parentMenu = &wifiScannerMenu;
+    this->addNodes(&wifiIPMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+      this->changeMenu(wifiIPMenu.parentMenu);
     });
 
 
@@ -2894,6 +2985,9 @@ void MenuFunctions::RunSetup()
       settings_obj.toggleSetting(settings_obj.setting_index_to_name(i));
       this->changeMenu(&specSettingMenu);
       this->displaySetting(settings_obj.setting_index_to_name(i), &settingsMenu, i + 1);
+      wifi_scan_obj.force_pmkid = settings_obj.loadSetting<bool>(text_table4[5]);
+      wifi_scan_obj.force_probe = settings_obj.loadSetting<bool>(text_table4[6]);
+      wifi_scan_obj.save_pcap = settings_obj.loadSetting<bool>(text_table4[7]);
     }, settings_obj.loadSetting<bool>(settings_obj.setting_index_to_name(i)));
   }
 

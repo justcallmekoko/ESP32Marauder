@@ -222,6 +222,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_EVIL_PORTAL_CMD);
     Serial.println(HELP_PACKET_COUNT_CMD);
     Serial.println(HELP_PING_CMD);
+    Serial.println(HELP_PORT_SCAN_CMD);
     Serial.println(HELP_SIGSTREN_CMD);
     Serial.println(HELP_SCAN_ALL_CMD);
     Serial.println(HELP_SCANAP_CMD);
@@ -249,6 +250,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_LIST_AP_CMD_B);
     Serial.println(HELP_LIST_AP_CMD_C);
     Serial.println(HELP_LIST_AP_CMD_D);
+    Serial.println(HELP_LIST_AP_CMD_E);
     Serial.println(HELP_SEL_CMD_A);
     Serial.println(HELP_SSID_CMD_A);
     Serial.println(HELP_SSID_CMD_B);
@@ -1179,6 +1181,40 @@ void CommandLine::runCommand(String input) {
       #endif
       wifi_scan_obj.StartScan(WIFI_PING_SCAN, TFT_GREEN);
     }
+
+    // Port Scan
+    if (cmd_args.get(0) == PORT_SCAN_CMD) {
+      int all_sw = this->argSearch(&cmd_args, "-a");
+      int ip_sw = this->argSearch(&cmd_args, "-t");
+
+      // Check they specified ip index
+      if (ip_sw != -1) {
+        int ip_index = cmd_args.get(ip_sw + 1).toInt();
+
+        // Check provided index is in list
+        if (ip_index < ipList->size()) {
+
+          // Full port scan
+          if (all_sw != -1) {
+            Serial.println("Selected: " + ipList->get(ip_index).toString());
+            wifi_scan_obj.current_scan_ip = ipList->get(ip_index);
+            #ifdef HAS_SCREEN
+              display_obj.clearScreen();
+              menu_function_obj.drawStatusBar();
+            #endif
+            wifi_scan_obj.StartScan(WIFI_PORT_SCAN_ALL, TFT_BLUE);
+          }
+        }
+        else {
+          Serial.println("The IP index specified is out of range");
+          return;
+        }
+      }
+      else {
+        Serial.println("You did not specify an IP index");
+        return;
+      }
+    }
   }
 
 
@@ -1190,6 +1226,7 @@ void CommandLine::runCommand(String input) {
     int ss_sw = this->argSearch(&cmd_args, "-s");
     int cl_sw = this->argSearch(&cmd_args, "-c");
     int at_sw = this->argSearch(&cmd_args, "-t");
+    int ip_sw = this->argSearch(&cmd_args, "-i");
 
     // List APs
     if (ap_sw != -1) {
@@ -1202,6 +1239,12 @@ void CommandLine::runCommand(String input) {
           Serial.println("[" + (String)i + "][CH:" + (String)access_points->get(i).channel + "] " + access_points->get(i).essid + " " + (String)access_points->get(i).rssi);
       }
       this->showCounts(count_selected);
+    }
+    // List IPs
+    else if (ip_sw != -1) {
+      for (int i = 0; i < ipList->size(); i++) {
+        Serial.println("[" + (String)i + "] " + ipList->get(i).toString());
+      }
     }
     // List SSIDs
     else if (ss_sw != -1) {
