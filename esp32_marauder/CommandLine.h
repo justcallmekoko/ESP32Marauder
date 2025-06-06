@@ -34,6 +34,7 @@ extern LinkedList<AccessPoint>* access_points;
 extern LinkedList<AirTag>* airtags;
 extern LinkedList<ssid>* ssids;
 extern LinkedList<Station>* stations;
+extern LinkedList<IPAddress>* ipList;
 extern const String PROGMEM version_number;
 extern const String PROGMEM board_target;
 
@@ -71,6 +72,7 @@ const char PROGMEM SNIFF_PMKID_CMD[] = "sniffpmkid";
 const char PROGMEM STOPSCAN_CMD[] = "stopscan";
 const char PROGMEM WARDRIVE_CMD[] = "wardrive";
 const char PROGMEM PING_CMD[] = "pingscan";
+const char PROGMEM PORT_SCAN_CMD[] = "portscan";
 
 // WiFi attack
 const char PROGMEM ATTACK_CMD[] = "attack";
@@ -133,6 +135,7 @@ const char PROGMEM HELP_SNIFF_PMKID_CMD[] = "sniffpmkid [-c <channel>][-d][-l]";
 const char PROGMEM HELP_STOPSCAN_CMD[] = "stopscan [-f]";
 const char PROGMEM HELP_WARDRIVE_CMD[] = "wardrive [-s]";
 const char PROGMEM HELP_PING_CMD[] = "pingscan";
+const char PROGMEM HELP_PORT_SCAN_CMD[] = "portscan [-a] -t <ip index>";
 
 // WiFi attack
 const char PROGMEM HELP_ATTACK_CMD[] = "attack -t <beacon [-l/-r/-a]/deauth [-c]/[-s <src mac>] [-d <dst mac>]/probe/rickroll>";
@@ -142,6 +145,7 @@ const char PROGMEM HELP_LIST_AP_CMD_A[] = "list -s";
 const char PROGMEM HELP_LIST_AP_CMD_B[] = "list -a";
 const char PROGMEM HELP_LIST_AP_CMD_C[] = "list -c";
 const char PROGMEM HELP_LIST_AP_CMD_D[] = "list -t";
+const char PROGMEM HELP_LIST_AP_CMD_E[] = "list -i";
 const char PROGMEM HELP_INFO_CMD[] = "info [-a <index>]";
 const char PROGMEM HELP_SEL_CMD_A[] = "select -a/-s/-c <index (comma separated)>/-f \"equals <String> or contains <String>\"";
 const char PROGMEM HELP_SSID_CMD_A[] = "ssid -a [-g <count>/-n <name>]";
