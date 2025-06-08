@@ -16,6 +16,7 @@ LinkedList<Station>* stations;
 LinkedList<AirTag>* airtags;
 LinkedList<Flipper>* flippers;
 LinkedList<IPAddress>* ipList;
+LinkedList<ProbeReqSsid>* probe_req_ssids;
 
 extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3){
     if (arg == 31337)
@@ -548,6 +549,7 @@ void WiFiScan::RunSetup() {
   airtags = new LinkedList<AirTag>();
   flippers = new LinkedList<Flipper>();
   ipList = new LinkedList<IPAddress>();
+  probe_req_ssids = new LinkedList<ProbeReqSsid>;
   // for Pinescan
   pinescan_trackers = new LinkedList<PineScanTracker>();
   confirmed_pinescan = new LinkedList<ConfirmedPineScan>();
@@ -3351,6 +3353,8 @@ void WiFiScan::RunDeauthScan(uint8_t scan_mode, uint16_t color)
 // Function for running probe request scan
 void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
 {
+  probe_req_ssids->clear();
+
   if (scan_mode == WIFI_SCAN_PROBE)
     startPcap("probe");
   else if (scan_mode == WIFI_SCAN_STATION_WAR_DRIVE) {
@@ -5773,6 +5777,8 @@ void WiFiScan::probeSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
     if ((snifferPacket->payload[0] == 0x40) && (buf == 0))
     {
       if (wifi_scan_obj.currentScanMode == WIFI_SCAN_PROBE) {
+        String probe_req_essid;
+
         delay(random(0, 10));
         Serial.print("RSSI: ");
         Serial.print(snifferPacket->rx_ctrl.rssi);
@@ -5788,9 +5794,29 @@ void WiFiScan::probeSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
         for (int i = 0; i < snifferPacket->payload[25]; i++)
         {
           Serial.print((char)snifferPacket->payload[26 + i]);
-          display_string.concat((char)snifferPacket->payload[26 + i]);
+          probe_req_essid.concat((char)snifferPacket->payload[26 + i]);
         }
 
+        display_string.concat(probe_req_essid);
+
+        if (probe_req_essid.length() > 0) {
+            bool essidExist = false;
+            for (int i = 0; i < probe_req_ssids->size(); i++) {
+                ProbeReqSsid cur_probe_ssid = probe_req_ssids->get(i);
+                if (cur_probe_ssid.essid == probe_req_essid) {
+                    cur_probe_ssid.requests++;
+                    essidExist = true;
+                    break;
+                }
+            }
+            if (!essidExist) {
+				      ProbeReqSsid probeReqSsid;
+				      probeReqSsid.essid = probe_req_essid;
+              probeReqSsid.requests = 1;
+				      probeReqSsid.selected = false;
+              probe_req_ssids->add(probeReqSsid);
+            }
+        }
         // Print spaces because of the rotating lines of the hardware scroll.
         // The same characters print from previous lines so I just overwrite them
         // with spaces.
