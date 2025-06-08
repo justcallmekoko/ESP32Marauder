@@ -2235,7 +2235,7 @@ void MenuFunctions::RunSetup()
           // This is the menu node
           this->addNodes(
               &selectProbeSSIDsMenu,
-              "(#" + String(cur_ssid.requests) + ") -> " + cur_ssid.essid,
+              "[" + String(cur_ssid.requests) + "]" + cur_ssid.essid,
               TFTCYAN,
               NULL,
               255,
