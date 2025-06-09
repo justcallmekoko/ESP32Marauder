@@ -1392,19 +1392,28 @@ void MenuFunctions::updateStatusBar()
   display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR);
 
   // WiFi Channel Stuff
-  if ((wifi_scan_obj.set_channel != wifi_scan_obj.old_channel) || (status_changed)) {
-    wifi_scan_obj.old_channel = wifi_scan_obj.set_channel;
+  uint8_t primaryChannel;
+  wifi_second_chan_t secondChannel;
+  esp_err_t err = esp_wifi_get_channel(&primaryChannel, &secondChannel);
+
+  uint8_t current_channel = wifi_scan_obj.set_channel;
+
+  if (err == ESP_OK)
+    current_channel = primaryChannel;
+
+  if ((current_channel != wifi_scan_obj.old_channel) || (status_changed)) {
+    wifi_scan_obj.old_channel = current_channel;
     #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
       display_obj.tft.fillRect(43, 0, TFT_WIDTH * 0.21, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
     #else
       display_obj.tft.fillRect(50, 0, TFT_WIDTH * 0.21, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
     #endif
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.set_channel, 50, 0, 2);
+      display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.old_channel, 50, 0, 2);
     #endif
 
     #ifdef HAS_MINI_SCREEN
-      display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.set_channel, TFT_WIDTH/4, 0, 1);
+      display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.old_channel, TFT_WIDTH/4, 0, 1);
     #endif
   }
 
@@ -1578,18 +1587,26 @@ void MenuFunctions::drawStatusBar()
 
 
   // WiFi Channel Stuff
-  wifi_scan_obj.old_channel = wifi_scan_obj.set_channel;
+  uint8_t primaryChannel;
+  wifi_second_chan_t secondChannel;
+  esp_err_t err = esp_wifi_get_channel(&primaryChannel, &secondChannel);
+
+  if (err == ESP_OK)
+    wifi_scan_obj.old_channel = primaryChannel;
+  else
+    wifi_scan_obj.old_channel = wifi_scan_obj.set_channel;
+
   #ifdef HAS_MINI_SCREEN
     display_obj.tft.fillRect(43, 0, TFT_WIDTH * 0.21, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
   #else
     display_obj.tft.fillRect(50, 0, TFT_WIDTH * 0.21, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
   #endif
   #ifdef HAS_FULL_SCREEN
-    display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.set_channel, 50, 0, 2);
+    display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.old_channel, 50, 0, 2);
   #endif
 
   #ifdef HAS_MINI_SCREEN
-    display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.set_channel, TFT_WIDTH/4, 0, 1);
+    display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.old_channel, TFT_WIDTH/4, 0, 1);
   #endif
 
   // RAM Stuff
@@ -3086,7 +3103,7 @@ void MenuFunctions::RunSetup()
           #ifdef HAS_MINI_KB
             // Cycle char previous
             #ifdef HAS_L
-              if (l_btn.justPressed()) {
+              if ((l_btn.justPressed()) || (l_btn.isHeld())) {
                 pressed = true;
                 if (this->mini_kb_index > 0)
                   this->mini_kb_index--;
@@ -3095,14 +3112,20 @@ void MenuFunctions::RunSetup()
 
                 targetMenu->list->set(0, MenuNode{String(char_array[this->mini_kb_index]).c_str(), false, TFTCYAN, 0, NULL, true, NULL});
                 this->buildButtons(targetMenu);
-                while (!l_btn.justReleased())
-                  delay(1);
+
+                while (!l_btn.justReleased()) {
+                  l_btn.justPressed();
+                  if (!l_btn.isHeld())
+                    delay(1);
+                  else
+                    break;
+                }
               }
             #endif
 
             // Cycle char next
             #ifdef HAS_R
-              if (r_btn.justPressed()) {
+              if ((r_btn.justPressed()) || (r_btn.isHeld())) {
                 pressed = true;
                 if (this->mini_kb_index < str_len - 2)
                   this->mini_kb_index++;
@@ -3111,8 +3134,14 @@ void MenuFunctions::RunSetup()
 
                 targetMenu->list->set(0, MenuNode{String(char_array[this->mini_kb_index]).c_str(), false, TFTCYAN, 0, NULL, true, NULL});
                 this->buildButtons(targetMenu, 0, String(char_array[this->mini_kb_index]).c_str());
-                while (!r_btn.justReleased())
-                  delay(1);
+                
+                while (!r_btn.justReleased()) {
+                  r_btn.justPressed();
+                  if (!r_btn.isHeld())
+                    delay(1);
+                  else
+                    break;
+                }
               }
             #endif
 
