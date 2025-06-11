@@ -5805,7 +5805,7 @@ void WiFiScan::probeSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
                 ProbeReqSsid cur_probe_ssid = probe_req_ssids->get(i);
                 if (cur_probe_ssid.essid == probe_req_essid) {
                     cur_probe_ssid.requests++;
-	      	    probe_req_ssids->set(i, cur_probe_ssid);
+	      	          probe_req_ssids->set(i, cur_probe_ssid);
                     essidExist = true;
                     break;
                 }
