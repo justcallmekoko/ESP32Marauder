@@ -1817,6 +1817,8 @@ void MenuFunctions::RunSetup()
   extern LinkedList<Station>* stations;
   extern LinkedList<AirTag>* airtags;
   extern LinkedList<IPAddress>* ipList;
+  extern LinkedList<ProbeReqSsid>* probe_req_ssids;
+  extern LinkedList<ssid>* ssids;
 
   this->disable_touch = false;
   
@@ -1866,6 +1868,7 @@ void MenuFunctions::RunSetup()
   //#ifndef HAS_ILI9341
     wifiStationMenu.list = new LinkedList<MenuNode>();
   //#endif
+  selectProbeSSIDsMenu.list = new LinkedList<MenuNode>();
 
   // WiFi HTML menu stuff
   htmlMenu.list = new LinkedList<MenuNode>();
@@ -2208,6 +2211,67 @@ void MenuFunctions::RunSetup()
     this->changeMenu(&generateSSIDsMenu);
     wifi_scan_obj.RunGenerateSSIDs();
   });
+
+	//Add Select probe ssid
+  this->addNodes(&wifiGeneralMenu, text_table1[65], TFTCYAN, NULL, KEYBOARD_ICO, [this]() {
+      selectProbeSSIDsMenu.list->clear();
+
+      // Add the back button
+      this->addNodes(&selectProbeSSIDsMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+          this->changeMenu(&wifiGeneralMenu);
+
+          // TODO: TBD - Should probe_req_ssids have it´s own life and override ap.config and/or ssids -list for EP?
+          // If so, then we should not add selected ssids to ssids list
+
+          // Add selected ssid names to ssids list when clicking back button
+          if (probe_req_ssids->size() > 0) {
+
+              //TODO: TBD - Clear ssids list before adding new ones??
+
+              for (int i = 0; i < probe_req_ssids->size(); i++) {
+                  ProbeReqSsid cur_probe_ssid = probe_req_ssids->get(i);
+                  if (cur_probe_ssid.selected) {
+                      bool ssidExists = false;
+                      for (int i = 0; i < ssids->size(); i++) {
+                          if (ssids->get(i).essid == cur_probe_ssid.essid) {
+                              ssidExists = true;
+                              break;
+                          }
+                      }
+                      if (!ssidExists) {
+                          wifi_scan_obj.addSSID(cur_probe_ssid.essid);
+                      }
+                  }
+              }
+          }
+      });
+
+      // Populate the menu with buttons
+      for (int i = 0; i < probe_req_ssids->size(); i++) {
+          ProbeReqSsid cur_ssid = probe_req_ssids->get(i);
+          // This is the menu node
+          this->addNodes(
+              &selectProbeSSIDsMenu,
+              "[" + String(cur_ssid.requests) + "]" + cur_ssid.essid,
+              TFTCYAN,
+              NULL,
+              255,
+              [this, i]() {
+                  ProbeReqSsid new_ssid = probe_req_ssids->get(i);
+                  new_ssid.selected = !probe_req_ssids->get(i).selected;
+
+                  // Change selection status of menu node
+                  MenuNode new_node = current_menu->list->get(i + 1);
+                  new_node.selected = !current_menu->list->get(i + 1).selected;
+                  current_menu->list->set(i + 1, new_node);
+
+                  probe_req_ssids->set(i, new_ssid);
+              },
+              probe_req_ssids->get(i).selected);
+      }
+      this->changeMenu(&selectProbeSSIDsMenu);
+  });
+
   #ifdef HAS_ILI9341
     this->addNodes(&wifiGeneralMenu, text_table1[1], TFTNAVY, NULL, KEYBOARD_ICO, [this](){
       display_obj.clearScreen(); 

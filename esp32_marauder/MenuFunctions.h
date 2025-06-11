@@ -188,6 +188,7 @@ class MenuFunctions
     Menu genAPMacMenu;
     Menu cloneAPMacMenu;
     Menu setMacMenu;
+    Menu selectProbeSSIDsMenu;
 
     // Bluetooth menu stuff
     Menu bluetoothSnifferMenu;

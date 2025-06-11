@@ -21,6 +21,12 @@ struct Station {
   uint16_t ap;
 };
 
+struct ProbeReqSsid {
+    String essid;
+    bool selected;
+    uint8_t requests;
+};
+
 const char apple_ouis[][9] PROGMEM = {
   "00:17:F2", "00:1E:C2", "00:26:08", "F8:1E:DF", "BC:92:6B", 
   "28:E0:2C", "3C:07:54", "7C:D1:C3", "DC:A9:04", "F0:D1:A9",
