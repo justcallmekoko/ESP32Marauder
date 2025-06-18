@@ -6,7 +6,10 @@
 #include "configs.h"
 #include "settings.h"
 #include <Arduino.h>
+
+#ifndef DISABLE_STATUS_LED
 #include <Adafruit_NeoPixel.h>
+#endif
 
 #define Pixels 1
 
@@ -17,7 +20,10 @@
 #define MODE_CUSTOM 4
 
 extern Settings settings_obj;
+
+#ifndef DISABLE_STATUS_LED
 extern Adafruit_NeoPixel strip;
+#endif
 
 class LedInterface {
 

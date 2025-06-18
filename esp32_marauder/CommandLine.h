@@ -173,7 +173,9 @@ class CommandLine {
     LinkedList<String> parseCommand(String input, char* delim);
     String toLowerCase(String str);
     void filterAccessPoints(String filter);
+#ifndef ENABLE_NONSERIAL_COMMAND_EXECUTION
     void runCommand(String input);
+#endif
     bool checkValueExists(LinkedList<String>* cmd_args_list, int index);
     bool inRange(int max, int index);
     bool apSelected();
@@ -213,6 +215,9 @@ class CommandLine {
 
     void RunSetup();
     void main(uint32_t currentTime);
+#ifdef ENABLE_NONSERIAL_COMMAND_EXECUTION
+    void runCommand(String input);
+#endif
 };
 
 #endif
