@@ -3434,7 +3434,7 @@ void WiFiScan::RunSourApple(uint8_t scan_mode, uint16_t color) {
       display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
     #endif
 
-    this->ble_initialized;
+    this->ble_initialized = true;
 
     #ifdef HAS_FLIPPER_LED
       flipper_led.sniffLED();
@@ -3480,7 +3480,7 @@ void WiFiScan::RunSwiftpairSpam(uint8_t scan_mode, uint16_t color) {
       display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
     #endif
 
-    this->ble_initialized;
+    this->ble_initialized = true;
 
     #ifdef HAS_FLIPPER_LED
       flipper_led.attackLED();
