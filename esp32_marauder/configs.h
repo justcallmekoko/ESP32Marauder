@@ -18,6 +18,7 @@
   //#define MARAUDER_KIT
   //#define GENERIC_ESP32
   //#define MARAUDER_FLIPPER
+  //#define MARAUDER_MULTIBOARD_S3
   //#define ESP32_LDDB
   //#define MARAUDER_DEV_BOARD_PRO
   //#define XIAO_ESP32_S3
@@ -60,6 +61,8 @@
     #define HARDWARE_NAME "Marauder Kit"
   #elif defined(MARAUDER_FLIPPER)
     #define HARDWARE_NAME "Flipper Zero Dev Board"
+  #elif defined(MARAUDER_MULTIBOARD_S3)
+    #define HARDWARE_NAME "Flipper Zero Multi Board S3"
   #elif defined(ESP32_LDDB)
     #define HARDWARE_NAME "ESP32 LDDB"
   #elif defined(MARAUDER_DEV_BOARD_PRO)
@@ -289,6 +292,22 @@
     #define HAS_SD
     #define USE_SD
     #define HAS_PSRAM
+    //#define HAS_TEMP_SENSOR
+  #endif
+
+  #ifdef MARAUDER_MULTIBOARD_S3
+    #define HAS_FLIPPER_LED
+    //#define FLIPPER_ZERO_HAT
+    //#define HAS_BATTERY
+    #define HAS_BT
+    //#define HAS_BUTTONS
+    //#define HAS_NEOPIXEL_LED
+    //#define HAS_PWR_MGMT
+    //#define HAS_SCREEN
+    #define HAS_GPS
+    #define HAS_SD
+    #define USE_SD
+    //#define HAS_PSRAM
     //#define HAS_TEMP_SENSOR
   #endif
 
@@ -1666,6 +1685,10 @@
       #define SD_CS 10
     #endif
 
+    #ifdef MARAUDER_MULTIBOARD_S3
+      #define SD_CS 10
+    #endif
+
     #ifdef ESP32_LDDB
       #define SD_CS 4
     #endif
@@ -1761,6 +1784,8 @@
     #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_FLIPPER)
     #define MEM_LOWER_LIM 10000
+  #elif defined(MARAUDER_MULTIBOARD_S3)
+    #define MEM_LOWER_LIM 10000
   #elif defined(ESP32_LDDB)
     #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_DEV_BOARD_PRO)
@@ -1849,6 +1874,10 @@
       #define GPS_TX 21
       #define GPS_RX 22
     #elif defined(MARAUDER_FLIPPER)
+      #define GPS_SERIAL_INDEX 1
+      #define GPS_TX 9
+      #define GPS_RX 21
+    #elif defined(MARAUDER_MULTIBOARD_S3)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 9
       #define GPS_RX 21
@@ -1994,6 +2023,12 @@
 
   #ifdef HAS_FLIPPER_LED
     #ifdef MARAUDER_FLIPPER
+      #define B_PIN 4
+      #define G_PIN 5
+      #define R_PIN 6
+    #endif
+
+    #ifdef MARAUDER_MULTIBOARD_S3
       #define B_PIN 4
       #define G_PIN 5
       #define R_PIN 6
