@@ -11,7 +11,7 @@
 #include <vector>
 
 #ifdef HAS_BT
-  #include <NimBLEDevice.h>
+  #include <NimBLEDevice.h> // 1.3.8
 #endif
 
 #include <WiFi.h>
