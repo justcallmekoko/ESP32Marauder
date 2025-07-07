@@ -1,4 +1,3 @@
-#include "HardwareSerial.h"
 #include "EvilPortal.h"
 
 #ifdef HAS_PSRAM
@@ -118,10 +117,9 @@ void EvilPortal::setupServer() {
       this->password = inputMessage;
       this->password_received = true;
     }
-    
     request->send(
-        200, "text/html",
-        "<html><head><script>setTimeout(() => { window.location.href ='/' }, 100);</script></head><body></body></html>");
+      200, "text/html",
+      "<html><head><script>setTimeout(() => { window.location.href ='/' }, 100);</script></head><body></body></html>");
   });
   Serial.println("web server up");
 }
