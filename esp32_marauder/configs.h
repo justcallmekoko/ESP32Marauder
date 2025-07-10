@@ -26,11 +26,14 @@
   //#define MARAUDER_CYD_MICRO // 2432S028
   //#define MARAUDER_CYD_2USB // Another 2432S028 but it has tWo UsBs OoOoOoO
   //#define MARAUDER_CYD_GUITION // ESP32-2432S024 GUITION
+  //#define MARAUDER_C5
   //// END BOARD TARGETS
 
-  #define MARAUDER_VERSION "v1.7.2"
+  #define MARAUDER_VERSION "v1.8.0"
 
   #define GRAPH_REFRESH   100
+
+  #define DUAL_BAND_CHANNELS 51
 
   //// HARDWARE NAMES
   #ifdef MARAUDER_M5STICKC
@@ -69,6 +72,8 @@
     #define HARDWARE_NAME "Flipper Zero Dev Board Pro"
   #elif defined(XIAO_ESP32_S3)
     #define HARDWARE_NAME "XIAO ESP32 S3"
+  #elif defined(MARAUDER_C5)
+    #define HARDWARE_NAME "ESP32-C5 DevKit"
   #else
     #define HARDWARE_NAME "ESP32"
   #endif
@@ -350,6 +355,24 @@
     //#define HAS_SD
     //#define HAS_TEMP_SENSOR
     //#define HAS_GPS
+  #endif
+
+  #ifdef MARAUDER_C5
+    //#define HAS_FLIPPER_LED
+    //#define FLIPPER_ZERO_HAT
+    //#define HAS_BATTERY
+    //#define HAS_BT
+    //#define HAS_BUTTONS
+    //#define HAS_NEOPIXEL_LED
+    //#define HAS_PWR_MGMT
+    //#define HAS_SCREEN
+    #define HAS_GPS
+    #define HAS_C5_SD
+    #define HAS_SD
+    #define USE_SD
+    #define HAS_DUAL_BAND
+    //#define HAS_PSRAM
+    //#define HAS_TEMP_SENSOR
   #endif
   //// END BOARD FEATURES
 
@@ -1701,6 +1724,10 @@
       #define SD_CS 3
     #endif
 
+    #ifdef MARAUDER_C5
+      #define SD_CS 10
+    #endif
+
   #endif
   //// END SD DEFINITIONS
 
@@ -1791,6 +1818,8 @@
   #elif defined(MARAUDER_DEV_BOARD_PRO)
     #define MEM_LOWER_LIM 10000
   #elif defined(XIAO_ESP32_S3)
+    #define MEM_LOWER_LIM 10000
+  #elif defined(MARAUDER_C5)
     #define MEM_LOWER_LIM 10000
   #endif
   //// END MEMORY LOWER LIMIT STUFF
@@ -1889,6 +1918,10 @@
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 6
       #define GPS_RX 9
+    #elif defined(MARAUDER_C5)
+      #define GPS_SERIAL_INDEX 1
+      #define GPS_TX 14
+      #define GPS_RX 13
     #endif
   #else
     #define mac_history_len 100
@@ -1971,6 +2004,8 @@
     #define MARAUDER_TITLE_BYTES 13578
   #elif defined(MARAUDER_REV_FEATHER)
     #define MARAUDER_TITLE_BYTES 13578
+  #elif defined(MARAUDER_C5)
+    #define MARAUDER_TITLE_BYTES 13578
   #else
     #define MARAUDER_TITLE_BYTES 13578
   #endif
@@ -1992,7 +2027,7 @@
   //// PCAP BUFFER STUFF
 
   //// STUPID CYD STUFF
-  #ifdef HAS_CYD_TOUCH
+  #if defined(HAS_CYD_TOUCH) || defined(HAS_C5_SD)
     #ifdef MARAUDER_CYD_MICRO
       #define XPT2046_IRQ  36
       #define XPT2046_MOSI 32
@@ -2015,6 +2050,12 @@
       #define SD_MISO      19
       #define SD_MOSI      23
       #define SD_SCK       18
+    #endif
+
+    #ifdef MARAUDER_C5
+      #define SD_MISO 2
+      #define SD_MOSI 7
+      #define SD_SCK  6
     #endif
   #endif
   //// END STUPID CYD STUFF
@@ -2054,4 +2095,12 @@
   #endif
 
   //// END FUNNY FLIPPER LED STUFF
+
+  //// WIFI STUFF
+
+  #ifndef HAS_DUAL_BAND
+    #define HOP_DELAY 1000
+  #else
+    #define HOP_DELAY 100
+  #endif
 #endif

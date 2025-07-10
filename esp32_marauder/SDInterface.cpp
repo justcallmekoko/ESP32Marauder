@@ -1,6 +1,10 @@
 #include "SDInterface.h"
 #include "lang_var.h"
 
+#ifdef HAS_C5_SD
+  SDInterface::SDInterface(SPIClass* spi, int cs)
+    : _spi(spi), _cs(cs) {}
+#endif
 
 bool SDInterface::initSD() {
   #ifdef HAS_SD
@@ -41,6 +45,9 @@ bool SDInterface::initSD() {
       this->spiExt = new SPIClass();
       this->spiExt->begin(SPI_SCK, SPI_MISO, SPI_MOSI, SD_CS);
       if (!SD.begin(SD_CS, *(this->spiExt))) {
+    #elif defined(HAS_C5_SD)
+      Serial.println("Using C5 SD configuration...");
+      if (!SD.begin(SD_CS, *_spi)) {
     #else
       if (!SD.begin(SD_CS)) {
     #endif
@@ -51,19 +58,9 @@ bool SDInterface::initSD() {
     else {
       this->supported = true;
       this->cardType = SD.cardType();
-      //if (cardType == CARD_MMC)
-      //  Serial.println(F("SD: MMC Mounted"));
-      //else if(cardType == CARD_SD)
-      //    Serial.println(F("SD: SDSC Mounted"));
-      //else if(cardType == CARD_SDHC)
-      //    Serial.println(F("SD: SDHC Mounted"));
-      //else
-      //    Serial.println(F("SD: UNKNOWN Card Mounted"));
 
       this->cardSizeMB = SD.cardSize() / (1024 * 1024);
     
-      //Serial.printf("SD Card Size: %lluMB\n", this->cardSizeMB);
-
       if (this->supported) {
         const int NUM_DIGITS = log10(this->cardSizeMB) + 1;
 
