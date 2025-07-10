@@ -28,10 +28,17 @@ class SDInterface {
   private:
   #if (defined(MARAUDER_M5STICKC) || defined(HAS_CYD_TOUCH))
     SPIClass *spiExt;
+  #elif defined(HAS_C5_SD)
+    SPIClass* _spi;
+    int _cs;
   #endif
     bool checkDetectPin();
 
   public:
+    #ifdef HAS_C5_SD
+      SDInterface(SPIClass* spi, int cs);
+    #endif
+
     uint8_t cardType;
     //uint64_t cardSizeBT;
     //uint64_t cardSizeKB;
