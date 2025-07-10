@@ -6,7 +6,13 @@
 #include "configs.h"
 
 #include "settings.h"
+#ifdef HAS_C5_SD
+  #include "FS.h"
+#endif
 #include "SD.h"
+#ifdef HAS_C5_SD
+  #include "SPI.h"
+#endif
 #include "Buffer.h"
 #ifdef HAS_SCREEN
   #include "Display.h"
