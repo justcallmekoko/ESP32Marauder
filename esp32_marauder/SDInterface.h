@@ -6,7 +6,11 @@
 #include "configs.h"
 
 #include "settings.h"
-#include "SD.h"
+#ifdef USE_SD_MMC
+  #include "SD_MMC.h"
+#else
+  #include "SD.h"
+#endif
 #include "Buffer.h"
 #ifdef HAS_SCREEN
   #include "Display.h"
