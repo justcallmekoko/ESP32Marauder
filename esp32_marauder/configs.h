@@ -26,6 +26,7 @@
   //#define MARAUDER_CYD_MICRO // 2432S028
   //#define MARAUDER_CYD_2USB // Another 2432S028 but it has tWo UsBs OoOoOoO
   //#define MARAUDER_CYD_GUITION // ESP32-2432S024 GUITION
+  //#define ESP32_WROVER // ESP32 WROVER v3.0 with built-in SD slot
   //// END BOARD TARGETS
 
   #define MARAUDER_VERSION "v1.7.2"
@@ -69,6 +70,8 @@
     #define HARDWARE_NAME "Flipper Zero Dev Board Pro"
   #elif defined(XIAO_ESP32_S3)
     #define HARDWARE_NAME "XIAO ESP32 S3"
+  #elif defined(ESP32_WROVER)
+    #define HARDWARE_NAME "ESP32 WROVER"
   #else
     #define HARDWARE_NAME "ESP32"
   #endif
@@ -348,6 +351,21 @@
     //#define HAS_PWR_MGMT
     //#define HAS_SCREEN
     //#define HAS_SD
+    //#define HAS_TEMP_SENSOR
+    //#define HAS_GPS
+  #endif
+
+  #ifdef ESP32_WROVER
+    //#define FLIPPER_ZERO_HAT
+    //#define HAS_BATTERY
+    #define HAS_BT
+    //#define HAS_BUTTONS
+    //#define HAS_NEOPIXEL_LED
+    //#define HAS_PWR_MGMT
+    //#define HAS_SCREEN
+    #define HAS_SD
+    #define USE_SD
+    #define USE_SD_MMC
     //#define HAS_TEMP_SENSOR
     //#define HAS_GPS
   #endif
@@ -1701,6 +1719,10 @@
       #define SD_CS 3
     #endif
 
+    #ifdef ESP32_WROVER
+      #define SD_CS -1  // Not used with SDMMC interface
+    #endif
+
   #endif
   //// END SD DEFINITIONS
 
@@ -1791,6 +1813,8 @@
   #elif defined(MARAUDER_DEV_BOARD_PRO)
     #define MEM_LOWER_LIM 10000
   #elif defined(XIAO_ESP32_S3)
+    #define MEM_LOWER_LIM 10000
+  #elif defined(ESP32_WROVER)
     #define MEM_LOWER_LIM 10000
   #endif
   //// END MEMORY LOWER LIMIT STUFF

@@ -18,9 +18,12 @@ bool SDInterface::initSD() {
       }
     #endif
 
-    pinMode(SD_CS, OUTPUT);
+    #ifndef USE_SD_MMC
+      pinMode(SD_CS, OUTPUT);
 
-    delay(10);
+      delay(10);
+    #endif
+    
     #if (defined(MARAUDER_M5STICKC)) || (defined(HAS_CYD_TOUCH))
       /* Set up SPI SD Card using external pin header
       StickCPlus Header - SPI SD Card Reader
@@ -41,6 +44,11 @@ bool SDInterface::initSD() {
       this->spiExt = new SPIClass();
       this->spiExt->begin(SPI_SCK, SPI_MISO, SPI_MOSI, SD_CS);
       if (!SD.begin(SD_CS, *(this->spiExt))) {
+    #elif defined(USE_SD_MMC)
+      // Use SDMMC interface for ESP32 WROVER
+      // The SD_MMC library uses default pins:
+      // CLK: GPIO14, CMD: GPIO15, D0: GPIO2, D1: GPIO4, D2: GPIO12, D3: GPIO13
+      if (!SD_MMC.begin()) {
     #else
       if (!SD.begin(SD_CS)) {
     #endif
@@ -50,7 +58,11 @@ bool SDInterface::initSD() {
     }
     else {
       this->supported = true;
-      this->cardType = SD.cardType();
+      #ifdef USE_SD_MMC
+        this->cardType = SD_MMC.cardType();
+      #else
+        this->cardType = SD.cardType();
+      #endif
       //if (cardType == CARD_MMC)
       //  Serial.println(F("SD: MMC Mounted"));
       //else if(cardType == CARD_SD)
@@ -60,7 +72,11 @@ bool SDInterface::initSD() {
       //else
       //    Serial.println(F("SD: UNKNOWN Card Mounted"));
 
-      this->cardSizeMB = SD.cardSize() / (1024 * 1024);
+      #ifdef USE_SD_MMC
+        this->cardSizeMB = SD_MMC.cardSize() / (1024 * 1024);
+      #else
+        this->cardSizeMB = SD.cardSize() / (1024 * 1024);
+      #endif
     
       //Serial.printf("SD Card Size: %lluMB\n", this->cardSizeMB);
 
@@ -79,12 +95,21 @@ bool SDInterface::initSD() {
         this->card_sz = sz;
       }
 
-      if (!SD.exists("/SCRIPTS")) {
-        Serial.println("/SCRIPTS does not exist. Creating...");
+      #ifdef USE_SD_MMC
+        if (!SD_MMC.exists("/SCRIPTS")) {
+          Serial.println("/SCRIPTS does not exist. Creating...");
 
-        SD.mkdir("/SCRIPTS");
-        Serial.println("/SCRIPTS created");
-      }
+          SD_MMC.mkdir("/SCRIPTS");
+          Serial.println("/SCRIPTS created");
+        }
+      #else
+        if (!SD.exists("/SCRIPTS")) {
+          Serial.println("/SCRIPTS does not exist. Creating...");
+
+          SD.mkdir("/SCRIPTS");
+          Serial.println("/SCRIPTS created");
+        }
+      #endif
 
       this->sd_files = new LinkedList<String>();
 
@@ -101,7 +126,11 @@ bool SDInterface::initSD() {
 
 File SDInterface::getFile(String path) {
   if (this->supported) {
-    File file = SD.open(path, FILE_READ);
+    #ifdef USE_SD_MMC
+      File file = SD_MMC.open(path, FILE_READ);
+    #else
+      File file = SD.open(path, FILE_READ);
+    #endif
 
     //if (file)
     return file;
@@ -109,15 +138,26 @@ File SDInterface::getFile(String path) {
 }
 
 bool SDInterface::removeFile(String file_path) {
-  if (SD.remove(file_path))
-    return true;
-  else
-    return false;
+  #ifdef USE_SD_MMC
+    if (SD_MMC.remove(file_path))
+      return true;
+    else
+      return false;
+  #else
+    if (SD.remove(file_path))
+      return true;
+    else
+      return false;
+  #endif
 }
 
 void SDInterface::listDirToLinkedList(LinkedList<String>* file_names, String str_dir, String ext) {
   if (this->supported) {
-    File dir = SD.open(str_dir);
+    #ifdef USE_SD_MMC
+      File dir = SD_MMC.open(str_dir);
+    #else
+      File dir = SD.open(str_dir);
+    #endif
     while (true)
     {
       File entry = dir.openNextFile();
@@ -143,7 +183,11 @@ void SDInterface::listDirToLinkedList(LinkedList<String>* file_names, String str
 
 void SDInterface::listDir(String str_dir){
   if (this->supported) {
-    File dir = SD.open(str_dir);
+    #ifdef USE_SD_MMC
+      File dir = SD_MMC.open(str_dir);
+    #else
+      File dir = SD.open(str_dir);
+    #endif
     while (true)
     {
       File entry = dir.openNextFile();
@@ -173,7 +217,11 @@ void SDInterface::runUpdate() {
   
     display_obj.tft.println(F(text15));
   #endif
-  File updateBin = SD.open("/update.bin");
+  #ifdef USE_SD_MMC
+    File updateBin = SD_MMC.open("/update.bin");
+  #else
+    File updateBin = SD.open("/update.bin");
+  #endif
   if (updateBin) {
     if(updateBin.isDirectory()){
       #ifdef HAS_SCREEN

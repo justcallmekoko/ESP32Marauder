@@ -1,3 +1,4 @@
+#include <SD.h>
 #include "WiFiScan.h"
 #include "lang_var.h"
 
