@@ -896,7 +896,9 @@ void MenuFunctions::main(uint32_t currentTime)
 
   #ifdef HAS_BUTTONS
 
-    bool c_btn_press = c_btn.justPressed();
+    #if (C_BTN >= 0)
+      bool c_btn_press = c_btn.justPressed();
+    #endif
 
     #ifndef HAS_ILI9341
     
@@ -1147,47 +1149,58 @@ void MenuFunctions::main(uint32_t currentTime)
   #ifdef HAS_BUTTONS
     #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_CYD_MICRO) || defined(MARAUDER_CYD_GUITION) || defined(MARAUDER_CYD_2USB))
       #if !defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
-        if (u_btn.justPressed()){
-          if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
-              (wifi_scan_obj.currentScanMode == WIFI_CONNECTED) ||
-              (wifi_scan_obj.currentScanMode == OTA_UPDATE)) {
-            if (current_menu->selected > 0) {
-              current_menu->selected--;
-              // Page up
-              if (current_menu->selected < this->menu_start_index) {
-                this->buildButtons(current_menu, current_menu->selected);
-                this->displayCurrentMenu(current_menu->selected);
+        #if (U_BTN >= 0 || defined(MARAUDER_CARDPUTER))
+          #if (U_BTN >= 0)
+            if (u_btn.justPressed()) {
+          #elif defined(MARAUDER_CARDPUTER)
+            if (this->isKeyPressed(';')) {
+          #endif
+              if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
+                  (wifi_scan_obj.currentScanMode == WIFI_CONNECTED) ||
+                  (wifi_scan_obj.currentScanMode == OTA_UPDATE)) {
+                if (current_menu->selected > 0) {
+                  current_menu->selected--;
+                  // Page up
+                  if (current_menu->selected < this->menu_start_index) {
+                    this->buildButtons(current_menu, current_menu->selected);
+                    this->displayCurrentMenu(current_menu->selected);
+                  }
+                  this->buttonSelected(current_menu->selected - this->menu_start_index, current_menu->selected);
+                  if (!current_menu->list->get(current_menu->selected + 1).selected)
+                    this->buttonNotSelected(current_menu->selected + 1 - this->menu_start_index, current_menu->selected + 1);
+                }
+                // Loop to end
+                else {
+                  current_menu->selected = current_menu->list->size() - 1;
+                  if (current_menu->selected >= BUTTON_SCREEN_LIMIT) {
+                    this->buildButtons(current_menu, current_menu->selected + 1 - BUTTON_SCREEN_LIMIT);
+                    this->displayCurrentMenu(current_menu->selected + 1 - BUTTON_SCREEN_LIMIT);
+                  }
+                  this->buttonSelected(current_menu->selected, current_menu->selected);
+                  if (!current_menu->list->get(0).selected)
+                    this->buttonNotSelected(0, this->menu_start_index);
+                }
               }
-              this->buttonSelected(current_menu->selected - this->menu_start_index, current_menu->selected);
-              if (!current_menu->list->get(current_menu->selected + 1).selected)
-                this->buttonNotSelected(current_menu->selected + 1 - this->menu_start_index, current_menu->selected + 1);
-            }
-            // Loop to end
-            else {
-              current_menu->selected = current_menu->list->size() - 1;
-              if (current_menu->selected >= BUTTON_SCREEN_LIMIT) {
-                this->buildButtons(current_menu, current_menu->selected + 1 - BUTTON_SCREEN_LIMIT);
-                this->displayCurrentMenu(current_menu->selected + 1 - BUTTON_SCREEN_LIMIT);
+              else if ((wifi_scan_obj.currentScanMode == WIFI_PACKET_MONITOR) ||
+                      (wifi_scan_obj.currentScanMode == WIFI_SCAN_EAPOL) ||
+                      (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ANALYZER) ||
+                      (wifi_scan_obj.currentScanMode == WIFI_SCAN_PACKET_RATE) ||
+                      (wifi_scan_obj.currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
+                      (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN)) {
+                if (wifi_scan_obj.set_channel < 14)
+                  wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
+                else
+                  wifi_scan_obj.changeChannel(1);
               }
-              this->buttonSelected(current_menu->selected, current_menu->selected);
-              if (!current_menu->list->get(0).selected)
-                this->buttonNotSelected(0, this->menu_start_index);
             }
-          }
-          else if ((wifi_scan_obj.currentScanMode == WIFI_PACKET_MONITOR) ||
-                  (wifi_scan_obj.currentScanMode == WIFI_SCAN_EAPOL) ||
-                  (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ANALYZER) ||
-                  (wifi_scan_obj.currentScanMode == WIFI_SCAN_PACKET_RATE) ||
-                  (wifi_scan_obj.currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
-                  (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN)) {
-            if (wifi_scan_obj.set_channel < 14)
-              wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
-            else
-              wifi_scan_obj.changeChannel(1);
-          }
-        }
+        #endif
       #endif
+      #if (D_BTN >= 0 || defined(MARAUDER_CARDPUTER))
+      #if (D_BTN >= 0)
       if (d_btn.justPressed()){
+      #elif defined(MARAUDER_CARDPUTER)
+      if (this->isKeyPressed('.')){
+      #endif
         if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
             (wifi_scan_obj.currentScanMode == WIFI_CONNECTED) ||
             (wifi_scan_obj.currentScanMode == OTA_UPDATE)) {
@@ -1231,6 +1244,7 @@ void MenuFunctions::main(uint32_t currentTime)
             wifi_scan_obj.changeChannel(14);
         }
       }
+      #endif
       if(c_btn_press){
         current_menu->list->get(current_menu->selected).callable();
       }
@@ -1349,7 +1363,7 @@ void MenuFunctions::updateStatusBar()
 
   bool status_changed = false;
   
-  #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+  #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_CARDPUTER)
     display_obj.tft.setFreeFont(NULL);
   #endif
   
@@ -1403,7 +1417,7 @@ void MenuFunctions::updateStatusBar()
 
   if ((current_channel != wifi_scan_obj.old_channel) || (status_changed)) {
     wifi_scan_obj.old_channel = current_channel;
-    #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER)
+    #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_CARDPUTER)
       display_obj.tft.fillRect(43, 0, TFT_WIDTH * 0.21, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
     #else
       display_obj.tft.fillRect(50, 0, TFT_WIDTH * 0.21, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
@@ -1810,6 +1824,20 @@ void MenuFunctions::displaySetting(String key, Menu* menu, int index) {
     
 }
 
+#ifdef MARAUDER_CARDPUTER
+bool MenuFunctions::isKeyPressed(char c)
+{
+  M5CardputerKeyboard.updateKeyList();
+  M5CardputerKeyboard.updateKeysState();
+  bool pressed = M5CardputerKeyboard.isKeyPressed(c);
+
+  if (pressed)
+    delay(200);
+
+  return pressed;
+}
+#endif
+
 // Function to build the menus
 void MenuFunctions::RunSetup()
 {
@@ -1824,6 +1852,10 @@ void MenuFunctions::RunSetup()
   
   #ifdef HAS_ILI9341
     this->initLVGL();
+  #endif
+
+  #ifdef MARAUDER_CARDPUTER
+    M5CardputerKeyboard.begin();
   #endif
    
   // root menu stuff
@@ -2348,9 +2380,11 @@ void MenuFunctions::RunSetup()
 
     //#if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
       miniKbMenu.parentMenu = &wifiGeneralMenu;
-      this->addNodes(&miniKbMenu, "a", TFTCYAN, NULL, 0, [this]() {
-        this->changeMenu(miniKbMenu.parentMenu);
-      });
+      #ifndef MARAUDER_CARDPUTER
+        this->addNodes(&miniKbMenu, "a", TFTCYAN, NULL, 0, [this]() {
+          this->changeMenu(miniKbMenu.parentMenu);
+        });
+      #endif
     //#endif
 
     htmlMenu.parentMenu = &wifiGeneralMenu;
@@ -2835,7 +2869,12 @@ void MenuFunctions::RunSetup()
                 // Start button loop
                 while(true) {
                   #if !defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
-                    if (u_btn.justPressed()) {
+                    #if (U_BTN >= 0 || defined(MARAUDER_CARDPUTER))
+                    #if (U_BTN >= 0)
+                      if (u_btn.justPressed()){
+                    #elif defined(MARAUDER_CARDPUTER)
+                      if (this->isKeyPressed(';')){
+                    #endif
                       if (sd_file_index > 0)
                         sd_file_index--;
                       else
@@ -2845,8 +2884,14 @@ void MenuFunctions::RunSetup()
                       this->buildButtons(&sdDeleteMenu);
                       this->displayCurrentMenu();
                     }
+                    #endif
                   #endif
-                  if (d_btn.justPressed()) {
+                  #if (D_BTN >= 0 || defined(MARAUDER_CARDPUTER))
+                  #if (D_BTN >= 0)
+                  if (d_btn.justPressed()){
+                  #elif defined(MARAUDER_CARDPUTER)
+                  if (this->isKeyPressed('.')){
+                  #endif
                     if (sd_file_index < sd_obj.sd_files->size() - 1)
                       sd_file_index++;
                     else
@@ -2856,6 +2901,7 @@ void MenuFunctions::RunSetup()
                     this->buildButtons(&sdDeleteMenu, 0, sd_obj.sd_files->get(sd_file_index));
                     this->displayCurrentMenu();
                   }
+                  #endif
                   if (c_btn.justPressed()) {
                     if (sd_obj.sd_files->get(sd_file_index) != "Back") {
                       if (sd_obj.removeFile("/" + sd_obj.sd_files->get(sd_file_index)))
@@ -3312,6 +3358,20 @@ void MenuFunctions::RunSetup()
             #endif
           #endif
 
+          #ifdef MARAUDER_CARDPUTER
+            for (int i = 0; i < 95; i++) {
+              if (this->isKeyPressed(M5CardputerKeyboard._ascii_list[i])) {
+                pressed = true;
+                wifi_scan_obj.current_mini_kb_ssid.concat(M5CardputerKeyboard._ascii_list[i]);
+              }
+              if (this->isKeyPressed(KEY_BACKSPACE)) {
+                pressed = true;
+                wifi_scan_obj.current_mini_kb_ssid.remove(wifi_scan_obj.current_mini_kb_ssid.length() - 1);
+              }
+            }
+            
+          #endif
+
           // Keyboard functions for touch hardware
           #ifdef HAS_TOUCH
             bool touched = display_obj.updateTouch(&t_x, &t_y);
@@ -3473,8 +3533,10 @@ void MenuFunctions::RunSetup()
 
             display_obj.tft.setTextColor(TFT_ORANGE, TFT_BLACK);
             #ifdef HAS_MINI_KB
+              #ifndef MARAUDER_CARDPUTER
               display_obj.tft.println("U/D - Rem/Add Char");
               display_obj.tft.println("L/R - Prev/Nxt Char");
+              #endif
               if (!do_pass) {
                 display_obj.tft.println("C - Save");
                 display_obj.tft.println("C(Hold) - Exit");

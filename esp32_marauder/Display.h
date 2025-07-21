@@ -9,7 +9,7 @@
 
 #include <FS.h>
 #include <functional>
-#include <JPEGDecoder.h>
+//#include <JPEGDecoder.h>
 #include <LinkedList.h>
 #include <SPI.h>
 #include <lvgl.h>
@@ -136,8 +136,8 @@ class Display
     //void drawJpeg(const char *filename, int xpos, int ypos);
     void getTouchWhileFunction(bool pressed);
     void initScrollValues(bool tte = false);
-    void jpegInfo();
-    void jpegRender(int xpos, int ypos);
+    //void jpegInfo();
+    //void jpegRender(int xpos, int ypos);
     void listDir(fs::FS &fs, const char * dirname, uint8_t levels);
     void listFiles();
     void main(uint8_t scan_mode);

@@ -32,7 +32,7 @@ extern Settings settings_obj;
 class SDInterface {
 
   private:
-  #if (defined(MARAUDER_M5STICKC) || defined(HAS_CYD_TOUCH))
+  #if (defined(MARAUDER_M5STICKC) || defined(HAS_CYD_TOUCH) || defined(MARAUDER_CARDPUTER))
     SPIClass *spiExt;
   #elif defined(HAS_C5_SD)
     SPIClass* _spi;

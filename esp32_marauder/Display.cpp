@@ -131,22 +131,6 @@ void Display::RunSetup()
 
   tft.setRotation(SCREEN_ORIENTATION);
 
-  /*#ifndef MARAUDER_M5STICKC
-    tft.setRotation(0); // Portrait
-  #endif
-
-  #ifdef HAS_CYD_PORTRAIT
-    tft.setRotation(3); // Bro these CYDs are so stupid
-  #endif
-
-  #ifdef MARAUDER_M5STICKC
-    tft.setRotation(1);
-  #endif
-
-  #ifdef MARAUDER_REV_FEATHER
-    tft.setRotation(1);
-  #endif*/
-
   tft.setCursor(0, 0);
 
   #ifdef HAS_ILI9341
@@ -154,22 +138,15 @@ void Display::RunSetup()
     #ifndef HAS_CYD_TOUCH
       #ifdef TFT_SHIELD
         uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield
-        //Serial.println(F("Using TFT Shield"));
       #elif defined(TFT_DIY)
         uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // tft.setRotation(0); // Portrait with DIY TFT
-        //Serial.println(F("Using TFT DIY"));
       #endif
       tft.setTouch(calData);
     #endif
 
   #endif
 
-  //tft.fillScreen(TFT_BLACK);
   clearScreen();
-
-  //Serial.println("SPI_FREQUENCY: " + (String)SPI_FREQUENCY);
-  //Serial.println("SPI_READ_FREQUENCY:" + (String)SPI_READ_FREQUENCY);
-  //Serial.println("SPI_TOUCH_FREQUENCY: " + (String)SPI_TOUCH_FREQUENCY);
 
   #ifdef KIT
     pinMode(KIT_LED_BUILTIN, OUTPUT);
@@ -734,7 +711,7 @@ void Display::drawStylus()
 //====================================================================================
 //   Decode and render the Jpeg image onto the TFT screen
 //====================================================================================
-void Display::jpegRender(int xpos, int ypos) {
+/*void Display::jpegRender(int xpos, int ypos) {
 
   // retrieve infomration about the image
   uint16_t  *pImg;
@@ -801,13 +778,13 @@ void Display::jpegRender(int xpos, int ypos) {
 
   // calculate how long it took to draw the image
   drawTime = millis() - drawTime; // Calculate the time it took
-}
+}*/
 
 //====================================================================================
 //   Print information decoded from the Jpeg image
 //====================================================================================
-void Display::jpegInfo() {
-/*
+/*void Display::jpegInfo() {
+
   Serial.println("===============");
   Serial.println("JPEG image info");
   Serial.println("===============");
@@ -821,13 +798,12 @@ void Display::jpegInfo() {
   Serial.print  ("MCU height :"); Serial.println(JpegDec.MCUHeight);
   Serial.println("===============");
   Serial.println("");
-  */
-}
+}*/
 
 //====================================================================================
 //   Open a Jpeg file and send it to the Serial port in a C array compatible format
 //====================================================================================
-void createArray(const char *filename) {
+/*void createArray(const char *filename) {
 
   // Open the named file
   fs::File jpgFile = SPIFFS.open( filename, "r");    // File handle reference for SPIFFS
@@ -867,7 +843,7 @@ void createArray(const char *filename) {
 
   Serial.println("};\r\n");
   jpgFile.close();
-}
+}*/
 
 // End JPEG_functions
 
