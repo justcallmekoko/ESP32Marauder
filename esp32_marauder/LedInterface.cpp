@@ -6,14 +6,17 @@ LedInterface::LedInterface() {
 
 void LedInterface::RunSetup() {
   //Serial.println("Setting neopixel to black...");
-  strip.setBrightness(0);
-  strip.begin();
-  strip.setPixelColor(0, strip.Color(0, 0, 0));
-  strip.show();
-  //delay(100);
-  strip.setBrightness(50);
-  strip.setPixelColor(0, strip.Color(0, 0, 0));
-  strip.show();
+  #ifdef HAS_NEOPIXEL_LED
+    strip.setBrightness(0);
+    strip.begin();
+    strip.setPixelColor(0, strip.Color(0, 0, 0));
+    strip.show();
+    //delay(100);
+    strip.setBrightness(50);
+    strip.setPixelColor(0, strip.Color(0, 0, 0));
+    strip.show();
+  #endif
+
   this->initTime = millis();
 }
 
@@ -50,8 +53,10 @@ uint8_t LedInterface::getMode() {
 }
 
 void LedInterface::setColor(int r, int g, int b) {
-  strip.setPixelColor(0, strip.Color(r, g, b));
-  strip.show();  
+  #ifdef HAS_NEOPIXEL_LED
+    strip.setPixelColor(0, strip.Color(r, g, b));
+    strip.show();
+  #endif
 }
 
 void LedInterface::sniffLed() {
@@ -67,25 +72,29 @@ void LedInterface::ledOff() {
 }
 
 void LedInterface::rainbow() {
-  strip.setPixelColor(0, this->Wheel((0 * 256 / 100 + this->wheel_pos) % 256));
-  strip.show();
+  #ifdef HAS_NEOPIXEL_LED
+    strip.setPixelColor(0, this->Wheel((0 * 256 / 100 + this->wheel_pos) % 256));
+    strip.show();
 
-  this->current_fade_itter++;
+    this->current_fade_itter++;
 
-  this->wheel_pos = this->wheel_pos - this->wheel_speed;
-  if (this->wheel_pos < 0)
-    this->wheel_pos = 255;
+    this->wheel_pos = this->wheel_pos - this->wheel_speed;
+    if (this->wheel_pos < 0)
+      this->wheel_pos = 255;
+  #endif
 }
 
 uint32_t LedInterface::Wheel(byte WheelPos) {
-  WheelPos = 255 - WheelPos;
-  if(WheelPos < 85) {
-    return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
-  }
-  if(WheelPos < 170) {
-    WheelPos -= 85;
-    return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
-  }
-  WheelPos -= 170;
-  return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+  #ifdef HAS_NEOPIXEL_LED
+    WheelPos = 255 - WheelPos;
+    if(WheelPos < 85) {
+      return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+    }
+    if(WheelPos < 170) {
+      WheelPos -= 85;
+      return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+    }
+    WheelPos -= 170;
+    return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+  #endif
 }
