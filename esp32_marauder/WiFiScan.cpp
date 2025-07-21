@@ -3036,7 +3036,11 @@ void WiFiScan::executeWarDrive() {
         delay(500);
       }
       
-      int n = WiFi.scanNetworks(false, true, false, 110, this->set_channel);
+      #ifndef HAS_DUAL_BAND
+        int n = WiFi.scanNetworks(false, true, false, 110, this->set_channel);
+      #else
+        int n = WiFi.scanNetworks(false, true, false, 110);
+      #endif
 
       if (n > 0) {
         for (int i = 0; i < n; i++) {
@@ -7129,10 +7133,19 @@ void WiFiScan::changeChannel()
 // Function to cycle to the next channel
 void WiFiScan::channelHop()
 {
-  this->set_channel = this->set_channel + 1;
-  if (this->set_channel > 14) {
-    this->set_channel = 1;
-  }
+  #ifndef HAS_DUAL_BAND
+    this->set_channel = this->set_channel + 1;
+    if (this->set_channel > 14) {
+      this->set_channel = 1;
+    }
+  #else
+    this->set_channel = this->dual_band_channels[this->dual_band_channel_index];
+    if (this->dual_band_channel_index >= DUAL_BAND_CHANNELS)
+      this->dual_band_channel_index = 0;
+    else
+      this->dual_band_channel_index++;
+  #endif
+
   esp_wifi_set_channel(this->set_channel, WIFI_SECOND_CHAN_NONE);
   delay(1);
 }
@@ -7458,7 +7471,7 @@ void WiFiScan::main(uint32_t currentTime)
   (currentScanMode == WIFI_SCAN_STATION_WAR_DRIVE) ||
   (currentScanMode == WIFI_SCAN_ALL))
   {
-    if (currentTime - initTime >= this->channel_hop_delay * 1000)
+    if (currentTime - initTime >= this->channel_hop_delay * HOP_DELAY)
     {
       initTime = millis();
       channelHop();
@@ -7539,7 +7552,7 @@ void WiFiScan::main(uint32_t currentTime)
     #endif
   }
   else if (currentScanMode == WIFI_SCAN_WAR_DRIVE) {
-    if (currentTime - initTime >= this->channel_hop_delay * 1000)
+    if (currentTime - initTime >= this->channel_hop_delay * HOP_DELAY)
     {
       initTime = millis();
       #ifdef HAS_GPS

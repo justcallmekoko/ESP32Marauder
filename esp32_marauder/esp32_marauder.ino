@@ -97,7 +97,7 @@ CommandLine cli_obj;
   MenuFunctions menu_function_obj;
 #endif
 
-#ifdef HAS_SD
+#if defined(HAS_SD) && !defined(HAS_C5_SD)
   SDInterface sd_obj;
 #endif
 
@@ -147,9 +147,22 @@ void backlightOff() {
   #endif
 }
 
+#ifdef HAS_C5_SD
+  SPIClass sharedSPI(SPI);
+  SDInterface sd_obj = SDInterface(&sharedSPI, SD_CS);
+#endif
+
 void setup()
 {
-  esp_spiram_init();
+  #ifndef HAS_DUAL_BAND
+    esp_spiram_init();
+  #endif
+
+  #ifdef HAS_C5_SD
+    Serial.println("Starting shared SPI for C5 SD configuration...");
+    sharedSPI.begin(SD_SCK, SD_MISO, SD_MOSI);
+    delay(100);
+  #endif
 
   #ifdef defined(MARAUDER_M5STICKC) && !defined(MARAUDER_M5STICKCP2)
     axp192_obj.begin();
@@ -175,7 +188,7 @@ void setup()
     digitalWrite(TFT_CS, HIGH);
   #endif
   
-  #ifdef HAS_SD
+  #if defined(HAS_SD) && !defined(HAS_C5_SD)
     pinMode(SD_CS, OUTPUT);
 
     delay(10);
@@ -206,17 +219,6 @@ void setup()
   #endif
 
   backlightOff();
-
-  // Draw the title screen
-  /*
-  #ifdef HAS_SCREEN
-    #ifndef MARAUDER_MINI
-      display_obj.drawJpeg("/marauder3L.jpg", 0 , 0);     // 240 x 320 image
-    #else
-      display_obj.drawJpeg("/marauder3L.jpg", 0, 0);
-    #endif
-  #endif
-  */
 
   #ifdef HAS_SCREEN
     display_obj.tft.drawCentreString("ESP32 Marauder", TFT_WIDTH/2, TFT_HEIGHT * 0.33, 1);
@@ -256,12 +258,6 @@ void setup()
 
   settings_obj.begin();
 
-  wifi_scan_obj.RunSetup();
-
-  //#ifdef HAS_SCREEN
-  //  display_obj.tft.println(F(text_table0[2]));
-  //#endif
-
   buffer_obj = Buffer();
   #if defined(HAS_SD)
     // Do some SD stuff
@@ -269,6 +265,8 @@ void setup()
       Serial.println(F("SD Card NOT Supported"));
 
   #endif
+
+  wifi_scan_obj.RunSetup();
 
   #ifdef HAS_SCREEN
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
@@ -279,14 +277,6 @@ void setup()
 
   #ifdef HAS_BATTERY
     battery_obj.RunSetup();
-  #endif
-  
-  #ifdef HAS_SCREEN
-    //display_obj.tft.println(F(text_table0[5]));
-  #endif
-
-  #ifdef HAS_SCREEN
-    //display_obj.tft.println(F(text_table0[6]));
   #endif
 
   #ifdef HAS_BATTERY
@@ -304,28 +294,12 @@ void setup()
     led_obj.RunSetup();
   #endif
 
-  #ifdef HAS_SCREEN
-    //display_obj.tft.println(F(text_table0[7]));
-
-    //delay(500);
-  #endif
-
   #ifdef HAS_GPS
     gps_obj.begin();
-    //#ifdef HAS_SCREEN
-      //if (gps_obj.getGpsModuleStatus())
-        //display_obj.tft.println("GPS Module connected");
-      //else
-        //display_obj.tft.println("GPS Module NOT connected");
-    //#endif
   #endif
 
-  #ifdef HAS_SCREEN
-    //display_obj.tft.println(F(text_table0[8]));
-  
+  #ifdef HAS_SCREEN  
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  
-    //delay(2000);
   #endif
 
   #ifdef HAS_SCREEN
