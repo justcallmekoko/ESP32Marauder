@@ -27,7 +27,7 @@
   //#define MARAUDER_CYD_2USB // Another 2432S028 but it has tWo UsBs OoOoOoO
   //#define MARAUDER_CYD_GUITION // ESP32-2432S024 GUITION
   //#define MARAUDER_C5
-  #define MARAUDER_CARDPUTER
+  //#define MARAUDER_CARDPUTER
   //// END BOARD TARGETS
 
   #define MARAUDER_VERSION "v1.8.0"
