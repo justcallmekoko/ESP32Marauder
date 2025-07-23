@@ -35,8 +35,10 @@ void EvilPortal::cleanup() {
 }
 
 bool EvilPortal::begin(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_points) {
-  if (!this->setAP(ssids, access_points))
-    return false;
+  if (!this->has_ap) {
+    if (!this->setAP(ssids, access_points))
+      return false;
+  }
   if (!this->setHtml())
     return false;
     
@@ -298,6 +300,20 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
   else
     return false;
 
+}
+
+bool EvilPortal::setAP(String essid) {
+  if (essid == "")
+    return false;
+
+  if (essid.length() > MAX_AP_NAME_SIZE) {
+    return false;
+  }
+
+  strncpy(apName, essid.c_str(), MAX_AP_NAME_SIZE);
+  this->has_ap = true;
+  Serial.println("ap config set");
+  return true;
 }
 
 void EvilPortal::startAP() {

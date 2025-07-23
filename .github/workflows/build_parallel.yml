@@ -17,24 +17,25 @@ jobs:
       fail-fast: false
       matrix:
         board:
-          - { name: "Flipper Zero WiFi Dev Board",   flag: "MARAUDER_FLIPPER",         fbqn: "esp32:esp32:esp32s2:PartitionScheme=min_spiffs,FlashSize=4M,PSRAM=enabled",                     file_name: "flipper",                 tft: false, tft_file: "",                                   build_dir: "esp32s2",                    addr: "0x1000" }
-          - { name: "Flipper Zero Multi Board S3",   flag: "MARAUDER_MULTIBOARD_S3",   fbqn: "esp32:esp32:esp32s3:PartitionScheme=min_spiffs,FlashSize=4M",                                   file_name: "multiboardS3",            tft: false, tft_file: "",                                   build_dir: "esp32s3",                    addr: "0x0" }
-          - { name: "OG Marauder",                   flag: "MARAUDER_V4",              fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "og",                      tft: true,  tft_file: "User_Setup_og_marauder.h",           build_dir: "d32",                        addr: "0x1000" }
-          - { name: "Marauder v6",                   flag: "MARAUDER_V6",              fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "v6",                      tft: true,  tft_file: "User_Setup_og_marauder.h",           build_dir: "d32",                        addr: "0x1000" }
-          - { name: "Marauder v6.1",                 flag: "MARAUDER_V6_1",            fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "v6_1",                    tft: true,  tft_file: "User_Setup_og_marauder.h",           build_dir: "d32",                        addr: "0x1000" }
-          - { name: "Marauder Kit",                  flag: "MARAUDER_KIT",             fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "kit",                     tft: true,  tft_file: "User_Setup_og_marauder.h",           build_dir: "d32",                        addr: "0x1000" }
-          - { name: "Marauder Mini",                 flag: "MARAUDER_MINI",            fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "mini",                    tft: true,  tft_file: "User_Setup_marauder_mini.h",         build_dir: "d32",                        addr: "0x1000" }
-          - { name: "ESP32 LDDB",                    flag: "ESP32_LDDB",               fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "esp32_lddb",              tft: false, tft_file: "",                                   build_dir: "d32",                        addr: "0x1000" }
-          - { name: "Marauder Dev Board Pro",        flag: "MARAUDER_DEV_BOARD_PRO",   fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "marauder_dev_board_pro",  tft: false, tft_file: "",                                   build_dir: "d32",                        addr: "0x1000" }
-          - { name: "M5StickCPlus",                  flag: "MARAUDER_M5STICKC",        fbqn: "esp32:esp32:m5stick-c:PartitionScheme=min_spiffs",                                              file_name: "m5stickc_plus",           tft: true,  tft_file: "User_Setup_marauder_m5stickc.h",     build_dir: "m5stick-c",                  addr: "0x1000" }
-          - { name: "M5StickCPlus 2",                flag: "MARAUDER_M5STICKCP2",      fbqn: "esp32:esp32:m5stick-c:PartitionScheme=min_spiffs",                                              file_name: "m5stickc_plus2",          tft: true,  tft_file: "User_Setup_marauder_m5stickcp2.h",   build_dir: "m5stick-c",                  addr: "0x1000" }
-          - { name: "Rev Feather",                   flag: "MARAUDER_REV_FEATHER",     fbqn: "esp32:esp32:esp32s2:PartitionScheme=min_spiffs,FlashSize=4M,PSRAM=enabled",                     file_name: "rev_feather",             tft: true,  tft_file: "User_Setup_marauder_rev_feather.h",  build_dir: "esp32s2",                    addr: "0x1000" }
-          - { name: "Marauder v7",                   flag: "MARAUDER_V7",              fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "marauder_v7",             tft: true,  tft_file: "User_Setup_dual_nrf24.h",            build_dir: "d32",                        addr: "0x1000" }
-          - { name: "Marauder CYD 2432S028",         flag: "MARAUDER_CYD_MICRO",       fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "cyd_2432S028",            tft: true,  tft_file: "User_Setup_cyd_micro.h",             build_dir: "d32",                        addr: "0x1000" }
-          - { name: "Marauder CYD 2432S024 GUITION", flag: "MARAUDER_CYD_GUITION",     fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "cyd_2432S024_guition",    tft: true,  tft_file: "User_Setup_cyd_guition.h",           build_dir: "d32",                        addr: "0x1000" }
-          - { name: "Marauder CYD 2432S028 2 USB",   flag: "MARAUDER_CYD_2USB",        fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "cyd_2432S028_2usb",       tft: true,  tft_file: "User_Setup_cyd_2usb.h",              build_dir: "d32",                        addr: "0x1000" }
-          - { name: "Marauder v7.1",                 flag: "MARAUDER_V7_1",            fbqn: "esp32:esp32:dfrobot_firebeetle2_esp32e:FlashSize=16M,PartitionScheme=min_spiffs,PSRAM=enabled", file_name: "marauder_v7_1",           tft: true,  tft_file: "User_Setup_dual_nrf24.h",            build_dir: "dfrobot_firebeetle2_esp32e", addr: "0x1000" }
-          - { name: "M5Cardputer",                   flag: "MARAUDER_CARDPUTER",       fbqn: "esp32:esp32:esp32s3:PartitionScheme=min_spiffs,FlashSize=8M,PSRAM=disabled",                    file_name: "m5cardputer",             tft: true,  tft_file: "User_Setup_marauder_m5cardputer.h",  build_dir: "esp32s3",                    addr: "0x1000" }
+          - { name: "Flipper Zero WiFi Dev Board",   flag: "MARAUDER_FLIPPER",         fbqn: "esp32:esp32:esp32s2:PartitionScheme=min_spiffs,FlashSize=4M,PSRAM=enabled",                     file_name: "flipper",                 tft: false, tft_file: "",                                   build_dir: "esp32s2",                    addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Flipper Zero Multi Board S3",   flag: "MARAUDER_MULTIBOARD_S3",   fbqn: "esp32:esp32:esp32s3:PartitionScheme=min_spiffs,FlashSize=4M",                                   file_name: "multiboardS3",            tft: false, tft_file: "",                                   build_dir: "esp32s3",                    addr: "0x0",      idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "OG Marauder",                   flag: "MARAUDER_V4",              fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "og",                      tft: true,  tft_file: "User_Setup_og_marauder.h",           build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Marauder v6",                   flag: "MARAUDER_V6",              fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "v6",                      tft: true,  tft_file: "User_Setup_og_marauder.h",           build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Marauder v6.1",                 flag: "MARAUDER_V6_1",            fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "v6_1",                    tft: true,  tft_file: "User_Setup_og_marauder.h",           build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Marauder Kit",                  flag: "MARAUDER_KIT",             fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "kit",                     tft: true,  tft_file: "User_Setup_og_marauder.h",           build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Marauder Mini",                 flag: "MARAUDER_MINI",            fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "mini",                    tft: true,  tft_file: "User_Setup_marauder_mini.h",         build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "ESP32 LDDB",                    flag: "ESP32_LDDB",               fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "esp32_lddb",              tft: false, tft_file: "",                                   build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Marauder Dev Board Pro",        flag: "MARAUDER_DEV_BOARD_PRO",   fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "marauder_dev_board_pro",  tft: false, tft_file: "",                                   build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "M5StickCPlus",                  flag: "MARAUDER_M5STICKC",        fbqn: "esp32:esp32:m5stick-c:PartitionScheme=min_spiffs",                                              file_name: "m5stickc_plus",           tft: true,  tft_file: "User_Setup_marauder_m5stickc.h",     build_dir: "m5stick-c",                  addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "M5StickCPlus 2",                flag: "MARAUDER_M5STICKCP2",      fbqn: "esp32:esp32:m5stick-c:PartitionScheme=min_spiffs",                                              file_name: "m5stickc_plus2",          tft: true,  tft_file: "User_Setup_marauder_m5stickcp2.h",   build_dir: "m5stick-c",                  addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Rev Feather",                   flag: "MARAUDER_REV_FEATHER",     fbqn: "esp32:esp32:esp32s2:PartitionScheme=min_spiffs,FlashSize=4M,PSRAM=enabled",                     file_name: "rev_feather",             tft: true,  tft_file: "User_Setup_marauder_rev_feather.h",  build_dir: "esp32s2",                    addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Marauder v7",                   flag: "MARAUDER_V7",              fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "marauder_v7",             tft: true,  tft_file: "User_Setup_dual_nrf24.h",            build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Marauder CYD 2432S028",         flag: "MARAUDER_CYD_MICRO",       fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "cyd_2432S028",            tft: true,  tft_file: "User_Setup_cyd_micro.h",             build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Marauder CYD 2432S024 GUITION", flag: "MARAUDER_CYD_GUITION",     fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "cyd_2432S024_guition",    tft: true,  tft_file: "User_Setup_cyd_guition.h",           build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Marauder CYD 2432S028 2 USB",   flag: "MARAUDER_CYD_2USB",        fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "cyd_2432S028_2usb",       tft: true,  tft_file: "User_Setup_cyd_2usb.h",              build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Marauder v7.1",                 flag: "MARAUDER_V7_1",            fbqn: "esp32:esp32:dfrobot_firebeetle2_esp32e:FlashSize=16M,PartitionScheme=min_spiffs,PSRAM=enabled", file_name: "marauder_v7_1",           tft: true,  tft_file: "User_Setup_dual_nrf24.h",            build_dir: "dfrobot_firebeetle2_esp32e", addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "M5Cardputer",                   flag: "MARAUDER_CARDPUTER",       fbqn: "esp32:esp32:esp32s3:PartitionScheme=min_spiffs,FlashSize=8M,PSRAM=disabled",                    file_name: "m5cardputer",             tft: true,  tft_file: "User_Setup_marauder_m5cardputer.h",  build_dir: "esp32s3",                    addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "ESP32-C5-DevKitC-1",            flag: "MARAUDER_C5",              fbqn: "esp32:esp32:esp32c5:PartitionScheme=min_spiffs",                                                file_name: "esp32c5devkitc1",         tft: false, tft_file: "",                                   build_dir: "esp32c5",                    addr: "0x2000",   idf_ver: "3.3.0",    nimble_ver: "2.3.0",    esp_async: "bigbrodude6119/ESPAsyncWebServer",     esp_async_ver: "master" }
           
     steps:
       - name: Checkout Code
@@ -47,21 +48,21 @@ jobs:
           export PATH=$PATH:/home/runner/work/ESP32Marauder/ESP32Marauder/bin
           arduino-cli version
 
-      - name: Install Arduino-ESP32 Core v2.0.11
-        run: |
-          arduino-cli core update-index
-          arduino-cli core install esp32:esp32@2.0.11
+      #- name: Install Arduino-ESP32 Core v${{ matrix.board.idf_ver }}
+      #  run: |
+      #    arduino-cli core update-index
+      #    arduino-cli core install esp32:esp32@${{ matrix.board.idf_ver }}
 
       - name: Verify Installed Cores
         run: arduino-cli core list
 
-      - name: Build TestFile with ESP32 v2.0.11
+      - name: Build TestFile with ESP32 v${{ matrix.board.idf_ver }}
         uses: ArminJo/arduino-test-compile@v3.2.1
         with:
           sketch-names: TestFile.ino
           arduino-board-fqbn: esp32:esp32:esp32s2
-          arduino-platform: esp32:esp32@2.0.11
-          platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.11/package_esp32_dev_index.json
+          arduino-platform: esp32:esp32@${{ matrix.board.idf_ver }}
+          platform-url: https://github.com/espressif/arduino-esp32/releases/download/${{ matrix.board.idf_ver }}/package_esp32_dev_index.json
 
       - name: Verify Installed Cores Again
         run: arduino-cli core list
@@ -91,12 +92,16 @@ jobs:
           ref: v2.0.6
           path: CustomMicroNMEA
           
+      #- name: Install ESPAsyncWebServer
+      #  uses: actions/checkout@v2
+      #  with:
+      #    repository: ${{ matrix.board.esp_async }}
+      #    ref: ${{ matrix.board.esp_async_ver }}
+      #    path: CustomESPAsyncWebServer
+      
       - name: Install ESPAsyncWebServer
-        uses: actions/checkout@v2
-        with:
-          repository: bigbrodude6119/ESPAsyncWebServer
-          ref: master
-          path: CustomESPAsyncWebServer
+        run: |
+          cp -r libraries/ESPAsyncWebServer ./CustomESPAsyncWebServer
           
       - name: Install TFT_eSPI
         uses: actions/checkout@v2
@@ -130,7 +135,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: h2zero/NimBLE-Arduino
-          ref: 1.3.8
+          ref: ${{ matrix.board.nimble_ver }}
           path: CustomNimBLE-Arduino
 
       - name: Install Adafruit_NeoPixel
@@ -175,6 +180,10 @@ jobs:
           ref: 1.0.2
           path: CustomAdafruit_MAX1704X
           
+      - name: Show Libraries
+        run: |
+          find /home/runner/ -name "Custom*"
+          
       - name: Configure TFT_eSPI
         run: |
           rm -f CustomTFT_eSPI/User_Setup_Select.h
@@ -189,16 +198,24 @@ jobs:
 
       - name: Modify platform.txt
         run: |
-          for i in $(find /home/runner/.arduino15/packages/esp32/hardware/esp32/ -name "platform.txt"); do
-            sed -i 's/compiler.c.elf.libs.esp32c3=/compiler.c.elf.libs.esp32c3=-zmuldefs /' "$i"
-            sed -i 's/compiler.c.elf.libs.esp32s3=/compiler.c.elf.libs.esp32s3=-zmuldefs /' "$i"
-            sed -i 's/compiler.c.elf.libs.esp32s2=/compiler.c.elf.libs.esp32s2=-zmuldefs /' "$i"
-            sed -i 's/compiler.c.elf.libs.esp32=/compiler.c.elf.libs.esp32=-zmuldefs /' "$i"
-            cat "$i" | grep compiler.c.elf.libs.esp32c3
-            cat "$i" | grep compiler.c.elf.libs.esp32s3
-            cat "$i" | grep compiler.c.elf.libs.esp32s2
-            cat "$i" | grep compiler.c.elf.libs.esp32
-          done
+          if [[ ${{ matrix.board.idf_ver }} == "2.0.11" ]]; then
+            for i in $(find /home/runner/.arduino15/packages/esp32/hardware/esp32/ -name "platform.txt"); do
+              sed -i 's/compiler.c.elf.libs.esp32c3=/compiler.c.elf.libs.esp32c3=-zmuldefs /' "$i"
+              sed -i 's/compiler.c.elf.libs.esp32s3=/compiler.c.elf.libs.esp32s3=-zmuldefs /' "$i"
+              sed -i 's/compiler.c.elf.libs.esp32s2=/compiler.c.elf.libs.esp32s2=-zmuldefs /' "$i"
+              sed -i 's/compiler.c.elf.libs.esp32=/compiler.c.elf.libs.esp32=-zmuldefs /' "$i"
+              cat "$i" | grep compiler.c.elf.libs.esp32c3
+              cat "$i" | grep compiler.c.elf.libs.esp32s3
+              cat "$i" | grep compiler.c.elf.libs.esp32s2
+              cat "$i" | grep compiler.c.elf.libs.esp32
+            done
+          fi
+          
+          if [[ ${{ matrix.board.idf_ver }} == "3.3.0" ]]; then
+            for i in $(find /home/runner/.arduino15/packages/esp32/hardware/esp32/ -name "platform.txt"); do
+              sed -i 's/compiler.c.elf.extra_flags=/compiler.c.elf.extra_flags=-Wl,-zmuldefs /' "$i"
+            done
+          fi
           
       - name: Configure TFT_eSPI (if needed)
         run: |
@@ -209,13 +226,13 @@ jobs:
           fi
 
       - name: Build Marauder for ${{ matrix.board.name }}
-        uses: ArminJo/arduino-test-compile@v3.2.1
+        uses: ArminJo/arduino-test-compile@v3.3.0
         with:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: ${{ matrix.board.fbqn }}
           extra-arduino-cli-args: "--warnings none --build-property compiler.cpp.extra_flags='-D${{ matrix.board.flag }}'"
-          arduino-platform: esp32:esp32@2.0.11
-          platform-url: https://github.com/espressif/arduino-esp32/releases/download/2.0.11/package_esp32_dev_index.json
+          arduino-platform: esp32:esp32@${{ matrix.board.idf_ver }}
+          platform-url: https://github.com/espressif/arduino-esp32/releases/download/${{ matrix.board.idf_ver }}/package_esp32_dev_index.json
 
       - name: Rename Marauder ${{ matrix.board.name }} bin
         run: |
