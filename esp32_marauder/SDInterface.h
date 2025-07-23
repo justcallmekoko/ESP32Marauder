@@ -19,6 +19,10 @@
 #endif
 #include <Update.h>
 
+#include "esp_ota_ops.h"
+#include "esp_partition.h"
+#include "esp_err.h"
+
 extern Buffer buffer_obj;
 extern Settings settings_obj;
 #ifdef HAS_SCREEN

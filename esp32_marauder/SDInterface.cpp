@@ -217,6 +217,15 @@ void SDInterface::runUpdate() {
     #ifdef HAS_SCREEN
       display_obj.tft.println(F(text_table2[3]));
     #endif
+    const esp_partition_t *running = esp_ota_get_running_partition();
+    Serial.printf("Currently running: %s at 0x%X\n", running->label, running->address);
+
+    const esp_partition_t *next = esp_ota_get_next_update_partition(NULL);
+    Serial.printf("Next OTA partition: %s at 0x%X\n", next->label, next->address);
+
+    esp_err_t result = esp_ota_set_boot_partition(next);
+    Serial.printf("esp_ota_set_boot_partition result: %s\n", esp_err_to_name(result));
+
     Serial.println(F("rebooting..."));
     //SD.remove("/update.bin");      
     delay(1000);
