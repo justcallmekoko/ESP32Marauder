@@ -91,13 +91,17 @@ bool Settings::loadSetting<bool>(String key) {
   DynamicJsonDocument json(1024); // ArduinoJson v6
 
   if (deserializeJson(json, this->json_settings_string)) {
-    Serial.println("\nCould not parse json");
+    Serial.println("Could not parse json to load");
   }
 
   for (int i = 0; i < json["Settings"].size(); i++) {
     if (json["Settings"][i]["name"].as<String>() == key)
       return json["Settings"][i]["value"];
   }
+
+  Serial.println("Did not find setting named " + (String)key + ". Creating...");
+  if (this->createDefaultSettings(SPIFFS, true, json["Settings"].size(), "bool", key))
+    return true;
 
   return false;
 }
@@ -239,7 +243,7 @@ void Settings::printJsonSettings(String json_string) {
   }
 }
 
-bool Settings::createDefaultSettings(fs::FS &fs) {
+bool Settings::createDefaultSettings(fs::FS &fs, bool spec, uint8_t index, String typeStr, String name) {
   Serial.println(F("Creating default settings file: settings.json"));
   
   File settingsFile = fs.open("/settings.json", FILE_WRITE);
@@ -249,51 +253,74 @@ bool Settings::createDefaultSettings(fs::FS &fs) {
     return false;
   }
 
-  DynamicJsonDocument jsonBuffer(1024);
   String settings_string;
 
-  //jsonBuffer["Settings"][0]["name"] = "Channel";
-  //jsonBuffer["Settings"][0]["type"] = "uint8_t";
-  //jsonBuffer["Settings"][0]["value"] = 11;
-  //jsonBuffer["Settings"][0]["range"]["min"] = 1;
-  //jsonBuffer["Settings"][0]["range"]["max"] = 14;
+  if (!spec) {
+    DynamicJsonDocument jsonBuffer(1024);
 
-  //jsonBuffer["Settings"][1]["name"] = "Channel Hop Delay";
-  //jsonBuffer["Settings"][1]["type"] = "int";
-  //jsonBuffer["Settings"][1]["value"] = 1;
-  //jsonBuffer["Settings"][1]["range"]["min"] = 1;
-  //jsonBuffer["Settings"][1]["range"]["max"] = 10;
+    jsonBuffer["Settings"][0]["name"] = "ForcePMKID";
+    jsonBuffer["Settings"][0]["type"] = "bool";
+    jsonBuffer["Settings"][0]["value"] = false;
+    jsonBuffer["Settings"][0]["range"]["min"] = false;
+    jsonBuffer["Settings"][0]["range"]["max"] = true;
 
-  jsonBuffer["Settings"][0]["name"] = "ForcePMKID";
-  jsonBuffer["Settings"][0]["type"] = "bool";
-  jsonBuffer["Settings"][0]["value"] = true;
-  jsonBuffer["Settings"][0]["range"]["min"] = false;
-  jsonBuffer["Settings"][0]["range"]["max"] = true;
+    jsonBuffer["Settings"][1]["name"] = "ForceProbe";
+    jsonBuffer["Settings"][1]["type"] = "bool";
+    jsonBuffer["Settings"][1]["value"] = false;
+    jsonBuffer["Settings"][1]["range"]["min"] = false;
+    jsonBuffer["Settings"][1]["range"]["max"] = true;
 
-  jsonBuffer["Settings"][1]["name"] = "ForceProbe";
-  jsonBuffer["Settings"][1]["type"] = "bool";
-  jsonBuffer["Settings"][1]["value"] = true;
-  jsonBuffer["Settings"][1]["range"]["min"] = false;
-  jsonBuffer["Settings"][1]["range"]["max"] = true;
+    jsonBuffer["Settings"][2]["name"] = "SavePCAP";
+    jsonBuffer["Settings"][2]["type"] = "bool";
+    jsonBuffer["Settings"][2]["value"] = true;
+    jsonBuffer["Settings"][2]["range"]["min"] = false;
+    jsonBuffer["Settings"][2]["range"]["max"] = true;
 
-  jsonBuffer["Settings"][2]["name"] = "SavePCAP";
-  jsonBuffer["Settings"][2]["type"] = "bool";
-  jsonBuffer["Settings"][2]["value"] = true;
-  jsonBuffer["Settings"][2]["range"]["min"] = false;
-  jsonBuffer["Settings"][2]["range"]["max"] = true;
+    jsonBuffer["Settings"][3]["name"] = "EnableLED";
+    jsonBuffer["Settings"][3]["type"] = "bool";
+    jsonBuffer["Settings"][3]["value"] = true;
+    jsonBuffer["Settings"][3]["range"]["min"] = false;
+    jsonBuffer["Settings"][3]["range"]["max"] = true;
 
-  jsonBuffer["Settings"][3]["name"] = "EnableLED";
-  jsonBuffer["Settings"][3]["type"] = "bool";
-  jsonBuffer["Settings"][3]["value"] = true;
-  jsonBuffer["Settings"][3]["range"]["min"] = false;
-  jsonBuffer["Settings"][3]["range"]["max"] = true;
+    jsonBuffer["Settings"][4]["name"] = "EPDeauth";
+    jsonBuffer["Settings"][4]["type"] = "bool";
+    jsonBuffer["Settings"][4]["value"] = false;
+    jsonBuffer["Settings"][4]["range"]["min"] = false;
+    jsonBuffer["Settings"][4]["range"]["max"] = true;
 
-  //jsonBuffer.printTo(settingsFile);
-  if (serializeJson(jsonBuffer, settingsFile) == 0) {
-    Serial.println(F("Failed to write to file"));
+    //jsonBuffer.printTo(settingsFile);
+    if (serializeJson(jsonBuffer, settingsFile) == 0) {
+      Serial.println(F("Failed to write to file"));
+    }
+    if (serializeJson(jsonBuffer, settings_string) == 0) {
+      Serial.println(F("Failed to write to string"));
+    }
   }
-  if (serializeJson(jsonBuffer, settings_string) == 0) {
-    Serial.println(F("Failed to write to string"));
+
+  else {
+    DynamicJsonDocument json(1024); // ArduinoJson v6
+
+    if (deserializeJson(json, this->json_settings_string)) {
+      Serial.println("Could not parse json to create new setting");
+      return false;
+    }
+
+    if (typeStr == "bool") {
+      Serial.println("Creating bool setting...");
+      json["Settings"][index]["name"] = name;
+      json["Settings"][index]["type"] = typeStr;
+      json["Settings"][index]["value"] = false;
+      json["Settings"][index]["range"]["min"] = false;
+      json["Settings"][index]["range"]["max"] = true;
+
+      if (serializeJson(json, settings_string) == 0) {
+        Serial.println("Failed to write to string");
+      }
+
+      if (serializeJson(json, settingsFile) == 0) {
+        Serial.println("Failed to write to file");
+      }
+    }
   }
 
   // Close the file

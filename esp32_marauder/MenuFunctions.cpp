@@ -1540,7 +1540,7 @@ void MenuFunctions::updateStatusBar()
   }
 
   // Force PMKID stuff
-  if (wifi_scan_obj.force_pmkid) {
+  if ((wifi_scan_obj.force_pmkid) || (wifi_scan_obj.ep_deauth)) {
     #ifdef HAS_FULL_SCREEN
       display_obj.tft.drawXBitmap(170 - (16 * 2),
                                   0,
@@ -1732,7 +1732,7 @@ void MenuFunctions::drawStatusBar()
   }
 
   // Force PMKID stuff
-  if (wifi_scan_obj.force_pmkid) {
+  if ((wifi_scan_obj.force_pmkid) || (wifi_scan_obj.ep_deauth)) {
     #ifdef HAS_FULL_SCREEN
       display_obj.tft.drawXBitmap(170 - (16 * 2),
                                   0,
@@ -3140,6 +3140,7 @@ void MenuFunctions::RunSetup()
       wifi_scan_obj.force_pmkid = settings_obj.loadSetting<bool>(text_table4[5]);
       wifi_scan_obj.force_probe = settings_obj.loadSetting<bool>(text_table4[6]);
       wifi_scan_obj.save_pcap = settings_obj.loadSetting<bool>(text_table4[7]);
+      wifi_scan_obj.ep_deauth = settings_obj.loadSetting<bool>("EPDeauth");
     }, settings_obj.loadSetting<bool>(settings_obj.setting_index_to_name(i)));
   }
 
