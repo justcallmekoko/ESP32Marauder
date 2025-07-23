@@ -35,6 +35,7 @@ jobs:
           - { name: "Marauder CYD 2432S028 2 USB",   flag: "MARAUDER_CYD_2USB",        fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "cyd_2432S028_2usb",       tft: true,  tft_file: "User_Setup_cyd_2usb.h",              build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8" }
           - { name: "Marauder v7.1",                 flag: "MARAUDER_V7_1",            fbqn: "esp32:esp32:dfrobot_firebeetle2_esp32e:FlashSize=16M,PartitionScheme=min_spiffs,PSRAM=enabled", file_name: "marauder_v7_1",           tft: true,  tft_file: "User_Setup_dual_nrf24.h",            build_dir: "dfrobot_firebeetle2_esp32e", addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8" }
           - { name: "M5Cardputer",                   flag: "MARAUDER_CARDPUTER",       fbqn: "esp32:esp32:esp32s3:PartitionScheme=min_spiffs,FlashSize=8M,PSRAM=disabled",                    file_name: "m5cardputer",             tft: true,  tft_file: "User_Setup_marauder_m5cardputer.h",  build_dir: "esp32s3",                    addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8" }
+          - { name: "ESP32-C5-DevKitC-1",            flag: "MARAUDER_C5",              fbqn: "esp32:esp32:esp32c5:PartitionScheme=min_spiffs",                                                file_name: "esp32c5devkitc1",         tft: false, tft_file: "",                                   build_dir: "esp32c5",                    addr: "0x1000",   idf_ver: "3.3.0",    nimble_ver: "2.3.0" }
           
     steps:
       - name: Checkout Code
@@ -189,16 +190,24 @@ jobs:
 
       - name: Modify platform.txt
         run: |
-          for i in $(find /home/runner/.arduino15/packages/esp32/hardware/esp32/ -name "platform.txt"); do
-            sed -i 's/compiler.c.elf.libs.esp32c3=/compiler.c.elf.libs.esp32c3=-zmuldefs /' "$i"
-            sed -i 's/compiler.c.elf.libs.esp32s3=/compiler.c.elf.libs.esp32s3=-zmuldefs /' "$i"
-            sed -i 's/compiler.c.elf.libs.esp32s2=/compiler.c.elf.libs.esp32s2=-zmuldefs /' "$i"
-            sed -i 's/compiler.c.elf.libs.esp32=/compiler.c.elf.libs.esp32=-zmuldefs /' "$i"
-            cat "$i" | grep compiler.c.elf.libs.esp32c3
-            cat "$i" | grep compiler.c.elf.libs.esp32s3
-            cat "$i" | grep compiler.c.elf.libs.esp32s2
-            cat "$i" | grep compiler.c.elf.libs.esp32
-          done
+          if [[ ${{ matrix.board.idf_ver }} == "2.0.11" ]]; then
+            for i in $(find /home/runner/.arduino15/packages/esp32/hardware/esp32/ -name "platform.txt"); do
+              sed -i 's/compiler.c.elf.libs.esp32c3=/compiler.c.elf.libs.esp32c3=-zmuldefs /' "$i"
+              sed -i 's/compiler.c.elf.libs.esp32s3=/compiler.c.elf.libs.esp32s3=-zmuldefs /' "$i"
+              sed -i 's/compiler.c.elf.libs.esp32s2=/compiler.c.elf.libs.esp32s2=-zmuldefs /' "$i"
+              sed -i 's/compiler.c.elf.libs.esp32=/compiler.c.elf.libs.esp32=-zmuldefs /' "$i"
+              cat "$i" | grep compiler.c.elf.libs.esp32c3
+              cat "$i" | grep compiler.c.elf.libs.esp32s3
+              cat "$i" | grep compiler.c.elf.libs.esp32s2
+              cat "$i" | grep compiler.c.elf.libs.esp32
+            done
+          fi
+          
+          if [[ ${{ matrix.board.idf_ver }} == "3.3.0" ]]; then
+            for i in $(find /home/runner/.arduino15/packages/esp32/hardware/esp32/ -name "platform.txt"); do
+              sed -i 's/compiler.c.elf.extra_flags=/compiler.c.elf.extra_flags=-Wl,-zmuldefs /' "$i"
+            done
+          fi
           
       - name: Configure TFT_eSPI (if needed)
         run: |
