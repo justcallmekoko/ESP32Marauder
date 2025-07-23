@@ -35,6 +35,7 @@ extern LinkedList<AirTag>* airtags;
 extern LinkedList<ssid>* ssids;
 extern LinkedList<Station>* stations;
 extern LinkedList<IPAddress>* ipList;
+extern LinkedList<ProbeReqSsid>* probe_req_ssids;
 extern const String PROGMEM version_number;
 extern const String PROGMEM board_target;
 
@@ -55,6 +56,7 @@ const char PROGMEM NMEA_CMD[] = "nmea";
 
 // WiFi sniff/scan
 const char PROGMEM EVIL_PORTAL_CMD[] = "evilportal";
+const char PROGMEM KARMA_CMD[] = "karma";
 const char PROGMEM PACKET_COUNT_CMD[] = "packetcount";
 const char PROGMEM SIGSTREN_CMD[] = "sigmon";
 const char PROGMEM SCAN_ALL_CMD[] = "scanall";
@@ -118,6 +120,7 @@ const char PROGMEM HELP_NMEA_CMD[] = "nmea";
 
 // WiFi sniff/scan
 const char PROGMEM HELP_EVIL_PORTAL_CMD[] = "evilportal [-c start [-w html.html]/sethtml <html.html>]";
+const char PROGMEM HELP_KARMA_CMD[] = "karma -p <index>";
 const char PROGMEM HELP_PACKET_COUNT_CMD[] = "packetcount";
 const char PROGMEM HELP_SIGSTREN_CMD[] = "sigmon";
 const char PROGMEM HELP_SCAN_ALL_CMD[] = "scanall";
@@ -146,6 +149,7 @@ const char PROGMEM HELP_LIST_AP_CMD_B[] = "list -a";
 const char PROGMEM HELP_LIST_AP_CMD_C[] = "list -c";
 const char PROGMEM HELP_LIST_AP_CMD_D[] = "list -t";
 const char PROGMEM HELP_LIST_AP_CMD_E[] = "list -i";
+const char PROGMEM HELP_LIST_AP_CMD_F[] = "list -p";
 const char PROGMEM HELP_INFO_CMD[] = "info [-a <index>]";
 const char PROGMEM HELP_SEL_CMD_A[] = "select -a/-s/-c <index (comma separated)>/-f \"equals <String> or contains <String>\"";
 const char PROGMEM HELP_SSID_CMD_A[] = "ssid -a [-g <count>/-n <name>]";
