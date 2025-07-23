@@ -230,7 +230,7 @@ jobs:
         with:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: ${{ matrix.board.fbqn }}
-          extra-arduino-cli-args: "--warnings none --build-property compiler.cpp.extra_flags='-D${{ matrix.board.flag }}' --build-property build.extra_flags='-DCONFIG_ESP_COREDUMP_ENABLE=0'"
+          extra-arduino-cli-args: "--warnings none --build-property compiler.cpp.extra_flags='-D${{ matrix.board.flag }}'"
           arduino-platform: esp32:esp32@${{ matrix.board.idf_ver }}
           platform-url: https://github.com/espressif/arduino-esp32/releases/download/${{ matrix.board.idf_ver }}/package_esp32_dev_index.json
 
