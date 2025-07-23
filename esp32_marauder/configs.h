@@ -12,7 +12,7 @@
   //#define MARAUDER_MINI
   //#define MARAUDER_V4
   //#define MARAUDER_V6
-  //#define MARAUDER_V6_1
+  #define MARAUDER_V6_1
   //#define MARAUDER_V7
   //#define MARAUDER_V7_1
   //#define MARAUDER_KIT
@@ -30,7 +30,7 @@
   //#define MARAUDER_CARDPUTER
   //// END BOARD TARGETS
 
-  #define MARAUDER_VERSION "v1.8.1"
+  #define MARAUDER_VERSION "v1.8.2"
 
   #define GRAPH_REFRESH   100
 

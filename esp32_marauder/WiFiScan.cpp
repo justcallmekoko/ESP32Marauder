@@ -1202,6 +1202,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
 
       evil_portal_obj.cleanup();
     #endif
+    evil_portal_obj.has_ap = false;
   }
 
   
