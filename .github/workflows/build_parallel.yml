@@ -92,12 +92,16 @@ jobs:
           ref: v2.0.6
           path: CustomMicroNMEA
           
+      #- name: Install ESPAsyncWebServer
+      #  uses: actions/checkout@v2
+      #  with:
+      #    repository: ${{ matrix.board.esp_async }}
+      #    ref: ${{ matrix.board.esp_async_ver }}
+      #    path: CustomESPAsyncWebServer
+      
       - name: Install ESPAsyncWebServer
-        uses: actions/checkout@v2
-        with:
-          repository: ${{ matrix.board.esp_async }}
-          ref: ${{ matrix.board.esp_async_ver }}
-          path: CustomESPAsyncWebServer
+        run: |
+          cp -r libraries/ESPAsyncWebServer ./CustomESPAsyncWebServer
           
       - name: Install TFT_eSPI
         uses: actions/checkout@v2
@@ -175,6 +179,10 @@ jobs:
           repository: adafruit/Adafruit_MAX1704X
           ref: 1.0.2
           path: CustomAdafruit_MAX1704X
+          
+      - name: Show Libraries
+        run: |
+          find /home/runner/ -name "Custom*"
           
       - name: Configure TFT_eSPI
         run: |
