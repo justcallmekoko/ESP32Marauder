@@ -1985,6 +1985,7 @@ void MenuFunctions::RunSetup()
       sdDeleteMenu.name = "Delete SD Files";
   //  #endif
   #endif
+  selectProbeSSIDsMenu.name = "Probe Requests";
 
   // Build Main Menu
   mainMenu.parentMenu = NULL;
@@ -2234,6 +2235,30 @@ void MenuFunctions::RunSetup()
     wifi_scan_obj.StartScan(WIFI_ATTACK_DEAUTH_TARGETED, TFT_ORANGE);
   });
 
+  this->addNodes(&wifiAttackMenu, "Karma", TFTORANGE, NULL, KEYBOARD_ICO, [this](){
+    // Add the back button
+    selectProbeSSIDsMenu.list->clear();
+    this->addNodes(&selectProbeSSIDsMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+      this->changeMenu(&wifiAttackMenu);
+    });
+
+    // Populate the menu with buttons
+    for (int i = 0; i < probe_req_ssids->size(); i++) {
+      // This is the menu node
+      this->addNodes(&selectProbeSSIDsMenu, probe_req_ssids->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
+        if (evil_portal_obj.setAP(probe_req_ssids->get(i).essid)) {
+          display_obj.clearScreen();
+          this->drawStatusBar();
+          wifi_scan_obj.StartScan(WIFI_SCAN_EVIL_PORTAL, TFT_ORANGE);
+          wifi_scan_obj.setMac();
+        }
+        else
+          this->changeMenu(&wifiAttackMenu);
+      });
+    }
+    this->changeMenu(&selectProbeSSIDsMenu);
+  });  
+
   // Build WiFi General menu
   wifiGeneralMenu.parentMenu = &wifiMenu;
   this->addNodes(&wifiGeneralMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
@@ -2246,62 +2271,62 @@ void MenuFunctions::RunSetup()
 
 	//Add Select probe ssid
   this->addNodes(&wifiGeneralMenu, text_table1[65], TFTCYAN, NULL, KEYBOARD_ICO, [this]() {
-      selectProbeSSIDsMenu.list->clear();
+    selectProbeSSIDsMenu.list->clear();
 
-      // Add the back button
-      this->addNodes(&selectProbeSSIDsMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
-          this->changeMenu(&wifiGeneralMenu);
+    // Add the back button
+    this->addNodes(&selectProbeSSIDsMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+      this->changeMenu(&wifiGeneralMenu);
 
-          // TODO: TBD - Should probe_req_ssids have it´s own life and override ap.config and/or ssids -list for EP?
-          // If so, then we should not add selected ssids to ssids list
+      // TODO: TBD - Should probe_req_ssids have it´s own life and override ap.config and/or ssids -list for EP?
+      // If so, then we should not add selected ssids to ssids list
 
-          // Add selected ssid names to ssids list when clicking back button
-          if (probe_req_ssids->size() > 0) {
+      // Add selected ssid names to ssids list when clicking back button
+      if (probe_req_ssids->size() > 0) {
 
-              //TODO: TBD - Clear ssids list before adding new ones??
+        //TODO: TBD - Clear ssids list before adding new ones??
 
-              for (int i = 0; i < probe_req_ssids->size(); i++) {
-                  ProbeReqSsid cur_probe_ssid = probe_req_ssids->get(i);
-                  if (cur_probe_ssid.selected) {
-                      bool ssidExists = false;
-                      for (int i = 0; i < ssids->size(); i++) {
-                          if (ssids->get(i).essid == cur_probe_ssid.essid) {
-                              ssidExists = true;
-                              break;
-                          }
-                      }
-                      if (!ssidExists) {
-                          wifi_scan_obj.addSSID(cur_probe_ssid.essid);
-                      }
-                  }
+        for (int i = 0; i < probe_req_ssids->size(); i++) {
+          ProbeReqSsid cur_probe_ssid = probe_req_ssids->get(i);
+          if (cur_probe_ssid.selected) {
+            bool ssidExists = false;
+            for (int i = 0; i < ssids->size(); i++) {
+              if (ssids->get(i).essid == cur_probe_ssid.essid) {
+                ssidExists = true;
+                break;
               }
+            }
+            if (!ssidExists) {
+              wifi_scan_obj.addSSID(cur_probe_ssid.essid);
+            }
           }
-      });
-
-      // Populate the menu with buttons
-      for (int i = 0; i < probe_req_ssids->size(); i++) {
-          ProbeReqSsid cur_ssid = probe_req_ssids->get(i);
-          // This is the menu node
-          this->addNodes(
-              &selectProbeSSIDsMenu,
-              "[" + String(cur_ssid.requests) + "]" + cur_ssid.essid,
-              TFTCYAN,
-              NULL,
-              255,
-              [this, i]() {
-                  ProbeReqSsid new_ssid = probe_req_ssids->get(i);
-                  new_ssid.selected = !probe_req_ssids->get(i).selected;
-
-                  // Change selection status of menu node
-                  MenuNode new_node = current_menu->list->get(i + 1);
-                  new_node.selected = !current_menu->list->get(i + 1).selected;
-                  current_menu->list->set(i + 1, new_node);
-
-                  probe_req_ssids->set(i, new_ssid);
-              },
-              probe_req_ssids->get(i).selected);
+        }
       }
-      this->changeMenu(&selectProbeSSIDsMenu);
+    });
+
+    // Populate the menu with buttons
+    for (int i = 0; i < probe_req_ssids->size(); i++) {
+      ProbeReqSsid cur_ssid = probe_req_ssids->get(i);
+      // This is the menu node
+      this->addNodes(
+        &selectProbeSSIDsMenu,
+        "[" + String(cur_ssid.requests) + "]" + cur_ssid.essid,
+        TFTCYAN,
+        NULL,
+        255,
+        [this, i]() {
+          ProbeReqSsid new_ssid = probe_req_ssids->get(i);
+          new_ssid.selected = !probe_req_ssids->get(i).selected;
+
+          // Change selection status of menu node
+          MenuNode new_node = current_menu->list->get(i + 1);
+          new_node.selected = !current_menu->list->get(i + 1).selected;
+          current_menu->list->set(i + 1, new_node);
+
+          probe_req_ssids->set(i, new_ssid);
+        },
+        probe_req_ssids->get(i).selected);
+    }
+    this->changeMenu(&selectProbeSSIDsMenu);
   });
 
   #ifdef HAS_ILI9341

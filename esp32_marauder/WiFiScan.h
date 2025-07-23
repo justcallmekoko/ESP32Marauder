@@ -184,33 +184,6 @@ esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx, const void *buffer, int len, b
   esp_err_t esp_base_mac_addr_set(uint8_t *Mac);
 #endif
 
-/*struct ssid {
-  String essid;
-  uint8_t channel;
-  int bssid[6];
-  bool selected;
-};*/
-
-/*struct AccessPoint {
-  String essid;
-  int channel;
-  int bssid[6];
-  bool selected;
-  LinkedList<char>* beacon;
-  int rssi;
-  LinkedList<int>* stations;
-};*/
-
-
-/*struct mac_addr {
-   unsigned char bytes[6];
-};
-
-struct Station {
-  uint8_t mac[6];
-  bool selected;
-};*/
-
 struct AirTag {
     String mac;                  // MAC address of the AirTag
     std::vector<uint8_t> payload; // Payload data

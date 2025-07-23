@@ -89,7 +89,6 @@ class EvilPortal {
     String password;
 
     bool has_html;
-    bool has_ap;
 
     DNSServer dnsServer;
 
@@ -109,12 +108,14 @@ class EvilPortal {
     uint8_t selected_html_index = 0;
 
     bool using_serial_html;
+    bool has_ap;
 
     LinkedList<String>* html_files;
 
     void cleanup();
     String get_user_name();
     String get_password();
+    bool setAP(String essid);
     void setup();
     bool begin(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_points);
     void main(uint8_t scan_mode);
