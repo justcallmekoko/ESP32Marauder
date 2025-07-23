@@ -220,6 +220,7 @@ void CommandLine::runCommand(String input) {
     
     // WiFi sniff/scan
     Serial.println(HELP_EVIL_PORTAL_CMD);
+    Serial.println(HELP_KARMA_CMD);
     Serial.println(HELP_PACKET_COUNT_CMD);
     Serial.println(HELP_PING_CMD);
     Serial.println(HELP_PORT_SCAN_CMD);
@@ -251,6 +252,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_LIST_AP_CMD_C);
     Serial.println(HELP_LIST_AP_CMD_D);
     Serial.println(HELP_LIST_AP_CMD_E);
+    Serial.println(HELP_LIST_AP_CMD_F);
     Serial.println(HELP_SEL_CMD_A);
     Serial.println(HELP_SSID_CMD_A);
     Serial.println(HELP_SSID_CMD_B);
@@ -574,6 +576,37 @@ void CommandLine::runCommand(String input) {
       #else
         Serial.println("GPS not supported");
       #endif
+    }
+    // Karma
+    else if (cmd_args.get(0) == KARMA_CMD) {
+      int pr_sw = this->argSearch(&cmd_args, "-p");
+
+      if (pr_sw == -1) {
+        Serial.println("You did not provide a target index");
+        return;
+      }
+
+      int pr_index = cmd_args.get(pr_sw + 1).toInt();
+
+      if ((pr_index < 0) || (pr_index > probe_req_ssids->size() - 1)) {
+        Serial.println("The provided index was not in range");
+        return;
+      }
+
+      if (evil_portal_obj.setAP(probe_req_ssids->get(pr_index).essid)) {
+        Serial.println("Starting Karma Attack with " + probe_req_ssids->get(pr_index).essid + ". Stop with " + (String)STOPSCAN_CMD);
+        #ifdef HAS_SCREEN
+          display_obj.clearScreen();
+          menu_function_obj.drawStatusBar();
+        #endif
+        wifi_scan_obj.StartScan(WIFI_SCAN_EVIL_PORTAL, TFT_ORANGE);
+        wifi_scan_obj.setMac();
+      }
+      else {
+        Serial.println("Unable to set AP ESSID");
+        return;
+      }
+
     }
     // AP Scan
     else if (cmd_args.get(0) == EVIL_PORTAL_CMD) {
@@ -1045,54 +1078,6 @@ void CommandLine::runCommand(String input) {
         }
       }
     }
-    /*else if (cmd_args.get(0) == BT_SOUR_APPLE_CMD) {
-      #ifdef HAS_BT
-        Serial.println("Starting Sour Apple attack. Stop with " + (String)STOPSCAN_CMD);
-        #ifdef HAS_SCREEN
-          display_obj.clearScreen();
-          menu_function_obj.drawStatusBar();
-        #endif
-        wifi_scan_obj.StartScan(BT_ATTACK_SOUR_APPLE, TFT_GREEN);
-      #else
-        Serial.println("Bluetooth not supported");
-      #endif
-    }
-    else if (cmd_args.get(0) == BT_SWIFTPAIR_SPAM_CMD) {
-      #ifdef HAS_BT
-        Serial.println("Starting Swiftpair Spam attack. Stop with " + (String)STOPSCAN_CMD);
-        #ifdef HAS_SCREEN
-          display_obj.clearScreen();
-          menu_function_obj.drawStatusBar();
-        #endif
-        wifi_scan_obj.StartScan(BT_ATTACK_SWIFTPAIR_SPAM, TFT_CYAN);
-      #else
-        Serial.println("Bluetooth not supported");
-      #endif
-    }
-    else if (cmd_args.get(0) == BT_SAMSUNG_SPAM_CMD) {
-      #ifdef HAS_BT
-        Serial.println("Starting Samsung Spam attack. Stop with " + (String)STOPSCAN_CMD);
-        #ifdef HAS_SCREEN
-          display_obj.clearScreen();
-          menu_function_obj.drawStatusBar();
-        #endif
-        wifi_scan_obj.StartScan(BT_ATTACK_SAMSUNG_SPAM, TFT_CYAN);
-      #else
-        Serial.println("Bluetooth not supported");
-      #endif
-    }
-    else if (cmd_args.get(0) == BT_SPAM_ALL_CMD) {
-      #ifdef HAS_BT
-        Serial.println("Starting BT Spam All attack. Stop with " + (String)STOPSCAN_CMD);
-        #ifdef HAS_SCREEN
-          display_obj.clearScreen();
-          menu_function_obj.drawStatusBar();
-        #endif
-        wifi_scan_obj.StartScan(BT_ATTACK_SPAM_ALL, TFT_MAGENTA);
-      #else
-        Serial.println("Bluetooth not supported");
-      #endif
-    }*/
     // Wardrive
     else if (cmd_args.get(0) == BT_WARDRIVE_CMD) {
       #ifdef HAS_BT
@@ -1227,6 +1212,7 @@ void CommandLine::runCommand(String input) {
     int cl_sw = this->argSearch(&cmd_args, "-c");
     int at_sw = this->argSearch(&cmd_args, "-t");
     int ip_sw = this->argSearch(&cmd_args, "-i");
+    int pr_sw = this->argSearch(&cmd_args, "-p");
 
     // List APs
     if (ap_sw != -1) {
@@ -1244,6 +1230,12 @@ void CommandLine::runCommand(String input) {
     else if (ip_sw != -1) {
       for (int i = 0; i < ipList->size(); i++) {
         Serial.println("[" + (String)i + "] " + ipList->get(i).toString());
+      }
+    }
+    // List Probes
+    else if (pr_sw != -1) {
+      for (int i = 0; i < probe_req_ssids->size(); i++) {
+        Serial.println("[" + (String)i + "] " + probe_req_ssids->get(i).essid);
       }
     }
     // List SSIDs
