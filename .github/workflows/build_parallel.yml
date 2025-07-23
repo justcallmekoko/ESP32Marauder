@@ -48,10 +48,10 @@ jobs:
           export PATH=$PATH:/home/runner/work/ESP32Marauder/ESP32Marauder/bin
           arduino-cli version
 
-      - name: Install Arduino-ESP32 Core v${{ matrix.board.idf_ver }}
-        run: |
-          arduino-cli core update-index
-          arduino-cli core install esp32:esp32@${{ matrix.board.idf_ver }}
+      #- name: Install Arduino-ESP32 Core v${{ matrix.board.idf_ver }}
+      #  run: |
+      #    arduino-cli core update-index
+      #    arduino-cli core install esp32:esp32@${{ matrix.board.idf_ver }}
 
       - name: Verify Installed Cores
         run: arduino-cli core list
