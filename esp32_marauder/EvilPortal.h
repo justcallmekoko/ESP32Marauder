@@ -104,6 +104,8 @@ class EvilPortal {
   public:
     EvilPortal();
 
+    int ap_index = -1;
+
     String target_html_name = "index.html";
     uint8_t selected_html_index = 0;
 
