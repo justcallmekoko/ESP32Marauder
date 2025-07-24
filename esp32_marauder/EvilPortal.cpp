@@ -28,6 +28,8 @@ void EvilPortal::setup() {
 }
 
 void EvilPortal::cleanup() {
+  this->ap_index = -1;
+
   #ifdef HAS_PSRAM
     free(index_html);
     index_html = nullptr;
@@ -193,11 +195,13 @@ bool EvilPortal::setHtml() {
 
 bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_points) {
   // See if there are selected APs first
+  int targ_ap_index = -1;
   String ap_config = "";
   String temp_ap_name = "";
   for (int i = 0; i < access_points->size(); i++) {
     if (access_points->get(i).selected) {
       temp_ap_name = access_points->get(i).essid;
+      targ_ap_index = i;
       break;
     }
   }
@@ -295,6 +299,7 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
     strncpy(apName, ap_config.c_str(), MAX_AP_NAME_SIZE);
     this->has_ap = true;
     Serial.println("ap config set");
+    this->ap_index = targ_ap_index;
     return true;
   }
   else

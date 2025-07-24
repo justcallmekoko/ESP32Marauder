@@ -7576,7 +7576,7 @@ void WiFiScan::main(uint32_t currentTime)
     }
   }
   else if (currentScanMode == WIFI_SCAN_EVIL_PORTAL) {
-    if (currentTime - initTime >= this->channel_hop_delay * HOP_DELAY) {
+    if (currentTime - initTime >= (this->channel_hop_delay * HOP_DELAY) / 2) {
       initTime = millis();
       if (this->ep_deauth) {
         for (int i = 0; i < access_points->size(); i++) {
@@ -7586,6 +7586,10 @@ void WiFiScan::main(uint32_t currentTime)
         }
       }
     }
+
+    if (evil_portal_obj.ap_index > -1)
+      this->changeChannel(access_points->get(evil_portal_obj.ap_index).channel);
+    
     evil_portal_obj.main(currentScanMode);
   }
   else if (currentScanMode == WIFI_PACKET_MONITOR)
