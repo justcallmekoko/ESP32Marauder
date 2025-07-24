@@ -188,6 +188,7 @@ class MenuFunctions
     Menu wifiGeneralMenu;
     Menu wifiAPMenu;
     Menu wifiIPMenu;
+    Menu ssidsMenu;
     #ifdef HAS_BT
       Menu airtagMenu;
     #endif
@@ -210,6 +211,8 @@ class MenuFunctions
 
     // Settings things menus
     Menu generateSSIDsMenu;
+
+    Menu evilPortalMenu;
 
     static void lv_tick_handler();
 

@@ -1932,6 +1932,9 @@ void MenuFunctions::RunSetup()
   saveATsMenu.list = new LinkedList<MenuNode>();
   loadATsMenu.list = new LinkedList<MenuNode>();
 
+  evilPortalMenu.list = new LinkedList<MenuNode>();
+  ssidsMenu.list = new LinkedList<MenuNode>();
+
   // Work menu names
   mainMenu.name = text_table1[6];
   wifiMenu.name = text_table1[7];
@@ -1986,6 +1989,8 @@ void MenuFunctions::RunSetup()
   //  #endif
   #endif
   selectProbeSSIDsMenu.name = "Probe Requests";
+  evilPortalMenu.name = "Evil Portal";
+  ssidsMenu.name = "SSIDs";
 
   // Build Main Menu
   mainMenu.parentMenu = NULL;
@@ -2213,11 +2218,62 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_ATTACK_AUTH, TFT_RED);
   });
-  this->addNodes(&wifiAttackMenu, "Evil Portal", TFTORANGE, NULL, BEACON_SNIFF, [this]() {
+  /*this->addNodes(&wifiAttackMenu, "Evil Portal", TFTORANGE, NULL, BEACON_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_EVIL_PORTAL, TFT_ORANGE);
     wifi_scan_obj.setMac();
+  });*/
+  this->addNodes(&wifiAttackMenu, "Evil Portal", TFTORANGE, NULL, BEACON_SNIFF, [this]() {
+
+    wifiAPMenu.list->clear();
+    ssidsMenu.list->clear();
+
+    wifiAPMenu.parentMenu = &evilPortalMenu;
+    ssidsMenu.parentMenu = &evilPortalMenu;
+
+    this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+      this->changeMenu(wifiAPMenu.parentMenu);
+    });
+    this->addNodes(&ssidsMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+      this->changeMenu(ssidsMenu.parentMenu);
+    });
+
+    // Get AP list ready
+    for (int i = 0; i < access_points->size(); i++) {
+      // This is the menu node
+      this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
+        if (evil_portal_obj.setAP(access_points->get(i).essid)) {
+          AccessPoint new_ap = access_points->get(i);
+          new_ap.selected = true;
+          access_points->set(i, new_ap);
+
+          evil_portal_obj.ap_index = i;
+
+          display_obj.clearScreen();
+          this->drawStatusBar();
+          wifi_scan_obj.StartScan(WIFI_SCAN_EVIL_PORTAL, TFT_ORANGE);
+          wifi_scan_obj.setMac();
+        }
+        else
+          this->changeMenu(&evilPortalMenu);
+      });
+    }
+
+    for (int i = 0; i < ssids->size(); i++) {
+      // This is the menu node
+      this->addNodes(&ssidsMenu, ssids->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
+        if (evil_portal_obj.setAP(ssids->get(i).essid)) {
+          display_obj.clearScreen();
+          this->drawStatusBar();
+          wifi_scan_obj.StartScan(WIFI_SCAN_EVIL_PORTAL, TFT_ORANGE);
+          wifi_scan_obj.setMac();
+        }
+        else
+          this->changeMenu(&evilPortalMenu);
+      });
+    }
+    this->changeMenu(&evilPortalMenu);
   });
   this->addNodes(&wifiAttackMenu, text_table1[54], TFTRED, NULL, DEAUTH_SNIFF, [this]() {
     display_obj.clearScreen();
@@ -2258,6 +2314,17 @@ void MenuFunctions::RunSetup()
     }
     this->changeMenu(&selectProbeSSIDsMenu);
   });  
+
+  evilPortalMenu.parentMenu = &wifiAttackMenu;
+  this->addNodes(&evilPortalMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(evilPortalMenu.parentMenu);
+  });
+  this->addNodes(&evilPortalMenu, "Access Points", TFTGREEN, NULL, BEACON_SNIFF, [this]() {
+    this->changeMenu(&wifiAPMenu);
+  });
+  this->addNodes(&evilPortalMenu, "User SSIDs", TFTCYAN, NULL, PROBE_SNIFF, [this]() {
+    this->changeMenu(&ssidsMenu);
+  });
 
   // Build WiFi General menu
   wifiGeneralMenu.parentMenu = &wifiMenu;
@@ -2419,6 +2486,7 @@ void MenuFunctions::RunSetup()
 
     // Select APs on Mini
     this->addNodes(&wifiGeneralMenu, "Select APs", TFTNAVY, NULL, KEYBOARD_ICO, [this](){
+      wifiAPMenu.parentMenu = &wifiGeneralMenu;
       // Add the back button
       wifiAPMenu.list->clear();
         this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
