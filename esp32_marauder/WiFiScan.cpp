@@ -855,6 +855,7 @@ void WiFiScan::initWiFi(uint8_t scan_mode) {
     this->force_pmkid = settings_obj.loadSetting<bool>(text_table4[5]);
     this->force_probe = settings_obj.loadSetting<bool>(text_table4[6]);
     this->save_pcap = settings_obj.loadSetting<bool>(text_table4[7]);
+    this->ep_deauth = settings_obj.loadSetting<bool>("EPDeauth");
     //Serial.println(F("Initialization complete"));
   }
 }
@@ -7575,6 +7576,16 @@ void WiFiScan::main(uint32_t currentTime)
     }
   }
   else if (currentScanMode == WIFI_SCAN_EVIL_PORTAL) {
+    if (currentTime - initTime >= this->channel_hop_delay * HOP_DELAY) {
+      initTime = millis();
+      if (this->ep_deauth) {
+        for (int i = 0; i < access_points->size(); i++) {
+          if (access_points->get(i).selected) {
+            this->sendDeauthFrame(access_points->get(i).bssid, access_points->get(i).channel);
+          }
+        }
+      }
+    }
     evil_portal_obj.main(currentScanMode);
   }
   else if (currentScanMode == WIFI_PACKET_MONITOR)

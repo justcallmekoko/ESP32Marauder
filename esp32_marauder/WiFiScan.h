@@ -500,6 +500,7 @@ class WiFiScan
     bool force_pmkid = false;
     bool force_probe = false;
     bool save_pcap = false;
+    bool ep_deauth = false;
 
     String analyzer_name_string = "";
     

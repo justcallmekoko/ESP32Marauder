@@ -49,7 +49,7 @@ class Settings {
     //uint8_t loadSetting<uint8_t>(String key);
 
     String getSettingsString();
-    bool createDefaultSettings(fs::FS &fs);
+    bool createDefaultSettings(fs::FS &fs, bool spec = false, uint8_t index = 0, String typeStr = "bool", String name = "");
     void printJsonSettings(String json_string);
     void main(uint32_t currentTime);
 };
