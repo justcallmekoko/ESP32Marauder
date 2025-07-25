@@ -772,6 +772,7 @@ void MenuFunctions::main(uint32_t currentTime)
       (wifi_scan_obj.currentScanMode == ESP_UPDATE) ||
       (wifi_scan_obj.currentScanMode == SHOW_INFO) ||
       (wifi_scan_obj.currentScanMode == WIFI_SCAN_GPS_DATA) ||
+      (wifi_scan_obj.currentScanMode == GPS_TRACKER) ||
       (wifi_scan_obj.currentScanMode == WIFI_SCAN_GPS_NMEA)) {
     if (wifi_scan_obj.orient_display) {
       this->orientDisplay();
@@ -834,6 +835,7 @@ void MenuFunctions::main(uint32_t currentTime)
         (wifi_scan_obj.currentScanMode != ESP_UPDATE) &&
         (wifi_scan_obj.currentScanMode != SHOW_INFO) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_GPS_DATA) &&
+        (wifi_scan_obj.currentScanMode != GPS_TRACKER) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_GPS_NMEA))
     {
       // Stop the current scan
@@ -909,6 +911,7 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode != ESP_UPDATE) &&
           (wifi_scan_obj.currentScanMode != SHOW_INFO) &&
           (wifi_scan_obj.currentScanMode != WIFI_SCAN_GPS_DATA) &&
+          (wifi_scan_obj.currentScanMode != GPS_TRACKER) &&
           (wifi_scan_obj.currentScanMode != WIFI_SCAN_GPS_NMEA))
       {
         // Stop the current scan
@@ -3183,10 +3186,17 @@ void MenuFunctions::RunSetup()
         wifi_scan_obj.StartScan(WIFI_SCAN_GPS_NMEA, TFT_ORANGE);
       });
 
+      this->addNodes(&deviceMenu, "GPS Tracker", TFTGREEN, NULL, GPS_MENU, [this]() {
+        wifi_scan_obj.currentScanMode = GPS_TRACKER;
+        this->changeMenu(&gpsInfoMenu);
+        wifi_scan_obj.StartScan(GPS_TRACKER, TFT_CYAN);
+      });
+
       // GPS Info Menu
       gpsInfoMenu.parentMenu = &deviceMenu;
       this->addNodes(&gpsInfoMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
-        wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
+        if(wifi_scan_obj.currentScanMode != GPS_TRACKER)
+          wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
         wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
         this->changeMenu(gpsInfoMenu.parentMenu);
       }); 

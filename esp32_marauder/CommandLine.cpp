@@ -329,6 +329,7 @@ void CommandLine::runCommand(String input) {
     #ifdef HAS_GPS
       if (gps_obj.getGpsModuleStatus()) {
         int get_arg = this->argSearch(&cmd_args, "-g");
+        int track_arg = this->argSearch(&cmd_args, "-t");
         int nmea_arg = this->argSearch(&cmd_args, "-n");
 
         if (get_arg != -1) {
@@ -384,6 +385,13 @@ void CommandLine::runCommand(String input) {
           }
           else
             Serial.println("You did not provide a valid argument");
+        }
+        else if (track_arg != -1) {
+          wifi_scan_obj.currentScanMode = GPS_TRACKER;
+          #ifdef HAS_SCREEN
+            menu_function_obj.changeMenu(&menu_function_obj.gpsInfoMenu);
+          #endif
+          wifi_scan_obj.StartScan(GPS_TRACKER, TFT_CYAN);
         }
         else if(cmd_args.size()>1)
           Serial.println("You did not provide a valid flag");
