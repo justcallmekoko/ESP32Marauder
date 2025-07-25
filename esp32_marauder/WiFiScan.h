@@ -576,6 +576,13 @@ class WiFiScan
           .magic = WIFI_INIT_CONFIG_MAGIC\
       };
     #else
+      wifi_country_t country = {
+        .cc = "PH",
+        .schan = 1,
+        .nchan = 13,
+        .policy = WIFI_COUNTRY_POLICY_AUTO,
+      };
+
       wifi_init_config_t cfg2 = WIFI_INIT_CONFIG_DEFAULT();
     #endif
 

@@ -601,6 +601,9 @@ void WiFiScan::RunSetup() {
     
     this->shutdownBLE();
     esp_wifi_init(&cfg);
+    #ifdef HAS_DUAL_BAND
+      esp_wifi_set_country(&country);
+    #endif
     esp_wifi_set_mode(WIFI_AP_STA);
     esp_wifi_start();
     this->wifi_initialized = true;
@@ -1022,6 +1025,9 @@ void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_
         
   packets_sent = 0;
   esp_wifi_init(&cfg);
+  #ifdef HAS_DUAL_BAND
+    esp_wifi_set_country(&country);
+  #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_AP);
   esp_wifi_set_config(WIFI_IF_AP, &ap_config);
@@ -1264,6 +1270,9 @@ String WiFiScan::getStaMAC()
   uint8_t mac[6];
   char macAddrChr[18] = {0};
   esp_wifi_init(&cfg2);
+  #ifdef HAS_DUAL_BAND
+    esp_wifi_set_country(&country);
+  #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_STA);
   esp_wifi_start();
@@ -1288,6 +1297,9 @@ String WiFiScan::getApMAC()
   uint8_t mac[6];
   char macAddrChr[18] = {0};
   esp_wifi_init(&cfg2);
+  #ifdef HAS_DUAL_BAND
+    esp_wifi_set_country(&country);
+  #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_AP);
   esp_wifi_start();
@@ -1965,6 +1977,9 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
   esp_event_loop_create_default();
 
   esp_wifi_init(&cfg2);
+  #ifdef HAS_DUAL_BAND
+    esp_wifi_set_country(&country);
+  #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
   esp_wifi_start();
@@ -2659,6 +2674,9 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
 
   Serial.println("Running packet scan...");
   esp_wifi_init(&cfg2);
+  #ifdef HAS_DUAL_BAND
+    esp_wifi_set_country(&country);
+  #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
   esp_wifi_start();
@@ -2744,6 +2762,9 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
   #endif
 
   esp_wifi_init(&cfg);
+  #ifdef HAS_DUAL_BAND
+    esp_wifi_set_country(&country);
+  #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_AP);
 
@@ -2809,6 +2830,9 @@ void WiFiScan::RunMimicFlood(uint8_t scan_mode, uint16_t color) {
   
   packets_sent = 0;
   esp_wifi_init(&cfg);
+  #ifdef HAS_DUAL_BAND
+    esp_wifi_set_country(&country);
+  #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_AP_STA);
   esp_wifi_start();
@@ -2857,6 +2881,9 @@ void WiFiScan::RunPineScan(uint8_t scan_mode, uint16_t color)
   #endif
   
   esp_wifi_init(&cfg2);
+  #ifdef HAS_DUAL_BAND
+    esp_wifi_set_country(&country);
+  #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
   esp_wifi_start();
@@ -2906,6 +2933,9 @@ void WiFiScan::RunMultiSSIDScan(uint8_t scan_mode, uint16_t color)
   #endif
   
   esp_wifi_init(&cfg2);
+  #ifdef HAS_DUAL_BAND
+    esp_wifi_set_country(&country);
+  #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
   esp_wifi_start();
@@ -2952,6 +2982,9 @@ void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color)
   #endif
   
   esp_wifi_init(&cfg2);
+  #ifdef HAS_DUAL_BAND
+    esp_wifi_set_country(&country);
+  #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
   esp_wifi_start();
@@ -3190,6 +3223,9 @@ void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color)
   if (scan_mode != WIFI_SCAN_WAR_DRIVE) {
   
     esp_wifi_init(&cfg2);
+    #ifdef HAS_DUAL_BAND
+      esp_wifi_set_country(&country);
+    #endif
     esp_wifi_set_storage(WIFI_STORAGE_RAM);
     esp_wifi_set_mode(WIFI_MODE_NULL);
     esp_wifi_start();
@@ -3260,6 +3296,9 @@ void WiFiScan::RunStationScan(uint8_t scan_mode, uint16_t color)
   } else {
     Serial.println("Wi-Fi init succeeded with custom config.");
   }
+  #ifdef HAS_DUAL_BAND
+    esp_wifi_set_country(&country);
+  #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
   esp_wifi_start();
@@ -3327,6 +3366,9 @@ void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color)
   #endif
   
   esp_wifi_init(&cfg2);
+  #ifdef HAS_DUAL_BAND
+    esp_wifi_set_country(&country);
+  #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
   esp_wifi_start();
@@ -3373,6 +3415,9 @@ void WiFiScan::RunDeauthScan(uint8_t scan_mode, uint16_t color)
   #endif
   
   esp_wifi_init(&cfg2);
+  #ifdef HAS_DUAL_BAND
+    esp_wifi_set_country(&country);
+  #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
   esp_wifi_start();
@@ -3437,6 +3482,9 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
   #endif
   
   esp_wifi_init(&cfg2);
+  #ifdef HAS_DUAL_BAND
+    esp_wifi_set_country(&country);
+  #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
   esp_wifi_start();
