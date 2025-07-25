@@ -21,13 +21,14 @@ class Buffer {
     Buffer();
     void pcapOpen(String file_name, fs::FS* fs, bool serial);
     void logOpen(String file_name, fs::FS* fs, bool serial);
+    void gpxOpen(String file_name, fs::FS* fs, bool serial);
     void append(wifi_promiscuous_pkt_t *packet, int len);
     void append(String log);
     void save();
   private:
-    void createFile(String name, bool is_pcap);
+    void createFile(String name, bool is_pcap, bool is_gpx = false);
     void open(bool is_pcap);
-    void openFile(String file_name, fs::FS* fs, bool serial, bool is_pcap);
+    void openFile(String file_name, fs::FS* fs, bool serial, bool is_pcap, bool is_gpx = false);
     void add(const uint8_t* buf, uint32_t len, bool is_pcap);
     void write(int32_t n);
     void write(uint32_t n);
