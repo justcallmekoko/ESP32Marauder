@@ -982,6 +982,9 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
       gps_obj.enable_queue();
     #endif
   }
+  else if (scan_mode == GPS_TRACKER) {
+    RunSetupGPSTracker();
+  }
   else if (scan_mode == WIFI_PING_SCAN)
     RunPingScan(scan_mode, color);
   else if (scan_mode == WIFI_PORT_SCAN_ALL)
@@ -1206,6 +1209,10 @@ void WiFiScan::StopScan(uint8_t scan_mode)
     evil_portal_obj.has_ap = false;
   }
 
+  else if ((currentScanMode == GPS_TRACKER)) {
+    this->writeFooter();
+  }
+
   
   else if ((currentScanMode == BT_SCAN_ALL) ||
   (currentScanMode == BT_SCAN_AIRTAG) ||
@@ -1415,6 +1422,17 @@ void WiFiScan::startPcap(String file_name) {
 
 void WiFiScan::startLog(String file_name) {
   buffer_obj.logOpen(
+    file_name,
+    #if defined(HAS_SD)
+      sd_obj.supported ? &SD :
+    #endif
+    NULL,
+    save_serial // Set with commandline options
+  );
+}
+
+void WiFiScan::startGPX(String file_name) {
+  buffer_obj.gpxOpen(
     file_name,
     #if defined(HAS_SD)
       sd_obj.supported ? &SD :
@@ -2119,36 +2137,48 @@ void WiFiScan::RunGenerateSSIDs(int count) {
   #endif
 }
 
-/*void WiFiScan::RunShutdownBLE() {
-  #ifdef HAS_SCREEN
-    display_obj.tft.setTextWrap(false);
-    display_obj.tft.setFreeFont(NULL);
-    display_obj.tft.setCursor(0, 100);
-    display_obj.tft.setTextSize(1);
-    display_obj.tft.setTextColor(TFT_CYAN);
-  
-    display_obj.tft.print(F(text_table4[18]));
-  #endif
+void WiFiScan::logPoint(String lat, String lon, float alt, String datetime) {
+  datetime.replace(" ", "T");
+  datetime += "Z";
 
-  if (this->ble_initialized) {
-    this->shutdownBLE();
-    #ifdef HAS_SCREEN
-      display_obj.tft.setTextColor(TFT_GREEN);
-      display_obj.tft.println(F("OK"));
-    #endif
-  }
-  else {
-    #ifdef HAS_SCREEN
-      display_obj.tft.setTextColor(TFT_RED);
-      display_obj.tft.println(F(text17));
-      display_obj.tft.println(F(text_table4[19]));
-    #endif
-  }
-}*/
+  buffer_obj.append("    <trkpt lat=\"" + lat + "\" lon=\"" + lon + "\">\n");
+  buffer_obj.append("      <ele>" + String(alt, 2) + "</ele>\n");
+  buffer_obj.append("      <time>" + datetime + "</time>\n");
+  buffer_obj.append("    </trkpt>\n");
+  //gpxFile.flush();
+}
 
-void WiFiScan::RunGPSInfo() {
+void WiFiScan::writeHeader() {
+  Serial.println("Writing header to GPX file...");
+  buffer_obj.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+  buffer_obj.append("<gpx version=\"1.1\" creator=\"ESP32 GPS Logger\" xmlns=\"http://www.topografix.com/GPX/1/1\">\n");
+  buffer_obj.append("  <trk>\n");
+  buffer_obj.append("    <name>ESP32 Track</name>\n");
+  buffer_obj.append("    <trkseg>\n");
+}
+
+void WiFiScan::writeFooter() {
+  Serial.println("Writing footer to GPX file...\n");
+  buffer_obj.append("    </trkseg>\n");
+  buffer_obj.append("  </trk>\n");
+  buffer_obj.append("</gpx>\n");
+}
+
+void WiFiScan::RunSetupGPSTracker() {
+  this->startGPX("tracker");
+  this->writeHeader();
+  initTime = millis();
+}
+
+void WiFiScan::RunGPSInfo(bool tracker) {
   #ifdef HAS_GPS
     String text=gps_obj.getText();
+
+    if (tracker) {
+      if (gps_obj.getFixStatus()) {
+        this->logPoint(gps_obj.getLat(), gps_obj.getLon(), gps_obj.getAlt(), gps_obj.getDatetime());
+      }
+    }
 
     Serial.println("Refreshing GPS Data on screen...");
     #ifdef HAS_SCREEN
@@ -7567,6 +7597,12 @@ void WiFiScan::main(uint32_t currentTime)
     if (currentTime - initTime >= 5000) {
       this->initTime = millis();
       this->RunGPSInfo();
+    }
+  }
+  else if (currentScanMode == GPS_TRACKER) {
+    if (currentTime - initTime >= 1000) {
+      this->initTime = millis();
+      this->RunGPSInfo(true);
     }
   }
   else if (currentScanMode == WIFI_SCAN_GPS_NMEA) {

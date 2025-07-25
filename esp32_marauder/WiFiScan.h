@@ -111,6 +111,7 @@
 #define WIFI_CONNECTED 52
 #define WIFI_PING_SCAN 53
 #define WIFI_PORT_SCAN_ALL 54
+#define GPS_TRACKER 55
 
 #define BASE_MULTIPLIER 4
 
@@ -455,7 +456,7 @@ class WiFiScan
     void broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_ssid);
     void broadcastSetSSID(uint32_t current_time, const char* ESSID);
     void RunAPScan(uint8_t scan_mode, uint16_t color);
-    void RunGPSInfo();
+    void RunGPSInfo(bool tracker = false);
     void RunGPSNmea();
     void RunMimicFlood(uint8_t scan_mode, uint16_t color);
     void RunPwnScan(uint8_t scan_mode, uint16_t color);
@@ -477,6 +478,9 @@ class WiFiScan
     void RunPortScanAll(uint8_t scan_mode, uint16_t color);
     bool checkMem();
     void parseBSSID(const char* bssidStr, uint8_t* bssid);
+    void logPoint(String lat, String lon, float alt, String datetime);
+    void writeHeader();
+    void writeFooter();
 
 
   public:
@@ -621,6 +625,7 @@ class WiFiScan
     void RunLoadAPList();
     void RunSaveATList(bool save_as = true);
     void RunLoadATList();
+    void RunSetupGPSTracker();
     void channelHop();
     uint8_t currentScanMode = 0;
     void main(uint32_t currentTime);
@@ -632,6 +637,7 @@ class WiFiScan
     bool save_serial = false;
     void startPcap(String file_name);
     void startLog(String file_name);
+    void startGPX(String file_name);
     //String macToString(const Station& station);
 
     static void getMAC(char *addr, uint8_t* data, uint16_t offset);
