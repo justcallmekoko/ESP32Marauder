@@ -1914,6 +1914,12 @@ void WiFiScan::RunEvilPortal(uint8_t scan_mode, uint16_t color)
     display_obj.tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
     display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
   #endif
+
+  esp_wifi_init(&cfg);
+  #ifdef HAS_DUAL_BAND
+    esp_wifi_set_country(&country);
+  #endif
+
   evil_portal_obj.begin(ssids, access_points);
   //if (!evil_portal_obj.begin(ssids, access_points)) {
   //  Serial.println("Could not successfully start EvilPortal. Setting WIFI_SCAN_OFF...");
@@ -7660,7 +7666,7 @@ void WiFiScan::main(uint32_t currentTime)
     }
   }
   else if (currentScanMode == WIFI_SCAN_EVIL_PORTAL) {
-    if (currentTime - initTime >= (this->channel_hop_delay * HOP_DELAY) / 2) {
+    if (currentTime - initTime >= (this->channel_hop_delay * HOP_DELAY) / 4) {
       initTime = millis();
       if (this->ep_deauth) {
         for (int i = 0; i < access_points->size(); i++) {
