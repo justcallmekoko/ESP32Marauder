@@ -919,9 +919,9 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
   }
   else if ((scan_mode == WIFI_SCAN_CHAN_ANALYZER) ||
           (scan_mode == WIFI_SCAN_PACKET_RATE)) {
-    #ifdef HAS_SCREEN
+    //#ifdef HAS_SCREEN
       RunPacketMonitor(scan_mode, color);
-    #endif
+    //#endif
   }
   else if (scan_mode == WIFI_ATTACK_BEACON_LIST)
     this->startWiFiAttacks(scan_mode, color, text_table1[50]);
@@ -2640,8 +2640,9 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
           display_obj.tft.setTextColor(TFT_BLACK, color);
           display_obj.tft.drawCentreString("Channel Analyzer", 120, 16, 2);
         }
-        else if (scan_mode == WIFI_SCAN_PACKET_RATE)
+        else if (scan_mode == WIFI_SCAN_PACKET_RATE) {
           display_obj.tft.drawCentreString("Packet Rate", 120, 16, 2);
+        }
       #endif
 
       // Setup up portrait analyzer buttons
