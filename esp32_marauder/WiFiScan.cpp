@@ -919,9 +919,9 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
   }
   else if ((scan_mode == WIFI_SCAN_CHAN_ANALYZER) ||
           (scan_mode == WIFI_SCAN_PACKET_RATE)) {
-    #ifdef HAS_SCREEN
+    //#ifdef HAS_SCREEN
       RunPacketMonitor(scan_mode, color);
-    #endif
+    //#endif
   }
   else if (scan_mode == WIFI_ATTACK_BEACON_LIST)
     this->startWiFiAttacks(scan_mode, color, text_table1[50]);
@@ -1914,6 +1914,12 @@ void WiFiScan::RunEvilPortal(uint8_t scan_mode, uint16_t color)
     display_obj.tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
     display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
   #endif
+
+  esp_wifi_init(&cfg);
+  #ifdef HAS_DUAL_BAND
+    esp_wifi_set_country(&country);
+  #endif
+
   evil_portal_obj.begin(ssids, access_points);
   //if (!evil_portal_obj.begin(ssids, access_points)) {
   //  Serial.println("Could not successfully start EvilPortal. Setting WIFI_SCAN_OFF...");
@@ -2634,8 +2640,9 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
           display_obj.tft.setTextColor(TFT_BLACK, color);
           display_obj.tft.drawCentreString("Channel Analyzer", 120, 16, 2);
         }
-        else if (scan_mode == WIFI_SCAN_PACKET_RATE)
+        else if (scan_mode == WIFI_SCAN_PACKET_RATE) {
           display_obj.tft.drawCentreString("Packet Rate", 120, 16, 2);
+        }
       #endif
 
       // Setup up portrait analyzer buttons
@@ -7660,7 +7667,7 @@ void WiFiScan::main(uint32_t currentTime)
     }
   }
   else if (currentScanMode == WIFI_SCAN_EVIL_PORTAL) {
-    if (currentTime - initTime >= (this->channel_hop_delay * HOP_DELAY) / 2) {
+    if (currentTime - initTime >= (this->channel_hop_delay * HOP_DELAY) / 4) {
       initTime = millis();
       if (this->ep_deauth) {
         for (int i = 0; i < access_points->size(); i++) {
