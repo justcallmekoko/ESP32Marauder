@@ -5509,7 +5509,7 @@ void WiFiScan::stationSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t typ
   String display_string = "";
   String mac = "";
 
-  if (type == WIFI_PKT_MGMT)
+  if (type != WIFI_PKT_DATA)
     return;
   /*{
     len -= 4;
