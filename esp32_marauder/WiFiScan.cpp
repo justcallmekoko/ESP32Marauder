@@ -4115,8 +4115,9 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
     }
   }
 
-  // We got a client possibly. Check for AP association
-  if ((snifferPacket->payload[0] != 0x80) && (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA)) {
+  // We got a client possibly associated with AP. Check for AP association
+  //if ((snifferPacket->payload[0] != 0x80) && (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA)) {
+  if ((type == WIFI_PKT_DATA) && (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA)) {
     #ifdef HAS_SCREEN
       display_string = CYAN_KEY;
     #endif
@@ -5509,12 +5510,13 @@ void WiFiScan::stationSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t typ
   String mac = "";
 
   if (type == WIFI_PKT_MGMT)
-  {
+    return;
+  /*{
     len -= 4;
     int fctl = ntohs(frameControl->fctl);
     const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)snifferPacket->payload;
     const WifiMgmtHdr *hdr = &ipkt->hdr;
-  }
+  }*/
 
   char ap_addr[] = "00:00:00:00:00:00";
   char dst_addr[] = "00:00:00:00:00:00";
