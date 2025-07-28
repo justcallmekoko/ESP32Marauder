@@ -6460,7 +6460,7 @@ void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6]) {
   packets_sent = packets_sent + 3;
 }
 
-void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, String dst_mac_str = "ff:ff:ff:ff:ff:ff") {
+void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, String dst_mac_str) {
   WiFiScan::set_channel = channel;
   esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
   delay(1);
