@@ -112,6 +112,8 @@
 #define WIFI_PING_SCAN 53
 #define WIFI_PORT_SCAN_ALL 54
 #define GPS_TRACKER 55
+#define WIFI_ATTACK_BAD_MSG 56
+#define WIFI_ATTACK_BAD_MSG_TARGETED 57
 
 #define BASE_MULTIPLIER 4
 
@@ -494,6 +496,7 @@ class WiFiScan
     void tftDrawGraphObjects();
     void sendProbeAttack(uint32_t currentTime);
     void sendDeauthAttack(uint32_t currentTime, String dst_mac_str = "ff:ff:ff:ff:ff:ff");
+    void sendBadMsgAttack(uint32_t currentTime, bool all = false);
     void sendDeauthFrame(uint8_t bssid[6], int channel, String dst_mac_str = "ff:ff:ff:ff:ff:ff");
     void sendDeauthFrame(uint8_t bssid[6], int channel, uint8_t mac[6]);
     void sendEapolBagMsg1(uint8_t bssid[6], int channel, String dst_mac_str = "ff:ff:ff:ff:ff:ff");

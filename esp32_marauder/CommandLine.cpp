@@ -873,6 +873,27 @@ void CommandLine::runCommand(String input) {
             wifi_scan_obj.StartScan(WIFI_ATTACK_DEAUTH_MANUAL, TFT_RED);            
           }
         }
+        // Bad Msg
+        else if (attack_type == ATTACK_TYPE_BM) {
+          // Attack all
+          if (targ_sw == -1) {
+            Serial.println("Starting Bad Msg attack against all stations. Stop with " + (String)STOPSCAN_CMD);
+            #ifdef HAS_SCREEN
+              display_obj.clearScreen();
+              menu_functions_obj.drawStatusBar();
+            #endif
+            wifi_scan_obj.StartScan(WIFI_ATTACK_BAD_MSG, TFT_RED);
+          }
+          // Target clients
+          else {
+            Serial.println("Starting targeted Bad Msg attack. Stop with " + (String)STOPSCAN_CMD);
+            #ifdef HAS_SCREEN
+              display_obj.clearScreen();
+              menu_functions_obj.drawStatusBar();
+            #endif
+            wifi_scan_obj.StartScan(WIFI_ATTACK_BAD_MSG_TARGETED, TFT_YELLOW);
+          }
+        }
         // Beacon
         else if (attack_type == ATTACK_TYPE_BEACON) {
           // spam by list
