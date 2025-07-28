@@ -2326,7 +2326,7 @@ void MenuFunctions::RunSetup()
     this->changeMenu(&selectProbeSSIDsMenu);
   });
 
-  /*this->addNodes(&wifiAttackMenu, "Bad Msg", TFTRED, NULL, DEAUTH_SNIFF, [this]() {
+  this->addNodes(&wifiAttackMenu, "Bad Msg", TFTRED, NULL, DEAUTH_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_ATTACK_BAD_MSG, TFT_RED);
@@ -2335,7 +2335,7 @@ void MenuFunctions::RunSetup()
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_ATTACK_BAD_MSG_TARGETED, TFT_YELLOW);
-  });*/
+  });
 
   evilPortalMenu.parentMenu = &wifiAttackMenu;
   this->addNodes(&evilPortalMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
