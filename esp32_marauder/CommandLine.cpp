@@ -880,7 +880,7 @@ void CommandLine::runCommand(String input) {
             Serial.println("Starting Bad Msg attack against all stations. Stop with " + (String)STOPSCAN_CMD);
             #ifdef HAS_SCREEN
               display_obj.clearScreen();
-              menu_functions_obj.drawStatusBar();
+              menu_function_obj.drawStatusBar();
             #endif
             wifi_scan_obj.StartScan(WIFI_ATTACK_BAD_MSG, TFT_RED);
           }
@@ -889,7 +889,7 @@ void CommandLine::runCommand(String input) {
             Serial.println("Starting targeted Bad Msg attack. Stop with " + (String)STOPSCAN_CMD);
             #ifdef HAS_SCREEN
               display_obj.clearScreen();
-              menu_functions_obj.drawStatusBar();
+              menu_function_obj.drawStatusBar();
             #endif
             wifi_scan_obj.StartScan(WIFI_ATTACK_BAD_MSG_TARGETED, TFT_YELLOW);
           }

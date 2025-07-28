@@ -7867,7 +7867,7 @@ void WiFiScan::main(uint32_t currentTime)
       initTime = millis();
       String displayString = "";
       String displayString2 = "";
-      displayString.concat(text18);
+      //displayString.concat(text18);
       displayString.concat(packets_sent);
       for (int x = 0; x < STANDARD_FONT_CHAR_LIMIT; x++)
         displayString2.concat(" ");
@@ -7876,7 +7876,7 @@ void WiFiScan::main(uint32_t currentTime)
         display_obj.showCenterText(displayString2, TFT_HEIGHT / 2);
         display_obj.showCenterText(displayString, TFT_HEIGHT / 2);
       #endif
-      packets_sent = 0;
+      //packets_sent = 0;
     }
   }
   else if (currentScanMode == WIFI_ATTACK_DEAUTH) {
