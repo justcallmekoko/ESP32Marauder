@@ -1922,8 +1922,8 @@ void WiFiScan::RunEvilPortal(uint8_t scan_mode, uint16_t color)
     display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
   #endif
 
-  esp_wifi_init(&cfg);
   #ifdef HAS_DUAL_BAND
+    esp_wifi_init(&cfg);
     esp_wifi_set_country(&country);
   #endif
 
