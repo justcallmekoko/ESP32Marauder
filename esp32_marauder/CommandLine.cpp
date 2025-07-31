@@ -223,6 +223,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_KARMA_CMD);
     Serial.println(HELP_PACKET_COUNT_CMD);
     Serial.println(HELP_PING_CMD);
+    Serial.println(HELP_ARP_SCAN_CMD);
     Serial.println(HELP_PORT_SCAN_CMD);
     Serial.println(HELP_SIGSTREN_CMD);
     Serial.println(HELP_SCAN_ALL_CMD);
@@ -1202,6 +1203,15 @@ void CommandLine::runCommand(String input) {
         menu_function_obj.drawStatusBar();
       #endif
       wifi_scan_obj.StartScan(WIFI_PING_SCAN, TFT_GREEN);
+    }
+
+    if (cmd_args.get(0) == ARP_SCAN_CMD) {
+      Serial.println("Starting ARP Scan. Stop with " + (String)STOPSCAN_CMD);
+      #ifdef HAS_SCREEN
+        display_obj.clearScreen();
+        menu_function_obj.drawStatusBar();
+      #endif
+      wifi_scan_obj.StartScan(WIFI_ARP_SCAN, TFT_CYAN);
     }
 
     // Port Scan

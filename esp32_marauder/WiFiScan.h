@@ -20,6 +20,9 @@
 #include <math.h>
 #include "esp_wifi.h"
 #include "esp_wifi_types.h"
+#include <esp_timer.h>
+#include <lwip/etharp.h>
+#include <lwip/ip_addr.h>
 #ifdef HAS_DUAL_BAND
   #include "esp_system.h"
 #endif
@@ -114,6 +117,9 @@
 #define GPS_TRACKER 55
 #define WIFI_ATTACK_BAD_MSG 56
 #define WIFI_ATTACK_BAD_MSG_TARGETED 57
+#define WIFI_SCAN_TELNET 58
+#define WIFI_SCAN_SSH 59
+#define WIFI_ARP_SCAN 60
 
 #define BASE_MULTIPLIER 4
 
@@ -207,6 +213,7 @@ class WiFiScan
 {
   private:
     // Wardriver thanks to https://github.com/JosephHewitt
+    int arp_count = 0;
     #ifndef HAS_PSRAM
       struct mac_addr mac_history[mac_history_len];
     #endif
@@ -459,8 +466,10 @@ class WiFiScan
       NimBLEAdvertisementData GetUniversalAdvertisementData(EBLEPayloadType type);
     #endif
 
-    void pingScan();
-    void portScan(uint8_t scan_mode = WIFI_PORT_SCAN_ALL);
+    void fullARP();
+    bool readARP(IPAddress targ_ip);
+    void pingScan(uint8_t scan_mode = WIFI_PING_SCAN);
+    void portScan(uint8_t scan_mode = WIFI_PORT_SCAN_ALL, uint16_t targ_port = 22);
     bool isHostAlive(IPAddress ip);
     bool checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout = 100);
     String extractManufacturer(const uint8_t* payload);

@@ -382,6 +382,29 @@ IPAddress getNextIP(IPAddress currentIP, IPAddress subnetMask) {
   );
 }
 
+IPAddress getPrevIP(IPAddress currentIP, IPAddress subnetMask, uint16_t stepsBack) {
+  // Convert IPAddress to uint32_t
+  uint32_t ipInt = (currentIP[0] << 24) | (currentIP[1] << 16) | (currentIP[2] << 8) | currentIP[3];
+  uint32_t maskInt = (subnetMask[0] << 24) | (subnetMask[1] << 16) | (subnetMask[2] << 8) | subnetMask[3];
+
+  uint32_t networkBase = ipInt & maskInt;
+  uint32_t broadcast = networkBase | ~maskInt;
+
+  uint32_t prevIP = ipInt - stepsBack;
+
+  // Ensure prevIP is not below the usable range
+  if (prevIP <= networkBase) {
+    return IPAddress(0, 0, 0, 0);  // No more IPs
+  }
+
+  return IPAddress(
+    (prevIP >> 24) & 0xFF,
+    (prevIP >> 16) & 0xFF,
+    (prevIP >> 8) & 0xFF,
+    prevIP & 0xFF
+  );
+}
+
 uint16_t getNextPort(uint16_t port) {
   return port + 1;
 }
