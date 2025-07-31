@@ -851,7 +851,10 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_TARGET_AP_FULL) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA) ||
           (wifi_scan_obj.currentScanMode == WIFI_PING_SCAN) ||
+          (wifi_scan_obj.currentScanMode == WIFI_ARP_SCAN) ||
           (wifi_scan_obj.currentScanMode == WIFI_PORT_SCAN_ALL) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_SSH) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_TELNET) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_PWN) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_PINESCAN) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_MULTISSID) ||
@@ -931,7 +934,10 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_TARGET_AP_FULL) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA) ||
             (wifi_scan_obj.currentScanMode == WIFI_PING_SCAN) ||
+            (wifi_scan_obj.currentScanMode == WIFI_ARP_SCAN) ||
             (wifi_scan_obj.currentScanMode == WIFI_PORT_SCAN_ALL) ||
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_SSH) ||
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_TELNET) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_PWN) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_PINESCAN) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_MULTISSID) ||
@@ -2051,6 +2057,11 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_PING_SCAN, TFT_CYAN);
   });
+  this->addNodes(&wifiScannerMenu, "ARP Scan", TFTCYAN, NULL, SCANNERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_ARP_SCAN, TFT_CYAN);
+  });
   this->addNodes(&wifiScannerMenu, "Port Scan All", TFTMAGENTA, NULL, BEACON_LIST, [this](){
     // Add the back button
     wifiIPMenu.list->clear();
@@ -2070,6 +2081,16 @@ void MenuFunctions::RunSetup()
       });
     }
     this->changeMenu(&wifiIPMenu);
+  });
+  this->addNodes(&wifiScannerMenu, "SSH Scan", TFTORANGE, NULL, SCANNERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_SCAN_SSH, TFT_CYAN);
+  });
+  this->addNodes(&wifiScannerMenu, "Telnet Scan", TFTRED, NULL, SCANNERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_SCAN_TELNET, TFT_CYAN);
   });
 
   // Build WiFi sniffer Menu

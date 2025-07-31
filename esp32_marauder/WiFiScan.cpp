@@ -995,7 +995,13 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
   }
   else if (scan_mode == WIFI_PING_SCAN)
     RunPingScan(scan_mode, color);
+  else if (scan_mode == WIFI_ARP_SCAN)
+    RunPingScan(scan_mode, color);
   else if (scan_mode == WIFI_PORT_SCAN_ALL)
+    RunPortScanAll(scan_mode, color);
+  else if (scan_mode == WIFI_SCAN_SSH)
+    RunPortScanAll(scan_mode, color);
+  else if (scan_mode == WIFI_SCAN_TELNET)
     RunPortScanAll(scan_mode, color);
 
   this->currentScanMode = scan_mode;
@@ -1166,7 +1172,10 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   (currentScanMode == WIFI_SCAN_TARGET_AP_FULL) ||
   (currentScanMode == WIFI_SCAN_AP_STA) ||
   (currentScanMode == WIFI_PING_SCAN) ||
+  (currentScanMode == WIFI_ARP_SCAN) ||
   (currentScanMode == WIFI_PORT_SCAN_ALL) ||
+  (currentScanMode == WIFI_SCAN_SSH) ||
+  (currentScanMode == WIFI_SCAN_TELNET) ||
   (currentScanMode == WIFI_SCAN_PWN) ||
   (currentScanMode == WIFI_SCAN_PINESCAN) ||
   (currentScanMode == WIFI_SCAN_MULTISSID) ||
@@ -1469,7 +1478,10 @@ void WiFiScan::parseBSSID(const char* bssidStr, uint8_t* bssid) {
 
 void WiFiScan::RunPingScan(uint8_t scan_mode, uint16_t color)
 {
-  startLog("pingscan");
+  if (scan_mode == WIFI_PING_SCAN)
+    startLog("pingscan");
+  else if (scan_mode == WIFI_ARP_SCAN)
+    startLog("arpscan");
 
   #ifdef HAS_FLIPPER_LED
     flipper_led.sniffLED();
@@ -1491,7 +1503,10 @@ void WiFiScan::RunPingScan(uint8_t scan_mode, uint16_t color)
     display_obj.tft.setTextColor(TFT_BLACK, color);
     #ifdef HAS_FULL_SCREEN
       display_obj.tft.fillRect(0,16,240,16, color);
-      display_obj.tft.drawCentreString("Ping Scan",120,16,2);
+      if (scan_mode == WIFI_PING_SCAN)
+        display_obj.tft.drawCentreString("Ping Scan",120,16,2);
+      else if (scan_mode == WIFI_ARP_SCAN)
+        display_obj.tft.drawCentreString("ARP Scan",120,16,2);
     #endif
     #ifdef HAS_ILI9341
       display_obj.touchToExit();
@@ -1501,7 +1516,10 @@ void WiFiScan::RunPingScan(uint8_t scan_mode, uint16_t color)
   #endif
   this->current_scan_ip = this->gateway;
   Serial.println("Cleared IPs: " + (String)this->clearIPs());
-  Serial.println("Starting Ping Scan with...");
+  if (scan_mode == WIFI_PING_SCAN)
+    Serial.println("Starting Ping Scan with...");
+  else if (scan_mode == WIFI_ARP_SCAN)
+    Serial.println("Starting ARP Scan with...");
   Serial.print("IP address: ");
   Serial.println(this->ip_addr);
   Serial.print("Gateway: ");
@@ -1511,7 +1529,9 @@ void WiFiScan::RunPingScan(uint8_t scan_mode, uint16_t color)
   Serial.print("MAC: ");
   Serial.println(WiFi.macAddress());
 
-  buffer_obj.append("Starting Ping Scan with...");
+  if (scan_mode == WIFI_PING_SCAN)
+    buffer_obj.append("Starting Ping Scan with...");
+  else if (scan_mode == WIFI_ARP_SCAN)
   buffer_obj.append("\nSSID: " + (String)this->connected_network);
   buffer_obj.append("\nIP address: ");
   buffer_obj.append(this->ip_addr.toString());
@@ -1524,12 +1544,21 @@ void WiFiScan::RunPingScan(uint8_t scan_mode, uint16_t color)
   buffer_obj.append("\n");
 
   this->scan_complete = false;
+
+  //if (scan_mode == WIFI_ARP_SCAN)
+  //  this->fullARP();
+  
   initTime = millis();
 }
 
 void WiFiScan::RunPortScanAll(uint8_t scan_mode, uint16_t color)
 {
-  startLog("portscan");
+  if (scan_mode == WIFI_SCAN_SSH)
+    startLog("sshscan");
+  else if (scan_mode == WIFI_SCAN_TELNET)
+    startLog("telnetscan");
+  else
+    startLog("portscan");
 
   #ifdef HAS_FLIPPER_LED
     flipper_led.sniffLED();
@@ -1551,7 +1580,12 @@ void WiFiScan::RunPortScanAll(uint8_t scan_mode, uint16_t color)
     display_obj.tft.setTextColor(TFT_BLACK, color);
     #ifdef HAS_FULL_SCREEN
       display_obj.tft.fillRect(0,16,240,16, color);
-      display_obj.tft.drawCentreString("Port Scan All",120,16,2);
+      if (scan_mode == WIFI_PORT_SCAN_ALL)
+        display_obj.tft.drawCentreString("Port Scan All",120,16,2);
+      else if (scan_mode == WIFI_SCAN_SSH)
+        display_obj.tft.drawCentreString("SSH Scan",120,16,2);
+      else if (scan_mode == WIFI_SCAN_TELNET)
+        display_obj.tft.drawCentreString("Telnet Scan",120,16,2);
     #endif
     #ifdef HAS_ILI9341
       display_obj.touchToExit();
@@ -1561,6 +1595,9 @@ void WiFiScan::RunPortScanAll(uint8_t scan_mode, uint16_t color)
   #endif
 
   this->current_scan_port = 0;
+  if ((scan_mode == WIFI_SCAN_SSH) ||
+      (scan_mode == WIFI_SCAN_TELNET))
+    this->current_scan_ip = this->gateway;
 
   Serial.println("Starting Port Scan with...");
   Serial.print("IP address: ");
@@ -7616,30 +7653,107 @@ bool WiFiScan::checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout) {
   return false;
 }
 
-void WiFiScan::pingScan() {
+bool WiFiScan::readARP(IPAddress targ_ip) {
+  // Convert IPAddress to ip4_addr_t using IP4_ADDR
+  ip4_addr_t test_ip;
+  IP4_ADDR(&test_ip, targ_ip[0], targ_ip[1], targ_ip[2], targ_ip[3]);
+
+  // Get the netif interface for STA mode
+  //void* netif = NULL;
+  //tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
+  //struct netif* netif_interface = (struct netif*)netif;
+
+  const ip4_addr_t* ipaddr_ret = NULL;
+  struct eth_addr* eth_ret = NULL;
+
+  // Use actual interface instead of NULL
+  if (etharp_find_addr(NULL, &test_ip, &eth_ret, &ipaddr_ret) >= 0) {
+    // Optional: filter out null MAC entries if needed
+    return true;
+  }
+
+  return false;
+}
+
+void WiFiScan::fullARP() {
   String display_string = "";
   String output_line = "";
+
+  void* netif = NULL;
+  tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
+  struct netif* netif_interface = (struct netif*)netif;
+
+  //this->arp_count = 0;
+
   if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
+    ip4_addr_t lwip_ip;
+    IP4_ADDR(&lwip_ip,
+             this->current_scan_ip[0],
+             this->current_scan_ip[1],
+             this->current_scan_ip[2],
+             this->current_scan_ip[3]);
+
+    etharp_request(netif_interface, &lwip_ip);
+
+    delay(100);
+
     this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
-    
-    // Check if IP is alive
-    if (this->isHostAlive(this->current_scan_ip)) {
-      output_line = this->current_scan_ip.toString();
-      display_string.concat(output_line);
-      uint8_t temp_len = display_string.length();
-      for (uint8_t i = 0; i < 40 - temp_len; i++)
-      {
-        display_string.concat(" ");
+
+    this->arp_count++;
+
+    if (this->arp_count >= 10) {
+      delay(250);
+
+      this->arp_count = 0;
+
+      for (int i = 10; i > 0; i--) {
+        IPAddress check_ip = getPrevIP(this->current_scan_ip, this->subnet, i);
+        display_string = "";
+        output_line = "";
+        if (this->readARP(check_ip)) {
+          ipList->add(check_ip);
+          output_line = check_ip.toString();
+          display_string.concat(output_line);
+          uint8_t temp_len = display_string.length();
+          for (uint8_t i = 0; i < 40 - temp_len; i++)
+          {
+            display_string.concat(" ");
+          }
+          #ifdef HAS_SCREEN
+            display_obj.display_buffer->add(display_string);
+          #endif
+          buffer_obj.append(output_line + "\n");
+          Serial.println(output_line);
+        }
       }
-      ipList->add(this->current_scan_ip);
-      #ifdef HAS_SCREEN
-        display_obj.display_buffer->add(display_string);
-      #endif
-      buffer_obj.append(output_line + "\n");
-      Serial.println(output_line);
     }
   }
-  else {
+
+  if (this->current_scan_ip == IPAddress(0, 0, 0, 0)) {
+
+    for (int i = this->arp_count; i > 0; i--) {
+      delay(250);
+
+      IPAddress check_ip = getPrevIP(this->current_scan_ip, this->subnet, i);
+      display_string = "";
+      output_line = "";
+      if (this->readARP(check_ip)) {
+        ipList->add(check_ip);
+        output_line = check_ip.toString();
+        display_string.concat(output_line);
+        uint8_t temp_len = display_string.length();
+        for (uint8_t i = 0; i < 40 - temp_len; i++)
+        {
+          display_string.concat(" ");
+        }
+        #ifdef HAS_SCREEN
+          display_obj.display_buffer->add(display_string);
+        #endif
+        buffer_obj.append(output_line + "\n");
+        Serial.println(output_line);
+      }
+    }
+    this->arp_count = 0;
     if (!this->scan_complete) {
       this->scan_complete = true;
       #ifdef HAS_SCREEN
@@ -7649,7 +7763,79 @@ void WiFiScan::pingScan() {
   }
 }
 
-void WiFiScan::portScan(uint8_t scan_mode) {
+void WiFiScan::pingScan(uint8_t scan_mode) {
+  String display_string = "";
+  String output_line = "";
+
+  if (scan_mode == WIFI_PING_SCAN) {
+    if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
+      this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
+      
+      // Check if IP is alive
+      if (this->isHostAlive(this->current_scan_ip)) {
+        output_line = this->current_scan_ip.toString();
+        display_string.concat(output_line);
+        uint8_t temp_len = display_string.length();
+        for (uint8_t i = 0; i < 40 - temp_len; i++)
+        {
+          display_string.concat(" ");
+        }
+        ipList->add(this->current_scan_ip);
+        #ifdef HAS_SCREEN
+          display_obj.display_buffer->add(display_string);
+        #endif
+        buffer_obj.append(output_line + "\n");
+        Serial.println(output_line);
+      }
+    }
+    else {
+      if (!this->scan_complete) {
+        this->scan_complete = true;
+        #ifdef HAS_SCREEN
+          display_obj.display_buffer->add("Scan complete");
+        #endif
+      }
+    }
+  }
+
+  else if (scan_mode == WIFI_SCAN_SSH) {
+    if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
+      this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
+      if (this->isHostAlive(this->current_scan_ip)) {
+        Serial.println(this->current_scan_ip);
+        this->portScan(scan_mode, 22);
+      }
+    }
+    else {
+      if (!this->scan_complete) {
+        this->scan_complete = true;
+        #ifdef HAS_SCREEN
+          display_obj.display_buffer->add("Scan complete");
+        #endif
+      }
+    }
+  }
+
+  else if (scan_mode == WIFI_SCAN_TELNET) {
+    if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
+      this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
+      if (this->isHostAlive(this->current_scan_ip)) {
+        Serial.println(this->current_scan_ip);
+        this->portScan(scan_mode, 23);
+      }
+    }
+    else {
+      if (!this->scan_complete) {
+        this->scan_complete = true;
+        #ifdef HAS_SCREEN
+          display_obj.display_buffer->add("Scan complete");
+        #endif
+      }
+    }
+  }
+}
+
+void WiFiScan::portScan(uint8_t scan_mode, uint16_t targ_port) {
   String display_string = "";
   if (scan_mode == WIFI_PORT_SCAN_ALL) {
     if (this->current_scan_port < MAX_PORT) {
@@ -7685,6 +7871,22 @@ void WiFiScan::portScan(uint8_t scan_mode) {
     }
   }
 
+  else {
+    if (this->checkHostPort(this->current_scan_ip, targ_port, 100)) {
+      String output_line = this->current_scan_ip.toString() + ": " + (String)targ_port;
+      display_string.concat(output_line);
+      uint8_t temp_len = display_string.length();
+      for (uint8_t i = 0; i < 40 - temp_len; i++)
+      {
+        display_string.concat(" ");
+      }
+      #ifdef HAS_SCREEN
+        display_obj.display_buffer->add(display_string);
+      #endif
+      Serial.println(output_line);
+      buffer_obj.append(output_line + "\n");
+    }
+  }
 }
 
 
@@ -7713,8 +7915,17 @@ void WiFiScan::main(uint32_t currentTime)
   else if (currentScanMode == WIFI_PING_SCAN) {
     this->pingScan();
   }
+  else if (currentScanMode == WIFI_ARP_SCAN) {
+    this->fullARP();
+  }
   else if (currentScanMode == WIFI_PORT_SCAN_ALL) {
     this->portScan(WIFI_PORT_SCAN_ALL);
+  }
+  else if (currentScanMode == WIFI_SCAN_SSH) {
+    this->pingScan(WIFI_SCAN_SSH);
+  }
+  else if (currentScanMode == WIFI_SCAN_TELNET) {
+    this->pingScan(WIFI_SCAN_TELNET);
   }
   else if (currentScanMode == WIFI_SCAN_SIG_STREN) {
     #ifdef HAS_ILI9341
