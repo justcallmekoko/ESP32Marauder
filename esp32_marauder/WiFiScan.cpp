@@ -6847,7 +6847,7 @@ void WiFiScan::sendAssocSleepAttack(uint32_t currentTime, bool all) {
     for (int i = 0; i < access_points->size(); i++) {
       for (int x = 0; x < access_points->get(i).stations->size(); x++) {
         if (stations->get(access_points->get(i).stations->get(x)).selected) {
-          this->sendAssociationSleep(access_points->get(i).bssid,
+          this->sendAssociationSleep(access_points->get(i).essid.c_str(), access_points->get(i).bssid,
                                   access_points->get(i).channel,
                                   stations->get(access_points->get(i).stations->get(x)).mac);
         }
