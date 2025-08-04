@@ -1367,6 +1367,7 @@ void CommandLine::runCommand(String input) {
   else if (cmd_args.get(0) == JOIN_CMD) {
     int ap_sw = this->argSearch(&cmd_args, "-a");
     int pw_sw = this->argSearch(&cmd_args, "-p");
+    int s_sw  = this->argSearch(&cmd_args, "-s");
 
     if ((ap_sw != -1) && (pw_sw != -1)) {
       int index = cmd_args.get(ap_sw + 1).toInt();
@@ -1380,6 +1381,20 @@ void CommandLine::runCommand(String input) {
           menu_function_obj.changeMenu(menu_function_obj.current_menu);
         #endif
       #endif
+    }
+    else if (s_sw != -1) {
+      String ssid = settings_obj.loadSetting<String>("ClientSSID");
+      String pw = settings_obj.loadSetting<String>("ClientPW");
+
+      if ((ssid != "") && (pw != "")) {
+        wifi_scan_obj.joinWiFi(ssid, pw, false);
+        #ifdef HAS_SCREEN
+          menu_function_obj.changeMenu(menu_function_obj.current_menu);
+        #endif
+      }
+      else {
+        Serial.println("There are no saved WiFi credentials");
+      }
     }
     else {
       Serial.println("You did not provide the proper args");

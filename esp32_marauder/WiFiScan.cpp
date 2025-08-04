@@ -846,6 +846,10 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui)
       display_obj.tft.setTextWrap(false, false);
     #endif
   #endif
+
+  settings_obj.saveSetting<bool>("ClientSSID", ssid);
+  settings_obj.saveSetting<bool>("ClientPW", password);
+
   return true;
 }
 
@@ -860,6 +864,8 @@ void WiFiScan::initWiFi(uint8_t scan_mode) {
     this->force_probe = settings_obj.loadSetting<bool>(text_table4[6]);
     this->save_pcap = settings_obj.loadSetting<bool>(text_table4[7]);
     this->ep_deauth = settings_obj.loadSetting<bool>("EPDeauth");
+    settings_obj.loadSetting<String>("ClientSSID");
+    settings_obj.loadSetting<String>("ClientPW");
     //Serial.println(F("Initialization complete"));
   }
 }
