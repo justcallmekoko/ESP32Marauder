@@ -478,7 +478,10 @@ String GpsInterface::dt_string_from_gps(){
     datetime += ":";
     datetime += nmea.getMinute();
     datetime += ":";
-    datetime += nmea.getSecond();
+    uint8_t seconds = nmea.getSecond();
+    if (seconds < 10)
+      datetime += "0";
+    datetime += seconds;
   }
   return datetime;
 }
