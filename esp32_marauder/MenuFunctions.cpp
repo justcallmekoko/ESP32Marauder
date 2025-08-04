@@ -2698,6 +2698,50 @@ void MenuFunctions::RunSetup()
       this->changeMenu(&wifiAPMenu);
     });
 
+    this->addNodes(&wifiGeneralMenu, "Join Saved WiFi", TFTWHITE, NULL, KEYBOARD_ICO, [this](){
+      String ssid = settings_obj.loadSetting<String>("ClientSSID");
+      String pw = settings_obj.loadSetting<String>("ClientPW");
+
+      if ((ssid != "") && (pw != "")) {
+        wifi_scan_obj.joinWiFi(ssid, pw, false);
+        this->changeMenu(&wifiGeneralMenu);
+      }
+      else {
+        // Add the back button
+        wifiAPMenu.list->clear();
+          this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+          this->changeMenu(wifiAPMenu.parentMenu);
+        });
+
+        // Populate the menu with buttons
+        for (int i = 0; i < access_points->size(); i++) {
+          // This is the menu node
+          this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
+            // Join WiFi using mini keyboard
+            #ifdef HAS_MINI_KB
+              this->changeMenu(&miniKbMenu);
+              String password = this->miniKeyboard(&miniKbMenu, true);
+              if (password != "") {
+                Serial.println("Using SSID: " + (String)access_points->get(i).essid + " Password: " + (String)password);
+                wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
+                wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
+                wifi_scan_obj.joinWiFi(access_points->get(i).essid, password);
+                this->changeMenu(current_menu);
+              }
+            #endif
+
+            // Join WiFi using touch screen keyboard
+            #ifdef HAS_TOUCH
+              wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
+              wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
+              joinWiFiGFX(access_points->get(i).essid);
+            #endif
+          });
+        }
+        this->changeMenu(&wifiAPMenu);
+      }
+    });
+
     wifiStationMenu.parentMenu = &wifiAPMenu;
     this->addNodes(&wifiStationMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
       this->changeMenu(wifiStationMenu.parentMenu);
