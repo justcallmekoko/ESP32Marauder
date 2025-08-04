@@ -84,6 +84,7 @@ const char PROGMEM ATTACK_TYPE_BEACON[] = "beacon";
 const char PROGMEM ATTACK_TYPE_PROBE[] = "probe";
 const char PROGMEM ATTACK_TYPE_RR[] = "rickroll";
 const char PROGMEM ATTACK_TYPE_BM[] = "badmsg";
+const char PROGMEM ATTACK_TYPE_S[] = "sleep";
 
 // WiFi Aux
 const char PROGMEM LIST_AP_CMD[] = "list";
@@ -144,7 +145,7 @@ const char PROGMEM HELP_PORT_SCAN_CMD[] = "portscan [-a] -t <ip index>";
 const char PROGMEM HELP_ARP_SCAN_CMD[] = "arpscan [-f]";
 
 // WiFi attack
-const char PROGMEM HELP_ATTACK_CMD[] = "attack -t <beacon [-l/-r/-a]/deauth [-c]/[-s <src mac>] [-d <dst mac>]/probe/rickroll/badmsg [-c]>";
+const char PROGMEM HELP_ATTACK_CMD[] = "attack -t <beacon [-l/-r/-a]/deauth [-c]/[-s <src mac>] [-d <dst mac>]/probe/rickroll/badmsg [-c]/sleep [-c]>";
 
 // WiFi Aux
 const char PROGMEM HELP_LIST_AP_CMD_A[] = "list -s";

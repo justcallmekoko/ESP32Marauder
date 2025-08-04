@@ -942,6 +942,10 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     this->startWiFiAttacks(scan_mode, color, "Bad Msg Targ");
   else if (scan_mode == WIFI_ATTACK_BAD_MSG)
     this->startWiFiAttacks(scan_mode, color, "Bad Msg");
+  else if (scan_mode == WIFI_ATTACK_SLEEP)
+    this->startWiFiAttacks(scan_mode, color, "Sleep");
+  else if (scan_mode == WIFI_ATTACK_SLEEP_TARGETED)
+    this->startWiFiAttacks(scan_mode, color, "Sleep Targeted");
   else if (scan_mode == WIFI_ATTACK_AP_SPAM)
     this->startWiFiAttacks(scan_mode, color, " AP Beacon Spam ");
   else if ((scan_mode == BT_SCAN_ALL) || (scan_mode == BT_SCAN_AIRTAG) || (scan_mode == BT_SCAN_FLIPPER) || (scan_mode == BT_SCAN_ANALYZER)){
@@ -1192,6 +1196,8 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   (currentScanMode == WIFI_ATTACK_DEAUTH_TARGETED) ||
   (currentScanMode == WIFI_ATTACK_BAD_MSG_TARGETED) ||
   (currentScanMode == WIFI_ATTACK_BAD_MSG) ||
+  (currentScanMode == WIFI_ATTACK_SLEEP) ||
+  (currentScanMode == WIFI_ATTACK_SLEEP_TARGETED) ||
   (currentScanMode == WIFI_ATTACK_MIMIC) ||
   (currentScanMode == WIFI_ATTACK_RICK_ROLL) ||
   (currentScanMode == WIFI_PACKET_MONITOR) ||
@@ -7944,9 +7950,17 @@ bool WiFiScan::readARP(IPAddress targ_ip) {
 }
 
 bool WiFiScan::singleARP(IPAddress ip_addr) {
-  void* netif = NULL;
-  tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
-  struct netif* netif_interface = (struct netif*)netif;
+
+  #ifndef HAS_DUAL_BAND
+    void* netif = NULL;
+    tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
+    struct netif* netif_interface = (struct netif*)netif;
+  #else
+    struct netif* netif_interface = (struct netif*)esp_netif_get_netif_impl(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"));
+    //esp_netif_t* netif_interface = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+    //struct netif* netif_interface = (struct netif*)netif;
+    //struct netif* netif_interface = esp_netif_get_netif_impl(*netif);
+  #endif
 
   ip4_addr_t lwip_ip;
   IP4_ADDR(&lwip_ip,
@@ -7969,9 +7983,16 @@ void WiFiScan::fullARP() {
   String display_string = "";
   String output_line = "";
 
-  void* netif = NULL;
-  tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
-  struct netif* netif_interface = (struct netif*)netif;
+  #ifndef HAS_DUAL_BAND
+    void* netif = NULL;
+    tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
+    struct netif* netif_interface = (struct netif*)netif;
+  #else
+    struct netif* netif_interface = (struct netif*)esp_netif_get_netif_impl(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"));
+    //esp_netif_t* netif_interface = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+    //struct netif* netif_interface = (struct netif*)netif;
+    //struct netif* netif_interface = esp_netif_get_netif_impl(*netif);
+  #endif
 
   //this->arp_count = 0;
 
@@ -8402,6 +8423,25 @@ void WiFiScan::main(uint32_t currentTime)
         display_obj.showCenterText(displayString, TFT_HEIGHT / 2);
       #endif
       //packets_sent = 0;
+    }
+  }
+  else if ((currentScanMode == WIFI_ATTACK_SLEEP) ||
+          (currentScanMode == WIFI_ATTACK_SLEEP_TARGETED)) {
+    if (currentTime - initTime >= 200) {
+      this->sendAssocSleepAttack(currentTime, currentScanMode == WIFI_ATTACK_SLEEP);
+
+    
+      initTime = millis();
+      String displayString = "";
+      String displayString2 = "";
+      displayString.concat(packets_sent);
+      for (int x = 0; x < STANDARD_FONT_CHAR_LIMIT; x++)
+        displayString2.concat(" ");
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+        display_obj.showCenterText(displayString2, TFT_HEIGHT / 2);
+        display_obj.showCenterText(displayString, TFT_HEIGHT / 2);
+      #endif
     }
   }
   else if (currentScanMode == WIFI_ATTACK_DEAUTH) {
