@@ -7937,9 +7937,30 @@ bool WiFiScan::readARP(IPAddress targ_ip) {
 
   // Use actual interface instead of NULL
   if (etharp_find_addr(NULL, &test_ip, &eth_ret, &ipaddr_ret) >= 0) {
-    // Optional: filter out null MAC entries if needed
     return true;
   }
+
+  return false;
+}
+
+bool WiFiScan::singleARP(IPAddress ip_addr) {
+  void* netif = NULL;
+  tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
+  struct netif* netif_interface = (struct netif*)netif;
+
+  ip4_addr_t lwip_ip;
+  IP4_ADDR(&lwip_ip,
+            ip_addr[0],
+            ip_addr[1],
+            ip_addr[2],
+            ip_addr[3]);
+
+  etharp_request(netif_interface, &lwip_ip);
+
+  delay(250);
+
+  if (this->readARP(ip_addr))
+    return true;
 
   return false;
 }
@@ -8070,7 +8091,7 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
   else if (scan_mode == WIFI_SCAN_SSH) {
     if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
       this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
-      if (this->isHostAlive(this->current_scan_ip)) {
+      if (this->singleARP(this->current_scan_ip)) {
         Serial.println(this->current_scan_ip);
         this->portScan(scan_mode, 22);
       }
@@ -8088,7 +8109,7 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
   else if (scan_mode == WIFI_SCAN_TELNET) {
     if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
       this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
-      if (this->isHostAlive(this->current_scan_ip)) {
+      if (this->singleARP(this->current_scan_ip)) {
         Serial.println(this->current_scan_ip);
         this->portScan(scan_mode, 23);
       }

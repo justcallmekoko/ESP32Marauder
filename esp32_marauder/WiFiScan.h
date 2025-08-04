@@ -481,6 +481,7 @@ class WiFiScan
 
     void fullARP();
     bool readARP(IPAddress targ_ip);
+    bool singleARP(IPAddress ip_addr);
     void pingScan(uint8_t scan_mode = WIFI_PING_SCAN);
     void portScan(uint8_t scan_mode = WIFI_PORT_SCAN_ALL, uint16_t targ_port = 22);
     bool isHostAlive(IPAddress ip);
