@@ -895,6 +895,26 @@ void CommandLine::runCommand(String input) {
             wifi_scan_obj.StartScan(WIFI_ATTACK_BAD_MSG_TARGETED, TFT_YELLOW);
           }
         }
+        else if (attack_type == ATTACK_TYPE_S) {
+          // Attack all
+          if (targ_sw == -1) {
+            Serial.println("Starting Sleep attack against all stations. Stop with " + (String)STOPSCAN_CMD);
+            #ifdef HAS_SCREEN
+              display_obj.clearScreen();
+              menu_function_obj.drawStatusBar();
+            #endif
+            wifi_scan_obj.StartScan(WIFI_ATTACK_SLEEP, TFT_RED);
+          }
+          // Target clients
+          else {
+            Serial.println("Starting targeted Sleep attack. Stop with " + (String)STOPSCAN_CMD);
+            #ifdef HAS_SCREEN
+              display_obj.clearScreen();
+              menu_function_obj.drawStatusBar();
+            #endif
+            wifi_scan_obj.StartScan(WIFI_ATTACK_SLEEP_TARGETED, TFT_MAGENTA);
+          }
+        }
         // Beacon
         else if (attack_type == ATTACK_TYPE_BEACON) {
           // spam by list
