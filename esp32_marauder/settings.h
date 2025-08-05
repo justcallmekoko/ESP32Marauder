@@ -31,6 +31,9 @@ class Settings {
     template <typename T>
     T saveSetting(String key, bool value);
 
+    template <typename T>
+    T saveSetting(String key, String value);
+
     bool toggleSetting(String key);
     String getSettingType(String key);
     String setting_index_to_name(int i);
