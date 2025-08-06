@@ -234,15 +234,26 @@ jobs:
           arduino-platform: esp32:esp32@${{ matrix.board.idf_ver }}
           platform-url: https://github.com/espressif/arduino-esp32/releases/download/${{ matrix.board.idf_ver }}/package_esp32_dev_index.json
 
+      #- name: Rename Marauder ${{ matrix.board.name }} bin
+      #  run: |
+      #    mv ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.${{ matrix.board.file_name }}.bin
+      
       - name: Rename Marauder ${{ matrix.board.name }} bin
         run: |
-          mv ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.${{ matrix.board.file_name }}.bin
+          # Extract version string from configs.h
+          VERSION=$(grep '#define MARAUDER_VERSION' ./esp32_marauder/configs.h | sed -E 's/.*"v([^"]+)"/v\1/' | tr '.' '_')
+
+          # Get current date in YYYYMMDD format
+          DATE=$(date +%Y%m%d)
+
+          # Build paths
+          BUILD_DIR=./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}
+          INPUT_BIN=$BUILD_DIR/esp32_marauder.ino.bin
+          OUTPUT_BIN=$BUILD_DIR/esp32_marauder_${VERSION}_${DATE}_${{ matrix.board.file_name }}.bin
+
+          # Rename the binary
+          mv "$INPUT_BIN" "$OUTPUT_BIN"
           
-          # ls -la ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/
-          # esptool.py --chip esp32s3 merge_bin -o ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.${{ matrix.board.file_name }}.bin \
-          # ${{ matrix.board.addr }} ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.bootloader.bin \
-          # 0x8000 ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.partitions.bin \
-          # 0x10000 ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.bin
 
       - name: Upload ${{ matrix.board.name }} Artifact
         uses: actions/upload-artifact@v4
@@ -269,4 +280,4 @@ jobs:
           generate_release_notes: true
           draft: true
           files: |
-            esp32_marauder.*.bin
+            esp32_marauder_v*.bin
