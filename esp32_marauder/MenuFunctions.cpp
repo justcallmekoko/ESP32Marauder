@@ -2561,6 +2561,22 @@ void MenuFunctions::RunSetup()
         this->changeMenu(wifiAPMenu.parentMenu);
       });
 
+      this->addNodes(&wifiAPMenu, "Select ALL", TFTGREEN, NULL, 255, [this](){
+
+        for (int x = 0; x < access_points->size(); x++) {
+          AccessPoint new_ap = access_points->get(x);
+          new_ap.selected = !access_points->get(x).selected;
+          access_points->set(x, new_ap);
+
+          MenuNode new_node = current_menu->list->get(x + 2);
+          new_node.selected = !current_menu->list->get(x + 2).selected;
+          current_menu->list->set(x + 2, new_node);
+        }
+
+        this->changeMenu(current_menu);
+
+      });
+
       // Populate the menu with buttons
       for (int i = 0; i < access_points->size(); i++) {
         // This is the menu node
@@ -2569,9 +2585,9 @@ void MenuFunctions::RunSetup()
         new_ap.selected = !access_points->get(i).selected;
 
         // Change selection status of menu node
-        MenuNode new_node = current_menu->list->get(i + 1);
-        new_node.selected = !current_menu->list->get(i + 1).selected;
-        current_menu->list->set(i + 1, new_node);
+        MenuNode new_node = current_menu->list->get(i + 2);
+        new_node.selected = !current_menu->list->get(i + 2).selected;
+        current_menu->list->set(i + 2, new_node);
 
         access_points->set(i, new_ap);
         }, access_points->get(i).selected);
@@ -2622,10 +2638,6 @@ void MenuFunctions::RunSetup()
 
       int menu_limit = access_points->size();
 
-      /*if (access_points->size() <= BUTTON_ARRAY_LEN)
-        menu_limit = access_points->size();
-      else
-        menu_limit = BUTTON_ARRAY_LEN;*/
 
       for (int i = 0; i < menu_limit; i++) {
         wifiStationMenu.list->clear();
@@ -2638,6 +2650,25 @@ void MenuFunctions::RunSetup()
             this->changeMenu(wifiStationMenu.parentMenu);
           });
 
+          this->addNodes(&wifiStationMenu, "Select ALL", TFTGREEN, NULL, 255, [this, i](){
+
+            for (int y = 0; y < access_points->get(i).stations->size(); y++) {
+              int cur_ap_sta_inx = access_points->get(i).stations->get(y);
+              Station new_sta = stations->get(cur_ap_sta_inx);
+              new_sta.selected = !stations->get(cur_ap_sta_inx).selected;
+
+              // Change selection status of menu node
+              MenuNode new_node = current_menu->list->get(y + 2);
+              new_node.selected = !current_menu->list->get(y + 2).selected;
+              current_menu->list->set(y + 2, new_node);
+
+              stations->set(cur_ap_sta_inx, new_sta);
+            }
+
+            this->changeMenu(current_menu);
+
+          });
+
           // Add the AP's stations to the specific AP menu
           for (int x = 0; x < access_points->get(i).stations->size(); x++) {
             int cur_ap_sta = access_points->get(i).stations->get(x);
@@ -2647,16 +2678,9 @@ void MenuFunctions::RunSetup()
             new_sta.selected = !stations->get(cur_ap_sta).selected;
 
             // Change selection status of menu node
-            MenuNode new_node = current_menu->list->get(x + 1);
-            new_node.selected = !current_menu->list->get(x + 1).selected;
-            current_menu->list->set(x + 1, new_node);
-
-            // Change selection status of button key
-            //if (new_sta.selected) {
-            //  this->buttonSelected(i + 1);
-            //} else {
-            //  this->buttonNotSelected(i + 1);
-            //}
+            MenuNode new_node = current_menu->list->get(x + 2);
+            new_node.selected = !current_menu->list->get(x + 2).selected;
+            current_menu->list->set(x + 2, new_node);
 
             stations->set(cur_ap_sta, new_sta);
             }, stations->get(cur_ap_sta).selected);
