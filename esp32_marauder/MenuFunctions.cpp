@@ -772,6 +772,7 @@ void MenuFunctions::main(uint32_t currentTime)
       (wifi_scan_obj.currentScanMode == ESP_UPDATE) ||
       (wifi_scan_obj.currentScanMode == SHOW_INFO) ||
       (wifi_scan_obj.currentScanMode == WIFI_SCAN_GPS_DATA) ||
+      (wifi_scan_obj.currentScanMode == GPS_POI) ||
       (wifi_scan_obj.currentScanMode == GPS_TRACKER) ||
       (wifi_scan_obj.currentScanMode == WIFI_SCAN_GPS_NMEA)) {
     if (wifi_scan_obj.orient_display) {
@@ -839,6 +840,7 @@ void MenuFunctions::main(uint32_t currentTime)
         (wifi_scan_obj.currentScanMode != ESP_UPDATE) &&
         (wifi_scan_obj.currentScanMode != SHOW_INFO) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_GPS_DATA) &&
+        (wifi_scan_obj.currentScanMode != GPS_POI) &&
         (wifi_scan_obj.currentScanMode != GPS_TRACKER) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_GPS_NMEA))
     {
@@ -922,6 +924,7 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode != ESP_UPDATE) &&
           (wifi_scan_obj.currentScanMode != SHOW_INFO) &&
           (wifi_scan_obj.currentScanMode != WIFI_SCAN_GPS_DATA) &&
+          (wifi_scan_obj.currentScanMode != GPS_POI) &&
           (wifi_scan_obj.currentScanMode != GPS_TRACKER) &&
           (wifi_scan_obj.currentScanMode != WIFI_SCAN_GPS_NMEA))
       {
@@ -1960,6 +1963,8 @@ void MenuFunctions::RunSetup()
   evilPortalMenu.list = new LinkedList<MenuNode>();
   ssidsMenu.list = new LinkedList<MenuNode>();
 
+  gpsPOIMenu.list = new LinkedList<MenuNode>();
+
   // Work menu names
   mainMenu.name = text_table1[6];
   wifiMenu.name = text_table1[7];
@@ -2016,6 +2021,8 @@ void MenuFunctions::RunSetup()
   selectProbeSSIDsMenu.name = "Probe Requests";
   evilPortalMenu.name = "Evil Portal";
   ssidsMenu.name = "SSIDs";
+
+  gpsPOIMenu.name = "GPS POI";
 
   // Build Main Menu
   mainMenu.parentMenu = NULL;
@@ -3292,6 +3299,37 @@ void MenuFunctions::RunSetup()
         wifi_scan_obj.currentScanMode = GPS_TRACKER;
         this->changeMenu(&gpsInfoMenu);
         wifi_scan_obj.StartScan(GPS_TRACKER, TFT_CYAN);
+      });
+
+      this->addNodes(&deviceMenu, "GPS POI", TFTCYAN, NULL, GPS_MENU, [this]() {
+        wifi_scan_obj.StartScan(GPS_POI, TFT_CYAN);
+        wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
+        this->changeMenu(&gpsPOIMenu);
+      });
+
+      // GPS POI Menu
+      gpsPOIMenu.parentMenu = &deviceMenu;
+      this->addNodes(&gpsPOIMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+        wifi_scan_obj.currentScanMode = GPS_POI;
+        wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+        this->changeMenu(gpsPOIMenu.parentMenu);
+      });
+      this->addNodes(&gpsPOIMenu, "Mark POI", TFTCYAN, NULL, GPS_MENU, [this]() {
+        /*if (wifi_scan_obj.currentScanMode != GPS_POI) {
+          wifi_scan_obj.currentScanMode = GPS_POI;
+          wifi_scan_obj.StartScan(GPS_POI, TFT_CYAN);
+        }*/
+        wifi_scan_obj.currentScanMode = GPS_POI;
+        display_obj.tft.setCursor(0, TFT_HEIGHT / 2);
+        display_obj.clearScreen();
+        if (wifi_scan_obj.RunGPSInfo(true, false))
+          display_obj.showCenterText("POI Logged", TFT_HEIGHT / 2);
+        else
+          display_obj.showCenterText("POI Log Failed", TFT_HEIGHT / 2);
+        wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
+        delay(2000);
+        //wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+        this->changeMenu(&gpsPOIMenu);
       });
 
       // GPS Info Menu

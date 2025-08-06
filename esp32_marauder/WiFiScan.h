@@ -129,6 +129,7 @@
 #define WIFI_ARP_SCAN 60
 #define WIFI_ATTACK_SLEEP 61
 #define WIFI_ATTACK_SLEEP_TARGETED 62
+#define GPS_POI 63
 
 #define BASE_MULTIPLIER 4
 
@@ -541,7 +542,6 @@ class WiFiScan
     void broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_ssid);
     void broadcastSetSSID(uint32_t current_time, const char* ESSID);
     void RunAPScan(uint8_t scan_mode, uint16_t color);
-    void RunGPSInfo(bool tracker = false);
     void RunGPSNmea();
     void RunMimicFlood(uint8_t scan_mode, uint16_t color);
     void RunPwnScan(uint8_t scan_mode, uint16_t color);
@@ -563,7 +563,6 @@ class WiFiScan
     void RunPortScanAll(uint8_t scan_mode, uint16_t color);
     bool checkMem();
     void parseBSSID(const char* bssidStr, uint8_t* bssid);
-    void logPoint(String lat, String lon, float alt, String datetime);
     void writeHeader();
     void writeFooter();
 
@@ -676,6 +675,8 @@ class WiFiScan
     #ifdef HAS_SCREEN
       int8_t checkAnalyzerButtons(uint32_t currentTime);
     #endif
+    bool RunGPSInfo(bool tracker = false, bool display = true);
+    void logPoint(String lat, String lon, float alt, String datetime);
     void setMac();
     void renderRawStats();
     void renderPacketRate();
@@ -717,7 +718,7 @@ class WiFiScan
     void RunLoadAPList();
     void RunSaveATList(bool save_as = true);
     void RunLoadATList();
-    void RunSetupGPSTracker();
+    void RunSetupGPSTracker(uint8_t scan_mode);
     void channelHop();
     uint8_t currentScanMode = 0;
     void main(uint32_t currentTime);
@@ -748,58 +749,5 @@ class WiFiScan
     static void pineScanSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type); // Pineapple
     static int extractPineScanChannel(const uint8_t* payload, int len); // Pineapple
     static void multiSSIDSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type); // MultiSSID
-
-    /*#ifdef HAS_BT
-      enum EBLEPayloadType
-      {
-        Microsoft,
-        Apple,
-        Samsung,
-        Google
-      };
-
-      struct BLEData
-      {
-        NimBLEAdvertisementData AdvData;
-        NimBLEAdvertisementData ScanData;
-      };
-
-      struct WatchModel
-      {
-          uint8_t value;
-          const char *name;
-      };
-
-      WatchModel* watch_models = nullptr;
-
-      const WatchModel watch_models[] = {
-        {0x1A, "Fallback Watch"},
-        {0x01, "White Watch4 Classic 44m"},
-        {0x02, "Black Watch4 Classic 40m"},
-        {0x03, "White Watch4 Classic 40m"},
-        {0x04, "Black Watch4 44mm"},
-        {0x05, "Silver Watch4 44mm"},
-        {0x06, "Green Watch4 44mm"},
-        {0x07, "Black Watch4 40mm"},
-        {0x08, "White Watch4 40mm"},
-        {0x09, "Gold Watch4 40mm"},
-        {0x0A, "French Watch4"},
-        {0x0B, "French Watch4 Classic"},
-        {0x0C, "Fox Watch5 44mm"},
-        {0x11, "Black Watch5 44mm"},
-        {0x12, "Sapphire Watch5 44mm"},
-        {0x13, "Purpleish Watch5 40mm"},
-        {0x14, "Gold Watch5 40mm"},
-        {0x15, "Black Watch5 Pro 45mm"},
-        {0x16, "Gray Watch5 Pro 45mm"},
-        {0x17, "White Watch5 44mm"},
-        {0x18, "White & Black Watch5"},
-        {0x1B, "Black Watch6 Pink 40mm"},
-        {0x1C, "Gold Watch6 Gold 40mm"},
-        {0x1D, "Silver Watch6 Cyan 44mm"},
-        {0x1E, "Black Watch6 Classic 43m"},
-        {0x20, "Green Watch6 Classic 43m"},
-      };
-    #endif*/
 };
 #endif

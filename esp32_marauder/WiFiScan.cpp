@@ -1001,7 +1001,10 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     #endif
   }
   else if (scan_mode == GPS_TRACKER) {
-    RunSetupGPSTracker();
+    RunSetupGPSTracker(scan_mode);
+  }
+  else if (scan_mode == GPS_POI) {
+    RunSetupGPSTracker(scan_mode);
   }
   else if (scan_mode == WIFI_PING_SCAN)
     RunPingScan(scan_mode, color);
@@ -1243,7 +1246,8 @@ void WiFiScan::StopScan(uint8_t scan_mode)
     evil_portal_obj.has_ap = false;
   }
 
-  else if ((currentScanMode == GPS_TRACKER)) {
+  else if ((currentScanMode == GPS_TRACKER) ||
+          (currentScanMode == GPS_POI)) {
     this->writeFooter();
   }
 
@@ -2241,13 +2245,18 @@ void WiFiScan::writeFooter() {
   buffer_obj.append("</gpx>\n");
 }
 
-void WiFiScan::RunSetupGPSTracker() {
-  this->startGPX("tracker");
+void WiFiScan::RunSetupGPSTracker(uint8_t scan_mode) {
+  if (scan_mode == GPS_TRACKER)
+    this->startGPX("tracker");
+  else if (scan_mode == GPS_POI)
+    this->startGPX("poi");
+
   this->writeHeader();
   initTime = millis();
 }
 
-void WiFiScan::RunGPSInfo(bool tracker) {
+bool WiFiScan::RunGPSInfo(bool tracker, bool display) {
+  bool return_val = true;
   #ifdef HAS_GPS
     String text=gps_obj.getText();
 
@@ -2255,55 +2264,63 @@ void WiFiScan::RunGPSInfo(bool tracker) {
       if (gps_obj.getFixStatus()) {
         this->logPoint(gps_obj.getLat(), gps_obj.getLon(), gps_obj.getAlt(), gps_obj.getDatetime());
       }
+      else
+        return_val = false;
     }
 
-    Serial.println("Refreshing GPS Data on screen...");
-    #ifdef HAS_SCREEN
+    if (display) {
+      Serial.println("Refreshing GPS Data on screen...");
+      #ifdef HAS_SCREEN
 
-      // Get screen position ready
-      display_obj.tft.setTextWrap(false);
-      display_obj.tft.setFreeFont(NULL);
-      display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-      display_obj.tft.setTextSize(1);
-      display_obj.tft.setTextColor(TFT_CYAN);
+        // Get screen position ready
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setFreeFont(NULL);
+        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_CYAN);
 
-      // Clean up screen first
-      //display_obj.tft.fillRect(0, 0, 240, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
-      display_obj.tft.fillRect(0, (SCREEN_HEIGHT / 3) - 6, SCREEN_WIDTH, SCREEN_HEIGHT - ((SCREEN_HEIGHT / 3) - 6), TFT_BLACK);
+        // Clean up screen first
+        //display_obj.tft.fillRect(0, 0, 240, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+        display_obj.tft.fillRect(0, (SCREEN_HEIGHT / 3) - 6, SCREEN_WIDTH, SCREEN_HEIGHT - ((SCREEN_HEIGHT / 3) - 6), TFT_BLACK);
 
-      // Print the GPS data: 3
-      display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+        // Print the GPS data: 3
+        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+        if (gps_obj.getFixStatus())
+          display_obj.tft.println("  Good Fix: Yes");
+        else {
+          return_val = false;
+          display_obj.tft.println("  Good Fix: No");
+        }
+          
+        if(text != "") display_obj.tft.println("      Text: " + text);
+
+        display_obj.tft.println("Satellites: " + gps_obj.getNumSatsString());
+        display_obj.tft.println("  Accuracy: " + (String)gps_obj.getAccuracy());
+        display_obj.tft.println("  Latitude: " + gps_obj.getLat());
+        display_obj.tft.println(" Longitude: " + gps_obj.getLon());
+        display_obj.tft.println("  Altitude: " + (String)gps_obj.getAlt());
+        display_obj.tft.println("  Datetime: " + gps_obj.getDatetime());
+      #endif
+
+      // Display to serial
+      Serial.println("==== GPS Data ====");
       if (gps_obj.getFixStatus())
-        display_obj.tft.println("  Good Fix: Yes");
+        Serial.println("  Good Fix: Yes");
       else
-        display_obj.tft.println("  Good Fix: No");
+        Serial.println("  Good Fix: No");
         
-      if(text != "") display_obj.tft.println("      Text: " + text);
+      if(text != "") Serial.println("      Text: " + text);
 
-      display_obj.tft.println("Satellites: " + gps_obj.getNumSatsString());
-      display_obj.tft.println("  Accuracy: " + (String)gps_obj.getAccuracy());
-      display_obj.tft.println("  Latitude: " + gps_obj.getLat());
-      display_obj.tft.println(" Longitude: " + gps_obj.getLon());
-      display_obj.tft.println("  Altitude: " + (String)gps_obj.getAlt());
-      display_obj.tft.println("  Datetime: " + gps_obj.getDatetime());
-    #endif
-
-    // Display to serial
-    Serial.println("==== GPS Data ====");
-    if (gps_obj.getFixStatus())
-      Serial.println("  Good Fix: Yes");
-    else
-      Serial.println("  Good Fix: No");
-      
-    if(text != "") Serial.println("      Text: " + text);
-
-    Serial.println("Satellites: " + gps_obj.getNumSatsString());
-    Serial.println("  Accuracy: " + (String)gps_obj.getAccuracy());
-    Serial.println("  Latitude: " + gps_obj.getLat());
-    Serial.println(" Longitude: " + gps_obj.getLon());
-    Serial.println("  Altitude: " + (String)gps_obj.getAlt());
-    Serial.println("  Datetime: " + gps_obj.getDatetime());
+      Serial.println("Satellites: " + gps_obj.getNumSatsString());
+      Serial.println("  Accuracy: " + (String)gps_obj.getAccuracy());
+      Serial.println("  Latitude: " + gps_obj.getLat());
+      Serial.println(" Longitude: " + gps_obj.getLon());
+      Serial.println("  Altitude: " + (String)gps_obj.getAlt());
+      Serial.println("  Datetime: " + gps_obj.getDatetime());
+    }
   #endif
+
+  return return_val;
 }
 
 void WiFiScan::RunGPSNmea() {
@@ -8118,7 +8135,11 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
   else if (scan_mode == WIFI_SCAN_SSH) {
     if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
       this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
-      if (this->singleARP(this->current_scan_ip)) {
+      #ifndef HAS_DUAL_BAND
+        if (this->singleARP(this->current_scan_ip)) {
+      #else
+        if (this->isHostAlive(this->current_scan_ip)) {
+      #endif
         Serial.println(this->current_scan_ip);
         this->portScan(scan_mode, 22);
       }
@@ -8136,7 +8157,11 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
   else if (scan_mode == WIFI_SCAN_TELNET) {
     if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
       this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
-      if (this->singleARP(this->current_scan_ip)) {
+      #ifndef HAS_DUAL_BAND
+        if (this->singleARP(this->current_scan_ip)) {
+      #else
+        if (this->isHostAlive(this->current_scan_ip)) {
+      #endif
         Serial.println(this->current_scan_ip);
         this->portScan(scan_mode, 23);
       }
