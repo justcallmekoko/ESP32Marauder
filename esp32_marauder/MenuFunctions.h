@@ -214,6 +214,8 @@ class MenuFunctions
 
     Menu evilPortalMenu;
 
+    Menu gpsPOIMenu;
+
     static void lv_tick_handler();
 
     // Menu icons
