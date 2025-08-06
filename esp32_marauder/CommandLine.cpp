@@ -1238,6 +1238,10 @@ void CommandLine::runCommand(String input) {
     if (cmd_args.get(0) == PORT_SCAN_CMD) {
       int all_sw = this->argSearch(&cmd_args, "-a");
       int ip_sw = this->argSearch(&cmd_args, "-t");
+      int port_sw = this->argSearch(&cmd_args, "-p");
+
+      if (port_sw != -1)
+        int ip_index = cmd_args.get(ip_sw + 1).toInt();
 
       // Check they specified ip index
       if (ip_sw != -1) {
@@ -1261,6 +1265,9 @@ void CommandLine::runCommand(String input) {
           Serial.println("The IP index specified is out of range");
           return;
         }
+      }
+      else if (port_sw != -1) {
+        
       }
       else {
         Serial.println("You did not specify an IP index");
