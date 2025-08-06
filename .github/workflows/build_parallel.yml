@@ -238,28 +238,24 @@ jobs:
       #  run: |
       #    mv ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.${{ matrix.board.file_name }}.bin
       
-      - name: Rename Marauder ${{ matrix.board.name }} bin
+      - name: Rename and Upload ${{ matrix.board.name }} Artifact
         run: |
-          # Extract version string from configs.h
           VERSION=$(grep '#define MARAUDER_VERSION' ./esp32_marauder/configs.h | sed -E 's/.*"v([^"]+)"/v\1/' | tr '.' '_')
-
-          # Get current date in YYYYMMDD format
           DATE=$(date +%Y%m%d)
 
-          # Build paths
           BUILD_DIR=./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}
           INPUT_BIN=$BUILD_DIR/esp32_marauder.ino.bin
-          OUTPUT_BIN=$BUILD_DIR/esp32_marauder_${VERSION}_${DATE}_${{ matrix.board.file_name }}.bin
+          OUTPUT_BIN=esp32_marauder_${VERSION}_${DATE}_${{ matrix.board.file_name }}.bin
 
-          # Rename the binary
-          mv "$INPUT_BIN" "$OUTPUT_BIN"
-          
+          mv "$INPUT_BIN" "$BUILD_DIR/$OUTPUT_BIN"
 
+          echo "artifact_name=$OUTPUT_BIN" >> $GITHUB_ENV
+          echo "artifact_path=$BUILD_DIR/$OUTPUT_BIN" >> $GITHUB_ENV
       - name: Upload ${{ matrix.board.name }} Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: esp32_marauder.${{ matrix.board.file_name }}.bin
-          path: ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.${{ matrix.board.file_name }}.bin
+          name: ${{ env.artifact_name }}
+          path: ${{ env.artifact_path }}
           retention-days: 5
 
   post_compile_steps:
