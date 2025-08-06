@@ -19,7 +19,7 @@ jobs:
         board:
           - { name: "Flipper Zero WiFi Dev Board",   flag: "MARAUDER_FLIPPER",         fbqn: "esp32:esp32:esp32s2:PartitionScheme=min_spiffs,FlashSize=4M,PSRAM=enabled",                     file_name: "flipper",                 tft: false, tft_file: "",                                   build_dir: "esp32s2",                    addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
           - { name: "Flipper Zero Multi Board S3",   flag: "MARAUDER_MULTIBOARD_S3",   fbqn: "esp32:esp32:esp32s3:PartitionScheme=min_spiffs,FlashSize=4M",                                   file_name: "multiboardS3",            tft: false, tft_file: "",                                   build_dir: "esp32s3",                    addr: "0x0",      idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
-          - { name: "OG Marauder",                   flag: "MARAUDER_V4",              fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "og",                      tft: true,  tft_file: "User_Setup_og_marauder.h",           build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "OG Marauder",                   flag: "MARAUDER_V4",              fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "old_hardware",            tft: true,  tft_file: "User_Setup_og_marauder.h",           build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
           - { name: "Marauder v6",                   flag: "MARAUDER_V6",              fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "v6",                      tft: true,  tft_file: "User_Setup_og_marauder.h",           build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
           - { name: "Marauder v6.1",                 flag: "MARAUDER_V6_1",            fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "v6_1",                    tft: true,  tft_file: "User_Setup_og_marauder.h",           build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
           - { name: "Marauder Kit",                  flag: "MARAUDER_KIT",             fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "kit",                     tft: true,  tft_file: "User_Setup_og_marauder.h",           build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
@@ -35,7 +35,7 @@ jobs:
           - { name: "Marauder CYD 2432S028 2 USB",   flag: "MARAUDER_CYD_2USB",        fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "cyd_2432S028_2usb",       tft: true,  tft_file: "User_Setup_cyd_2usb.h",              build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
           - { name: "Marauder v7.1",                 flag: "MARAUDER_V7_1",            fbqn: "esp32:esp32:dfrobot_firebeetle2_esp32e:FlashSize=16M,PartitionScheme=min_spiffs,PSRAM=enabled", file_name: "marauder_v7_1",           tft: true,  tft_file: "User_Setup_dual_nrf24.h",            build_dir: "dfrobot_firebeetle2_esp32e", addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
           - { name: "M5Cardputer",                   flag: "MARAUDER_CARDPUTER",       fbqn: "esp32:esp32:esp32s3:PartitionScheme=min_spiffs,FlashSize=8M,PSRAM=disabled",                    file_name: "m5cardputer",             tft: true,  tft_file: "User_Setup_marauder_m5cardputer.h",  build_dir: "esp32s3",                    addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
-          - { name: "ESP32-C5-DevKitC-1",            flag: "MARAUDER_C5",              fbqn: "esp32:esp32:esp32c5:PartitionScheme=min_spiffs",                                                file_name: "esp32c5devkitc1",         tft: false, tft_file: "",                                   build_dir: "esp32c5",                    addr: "0x2000",   idf_ver: "3.3.0",    nimble_ver: "2.3.0",    esp_async: "bigbrodude6119/ESPAsyncWebServer",     esp_async_ver: "master" }
+          - { name: "ESP32-C5-DevKitC-1",            flag: "MARAUDER_C5",              fbqn: "esp32:esp32:esp32c5:PartitionScheme=min_spiffs",                                                file_name: "esp32c5devkitc1",         tft: false, tft_file: "",                                   build_dir: "esp32c5",                    addr: "0x2000",   idf_ver: "3.3.0",    nimble_ver: "2.3.0",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
           
     steps:
       - name: Checkout Code
@@ -234,21 +234,28 @@ jobs:
           arduino-platform: esp32:esp32@${{ matrix.board.idf_ver }}
           platform-url: https://github.com/espressif/arduino-esp32/releases/download/${{ matrix.board.idf_ver }}/package_esp32_dev_index.json
 
-      - name: Rename Marauder ${{ matrix.board.name }} bin
+      #- name: Rename Marauder ${{ matrix.board.name }} bin
+      #  run: |
+      #    mv ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.${{ matrix.board.file_name }}.bin
+      
+      - name: Rename and Upload ${{ matrix.board.name }} Artifact
         run: |
-          mv ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.${{ matrix.board.file_name }}.bin
-          
-          # ls -la ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/
-          # esptool.py --chip esp32s3 merge_bin -o ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.${{ matrix.board.file_name }}.bin \
-          # ${{ matrix.board.addr }} ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.bootloader.bin \
-          # 0x8000 ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.partitions.bin \
-          # 0x10000 ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.bin
+          VERSION=$(grep '#define MARAUDER_VERSION' ./esp32_marauder/configs.h | sed -E 's/.*"v([^"]+)"/v\1/' | tr '.' '_')
+          DATE=$(date +%Y%m%d)
 
+          BUILD_DIR=./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}
+          INPUT_BIN=$BUILD_DIR/esp32_marauder.ino.bin
+          OUTPUT_BIN=esp32_marauder_${VERSION}_${DATE}_${{ matrix.board.file_name }}.bin
+
+          mv "$INPUT_BIN" "$BUILD_DIR/$OUTPUT_BIN"
+
+          echo "artifact_name=$OUTPUT_BIN" >> $GITHUB_ENV
+          echo "artifact_path=$BUILD_DIR/$OUTPUT_BIN" >> $GITHUB_ENV
       - name: Upload ${{ matrix.board.name }} Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: esp32_marauder.${{ matrix.board.file_name }}.bin
-          path: ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.${{ matrix.board.file_name }}.bin
+          name: ${{ env.artifact_name }}
+          path: ${{ env.artifact_path }}
           retention-days: 5
 
   post_compile_steps:
@@ -269,4 +276,4 @@ jobs:
           generate_release_notes: true
           draft: true
           files: |
-            esp32_marauder.*.bin
+            esp32_marauder_v*.bin
