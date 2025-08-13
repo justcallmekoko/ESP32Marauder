@@ -911,8 +911,10 @@ void MenuFunctions::main(uint32_t currentTime)
 
   #ifdef HAS_BUTTONS
 
-    #if (C_BTN >= 0)
+    #if (C_BTN >= 0) && !defined(MARAUDER_CARDPUTER)
       bool c_btn_press = c_btn.justPressed();
+    #elif defined(MARAUDER_CARDPUTER)
+      bool c_btn_press = this->isKeyPressed('(');
     #endif
 
     #ifndef HAS_ILI9341
@@ -1276,6 +1278,7 @@ void MenuFunctions::main(uint32_t currentTime)
       if(c_btn_press){
         current_menu->list->get(current_menu->selected).callable();
       }
+
     #endif
   #endif
 }
@@ -3131,7 +3134,11 @@ void MenuFunctions::RunSetup()
                     this->displayCurrentMenu();
                   }
                   #endif
-                  if (c_btn.justPressed()) {
+                  #if (C_BTN >= 0) && !defined(MARAUDER_CARDPUTER)
+                    if(c_btn.justPressed()){
+                  #elif defined(MARAUDER_CARDPUTER)
+                    if (this->isKeyPressed('(')) {
+                  #endif
                     if (sd_obj.sd_files->get(sd_file_index) != "Back") {
                       if (sd_obj.removeFile("/" + sd_obj.sd_files->get(sd_file_index)))
                         Serial.println("Successfully Removed File: /" + sd_obj.sd_files->get(sd_file_index));
@@ -3600,7 +3607,7 @@ void MenuFunctions::RunSetup()
             #endif
 
             // Add SSID
-            #ifdef HAS_C
+            #ifdef HAS_C && !defined(MARAUDER_CARDPUTER)
               if (c_btn.justPressed()) {
                 while (!c_btn.justReleased()) {
                   c_btn.justPressed(); // Need to continue updating button hold status. My shitty library.
@@ -3628,13 +3635,45 @@ void MenuFunctions::RunSetup()
 
           #ifdef MARAUDER_CARDPUTER
             for (int i = 0; i < 95; i++) {
-              if (this->isKeyPressed(M5CardputerKeyboard._ascii_list[i])) {
-                pressed = true;
-                wifi_scan_obj.current_mini_kb_ssid.concat(M5CardputerKeyboard._ascii_list[i]);
+              if ((M5CardputerKeyboard._ascii_list[i] != '(') &&
+                  (M5CardputerKeyboard._ascii_list[i] != '`')) {
+                if (this->isKeyPressed(M5CardputerKeyboard._ascii_list[i])) {
+                  pressed = true;
+                  wifi_scan_obj.current_mini_kb_ssid.concat(M5CardputerKeyboard._ascii_list[i]);
+                }
+                if (this->isKeyPressed(KEY_BACKSPACE)) {
+                  pressed = true;
+                  wifi_scan_obj.current_mini_kb_ssid.remove(wifi_scan_obj.current_mini_kb_ssid.length() - 1);
+                }
               }
-              if (this->isKeyPressed(KEY_BACKSPACE)) {
-                pressed = true;
-                wifi_scan_obj.current_mini_kb_ssid.remove(wifi_scan_obj.current_mini_kb_ssid.length() - 1);
+            }
+
+            if (!do_pass) {
+              if (this->isKeyPressed('`')) {
+                this->changeMenu(targetMenu->parentMenu);
+                return wifi_scan_obj.current_mini_kb_ssid;
+              }
+
+              if (this->isKeyPressed('(')) {
+                if (!do_pass) {
+                  if (wifi_scan_obj.current_mini_kb_ssid != "") {
+                    pressed = true;
+                    ssid s = {wifi_scan_obj.current_mini_kb_ssid, random(1, 12), {random(256), random(256), random(256), random(256), random(256), random(256)}, false};
+                    ssids->unshift(s);
+                    wifi_scan_obj.current_mini_kb_ssid = "";
+                  }
+                }
+              }
+            }
+            else {
+              if (this->isKeyPressed('(')) {
+                this->changeMenu(targetMenu->parentMenu);
+                return wifi_scan_obj.current_mini_kb_ssid;
+              }
+
+              if (this->isKeyPressed('`')) {
+                this->changeMenu(targetMenu->parentMenu);
+                return "";
               }
             }
             
@@ -3749,25 +3788,6 @@ void MenuFunctions::RunSetup()
               }
             #endif
 
-            // Add SSID
-            /*#ifdef HAS_C
-              if (menu_button == SELECT_BUTTON) {
-                while (display_obj.updateTouch(&t_x, &t_y)) {
-                  ///c_btn.justPressed(); // Need to continue updating button hold status. My shitty library.
-
-                  delay(1);
-                }
-                // If we have a string, add it to list of SSIDs
-                if (wifi_scan_obj.current_mini_kb_ssid != "") {
-                  pressed = true;
-                  ssid s = {wifi_scan_obj.current_mini_kb_ssid, random(1, 12), {random(256), random(256), random(256), random(256), random(256), random(256)}, false};
-                  ssids->unshift(s);
-                  wifi_scan_obj.current_mini_kb_ssid = "";
-                }
-              }
-
-            #endif*/
-
             // Exit if UP button is held
             if ((display_obj.isTouchHeld()) && (display_obj.menuButton(&t_x, &t_y, touched, true) == UP_BUTTON)) {
               display_obj.clearScreen();
@@ -3806,11 +3826,20 @@ void MenuFunctions::RunSetup()
               display_obj.tft.println("L/R - Prev/Nxt Char");
               #endif
               if (!do_pass) {
-                display_obj.tft.println("C - Save");
-                display_obj.tft.println("C(Hold) - Exit");
+                #ifdef MARAUDER_CARDPUTER
+                  display_obj.tft.println("Enter - Save");
+                  display_obj.tft.println("Esc - Exit");
+                #else
+                  display_obj.tft.println("C - Save");
+                  display_obj.tft.println("C(Hold) - Exit");
+                #endif
               }
               else {
-                display_obj.tft.println("C(Hold) - Enter");
+                #ifdef MARAUDER_CARDPUTER
+                  display_obj.tft.println("Enter - Enter");
+                #else
+                  display_obj.tft.println("C(Hold) - Enter");
+                #endif
               }
             #endif
 
