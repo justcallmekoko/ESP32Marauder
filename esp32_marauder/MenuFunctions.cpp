@@ -2035,12 +2035,92 @@ void MenuFunctions::RunSetup()
   this->addNodes(&mainMenu, text_table1[19], TFTCYAN, NULL, BLUETOOTH, [this]() {
     this->changeMenu(&bluetoothMenu);
   });
+
+  // H4W9 Added GPS Menu option to Main Menu
+  #ifdef HAS_GPS
+    this->addNodes(&mainMenu, text1_67, TFTRED, NULL, GPS_MENU, [this]() {
+      this->changeMenu(&gpsMenu);
+    });
+  #endif
+
   this->addNodes(&mainMenu, text_table1[9], TFTBLUE, NULL, DEVICE, [this]() {
     this->changeMenu(&deviceMenu);
   });
   this->addNodes(&mainMenu, text_table1[30], TFTLIGHTGREY, NULL, REBOOT, []() {
     ESP.restart();
   });
+
+  // H4W9 Moved GPS Menu
+  // Build GPS Menu
+  gpsMenu.parentMenu = &mainMenu; // Main Menu is second menu parent
+  // GPS Menu
+  #ifdef HAS_GPS
+    if (gps_obj.getGpsModuleStatus()) {
+      
+      this->addNodes(&gpsMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+        this->changeMenu(gpsMenu.parentMenu);
+      });
+
+      this->addNodes(&gpsMenu, "GPS Data", TFTRED, NULL, GPS_MENU, [this]() {
+        wifi_scan_obj.currentScanMode = WIFI_SCAN_GPS_DATA;
+        this->changeMenu(&gpsInfoMenu);
+        wifi_scan_obj.StartScan(WIFI_SCAN_GPS_DATA, TFT_CYAN);
+      });
+
+      this->addNodes(&gpsMenu, "NMEA Stream", TFTORANGE, NULL, GPS_MENU, [this]() {
+        wifi_scan_obj.currentScanMode = WIFI_SCAN_GPS_NMEA;
+        this->changeMenu(&gpsInfoMenu);
+        wifi_scan_obj.StartScan(WIFI_SCAN_GPS_NMEA, TFT_ORANGE);
+      });
+
+      this->addNodes(&gpsMenu, "GPS Tracker", TFTGREEN, NULL, GPS_MENU, [this]() {
+        wifi_scan_obj.currentScanMode = GPS_TRACKER;
+        this->changeMenu(&gpsInfoMenu);
+        wifi_scan_obj.StartScan(GPS_TRACKER, TFT_CYAN);
+      });
+
+      this->addNodes(&gpsMenu, "GPS POI", TFTCYAN, NULL, GPS_MENU, [this]() {
+        wifi_scan_obj.StartScan(GPS_POI, TFT_CYAN);
+        wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
+        this->changeMenu(&gpsPOIMenu);
+      });
+
+      // GPS POI Menu
+      gpsPOIMenu.parentMenu = &gpsMenu;
+      this->addNodes(&gpsPOIMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+        wifi_scan_obj.currentScanMode = GPS_POI;
+        wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+        this->changeMenu(gpsPOIMenu.parentMenu);
+      });
+      this->addNodes(&gpsPOIMenu, "Mark POI", TFTCYAN, NULL, GPS_MENU, [this]() {
+        /*if (wifi_scan_obj.currentScanMode != GPS_POI) {
+          wifi_scan_obj.currentScanMode = GPS_POI;
+          wifi_scan_obj.StartScan(GPS_POI, TFT_CYAN);
+        }*/
+        wifi_scan_obj.currentScanMode = GPS_POI;
+        display_obj.tft.setCursor(0, TFT_HEIGHT / 2);
+        display_obj.clearScreen();
+        if (wifi_scan_obj.RunGPSInfo(true, false))
+          display_obj.showCenterText("POI Logged", TFT_HEIGHT / 2);
+        else
+          display_obj.showCenterText("POI Log Failed", TFT_HEIGHT / 2);
+        wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
+        delay(2000);
+        //wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+        this->changeMenu(&gpsPOIMenu);
+      });
+
+      // GPS Info Menu
+      gpsInfoMenu.parentMenu = &gpsMenu;
+      this->addNodes(&gpsInfoMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+        if(wifi_scan_obj.currentScanMode != GPS_TRACKER)
+          wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
+        wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+        this->changeMenu(gpsInfoMenu.parentMenu);
+      }); 
+    }
+  #endif
+  //End GPS Menu
 
   // Build WiFi Menu
   wifiMenu.parentMenu = &mainMenu; // Main Menu is second menu parent
@@ -3311,69 +3391,6 @@ void MenuFunctions::RunSetup()
     this->changeMenu(loadATsMenu.parentMenu);
   });
 
-  // GPS Menu
-  #ifdef HAS_GPS
-    if (gps_obj.getGpsModuleStatus()) {
-      this->addNodes(&deviceMenu, "GPS Data", TFTRED, NULL, GPS_MENU, [this]() {
-        wifi_scan_obj.currentScanMode = WIFI_SCAN_GPS_DATA;
-        this->changeMenu(&gpsInfoMenu);
-        wifi_scan_obj.StartScan(WIFI_SCAN_GPS_DATA, TFT_CYAN);
-      });
-
-      this->addNodes(&deviceMenu, "NMEA Stream", TFTORANGE, NULL, GPS_MENU, [this]() {
-        wifi_scan_obj.currentScanMode = WIFI_SCAN_GPS_NMEA;
-        this->changeMenu(&gpsInfoMenu);
-        wifi_scan_obj.StartScan(WIFI_SCAN_GPS_NMEA, TFT_ORANGE);
-      });
-
-      this->addNodes(&deviceMenu, "GPS Tracker", TFTGREEN, NULL, GPS_MENU, [this]() {
-        wifi_scan_obj.currentScanMode = GPS_TRACKER;
-        this->changeMenu(&gpsInfoMenu);
-        wifi_scan_obj.StartScan(GPS_TRACKER, TFT_CYAN);
-      });
-
-      this->addNodes(&deviceMenu, "GPS POI", TFTCYAN, NULL, GPS_MENU, [this]() {
-        wifi_scan_obj.StartScan(GPS_POI, TFT_CYAN);
-        wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
-        this->changeMenu(&gpsPOIMenu);
-      });
-
-      // GPS POI Menu
-      gpsPOIMenu.parentMenu = &deviceMenu;
-      this->addNodes(&gpsPOIMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
-        wifi_scan_obj.currentScanMode = GPS_POI;
-        wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
-        this->changeMenu(gpsPOIMenu.parentMenu);
-      });
-      this->addNodes(&gpsPOIMenu, "Mark POI", TFTCYAN, NULL, GPS_MENU, [this]() {
-        /*if (wifi_scan_obj.currentScanMode != GPS_POI) {
-          wifi_scan_obj.currentScanMode = GPS_POI;
-          wifi_scan_obj.StartScan(GPS_POI, TFT_CYAN);
-        }*/
-        wifi_scan_obj.currentScanMode = GPS_POI;
-        display_obj.tft.setCursor(0, TFT_HEIGHT / 2);
-        display_obj.clearScreen();
-        if (wifi_scan_obj.RunGPSInfo(true, false))
-          display_obj.showCenterText("POI Logged", TFT_HEIGHT / 2);
-        else
-          display_obj.showCenterText("POI Log Failed", TFT_HEIGHT / 2);
-        wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
-        delay(2000);
-        //wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
-        this->changeMenu(&gpsPOIMenu);
-      });
-
-      // GPS Info Menu
-      gpsInfoMenu.parentMenu = &deviceMenu;
-      this->addNodes(&gpsInfoMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
-        if(wifi_scan_obj.currentScanMode != GPS_TRACKER)
-          wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
-        wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
-        this->changeMenu(gpsInfoMenu.parentMenu);
-      }); 
-    }
-  #endif
-
   // Settings menu
   // Device menu
   settingsMenu.parentMenu = &deviceMenu;
@@ -4146,3 +4163,4 @@ void MenuFunctions::displayCurrentMenu(int start_index)
 }
 
 #endif
+
