@@ -165,6 +165,9 @@ class MenuFunctions
 
     Menu wifiMenu;
     Menu bluetoothMenu;
+    #ifdef HAS_GPS
+      Menu gpsMenu;   // H4W9 Added GPS Menu option to Main Menu
+    #endif
     Menu badusbMenu;
     Menu deviceMenu;
 
