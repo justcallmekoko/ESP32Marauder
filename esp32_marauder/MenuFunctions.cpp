@@ -1895,6 +1895,11 @@ void MenuFunctions::RunSetup()
   // Main menu stuff
   wifiMenu.list = new LinkedList<MenuNode>(); // Get list in second menu ready
   bluetoothMenu.list = new LinkedList<MenuNode>(); // Get list in third menu ready
+  #ifdef HAS_GPS
+    if (gps_obj.getGpsModuleStatus()) {
+      gpsMenu.list = new LinkedList<MenuNode>(); // H4W9 Added GPS Menu
+    }
+  #endif
   deviceMenu.list = new LinkedList<MenuNode>();
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
@@ -2010,6 +2015,7 @@ void MenuFunctions::RunSetup()
   //#endif
   #ifdef HAS_GPS
     gpsInfoMenu.name = "GPS Data";
+    gpsMenu.name = "GPS";   // H4W9 Added GPS Menu
     wardrivingMenu.name = "Wardriving";
   #endif  
   htmlMenu.name = "EP HTML List";
@@ -4163,4 +4169,5 @@ void MenuFunctions::displayCurrentMenu(int start_index)
 }
 
 #endif
+
 
