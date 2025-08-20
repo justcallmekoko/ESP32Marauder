@@ -106,7 +106,7 @@ PROGMEM const char text1_62[] = "Deauth Targeted";
 PROGMEM const char text1_63[] = "Detect Pineapple";
 PROGMEM const char text1_64[] = "Detect MultiSSID";
 PROGMEM const char text1_65[] = "Select probe SSIDs";
-PROGMEM const char text1_67[] = "GPS Menu ";
+PROGMEM const char text1_67[] = "GPS Menu";
 
 //SDInterface.cpp texts
 PROGMEM const char text2_0[] = "Error, could not find update.bin";
