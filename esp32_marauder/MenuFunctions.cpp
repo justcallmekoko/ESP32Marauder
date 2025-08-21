@@ -2262,7 +2262,7 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_ATTACK_BEACON_SPAM, TFT_ORANGE);
   });
-  this->addNodes(&wifiAttackMenu, text1_68, TFTCYAN, NULL, FUNNY_BEACON, [this]() {
+  this->addNodes(&wifiAttackMenu, text1_67, TFTCYAN, NULL, FUNNY_BEACON, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_ATTACK_FUNNY_BEACON, TFT_CYAN);
@@ -4155,5 +4155,6 @@ void MenuFunctions::displayCurrentMenu(int start_index)
 }
 
 #endif
+
 
 
