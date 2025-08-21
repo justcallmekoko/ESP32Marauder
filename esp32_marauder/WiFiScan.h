@@ -130,6 +130,7 @@
 #define WIFI_ATTACK_SLEEP 61
 #define WIFI_ATTACK_SLEEP_TARGETED 62
 #define GPS_POI 63
+#define WIFI_ATTACK_FUNNY_BEACON 64 
 
 #define BASE_MULTIPLIER 4
 
@@ -282,6 +283,22 @@ class WiFiScan
       "06 Never gonna say goodbye",
       "07 Never gonna tell a lie",
       "08 and hurt you"
+    };
+
+    // H4W9 added Funny Beacon Spam
+    const char* funny_beacon[12] = {
+      "Abraham Linksys",
+      "Benjamin FrankLAN",
+      "Dora the Internet Explorer",
+      "FBI Surveillance Van 4",
+      "Get Off My LAN",
+      "Loading...",
+      "Martin Router King",
+      "404 Wi-Fi Unavailable",
+      "Test Wi-Fi Please Ignore",
+      "This LAN is My LAN",
+      "Titanic Syncing",
+      "Winternet is Coming"
     };
 
     char* prefix = "G";
