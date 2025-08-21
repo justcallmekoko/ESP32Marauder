@@ -2040,7 +2040,7 @@ void MenuFunctions::RunSetup()
 
   // H4W9 Added GPS Menu option to Main Menu
   #ifdef HAS_GPS
-    this->addNodes(&mainMenu, text1_67, TFTRED, NULL, GPS_MENU, [this]() {
+    this->addNodes(&mainMenu, text1_66, TFTRED, NULL, GPS_MENU, [this]() {
       this->changeMenu(&gpsMenu);
     });
   #endif
@@ -4164,4 +4164,5 @@ void MenuFunctions::displayCurrentMenu(int start_index)
 }
 
 #endif
+
 
