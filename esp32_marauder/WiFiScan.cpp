@@ -8646,8 +8646,7 @@ void WiFiScan::main(uint32_t currentTime)
       packets_sent = 0;
     }
   }
-  else if ((currentScanMode == WIFI_ATTACK_RICK_ROLL))
-  {
+  else if ((currentScanMode == WIFI_ATTACK_RICK_ROLL)) {
     // Need this for loop because getTouch causes ~10ms delay
     // which makes beacon spam less effective
     for (int i = 0; i < 7; i++)
@@ -8677,8 +8676,7 @@ void WiFiScan::main(uint32_t currentTime)
       packets_sent = 0;
     }
   }
-  else if ((currentScanMode == WIFI_ATTACK_FUNNY_BEACON))
-  {
+  else if ((currentScanMode == WIFI_ATTACK_FUNNY_BEACON)) {
     // Need this for loop because getTouch causes ~10ms delay
     // which makes beacon spam less effective
     for (int i = 0; i < 7; i++)
