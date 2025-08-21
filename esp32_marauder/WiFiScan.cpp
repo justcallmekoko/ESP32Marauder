@@ -937,7 +937,7 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
   else if (scan_mode == WIFI_ATTACK_RICK_ROLL)
     this->startWiFiAttacks(scan_mode, color, text_table1[52]);
   else if (scan_mode == WIFI_ATTACK_FUNNY_BEACON)
-    this->startWiFiAttacks(scan_mode, color, text1_68);
+    this->startWiFiAttacks(scan_mode, color, text1_67);
   else if (scan_mode == WIFI_ATTACK_AUTH)
     this->startWiFiAttacks(scan_mode, color, text_table1[53]);
   else if (scan_mode == WIFI_ATTACK_DEAUTH)
