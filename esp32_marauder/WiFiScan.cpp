@@ -8676,6 +8676,7 @@ void WiFiScan::main(uint32_t currentTime)
       #endif
       packets_sent = 0;
     }
+  }
   else if ((currentScanMode == WIFI_ATTACK_FUNNY_BEACON))
   {
     // Need this for loop because getTouch causes ~10ms delay
