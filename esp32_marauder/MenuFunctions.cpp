@@ -819,6 +819,7 @@ void MenuFunctions::main(uint32_t currentTime)
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_SLEEP) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_SLEEP_TARGETED) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_MIMIC) &&
+	  (wifi_scan_obj.currentScanMode != WIFI_ATTACK_FUNNY_BEACON) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_RICK_ROLL))
     display_obj.displayBuffer();
 
@@ -876,6 +877,7 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_SLEEP) ||
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_SLEEP_TARGETED) ||
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_MIMIC) ||
+		  (wifi_scan_obj.currentScanMode == WIFI_ATTACK_FUNNY_BEACON) ||
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_RICK_ROLL) ||
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_BEACON_LIST) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_ALL) ||
@@ -964,6 +966,7 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_SLEEP) ||
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_SLEEP_TARGETED) ||
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_MIMIC) ||
+			(wifi_scan_obj.currentScanMode == WIFI_ATTACK_FUNNY_BEACON) ||
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_RICK_ROLL) ||
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_BEACON_LIST) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_ALL) ||
@@ -1026,6 +1029,7 @@ void MenuFunctions::main(uint32_t currentTime)
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_RAW_CAPTURE) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_CHAN_ANALYZER) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_SIG_STREN) &&
+		(wifi_scan_obj.currentScanMode != WIFI_ATTACK_FUNNY_BEACON) &&
         (wifi_scan_obj.currentScanMode != WIFI_ATTACK_RICK_ROLL))
     {
       // Need this to set all keys to false
@@ -2258,10 +2262,10 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_ATTACK_BEACON_SPAM, TFT_ORANGE);
   });
-  this->addNodes(&wifiAttackMenu, text1_68, TFTYELLOW, NULL, FUNNY_BEACON, [this]() {
+  this->addNodes(&wifiAttackMenu, text1_68, TFTCYAN, NULL, FUNNY_BEACON, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_ATTACK_FUNNY_BEACON, TFT_YELLOW);
+    wifi_scan_obj.StartScan(WIFI_ATTACK_FUNNY_BEACON, TFT_CYAN);
   });
   this->addNodes(&wifiAttackMenu, text_table1[52], TFTYELLOW, NULL, RICK_ROLL, [this]() {
     display_obj.clearScreen();
@@ -4151,4 +4155,5 @@ void MenuFunctions::displayCurrentMenu(int start_index)
 }
 
 #endif
+
 
