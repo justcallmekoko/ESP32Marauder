@@ -82,6 +82,7 @@ const char PROGMEM ATTACK_CMD[] = "attack";
 const char PROGMEM ATTACK_TYPE_DEAUTH[] = "deauth";
 const char PROGMEM ATTACK_TYPE_BEACON[] = "beacon";
 const char PROGMEM ATTACK_TYPE_PROBE[] = "probe";
+const char PROGMEM ATTACK_TYPE_FUNNY[] = "funny";
 const char PROGMEM ATTACK_TYPE_RR[] = "rickroll";
 const char PROGMEM ATTACK_TYPE_BM[] = "badmsg";
 const char PROGMEM ATTACK_TYPE_S[] = "sleep";
