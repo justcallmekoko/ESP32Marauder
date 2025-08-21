@@ -8685,7 +8685,7 @@ void WiFiScan::main(uint32_t currentTime)
     {
       for (int x = 0; x < (sizeof(funny_beacon)/sizeof(char *)); x++)
       {
-        broadcastSetSSID(currentTime, rick_roll[x]);
+        broadcastSetSSID(currentTime, funny_beacon[x]);
       }
     }
 
