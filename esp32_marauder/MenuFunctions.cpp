@@ -4164,5 +4164,3 @@ void MenuFunctions::displayCurrentMenu(int start_index)
 }
 
 #endif
-
-
