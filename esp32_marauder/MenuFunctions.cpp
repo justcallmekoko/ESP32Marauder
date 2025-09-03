@@ -1909,6 +1909,7 @@ void MenuFunctions::RunSetup()
   deviceMenu.list = new LinkedList<MenuNode>();
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
+      gpsMenu.list = new LinkedList<MenuNode>();
       gpsInfoMenu.list = new LinkedList<MenuNode>();
     }
   #endif
@@ -2020,6 +2021,7 @@ void MenuFunctions::RunSetup()
     wifiStationMenu.name = "Select Stations";
   //#endif
   #ifdef HAS_GPS
+    gpsMenu.name = "GPS"; 
     gpsInfoMenu.name = "GPS Data";
     wardrivingMenu.name = "Wardriving";
   #endif  
@@ -2046,6 +2048,11 @@ void MenuFunctions::RunSetup()
   this->addNodes(&mainMenu, text_table1[19], TFTCYAN, NULL, BLUETOOTH, [this]() {
     this->changeMenu(&bluetoothMenu);
   });
+  #ifdef HAS_GPS
+    this->addNodes(&mainMenu, text1_66, TFTRED, NULL, GPS_MENU, [this]() {
+      this->changeMenu(&gpsMenu);
+    });
+  #endif
   this->addNodes(&mainMenu, text_table1[9], TFTBLUE, NULL, DEVICE, [this]() {
     this->changeMenu(&deviceMenu);
   });
@@ -3325,32 +3332,38 @@ void MenuFunctions::RunSetup()
   // GPS Menu
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
-      this->addNodes(&deviceMenu, "GPS Data", TFTRED, NULL, GPS_MENU, [this]() {
+      gpsMenu.parentMenu = &mainMenu; // Main Menu is second menu parent
+
+      this->addNodes(&gpsMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+        this->changeMenu(gpsMenu.parentMenu);
+      });
+
+      this->addNodes(&gpsMenu, "GPS Data", TFTRED, NULL, GPS_MENU, [this]() {
         wifi_scan_obj.currentScanMode = WIFI_SCAN_GPS_DATA;
         this->changeMenu(&gpsInfoMenu);
         wifi_scan_obj.StartScan(WIFI_SCAN_GPS_DATA, TFT_CYAN);
       });
 
-      this->addNodes(&deviceMenu, "NMEA Stream", TFTORANGE, NULL, GPS_MENU, [this]() {
+      this->addNodes(&gpsMenu, "NMEA Stream", TFTORANGE, NULL, GPS_MENU, [this]() {
         wifi_scan_obj.currentScanMode = WIFI_SCAN_GPS_NMEA;
         this->changeMenu(&gpsInfoMenu);
         wifi_scan_obj.StartScan(WIFI_SCAN_GPS_NMEA, TFT_ORANGE);
       });
 
-      this->addNodes(&deviceMenu, "GPS Tracker", TFTGREEN, NULL, GPS_MENU, [this]() {
+      this->addNodes(&gpsMenu, "GPS Tracker", TFTGREEN, NULL, GPS_MENU, [this]() {
         wifi_scan_obj.currentScanMode = GPS_TRACKER;
         this->changeMenu(&gpsInfoMenu);
         wifi_scan_obj.StartScan(GPS_TRACKER, TFT_CYAN);
       });
 
-      this->addNodes(&deviceMenu, "GPS POI", TFTCYAN, NULL, GPS_MENU, [this]() {
+      this->addNodes(&gpsMenu, "GPS POI", TFTCYAN, NULL, GPS_MENU, [this]() {
         wifi_scan_obj.StartScan(GPS_POI, TFT_CYAN);
         wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
         this->changeMenu(&gpsPOIMenu);
       });
 
       // GPS POI Menu
-      gpsPOIMenu.parentMenu = &deviceMenu;
+      gpsPOIMenu.parentMenu = &gpsMenu;
       this->addNodes(&gpsPOIMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
         wifi_scan_obj.currentScanMode = GPS_POI;
         wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
@@ -3375,7 +3388,7 @@ void MenuFunctions::RunSetup()
       });
 
       // GPS Info Menu
-      gpsInfoMenu.parentMenu = &deviceMenu;
+      gpsInfoMenu.parentMenu = &gpsMenu;
       this->addNodes(&gpsInfoMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
         if(wifi_scan_obj.currentScanMode != GPS_TRACKER)
           wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
