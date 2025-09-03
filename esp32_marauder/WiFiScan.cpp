@@ -1251,7 +1251,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
 
   else if ((currentScanMode == GPS_TRACKER) ||
           (currentScanMode == GPS_POI)) {
-    this->writeFooter();
+    this->writeFooter(currentScanMode == GPS_POI);
   }
 
   
@@ -2221,30 +2221,40 @@ void WiFiScan::RunGenerateSSIDs(int count) {
   #endif
 }
 
-void WiFiScan::logPoint(String lat, String lon, float alt, String datetime) {
+void WiFiScan::logPoint(String lat, String lon, float alt, String datetime, bool poi) {
   datetime.replace(" ", "T");
   datetime += "Z";
 
-  buffer_obj.append("    <trkpt lat=\"" + lat + "\" lon=\"" + lon + "\">\n");
+  if (!poi)
+    buffer_obj.append("    <trkpt lat=\"" + lat + "\" lon=\"" + lon + "\">\n");
+  else
+    buffer_obj.append("    <wpt lat=\"" + lat + "\" lon=\"" + lon + "\">\n");
   buffer_obj.append("      <ele>" + String(alt, 2) + "</ele>\n");
   buffer_obj.append("      <time>" + datetime + "</time>\n");
-  buffer_obj.append("    </trkpt>\n");
+  if (!poi)
+    buffer_obj.append("    </trkpt>\n");
+  else
+    buffer_obj.append("    </wpt>\n");
   //gpxFile.flush();
 }
 
-void WiFiScan::writeHeader() {
+void WiFiScan::writeHeader(bool poi) {
   Serial.println("Writing header to GPX file...");
   buffer_obj.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
   buffer_obj.append("<gpx version=\"1.1\" creator=\"ESP32 GPS Logger\" xmlns=\"http://www.topografix.com/GPX/1/1\">\n");
-  buffer_obj.append("  <trk>\n");
+  if (!poi)
+    buffer_obj.append("  <trk>\n");
   buffer_obj.append("    <name>ESP32 Track</name>\n");
-  buffer_obj.append("    <trkseg>\n");
+  if (!poi)
+    buffer_obj.append("    <trkseg>\n");
 }
 
-void WiFiScan::writeFooter() {
+void WiFiScan::writeFooter(bool poi) {
   Serial.println("Writing footer to GPX file...\n");
-  buffer_obj.append("    </trkseg>\n");
-  buffer_obj.append("  </trk>\n");
+  if (!poi) {
+    buffer_obj.append("    </trkseg>\n");
+    buffer_obj.append("  </trk>\n");
+  }
   buffer_obj.append("</gpx>\n");
 }
 
@@ -2254,18 +2264,18 @@ void WiFiScan::RunSetupGPSTracker(uint8_t scan_mode) {
   else if (scan_mode == GPS_POI)
     this->startGPX("poi");
 
-  this->writeHeader();
+  this->writeHeader(scan_mode == GPS_POI);
   initTime = millis();
 }
 
-bool WiFiScan::RunGPSInfo(bool tracker, bool display) {
+bool WiFiScan::RunGPSInfo(bool tracker, bool display, bool poi) {
   bool return_val = true;
   #ifdef HAS_GPS
     String text=gps_obj.getText();
 
     if (tracker) {
       if (gps_obj.getFixStatus()) {
-        this->logPoint(gps_obj.getLat(), gps_obj.getLon(), gps_obj.getAlt(), gps_obj.getDatetime());
+        this->logPoint(gps_obj.getLat(), gps_obj.getLon(), gps_obj.getAlt(), gps_obj.getDatetime(), poi);
       }
       else
         return_val = false;
