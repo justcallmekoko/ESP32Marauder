@@ -563,8 +563,8 @@ class WiFiScan
     void RunPortScanAll(uint8_t scan_mode, uint16_t color);
     bool checkMem();
     void parseBSSID(const char* bssidStr, uint8_t* bssid);
-    void writeHeader();
-    void writeFooter();
+    void writeHeader(bool poi = false);
+    void writeFooter(bool poi = false);
 
 
   public:
@@ -675,8 +675,8 @@ class WiFiScan
     #ifdef HAS_SCREEN
       int8_t checkAnalyzerButtons(uint32_t currentTime);
     #endif
-    bool RunGPSInfo(bool tracker = false, bool display = true);
-    void logPoint(String lat, String lon, float alt, String datetime);
+    bool RunGPSInfo(bool tracker = false, bool display = true, bool poi = false);
+    void logPoint(String lat, String lon, float alt, String datetime, bool poi = false);
     void setMac();
     void renderRawStats();
     void renderPacketRate();
