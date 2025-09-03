@@ -1127,6 +1127,17 @@ void MenuFunctions::main(uint32_t currentTime)
         if(menu_button == SELECT_BUTTON) {
           current_menu->list->get(current_menu->selected).callable();
         }
+        if (menu_button == LEFT_BUTTON) {
+          if (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
+            if (wifi_scan_obj.set_channel > 1)
+              wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
+            else
+              wifi_scan_obj.changeChannel(14);
+          }
+        }
+        if (menu_button == RIGHT_BUTTON) {
+
+        }
         else {
           if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
               (wifi_scan_obj.currentScanMode == WIFI_CONNECTED))
@@ -1898,7 +1909,7 @@ void MenuFunctions::RunSetup()
   deviceMenu.list = new LinkedList<MenuNode>();
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
-	  gpsMenu.list = new LinkedList<MenuNode>();  // H4W9 Added GPS Menu
+      gpsMenu.list = new LinkedList<MenuNode>();
       gpsInfoMenu.list = new LinkedList<MenuNode>();
     }
   #endif
@@ -2010,8 +2021,8 @@ void MenuFunctions::RunSetup()
     wifiStationMenu.name = "Select Stations";
   //#endif
   #ifdef HAS_GPS
+    gpsMenu.name = "GPS"; 
     gpsInfoMenu.name = "GPS Data";
-    gpsMenu.name = "GPS";   // H4W9 Added GPS Menu
     wardrivingMenu.name = "Wardriving";
   #endif  
   htmlMenu.name = "EP HTML List";
@@ -2037,14 +2048,11 @@ void MenuFunctions::RunSetup()
   this->addNodes(&mainMenu, text_table1[19], TFTCYAN, NULL, BLUETOOTH, [this]() {
     this->changeMenu(&bluetoothMenu);
   });
-
-  // H4W9 Added GPS Menu option to Main Menu
   #ifdef HAS_GPS
     this->addNodes(&mainMenu, text1_66, TFTRED, NULL, GPS_MENU, [this]() {
       this->changeMenu(&gpsMenu);
     });
   #endif
-
   this->addNodes(&mainMenu, text_table1[9], TFTBLUE, NULL, DEVICE, [this]() {
     this->changeMenu(&deviceMenu);
   });
@@ -3321,13 +3329,11 @@ void MenuFunctions::RunSetup()
     this->changeMenu(loadATsMenu.parentMenu);
   });
 
-  // H4W9 Moved GPS functions to GPS Menu
-  // Build GPS Menu
+  // GPS Menu
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
-	  
-	  gpsMenu.parentMenu = &mainMenu; // Main Menu is second menu parent
-		
+      gpsMenu.parentMenu = &mainMenu; // Main Menu is second menu parent
+
       this->addNodes(&gpsMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
         this->changeMenu(gpsMenu.parentMenu);
       });
