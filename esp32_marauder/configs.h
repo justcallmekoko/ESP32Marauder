@@ -382,7 +382,7 @@
     //#define HAS_BATTERY
     //#define HAS_BT
     //#define HAS_BUTTONS
-    //#define HAS_NEOPIXEL_LED
+    #define HAS_NEOPIXEL_LED
     //#define HAS_PWR_MGMT
     //#define HAS_SCREEN
     #define HAS_GPS
@@ -1976,6 +1976,8 @@
       #define PIN 4
     #elif defined(MARAUDER_CYD_2USB)
       #define PIN 4
+    #elif defined(MARAUDER_C5)
+      #define PIN 27
     #else
       #define PIN 25
     #endif
