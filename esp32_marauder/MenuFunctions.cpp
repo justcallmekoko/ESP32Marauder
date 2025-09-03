@@ -1131,17 +1131,6 @@ void MenuFunctions::main(uint32_t currentTime)
         if(menu_button == SELECT_BUTTON) {
           current_menu->list->get(current_menu->selected).callable();
         }
-        if (menu_button == LEFT_BUTTON) {
-          if (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
-            if (wifi_scan_obj.set_channel > 1)
-              wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
-            else
-              wifi_scan_obj.changeChannel(14);
-          }
-        }
-        if (menu_button == RIGHT_BUTTON) {
-
-        }
         else {
           if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
               (wifi_scan_obj.currentScanMode == WIFI_CONNECTED))
@@ -1192,6 +1181,7 @@ void MenuFunctions::main(uint32_t currentTime)
 
   // Menu navigation and paging
   #ifdef HAS_BUTTONS
+    // Don't do this for touch screens
     #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_CYD_MICRO) || defined(MARAUDER_CYD_GUITION) || defined(MARAUDER_CYD_2USB))
       #if !defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
         #if (U_BTN >= 0 || defined(MARAUDER_CARDPUTER))
@@ -1240,6 +1230,7 @@ void MenuFunctions::main(uint32_t currentTime)
             }
         #endif
       #endif
+
       #if (D_BTN >= 0 || defined(MARAUDER_CARDPUTER))
       #if (D_BTN >= 0)
       if (d_btn.justPressed()){
@@ -1290,6 +1281,37 @@ void MenuFunctions::main(uint32_t currentTime)
         }
       }
       #endif
+
+      #if (R_BTN >= 0 || defined(MARAUDER_CARDPUTER))
+      #if (R_BTN >= 0)
+      if (r_btn.justPressed()) {
+      #elif defined(MARAUDER_CARDPUTER)
+      if (this->isKeyPressed('/')) {
+      #endif
+        if (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
+          if (wifi_scan_obj.set_channel < 14)
+            wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
+          else
+            wifi_scan_obj.changeChannel(1);
+        }
+      }
+      #endif
+
+      #if (L_BTN >= 0 || defined(MARAUDER_CARDPUTER))
+      #if (L_BTN >= 0)
+      if (l_btn.justPressed()) {
+      #elif defined(MARAUDER_CARDPUTER)
+      if (this->isKeyPressed(',')) {
+      #endif
+        if (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
+          if (wifi_scan_obj.set_channel > 1)
+            wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
+          else
+            wifi_scan_obj.changeChannel(14);
+        }
+      }
+      #endif
+
       if(c_btn_press){
         current_menu->list->get(current_menu->selected).callable();
       }

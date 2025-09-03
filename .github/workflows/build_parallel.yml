@@ -277,3 +277,46 @@ jobs:
           draft: true
           files: |
             esp32_marauder_v*.bin
+          body: |
+            [justcallmekokollc.com](https://justcallmekokollc.com)
+
+            ### Please see [GPS Modification](https://github.com/justcallmekoko/ESP32Marauder/wiki/gps-modification) to find out how to add GPS capabilities to your Marauder.
+            **Flipper Zero Marauder Companion App:**
+            **Be sure to install the latest version of the [Marauder Companion](https://github.com/0xchocolate/flipperzero-wifi-marauder/releases/latest) to use these new features on your Flipper Zero**
+
+            **Additional Resources**
+            **[Project Issues](https://github.com/justcallmekoko/ESP32Marauder/issues)**
+            **[Install/Update Instructions](https://github.com/justcallmekoko/ESP32Marauder/wiki/update-firmware)**
+            **[ESP32 Marauder companion app](https://github.com/0xchocolate/flipperzero-firmware-with-wifi-marauder-companion/releases/latest)**
+            **[My Discord](https://discord.com/servers/willstunforfood-776211399918878760)**
+
+            **Flipper Zero Dev Board is NOT the same thing as Dev Board Pro. Don't get them confused.**
+
+            ### MARAUDER V6/V6.X WARNING
+            **Please check which Marauder you are using by looking at the front face of the PCB (side with the screen). If it says v6.1 (or .2), use the v6.1 bin. If it says v6, use the v6 bin.**
+
+            ## ESP32-C5 (5GHz support)
+            Please see our [installation guide](https://github.com/justcallmekoko/ESP32Marauder/wiki/ESP32%E2%80%90C5%E2%80%90DevKitC%E2%80%901) for installing the Marauder firmware on your ESP32-C5-DevKitC-1
+
+            | Hardware | Binary Version |
+            | -------- | -------------- |
+            | v4 (OG) | `_old_hardware.bin` |
+            | v6 | `_new_hardware.bin`/`_v6.bin` |
+            | v6.1/v6.2 | `_v6_1.bin` |
+            | v7 | `_v7.bin` |
+            | Kit | `_kit.bin` |
+            | Mini | `_mini.bin` |
+            | Flipper Zero | `_flipper.bin` |
+            | MutliBoard S3 | `_multiboardS3.bin` |
+            | LDDB/NodeMCU/Wemos | `_lddb.bin` |
+            | Dev Board Pro | `_marauder_dev_board_pro.bin` |
+            | BFFB | `_marauder_dev_board_pro.bin` |
+            | ESP32-S2 Reverse Feather | `_rev_feather.bin` |
+            | CYD 2432S028(R) | `_cyd_2432S028.bin` |
+            | RL Phantom | `_cyd_2432S024_guition.bin` |
+            | CYD 2432S028 2 USB | `_cyd_2432S028_2usb.bin` |
+            | M5 Cardputer | `_m5cardputer.bin` (Available on M5 Burner) |
+            | ESP32-C5 DevKit | [`_esp32c5_devkit.bin`](https://github.com/justcallmekoko/ESP32Marauder/wiki/ESP32%E2%80%90C5%E2%80%90DevKitC%E2%80%901) |
+            | AWOK V2/V3 screen (white usb) | `_v6_1.bin` |
+            | AWOK V2 flipper (orange usb) | `_flipper.bin` |
+            | AWOK V3 flipper (orange usb) | `_marauder_dev_board_pro.bin` |
