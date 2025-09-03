@@ -3399,7 +3399,7 @@ void MenuFunctions::RunSetup()
         wifi_scan_obj.currentScanMode = GPS_POI;
         display_obj.tft.setCursor(0, TFT_HEIGHT / 2);
         display_obj.clearScreen();
-        if (wifi_scan_obj.RunGPSInfo(true, false))
+        if (wifi_scan_obj.RunGPSInfo(true, false, true))
           display_obj.showCenterText("POI Logged", TFT_HEIGHT / 2);
         else
           display_obj.showCenterText("POI Log Failed", TFT_HEIGHT / 2);
