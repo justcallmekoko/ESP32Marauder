@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/stale@v9
         with:
-          days-before-stale: 365
+          days-before-stale: 132
           days-before-close: 7
           stale-issue-message: >
             This issue has been automatically marked as stale due to inactivity.
