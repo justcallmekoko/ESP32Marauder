@@ -976,6 +976,14 @@ void CommandLine::runCommand(String input) {
           #endif
           wifi_scan_obj.StartScan(WIFI_ATTACK_RICK_ROLL, TFT_YELLOW);
         }
+        else if (attack_type == ATTACK_TYPE_FUNNY) {
+          Serial.println("Starting Funny SSID Beacon spam. Stop with " + (String)STOPSCAN_CMD);
+          #ifdef HAS_SCREEN
+            display_obj.clearScreen();
+            menu_function_obj.drawStatusBar();
+          #endif
+          wifi_scan_obj.StartScan(WIFI_ATTACK_FUNNY_BEACON, TFT_CYAN);
+        }
         else {
           Serial.println("Attack type not properly defined");
           return;
