@@ -8356,6 +8356,21 @@ void WiFiScan::main(uint32_t currentTime)
   else if (currentScanMode == WIFI_SCAN_TELNET) {
     this->pingScan(WIFI_SCAN_TELNET);
   }
+  else if (currentScanMode == WIFI_SCAN_SMTP) {
+    this->pingScan(WIFI_SCAN_SMTP);
+  }
+  else if (currentScanMode == WIFI_SCAN_DNS) {
+    this->pingScan(WIFI_SCAN_DNS);
+  }
+  else if (currentScanMode == WIFI_SCAN_HTTP) {
+    this->pingScan(WIFI_SCAN_HTTP);
+  }
+  else if (currentScanMode == WIFI_SCAN_HTTPS) {
+    this->pingScan(WIFI_SCAN_HTTPS);
+  }
+  else if (currentScanMode == WIFI_SCAN_RDP) {
+    this->pingScan(WIFI_SCAN_RDP);
+  }
   else if (currentScanMode == WIFI_SCAN_SIG_STREN) {
     #ifdef HAS_ILI9341
       this->signalAnalyzerLoop(currentTime);
