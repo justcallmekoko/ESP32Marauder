@@ -859,6 +859,11 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_PORT_SCAN_ALL) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_SSH) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_TELNET) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_DNS) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_SMTP) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_HTTP) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_HTTPS) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_RDP) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_PWN) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_PINESCAN) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_MULTISSID) ||
@@ -947,6 +952,11 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_PORT_SCAN_ALL) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_SSH) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_TELNET) ||
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_DNS) ||
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_SMTP) ||
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_HTTP) ||
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_HTTPS) ||
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_RDP) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_PWN) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_PINESCAN) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_MULTISSID) ||
@@ -2149,6 +2159,31 @@ void MenuFunctions::RunSetup()
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_TELNET, TFT_CYAN);
+  });
+  this->addNodes(&wifiScannerMenu, "SMTP Scan", TFTWHITE, NULL, SCANNERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_SCAN_SMTP, TFT_CYAN);
+  });
+  this->addNodes(&wifiScannerMenu, "DNS Scan", TFTLIME, NULL, SCANNERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_SCAN_DNS, TFT_CYAN);
+  });
+  this->addNodes(&wifiScannerMenu, "HTTP Scan", TFTSKYBLUE, NULL, SCANNERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_SCAN_HTTP, TFT_CYAN);
+  });
+  this->addNodes(&wifiScannerMenu, "HTTPS Scan", TFTYELLOW, NULL, SCANNERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_SCAN_HTTPS, TFT_CYAN);
+  });
+  this->addNodes(&wifiScannerMenu, "RDP Scan", TFTPURPLE, NULL, SCANNERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_SCAN_RDP, TFT_CYAN);
   });
 
   // Build WiFi sniffer Menu

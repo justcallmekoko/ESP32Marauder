@@ -30,7 +30,7 @@
   //#define MARAUDER_CARDPUTER
   //// END BOARD TARGETS
 
-  #define MARAUDER_VERSION "v1.8.5"
+  #define MARAUDER_VERSION "v1.8.6"
 
   #define GRAPH_REFRESH   100
 
