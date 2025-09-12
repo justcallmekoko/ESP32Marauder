@@ -90,7 +90,7 @@ bool SDInterface::initSD() {
 
       this->sd_files = new LinkedList<String>();
 
-      this->sd_files->add("Back");
+      //this->sd_files->add("Back");
     
       return true;
   }
