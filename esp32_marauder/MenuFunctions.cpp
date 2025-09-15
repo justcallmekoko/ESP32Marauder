@@ -859,6 +859,11 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_PORT_SCAN_ALL) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_SSH) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_TELNET) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_DNS) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_SMTP) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_HTTP) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_HTTPS) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_RDP) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_PWN) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_PINESCAN) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_MULTISSID) ||
@@ -947,6 +952,11 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_PORT_SCAN_ALL) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_SSH) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_TELNET) ||
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_DNS) ||
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_SMTP) ||
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_HTTP) ||
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_HTTPS) ||
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_RDP) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_PWN) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_PINESCAN) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_MULTISSID) ||
@@ -2150,6 +2160,31 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_TELNET, TFT_CYAN);
   });
+  this->addNodes(&wifiScannerMenu, "SMTP Scan", TFTWHITE, NULL, SCANNERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_SCAN_SMTP, TFT_CYAN);
+  });
+  this->addNodes(&wifiScannerMenu, "DNS Scan", TFTLIME, NULL, SCANNERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_SCAN_DNS, TFT_CYAN);
+  });
+  this->addNodes(&wifiScannerMenu, "HTTP Scan", TFTSKYBLUE, NULL, SCANNERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_SCAN_HTTP, TFT_CYAN);
+  });
+  this->addNodes(&wifiScannerMenu, "HTTPS Scan", TFTYELLOW, NULL, SCANNERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_SCAN_HTTPS, TFT_CYAN);
+  });
+  this->addNodes(&wifiScannerMenu, "RDP Scan", TFTPURPLE, NULL, SCANNERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_SCAN_RDP, TFT_CYAN);
+  });
 
   // Build WiFi sniffer Menu
   wifiSnifferMenu.parentMenu = &wifiMenu; // Main Menu is second menu parent
@@ -3108,7 +3143,7 @@ void MenuFunctions::RunSetup()
 
   #ifdef HAS_SD
     if (sd_obj.supported) {
-      this->addNodes(&deviceMenu, "Delete SD Files", TFTCYAN, NULL, SD_UPDATE, [this]() {
+      /*this->addNodes(&deviceMenu, "Delete SD Files", TFTCYAN, NULL, SD_UPDATE, [this]() {
         #ifndef HAS_ILI9341
           #ifdef HAS_BUTTONS
             this->changeMenu(&sdDeleteMenu);
@@ -3276,11 +3311,26 @@ void MenuFunctions::RunSetup()
             }
           #endif
         #endif
+      });*/
+
+      sdDeleteMenu.parentMenu = &deviceMenu;
+
+      this->addNodes(&deviceMenu, "Delete SD Files", TFTCYAN, NULL, SD_UPDATE, [this]() {
+        display_obj.clearScreen();
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+        display_obj.tft.println("Loading...");
+
+        // Clear menu and lists
+        this->buildSDFileMenu();
+
+        this->changeMenu(&sdDeleteMenu);
       });
     }
   #endif
 
-  #ifdef HAS_SD
+  /*#ifdef HAS_SD
     //#ifndef HAS_ILI9341
       #ifdef HAS_BUTTONS
         sdDeleteMenu.parentMenu = &deviceMenu;
@@ -3289,7 +3339,7 @@ void MenuFunctions::RunSetup()
         });
       #endif
     //#endif
-  #endif
+  #endif*/
 
   // Save Files Menu
   saveFileMenu.parentMenu = &deviceMenu;
@@ -3902,6 +3952,46 @@ void MenuFunctions::RunSetup()
     #endif
   }
 //#endif
+
+void MenuFunctions::setupSDFileList() {
+  sd_obj.sd_files->clear();
+
+  delete sd_obj.sd_files;
+
+  sd_obj.sd_files = new LinkedList<String>();
+
+  sd_obj.listDirToLinkedList(sd_obj.sd_files);
+}
+
+void MenuFunctions::buildSDFileMenu() {
+  this->setupSDFileList();
+
+  sdDeleteMenu.list->clear();
+  delete sdDeleteMenu.list;
+  sdDeleteMenu.list = new LinkedList<MenuNode>();
+  sdDeleteMenu.name = "SD Files";
+
+  this->addNodes(&sdDeleteMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(sdDeleteMenu.parentMenu);
+  });
+
+  for (int x = 0; x < sd_obj.sd_files->size(); x++) {
+    this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x), TFTCYAN, NULL, SD_UPDATE, [this, x]() {
+      if (sd_obj.removeFile("/" + sd_obj.sd_files->get(x))) {
+        Serial.println("Deleted /" + sd_obj.sd_files->get(x));
+        display_obj.clearScreen();
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+        display_obj.tft.println("Deleting /" + sd_obj.sd_files->get(x) + "...");
+        //sd_obj.sd_files->remove(x);
+        //sdDeleteMenu.list->remove(x + 1); // +1 for "Back"
+        this->buildSDFileMenu();
+        this->changeMenu(&sdDeleteMenu);
+      }
+    });
+  }
+}
 
 // Function to show all MenuNodes in a Menu
 void MenuFunctions::showMenuList(Menu * menu, int layer)
