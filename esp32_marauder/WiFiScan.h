@@ -130,6 +130,11 @@
 #define WIFI_ATTACK_SLEEP 61
 #define WIFI_ATTACK_SLEEP_TARGETED 62
 #define GPS_POI 63
+#define WIFI_SCAN_DNS 64
+#define WIFI_SCAN_HTTP 65
+#define WIFI_SCAN_HTTPS 66
+#define WIFI_SCAN_SMTP 67
+#define WIFI_SCAN_RDP 68
 
 #define WIFI_ATTACK_FUNNY_BEACON 9999 
 
@@ -581,8 +586,8 @@ class WiFiScan
     void RunPortScanAll(uint8_t scan_mode, uint16_t color);
     bool checkMem();
     void parseBSSID(const char* bssidStr, uint8_t* bssid);
-    void writeHeader();
-    void writeFooter();
+    void writeHeader(bool poi = false);
+    void writeFooter(bool poi = false);
 
 
   public:
@@ -693,8 +698,8 @@ class WiFiScan
     #ifdef HAS_SCREEN
       int8_t checkAnalyzerButtons(uint32_t currentTime);
     #endif
-    bool RunGPSInfo(bool tracker = false, bool display = true);
-    void logPoint(String lat, String lon, float alt, String datetime);
+    bool RunGPSInfo(bool tracker = false, bool display = true, bool poi = false);
+    void logPoint(String lat, String lon, float alt, String datetime, bool poi = false);
     void setMac();
     void renderRawStats();
     void renderPacketRate();

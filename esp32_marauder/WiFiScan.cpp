@@ -1018,6 +1018,16 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     RunPortScanAll(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_TELNET)
     RunPortScanAll(scan_mode, color);
+  else if (scan_mode == WIFI_SCAN_SMTP)
+    RunPortScanAll(scan_mode, color);
+  else if (scan_mode == WIFI_SCAN_DNS)
+    RunPortScanAll(scan_mode, color);
+  else if (scan_mode == WIFI_SCAN_HTTP)
+    RunPortScanAll(scan_mode, color);
+  else if (scan_mode == WIFI_SCAN_HTTPS)
+    RunPortScanAll(scan_mode, color);
+  else if (scan_mode == WIFI_SCAN_RDP)
+    RunPortScanAll(scan_mode, color);
 
   this->currentScanMode = scan_mode;
 }
@@ -1191,6 +1201,11 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   (currentScanMode == WIFI_PORT_SCAN_ALL) ||
   (currentScanMode == WIFI_SCAN_SSH) ||
   (currentScanMode == WIFI_SCAN_TELNET) ||
+  (currentScanMode == WIFI_SCAN_SMTP) ||
+  (currentScanMode == WIFI_SCAN_DNS) ||
+  (currentScanMode == WIFI_SCAN_HTTP) ||
+  (currentScanMode == WIFI_SCAN_HTTPS) ||
+  (currentScanMode == WIFI_SCAN_RDP) ||
   (currentScanMode == WIFI_SCAN_PWN) ||
   (currentScanMode == WIFI_SCAN_PINESCAN) ||
   (currentScanMode == WIFI_SCAN_MULTISSID) ||
@@ -1251,7 +1266,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
 
   else if ((currentScanMode == GPS_TRACKER) ||
           (currentScanMode == GPS_POI)) {
-    this->writeFooter();
+    this->writeFooter(currentScanMode == GPS_POI);
   }
 
   
@@ -1576,6 +1591,16 @@ void WiFiScan::RunPortScanAll(uint8_t scan_mode, uint16_t color)
     startLog("sshscan");
   else if (scan_mode == WIFI_SCAN_TELNET)
     startLog("telnetscan");
+  else if (scan_mode == WIFI_SCAN_SMTP)
+    startLog("smtp");
+  else if (scan_mode == WIFI_SCAN_DNS)
+    startLog("dns");
+  else if (scan_mode == WIFI_SCAN_HTTP)
+    startLog("http");
+  else if (scan_mode == WIFI_SCAN_HTTPS)
+    startLog("https");
+  else if (scan_mode == WIFI_SCAN_RDP)
+    startLog("rdp");
   else
     startLog("portscan");
 
@@ -1605,6 +1630,16 @@ void WiFiScan::RunPortScanAll(uint8_t scan_mode, uint16_t color)
         display_obj.tft.drawCentreString("SSH Scan",120,16,2);
       else if (scan_mode == WIFI_SCAN_TELNET)
         display_obj.tft.drawCentreString("Telnet Scan",120,16,2);
+      else if (scan_mode == WIFI_SCAN_SMTP)
+        display_obj.tft.drawCentreString("SMTP Scan",120,16,2);
+      else if (scan_mode == WIFI_SCAN_DNS)
+        display_obj.tft.drawCentreString("DNS Scan",120,16,2);
+      else if (scan_mode == WIFI_SCAN_HTTP)
+        display_obj.tft.drawCentreString("HTTP Scan",120,16,2);
+      else if (scan_mode == WIFI_SCAN_HTTPS)
+        display_obj.tft.drawCentreString("HTTPS Scan",120,16,2);
+      else if (scan_mode == WIFI_SCAN_RDP)
+        display_obj.tft.drawCentreString("RDP Scan",120,16,2);
     #endif
     #ifdef HAS_ILI9341
       display_obj.touchToExit();
@@ -1615,7 +1650,12 @@ void WiFiScan::RunPortScanAll(uint8_t scan_mode, uint16_t color)
 
   this->current_scan_port = 0;
   if ((scan_mode == WIFI_SCAN_SSH) ||
-      (scan_mode == WIFI_SCAN_TELNET))
+      (scan_mode == WIFI_SCAN_TELNET) ||
+      (scan_mode == WIFI_SCAN_SMTP) ||
+      (scan_mode == WIFI_SCAN_DNS) ||
+      (scan_mode == WIFI_SCAN_HTTP) ||
+      (scan_mode == WIFI_SCAN_HTTPS) ||
+      (scan_mode == WIFI_SCAN_RDP))
     this->current_scan_ip = this->gateway;
 
   Serial.println("Starting Port Scan with...");
@@ -2221,30 +2261,40 @@ void WiFiScan::RunGenerateSSIDs(int count) {
   #endif
 }
 
-void WiFiScan::logPoint(String lat, String lon, float alt, String datetime) {
+void WiFiScan::logPoint(String lat, String lon, float alt, String datetime, bool poi) {
   datetime.replace(" ", "T");
   datetime += "Z";
 
-  buffer_obj.append("    <trkpt lat=\"" + lat + "\" lon=\"" + lon + "\">\n");
+  if (!poi)
+    buffer_obj.append("    <trkpt lat=\"" + lat + "\" lon=\"" + lon + "\">\n");
+  else
+    buffer_obj.append("    <wpt lat=\"" + lat + "\" lon=\"" + lon + "\">\n");
   buffer_obj.append("      <ele>" + String(alt, 2) + "</ele>\n");
   buffer_obj.append("      <time>" + datetime + "</time>\n");
-  buffer_obj.append("    </trkpt>\n");
+  if (!poi)
+    buffer_obj.append("    </trkpt>\n");
+  else
+    buffer_obj.append("    </wpt>\n");
   //gpxFile.flush();
 }
 
-void WiFiScan::writeHeader() {
+void WiFiScan::writeHeader(bool poi) {
   Serial.println("Writing header to GPX file...");
   buffer_obj.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
   buffer_obj.append("<gpx version=\"1.1\" creator=\"ESP32 GPS Logger\" xmlns=\"http://www.topografix.com/GPX/1/1\">\n");
-  buffer_obj.append("  <trk>\n");
+  if (!poi)
+    buffer_obj.append("  <trk>\n");
   buffer_obj.append("    <name>ESP32 Track</name>\n");
-  buffer_obj.append("    <trkseg>\n");
+  if (!poi)
+    buffer_obj.append("    <trkseg>\n");
 }
 
-void WiFiScan::writeFooter() {
+void WiFiScan::writeFooter(bool poi) {
   Serial.println("Writing footer to GPX file...\n");
-  buffer_obj.append("    </trkseg>\n");
-  buffer_obj.append("  </trk>\n");
+  if (!poi) {
+    buffer_obj.append("    </trkseg>\n");
+    buffer_obj.append("  </trk>\n");
+  }
   buffer_obj.append("</gpx>\n");
 }
 
@@ -2254,18 +2304,18 @@ void WiFiScan::RunSetupGPSTracker(uint8_t scan_mode) {
   else if (scan_mode == GPS_POI)
     this->startGPX("poi");
 
-  this->writeHeader();
+  this->writeHeader(scan_mode == GPS_POI);
   initTime = millis();
 }
 
-bool WiFiScan::RunGPSInfo(bool tracker, bool display) {
+bool WiFiScan::RunGPSInfo(bool tracker, bool display, bool poi) {
   bool return_val = true;
   #ifdef HAS_GPS
     String text=gps_obj.getText();
 
     if (tracker) {
       if (gps_obj.getFixStatus()) {
-        this->logPoint(gps_obj.getLat(), gps_obj.getLon(), gps_obj.getAlt(), gps_obj.getDatetime());
+        this->logPoint(gps_obj.getLat(), gps_obj.getLon(), gps_obj.getAlt(), gps_obj.getDatetime(), poi);
       }
       else
         return_val = false;
@@ -8134,8 +8184,45 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
       }
     }
   }
+  else {
+    int targ_port = 0;
+    if (scan_mode == WIFI_SCAN_SSH)
+      targ_port = 22;
+    else if (scan_mode == WIFI_SCAN_TELNET)
+      targ_port = 23;
+    else if (scan_mode == WIFI_SCAN_SMTP)
+      targ_port = 25;
+    else if (scan_mode == WIFI_SCAN_DNS)
+      targ_port = 53;
+    else if (scan_mode == WIFI_SCAN_HTTP)
+      targ_port = 80;
+    else if (scan_mode == WIFI_SCAN_HTTPS)
+      targ_port = 443;
+    else if (scan_mode == WIFI_SCAN_RDP)
+      targ_port = 3389;
 
-  else if (scan_mode == WIFI_SCAN_SSH) {
+    if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
+      this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
+      #ifndef HAS_DUAL_BAND
+        if (this->singleARP(this->current_scan_ip)) {
+      #else
+        if (this->isHostAlive(this->current_scan_ip)) {
+      #endif
+        Serial.println(this->current_scan_ip);
+        this->portScan(scan_mode, targ_port);
+      }
+    }
+    else {
+      if (!this->scan_complete) {
+        this->scan_complete = true;
+        #ifdef HAS_SCREEN
+          display_obj.display_buffer->add("Scan complete");
+        #endif
+      }
+    }
+  }
+
+  /*else if (scan_mode == WIFI_SCAN_SSH) {
     if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
       this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
       #ifndef HAS_DUAL_BAND
@@ -8177,7 +8264,7 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
         #endif
       }
     }
-  }
+  }*/
 }
 
 void WiFiScan::portScan(uint8_t scan_mode, uint16_t targ_port) {
@@ -8271,6 +8358,21 @@ void WiFiScan::main(uint32_t currentTime)
   }
   else if (currentScanMode == WIFI_SCAN_TELNET) {
     this->pingScan(WIFI_SCAN_TELNET);
+  }
+  else if (currentScanMode == WIFI_SCAN_SMTP) {
+    this->pingScan(WIFI_SCAN_SMTP);
+  }
+  else if (currentScanMode == WIFI_SCAN_DNS) {
+    this->pingScan(WIFI_SCAN_DNS);
+  }
+  else if (currentScanMode == WIFI_SCAN_HTTP) {
+    this->pingScan(WIFI_SCAN_HTTP);
+  }
+  else if (currentScanMode == WIFI_SCAN_HTTPS) {
+    this->pingScan(WIFI_SCAN_HTTPS);
+  }
+  else if (currentScanMode == WIFI_SCAN_RDP) {
+    this->pingScan(WIFI_SCAN_RDP);
   }
   else if (currentScanMode == WIFI_SCAN_SIG_STREN) {
     #ifdef HAS_ILI9341

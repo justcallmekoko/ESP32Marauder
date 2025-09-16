@@ -860,6 +860,11 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_PORT_SCAN_ALL) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_SSH) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_TELNET) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_DNS) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_SMTP) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_HTTP) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_HTTPS) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_RDP) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_PWN) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_PINESCAN) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_MULTISSID) ||
@@ -949,6 +954,11 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_PORT_SCAN_ALL) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_SSH) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_TELNET) ||
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_DNS) ||
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_SMTP) ||
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_HTTP) ||
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_HTTPS) ||
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_RDP) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_PWN) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_PINESCAN) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_MULTISSID) ||
@@ -1181,6 +1191,7 @@ void MenuFunctions::main(uint32_t currentTime)
 
   // Menu navigation and paging
   #ifdef HAS_BUTTONS
+    // Don't do this for touch screens
     #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_CYD_MICRO) || defined(MARAUDER_CYD_GUITION) || defined(MARAUDER_CYD_2USB))
       #if !defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
         #if (U_BTN >= 0 || defined(MARAUDER_CARDPUTER))
@@ -1229,6 +1240,7 @@ void MenuFunctions::main(uint32_t currentTime)
             }
         #endif
       #endif
+
       #if (D_BTN >= 0 || defined(MARAUDER_CARDPUTER))
       #if (D_BTN >= 0)
       if (d_btn.justPressed()){
@@ -1279,6 +1291,37 @@ void MenuFunctions::main(uint32_t currentTime)
         }
       }
       #endif
+
+      #if (R_BTN >= 0 || defined(MARAUDER_CARDPUTER))
+      #if (R_BTN >= 0)
+      if (r_btn.justPressed()) {
+      #elif defined(MARAUDER_CARDPUTER)
+      if (this->isKeyPressed('/')) {
+      #endif
+        if (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
+          if (wifi_scan_obj.set_channel < 14)
+            wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
+          else
+            wifi_scan_obj.changeChannel(1);
+        }
+      }
+      #endif
+
+      #if (L_BTN >= 0 || defined(MARAUDER_CARDPUTER))
+      #if (L_BTN >= 0)
+      if (l_btn.justPressed()) {
+      #elif defined(MARAUDER_CARDPUTER)
+      if (this->isKeyPressed(',')) {
+      #endif
+        if (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
+          if (wifi_scan_obj.set_channel > 1)
+            wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
+          else
+            wifi_scan_obj.changeChannel(14);
+        }
+      }
+      #endif
+
       if(c_btn_press){
         current_menu->list->get(current_menu->selected).callable();
       }
@@ -1902,7 +1945,7 @@ void MenuFunctions::RunSetup()
   deviceMenu.list = new LinkedList<MenuNode>();
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
-	  gpsMenu.list = new LinkedList<MenuNode>();  // H4W9 Added GPS Menu
+      gpsMenu.list = new LinkedList<MenuNode>();
       gpsInfoMenu.list = new LinkedList<MenuNode>();
     }
   #endif
@@ -2014,8 +2057,8 @@ void MenuFunctions::RunSetup()
     wifiStationMenu.name = "Select Stations";
   //#endif
   #ifdef HAS_GPS
+    gpsMenu.name = "GPS"; 
     gpsInfoMenu.name = "GPS Data";
-    gpsMenu.name = "GPS";   // H4W9 Added GPS Menu
     wardrivingMenu.name = "Wardriving";
   #endif  
   htmlMenu.name = "EP HTML List";
@@ -2041,14 +2084,11 @@ void MenuFunctions::RunSetup()
   this->addNodes(&mainMenu, text_table1[19], TFTCYAN, NULL, BLUETOOTH, [this]() {
     this->changeMenu(&bluetoothMenu);
   });
-
-  // H4W9 Added GPS Menu option to Main Menu
   #ifdef HAS_GPS
     this->addNodes(&mainMenu, text1_66, TFTRED, NULL, GPS_MENU, [this]() {
       this->changeMenu(&gpsMenu);
     });
   #endif
-
   this->addNodes(&mainMenu, text_table1[9], TFTBLUE, NULL, DEVICE, [this]() {
     this->changeMenu(&deviceMenu);
   });
@@ -2123,6 +2163,31 @@ void MenuFunctions::RunSetup()
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_TELNET, TFT_CYAN);
+  });
+  this->addNodes(&wifiScannerMenu, "SMTP Scan", TFTWHITE, NULL, SCANNERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_SCAN_SMTP, TFT_CYAN);
+  });
+  this->addNodes(&wifiScannerMenu, "DNS Scan", TFTLIME, NULL, SCANNERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_SCAN_DNS, TFT_CYAN);
+  });
+  this->addNodes(&wifiScannerMenu, "HTTP Scan", TFTSKYBLUE, NULL, SCANNERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_SCAN_HTTP, TFT_CYAN);
+  });
+  this->addNodes(&wifiScannerMenu, "HTTPS Scan", TFTYELLOW, NULL, SCANNERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_SCAN_HTTPS, TFT_CYAN);
+  });
+  this->addNodes(&wifiScannerMenu, "RDP Scan", TFTPURPLE, NULL, SCANNERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_SCAN_RDP, TFT_CYAN);
   });
 
   // Build WiFi sniffer Menu
@@ -3087,7 +3152,7 @@ void MenuFunctions::RunSetup()
 
   #ifdef HAS_SD
     if (sd_obj.supported) {
-      this->addNodes(&deviceMenu, "Delete SD Files", TFTCYAN, NULL, SD_UPDATE, [this]() {
+      /*this->addNodes(&deviceMenu, "Delete SD Files", TFTCYAN, NULL, SD_UPDATE, [this]() {
         #ifndef HAS_ILI9341
           #ifdef HAS_BUTTONS
             this->changeMenu(&sdDeleteMenu);
@@ -3255,11 +3320,26 @@ void MenuFunctions::RunSetup()
             }
           #endif
         #endif
+      });*/
+
+      sdDeleteMenu.parentMenu = &deviceMenu;
+
+      this->addNodes(&deviceMenu, "Delete SD Files", TFTCYAN, NULL, SD_UPDATE, [this]() {
+        display_obj.clearScreen();
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+        display_obj.tft.println("Loading...");
+
+        // Clear menu and lists
+        this->buildSDFileMenu();
+
+        this->changeMenu(&sdDeleteMenu);
       });
     }
   #endif
 
-  #ifdef HAS_SD
+  /*#ifdef HAS_SD
     //#ifndef HAS_ILI9341
       #ifdef HAS_BUTTONS
         sdDeleteMenu.parentMenu = &deviceMenu;
@@ -3268,7 +3348,7 @@ void MenuFunctions::RunSetup()
         });
       #endif
     //#endif
-  #endif
+  #endif*/
 
   // Save Files Menu
   saveFileMenu.parentMenu = &deviceMenu;
@@ -3330,13 +3410,11 @@ void MenuFunctions::RunSetup()
     this->changeMenu(loadATsMenu.parentMenu);
   });
 
-  // H4W9 Moved GPS functions to GPS Menu
-  // Build GPS Menu
+  // GPS Menu
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
-	  
-	  gpsMenu.parentMenu = &mainMenu; // Main Menu is second menu parent
-		
+      gpsMenu.parentMenu = &mainMenu; // Main Menu is second menu parent
+
       this->addNodes(&gpsMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
         this->changeMenu(gpsMenu.parentMenu);
       });
@@ -3380,7 +3458,7 @@ void MenuFunctions::RunSetup()
         wifi_scan_obj.currentScanMode = GPS_POI;
         display_obj.tft.setCursor(0, TFT_HEIGHT / 2);
         display_obj.clearScreen();
-        if (wifi_scan_obj.RunGPSInfo(true, false))
+        if (wifi_scan_obj.RunGPSInfo(true, false, true))
           display_obj.showCenterText("POI Logged", TFT_HEIGHT / 2);
         else
           display_obj.showCenterText("POI Log Failed", TFT_HEIGHT / 2);
@@ -3883,6 +3961,46 @@ void MenuFunctions::RunSetup()
     #endif
   }
 //#endif
+
+void MenuFunctions::setupSDFileList() {
+  sd_obj.sd_files->clear();
+
+  delete sd_obj.sd_files;
+
+  sd_obj.sd_files = new LinkedList<String>();
+
+  sd_obj.listDirToLinkedList(sd_obj.sd_files);
+}
+
+void MenuFunctions::buildSDFileMenu() {
+  this->setupSDFileList();
+
+  sdDeleteMenu.list->clear();
+  delete sdDeleteMenu.list;
+  sdDeleteMenu.list = new LinkedList<MenuNode>();
+  sdDeleteMenu.name = "SD Files";
+
+  this->addNodes(&sdDeleteMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+    this->changeMenu(sdDeleteMenu.parentMenu);
+  });
+
+  for (int x = 0; x < sd_obj.sd_files->size(); x++) {
+    this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x), TFTCYAN, NULL, SD_UPDATE, [this, x]() {
+      if (sd_obj.removeFile("/" + sd_obj.sd_files->get(x))) {
+        Serial.println("Deleted /" + sd_obj.sd_files->get(x));
+        display_obj.clearScreen();
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+        display_obj.tft.println("Deleting /" + sd_obj.sd_files->get(x) + "...");
+        //sd_obj.sd_files->remove(x);
+        //sdDeleteMenu.list->remove(x + 1); // +1 for "Back"
+        this->buildSDFileMenu();
+        this->changeMenu(&sdDeleteMenu);
+      }
+    });
+  }
+}
 
 // Function to show all MenuNodes in a Menu
 void MenuFunctions::showMenuList(Menu * menu, int layer)
