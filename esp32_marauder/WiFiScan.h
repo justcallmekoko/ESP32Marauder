@@ -136,6 +136,8 @@
 #define WIFI_SCAN_SMTP 67
 #define WIFI_SCAN_RDP 68
 
+#define WIFI_ATTACK_FUNNY_BEACON 99 
+
 #define BASE_MULTIPLIER 4
 
 #define ANALYZER_NAME_REFRESH 100 // Number of events to refresh the name
@@ -287,6 +289,22 @@ class WiFiScan
       "06 Never gonna say goodbye",
       "07 Never gonna tell a lie",
       "08 and hurt you"
+    };
+
+    // H4W9 added Funny Beacon Spam
+    const char* funny_beacon[12] = {
+      "Abraham Linksys",
+      "Benjamin FrankLAN",
+      "Dora the Internet Explorer",
+      "FBI Surveillance Van 4",
+      "Get Off My LAN",
+      "Loading...",
+      "Martin Router King",
+      "404 Wi-Fi Unavailable",
+      "Test Wi-Fi Please Ignore",
+      "This LAN is My LAN",
+      "Titanic Syncing",
+      "Winternet is Coming"
     };
 
     char* prefix = "G";
