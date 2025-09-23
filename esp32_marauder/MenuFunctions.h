@@ -218,8 +218,6 @@ class MenuFunctions
 
     Menu evilPortalMenu;
 
-    Menu gpsPOIMenu;
-
     static void lv_tick_handler();
 
     // Menu icons
@@ -271,6 +269,7 @@ class MenuFunctions
     #ifdef HAS_GPS
       // GPS Menu
       Menu gpsInfoMenu;
+      Menu gpsPOIMenu;
     #endif
 
     Menu infoMenu;

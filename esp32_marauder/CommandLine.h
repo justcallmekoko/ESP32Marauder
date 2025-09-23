@@ -53,6 +53,8 @@ const char PROGMEM LED_CMD[] = "led";
 const char PROGMEM GPS_DATA_CMD[] = "gpsdata";
 const char PROGMEM GPS_CMD[] = "gps";
 const char PROGMEM NMEA_CMD[] = "nmea";
+const char PROGMEM GPS_POI_CMD[] = "gpspoi";
+const char PROGMEM GPS_TRACKER_CMD[] = "gpstracker";
 
 // WiFi sniff/scan
 const char PROGMEM EVIL_PORTAL_CMD[] = "evilportal";
@@ -119,7 +121,9 @@ const char PROGMEM HELP_SETTINGS_CMD[] = "settings [-s <setting> enable/disable>
 const char PROGMEM HELP_LS_CMD[] = "ls <directory>";
 const char PROGMEM HELP_LED_CMD[] = "led -s <hex color>/-p <rainbow>";
 const char PROGMEM HELP_GPS_DATA_CMD[] = "gpsdata";
-const char PROGMEM HELP_GPS_CMD[] = "gps [-g] <fix/sat/lon/lat/alt/date/accuracy/text/nmea>\r\n    [-n] <native/all/gps/glonass/galileo/navic/qzss/beidou>\r\n         [-b = use BD vs GB for beidou]";
+const char PROGMEM HELP_GPS_CMD[] = "gps [-t] [-g] <fix/sat/lon/lat/alt/date/accuracy/text/nmea>\r\n    [-n] <native/all/gps/glonass/galileo/navic/qzss/beidou>\r\n         [-b = use BD vs GB for beidou]";
+const char PROGMEM HELP_GPS_POI_CMD[] = "gpspoi -s/-m/-e";
+const char PROGMEM HELP_GPS_TRACKER_CMD[] = "gpstracker -c <start/stop>";
 const char PROGMEM HELP_NMEA_CMD[] = "nmea";
 
 // WiFi sniff/scan
@@ -142,7 +146,7 @@ const char PROGMEM HELP_SNIFF_PMKID_CMD[] = "sniffpmkid [-c <channel>][-d][-l]";
 const char PROGMEM HELP_STOPSCAN_CMD[] = "stopscan [-f]";
 const char PROGMEM HELP_WARDRIVE_CMD[] = "wardrive [-s]";
 const char PROGMEM HELP_PING_CMD[] = "pingscan";
-const char PROGMEM HELP_PORT_SCAN_CMD[] = "portscan [-a] -t <ip index>";
+const char PROGMEM HELP_PORT_SCAN_CMD[] = "portscan [-a -t <ip index>]/[-s <ssh/telnet/dns/http/smtp/https/rdp>]";
 const char PROGMEM HELP_ARP_SCAN_CMD[] = "arpscan [-f]";
 
 // WiFi attack
