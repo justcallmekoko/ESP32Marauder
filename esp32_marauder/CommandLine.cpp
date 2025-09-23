@@ -217,6 +217,8 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_GPS_DATA_CMD);
     Serial.println(HELP_GPS_CMD);
     Serial.println(HELP_NMEA_CMD);
+    Serial.println(HELP_GPS_POI_CMD);
+    Serial.println(HELP_GPS_TRACKER_CMD);
     
     // WiFi sniff/scan
     Serial.println(HELP_EVIL_PORTAL_CMD);
@@ -1242,14 +1244,61 @@ void CommandLine::runCommand(String input) {
       wifi_scan_obj.StartScan(WIFI_ARP_SCAN, TFT_CYAN);
     }
 
+    // GPS POI
+    if (cmd_args.get(0) == GPS_POI_CMD) {
+      #ifdef HAS_GPS
+        int start_sw = this->argSearch(&cmd_args, "-s");
+        int mark_sw = this->argSearch(&cmd_args, "-m");
+        int end_sw = this->argSearch(&cmd_args, "-e");
+
+        if (start_sw != -1) {
+          wifi_scan_obj.StartScan(GPS_POI, TFT_CYAN);
+          wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
+          #ifdef HAS_SCREEN
+            menu_function_obj.changeMenu(&menu_function_obj.gpsPOIMenu);
+          #endif
+        }
+        else if (mark_sw != -1) {
+          wifi_scan_obj.currentScanMode = GPS_POI;
+          #ifdef HAS_SCREEN
+            display_obj.tft.setCursor(0, TFT_HEIGHT / 2);
+            display_obj.clearScreen();
+          #endif
+          if (wifi_scan_obj.RunGPSInfo(true, false, true)) {
+            #ifdef HAS_SCREEN
+              display_obj.showCenterText("POI Logged", TFT_HEIGHT / 2);
+            #endif
+          }
+          else {
+            #ifdef HAS_SCREEN
+              display_obj.showCenterText("POI Log Failed", TFT_HEIGHT / 2);
+            #endif
+          }
+          wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
+          delay(2000);
+          //wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+          #ifdef HAS_SCREEN
+            menu_function_obj.changeMenu(&menu_function_obj.gpsPOIMenu);
+          #endif
+        }
+        else if (end_sw != -1) {
+          wifi_scan_obj.currentScanMode = GPS_POI;
+          wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+          #ifdef HAS_SCREEN
+            menu_function_obj.changeMenu(menu_function_obj.gpsPOIMenu.parentMenu);
+          #endif
+        }
+      #else
+        Serial.println("Your hardware doesn't have GPS, silly");
+        return;
+      #endif
+    }
+
     // Port Scan
     if (cmd_args.get(0) == PORT_SCAN_CMD) {
       int all_sw = this->argSearch(&cmd_args, "-a");
       int ip_sw = this->argSearch(&cmd_args, "-t");
-      int port_sw = this->argSearch(&cmd_args, "-p");
-
-      if (port_sw != -1)
-        int ip_index = cmd_args.get(ip_sw + 1).toInt();
+      int port_sw = this->argSearch(&cmd_args, "-s");
 
       // Check they specified ip index
       if (ip_sw != -1) {
@@ -1275,7 +1324,36 @@ void CommandLine::runCommand(String input) {
         }
       }
       else if (port_sw != -1) {
-        
+        String port_name = cmd_args.get(port_sw + 1);
+        port_name.toUpperCase();
+        uint8_t target_mode = 0;
+        if (port_name == "SSH")
+          target_mode = WIFI_SCAN_SSH;
+        else if (port_name == "TELNET")
+          target_mode = WIFI_SCAN_TELNET;
+        else if (port_name == "DNS")
+          target_mode = WIFI_SCAN_DNS;
+        else if (port_name == "HTTP")
+          target_mode = WIFI_SCAN_HTTP;
+        else if (port_name == "SMTP")
+          target_mode = WIFI_SCAN_SMTP;
+        else if (port_name == "HTTPS")
+          target_mode = WIFI_SCAN_HTTPS;
+        else if (port_name == "RDP")
+          target_mode = WIFI_SCAN_RDP;
+
+        if (target_mode != 0) {
+          Serial.println("Starting port scan for service " + port_name);
+          #ifdef HAS_SCREEN
+            display_obj.clearScreen();
+            menu_function_obj.drawStatusBar();
+          #endif
+          wifi_scan_obj.StartScan(target_mode, TFT_CYAN);
+        }
+        else {
+          Serial.println("You did not specify a supported service");
+          return;
+        }
       }
       else {
         Serial.println("You did not specify an IP index");
