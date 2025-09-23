@@ -1277,7 +1277,9 @@ void CommandLine::runCommand(String input) {
           wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
           delay(2000);
           //wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
-          menu_function_obj.changeMenu(&menu_function_obj.gpsPOIMenu);
+          #ifdef HAS_SCREEN
+            menu_function_obj.changeMenu(&menu_function_obj.gpsPOIMenu);
+          #endif
         }
         else if (end_sw != -1) {
           wifi_scan_obj.currentScanMode = GPS_POI;
