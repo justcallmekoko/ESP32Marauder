@@ -604,6 +604,7 @@ void WiFiScan::RunSetup() {
     esp_wifi_init(&cfg);
     #ifdef HAS_DUAL_BAND
       esp_wifi_set_country(&country);
+      esp_event_loop_create_default();
     #endif
     esp_wifi_set_mode(WIFI_AP_STA);
     esp_wifi_start();
@@ -2088,6 +2089,7 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_init(&cfg2);
   #ifdef HAS_DUAL_BAND
     esp_wifi_set_country(&country);
+    esp_event_loop_create_default();
   #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
@@ -2809,6 +2811,7 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
   esp_wifi_init(&cfg2);
   #ifdef HAS_DUAL_BAND
     esp_wifi_set_country(&country);
+    esp_event_loop_create_default();
   #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
@@ -2897,6 +2900,7 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_init(&cfg);
   #ifdef HAS_DUAL_BAND
     esp_wifi_set_country(&country);
+    esp_event_loop_create_default();
   #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_AP);
@@ -2965,6 +2969,7 @@ void WiFiScan::RunMimicFlood(uint8_t scan_mode, uint16_t color) {
   esp_wifi_init(&cfg);
   #ifdef HAS_DUAL_BAND
     esp_wifi_set_country(&country);
+    esp_event_loop_create_default();
   #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_AP_STA);
@@ -3016,6 +3021,7 @@ void WiFiScan::RunPineScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_init(&cfg2);
   #ifdef HAS_DUAL_BAND
     esp_wifi_set_country(&country);
+    esp_event_loop_create_default();
   #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
@@ -3068,6 +3074,7 @@ void WiFiScan::RunMultiSSIDScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_init(&cfg2);
   #ifdef HAS_DUAL_BAND
     esp_wifi_set_country(&country);
+    esp_event_loop_create_default();
   #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
@@ -3117,6 +3124,7 @@ void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_init(&cfg2);
   #ifdef HAS_DUAL_BAND
     esp_wifi_set_country(&country);
+    esp_event_loop_create_default();
   #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
@@ -3358,6 +3366,7 @@ void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color)
     esp_wifi_init(&cfg2);
     #ifdef HAS_DUAL_BAND
       esp_wifi_set_country(&country);
+      esp_event_loop_create_default();
     #endif
     esp_wifi_set_storage(WIFI_STORAGE_RAM);
     esp_wifi_set_mode(WIFI_MODE_NULL);
@@ -3431,6 +3440,7 @@ void WiFiScan::RunStationScan(uint8_t scan_mode, uint16_t color)
   }
   #ifdef HAS_DUAL_BAND
     esp_wifi_set_country(&country);
+    esp_event_loop_create_default();
   #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
@@ -3501,6 +3511,7 @@ void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_init(&cfg2);
   #ifdef HAS_DUAL_BAND
     esp_wifi_set_country(&country);
+    esp_event_loop_create_default();
   #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
@@ -3550,9 +3561,11 @@ void WiFiScan::RunDeauthScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_init(&cfg2);
   #ifdef HAS_DUAL_BAND
     esp_wifi_set_country(&country);
+    esp_event_loop_create_default();
   #endif
+  esp_wifi_set_ps(WIFI_PS_NONE);
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
-  esp_wifi_set_mode(WIFI_MODE_NULL);
+  esp_wifi_set_mode(WIFI_MODE_NULL);  
   esp_wifi_start();
   this->setMac();
   esp_wifi_set_promiscuous(true);
@@ -3617,6 +3630,7 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_init(&cfg2);
   #ifdef HAS_DUAL_BAND
     esp_wifi_set_country(&country);
+    esp_event_loop_create_default();
   #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
