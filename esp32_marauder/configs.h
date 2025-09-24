@@ -406,6 +406,10 @@
         #define POWER_HOLD_PIN 4
     #endif
   #endif
+
+  #ifdef MARAUDER_CARDPUTER
+    #include "AXP2102_Class.h"
+  #endif
   //// END POWER MANAGEMENT
 
   //// BUTTON DEFINITIONS
