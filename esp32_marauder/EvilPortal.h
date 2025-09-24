@@ -6,6 +6,7 @@
 #include "ESPAsyncWebServer.h"
 #include <AsyncTCP.h>
 #include <DNSServer.h>
+#include <WiFi.h>
 
 #include "configs.h"
 #include "settings.h"
