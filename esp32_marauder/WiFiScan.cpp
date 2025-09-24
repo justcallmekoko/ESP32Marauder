@@ -2021,7 +2021,7 @@ void WiFiScan::RunEvilPortal(uint8_t scan_mode, uint16_t color)
 
   #ifdef HAS_DUAL_BAND
     esp_wifi_init(&cfg);
-    esp_wifi_set_country(&country);
+    //esp_wifi_set_country(&country);
   #endif
 
   evil_portal_obj.begin(ssids, access_points);

@@ -125,7 +125,6 @@ void EvilPortal::setupServer() {
       200, "text/html",
       "<html><head><script>setTimeout(() => { window.location.href ='/' }, 100);</script></head><body></body></html>");
   });
-  Serial.println("web server up");
 }
 
 void EvilPortal::setHtmlFromSerial() {
@@ -340,9 +339,14 @@ void EvilPortal::startAP() {
 
   this->setupServer();
 
+  Serial.println("Server endpoints configured");
+
   this->dnsServer.start(53, "*", WiFi.softAPIP());
+  Serial.println("DNS Server started");
   server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);
+  Serial.println("Captive Portal handler started");
   server.begin();
+  Serial.println("Server started");
   #ifdef HAS_SCREEN
     this->sendToDisplay("Evil Portal READY");
   #endif

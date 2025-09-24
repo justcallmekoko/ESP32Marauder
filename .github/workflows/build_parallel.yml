@@ -81,8 +81,8 @@ jobs:
       - name: Install AsyncTCP
         uses: actions/checkout@v2
         with:
-          repository: me-no-dev/AsyncTCP
-          ref: master
+          repository: ESP32Async/AsyncTCP
+          ref: v3.4.8
           path: CustomAsyncTCP
           
       - name: Install MicroNMEA
@@ -92,16 +92,16 @@ jobs:
           ref: v2.0.6
           path: CustomMicroNMEA
           
-      #- name: Install ESPAsyncWebServer
-      #  uses: actions/checkout@v2
-      #  with:
-      #    repository: ${{ matrix.board.esp_async }}
-      #    ref: ${{ matrix.board.esp_async_ver }}
-      #    path: CustomESPAsyncWebServer
-      
       - name: Install ESPAsyncWebServer
-        run: |
-          cp -r libraries/ESPAsyncWebServer ./CustomESPAsyncWebServer
+        uses: actions/checkout@v2
+        with:
+          repository: ESP32Async/ESPAsyncWebServer
+          ref: v3.8.1
+          path: CustomESPAsyncWebServer
+      
+      #- name: Install ESPAsyncWebServer
+      #  run: |
+      #    cp -r libraries/ESPAsyncWebServer ./CustomESPAsyncWebServer
           
       - name: Install TFT_eSPI
         uses: actions/checkout@v2
