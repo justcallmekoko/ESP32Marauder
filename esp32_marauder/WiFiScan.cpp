@@ -8397,21 +8397,23 @@ void WiFiScan::main(uint32_t currentTime)
     if (currentTime - initTime >= this->channel_hop_delay * 500) {
       initTime = millis();
 
-      display_obj.tft.fillRect(0,
-                              (STATUS_BAR_WIDTH * 2) + 1 + EXT_BUTTON_WIDTH,
-                              TFT_WIDTH,
-                              TFT_HEIGHT - STATUS_BAR_WIDTH + 1,
-                              TFT_BLACK);
-                              
-      display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH + EXT_BUTTON_WIDTH);
-      display_obj.tft.setTextSize(1);
-      display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      #ifdef HAS_SCREEN
+        display_obj.tft.fillRect(0,
+                                (STATUS_BAR_WIDTH * 2) + 1 + EXT_BUTTON_WIDTH,
+                                TFT_WIDTH,
+                                TFT_HEIGHT - STATUS_BAR_WIDTH + 1,
+                                TFT_BLACK);
+                                
+        display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH + EXT_BUTTON_WIDTH);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
-      for (int y = 0; y < access_points->size(); y++) {
-        if (access_points->get(y).selected) {
-          display_obj.tft.println(access_points->get(y).essid + ": " + (String)access_points->get(y).rssi);
+        for (int y = 0; y < access_points->size(); y++) {
+          if (access_points->get(y).selected) {
+            display_obj.tft.println(access_points->get(y).essid + ": " + (String)access_points->get(y).rssi);
+          }
         }
-      }
+      #endif
     }
   }
   else if ((currentScanMode == WIFI_SCAN_CHAN_ANALYZER) ||
