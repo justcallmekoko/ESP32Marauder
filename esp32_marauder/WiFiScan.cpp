@@ -5882,11 +5882,13 @@ void WiFiScan::rawSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
     if (!found)
       return;
 
-    if ((targ_ap.rssi + 5 < snifferPacket->rx_ctrl.rssi) || (snifferPacket->rx_ctrl.rssi + 5 < targ_ap.rssi)) {
+    if ((targ_ap.rssi + 1 < snifferPacket->rx_ctrl.rssi) || (snifferPacket->rx_ctrl.rssi + 1 < targ_ap.rssi)) {
       targ_ap.rssi = snifferPacket->rx_ctrl.rssi;
       access_points->set(targ_index, targ_ap);
+
       Serial.println((String)access_points->get(targ_index).essid + " RSSI: " + (String)access_points->get(targ_index).rssi);
-      display_string.concat((String)access_points->get(targ_index).essid);
+
+      /*display_string.concat((String)access_points->get(targ_index).essid);
       #ifndef HAS_MINI_SCREEN
         display_string.concat(" RSSI: ");
         display_string.concat((String)access_points->get(targ_index).rssi);
@@ -5909,7 +5911,7 @@ void WiFiScan::rawSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
           }
           display_obj.display_buffer->add(display_string);
         #endif
-      #endif
+      #endif*/
     }
     else
       return;
@@ -8392,6 +8394,27 @@ void WiFiScan::main(uint32_t currentTime)
     #ifdef HAS_ILI9341
       this->signalAnalyzerLoop(currentTime);
     #endif
+    if (currentTime - initTime >= this->channel_hop_delay * 500) {
+      initTime = millis();
+
+      #ifdef HAS_SCREEN
+        display_obj.tft.fillRect(0,
+                                (STATUS_BAR_WIDTH * 2) + 1 + EXT_BUTTON_WIDTH,
+                                TFT_WIDTH,
+                                TFT_HEIGHT - STATUS_BAR_WIDTH + 1,
+                                TFT_BLACK);
+                                
+        display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH + EXT_BUTTON_WIDTH);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+
+        for (int y = 0; y < access_points->size(); y++) {
+          if (access_points->get(y).selected) {
+            display_obj.tft.println(access_points->get(y).essid + ": " + (String)access_points->get(y).rssi);
+          }
+        }
+      #endif
+    }
   }
   else if ((currentScanMode == WIFI_SCAN_CHAN_ANALYZER) ||
           (currentScanMode == BT_SCAN_ANALYZER)) {
