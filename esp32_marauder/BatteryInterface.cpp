@@ -27,7 +27,7 @@ void BatteryInterface::RunSetup() {
   #ifdef HAS_BATTERY
 
     Serial.println("Checking for battery monitors...");
-    
+
     #ifndef HAS_AXP2101
       Wire.begin(I2C_SDA, I2C_SCL);
 
@@ -99,7 +99,9 @@ int8_t BatteryInterface::getBatteryLevel() {
       return percent;
   }
 
-  if (this->has_axp2101) {
-    return this->power.getBatteryPercent();
-  }
+  #ifdef HAS_AXP2101
+    if (this->has_axp2101) {
+      return this->power.getBatteryPercent();
+    }
+  #endif
 }
