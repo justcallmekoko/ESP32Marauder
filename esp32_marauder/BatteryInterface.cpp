@@ -26,63 +26,41 @@ void BatteryInterface::RunSetup() {
 
   #ifdef HAS_BATTERY
 
-    Wire.begin(I2C_SDA, I2C_SCL);
-
     Serial.println("Checking for battery monitors...");
+    
+    #ifndef HAS_AXP2101
+      Wire.begin(I2C_SDA, I2C_SCL);
 
-    Wire.beginTransmission(IP5306_ADDR);
-    error = Wire.endTransmission();
-
-    if (error == 0) {
-      Serial.println("Detected IP5306");
-      this->has_ip5306 = true;
-      this->i2c_supported = true;
-    }
-
-    Wire.beginTransmission(MAX17048_ADDR);
-    error = Wire.endTransmission();
-
-    if (error == 0) {
-      if (maxlipo.begin()) {
-        Serial.println("Detected MAX17048");
-        this->has_max17048 = true;
-        this->i2c_supported = true;
-      }
-    }
-
-    /*for(addr = 1; addr < 127; addr++ ) {
-      Wire.beginTransmission(addr);
+      Wire.beginTransmission(IP5306_ADDR);
       error = Wire.endTransmission();
 
-      if (error == 0)
-      {
-        Serial.print("I2C device found at address 0x");
-        
-        if (addr<16)
-          Serial.print("0");
+      if (error == 0) {
+        Serial.println("Detected IP5306");
+        this->has_ip5306 = true;
+        this->i2c_supported = true;
+      }
 
-        Serial.println(addr,HEX);
-        
-        if (addr == IP5306_ADDR) {
-          this->has_ip5306 = true;
+      Wire.beginTransmission(MAX17048_ADDR);
+      error = Wire.endTransmission();
+
+      if (error == 0) {
+        if (maxlipo.begin()) {
+          Serial.println("Detected MAX17048");
+          this->has_max17048 = true;
           this->i2c_supported = true;
         }
-
-        if (addr == MAX17048_ADDR) {
-          if (maxlipo.begin()) {
-            Serial.println("Detected MAX17048");
-            this->has_max17048 = true;
-            this->i2c_supported = true;
-          }
-        }
       }
-    }*/
+    #else
+      bool result = this->power.begin(Wire, AXP2101_SLAVE_ADDRESS, I2C_SDA, I2C_SCL);
 
-    /*if (this->maxlipo.begin()) {
-      Serial.println("Detected MAX17048");
-      this->has_max17048 = true;
+      if (!result)
+        return;
+
+      Serial.println("Detected AXP2101");
+
       this->i2c_supported = true;
-    }*/
+      this->has_axp2101 = true;
+    #endif
     
     this->initTime = millis();
   #endif
@@ -119,5 +97,9 @@ int8_t BatteryInterface::getBatteryLevel() {
       return 0;
     else
       return percent;
+  }
+
+  if (this->has_axp2101) {
+    return this->power.getBatteryPercent();
   }
 }
