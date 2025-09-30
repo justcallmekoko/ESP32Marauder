@@ -358,17 +358,31 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           merge-multiple: true
+          
+      - name: Compute release title/tag
+        id: meta
+        shell: bash
+        run: |
+          SHORT_SHA="$(git rev-parse --short HEAD)"
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            echo "name=${SHORT_SHA}_nightly" >> $GITHUB_OUTPUT
+            # keep your existing tag, or set one here:
+            echo "tag=nightly-$(date -u +'%Y%m%d')-${SHORT_SHA}" >> $GITHUB_OUTPUT
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "name=${SHORT_SHA}" >> $GITHUB_OUTPUT
+            echo "tag=manual-$(date -u +'%Y%m%d')-${SHORT_SHA}" >> $GITHUB_OUTPUT
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Create Release (via softprops/action-gh-release)
-        # softprops/action-gh-release supports prerelease input
+      - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          name: ${{ fromJSON(needs.should_release.outputs.result).release_name }}
-          tag_name: ${{ fromJSON(needs.should_release.outputs.result).tag_name }}
-          prerelease: ${{ fromJSON(needs.should_release.outputs.result).prerelease }}
-          # keep your existing release-note generation if desired
+          name: ${{ steps.meta.outputs.name }} 
+          tag_name: nightly
+          prerelease: ${{ steps.meta.outputs.prerelease }}
           generate_release_notes: true
-          draft: true
+          draft: false
           files: |
             esp32_marauder_v*.bin
           body: |
