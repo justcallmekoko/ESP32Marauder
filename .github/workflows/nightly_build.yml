@@ -347,7 +347,7 @@ jobs:
           retention-days: 5
 
   post_compile_steps:
-    name: Create Release (pre-release when nightly)
+    name: Create Nightly Release
     runs-on: ubuntu-latest
     needs: [compile_sketch, should_release]
     # create release if manual dispatch OR should_release decided true for scheduled run
@@ -378,9 +378,9 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          name: ${{ steps.meta.outputs.name }} 
+          name: ${{ steps.meta.outputs.name }}_nightly
           tag_name: nightly
-          prerelease: ${{ steps.meta.outputs.prerelease }}
+          prerelease: true
           generate_release_notes: true
           draft: false
           files: |
