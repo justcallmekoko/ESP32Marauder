@@ -331,13 +331,8 @@ jobs:
 
           BUILD_DIR=./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}
           INPUT_BIN=$BUILD_DIR/esp32_marauder.ino.bin
-          RESULT_JSON='${{ needs.should_release.outputs.result }}'
           
-          echo "RESULT_JSON=${RESULT_JSON}" >> $GITHUB_ENV
-          release_suffix=$(echo "${RESULT_JSON}" | jq -r '.release_suffix')
-          if [ "${release_suffix}" = "null" ]; then release_suffix=""; fi
-          
-          OUTPUT_BIN=esp32_marauder_${VERSION}_${DATE}_${{ matrix.board.file_name }}${release_suffix}.bin
+          OUTPUT_BIN=esp32_marauder_${VERSION}_beta_${DATE}_${{ matrix.board.file_name }}.bin
 
           mv "$INPUT_BIN" "$BUILD_DIR/$OUTPUT_BIN"
 
@@ -379,7 +374,7 @@ jobs:
           body: |
             [justcallmekokollc.com](https://justcallmekokollc.com)
 
-            ### This is an automated {{ fromJSON(needs.should_release.outputs.result).prerelease == true && 'pre-release / beta' || 'release' }} created by CI.
+            ### This is an automated pre-release / beta created by CI.
 
             ### Please see [GPS Modification](https://github.com/justcallmekoko/ESP32Marauder/wiki/gps-modification) to find out how to add GPS capabilities to your Marauder.
             **Flipper Zero Marauder Companion App:**
@@ -392,4 +387,27 @@ jobs:
             **[My Discord](https://discord.com/servers/willstunforfood-776211399918878760)**
 
             **Note:** Nightly pre-releases are for testing and evaluation. Use them at your own risk.
+            
+            | Hardware | Binary Version |
+            | -------- | -------------- |
+            | v4 (OG) | `_old_hardware.bin` |
+            | v6 | `_new_hardware.bin`/`_v6.bin` |
+            | v6.1/v6.2 | `_v6_1.bin` |
+            | v7 | `_v7.bin` |
+            | Kit | `_kit.bin` |
+            | Mini | `_mini.bin` |
+            | Flipper Zero | `_flipper.bin` |
+            | MutliBoard S3 | `_multiboardS3.bin` |
+            | LDDB/NodeMCU/Wemos | `_lddb.bin` |
+            | Dev Board Pro | `_marauder_dev_board_pro.bin` |
+            | BFFB | `_marauder_dev_board_pro.bin` |
+            | ESP32-S2 Reverse Feather | `_rev_feather.bin` |
+            | CYD 2432S028(R) | `_cyd_2432S028.bin` |
+            | RL Phantom | `_cyd_2432S024_guition.bin` |
+            | CYD 2432S028 2 USB | `_cyd_2432S028_2usb.bin` |
+            | M5 Cardputer | `_m5cardputer.bin` (Available on M5 Burner) |
+            | ESP32-C5 DevKit | [`_esp32c5_devkit.bin`](https://github.com/justcallmekoko/ESP32Marauder/wiki/ESP32%E2%80%90C5%E2%80%90DevKitC%E2%80%901) |
+            | AWOK V2/V3 screen (white usb) | `_v6_1.bin` |
+            | AWOK V2 flipper (orange usb) | `_flipper.bin` |
+            | AWOK V3 flipper (orange usb) | `_marauder_dev_board_pro.bin` |
 
