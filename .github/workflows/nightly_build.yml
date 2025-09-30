@@ -1,0 +1,401 @@
+name: Build and (Nightly) Pre-release
+
+on:
+  workflow_dispatch:
+  schedule:
+    # daily at 03:00 UTC (adjust to your preferred time)
+    - cron: '0 3 * * *'
+  push:
+    branches:
+      - master
+    tags:
+      - "*"
+  pull_request:
+
+jobs:
+  should_release:
+    name: "Decide: publish nightly prerelease?"
+    runs-on: ubuntu-latest
+    outputs:
+      result: ${{ steps.check.outputs.result }}
+    steps:
+      - uses: actions/checkout@v4
+        # no heavy fetch needed for this check, but we want commit info:
+        with:
+          fetch-depth: 0
+
+      - name: Check for new commits since last release / pre-release
+        id: check
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const repoInfo = await github.rest.repos.get({ owner, repo });
+            const defaultBranch = repoInfo.data.default_branch || 'main';
+
+            const branchCommit = await github.rest.repos.getCommit({
+              owner, repo, ref: defaultBranch
+            });
+            const branchCommitDate = new Date(branchCommit.data.commit.author.date);
+
+            const rels = await github.rest.repos.listReleases({ owner, repo, per_page: 100 });
+            const releases = rels.data.filter(r => !r.draft);
+
+            let latestReleaseDate = null;
+            let latestRelease = null;
+            if (releases.length > 0) {
+              latestRelease = releases.reduce((a,b) => {
+                const da = a.published_at ? new Date(a.published_at) : null;
+                const db = b.published_at ? new Date(b.published_at) : null;
+                if (!da) return b;
+                if (!db) return a;
+                return da > db ? a : b;
+              });
+              latestReleaseDate = latestRelease.published_at ? new Date(latestRelease.published_at) : null;
+            }
+
+            const isManual = (context.eventName === 'workflow_dispatch');
+
+            let shouldPublish = false;
+            let prerelease = false;
+            let releaseSuffix = "";
+            let tagName = "";
+            let releaseName = "";
+
+            // Build tag_name and release_name (nightly)
+            const now = new Date();
+            const pad = (v) => v.toString().padStart(2,'0');
+            const Y = now.getUTCFullYear();
+            const M = pad(now.getUTCMonth()+1);
+            const D = pad(now.getUTCDate());
+            const h = pad(now.getUTCHours());
+            const m = pad(now.getUTCMinutes());
+            const shortSha = branchCommit.data.sha.substring(0,7);
+
+            if (isManual) {
+              shouldPublish = true;
+              prerelease = false;
+              releaseSuffix = "";
+              tagName = `manual-${Y}${M}${D}-${h}${m}-${shortSha}`;
+              releaseName = `Manual Release ${Y}-${M}-${D} ${h}:${m} UTC`;
+            } else if (context.eventName === 'schedule') {
+              if (!latestReleaseDate) {
+                // no prior releases -> publish nightly prerelease
+                shouldPublish = true;
+                prerelease = true;
+                releaseSuffix = "_beta";
+              } else if (branchCommitDate > latestReleaseDate) {
+                shouldPublish = true;
+                prerelease = true;
+                releaseSuffix = "_beta";
+              } else {
+                shouldPublish = false;
+              }
+              tagName = `nightly-${Y}${M}${D}-${h}${m}-${shortSha}`;
+              releaseName = `Nightly Beta ${Y}-${M}-${D} ${h}:${m} UTC`;
+            } else {
+              shouldPublish = (context.eventName === 'push' || context.eventName === 'pull_request') ? false : false;
+              prerelease = false;
+              releaseSuffix = "";
+              tagName = `run-${Y}${M}${D}-${h}${m}-${shortSha}`;
+              releaseName = `Automatic Run ${Y}-${M}-${D} ${h}:${m} UTC`;
+            }
+
+            return JSON.stringify({
+              should_release: shouldPublish,
+              prerelease: prerelease,
+              release_suffix: releaseSuffix,
+              tag_name: tagName,
+              release_name: releaseName,
+              default_branch: defaultBranch,
+              branch_commit: branchCommit.data.sha,
+              branch_commit_date: branchCommitDate.toISOString(),
+              latest_release_published_at: latestReleaseDate ? latestReleaseDate.toISOString() : null
+            });
+            
+  compile_sketch:
+    name: build ${{ matrix.board.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        board:
+          - { name: "Flipper Zero WiFi Dev Board",   flag: "MARAUDER_FLIPPER",         fbqn: "esp32:esp32:esp32s2:PartitionScheme=min_spiffs,FlashSize=4M,PSRAM=enabled",                     file_name: "flipper",                 tft: false, tft_file: "",                                   build_dir: "esp32s2",                    addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Flipper Zero Multi Board S3",   flag: "MARAUDER_MULTIBOARD_S3",   fbqn: "esp32:esp32:esp32s3:PartitionScheme=min_spiffs,FlashSize=4M",                                   file_name: "multiboardS3",            tft: false, tft_file: "",                                   build_dir: "esp32s3",                    addr: "0x0",      idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "OG Marauder",                   flag: "MARAUDER_V4",              fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "old_hardware",            tft: true,  tft_file: "User_Setup_og_marauder.h",           build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Marauder v6",                   flag: "MARAUDER_V6",              fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "v6",                      tft: true,  tft_file: "User_Setup_og_marauder.h",           build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Marauder v6.1",                 flag: "MARAUDER_V6_1",            fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "v6_1",                    tft: true,  tft_file: "User_Setup_og_marauder.h",           build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Marauder Kit",                  flag: "MARAUDER_KIT",             fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "kit",                     tft: true,  tft_file: "User_Setup_og_marauder.h",           build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Marauder Mini",                 flag: "MARAUDER_MINI",            fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "mini",                    tft: true,  tft_file: "User_Setup_marauder_mini.h",         build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "ESP32 LDDB",                    flag: "ESP32_LDDB",               fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "esp32_lddb",              tft: false, tft_file: "",                                   build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Marauder Dev Board Pro",        flag: "MARAUDER_DEV_BOARD_PRO",   fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "marauder_dev_board_pro",  tft: false, tft_file: "",                                   build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "M5StickCPlus",                  flag: "MARAUDER_M5STICKC",        fbqn: "esp32:esp32:m5stick-c:PartitionScheme=min_spiffs",                                              file_name: "m5stickc_plus",           tft: true,  tft_file: "User_Setup_marauder_m5stickc.h",     build_dir: "m5stick-c",                  addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "M5StickCPlus 2",                flag: "MARAUDER_M5STICKCP2",      fbqn: "esp32:esp32:m5stick-c:PartitionScheme=min_spiffs",                                              file_name: "m5stickc_plus2",          tft: true,  tft_file: "User_Setup_marauder_m5stickcp2.h",   build_dir: "m5stick-c",                  addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Rev Feather",                   flag: "MARAUDER_REV_FEATHER",     fbqn: "esp32:esp32:esp32s2:PartitionScheme=min_spiffs,FlashSize=4M,PSRAM=enabled",                     file_name: "rev_feather",             tft: true,  tft_file: "User_Setup_marauder_rev_feather.h",  build_dir: "esp32s2",                    addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Marauder v7",                   flag: "MARAUDER_V7",              fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "marauder_v7",             tft: true,  tft_file: "User_Setup_dual_nrf24.h",            build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Marauder CYD 2432S028",         flag: "MARAUDER_CYD_MICRO",       fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "cyd_2432S028",            tft: true,  tft_file: "User_Setup_cyd_micro.h",             build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Marauder CYD 2432S024 GUITION", flag: "MARAUDER_CYD_GUITION",     fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "cyd_2432S024_guition",    tft: true,  tft_file: "User_Setup_cyd_guition.h",           build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Marauder CYD 2432S028 2 USB",   flag: "MARAUDER_CYD_2USB",        fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "cyd_2432S028_2usb",       tft: true,  tft_file: "User_Setup_cyd_2usb.h",              build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Marauder v7.1",                 flag: "MARAUDER_V7_1",            fbqn: "esp32:esp32:dfrobot_firebeetle2_esp32e:FlashSize=16M,PartitionScheme=min_spiffs,PSRAM=enabled", file_name: "marauder_v7_1",           tft: true,  tft_file: "User_Setup_dual_nrf24.h",            build_dir: "dfrobot_firebeetle2_esp32e", addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "M5Cardputer",                   flag: "MARAUDER_CARDPUTER",       fbqn: "esp32:esp32:esp32s3:PartitionScheme=min_spiffs,FlashSize=8M,PSRAM=disabled",                    file_name: "m5cardputer",             tft: true,  tft_file: "User_Setup_marauder_m5cardputer.h",  build_dir: "esp32s3",                    addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "ESP32-C5-DevKitC-1",            flag: "MARAUDER_C5",              fbqn: "esp32:esp32:esp32c5:PartitionScheme=min_spiffs",                                                file_name: "esp32c5devkitc1",         tft: false, tft_file: "",                                   build_dir: "esp32c5",                    addr: "0x2000",   idf_ver: "3.3.0",    nimble_ver: "2.3.0",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+          
+      - name: Install Arduino CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
+          echo "/home/runner/work/ESP32Marauder/ESP32Marauder/bin" >> $GITHUB_PATH
+          export PATH=$PATH:/home/runner/work/ESP32Marauder/ESP32Marauder/bin
+          arduino-cli version
+
+      - name: Verify Installed Cores
+        run: arduino-cli core list
+
+      - name: Build TestFile with ESP32 v${{ matrix.board.idf_ver }}
+        uses: ArminJo/arduino-test-compile@v3.2.1
+        with:
+          sketch-names: TestFile.ino
+          arduino-board-fqbn: esp32:esp32:esp32s2
+          arduino-platform: esp32:esp32@${{ matrix.board.idf_ver }}
+          platform-url: https://github.com/espressif/arduino-esp32/releases/download/${{ matrix.board.idf_ver }}/package_esp32_dev_index.json
+
+      - name: Verify Installed Cores Again
+        run: arduino-cli core list
+          
+      - name: Show Arduino dir structure
+        run: |
+          find /home/runner/.arduino15/packages/esp32/hardware/
+          
+      - name: Install ESP32Ping
+        uses: actions/checkout@v2
+        with:
+          repository: marian-craciunescu/ESP32Ping
+          ref: 1.6
+          path: CustomESP32Ping
+          
+      - name: Install AsyncTCP
+        uses: actions/checkout@v2
+        with:
+          repository: ESP32Async/AsyncTCP
+          ref: v3.4.8
+          path: CustomAsyncTCP
+          
+      - name: Install MicroNMEA
+        uses: actions/checkout@v2
+        with:
+          repository: stevemarple/MicroNMEA
+          ref: v2.0.6
+          path: CustomMicroNMEA
+          
+      - name: Install ESPAsyncWebServer
+        uses: actions/checkout@v2
+        with:
+          repository: ESP32Async/ESPAsyncWebServer
+          ref: v3.8.1
+          path: CustomESPAsyncWebServer
+          
+      - name: Install TFT_eSPI
+        uses: actions/checkout@v2
+        with:
+          repository: Bodmer/TFT_eSPI
+          ref: V2.5.34
+          path: CustomTFT_eSPI
+          
+      - name: Install XPT2046_Touchscreen
+        uses: actions/checkout@v2
+        with:
+          repository: PaulStoffregen/XPT2046_Touchscreen
+          ref: v1.4
+          path: CustomXPT2046_Touchscreen
+
+      - name: Install lv_arduino
+        uses: actions/checkout@v2
+        with:
+          repository: lvgl/lv_arduino
+          ref: 3.0.0
+          path: Customlv_arduino
+
+      - name: Install JPEGDecoder
+        uses: actions/checkout@v2
+        with:
+          repository: Bodmer/JPEGDecoder
+          ref: 1.8.0
+          path: CustomJPEGDecoder
+
+      - name: Install NimBLE-Arduino
+        uses: actions/checkout@v2
+        with:
+          repository: h2zero/NimBLE-Arduino
+          ref: ${{ matrix.board.nimble_ver }}
+          path: CustomNimBLE-Arduino
+
+      - name: Install Adafruit_NeoPixel
+        uses: actions/checkout@v2
+        with:
+          repository: adafruit/Adafruit_NeoPixel
+          ref: 1.10.7
+          path: CustomAdafruit_NeoPixel
+
+      - name: Install ArduinoJson
+        uses: actions/checkout@v2
+        with:
+          repository: bblanchon/ArduinoJson
+          ref: v6.18.2
+          path: CustomArduinoJson
+          
+      - name: Install LinkedList
+        uses: actions/checkout@v2
+        with:
+          repository: ivanseidel/LinkedList
+          ref: v1.3.3
+          path: CustomLinkedList
+          
+      - name: Install EspSoftwareSerial
+        uses: actions/checkout@v2
+        with:
+          repository: plerup/espsoftwareserial
+          ref: 8.1.0
+          path: CustomEspSoftwareSerial
+          
+      - name: Install Adafruit_BusIO
+        uses: actions/checkout@v2
+        with:
+          repository: adafruit/Adafruit_BusIO
+          ref: 1.15.0
+          path: CustomAdafruit_BusIO
+          
+      - name: Install Adafruit_MAX1704X
+        uses: actions/checkout@v2
+        with:
+          repository: adafruit/Adafruit_MAX1704X
+          ref: 1.0.2
+          path: CustomAdafruit_MAX1704X
+          
+      - name: Show Libraries
+        run: |
+          find /home/runner/ -name "Custom*"
+          
+      - name: Configure TFT_eSPI
+        run: |
+          rm -f CustomTFT_eSPI/User_Setup_Select.h
+          cp User*.h CustomTFT_eSPI/
+          pwd
+          ls -la
+          ls -la CustomTFT_eSPI
+
+      - name: Install Esptool
+        run: |
+          pip install esptool
+
+      - name: Modify platform.txt
+        run: |
+          if [[ ${{ matrix.board.idf_ver }} == "2.0.11" ]]; then
+            for i in $(find /home/runner/.arduino15/packages/esp32/hardware/esp32/ -name "platform.txt"); do
+              sed -i 's/compiler.c.elf.libs.esp32c3=/compiler.c.elf.libs.esp32c3=-zmuldefs /' "$i"
+              sed -i 's/compiler.c.elf.libs.esp32s3=/compiler.c.elf.libs.esp32s3=-zmuldefs /' "$i"
+              sed -i 's/compiler.c.elf.libs.esp32s2=/compiler.c.elf.libs.esp32s2=-zmuldefs /' "$i"
+              sed -i 's/compiler.c.elf.libs.esp32=/compiler.c.elf.libs.esp32=-zmuldefs /' "$i"
+              cat "$i" | grep compiler.c.elf.libs.esp32c3
+              cat "$i" | grep compiler.c.elf.libs.esp32s3
+              cat "$i" | grep compiler.c.elf.libs.esp32s2
+              cat "$i" | grep compiler.c.elf.libs.esp32
+            done
+          fi
+          
+          if [[ ${{ matrix.board.idf_ver }} == "3.3.0" ]]; then
+            for i in $(find /home/runner/.arduino15/packages/esp32/hardware/esp32/ -name "platform.txt"); do
+              sed -i 's/compiler.c.elf.extra_flags=/compiler.c.elf.extra_flags=-Wl,-zmuldefs /' "$i"
+            done
+          fi
+          
+      - name: Configure TFT_eSPI (if needed)
+        run: |
+          pwd
+          if [[ ${{ matrix.board.tft }} == true ]]; then
+            find /home/runner/ -name "*TFT_eSPI*"
+            sed -i 's/^\/\/#include <${{ matrix.board.tft_file }}>/#include <${{ matrix.board.tft_file }}>/' /home/runner/work/ESP32Marauder/ESP32Marauder/CustomTFT_eSPI/User_Setup_Select.h
+          fi
+
+      - name: Build Marauder for ${{ matrix.board.name }}
+        uses: ArminJo/arduino-test-compile@v3.3.0
+        with:
+          sketch-names: esp32_marauder.ino
+          arduino-board-fqbn: ${{ matrix.board.fbqn }}
+          extra-arduino-cli-args: "--warnings none --build-property compiler.cpp.extra_flags='-D${{ matrix.board.flag }}'"
+          arduino-platform: esp32:esp32@${{ matrix.board.idf_ver }}
+          platform-url: https://github.com/espressif/arduino-esp32/releases/download/${{ matrix.board.idf_ver }}/package_esp32_dev_index.json
+      
+      - name: Rename and Upload ${{ matrix.board.name }} Artifact
+        run: |
+          VERSION=$(grep '#define MARAUDER_VERSION' ./esp32_marauder/configs.h | sed -E 's/.*"v([^"]+)"/v\1/' | tr '.' '_')
+          DATE=$(date +%Y%m%d)
+
+          BUILD_DIR=./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}
+          INPUT_BIN=$BUILD_DIR/esp32_marauder.ino.bin
+          RESULT_JSON='${{ needs.should_release.outputs.result }}'
+          
+          echo "RESULT_JSON=${RESULT_JSON}" >> $GITHUB_ENV
+          release_suffix=$(echo "${RESULT_JSON}" | jq -r '.release_suffix')
+          if [ "${release_suffix}" = "null" ]; then release_suffix=""; fi
+          
+          OUTPUT_BIN=esp32_marauder_${VERSION}_${DATE}_${{ matrix.board.file_name }}${release_suffix}.bin
+
+          mv "$INPUT_BIN" "$BUILD_DIR/$OUTPUT_BIN"
+
+          echo "artifact_name=$OUTPUT_BIN" >> $GITHUB_ENV
+          echo "artifact_path=$BUILD_DIR/$OUTPUT_BIN" >> $GITHUB_ENV
+          
+      - name: Upload ${{ matrix.board.name }} Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.artifact_name }}
+          path: ${{ env.artifact_path }}
+          retention-days: 5
+
+  post_compile_steps:
+    name: Create Release (pre-release when nightly)
+    runs-on: ubuntu-latest
+    needs: [compile_sketch, should_release]
+    # create release if manual dispatch OR should_release decided true for scheduled run
+    if: ${{ github.event_name == 'workflow_dispatch' || fromJSON(needs.should_release.outputs.result).should_release == true }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Create Release (via softprops/action-gh-release)
+        # softprops/action-gh-release supports prerelease input
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ${{ fromJSON(needs.should_release.outputs.result).release_name }}
+          tag_name: ${{ fromJSON(needs.should_release.outputs.result).tag_name }}
+          prerelease: ${{ fromJSON(needs.should_release.outputs.result).prerelease }}
+          # keep your existing release-note generation if desired
+          generate_release_notes: true
+          draft: true
+          files: |
+            esp32_marauder_v*.bin
+          body: |
+            [justcallmekokollc.com](https://justcallmekokollc.com)
+
+            ### This is an automated {{ fromJSON(needs.should_release.outputs.result).prerelease == true && 'pre-release / beta' || 'release' }} created by CI.
+
+            ### Please see [GPS Modification](https://github.com/justcallmekoko/ESP32Marauder/wiki/gps-modification) to find out how to add GPS capabilities to your Marauder.
+            **Flipper Zero Marauder Companion App:**
+            **Be sure to install the latest version of the [Marauder Companion](https://github.com/0xchocolate/flipperzero-wifi-marauder/releases/latest) to use these new features on your Flipper Zero**
+
+            **Additional Resources**
+            **[Project Issues](https://github.com/justcallmekoko/ESP32Marauder/issues)**
+            **[Install/Update Instructions](https://github.com/justcallmekoko/ESP32Marauder/wiki/update-firmware)**
+            **[ESP32 Marauder companion app](https://github.com/0xchocolate/flipperzero-firmware-with-wifi-marauder-companion/releases/latest)**
+            **[My Discord](https://discord.com/servers/willstunforfood-776211399918878760)**
+
+            **Note:** Nightly pre-releases are for testing and evaluation. Use them at your own risk.
+
