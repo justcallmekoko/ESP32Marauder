@@ -5,12 +5,6 @@ on:
   schedule:
     # daily at 03:00 UTC (adjust to your preferred time)
     - cron: '0 3 * * *'
-  push:
-    branches:
-      - master
-    tags:
-      - "*"
-  pull_request:
 
 jobs:
   should_release:
