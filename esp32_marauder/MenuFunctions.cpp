@@ -582,14 +582,13 @@ MenuFunctions::MenuFunctions()
     }
   }
 
-  void MenuFunctions::joinWiFiGFX(String essid){
+  void MenuFunctions::joinWiFiGFX(String essid, bool start_ap){
 
     // Create one text area
     ta1 = lv_textarea_create(lv_scr_act(), NULL);
     lv_textarea_set_one_line(ta1, true);
     lv_obj_set_width(ta1, LV_HOR_RES / 2 - 20);
     lv_obj_set_pos(ta1, 5, 20);
-    //lv_ta_set_cursor_type(ta, LV_CURSOR_BLOCK);
     lv_textarea_set_text(ta1, essid.c_str());
     lv_obj_set_event_cb(ta1, ta_event_cb);
 
@@ -600,8 +599,6 @@ MenuFunctions::MenuFunctions()
 
     // Create second text area
     ta2 = lv_textarea_create(lv_scr_act(), ta1);
-    //lv_textarea_set_pwd_mode(ta2, true); // This shit makes it so backspace does not work
-    //lv_textarea_set_pwd_show_time(ta2, 1000);
     lv_textarea_set_cursor_hidden(ta2, true);
     lv_obj_align(ta2, NULL, LV_ALIGN_IN_TOP_RIGHT, -5, 20);
 
@@ -614,7 +611,11 @@ MenuFunctions::MenuFunctions()
     // Create a keyboard and apply the styles
     kb = lv_keyboard_create(lv_scr_act(), NULL);
     lv_obj_set_size(kb, LV_HOR_RES, LV_VER_RES / 2);
-    lv_obj_set_event_cb(kb, join_wifi_keyboard_event_cb);
+
+    if (!start_ap)
+      lv_obj_set_event_cb(kb, join_wifi_keyboard_event_cb);
+    else
+      lv_obj_set_event_cb(kb, start_ap_keyboard_event_cb);
 
     // Focus it on one of the text areas to start
     lv_keyboard_set_textarea(kb, ta1);
@@ -629,7 +630,6 @@ MenuFunctions::MenuFunctions()
     lv_keyboard_def_event_cb(kb, event);
     if(event == LV_EVENT_APPLY){
       printf("LV_EVENT_APPLY\n");
-      //String ta1_text = lv_textarea_get_text(lv_keyboard_get_textarea(kb));
       String ta1_text = lv_textarea_get_text(ta1);
       String ta2_text = lv_textarea_get_text(ta2);
       Serial.println(ta1_text);
@@ -640,9 +640,31 @@ MenuFunctions::MenuFunctions()
         wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
     }else if(event == LV_EVENT_CANCEL){
       printf("LV_EVENT_CANCEL\n");
-      //lv_textarea_set_text(lv_keyboard_get_textarea(kb), "");
       menu_function_obj.deinitLVGL();
-      //wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+      display_obj.exit_draw = true; // set everything back to normal
+      if (wifi_scan_obj.connected_network != "")
+        wifi_scan_obj.currentScanMode = WIFI_CONNECTED;
+    }
+  }
+
+  void start_ap_keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event){
+    extern Display display_obj;
+    extern MenuFunctions menu_function_obj;
+    extern WiFiScan wifi_scan_obj;
+    lv_keyboard_def_event_cb(kb, event);
+    if(event == LV_EVENT_APPLY){
+      printf("LV_EVENT_APPLY\n");
+      String ta1_text = lv_textarea_get_text(ta1);
+      String ta2_text = lv_textarea_get_text(ta2);
+      Serial.println(ta1_text);
+      Serial.println(ta2_text);
+      if (wifi_scan_obj.startWiFi(ta1_text, ta2_text))
+        wifi_scan_obj.currentScanMode = WIFI_CONNECTED;
+      else
+        wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
+    }else if(event == LV_EVENT_CANCEL){
+      printf("LV_EVENT_CANCEL\n");
+      menu_function_obj.deinitLVGL();
       display_obj.exit_draw = true; // set everything back to normal
       if (wifi_scan_obj.connected_network != "")
         wifi_scan_obj.currentScanMode = WIFI_CONNECTED;
@@ -1515,29 +1537,20 @@ void MenuFunctions::updateStatusBar()
     wifi_scan_obj.old_free_ram = wifi_scan_obj.free_ram;
     display_obj.tft.fillRect(100, 0, 60, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
     #ifdef HAS_FULL_SCREEN
-    //display_obj.tft.setCursor(100, 0);
-    //display_obj.tft.setFreeFont(2);
-    //display_obj.tft.print("D:" + String(getDRAMUsagePercent()) + "%");
     #ifndef HAS_PSRAM
       display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", 100, 0, 2);
     #else
-      //display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%" + " P:" + String(getPSRAMUsagePercent()) + "%", 100, 0, 1);
       display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", 100, 0, 1);
       display_obj.tft.drawString("P:" + String(getPSRAMUsagePercent()) + "%", 100, 8, 1);
     #endif
-    //display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", 100, 0, 2);
   #endif
 
   #ifdef HAS_MINI_SCREEN
-    //display_obj.tft.setCursor(TFT_WIDTH/1.75, 0);
-    //display_obj.tft.setFreeFont(1);
-    //display_obj.tft.print("D:" + String(getDRAMUsagePercent()) + "%");
     #ifndef HAS_PSRAM
       display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
     #else
       display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%" + " P:" + String(getPSRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
     #endif
-    //display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", TFT_WIDTH/1.75, 0, 1);
   #endif
   }
 
@@ -2860,7 +2873,86 @@ void MenuFunctions::RunSetup()
       }
     });
 
-    wifiStationMenu.parentMenu = &wifiAPMenu;
+    this->addNodes(&wifiGeneralMenu, "Start AP", TFTGREEN, NULL, KEYBOARD_ICO, [this](){
+      // Add the back button
+      ssidsMenu.list->clear();
+        this->addNodes(&ssidsMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+        this->changeMenu(ssidsMenu.parentMenu);
+      });
+
+      // Populate the menu with buttons
+      for (int i = 0; i < ssids->size(); i++) {
+        // This is the menu node
+        this->addNodes(&ssidsMenu, ssids->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
+          // Join WiFi using mini keyboard
+          #ifdef HAS_MINI_KB
+            this->changeMenu(&miniKbMenu);
+            String password = this->miniKeyboard(&miniKbMenu, true);
+            if (password != "") {
+              Serial.println("Using SSID: " + (String)ssids->get(i).essid + " Password: " + (String)password);
+              wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
+              wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
+              wifi_scan_obj.startWiFi(ssids->get(i).essid, password);
+              this->changeMenu(current_menu);
+            }
+          #endif
+
+          // Join WiFi using touch screen keyboard
+          #ifdef HAS_TOUCH
+            wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
+            wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
+            joinWiFiGFX(ssids->get(i).essid, true);
+          #endif
+        });
+      }
+      this->changeMenu(&ssidsMenu);
+    });
+
+    /*this->addNodes(&wifiGeneralMenu, "Start Saved AP", TFTWHITE, NULL, KEYBOARD_ICO, [this](){
+      String ssid = settings_obj.loadSetting<String>("APSSID");
+      String pw = settings_obj.loadSetting<String>("APPW");
+
+      if ((ssid != "") && (pw != "")) {
+        wifi_scan_obj.startWiFi(ssid, pw, false);
+        this->changeMenu(&wifiGeneralMenu);
+      }
+      else {
+        // Add the back button
+        wifiAPMenu.list->clear();
+          this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+          this->changeMenu(wifiAPMenu.parentMenu);
+        });
+
+        // Populate the menu with buttons
+        for (int i = 0; i < ssids->size(); i++) {
+          // This is the menu node
+          this->addNodes(&wifiAPMenu, ssids->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
+            // Join WiFi using mini keyboard
+            #ifdef HAS_MINI_KB
+              this->changeMenu(&miniKbMenu);
+              String password = this->miniKeyboard(&miniKbMenu, true);
+              if (password != "") {
+                Serial.println("Using SSID: " + (String)ssids->get(i).essid + " Password: " + (String)password);
+                wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
+                wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
+                wifi_scan_obj.startWiFi(ssids->get(i).essid, password);
+                this->changeMenu(current_menu);
+              }
+            #endif
+
+            // Join WiFi using touch screen keyboard
+            #ifdef HAS_TOUCH
+              wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
+              wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
+              joinWiFiGFX(ssids->get(i).essid, true);
+            #endif
+          });
+        }
+        this->changeMenu(&wifiAPMenu);
+      }
+    });*/
+
+    wifiStationMenu.parentMenu = &ssidsMenu;
     this->addNodes(&wifiStationMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
       this->changeMenu(wifiStationMenu.parentMenu);
     });

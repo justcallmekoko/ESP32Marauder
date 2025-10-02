@@ -854,6 +854,108 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui)
   return true;
 }
 
+bool WiFiScan::startWiFi(String ssid, String password, bool gui)
+{
+  static const char * btns[] ={text16, ""};
+  int count = 0;
+  
+  if ((WiFi.status() == WL_CONNECTED) && (ssid == connected_network) && (ssid != "")) {
+    #ifdef HAS_TOUCH
+      if (gui) {
+        lv_obj_t * mbox1 = lv_msgbox_create(lv_scr_act(), NULL);
+        lv_msgbox_set_text(mbox1, text_table4[2]);
+        lv_msgbox_add_btns(mbox1, btns);
+        lv_obj_set_width(mbox1, 200);
+        lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); //Align to the corner
+      }
+    #endif
+    this->wifi_initialized = true;
+    this->currentScanMode = WIFI_CONNECTED;
+    return true;
+  }
+  else if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("Already connected. Disconnecting...");
+    WiFi.disconnect();
+  }
+
+  WiFi.disconnect(true);
+  delay(100);
+  WiFi.mode(WIFI_MODE_AP);
+
+  //esp_wifi_set_mode(WIFI_IF_STA);
+
+  this->setMac();
+    
+  if (password != "")
+    WiFi.softAP(ssid.c_str(), password.c_str());
+  else
+    WiFi.softAP(ssid.c_str());
+
+  #ifdef HAS_SCREEN
+    #ifdef HAS_MINI_KB
+      if (gui) {
+        display_obj.clearScreen();
+        display_obj.tft.setCursor(0, TFT_HEIGHT / 2);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.print("Starting");
+        display_obj.tft.setTextWrap(true, false);
+      }
+    #endif
+  #endif
+
+  Serial.print("Started WiFi");
+  
+  #ifdef HAS_TOUCH
+    lv_obj_t * mbox1 = lv_msgbox_create(lv_scr_act(), NULL);
+    lv_msgbox_set_text(mbox1, text_table4[4]);
+    lv_msgbox_add_btns(mbox1, btns);
+    lv_obj_set_width(mbox1, 200);
+    lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); //Align to the corner
+  #endif
+  this->connected_network = ssid;
+  this->ip_addr = WiFi.softAPIP();
+  this->gateway = WiFi.gatewayIP();
+  this->subnet = WiFi.subnetMask();
+  
+  Serial.println("\nStarted AP");
+  Serial.print("IP address: ");
+  Serial.println(this->ip_addr);
+  Serial.print("Gateway: ");
+  Serial.println(this->gateway);
+  Serial.print("Netmask: ");
+  Serial.println(this->subnet);
+  Serial.print("MAC: ");
+  Serial.println(WiFi.macAddress());
+
+  #ifdef HAS_SCREEN
+    #ifdef HAS_MINI_KB
+      display_obj.tft.println("\nStarted AP");
+      display_obj.tft.print("IP address: ");
+      display_obj.tft.println(this->ip_addr);
+      display_obj.tft.print("Gateway: ");
+      display_obj.tft.println(this->gateway);
+      display_obj.tft.print("Netmask: ");
+      display_obj.tft.println(this->subnet);
+      display_obj.tft.print("MAC: ");
+      display_obj.tft.println(WiFi.macAddress());
+      display_obj.tft.println("Returning...");
+      delay(2000);
+    #endif
+  #endif
+  this->wifi_initialized = true;
+  #ifndef HAS_TOUCH
+    this->currentScanMode = WIFI_CONNECTED;
+    #ifdef HAS_SCREEN
+      display_obj.tft.setTextWrap(false, false);
+    #endif
+  #endif
+
+  //settings_obj.saveSetting<bool>("APSSID", ssid);
+  //settings_obj.saveSetting<bool>("APPW", password);
+
+  return true;
+}
+
 // Apply WiFi settings
 void WiFiScan::initWiFi(uint8_t scan_mode) {
   // Set the channel
@@ -8851,7 +8953,7 @@ void WiFiScan::main(uint32_t currentTime)
         gps_obj.disable_queue();
   #endif
 
-  if (WiFi.status() == WL_CONNECTED) {
+  if ((WiFi.status() == WL_CONNECTED) || (WiFi.softAPIP() != IPAddress(0,0,0,0))) {
     this->wifi_connected = true;
     this->wifi_initialized = true;
   }

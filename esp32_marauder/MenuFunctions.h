@@ -102,6 +102,7 @@ PROGMEM static lv_color_t buf[LV_HOR_RES_MAX * 10];
 
 PROGMEM static void ta_event_cb(lv_obj_t * ta, lv_event_t event);
 PROGMEM static void join_wifi_keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event);
+PROGMEM static void start_ap_keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event);
 PROGMEM static void add_ssid_keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event);
 PROGMEM static void html_list_cb(lv_obj_t * btn, lv_event_t event);
 PROGMEM static void ap_list_cb(lv_obj_t * btn, lv_event_t event);
@@ -284,7 +285,7 @@ class MenuFunctions
 
     String loaded_file = "";
 
-    void joinWiFiGFX(String essid);
+    void joinWiFiGFX(String essid, bool start_ap = false);
     void setGraphScale(float scale);
     void initLVGL();
     void deinitLVGL();
