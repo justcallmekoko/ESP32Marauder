@@ -135,6 +135,7 @@
 #define WIFI_SCAN_HTTPS 66
 #define WIFI_SCAN_SMTP 67
 #define WIFI_SCAN_RDP 68
+#define WIFI_HOSTSPOT 69 // Nice
 
 #define WIFI_ATTACK_FUNNY_BEACON 99 
 
@@ -721,6 +722,7 @@ class WiFiScan
     bool shutdownBLE();
     bool scanning();
     bool joinWiFi(String ssid, String password, bool gui = true);
+    bool startWiFi(String ssid, String password, bool gui = true);
     String getStaMAC();
     String getApMAC();
     String freeRAM();
