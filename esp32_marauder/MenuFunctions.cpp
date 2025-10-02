@@ -2564,6 +2564,8 @@ void MenuFunctions::RunSetup()
     this->changeMenu(&selectProbeSSIDsMenu);
   });
 
+  clearSSIDsMenu.parentMenu = &wifiGeneralMenu;
+
   #ifdef HAS_ILI9341
     this->addNodes(&wifiGeneralMenu, text_table1[1], TFTNAVY, NULL, KEYBOARD_ICO, [this](){
       display_obj.clearScreen(); 
@@ -2589,32 +2591,6 @@ void MenuFunctions::RunSetup()
     this->changeMenu(&clearAPsMenu);
     wifi_scan_obj.RunClearStations();
   });
-  /*#ifdef HAS_ILI9341
-    // Select APs on OG
-    this->addNodes(&wifiGeneralMenu, text_table1[56], TFTNAVY, NULL, KEYBOARD_ICO, [this](){
-      display_obj.clearScreen(); 
-      wifi_scan_obj.currentScanMode = LV_ADD_SSID; 
-      wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_RED);  
-      addAPGFX();
-    });
-    // Select Stations on OG
-    this->addNodes(&wifiGeneralMenu, text_table1[61], TFTLIGHTGREY, NULL, KEYBOARD_ICO, [this](){
-      display_obj.clearScreen(); 
-      wifi_scan_obj.currentScanMode = LV_ADD_SSID; 
-      wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_RED);  
-      addStationGFX();
-    });
-    // Select Evil Portal Files on OG
-    this->addNodes(&wifiGeneralMenu, "Select EP HTML File", TFTCYAN, NULL, KEYBOARD_ICO, [this](){
-      display_obj.clearScreen(); 
-      wifi_scan_obj.currentScanMode = LV_ADD_SSID; 
-      wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_RED);  
-      selectEPHTMLGFX();
-    });
-    apInfoMenu.parentMenu = &wifiGeneralMenu;
-    this->addNodes(&apInfoMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
-      this->changeMenu(apInfoMenu.parentMenu);
-    });*/
   //#else // Mini EP HTML select
     this->addNodes(&wifiGeneralMenu, "Select EP HTML File", TFTCYAN, NULL, KEYBOARD_ICO, [this](){
       // Add the back button
@@ -2874,6 +2850,8 @@ void MenuFunctions::RunSetup()
     });
 
     this->addNodes(&wifiGeneralMenu, "Start AP", TFTGREEN, NULL, KEYBOARD_ICO, [this](){
+      ssidsMenu.parentMenu = &wifiGeneralMenu;
+
       // Add the back button
       ssidsMenu.list->clear();
         this->addNodes(&ssidsMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
@@ -3049,7 +3027,7 @@ void MenuFunctions::RunSetup()
   });
 
   // Build clear ssids menu
-  clearSSIDsMenu.parentMenu = &wifiGeneralMenu;
+  
   this->addNodes(&clearSSIDsMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
     this->changeMenu(clearSSIDsMenu.parentMenu);
   });
