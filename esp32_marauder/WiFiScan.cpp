@@ -2217,6 +2217,9 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
       #ifdef TFT_SHIELD
         uint16_t calData[5] = { 391, 3491, 266, 3505, 7 }; // Landscape TFT Shield
         Serial.println("Using TFT Shield");
+      #elif defined(MARAUDER_CYD_3_5_INCH)
+        uint16_t calData[5] = { 272, 3648, 234, 3565, 7 };
+        Serial.println("Using CYD 3.5inch (join wifi)");
       #else if defined(TFT_DIY)
         uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
         Serial.println("Using TFT DIY (join wifi)");
@@ -2829,6 +2832,9 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
           #ifdef TFT_SHIELD
             uint16_t calData[5] = { 391, 3491, 266, 3505, 7 }; // Landscape TFT Shield
             Serial.println("Using TFT Shield");
+          #elif defined(MARAUDER_CYD_3_5_INCH)
+            uint16_t calData[5] = { 272, 3648, 234, 3565, 7 }; // Landscape
+            Serial.println("Using CYD 3.5inch");
           #else if defined(TFT_DIY)
             uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
             Serial.println("Using TFT DIY");
@@ -2955,6 +2961,8 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
         #ifdef TFT_SHIELD
           uint16_t calData[5] = { 391, 3491, 266, 3505, 7 }; // Landscape TFT Shield
           //Serial.println("Using TFT Shield");
+        #elif defined(MARAUDER_CYD_3_5_INCH)
+          uint16_t calData[5] = { 272, 3648, 234, 3565, 7 };
         #else if defined(TFT_DIY)
           uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
           //Serial.println("Using TFT DIY");
@@ -7964,7 +7972,7 @@ void WiFiScan::channelAnalyzerLoop(uint32_t tick) {
           set_channel--;
           display_obj.tftDrawChannelScaleButtons(set_channel, false);
           display_obj.tftDrawExitScaleButtons(false);
-          changeChannel();
+          changeChannel(set_channel);
           return;
         }
       }
@@ -7975,7 +7983,7 @@ void WiFiScan::channelAnalyzerLoop(uint32_t tick) {
           set_channel++;
           display_obj.tftDrawChannelScaleButtons(set_channel, false);
           display_obj.tftDrawExitScaleButtons(false);
-          changeChannel();
+          changeChannel(set_channel);
           return;
         }
       }
