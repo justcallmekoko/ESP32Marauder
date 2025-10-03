@@ -301,7 +301,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [compile_sketch, decide]
     # create release if manual dispatch OR should_release decided true for scheduled run
-    if: ${{ fromJSON(needs.decide.outputs.result).should_build == true }}
+    if: ${{ needs.decide.outputs.should_build == 'true' }}
     steps:
       - uses: actions/checkout@v4
 
