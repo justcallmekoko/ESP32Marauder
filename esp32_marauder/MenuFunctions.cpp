@@ -1214,7 +1214,7 @@ void MenuFunctions::main(uint32_t currentTime)
   // Menu navigation and paging
   #ifdef HAS_BUTTONS
     // Don't do this for touch screens
-    #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_CYD_MICRO) || defined(MARAUDER_CYD_GUITION) || defined(MARAUDER_CYD_2USB))
+    #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_CYD_MICRO) || defined(MARAUDER_CYD_GUITION) || defined(MARAUDER_CYD_2USB) || defined(MARAUDER_CYD_3_5_INCH))
       #if !defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
         #if (U_BTN >= 0 || defined(MARAUDER_CARDPUTER))
           #if (U_BTN >= 0)
@@ -1472,7 +1472,7 @@ void MenuFunctions::updateStatusBar()
   #ifdef HAS_GPS
     if (this->old_gps_sat_count != gps_obj.getNumSats()) {
       this->old_gps_sat_count = gps_obj.getNumSats();
-      display_obj.tft.fillRect(0, 0, 240, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+      display_obj.tft.fillRect(0, 0, TFT_WIDTH, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
       status_changed = true;
     }
   #endif
@@ -1660,7 +1660,7 @@ void MenuFunctions::drawStatusBar()
   #ifdef HAS_MINI_SCREEN
     display_obj.tft.setFreeFont(NULL);
   #endif
-  display_obj.tft.fillRect(0, 0, 240, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+  display_obj.tft.fillRect(0, 0, TFT_WIDTH, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
   display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR);
 
   uint16_t the_color;
@@ -1858,6 +1858,8 @@ void MenuFunctions::orientDisplay()
     #ifndef HAS_CYD_TOUCH
       #ifdef TFT_SHIELD
         uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield
+      #elif defined(MARAUDER_CYD_3_5_INCH)
+        uint16_t calData[5] = { 239, 3560, 262, 3643, 4 };
       #else if defined(TFT_DIY)
         uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // tft.setRotation(0); // Portrait with DIY TFT
       #endif

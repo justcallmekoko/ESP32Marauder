@@ -37,7 +37,7 @@ bool SDInterface::initSD() {
       */
       #if defined(MARAUDER_M5STICKC)
         enum { SPI_SCK = 0, SPI_MISO = 36, SPI_MOSI = 26 };
-      #elif defined(HAS_CYD_TOUCH) || defined(MARAUDER_CARDPUTER)
+      #elif defined(HAS_CYD_TOUCH) || defined(MARAUDER_CARDPUTER) || defined(HAS_SEPARATE_SD)
         enum { SPI_SCK = SD_SCK, SPI_MISO = SD_MISO, SPI_MOSI = SD_MOSI };
       #else
         enum { SPI_SCK = 0, SPI_MISO = 36, SPI_MOSI = 26 };
