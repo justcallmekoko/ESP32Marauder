@@ -7,107 +7,57 @@ on:
     - cron: '0 3 * * *'
 
 jobs:
-  should_release:
-    name: "Decide: publish nightly prerelease?"
+  decide:
+    name: Detect new commits on default branch
     runs-on: ubuntu-latest
     outputs:
-      result: ${{ steps.check.outputs.result }}
+      should_build: ${{ steps.decide.outputs.should_build }}
+      default_branch: ${{ steps.decide.outputs.default_branch }}
+      head_sha: ${{ steps.decide.outputs.head_sha }}
+      short_sha: ${{ steps.decide.outputs.short_sha }}
     steps:
       - uses: actions/checkout@v4
-        # no heavy fetch needed for this check, but we want commit info:
-        with:
-          fetch-depth: 0
+        with: { fetch-depth: 0 }
 
-      - name: Check for new commits since last release / pre-release
-        id: check
-        uses: actions/github-script@v6
+      - id: decide
+        uses: actions/github-script@v7
         with:
           script: |
             const owner = context.repo.owner;
-            const repo = context.repo.repo;
+            const repo  = context.repo.repo;
 
+            // Find default branch and its HEAD
             const repoInfo = await github.rest.repos.get({ owner, repo });
-            const defaultBranch = repoInfo.data.default_branch || 'main';
+            const defaultBranch = repoInfo.data.default_branch;
+            const head = await github.rest.repos.getBranch({ owner, repo, branch: defaultBranch });
+            const headSha = head.data.commit.sha;
+            const shortSha = headSha.slice(0,7);
 
-            const branchCommit = await github.rest.repos.getCommit({
-              owner, repo, ref: defaultBranch
-            });
-            const branchCommitDate = new Date(branchCommit.data.commit.author.date);
-
-            const rels = await github.rest.repos.listReleases({ owner, repo, per_page: 100 });
-            const releases = rels.data.filter(r => !r.draft);
-
-            let latestReleaseDate = null;
-            let latestRelease = null;
-            if (releases.length > 0) {
-              latestRelease = releases.reduce((a,b) => {
-                const da = a.published_at ? new Date(a.published_at) : null;
-                const db = b.published_at ? new Date(b.published_at) : null;
-                if (!da) return b;
-                if (!db) return a;
-                return da > db ? a : b;
+            // Try get the existing nightly release (single static tag)
+            let nightlyRelease = null;
+            try {
+              nightlyRelease = await github.rest.repos.getReleaseByTag({
+                owner, repo, tag: 'nightly'
               });
-              latestReleaseDate = latestRelease.published_at ? new Date(latestRelease.published_at) : null;
+            } catch (e) {
+              if (e.status !== 404) throw e;
             }
 
-            const isManual = (context.eventName === 'workflow_dispatch');
-
-            let shouldPublish = false;
-            let prerelease = false;
-            let releaseSuffix = "";
-            let tagName = "";
-            let releaseName = "";
-
-            // Build tag_name and release_name (nightly)
-            const now = new Date();
-            const pad = (v) => v.toString().padStart(2,'0');
-            const Y = now.getUTCFullYear();
-            const M = pad(now.getUTCMonth()+1);
-            const D = pad(now.getUTCDate());
-            const h = pad(now.getUTCHours());
-            const m = pad(now.getUTCMinutes());
-            const shortSha = branchCommit.data.sha.substring(0,7);
-
-            if (isManual) {
-              shouldPublish = true;
-              prerelease = false;
-              releaseSuffix = "";
-              tagName = `manual-${Y}${M}${D}-${h}${m}-${shortSha}`;
-              releaseName = `Manual Release ${Y}-${M}-${D} ${h}:${m} UTC`;
-            } else if (context.eventName === 'schedule') {
-              if (!latestReleaseDate) {
-                // no prior releases -> publish nightly prerelease
-                shouldPublish = true;
-                prerelease = true;
-                releaseSuffix = "_beta";
-              } else if (branchCommitDate > latestReleaseDate) {
-                shouldPublish = true;
-                prerelease = true;
-                releaseSuffix = "_beta";
-              } else {
-                shouldPublish = false;
+            // Decide if we need to rebuild: compare short SHA in the release name
+            // Name format we set: "<shortsha>_nightly"
+            let shouldBuild = true;
+            if (nightlyRelease) {
+              const name = nightlyRelease.data.name || '';
+              const m = name.match(/^([0-9a-f]{7})_nightly$/i);
+              if (m && m[1] === shortSha) {
+                shouldBuild = false; // no new commits since last nightly
               }
-              tagName = `nightly-${Y}${M}${D}-${h}${m}-${shortSha}`;
-              releaseName = `Nightly Beta ${Y}-${M}-${D} ${h}:${m} UTC`;
-            } else {
-              shouldPublish = (context.eventName === 'push' || context.eventName === 'pull_request') ? false : false;
-              prerelease = false;
-              releaseSuffix = "";
-              tagName = `run-${Y}${M}${D}-${h}${m}-${shortSha}`;
-              releaseName = `Automatic Run ${Y}-${M}-${D} ${h}:${m} UTC`;
             }
 
-            return JSON.stringify({
-              should_release: shouldPublish,
-              prerelease: prerelease,
-              release_suffix: releaseSuffix,
-              tag_name: tagName,
-              release_name: releaseName,
-              default_branch: defaultBranch,
-              branch_commit: branchCommit.data.sha,
-              branch_commit_date: branchCommitDate.toISOString(),
-              latest_release_published_at: latestReleaseDate ? latestReleaseDate.toISOString() : null
-            });
+            core.setOutput('should_build', String(shouldBuild));
+            core.setOutput('default_branch', defaultBranch);
+            core.setOutput('head_sha', headSha);
+            core.setOutput('short_sha', shortSha);
             
   compile_sketch:
     name: build ${{ matrix.board.name }}
@@ -349,9 +299,9 @@ jobs:
   post_compile_steps:
     name: Create Nightly Release
     runs-on: ubuntu-latest
-    needs: [compile_sketch, should_release]
+    needs: [compile_sketch, should_build]
     # create release if manual dispatch OR should_release decided true for scheduled run
-    if: ${{ github.event_name == 'workflow_dispatch' || fromJSON(needs.should_release.outputs.result).should_release == true }}
+    if: ${{ fromJSON(needs.should_build.outputs.result).should_build == true }}
     steps:
       - uses: actions/checkout@v4
 
