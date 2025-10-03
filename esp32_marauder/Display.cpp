@@ -138,6 +138,8 @@ void Display::RunSetup()
     #ifndef HAS_CYD_TOUCH
       #ifdef TFT_SHIELD
         uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield
+      #elif defined(MARAUDER_CYD_3_5_INCH)
+        uint16_t calData[5] = { 239, 3560, 262, 3643, 4 };
       #elif defined(TFT_DIY)
         uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // tft.setRotation(0); // Portrait with DIY TFT
       #endif
@@ -570,7 +572,9 @@ void Display::setupScrollArea(uint16_t tfa, uint16_t bfa) {
   //Serial.println("   bfa: " + (String)bfa);
   //Serial.println("yStart: " + (String)this->yStart);
   #ifdef HAS_ILI9341
-    #ifdef HAS_ST7789
+    #ifdef HAS_ST7796
+      tft.writecommand(0x33);
+    #elif defined(HAS_ST7789)
       tft.writecommand(ST7789_VSCRDEF); // Vertical scroll definition
     #else
       tft.writecommand(ILI9341_VSCRDEF);
@@ -589,6 +593,8 @@ void Display::scrollAddress(uint16_t vsp) {
   #ifdef HAS_ILI9341
     #ifdef HAS_ST7789
       tft.writecommand(ST7789_VSCRDEF); // Vertical scroll definition
+    #elif defined(HAS_ST7796)
+      tft.writecommand(0x33);
     #else
       tft.writecommand(ILI9341_VSCRDEF);
     #endif
