@@ -299,9 +299,9 @@ jobs:
   post_compile_steps:
     name: Create Nightly Release
     runs-on: ubuntu-latest
-    needs: [compile_sketch, should_build]
+    needs: [compile_sketch, decide]
     # create release if manual dispatch OR should_release decided true for scheduled run
-    if: ${{ fromJSON(needs.should_build.outputs.result).should_build == true }}
+    if: ${{ fromJSON(needs.decide.outputs.result).should_build == true }}
     steps:
       - uses: actions/checkout@v4
 
