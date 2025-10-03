@@ -399,7 +399,7 @@ void Display::touchToExit()
 {
   tft.setTextColor(TFT_BLACK, TFT_LIGHTGREY);
   tft.fillRect(0,32,HEIGHT_1,16, TFT_LIGHTGREY);
-  tft.drawCentreString(text11,120,32,2);
+  tft.drawCentreString(text11,TFT_WIDTH / 2,32,2);
 }
 
 

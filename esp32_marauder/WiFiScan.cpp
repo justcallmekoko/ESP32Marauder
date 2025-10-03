@@ -1639,11 +1639,11 @@ void WiFiScan::RunPingScan(uint8_t scan_mode, uint16_t color)
     display_obj.tft.setTextWrap(false);
     display_obj.tft.setTextColor(TFT_BLACK, color);
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.fillRect(0,16,240,16, color);
+      display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
       if (scan_mode == WIFI_PING_SCAN)
-        display_obj.tft.drawCentreString("Ping Scan",120,16,2);
+        display_obj.tft.drawCentreString("Ping Scan",TFT_WIDTH / 2,16,2);
       else if (scan_mode == WIFI_ARP_SCAN)
-        display_obj.tft.drawCentreString("ARP Scan",120,16,2);
+        display_obj.tft.drawCentreString("ARP Scan",TFT_WIDTH / 2,16,2);
     #endif
     #ifdef HAS_ILI9341
       display_obj.touchToExit();
@@ -1726,23 +1726,23 @@ void WiFiScan::RunPortScanAll(uint8_t scan_mode, uint16_t color)
     display_obj.tft.setTextWrap(false);
     display_obj.tft.setTextColor(TFT_BLACK, color);
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.fillRect(0,16,240,16, color);
+      display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
       if (scan_mode == WIFI_PORT_SCAN_ALL)
-        display_obj.tft.drawCentreString("Port Scan All",120,16,2);
+        display_obj.tft.drawCentreString("Port Scan All",TFT_WIDTH / 2,16,2);
       else if (scan_mode == WIFI_SCAN_SSH)
-        display_obj.tft.drawCentreString("SSH Scan",120,16,2);
+        display_obj.tft.drawCentreString("SSH Scan",TFT_WIDTH / 2,16,2);
       else if (scan_mode == WIFI_SCAN_TELNET)
-        display_obj.tft.drawCentreString("Telnet Scan",120,16,2);
+        display_obj.tft.drawCentreString("Telnet Scan",TFT_WIDTH / 2,16,2);
       else if (scan_mode == WIFI_SCAN_SMTP)
-        display_obj.tft.drawCentreString("SMTP Scan",120,16,2);
+        display_obj.tft.drawCentreString("SMTP Scan",TFT_WIDTH / 2,16,2);
       else if (scan_mode == WIFI_SCAN_DNS)
-        display_obj.tft.drawCentreString("DNS Scan",120,16,2);
+        display_obj.tft.drawCentreString("DNS Scan",TFT_WIDTH / 2,16,2);
       else if (scan_mode == WIFI_SCAN_HTTP)
-        display_obj.tft.drawCentreString("HTTP Scan",120,16,2);
+        display_obj.tft.drawCentreString("HTTP Scan",TFT_WIDTH / 2,16,2);
       else if (scan_mode == WIFI_SCAN_HTTPS)
-        display_obj.tft.drawCentreString("HTTPS Scan",120,16,2);
+        display_obj.tft.drawCentreString("HTTPS Scan",TFT_WIDTH / 2,16,2);
       else if (scan_mode == WIFI_SCAN_RDP)
-        display_obj.tft.drawCentreString("RDP Scan",120,16,2);
+        display_obj.tft.drawCentreString("RDP Scan",TFT_WIDTH / 2,16,2);
     #endif
     #ifdef HAS_ILI9341
       display_obj.touchToExit();
@@ -2111,8 +2111,8 @@ void WiFiScan::RunEvilPortal(uint8_t scan_mode, uint16_t color)
     display_obj.tft.setTextWrap(false);
     display_obj.tft.setTextColor(TFT_WHITE, color);
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.fillRect(0,16,240,16, color);
-      display_obj.tft.drawCentreString(" Evil Portal ",120,16,2);
+      display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
+      display_obj.tft.drawCentreString(" Evil Portal ",TFT_WIDTH / 2,16,2);
     #endif
     #ifdef HAS_ILI9341
       display_obj.touchToExit();
@@ -2169,11 +2169,11 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
     else
       display_obj.tft.setTextColor(TFT_BLACK, color);
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.fillRect(0,16,240,16, color);
+      display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
       if (scan_mode != WIFI_SCAN_AP_STA)
-        display_obj.tft.drawCentreString(text_table4[44],120,16,2);
+        display_obj.tft.drawCentreString(text_table4[44],TFT_WIDTH / 2,16,2);
       else
-        display_obj.tft.drawCentreString("Scan AP/STA",120,16,2);
+        display_obj.tft.drawCentreString("Scan AP/STA",TFT_WIDTH / 2,16,2);
     #endif
     #ifdef HAS_ILI9341
       display_obj.touchToExit();
@@ -2869,15 +2869,15 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
       display_obj.tft.setTextWrap(false);
       display_obj.tft.setTextColor(TFT_WHITE, color);
       #ifdef HAS_FULL_SCREEN
-        display_obj.tft.fillRect(0,16,240,16, color);
+        display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
         if (scan_mode == WIFI_PACKET_MONITOR)
-          display_obj.tft.drawCentreString(text_table1[45],120,16,2);
+          display_obj.tft.drawCentreString(text_table1[45],TFT_WIDTH / 2,16,2);
         else if (scan_mode == WIFI_SCAN_CHAN_ANALYZER) {
           display_obj.tft.setTextColor(TFT_BLACK, color);
-          display_obj.tft.drawCentreString("Channel Analyzer", 120, 16, 2);
+          display_obj.tft.drawCentreString("Channel Analyzer", TFT_WIDTH / 2, 16, 2);
         }
         else if (scan_mode == WIFI_SCAN_PACKET_RATE) {
-          display_obj.tft.drawCentreString("Packet Rate", 120, 16, 2);
+          display_obj.tft.drawCentreString("Packet Rate", TFT_WIDTH / 2, 16, 2);
         }
       #endif
 
@@ -2899,13 +2899,13 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
       display_obj.tft.setTextWrap(false);
       display_obj.tft.setTextColor(TFT_WHITE, color);
       #ifdef HAS_FULL_SCREEN
-        display_obj.tft.fillRect(0,16,240,16, color);
+        display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
         if (scan_mode == WIFI_PACKET_MONITOR)
-          display_obj.tft.drawCentreString(text_table1[45],120,16,2);
+          display_obj.tft.drawCentreString(text_table1[45],TFT_WIDTH / 2,16,2);
         else if (scan_mode == WIFI_SCAN_CHAN_ANALYZER)
-          display_obj.tft.drawCentreString("Channel Analyzer", 120, 16, 2);
+          display_obj.tft.drawCentreString("Channel Analyzer", TFT_WIDTH / 2, 16, 2);
         else if (scan_mode == WIFI_SCAN_PACKET_RATE)
-          display_obj.tft.drawCentreString("Packet Rate", 120, 16, 2);
+          display_obj.tft.drawCentreString("Packet Rate", TFT_WIDTH / 2, 16, 2);
       #endif
       #ifdef HAS_ILI9341
         display_obj.touchToExit();
@@ -2996,8 +2996,8 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
       display_obj.tft.setTextWrap(false);
       display_obj.tft.setTextColor(TFT_WHITE, color);
       #ifdef HAS_FULL_SCREEN
-        display_obj.tft.fillRect(0,16,240,16, color);
-        display_obj.tft.drawCentreString(text_table4[38],120,16,2);
+        display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
+        display_obj.tft.drawCentreString(text_table4[38],TFT_WIDTH / 2,16,2);
       #endif
       #ifdef HAS_ILI9341
         display_obj.touchToExit();
@@ -3066,8 +3066,8 @@ void WiFiScan::RunMimicFlood(uint8_t scan_mode, uint16_t color) {
     display_obj.tft.setTextWrap(false);
     display_obj.tft.setTextColor(TFT_BLACK, color);
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.fillRect(0,16,240,16, color);
-      display_obj.tft.drawCentreString(" Mimic Flood ",120,16,2);
+      display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
+      display_obj.tft.drawCentreString(" Mimic Flood ",TFT_WIDTH / 2,16,2);
     #endif
     #ifdef HAS_ILI9341
       display_obj.touchToExit();
@@ -3118,8 +3118,8 @@ void WiFiScan::RunPineScan(uint8_t scan_mode, uint16_t color)
     display_obj.tft.setTextWrap(false);
     display_obj.tft.setTextColor(TFT_BLACK, color);
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.fillRect(0,16,240,16, color);
-      display_obj.tft.drawCentreString(text_table4[48],120,16,2);
+      display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
+      display_obj.tft.drawCentreString(text_table4[48],TFT_WIDTH / 2,16,2);
     #endif
     #ifdef HAS_ILI9341
       display_obj.touchToExit();
@@ -3171,8 +3171,8 @@ void WiFiScan::RunMultiSSIDScan(uint8_t scan_mode, uint16_t color)
     display_obj.tft.setTextWrap(false);
     display_obj.tft.setTextColor(TFT_BLACK, color);
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.fillRect(0,16,240,16, color);
-      display_obj.tft.drawCentreString(text_table4[49],120,16,2);
+      display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
+      display_obj.tft.drawCentreString(text_table4[49],TFT_WIDTH / 2,16,2);
     #endif
     #ifdef HAS_ILI9341
       display_obj.touchToExit();
@@ -3221,8 +3221,8 @@ void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color)
     display_obj.tft.setTextWrap(false);
     display_obj.tft.setTextColor(TFT_WHITE, color);
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.fillRect(0,16,240,16, color);
-      display_obj.tft.drawCentreString(text_table4[37],120,16,2);
+      display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
+      display_obj.tft.drawCentreString(text_table4[37],TFT_WIDTH / 2,16,2);
     #endif
     #ifdef HAS_ILI9341
       display_obj.touchToExit();
@@ -3456,12 +3456,12 @@ void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color)
     display_obj.tft.setTextWrap(false);
     display_obj.tft.setTextColor(TFT_WHITE, color);
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.fillRect(0,16,240,16, color);
+      display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
       if (scan_mode == WIFI_SCAN_AP)
-        display_obj.tft.drawCentreString(text_table4[38],120,16,2);
+        display_obj.tft.drawCentreString(text_table4[38],TFT_WIDTH / 2,16,2);
       else if (scan_mode == WIFI_SCAN_WAR_DRIVE) {
         this->clearMacHistory();
-        display_obj.tft.drawCentreString("Wardrive", 120, 16, 2);
+        display_obj.tft.drawCentreString("Wardrive", TFT_WIDTH / 2, 16, 2);
       }
       #ifdef HAS_ILI9341
         display_obj.touchToExit();
@@ -3522,8 +3522,8 @@ void WiFiScan::RunStationScan(uint8_t scan_mode, uint16_t color)
     display_obj.tft.setTextWrap(false);
     display_obj.tft.setTextColor(TFT_WHITE, color);
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.fillRect(0,16,240,16, color);
-      display_obj.tft.drawCentreString(text_table1[59],120,16,2);
+      display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
+      display_obj.tft.drawCentreString(text_table1[59],TFT_WIDTH / 2,16,2);
     #endif
     #ifdef HAS_ILI9341
       display_obj.touchToExit();
@@ -3588,14 +3588,14 @@ void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color)
     display_obj.tft.setTextWrap(false);
     display_obj.tft.setTextColor(TFT_WHITE, color);
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.fillRect(0,16,240,16, color);
+      display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
       if (scan_mode != WIFI_SCAN_SIG_STREN) {
         display_obj.tft.setTextColor(TFT_BLACK, color);
-        display_obj.tft.drawCentreString(text_table1[58],120,16,2);
+        display_obj.tft.drawCentreString(text_table1[58],TFT_WIDTH / 2,16,2);
       }
       else {
         display_obj.tft.setTextColor(TFT_BLACK, color);
-        display_obj.tft.drawCentreString("Signal Monitor", 120, 16, 2);
+        display_obj.tft.drawCentreString("Signal Monitor", TFT_WIDTH / 2, 16, 2);
       }
     #endif
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
@@ -3658,8 +3658,8 @@ void WiFiScan::RunDeauthScan(uint8_t scan_mode, uint16_t color)
     display_obj.tft.setTextWrap(false);
     display_obj.tft.setTextColor(TFT_BLACK, color);
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.fillRect(0,16,240,16, color);
-      display_obj.tft.drawCentreString(text_table4[39],120,16,2);
+      display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
+      display_obj.tft.drawCentreString(text_table4[39],TFT_WIDTH / 2,16,2);
     #endif
     #ifdef HAS_ILI9341
       display_obj.touchToExit();
@@ -3727,8 +3727,8 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
     display_obj.tft.setTextWrap(false);
     display_obj.tft.setTextColor(TFT_BLACK, color);
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.fillRect(0,16,240,16, color);
-      display_obj.tft.drawCentreString(text_table4[40],120,16,2);
+      display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
+      display_obj.tft.drawCentreString(text_table4[40],TFT_WIDTH / 2,16,2);
     #endif
     #ifdef HAS_ILI9341
       display_obj.touchToExit();
@@ -3770,8 +3770,8 @@ void WiFiScan::RunSourApple(uint8_t scan_mode, uint16_t color) {
       display_obj.tft.setTextWrap(false);
       display_obj.tft.setTextColor(TFT_BLACK, color);
       #ifdef HAS_FULL_SCREEN
-        display_obj.tft.fillRect(0,16,240,16, color);
-        display_obj.tft.drawCentreString("Sour Apple",120,16,2);
+        display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
+        display_obj.tft.drawCentreString("Sour Apple",TFT_WIDTH / 2,16,2);
       #endif
       #ifdef HAS_ILI9341
         display_obj.touchToExit();
@@ -3803,19 +3803,19 @@ void WiFiScan::RunSwiftpairSpam(uint8_t scan_mode, uint16_t color) {
       display_obj.tft.setTextWrap(false);
       display_obj.tft.setTextColor(TFT_BLACK, color);
       #ifdef HAS_FULL_SCREEN
-        display_obj.tft.fillRect(0,16,240,16, color);
+        display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
         if (scan_mode == BT_ATTACK_SWIFTPAIR_SPAM)
-          display_obj.tft.drawCentreString("Swiftpair Spam",120,16,2);
+          display_obj.tft.drawCentreString("Swiftpair Spam",TFT_WIDTH / 2,16,2);
         else if (scan_mode == BT_ATTACK_SPAM_ALL)
-          display_obj.tft.drawCentreString("BLE Spam All",120,16,2);
+          display_obj.tft.drawCentreString("BLE Spam All",TFT_WIDTH / 2,16,2);
         else if (scan_mode == BT_ATTACK_SAMSUNG_SPAM)
-          display_obj.tft.drawCentreString("BLE Spam Samsung",120,16,2);
+          display_obj.tft.drawCentreString("BLE Spam Samsung",TFT_WIDTH / 2,16,2);
         else if (scan_mode == BT_ATTACK_GOOGLE_SPAM)
-          display_obj.tft.drawCentreString("BLE Spam Google",120,16,2);
+          display_obj.tft.drawCentreString("BLE Spam Google",TFT_WIDTH / 2,16,2);
         else if (scan_mode == BT_ATTACK_FLIPPER_SPAM)
-          display_obj.tft.drawCentreString("BLE Spam Flipper", 120, 16, 2);
+          display_obj.tft.drawCentreString("BLE Spam Flipper", TFT_WIDTH / 2, 16, 2);
         else if (scan_mode == BT_SPOOF_AIRTAG)
-          display_obj.tft.drawCentreString("BLE Spoof Airtag", 120, 16, 2);
+          display_obj.tft.drawCentreString("BLE Spoof Airtag", TFT_WIDTH / 2, 16, 2);
         #ifdef HAS_ILI9341
           display_obj.touchToExit();
         #endif
@@ -3863,13 +3863,13 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
         display_obj.tft.setTextWrap(false);
         display_obj.tft.setTextColor(TFT_BLACK, color);
         #ifdef HAS_FULL_SCREEN
-          display_obj.tft.fillRect(0,16,240,16, color);
+          display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
           if (scan_mode == BT_SCAN_ALL)
-            display_obj.tft.drawCentreString(text_table4[41],120,16,2);
+            display_obj.tft.drawCentreString(text_table4[41],TFT_WIDTH / 2,16,2);
           else if (scan_mode == BT_SCAN_AIRTAG)
-            display_obj.tft.drawCentreString("Airtag Sniff",120,16,2);
+            display_obj.tft.drawCentreString("Airtag Sniff",TFT_WIDTH / 2,16,2);
           else if (scan_mode == BT_SCAN_FLIPPER)
-            display_obj.tft.drawCentreString("Flipper Sniff", 120, 16, 2);
+            display_obj.tft.drawCentreString("Flipper Sniff", TFT_WIDTH / 2, 16, 2);
           #ifdef HAS_ILI9341
             display_obj.touchToExit();
           #endif
@@ -3912,11 +3912,11 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
         display_obj.tft.setTextWrap(false);
         display_obj.tft.setTextColor(TFT_BLACK, color);
         #ifdef HAS_FULL_SCREEN
-          display_obj.tft.fillRect(0,16,240,16, color);
+          display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
           if (scan_mode == BT_SCAN_WAR_DRIVE)
-            display_obj.tft.drawCentreString("BT Wardrive",120,16,2);
+            display_obj.tft.drawCentreString("BT Wardrive",TFT_WIDTH / 2,16,2);
           else if (scan_mode == BT_SCAN_WAR_DRIVE_CONT)
-            display_obj.tft.drawCentreString("BT Wardrive Continuous",120,16,2);
+            display_obj.tft.drawCentreString("BT Wardrive Continuous",TFT_WIDTH / 2,16,2);
           #ifdef HAS_ILI9341
             display_obj.touchToExit();
           #endif
@@ -3938,8 +3938,8 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
         display_obj.initScrollValues(true);
         display_obj.tft.setTextWrap(false);
         display_obj.tft.setTextColor(TFT_BLACK, color);
-        display_obj.tft.fillRect(0,16,240,16, color);
-        display_obj.tft.drawCentreString(text_table4[42],120,16,2);
+        display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
+        display_obj.tft.drawCentreString(text_table4[42],TFT_WIDTH / 2,16,2);
         display_obj.twoPartDisplay(text_table4[43]);
         display_obj.tft.setTextColor(TFT_BLACK, TFT_DARKGREY);
         display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
@@ -3954,8 +3954,8 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
         display_obj.tft.setTextWrap(false);
         display_obj.tft.setTextColor(TFT_BLACK, color);
         #ifdef HAS_FULL_SCREEN
-          display_obj.tft.fillRect(0,16,240,16, color);
-          display_obj.tft.drawCentreString("Bluetooth Analyzer", 120, 16, 2);
+          display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
+          display_obj.tft.drawCentreString("Bluetooth Analyzer", TFT_WIDTH / 2, 16, 2);
           #ifdef HAS_ILI9341
             display_obj.touchToExit();
           #endif
