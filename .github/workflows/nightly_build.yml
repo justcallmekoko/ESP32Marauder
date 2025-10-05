@@ -325,11 +325,35 @@ jobs:
             echo "tag=manual-$(date -u +'%Y%m%d')-${SHORT_SHA}" >> $GITHUB_OUTPUT
             echo "prerelease=false" >> $GITHUB_OUTPUT
           fi
+          
+      - name: Delete old assets on nightly release (if any)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+
+            let rel;
+            try {
+              rel = await github.rest.repos.getReleaseByTag({ owner, repo, tag: 'nightly' });
+            } catch (e) {
+              if (e.status === 404) {
+                // No release yet — nothing to delete
+                return;
+              }
+              throw e;
+            }
+
+            const assets = rel.data.assets || [];
+            for (const a of assets) {
+              await github.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: a.id });
+              core.info(`Deleted old asset: ${a.name}`);
+            }
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          name: ${{ steps.meta.outputs.name }}_nightly
+          name: ${{ needs.decide.outputs.short_sha }}_nightly
           tag_name: nightly
           prerelease: true
           generate_release_notes: true
