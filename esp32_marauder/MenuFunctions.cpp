@@ -1493,17 +1493,17 @@ void MenuFunctions::updateStatusBar()
                                     16,
                                     STATUSBAR_COLOR,
                                     the_color);
-        display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR);
+        display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR, true);
 
         display_obj.tft.drawString(gps_obj.getNumSatsString(), 22, 0, 2);
       #elif defined(HAS_SCREEN)
-        display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR);
+        display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR, true);
         display_obj.tft.drawString("GPS", 0, 0, 1);
       #endif
     }
   #endif
 
-  display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR);
+  display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR, true);
 
   // WiFi Channel Stuff
   uint8_t primaryChannel;
@@ -1517,11 +1517,11 @@ void MenuFunctions::updateStatusBar()
 
   if ((current_channel != wifi_scan_obj.old_channel) || (status_changed)) {
     wifi_scan_obj.old_channel = current_channel;
-    #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_CARDPUTER)
-      display_obj.tft.fillRect(43, 0, TFT_WIDTH * 0.21, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
-    #else
-      display_obj.tft.fillRect(50, 0, TFT_WIDTH * 0.21, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
-    #endif
+    //#if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_CARDPUTER)
+    //  display_obj.tft.fillRect(43, 0, CHAR_WIDTH * 6, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+    //#else
+    //  display_obj.tft.fillRect(50, 0, (CHAR_WIDTH / 2) * 6, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+    //#endif
     #ifdef HAS_FULL_SCREEN
       display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.old_channel, 50, 0, 2);
     #endif
@@ -1535,7 +1535,7 @@ void MenuFunctions::updateStatusBar()
   wifi_scan_obj.freeRAM();
   if ((wifi_scan_obj.free_ram != wifi_scan_obj.old_free_ram) || (status_changed)) {
     wifi_scan_obj.old_free_ram = wifi_scan_obj.free_ram;
-    display_obj.tft.fillRect(100, 0, 60, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+    //display_obj.tft.fillRect(100, 0, 60, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
     #ifdef HAS_FULL_SCREEN
     #ifndef HAS_PSRAM
       display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", 100, 0, 2);
@@ -1603,7 +1603,7 @@ void MenuFunctions::updateStatusBar()
   #endif
 
   #ifdef HAS_MINI_SCREEN
-    display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR);
+    display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR, true);
     display_obj.tft.drawString("SD", TFT_WIDTH - 12, 0, 1);
   #endif
 
