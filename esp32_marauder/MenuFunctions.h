@@ -295,7 +295,7 @@ class MenuFunctions
     void addAPGFX(String type = "AP");
     void addStationGFX();
     void buildButtons(Menu* menu, int starting_index = 0, String button_name = "");
-    void changeMenu(Menu* menu);
+    void changeMenu(Menu* menu, bool simple_change = false);
     void drawStatusBar();
     void displayCurrentMenu(int start_index = 0);
     void main(uint32_t currentTime);
