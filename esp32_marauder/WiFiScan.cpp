@@ -7924,24 +7924,46 @@ void WiFiScan::signalAnalyzerLoop(uint32_t tick) {
         return;
       }
       else if (b == 4) {
-        if (set_channel > 1) {
-          set_channel--;
-          display_obj.tftDrawChannelScaleButtons(set_channel, false);
-          display_obj.tftDrawExitScaleButtons(false);
-          changeChannel();
-          return;
-        }
+        #ifndef HAS_DUAL_BAND
+          if (set_channel > 1) {
+            set_channel--;
+            display_obj.tftDrawChannelScaleButtons(set_channel, false);
+            display_obj.tftDrawExitScaleButtons(false);
+            changeChannel();
+            return;
+          }
+        #else
+          if (this->dual_band_channel_index > 1) {
+            this->dual_band_channel_index--;
+            this->set_channel = this->dual_band_channels[this->dual_band_channel_index];
+            display_obj.tftDrawChannelScaleButtons(this->set_channel, false);
+            display_obj.tftDrawExitScaleButtons(false);
+            changeChannel();
+            return;
+          }
+        #endif
       }
 
       // Channel + button pressed
       else if (b == 5) {
-        if (set_channel < MAX_CHANNEL) {
-          set_channel++;
-          display_obj.tftDrawChannelScaleButtons(set_channel, false);
-          display_obj.tftDrawExitScaleButtons(false);
-          changeChannel();
-          return;
-        }
+        #ifndef HAS_DUAL_BAND
+          if (set_channel < MAX_CHANNEL) {
+            set_channel++;
+            display_obj.tftDrawChannelScaleButtons(set_channel, false);
+            display_obj.tftDrawExitScaleButtons(false);
+            changeChannel();
+            return;
+          }
+        #else
+          if (this->dual_band_channel_index < DUAL_BAND_CHANNELS - 1) {
+            this->dual_band_channel_index++;
+            this->set_channel = this->dual_band_channels[this->dual_band_channel_index];
+            display_obj.tftDrawChannelScaleButtons(this->set_channel, false);
+            display_obj.tftDrawExitScaleButtons(false);
+            changeChannel();
+            return;
+          }
+        #endif
       }
     #endif
   #endif
@@ -7968,24 +7990,46 @@ void WiFiScan::channelAnalyzerLoop(uint32_t tick) {
         return;
       }
       else if (b == 4) {
-        if (set_channel > 1) {
-          set_channel--;
-          display_obj.tftDrawChannelScaleButtons(set_channel, false);
-          display_obj.tftDrawExitScaleButtons(false);
-          changeChannel(set_channel);
-          return;
-        }
+        #ifndef HAS_DUAL_BAND
+          if (set_channel > 1) {
+            set_channel--;
+            display_obj.tftDrawChannelScaleButtons(set_channel, false);
+            display_obj.tftDrawExitScaleButtons(false);
+            changeChannel(set_channel);
+            return;
+          }
+        #else
+          if (this->dual_band_channel_index > 1) {
+            this->dual_band_channel_index--;
+            this->set_channel = this->dual_band_channels[this->dual_band_channel_index];
+            display_obj.tftDrawChannelScaleButtons(this->set_channel, false);
+            display_obj.tftDrawExitScaleButtons(false);
+            changeChannel(this->set_channel);
+            return;
+          }
+        #endif
       }
 
       // Channel + button pressed
       else if (b == 5) {
-        if (set_channel < MAX_CHANNEL) {
-          set_channel++;
-          display_obj.tftDrawChannelScaleButtons(set_channel, false);
-          display_obj.tftDrawExitScaleButtons(false);
-          changeChannel(set_channel);
-          return;
-        }
+        #ifndef HAS_DUAL_BAND
+          if (set_channel < MAX_CHANNEL) {
+            set_channel++;
+            display_obj.tftDrawChannelScaleButtons(set_channel, false);
+            display_obj.tftDrawExitScaleButtons(false);
+            changeChannel(set_channel);
+            return;
+          }
+        #else
+          if (this->dual_band_channel_index < DUAL_BAND_CHANNELS - 1) {
+            this->dual_band_channel_index++;
+            this->set_channel = this->dual_band_channels[this->dual_band_channel_index];
+            display_obj.tftDrawChannelScaleButtons(this->set_channel, false);
+            display_obj.tftDrawExitScaleButtons(false);
+            changeChannel(this->set_channel);
+            return;
+          }
+        #endif
       }
     #endif
   #endif
