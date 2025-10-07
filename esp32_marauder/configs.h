@@ -32,7 +32,7 @@
   //#define MARAUDER_V8
   //// END BOARD TARGETS
 
-  #define MARAUDER_VERSION "v1.8.7"
+  #define MARAUDER_VERSION "v1.8.8"
 
   #define GRAPH_REFRESH   100
 
@@ -425,7 +425,7 @@
     #define HAS_TOUCH
     //#define HAS_FLIPPER_LED
     //#define FLIPPER_ZERO_HAT
-    //#define HAS_BATTERY
+    #define HAS_BATTERY
     //#define HAS_BT
     //#define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
@@ -2398,6 +2398,11 @@
     #ifdef MARAUDER_CYD_3_5_INCH
       #define I2C_SDA 32
       #define I2C_SCL 25
+    #endif
+
+    #ifdef MARAUDER_V8
+      #define I2C_SCL 4
+      #define I2C_SDA 5
     #endif
 
   #endif
