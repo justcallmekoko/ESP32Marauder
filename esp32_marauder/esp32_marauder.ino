@@ -236,8 +236,6 @@ void setup()
   backlightOn(); // Need this
 
   #ifdef HAS_SCREEN
-    //delay(2000);
-
     // Do some stealth mode stuff
     #ifdef HAS_BUTTONS
       if (c_btn.justPressed()) {
@@ -248,18 +246,6 @@ void setup()
         Serial.println("Headless Mode enabled");
       }
     #endif
-
-    //display_obj.clearScreen();
-  
-    //display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-  
-    //display_obj.tft.println(text_table0[0]);
-  
-    //delay(2000);
-  
-    //display_obj.tft.println("Marauder " + display_obj.version_number + "\n");
-  
-    //display_obj.tft.println(text_table0[1]);
   #endif
 
   settings_obj.begin();
