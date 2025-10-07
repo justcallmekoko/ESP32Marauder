@@ -2220,6 +2220,8 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
       #elif defined(MARAUDER_CYD_3_5_INCH)
         uint16_t calData[5] = { 272, 3648, 234, 3565, 7 };
         Serial.println("Using CYD 3.5inch (join wifi)");
+      #elif defined(MARAUDER_V8)
+        uint16_t calData[5] = { 452, 3477, 263, 3524, 3 };
       #else if defined(TFT_DIY)
         uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
         Serial.println("Using TFT DIY (join wifi)");
@@ -2835,6 +2837,8 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
           #elif defined(MARAUDER_CYD_3_5_INCH)
             uint16_t calData[5] = { 272, 3648, 234, 3565, 7 }; // Landscape
             Serial.println("Using CYD 3.5inch");
+          #elif defined(MARAUDER_V8)
+            uint16_t calData[5] = { 452, 3477, 263, 3524, 3 };
           #else if defined(TFT_DIY)
             uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
             Serial.println("Using TFT DIY");
@@ -2963,6 +2967,8 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
           //Serial.println("Using TFT Shield");
         #elif defined(MARAUDER_CYD_3_5_INCH)
           uint16_t calData[5] = { 272, 3648, 234, 3565, 7 };
+        #elif defined(MARAUDER_V8)
+          uint16_t calData[5] = { 452, 3477, 263, 3524, 3 };
         #else if defined(TFT_DIY)
           uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
           //Serial.println("Using TFT DIY");

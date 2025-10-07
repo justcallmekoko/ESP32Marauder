@@ -2239,6 +2239,8 @@
       #define PIN 22
     #elif defined(MARAUDER_C5)
       #define PIN 27
+    #elif defined(MARAUDER_V8)
+      #define PIN 27
     #else
       #define PIN 25
     #endif
