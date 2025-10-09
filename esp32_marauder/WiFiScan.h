@@ -699,6 +699,7 @@ class WiFiScan
     #ifdef HAS_SCREEN
       int8_t checkAnalyzerButtons(uint32_t currentTime);
     #endif
+    bool filterActive();
     bool RunGPSInfo(bool tracker = false, bool display = true, bool poi = false);
     void logPoint(String lat, String lon, float alt, String datetime, bool poi = false);
     void setMac();
@@ -744,7 +745,7 @@ class WiFiScan
     void RunSaveATList(bool save_as = true);
     void RunLoadATList();
     void RunSetupGPSTracker(uint8_t scan_mode);
-    void channelHop();
+    void channelHop(bool filtered = false);
     uint8_t currentScanMode = 0;
     void main(uint32_t currentTime);
     void StartScan(uint8_t scan_mode, uint16_t color = 0);
