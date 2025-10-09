@@ -124,7 +124,7 @@ class Display
     void tftDrawRedOnOffButton();
     void tftDrawGreenOnOffButton();
     void tftDrawGraphObjects(byte x_scale);
-    void tftDrawEapolColorKey();
+    void tftDrawEapolColorKey(bool filter = false);
     void tftDrawColorKey();
     void tftDrawXScaleButtons(byte x_scale);
     void tftDrawYScaleButtons(byte y_scale);
