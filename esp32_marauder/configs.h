@@ -437,7 +437,7 @@
     #define HAS_SD
     #define USE_SD
     #define HAS_DUAL_BAND
-    //#define HAS_PSRAM
+    #define HAS_PSRAM
     //#define HAS_TEMP_SENSOR
   #endif
   //// END BOARD FEATURES

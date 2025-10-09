@@ -8707,11 +8707,6 @@ void WiFiScan::main(uint32_t currentTime)
     #endif
   }
   else if (currentScanMode == WIFI_SCAN_ACTIVE_LIST_EAPOL) {
-    if (currentTime - initTime >= this->channel_hop_delay * 1000)
-    {
-      initTime = millis();
-      channelHop();
-    }
     #ifdef HAS_SCREEN
       eapolMonitorMain(currentTime);
     #endif    
