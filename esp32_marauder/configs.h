@@ -2549,6 +2549,6 @@
   #ifndef HAS_DUAL_BAND
     #define HOP_DELAY 1000
   #else
-    #define HOP_DELAY 100
+    #define HOP_DELAY 250
   #endif
 #endif
