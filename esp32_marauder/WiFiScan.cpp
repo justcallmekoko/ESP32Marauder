@@ -2986,7 +2986,7 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
       delay(10);
     
       display_obj.tftDrawGraphObjects(x_scale); //draw graph objects
-      display_obj.tftDrawEapolColorKey();
+      display_obj.tftDrawEapolColorKey(this->filterActive());
       display_obj.tftDrawChannelScaleButtons(set_channel);
       display_obj.tftDrawExitScaleButtons();
     #endif
@@ -7387,14 +7387,7 @@ void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 
   }
 
-  bool filter = false;
-
-  for (int i = 0; i < access_points->size(); i++) {
-    if (access_points->get(i).selected) {
-      filter = true;
-      break;
-    }
-  }
+  bool filter = wifi_scan_obj.filterActive();
 
   // Check for and apply filters
   if (filter) {
