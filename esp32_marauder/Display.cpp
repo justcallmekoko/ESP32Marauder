@@ -205,11 +205,16 @@ void Display::tftDrawGraphObjects(byte x_scale)
   tft.setCursor(3, 228); tft.print("0"); // "-" at bottom of y axis
 }
 
-void Display::tftDrawEapolColorKey()
+void Display::tftDrawEapolColorKey(bool filter)
 {
   //Display color key
   tft.setTextSize(1); tft.setTextColor(TFT_WHITE);
-  tft.fillRect(14, 0, 15, 8, TFT_CYAN); tft.setCursor(30, 0); tft.print(" - EAPOL"); 
+  tft.fillRect(14, 0, 15, 8, TFT_CYAN); tft.setCursor(30, 0); tft.println(" - EAPOL"); 
+  if (filter) {
+    uint16_t y = tft.getCursorY();
+    tft.setCursor(14, y);
+    tft.println("Filter Active");
+  }
 }
 
 void Display::tftDrawColorKey()

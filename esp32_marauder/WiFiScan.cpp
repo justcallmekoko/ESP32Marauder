@@ -2220,6 +2220,8 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
       #elif defined(MARAUDER_CYD_3_5_INCH)
         uint16_t calData[5] = { 272, 3648, 234, 3565, 7 };
         Serial.println("Using CYD 3.5inch (join wifi)");
+      #elif defined(MARAUDER_V8)
+        uint16_t calData[5] = { 362, 3489, 260, 3486, 7 };
       #else if defined(TFT_DIY)
         uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
         Serial.println("Using TFT DIY (join wifi)");
@@ -2835,6 +2837,8 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
           #elif defined(MARAUDER_CYD_3_5_INCH)
             uint16_t calData[5] = { 272, 3648, 234, 3565, 7 }; // Landscape
             Serial.println("Using CYD 3.5inch");
+          #elif defined(MARAUDER_V8)
+            uint16_t calData[5] = { 362, 3489, 260, 3486, 7 };
           #else if defined(TFT_DIY)
             uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
             Serial.println("Using TFT DIY");
@@ -2963,6 +2967,8 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
           //Serial.println("Using TFT Shield");
         #elif defined(MARAUDER_CYD_3_5_INCH)
           uint16_t calData[5] = { 272, 3648, 234, 3565, 7 };
+        #elif defined(MARAUDER_V8)
+          uint16_t calData[5] = { 362, 3489, 260, 3486, 7 };
         #else if defined(TFT_DIY)
           uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
           //Serial.println("Using TFT DIY");
@@ -2980,7 +2986,7 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
       delay(10);
     
       display_obj.tftDrawGraphObjects(x_scale); //draw graph objects
-      display_obj.tftDrawEapolColorKey();
+      display_obj.tftDrawEapolColorKey(this->filterActive());
       display_obj.tftDrawChannelScaleButtons(set_channel);
       display_obj.tftDrawExitScaleButtons();
     #endif
@@ -7381,6 +7387,29 @@ void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 
   }
 
+  bool filter = wifi_scan_obj.filterActive();
+
+  // Check for and apply filters
+  if (filter) {
+    bool found = false;
+    int ap_index = -1;
+
+    char addr[] = "00:00:00:00:00:00";
+    getMAC(addr, snifferPacket->payload, 10);
+    ap_index = wifi_scan_obj.checkMatchAP(addr);
+
+    if (ap_index < 0) {
+      char addr2[] = "00:00:00:00:00:00";
+      getMAC(addr2, snifferPacket->payload, 4);
+      ap_index = wifi_scan_obj.checkMatchAP(addr2);
+    }
+
+    if ((ap_index < 0) || (!access_points->get(ap_index).selected))
+      return;
+
+    //Serial.println("Received frame for " + access_points->get(ap_index).essid + ". Processing...");   
+  }
+
   if (( (snifferPacket->payload[30] == 0x88 && snifferPacket->payload[31] == 0x8e)|| ( snifferPacket->payload[32] == 0x88 && snifferPacket->payload[33] == 0x8e) )){
     num_eapol++;
     Serial.println("Received EAPOL:");
@@ -7498,6 +7527,15 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
   buffer_obj.append(snifferPacket, len);
 }
 
+bool WiFiScan::filterActive() {
+  for (int i = 0; i < access_points->size(); i++) {
+    if (access_points->get(i).selected)
+      return true;
+  }
+
+  return false;
+}
+
 #ifdef HAS_SCREEN
   int8_t WiFiScan::checkAnalyzerButtons(uint32_t currentTime) {
     boolean pressed = false;
@@ -7541,32 +7579,6 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
       y_pos_x = 0;
       y_pos_y = 0;
       y_pos_z = 0;
-      /*boolean pressed = false;
-  
-      uint16_t t_x = 0, t_y = 0; // To store the touch coordinates
-  
-      // Do the touch stuff
-      #ifdef HAS_ILI9341
-        pressed = display_obj.tft.getTouch(&t_x, &t_y);
-      #endif
-  
-      // Check buttons for presses
-      for (uint8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
-      {
-        if (pressed && display_obj.key[b].contains(t_x, t_y))
-        {
-          display_obj.key[b].press(true);
-        } else {
-          display_obj.key[b].press(false);
-        }
-      }*/
-  
-      // Which buttons pressed
-      //for (uint8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
-      //{  
-      //  if (display_obj.key[b].justReleased())
-      //  {
-       //   do_break = true;
 
           int8_t b = this->checkAnalyzerButtons(currentTime);
   
@@ -7615,6 +7627,12 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
           Serial.println("Max EAPOL number reached. Adjusting...");
           num_eapol = 0;
         }
+
+        // Also change channel while we're at it
+        this->channelHop(true);
+        display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
+        display_obj.tftDrawChannelScaleButtons(set_channel);
+        display_obj.tftDrawExitScaleButtons();
   
         //CODE FOR PLOTTING CONTINUOUS LINES!!!!!!!!!!!!
         //Plot "X" value
@@ -7651,7 +7669,7 @@ void WiFiScan::activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t
     display_obj.tft.fillRect(12, 0, 90, 32, TFT_BLACK); // key
     display_obj.tftDrawChannelScaleButtons(set_channel);
     display_obj.tftDrawExitScaleButtons();
-    display_obj.tftDrawEapolColorKey();
+    display_obj.tftDrawEapolColorKey(this->filterActive());
     display_obj.tftDrawGraphObjects(x_scale);
   }
 
@@ -7878,20 +7896,72 @@ void WiFiScan::changeChannel()
 }
 
 // Function to cycle to the next channel
-void WiFiScan::channelHop()
+void WiFiScan::channelHop(bool filtered)
 {
-  #ifndef HAS_DUAL_BAND
-    this->set_channel = this->set_channel + 1;
-    if (this->set_channel > 14) {
-      this->set_channel = 1;
-    }
-  #else
-    this->set_channel = this->dual_band_channels[this->dual_band_channel_index];
-    if (this->dual_band_channel_index >= DUAL_BAND_CHANNELS)
-      this->dual_band_channel_index = 0;
-    else
-      this->dual_band_channel_index++;
-  #endif
+  bool channel_match = false;
+  bool ap_selected = true;
+
+  if (!filtered) {
+    #ifndef HAS_DUAL_BAND
+      this->set_channel = this->set_channel + 1;
+      if (this->set_channel > 14) {
+        this->set_channel = 1;
+      }
+    #else
+      if (this->dual_band_channel_index >= DUAL_BAND_CHANNELS)
+        this->dual_band_channel_index = 0;
+      else
+        this->dual_band_channel_index++;
+      this->set_channel = this->dual_band_channels[this->dual_band_channel_index];
+    #endif
+  }
+  else {
+    #ifndef HAS_DUAL_BAND
+      while ((!channel_match) && (ap_selected)) {
+        ap_selected = false;
+
+        // Pick channel like normal
+        this->set_channel = this->set_channel + 1;
+        if (this->set_channel > 14) {
+          this->set_channel = 1;
+        }
+
+        // Check if it matches a selected AP's channel
+        for (int i = 0; i < access_points->size(); i++) {
+          if (access_points->get(i).selected) {
+            ap_selected = true;
+            if (access_points->get(i).channel == this->set_channel) {
+              channel_match = true;
+              break;
+            }
+          }
+        }
+      }
+    #else
+      while ((!channel_match) && (ap_selected)) {
+        ap_selected = false;
+
+        // Pick channel like normal
+        if (this->dual_band_channel_index >= DUAL_BAND_CHANNELS)
+          this->dual_band_channel_index = 0;
+        else
+          this->dual_band_channel_index++;
+        this->set_channel = this->dual_band_channels[this->dual_band_channel_index];
+
+        // Check if it matches a selected AP's channel
+        for (int i = 0; i < access_points->size(); i++) {
+          if (access_points->get(i).selected) {
+            ap_selected = true;
+            if (access_points->get(i).channel == this->set_channel) {
+              Serial.println("Setting to channel " + (String)this->set_channel + " for AP " + access_points->get(i).essid);
+              channel_match = true;
+              break;
+            }
+          }
+        }
+      }
+    #endif
+  }
 
   esp_wifi_set_channel(this->set_channel, WIFI_SECOND_CHAN_NONE);
   delay(1);
@@ -8701,10 +8771,9 @@ void WiFiScan::main(uint32_t currentTime)
     #endif
   }
   else if (currentScanMode == WIFI_SCAN_ACTIVE_LIST_EAPOL) {
-    if (currentTime - initTime >= this->channel_hop_delay * 1000)
-    {
+    if (currentTime - initTime >= 1000) {
       initTime = millis();
-      channelHop();
+      this->channelHop(true);
     }
     #ifdef HAS_SCREEN
       eapolMonitorMain(currentTime);
