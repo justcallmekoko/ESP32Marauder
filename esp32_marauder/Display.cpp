@@ -120,20 +120,19 @@ void Display::setCalData(bool landscape) {
     #elif defined(TFT_DIY)
       uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // tft.setRotation(0); // Portrait with DIY TFT
     #endif
-    tft.setTouch(calData);
+    #ifdef HAS_ILI9341
+      tft.setTouch(calData);
+    #endif
   }
   else {
     #ifdef TFT_SHIELD
       uint16_t calData[5] = { 391, 3491, 266, 3505, 7 }; // Landscape TFT Shield
-      Serial.println("Using TFT Shield");
     #elif defined(MARAUDER_CYD_3_5_INCH)
       uint16_t calData[5] = { 272, 3648, 234, 3565, 7 };
-      Serial.println("Using CYD 3.5inch (join wifi)");
     #elif defined(MARAUDER_V8)
       uint16_t calData[5] = { 382, 3492, 293, 3502, 7 };
     #else if defined(TFT_DIY)
       uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
-      Serial.println("Using TFT DIY (join wifi)");
     #endif
     #ifdef HAS_ILI9341
       tft.setTouch(calData);
