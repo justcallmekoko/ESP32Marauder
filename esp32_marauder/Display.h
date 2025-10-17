@@ -149,6 +149,7 @@ class Display
     void touchToExit();
     void twoPartDisplay(String center_text);
     void updateBanner(String msg);
+    void setCalData(bool landscape = false);
 };
 #endif
 #endif

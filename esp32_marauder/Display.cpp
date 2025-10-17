@@ -109,6 +109,38 @@ bool Display::isTouchHeld(uint16_t threshold) {
   return false;
 }
 
+void Display::setCalData(bool landscape) {
+  if (!landscape) {
+    #ifdef TFT_SHIELD
+      uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield
+    #elif defined(MARAUDER_CYD_3_5_INCH)
+      uint16_t calData[5] = { 239, 3560, 262, 3643, 4 };
+    #elif defined(MARAUDER_V8)
+      uint16_t calData[5] = { 298, 3451, 377, 3509, 4 };
+    #elif defined(TFT_DIY)
+      uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // tft.setRotation(0); // Portrait with DIY TFT
+    #endif
+    tft.setTouch(calData);
+  }
+  else {
+    #ifdef TFT_SHIELD
+      uint16_t calData[5] = { 391, 3491, 266, 3505, 7 }; // Landscape TFT Shield
+      Serial.println("Using TFT Shield");
+    #elif defined(MARAUDER_CYD_3_5_INCH)
+      uint16_t calData[5] = { 272, 3648, 234, 3565, 7 };
+      Serial.println("Using CYD 3.5inch (join wifi)");
+    #elif defined(MARAUDER_V8)
+      uint16_t calData[5] = { 382, 3492, 293, 3502, 7 };
+    #else if defined(TFT_DIY)
+      uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
+      Serial.println("Using TFT DIY (join wifi)");
+    #endif
+    #ifdef HAS_ILI9341
+      tft.setTouch(calData);
+    #endif
+  }
+}
+
 // Function to prepare the display and the menus
 void Display::RunSetup()
 {
@@ -136,16 +168,7 @@ void Display::RunSetup()
   #ifdef HAS_ILI9341
 
     #ifndef HAS_CYD_TOUCH
-      #ifdef TFT_SHIELD
-        uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield
-      #elif defined(MARAUDER_CYD_3_5_INCH)
-        uint16_t calData[5] = { 239, 3560, 262, 3643, 4 };
-      #elif defined(MARAUDER_V8)
-        uint16_t calData[5] = { 286, 3495, 437, 3449, 6 };
-      #elif defined(TFT_DIY)
-        uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // tft.setRotation(0); // Portrait with DIY TFT
-      #endif
-      tft.setTouch(calData);
+      this->setCalData();
     #endif
 
   #endif
