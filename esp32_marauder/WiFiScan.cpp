@@ -2214,21 +2214,7 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
     #endif
     
     #ifndef HAS_CYD_TOUCH
-      #ifdef TFT_SHIELD
-        uint16_t calData[5] = { 391, 3491, 266, 3505, 7 }; // Landscape TFT Shield
-        Serial.println("Using TFT Shield");
-      #elif defined(MARAUDER_CYD_3_5_INCH)
-        uint16_t calData[5] = { 272, 3648, 234, 3565, 7 };
-        Serial.println("Using CYD 3.5inch (join wifi)");
-      #elif defined(MARAUDER_V8)
-        uint16_t calData[5] = { 362, 3489, 260, 3486, 7 };
-      #else if defined(TFT_DIY)
-        uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
-        Serial.println("Using TFT DIY (join wifi)");
-      #endif
-      #ifdef HAS_ILI9341
-        display_obj.tft.setTouch(calData);
-      #endif
+      display_obj.setCalData(true);
     #else
       //display_obj.touchscreen.setRotation(1);
     #endif
@@ -2831,19 +2817,7 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
     
       #ifdef HAS_SCREEN
         #ifndef HAS_CYD_TOUCH
-          #ifdef TFT_SHIELD
-            uint16_t calData[5] = { 391, 3491, 266, 3505, 7 }; // Landscape TFT Shield
-            Serial.println("Using TFT Shield");
-          #elif defined(MARAUDER_CYD_3_5_INCH)
-            uint16_t calData[5] = { 272, 3648, 234, 3565, 7 }; // Landscape
-            Serial.println("Using CYD 3.5inch");
-          #elif defined(MARAUDER_V8)
-            uint16_t calData[5] = { 362, 3489, 260, 3486, 7 };
-          #else if defined(TFT_DIY)
-            uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
-            Serial.println("Using TFT DIY");
-          #endif
-          display_obj.tft.setTouch(calData);
+          display_obj.setCalData(true);
         #else
           //display_obj.touchscreen.setRotation(1);
         #endif
@@ -2962,18 +2936,7 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
   
     #ifdef HAS_SCREEN
       #ifndef HAS_CYD_TOUCH
-        #ifdef TFT_SHIELD
-          uint16_t calData[5] = { 391, 3491, 266, 3505, 7 }; // Landscape TFT Shield
-          //Serial.println("Using TFT Shield");
-        #elif defined(MARAUDER_CYD_3_5_INCH)
-          uint16_t calData[5] = { 272, 3648, 234, 3565, 7 };
-        #elif defined(MARAUDER_V8)
-          uint16_t calData[5] = { 362, 3489, 260, 3486, 7 };
-        #else if defined(TFT_DIY)
-          uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
-          //Serial.println("Using TFT DIY");
-        #endif
-        display_obj.tft.setTouch(calData);
+        display_obj.setCalData(true);
       #else
         //display_obj.touchscreen.setRotation(1);
       #endif
@@ -8643,13 +8606,6 @@ void WiFiScan::main(uint32_t currentTime)
   else if ((currentScanMode == WIFI_SCAN_CHAN_ANALYZER) ||
           (currentScanMode == BT_SCAN_ANALYZER)) {
     this->channelAnalyzerLoop(currentTime);
-    #ifdef HAS_ILI9341
-      if (currentTime - initTime >= this->channel_hop_delay * 1000)
-      {
-        initTime = millis();
-        channelHop();
-      }
-    #endif
   }
   else if ((currentScanMode == WIFI_SCAN_PACKET_RATE) ||
             (currentScanMode == WIFI_SCAN_RAW_CAPTURE)) {
