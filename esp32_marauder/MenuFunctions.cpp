@@ -2926,7 +2926,7 @@ void MenuFunctions::RunSetup()
       }
     });*/
 
-    wifiStationMenu.parentMenu = &ssidsMenu;
+    wifiStationMenu.parentMenu = &wifiGeneralMenu;
     this->addNodes(&wifiStationMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
       this->changeMenu(wifiStationMenu.parentMenu, true);
     });
@@ -4358,3 +4358,4 @@ void MenuFunctions::displayCurrentMenu(int start_index)
 }
 
 #endif
+
