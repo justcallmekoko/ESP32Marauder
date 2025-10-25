@@ -2209,7 +2209,7 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
   void WiFiScan::RunLvJoinWiFi(uint8_t scan_mode, uint16_t color) {
   
     #ifdef HAS_TOUCH
-      display_obj.tft.init();
+      display_obj.init();
       display_obj.tft.setRotation(1);
     #endif
     
@@ -2810,7 +2810,7 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
     if ((scan_mode != WIFI_SCAN_PACKET_RATE) &&
         (scan_mode != WIFI_SCAN_CHAN_ANALYZER)) {
       #ifdef HAS_SCREEN
-        display_obj.tft.init();
+        display_obj.init();
         display_obj.tft.setRotation(1);
         display_obj.tft.fillScreen(TFT_BLACK);
       #endif
@@ -2927,7 +2927,7 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
 
   #ifdef HAS_ILI9341
     #ifdef HAS_SCREEN
-      display_obj.tft.init();
+      display_obj.init();
       display_obj.tft.setRotation(1);
       display_obj.tft.fillScreen(TFT_BLACK);
     #endif
@@ -7575,7 +7575,7 @@ bool WiFiScan::filterActive() {
           else if (b == 6) {
             Serial.println("Exiting packet monitor...");
             this->StartScan(WIFI_SCAN_OFF);
-            //display_obj.tft.init();
+            //display_obj.init();
             this->orient_display = true;
             return;
           }
