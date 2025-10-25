@@ -140,6 +140,7 @@ class Display
     //void jpegRender(int xpos, int ypos);
     void listDir(fs::FS &fs, const char * dirname, uint8_t levels);
     void listFiles();
+    void init();
     void main(uint8_t scan_mode);
     void RunSetup();
     void scrollAddress(uint16_t vsp);

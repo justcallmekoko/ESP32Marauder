@@ -109,6 +109,14 @@ bool Display::isTouchHeld(uint16_t threshold) {
   return false;
 }
 
+void Display::init() {
+  tft.init();
+
+  #ifdef HAS_DUAL_BAND
+    digitalWrite(TFT_BL, HIGH);
+  #endif
+}
+
 void Display::setCalData(bool landscape) {
   #ifndef HAS_CYD_TOUCH
     if (!landscape) {
@@ -117,7 +125,7 @@ void Display::setCalData(bool landscape) {
       #elif defined(MARAUDER_CYD_3_5_INCH)
         uint16_t calData[5] = { 239, 3560, 262, 3643, 4 };
       #elif defined(MARAUDER_V8)
-        uint16_t calData[5] = { 298, 3451, 377, 3509, 4 };
+        uint16_t calData[5] = { 351, 3279, 214, 3394, 2 };
       #elif defined(TFT_DIY)
         uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // tft.setRotation(0); // Portrait with DIY TFT
       #endif
@@ -131,7 +139,7 @@ void Display::setCalData(bool landscape) {
       #elif defined(MARAUDER_CYD_3_5_INCH)
         uint16_t calData[5] = { 272, 3648, 234, 3565, 7 };
       #elif defined(MARAUDER_V8)
-        uint16_t calData[5] = { 382, 3492, 293, 3502, 7 };
+        uint16_t calData[5] = { 213, 3396, 350, 3275, 1 };
       #else if defined(TFT_DIY)
         uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
       #endif
