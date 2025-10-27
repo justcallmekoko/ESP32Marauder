@@ -904,7 +904,7 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_SLEEP) ||
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_SLEEP_TARGETED) ||
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_MIMIC) ||
-		  (wifi_scan_obj.currentScanMode == WIFI_ATTACK_FUNNY_BEACON) ||
+		      (wifi_scan_obj.currentScanMode == WIFI_ATTACK_FUNNY_BEACON) ||
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_RICK_ROLL) ||
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_BEACON_LIST) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_ALL) ||
@@ -925,10 +925,10 @@ void MenuFunctions::main(uint32_t currentTime)
         wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
   
         // If we don't do this, the text and button coordinates will be off
-        display_obj.tft.init();
+        display_obj.init();
   
         // Take us back to the menu
-        changeMenu(current_menu);
+        changeMenu(current_menu, true);
       }
   
       x = -1;
@@ -1025,7 +1025,7 @@ void MenuFunctions::main(uint32_t currentTime)
           wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
     
           // If we don't do this, the text and button coordinates will be off
-          display_obj.tft.init();
+          display_obj.init();
     
           // Take us back to the menu
           changeMenu(current_menu);
@@ -1850,7 +1850,7 @@ void MenuFunctions::drawStatusBar()
 
 void MenuFunctions::orientDisplay()
 {
-  display_obj.tft.init();
+  display_obj.init();
 
   display_obj.tft.setRotation(SCREEN_ORIENTATION); // Portrait
 
@@ -2716,6 +2716,8 @@ void MenuFunctions::RunSetup()
         this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
 
           wifiStationMenu.list->clear();
+
+          wifiStationMenu.parentMenu = &wifiAPMenu;
 
           // Add back button to the APs
           this->addNodes(&wifiStationMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
@@ -4214,7 +4216,7 @@ void MenuFunctions::changeMenu(Menu* menu, bool simple_change) {
   if (!simple_change) {
     display_obj.initScrollValues();
     display_obj.setupScrollArea(TOP_FIXED_AREA, BOT_FIXED_AREA);
-    display_obj.tft.init();
+    display_obj.init();
   }
   current_menu = menu;
 
@@ -4223,6 +4225,10 @@ void MenuFunctions::changeMenu(Menu* menu, bool simple_change) {
   buildButtons(menu);
 
   displayCurrentMenu();
+
+  //#ifdef MARAUDER_V8
+  //  digitalWrite(TFT_BL, HIGH);
+  //#endif
 }
 
 void MenuFunctions::buildButtons(Menu *menu, int starting_index, String button_name) {

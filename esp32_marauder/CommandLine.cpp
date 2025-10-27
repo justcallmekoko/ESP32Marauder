@@ -312,7 +312,7 @@ void CommandLine::runCommand(String input) {
 
     // If we don't do this, the text and button coordinates will be off
     #ifdef HAS_SCREEN
-      display_obj.tft.init();
+      display_obj.init();
       menu_function_obj.changeMenu(menu_function_obj.current_menu);
     #endif
   }
