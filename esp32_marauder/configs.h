@@ -1010,7 +1010,7 @@
       #endif
 
       #ifndef MARAUDER_CYD_MICRO
-        #define TFT_DIY
+        #define TFT_DIY      
       #endif
 
       #define GRAPH_VERT_LIM TFT_HEIGHT/2
