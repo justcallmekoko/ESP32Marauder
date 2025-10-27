@@ -2717,6 +2717,8 @@ void MenuFunctions::RunSetup()
 
           wifiStationMenu.list->clear();
 
+          wifiStationMenu.parentMenu = &wifiAPMenu;
+
           // Add back button to the APs
           this->addNodes(&wifiStationMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
             this->changeMenu(wifiStationMenu.parentMenu, true);
