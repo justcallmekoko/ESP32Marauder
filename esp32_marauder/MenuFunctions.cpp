@@ -2094,9 +2094,11 @@ void MenuFunctions::RunSetup()
     this->changeMenu(&bluetoothMenu, true);
   });
   #ifdef HAS_GPS
-    this->addNodes(&mainMenu, text1_66, TFTRED, NULL, GPS_MENU, [this]() {
-      this->changeMenu(&gpsMenu, true);
-    });
+	if (gps_obj.getGpsModuleStatus()) {
+    	this->addNodes(&mainMenu, text1_66, TFTRED, NULL, GPS_MENU, [this]() {
+      	this->changeMenu(&gpsMenu, true);
+    	});
+	}
   #endif
   this->addNodes(&mainMenu, text_table1[9], TFTBLUE, NULL, DEVICE, [this]() {
     this->changeMenu(&deviceMenu, true);
@@ -4364,3 +4366,4 @@ void MenuFunctions::displayCurrentMenu(int start_index)
 }
 
 #endif
+
