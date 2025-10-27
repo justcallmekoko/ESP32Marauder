@@ -1961,7 +1961,7 @@ void MenuFunctions::RunSetup()
 
   // Device menu stuff
   failedUpdateMenu.list = new LinkedList<MenuNode>();
-  whichUpdateMenu.list = new LinkedList<MenuNode>();
+  //whichUpdateMenu.list = new LinkedList<MenuNode>();
   confirmMenu.list = new LinkedList<MenuNode>();
   updateMenu.list = new LinkedList<MenuNode>();
   settingsMenu.list = new LinkedList<MenuNode>();
@@ -2030,7 +2030,7 @@ void MenuFunctions::RunSetup()
   wifiMenu.name = text_table1[7];
   deviceMenu.name = text_table1[9];
   failedUpdateMenu.name = text_table1[11];
-  whichUpdateMenu.name = text_table1[12];
+  //whichUpdateMenu.name = text_table1[12];
   confirmMenu.name = text_table1[13];
   updateMenu.name = text_table1[15];
   languageMenu.name = text_table1[16]; 
@@ -3197,10 +3197,48 @@ void MenuFunctions::RunSetup()
   this->addNodes(&deviceMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
     this->changeMenu(deviceMenu.parentMenu, true);
   });
-  this->addNodes(&deviceMenu, text_table1[15], TFTORANGE, NULL, UPDATE, [this]() {
+  /*this->addNodes(&deviceMenu, text_table1[15], TFTORANGE, NULL, UPDATE, [this]() {
     wifi_scan_obj.currentScanMode = OTA_UPDATE;
     this->changeMenu(&whichUpdateMenu, true);
-  });
+  });*/
+
+  #ifdef HAS_SD
+    if (sd_obj.supported) {
+
+      sdDeleteMenu.parentMenu = &deviceMenu;
+
+      this->addNodes(&deviceMenu, "Update Firmware", TFTORANGE, NULL, SD_UPDATE, [this]() {
+        display_obj.clearScreen();
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+        display_obj.tft.println("Loading...");
+
+        // Clear menu and lists
+        this->buildSDFileMenu(true);
+
+        this->changeMenu(&sdDeleteMenu, true);
+      });
+    }
+
+    /*if (sd_obj.supported) {
+      addNodes(&whichUpdateMenu, text_table1[40], TFTMAGENTA, NULL, SD_UPDATE, [this]() {
+        wifi_scan_obj.currentScanMode = OTA_UPDATE;
+        this->changeMenu(&confirmMenu, true);
+      });
+    }
+
+    // Confirm SD update menu
+    confirmMenu.parentMenu = &whichUpdateMenu;
+    this->addNodes(&confirmMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+      this->changeMenu(confirmMenu.parentMenu, true);
+    });
+    this->addNodes(&confirmMenu, text14, TFTORANGE, NULL, UPDATE, [this]() {
+      wifi_scan_obj.currentScanMode = OTA_UPDATE;
+      this->changeMenu(&failedUpdateMenu, true);
+      sd_obj.runUpdate();
+    });*/
+  #endif
 
   this->addNodes(&deviceMenu, "Save/Load Files", TFTCYAN, NULL, SD_UPDATE, [this]() {
     this->changeMenu(&saveFileMenu, true);
@@ -3222,175 +3260,6 @@ void MenuFunctions::RunSetup()
 
   #ifdef HAS_SD
     if (sd_obj.supported) {
-      /*this->addNodes(&deviceMenu, "Delete SD Files", TFTCYAN, NULL, SD_UPDATE, [this]() {
-        #ifndef HAS_ILI9341
-          #ifdef HAS_BUTTONS
-            this->changeMenu(&sdDeleteMenu);
-            #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_CYD_MICRO))
-
-              bool deleting = true;
-
-              display_obj.tft.setTextWrap(false);
-              display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-              display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-              display_obj.tft.println("Loading...");
-
-              while (deleting) {
-                // Build list of files
-                sd_obj.sd_files->clear();
-                delete sd_obj.sd_files;
-
-                sd_obj.sd_files = new LinkedList<String>();
-
-                sd_obj.sd_files->add("Back");
-
-                sd_obj.listDirToLinkedList(sd_obj.sd_files);
-
-                int sd_file_index = 0;
-
-                this->sdDeleteMenu.list->set(0, MenuNode{sd_obj.sd_files->get(sd_file_index), false, TFTCYAN, 0, NULL, true, NULL});
-                this->buildButtons(&sdDeleteMenu);
-                this->displayCurrentMenu();
-
-                // Start button loop
-                while(true) {
-                  #if !defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
-                    #if (U_BTN >= 0 || defined(MARAUDER_CARDPUTER))
-                    #if (U_BTN >= 0)
-                      if (u_btn.justPressed()){
-                    #elif defined(MARAUDER_CARDPUTER)
-                      if (this->isKeyPressed(';')){
-                    #endif
-                      if (sd_file_index > 0)
-                        sd_file_index--;
-                      else
-                        sd_file_index = sd_obj.sd_files->size() - 1;
-
-                      this->sdDeleteMenu.list->set(0, MenuNode{sd_obj.sd_files->get(sd_file_index), false, TFTCYAN, 0, NULL, true, NULL});
-                      this->buildButtons(&sdDeleteMenu);
-                      this->displayCurrentMenu();
-                    }
-                    #endif
-                  #endif
-                  #if (D_BTN >= 0 || defined(MARAUDER_CARDPUTER))
-                  #if (D_BTN >= 0)
-                  if (d_btn.justPressed()){
-                  #elif defined(MARAUDER_CARDPUTER)
-                  if (this->isKeyPressed('.')){
-                  #endif
-                    if (sd_file_index < sd_obj.sd_files->size() - 1)
-                      sd_file_index++;
-                    else
-                      sd_file_index = 0;
-
-                    this->sdDeleteMenu.list->set(0, MenuNode{sd_obj.sd_files->get(sd_file_index), false, TFTCYAN, 0, NULL, true, NULL});
-                    this->buildButtons(&sdDeleteMenu, 0, sd_obj.sd_files->get(sd_file_index));
-                    this->displayCurrentMenu();
-                  }
-                  #endif
-                  #if (C_BTN >= 0) && !defined(MARAUDER_CARDPUTER)
-                    if(c_btn.justPressed()){
-                  #elif defined(MARAUDER_CARDPUTER)
-                    if (this->isKeyPressed('(')) {
-                  #endif
-                    if (sd_obj.sd_files->get(sd_file_index) != "Back") {
-                      if (sd_obj.removeFile("/" + sd_obj.sd_files->get(sd_file_index)))
-                        Serial.println("Successfully Removed File: /" + sd_obj.sd_files->get(sd_file_index));
-                        display_obj.tft.setTextWrap(false);
-                        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-                        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-                        display_obj.tft.println("Deleting /" + sd_obj.sd_files->get(sd_file_index) + "...");
-                    }
-                    else {
-                      this->changeMenu(sdDeleteMenu.parentMenu);
-                      deleting = false;
-                    }
-                    break;
-                  }
-                }
-              }
-            #endif
-          #endif
-        #else
-          #ifdef HAS_BUTTONS
-            this->changeMenu(&sdDeleteMenu);
-            bool deleting = true;
-
-            display_obj.tft.setTextWrap(false);
-            display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-            display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-            display_obj.tft.println("Loading...");
-
-            uint16_t t_x = 0, t_y = 0; // To store the touch coordinates
-
-            while (deleting) {
-              // Build list of files
-              sd_obj.sd_files->clear();
-              delete sd_obj.sd_files;
-
-              sd_obj.sd_files = new LinkedList<String>();
-
-              sd_obj.sd_files->add("Back");
-
-              sd_obj.listDirToLinkedList(sd_obj.sd_files);
-
-              int sd_file_index = 0;
-
-              this->sdDeleteMenu.list->set(0, MenuNode{sd_obj.sd_files->get(sd_file_index), false, TFTCYAN, 0, NULL, true, NULL});
-              this->buildButtons(&sdDeleteMenu);
-              this->displayCurrentMenu();
-
-              // Start button loop
-              while(true) {
-                #ifdef HAS_ILI9341
-                  if (!this->disable_touch)
-                    pressed = display_obj.updateTouch(&t_x, &t_y);
-                #endif
-
-                uint8_t menu_button = display_obj.menuButton(&t_x, &t_y, pressed);
-
-                #if !defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
-                  if (menu_button == UP_BUTTON) {
-                    if (sd_file_index > 0)
-                      sd_file_index--;
-                    else
-                      sd_file_index = sd_obj.sd_files->size() - 1;
-
-                    this->sdDeleteMenu.list->set(0, MenuNode{sd_obj.sd_files->get(sd_file_index), false, TFTCYAN, 0, NULL, true, NULL});
-                    this->buildButtons(&sdDeleteMenu);
-                    this->displayCurrentMenu();
-                  }
-                #endif
-                if (menu_button == DOWN_BUTTON) {
-                  if (sd_file_index < sd_obj.sd_files->size() - 1)
-                    sd_file_index++;
-                  else
-                    sd_file_index = 0;
-
-                  this->sdDeleteMenu.list->set(0, MenuNode{sd_obj.sd_files->get(sd_file_index), false, TFTCYAN, 0, NULL, true, NULL});
-                  this->buildButtons(&sdDeleteMenu, 0, sd_obj.sd_files->get(sd_file_index));
-                  this->displayCurrentMenu();
-                }
-                if (menu_button == SELECT_BUTTON) {
-                  if (sd_obj.sd_files->get(sd_file_index) != "Back") {
-                    if (sd_obj.removeFile("/" + sd_obj.sd_files->get(sd_file_index)))
-                      Serial.println("Successfully Removed File: /" + sd_obj.sd_files->get(sd_file_index));
-                      display_obj.tft.setTextWrap(false);
-                      display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-                      display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-                      display_obj.tft.println("Deleting /" + sd_obj.sd_files->get(sd_file_index) + "...");
-                  }
-                  else {
-                    this->changeMenu(sdDeleteMenu.parentMenu);
-                    deleting = false;
-                  }
-                  break;
-                }
-              }
-            }
-          #endif
-        #endif
-      });*/
 
       sdDeleteMenu.parentMenu = &deviceMenu;
 
@@ -3575,34 +3444,17 @@ void MenuFunctions::RunSetup()
   });
  
   // Select update
-  whichUpdateMenu.parentMenu = &deviceMenu;
+  /*whichUpdateMenu.parentMenu = &deviceMenu;
   this->addNodes(&whichUpdateMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
     wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
     this->changeMenu(whichUpdateMenu.parentMenu, true);
-  });
-  #ifdef HAS_SD
-    if (sd_obj.supported) addNodes(&whichUpdateMenu, text_table1[40], TFTMAGENTA, NULL, SD_UPDATE, [this]() {
-      wifi_scan_obj.currentScanMode = OTA_UPDATE;
-      this->changeMenu(&confirmMenu, true);
-    });
-
-    // Confirm SD update menu
-    confirmMenu.parentMenu = &whichUpdateMenu;
-    this->addNodes(&confirmMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
-      this->changeMenu(confirmMenu.parentMenu, true);
-    });
-    this->addNodes(&confirmMenu, text14, TFTORANGE, NULL, UPDATE, [this]() {
-      wifi_scan_obj.currentScanMode = OTA_UPDATE;
-      this->changeMenu(&failedUpdateMenu, true);
-      sd_obj.runUpdate();
-    });
-  #endif
+  });*/
 
   // Web Update
   updateMenu.parentMenu = &deviceMenu;
 
   // Failed update menu
-  failedUpdateMenu.parentMenu = &whichUpdateMenu;
+  failedUpdateMenu.parentMenu = &deviceMenu;
   this->addNodes(&failedUpdateMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
     wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
     this->changeMenu(failedUpdateMenu.parentMenu, true);
@@ -4032,43 +3884,61 @@ void MenuFunctions::RunSetup()
   }
 //#endif
 
-void MenuFunctions::setupSDFileList() {
+void MenuFunctions::setupSDFileList(bool update) {
   sd_obj.sd_files->clear();
 
   delete sd_obj.sd_files;
 
   sd_obj.sd_files = new LinkedList<String>();
 
-  sd_obj.listDirToLinkedList(sd_obj.sd_files);
+  if (!update)
+    sd_obj.listDirToLinkedList(sd_obj.sd_files);
+  else
+    sd_obj.listDirToLinkedList(sd_obj.sd_files, "/", ".bin");
 }
 
-void MenuFunctions::buildSDFileMenu() {
-  this->setupSDFileList();
+void MenuFunctions::buildSDFileMenu(bool update) {
+  this->setupSDFileList(update);
 
   sdDeleteMenu.list->clear();
   delete sdDeleteMenu.list;
   sdDeleteMenu.list = new LinkedList<MenuNode>();
-  sdDeleteMenu.name = "SD Files";
+
+  if (!update)
+    sdDeleteMenu.name = "SD Files";
+  else
+    sdDeleteMenu.name = "Bin Files";
 
   this->addNodes(&sdDeleteMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
     this->changeMenu(sdDeleteMenu.parentMenu, true);
   });
 
-  for (int x = 0; x < sd_obj.sd_files->size(); x++) {
-    this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x), TFTCYAN, NULL, SD_UPDATE, [this, x]() {
-      if (sd_obj.removeFile("/" + sd_obj.sd_files->get(x))) {
-        Serial.println("Deleted /" + sd_obj.sd_files->get(x));
-        display_obj.clearScreen();
-        display_obj.tft.setTextWrap(false);
-        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-        display_obj.tft.println("Deleting /" + sd_obj.sd_files->get(x) + "...");
-        //sd_obj.sd_files->remove(x);
-        //sdDeleteMenu.list->remove(x + 1); // +1 for "Back"
-        this->buildSDFileMenu();
-        this->changeMenu(&sdDeleteMenu, true);
-      }
-    });
+  if (!update) {
+    for (int x = 0; x < sd_obj.sd_files->size(); x++) {
+      this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x), TFTCYAN, NULL, SD_UPDATE, [this, x]() {
+        if (sd_obj.removeFile("/" + sd_obj.sd_files->get(x))) {
+          Serial.println("Deleted /" + sd_obj.sd_files->get(x));
+          display_obj.clearScreen();
+          display_obj.tft.setTextWrap(false);
+          display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+          display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+          display_obj.tft.println("Deleting /" + sd_obj.sd_files->get(x) + "...");
+          //sd_obj.sd_files->remove(x);
+          //sdDeleteMenu.list->remove(x + 1); // +1 for "Back"
+          this->buildSDFileMenu();
+          this->changeMenu(&sdDeleteMenu, true);
+        }
+      });
+    }
+  }
+  else {
+    for (int x = 0; x < sd_obj.sd_files->size(); x++) {
+      this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x), TFTCYAN, NULL, SD_UPDATE, [this, x]() {
+        wifi_scan_obj.currentScanMode = OTA_UPDATE;
+        this->changeMenu(&failedUpdateMenu, true);
+        sd_obj.runUpdate("/" + sd_obj.sd_files->get(x));
+      });
+    }
   }
 }
 
