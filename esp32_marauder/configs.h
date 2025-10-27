@@ -32,7 +32,7 @@
   //#define MARAUDER_V8
   //// END BOARD TARGETS
 
-  #define MARAUDER_VERSION "v1.8.8"
+  #define MARAUDER_VERSION "v1.8.9"
 
   #define GRAPH_REFRESH   100
 

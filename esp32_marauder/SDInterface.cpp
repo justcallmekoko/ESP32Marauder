@@ -165,7 +165,10 @@ void SDInterface::listDir(String str_dir){
   }
 }
 
-void SDInterface::runUpdate() {
+void SDInterface::runUpdate(String file_name) {
+  if (file_name == "")
+    file_name = "/update.bin";
+
   #ifdef HAS_SCREEN
     display_obj.tft.setTextWrap(false);
     display_obj.tft.setFreeFont(NULL);
@@ -173,16 +176,18 @@ void SDInterface::runUpdate() {
     display_obj.tft.setTextSize(1);
     display_obj.tft.setTextColor(TFT_WHITE);
   
-    display_obj.tft.println(F(text15));
+    display_obj.tft.println("Opening " + file_name + "...");
   #endif
-  File updateBin = SD.open("/update.bin");
+
+  File updateBin = SD.open(file_name);
+
   if (updateBin) {
     if(updateBin.isDirectory()){
       #ifdef HAS_SCREEN
         display_obj.tft.setTextColor(TFT_RED);
         display_obj.tft.println(F(text_table2[0]));
       #endif
-      Serial.println(F("Error, could not find \"update.bin\""));
+      Serial.println("Error, could not find \"" + file_name + "\"");
       #ifdef HAS_SCREEN
         display_obj.tft.setTextColor(TFT_WHITE);
       #endif

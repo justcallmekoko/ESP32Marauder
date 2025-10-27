@@ -65,7 +65,7 @@ class SDInterface {
     void listDir(String str_dir);
     void listDirToLinkedList(LinkedList<String>* file_names, String str_dir = "/", String ext = "");
     File getFile(String path);
-    void runUpdate();
+    void runUpdate(String file_name = "");
     void performUpdate(Stream &updateSource, size_t updateSize);
     void main();
     bool removeFile(String file_path);
