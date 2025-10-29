@@ -223,7 +223,8 @@ extern "C" {
           
         String display_string = "";
 
-        if (wifi_scan_obj.currentScanMode == BT_SCAN_AIRTAG) {
+        if ((wifi_scan_obj.currentScanMode == BT_SCAN_AIRTAG) ||
+            (wifi_scan_obj.currentScanMode == BT_SCAN_AIRTAG_MON)) { 
           uint8_t* payLoad = advertisedDevice->getPayload();
           size_t len = advertisedDevice->getPayloadLength();
 
@@ -239,16 +240,22 @@ extern "C" {
             }
           }
 
+          int rssi = advertisedDevice->getRSSI();
+
           if (match) {
             String mac = advertisedDevice->getAddress().toString().c_str();
             mac.toUpperCase();
 
             for (int i = 0; i < airtags->size(); i++) {
-              if (mac == airtags->get(i).mac)
+              // Airtag is in list already. Update RSSI
+              if (mac == airtags->get(i).mac) {
+                AirTag old_airtag = airtags->get(i);
+                old_airtag.rssi = rssi;
+                airtags->set(i, old_airtag);
                 return;
+              }
             }
 
-            int rssi = advertisedDevice->getRSSI();
             Serial.print("RSSI: ");
             Serial.print(rssi);
             Serial.print(" MAC: ");
@@ -265,22 +272,25 @@ extern "C" {
             airtag.mac = mac;
             airtag.payload.assign(payLoad, payLoad + len);
             airtag.payloadSize = len;
+            airtag.rssi = rssi;
 
             airtags->add(airtag);
 
 
-            #ifdef HAS_SCREEN
-              //display_string.concat("RSSI: ");
-              display_string.concat((String)rssi);
-              display_string.concat(" MAC: ");
-              display_string.concat(mac);
-              uint8_t temp_len = display_string.length();
-              for (uint8_t i = 0; i < 40 - temp_len; i++)
-              {
-                display_string.concat(" ");
-              }
-              display_obj.display_buffer->add(display_string);
-            #endif
+            if (wifi_scan_obj.currentScanMode != BT_SCAN_AIRTAG_MON) {
+              #ifdef HAS_SCREEN
+                //display_string.concat("RSSI: ");
+                display_string.concat((String)rssi);
+                display_string.concat(" MAC: ");
+                display_string.concat(mac);
+                uint8_t temp_len = display_string.length();
+                for (uint8_t i = 0; i < 40 - temp_len; i++)
+                {
+                  display_string.concat(" ");
+                }
+                display_obj.display_buffer->add(display_string);
+              #endif
+            }
           }
         }
         else if (wifi_scan_obj.currentScanMode == BT_SCAN_FLIPPER) {
@@ -1059,7 +1069,11 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     this->startWiFiAttacks(scan_mode, color, "Sleep Targeted");
   else if (scan_mode == WIFI_ATTACK_AP_SPAM)
     this->startWiFiAttacks(scan_mode, color, " AP Beacon Spam ");
-  else if ((scan_mode == BT_SCAN_ALL) || (scan_mode == BT_SCAN_AIRTAG) || (scan_mode == BT_SCAN_FLIPPER) || (scan_mode == BT_SCAN_ANALYZER)){
+  else if ((scan_mode == BT_SCAN_ALL) ||
+          (scan_mode == BT_SCAN_AIRTAG) ||
+          (scan_mode == BT_SCAN_AIRTAG_MON) ||
+          (scan_mode == BT_SCAN_FLIPPER) ||
+          (scan_mode == BT_SCAN_ANALYZER)) {
     #ifdef HAS_BT
       RunBluetoothScan(scan_mode, color);
     #endif
@@ -1375,6 +1389,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   
   else if ((currentScanMode == BT_SCAN_ALL) ||
   (currentScanMode == BT_SCAN_AIRTAG) ||
+  (currentScanMode == BT_SCAN_AIRTAG_MON) ||
   (currentScanMode == BT_SCAN_FLIPPER) ||
   (currentScanMode == BT_ATTACK_SOUR_APPLE) ||
   (currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
@@ -3823,7 +3838,10 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
     }
     NimBLEDevice::init("");
     pBLEScan = NimBLEDevice::getScan(); //create new scan
-    if ((scan_mode == BT_SCAN_ALL) || (scan_mode == BT_SCAN_AIRTAG) || (scan_mode == BT_SCAN_FLIPPER))
+    if ((scan_mode == BT_SCAN_ALL) ||
+        (scan_mode == BT_SCAN_AIRTAG) ||
+        (scan_mode == BT_SCAN_AIRTAG_MON) ||
+        (scan_mode == BT_SCAN_FLIPPER))
     {
       #ifdef HAS_SCREEN
         display_obj.TOP_FIXED_AREA_2 = 48;
@@ -3837,6 +3855,8 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
             display_obj.tft.drawCentreString(text_table4[41],TFT_WIDTH / 2,16,2);
           else if (scan_mode == BT_SCAN_AIRTAG)
             display_obj.tft.drawCentreString("Airtag Sniff",TFT_WIDTH / 2,16,2);
+          else if (scan_mode == BT_SCAN_AIRTAG_MON)
+            display_obj.tft.drawCentreString("Airtag Monitor",TFT_WIDTH / 2,16,2);
           else if (scan_mode == BT_SCAN_FLIPPER)
             display_obj.tft.drawCentreString("Flipper Sniff", TFT_WIDTH / 2, 16, 2);
           #ifdef HAS_ILI9341
@@ -3848,7 +3868,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
       #endif
       if (scan_mode == BT_SCAN_ALL)
         pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), false);
-      else if (scan_mode == BT_SCAN_AIRTAG) {
+      else if ((scan_mode == BT_SCAN_AIRTAG) || (scan_mode == BT_SCAN_AIRTAG_MON)) {
         this->clearAirtags();
         pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), true);
       }
@@ -8576,6 +8596,27 @@ void WiFiScan::main(uint32_t currentTime)
   }
   else if (currentScanMode == WIFI_SCAN_RDP) {
     this->pingScan(WIFI_SCAN_RDP);
+  }
+  else if (currentScanMode == BT_SCAN_AIRTAG_MON) {
+    if (currentTime - initTime >= this->channel_hop_delay * 500) {
+      initTime = millis();
+
+      #ifdef HAS_SCREEN
+        display_obj.tft.fillRect(0,
+                                (STATUS_BAR_WIDTH * 2) + 1 + EXT_BUTTON_WIDTH,
+                                TFT_WIDTH,
+                                TFT_HEIGHT - STATUS_BAR_WIDTH + 1,
+                                TFT_BLACK);
+                                
+        display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH + EXT_BUTTON_WIDTH);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+
+        for (int y = 0; y < airtags->size(); y++) {
+          display_obj.tft.println((String)airtags->get(y).rssi + ": " + airtags->get(y).mac);
+        }
+      #endif
+    }
   }
   else if (currentScanMode == WIFI_SCAN_SIG_STREN) {
     #ifdef HAS_ILI9341
