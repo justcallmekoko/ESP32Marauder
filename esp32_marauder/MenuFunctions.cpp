@@ -909,6 +909,7 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_BEACON_LIST) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_ALL) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_AIRTAG) ||
+          (wifi_scan_obj.currentScanMode == BT_SCAN_AIRTAG_MON) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_FLIPPER) ||
           (wifi_scan_obj.currentScanMode == BT_ATTACK_SOUR_APPLE) ||
           (wifi_scan_obj.currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
@@ -998,11 +999,12 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_SLEEP) ||
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_SLEEP_TARGETED) ||
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_MIMIC) ||
-			(wifi_scan_obj.currentScanMode == WIFI_ATTACK_FUNNY_BEACON) ||
+			      (wifi_scan_obj.currentScanMode == WIFI_ATTACK_FUNNY_BEACON) ||
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_RICK_ROLL) ||
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_BEACON_LIST) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_ALL) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_AIRTAG) ||
+            (wifi_scan_obj.currentScanMode == BT_SCAN_AIRTAG_MON) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_FLIPPER) ||
             (wifi_scan_obj.currentScanMode == BT_ATTACK_SOUR_APPLE) ||
             (wifi_scan_obj.currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
@@ -3067,6 +3069,11 @@ void MenuFunctions::RunSetup()
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_SCAN_AIRTAG, TFT_WHITE);
+  });
+  this->addNodes(&bluetoothSnifferMenu, "Airtag Monitor", TFTWHITE, NULL, BLUETOOTH_SNIFF, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(BT_SCAN_AIRTAG_MON, TFT_WHITE);
   });
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {

@@ -136,6 +136,7 @@
 #define WIFI_SCAN_SMTP 67
 #define WIFI_SCAN_RDP 68
 #define WIFI_HOSTSPOT 69 // Nice
+#define BT_SCAN_AIRTAG_MON 70
 
 #define WIFI_ATTACK_FUNNY_BEACON 99 
 
@@ -216,6 +217,7 @@ struct AirTag {
     std::vector<uint8_t> payload; // Payload data
     uint16_t payloadSize;
     bool selected;
+    int8_t rssi;
 };
 
 struct Flipper {
