@@ -354,7 +354,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           name: ${{ needs.decide.outputs.short_sha }}_nightly
-          tag_name: nightly
+          tag_name: nightly_${{ needs.decide.outputs.short_sha }}
           prerelease: true
           generate_release_notes: true
           draft: false
