@@ -254,7 +254,7 @@ jobs:
 
           echo "artifact_name=$OUTPUT_BIN" >> $GITHUB_ENV
           echo "artifact_path=$BUILD_DIR/$OUTPUT_BIN" >> $GITHUB_ENV
-          echo "version_dot=$VERSION_DOT >> $GITHUB_ENV
+          echo "version_dot=$VERSION_DOT" >> $GITHUB_ENV
       - name: Upload ${{ matrix.board.name }} Artifact
         uses: actions/upload-artifact@v4
         with:
