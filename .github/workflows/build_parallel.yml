@@ -242,16 +242,19 @@ jobs:
       - name: Rename and Upload ${{ matrix.board.name }} Artifact
         run: |
           VERSION=$(grep '#define MARAUDER_VERSION' ./esp32_marauder/configs.h | sed -E 's/.*"v([^"]+)"/v\1/' | tr '.' '_')
+          VERSION_DOT=$(grep '#define MARAUDER_VERSION' ./esp32_marauder/configs.h | sed -E 's/.*"v([^"]+)"/v\1/')
           DATE=$(date +%Y%m%d)
 
           BUILD_DIR=./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}
           INPUT_BIN=$BUILD_DIR/esp32_marauder.ino.bin
           OUTPUT_BIN=esp32_marauder_${VERSION}_${DATE}_${{ matrix.board.file_name }}.bin
+          VERSION_DOT=${VERSION_DOT}
 
           mv "$INPUT_BIN" "$BUILD_DIR/$OUTPUT_BIN"
 
           echo "artifact_name=$OUTPUT_BIN" >> $GITHUB_ENV
           echo "artifact_path=$BUILD_DIR/$OUTPUT_BIN" >> $GITHUB_ENV
+          echo "version_dot=$VERSION_DOT" >> $GITHUB_ENV
       - name: Upload ${{ matrix.board.name }} Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -273,7 +276,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           name: "Marauder Release ${{ github.ref_name }}"
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ env.version_dot }}
           generate_release_notes: true
           draft: true
           files: |
