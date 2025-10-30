@@ -251,6 +251,7 @@ extern "C" {
               if (mac == airtags->get(i).mac) {
                 AirTag old_airtag = airtags->get(i);
                 old_airtag.rssi = rssi;
+                old_airtag.last_seen = millis();
                 airtags->set(i, old_airtag);
                 return;
               }
@@ -273,6 +274,7 @@ extern "C" {
             airtag.payload.assign(payLoad, payLoad + len);
             airtag.payloadSize = len;
             airtag.rssi = rssi;
+            airtag.last_seen = millis();
 
             airtags->add(airtag);
 
@@ -8613,7 +8615,8 @@ void WiFiScan::main(uint32_t currentTime)
         display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
         for (int y = 0; y < airtags->size(); y++) {
-          display_obj.tft.println((String)airtags->get(y).rssi + ": " + airtags->get(y).mac);
+          float last_seen_sec = (millis() - airtags->get(y).last_seen) / 1000;
+          display_obj.tft.println((String)airtags->get(y).rssi + " " + (String)last_seen_sec + "s " + airtags->get(y).mac);
         }
       #endif
     }

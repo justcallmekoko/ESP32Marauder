@@ -218,6 +218,7 @@ struct AirTag {
     uint16_t payloadSize;
     bool selected;
     int8_t rssi;
+    uint32_t last_seen;
 };
 
 struct Flipper {
