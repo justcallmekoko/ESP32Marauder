@@ -231,7 +231,13 @@ class MenuFunctions
     void drawMaxLine(int16_t value, uint16_t color);
     float calculateGraphScale(int16_t value);
     float graphScaleCheck(const int16_t array[TFT_WIDTH]);
+    #ifndef HAS_DUAL_BAND
+      float graphScaleCheckSmall(const uint8_t array[MAX_CHANNEL]);
+    #else
+      float graphScaleCheckSmall(const uint8_t array[DUAL_BAND_CHANNELS]);
+    #endif
     void drawGraph(int16_t *values);
+    void drawGraphSmall(uint8_t *values);
     void renderGraphUI(uint8_t scan_mode = 0);
     //void addNodes(Menu* menu, String name, uint16_t color, Menu* child, int place, std::function<void()> callable, bool selected = false, String command = "");
     void addNodes(Menu* menu, String name, uint8_t color, Menu* child, int place, std::function<void()> callable, bool selected = false, String command = "");
