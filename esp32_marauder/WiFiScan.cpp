@@ -2877,6 +2877,7 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
         else if (scan_mode == WIFI_SCAN_CHAN_ACT) {
           display_obj.tft.setTextColor(TFT_BLACK, color);
           display_obj.tft.drawCentreString("Channel Summary", TFT_WIDTH / 2, 16, 2);
+          this->drawChannelLine();
         }
         else if (scan_mode == WIFI_SCAN_PACKET_RATE) {
           display_obj.tft.drawCentreString("Packet Rate", TFT_WIDTH / 2, 16, 2);
@@ -8060,6 +8061,31 @@ void WiFiScan::signalAnalyzerLoop(uint32_t tick) {
   #endif
 }
 
+void WiFiScan::drawChannelLine() {
+  #ifdef HAS_SCREEN
+    #ifdef HAS_FULL_SCREEN
+      display_obj.tft.fillRect(0, TFT_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2), TFT_WIDTH, (CHAR_WIDTH * 2) - 1, TFT_MAGENTA);
+    #else
+    #endif
+    Serial.println("Drawing channel line...");
+    #ifndef HAS_DUAL_BAND
+      for (int i = 1; i < CHAN_PER_PAGE + 1; i++) {
+        int x_mult = (i * 2) - 1;
+        int x_coord = (TFT_WIDTH / (CHAN_PER_PAGE * 2)) * (x_mult - 1);
+        #ifdef HAS_FULL_SCREEN
+          display_obj.tft.setTextSize(2);
+        #else
+          display_obj.tft.setTextSize(1);
+        #endif
+        display_obj.tft.setCursor(x_coord, TFT_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2));
+        display_obj.tft.setTextColor(TFT_BLACK, TFT_CYAN);
+        display_obj.tft.print((String)(i + (CHAN_PER_PAGE * (this->activity_page - 1))));
+      }
+    #else
+    #endif
+  #endif
+}
+
 void WiFiScan::channelActivityLoop(uint32_t tick) {
   #ifdef HAS_SCREEN
     /*if (tick - this->initTime >= BANNER_TIME) {
@@ -8072,6 +8098,15 @@ void WiFiScan::channelActivityLoop(uint32_t tick) {
       }
     }*/
 
+    if (tick - this->initTime >= BANNER_TIME * 50) {
+      initTime = millis();
+      Serial.println("--------------");
+      for (int i = (activity_page * CHAN_PER_PAGE) - CHAN_PER_PAGE; i < activity_page * CHAN_PER_PAGE; i++) {
+        Serial.println((String)(i+1) + ": " + (String)channel_activity[i]);
+        channel_activity[i] = 0;
+      }
+    }
+
     #ifdef HAS_ILI9341
       int8_t b = this->checkAnalyzerButtons(millis());
 
@@ -8081,12 +8116,12 @@ void WiFiScan::channelActivityLoop(uint32_t tick) {
         return;
       }
       else if (b == 4) {
-        Serial.println("Down");
         #ifndef HAS_DUAL_BAND
           if (this->activity_page > 1) {
             this->activity_page--;
             display_obj.tftDrawChannelScaleButtons(set_channel, false);
             display_obj.tftDrawExitScaleButtons(false);
+            this->drawChannelLine();
             return;
           }
         #else
@@ -8094,6 +8129,7 @@ void WiFiScan::channelActivityLoop(uint32_t tick) {
             this->activity_page--;
             display_obj.tftDrawChannelScaleButtons(this->set_channel, false);
             display_obj.tftDrawExitScaleButtons(false);
+            this->drawChannelLine();
             return;
           }
         #endif
@@ -8101,12 +8137,12 @@ void WiFiScan::channelActivityLoop(uint32_t tick) {
 
       // Channel + button pressed
       else if (b == 5) {
-        Serial.println("Up");
         #ifndef HAS_DUAL_BAND
           if (this->activity_page < MAX_CHANNEL / CHAN_PER_PAGE) {
             this->activity_page++;
             display_obj.tftDrawChannelScaleButtons(set_channel, false);
             display_obj.tftDrawExitScaleButtons(false);
+            this->drawChannelLine();
             return;
           }
         #else
@@ -8114,6 +8150,7 @@ void WiFiScan::channelActivityLoop(uint32_t tick) {
             this->activity_page++;
             display_obj.tftDrawChannelScaleButtons(this->set_channel, false);
             display_obj.tftDrawExitScaleButtons(false);
+            this->drawChannelLine();
             return;
           }
         #endif
@@ -8755,14 +8792,6 @@ void WiFiScan::main(uint32_t currentTime)
     if (currentTime - chanActTime >= 100) {
       chanActTime = millis();
       this->channelHop(false, true);
-    }
-    if (currentTime - initTime >= 1000) {
-      initTime = millis();
-      Serial.println("--------------");
-      for (int i = (activity_page * CHAN_PER_PAGE) - CHAN_PER_PAGE; i < activity_page * CHAN_PER_PAGE; i++) {
-        Serial.println((String)(i+1) + ": " + (String)channel_activity[i]);
-        channel_activity[i] = 0;
-      }
     }
   }
   else if ((currentScanMode == WIFI_SCAN_PACKET_RATE) ||

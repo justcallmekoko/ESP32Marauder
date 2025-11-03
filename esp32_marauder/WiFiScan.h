@@ -240,14 +240,6 @@ class WiFiScan
       struct mac_addr mac_history[mac_history_len];
     #endif
 
-    #ifdef HAS_DUAL_BAND
-      uint8_t channel_activity[DUAL_BAND_CHANNELS] = {};
-    #else
-      uint8_t channel_activity[MAX_CHANNEL] = {};
-    #endif
-
-    uint8_t activity_page = 1;
-
     uint32_t chanActTime = 0;
 
     uint8_t ap_mac[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
@@ -527,6 +519,7 @@ class WiFiScan
       NimBLEAdvertisementData GetUniversalAdvertisementData(EBLEPayloadType type);
     #endif
 
+    void drawChannelLine();
     void fullARP();
     bool readARP(IPAddress targ_ip);
     bool singleARP(IPAddress ip_addr);
@@ -628,6 +621,14 @@ class WiFiScan
     bool force_probe = false;
     bool save_pcap = false;
     bool ep_deauth = false;
+
+    #ifdef HAS_DUAL_BAND
+      uint8_t channel_activity[DUAL_BAND_CHANNELS] = {};
+    #else
+      uint8_t channel_activity[MAX_CHANNEL] = {};
+    #endif
+
+    uint8_t activity_page = 1;
 
     String analyzer_name_string = "";
     
