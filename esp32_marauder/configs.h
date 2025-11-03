@@ -32,7 +32,7 @@
   //#define MARAUDER_V8
   //// END BOARD TARGETS
 
-  #define MARAUDER_VERSION "v1.8.9"
+  #define MARAUDER_VERSION "v1.8.10"
 
   #define GRAPH_REFRESH   100
 
@@ -711,6 +711,8 @@
   #ifdef HAS_SCREEN
 
     #ifdef MARAUDER_M5STICKC
+      #define CHAN_PER_PAGE 7
+
       #define SCREEN_CHAR_WIDTH 40
       //#define TFT_MISO 19
       #define TFT_MOSI 15
@@ -785,6 +787,8 @@
     #endif
 
   #if defined(MARAUDER_M5STICKCP2)
+      #define CHAN_PER_PAGE 7
+
       #define MARAUDER_M5STICKC // From now on, everything is the same, except for one check in esp32_marauder.ino amd stickc_led.cpp/h
 
       #define SCREEN_CHAR_WIDTH 40
@@ -859,6 +863,8 @@
     #endif
 
     #ifdef MARAUDER_CARDPUTER
+      #define CHAN_PER_PAGE 7
+
       #define SCREEN_CHAR_WIDTH 40
       //#define TFT_MISO -1
       #define TFT_MOSI 35
@@ -932,6 +938,8 @@
     #endif
 
     #ifdef MARAUDER_V4
+      #define CHAN_PER_PAGE 7
+
       #define SCREEN_CHAR_WIDTH 40
       #define HAS_ILI9341
       #define BANNER_TEXT_SIZE 2
@@ -996,6 +1004,8 @@
     #endif
 
     #if defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
+      #define CHAN_PER_PAGE 7
+
       #define SCREEN_CHAR_WIDTH 40
       #define HAS_ILI9341
     
@@ -1067,6 +1077,8 @@
     #endif
 
     #if defined(MARAUDER_V8)
+      #define CHAN_PER_PAGE 7
+
       #define SCREEN_CHAR_WIDTH 40
       #define HAS_ILI9341
     
@@ -1139,6 +1151,8 @@
     #endif 
 
     #if defined(MARAUDER_CYD_MICRO)
+      #define CHAN_PER_PAGE 7
+
       #define SCREEN_CHAR_WIDTH 40
       #define HAS_ILI9341
     
@@ -1206,6 +1220,8 @@
     #endif
 
     #if defined(MARAUDER_CYD_2USB)
+      #define CHAN_PER_PAGE 7
+
       #define SCREEN_CHAR_WIDTH 40
       #define HAS_ILI9341
       #define HAS_ST7789
@@ -1274,6 +1290,8 @@
     #endif
 
     #if defined(MARAUDER_CYD_3_5_INCH)
+      #define CHAN_PER_PAGE 7
+
       #define SCREEN_CHAR_WIDTH 40
       #define HAS_ILI9341
       #define HAS_ST7796
@@ -1344,6 +1362,8 @@
     #endif
 
     #if defined(MARAUDER_CYD_GUITION)
+      #define CHAN_PER_PAGE 7
+
       #define SCREEN_CHAR_WIDTH 40
       #define HAS_ILI9341
     
@@ -1413,6 +1433,8 @@
     #endif
 
     #ifdef MARAUDER_V7
+      #define CHAN_PER_PAGE 7
+
       #define SCREEN_CHAR_WIDTH 40
       //#define HAS_ILI9341
     
@@ -1482,6 +1504,8 @@
     #endif
 
     #ifdef MARAUDER_V7_1
+      #define CHAN_PER_PAGE 7
+
       #define SCREEN_CHAR_WIDTH 40
       //#define HAS_ILI9341
     
@@ -1551,6 +1575,8 @@
     #endif
 
     #ifdef MARAUDER_KIT
+      #define CHAN_PER_PAGE 7
+
       #define SCREEN_CHAR_WIDTH 40
       #define HAS_ILI9341
     
@@ -1617,6 +1643,8 @@
     #endif
   
     #ifdef MARAUDER_MINI
+      #define CHAN_PER_PAGE 7
+
       #define SCREEN_CHAR_WIDTH 40
       #define TFT_MISO 19
       #define TFT_MOSI 23
@@ -1690,6 +1718,8 @@
     #endif
 
     #ifdef MARAUDER_REV_FEATHER
+      #define CHAN_PER_PAGE 7
+
       #define SCREEN_CHAR_WIDTH 40
       //#define TFT_MISO 37
       //#define TFT_MOSI 35
