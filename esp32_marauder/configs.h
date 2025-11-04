@@ -738,7 +738,7 @@
         #define TFT_HEIGHT 240
       #endif
 
-      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
 
       #define EXT_BUTTON_WIDTH 0
 
@@ -814,7 +814,7 @@
         #define TFT_HEIGHT 240
       #endif
 
-      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
 
       #define EXT_BUTTON_WIDTH 0
 
@@ -889,7 +889,7 @@
         #define TFT_HEIGHT 240
       #endif
 
-      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
 
       #define EXT_BUTTON_WIDTH 0
 
@@ -954,7 +954,7 @@
 
       #define TFT_SHIELD
 
-      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
 
       #define EXT_BUTTON_WIDTH 20
 
@@ -1023,7 +1023,7 @@
         #define TFT_DIY      
       #endif
 
-      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
 
       #define EXT_BUTTON_WIDTH 20
 
@@ -1097,7 +1097,7 @@
         //#define TFT_SHIELD
       //#endif
 
-      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
 
       #define EXT_BUTTON_WIDTH 20
 
@@ -1166,7 +1166,7 @@
         #define TFT_HEIGHT 320
       #endif
 
-      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
 
       #define EXT_BUTTON_WIDTH 20
 
@@ -1236,7 +1236,7 @@
         #define TFT_HEIGHT 320
       #endif
 
-      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
 
       #define EXT_BUTTON_WIDTH 20
 
@@ -1308,7 +1308,7 @@
 
       #define TFT_DIY
 
-      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
 
       #define EXT_BUTTON_WIDTH 20
 
@@ -1379,7 +1379,7 @@
 
       #define TFT_DIY
 
-      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
 
       #define EXT_BUTTON_WIDTH 20
 
@@ -1448,7 +1448,7 @@
         #define TFT_HEIGHT 320
       #endif
 
-      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
 
       #define TFT_DIY
 
@@ -1519,7 +1519,7 @@
         #define TFT_HEIGHT 320
       #endif
 
-      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
 
       #define TFT_DIY
 
@@ -1590,7 +1590,7 @@
         #define TFT_HEIGHT 320
       #endif
 
-      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
 
       #define TFT_DIY
       #define KIT
@@ -1670,7 +1670,7 @@
         #define TFT_HEIGHT 128
       #endif
 
-      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
 
       #define EXT_BUTTON_WIDTH 0
 
@@ -1745,7 +1745,7 @@
         #define TFT_HEIGHT 135
       #endif
 
-      #define GRAPH_VERT_LIM TFT_HEIGHT/2
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
 
       #define EXT_BUTTON_WIDTH 0
 
