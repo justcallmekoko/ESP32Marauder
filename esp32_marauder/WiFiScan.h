@@ -519,7 +519,6 @@ class WiFiScan
       NimBLEAdvertisementData GetUniversalAdvertisementData(EBLEPayloadType type);
     #endif
 
-    void drawChannelLine();
     void fullARP();
     bool readARP(IPAddress targ_ip);
     bool singleARP(IPAddress ip_addr);
@@ -712,6 +711,7 @@ class WiFiScan
 
     wifi_config_t ap_config;
 
+    void drawChannelLine();
     #ifdef HAS_SCREEN
       int8_t checkAnalyzerButtons(uint32_t currentTime);
     #endif

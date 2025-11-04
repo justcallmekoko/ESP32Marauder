@@ -2907,8 +2907,10 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
           display_obj.tft.drawCentreString(text_table1[45],TFT_WIDTH / 2,16,2);
         else if (scan_mode == WIFI_SCAN_CHAN_ANALYZER)
           display_obj.tft.drawCentreString("Channel Analyzer", TFT_WIDTH / 2, 16, 2);
-        else if (scan_mode == WIFI_SCAN_CHAN_ACT)
+        else if (scan_mode == WIFI_SCAN_CHAN_ACT) {
           display_obj.tft.drawCentreString("Channel Summary", TFT_WIDTH / 2, 16, 2);
+          this->drawChannelLine();
+        }
         else if (scan_mode == WIFI_SCAN_PACKET_RATE)
           display_obj.tft.drawCentreString("Packet Rate", TFT_WIDTH / 2, 16, 2);
       #endif
