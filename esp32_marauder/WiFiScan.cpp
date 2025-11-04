@@ -2907,10 +2907,16 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
           display_obj.tft.drawCentreString(text_table1[45],TFT_WIDTH / 2,16,2);
         else if (scan_mode == WIFI_SCAN_CHAN_ANALYZER)
           display_obj.tft.drawCentreString("Channel Analyzer", TFT_WIDTH / 2, 16, 2);
-        else if (scan_mode == WIFI_SCAN_CHAN_ACT)
+        else if (scan_mode == WIFI_SCAN_CHAN_ACT) {
           display_obj.tft.drawCentreString("Channel Summary", TFT_WIDTH / 2, 16, 2);
+          this->drawChannelLine();
+        }
         else if (scan_mode == WIFI_SCAN_PACKET_RATE)
           display_obj.tft.drawCentreString("Packet Rate", TFT_WIDTH / 2, 16, 2);
+      #else
+        if (scan_mode == WIFI_SCAN_CHAN_ACT) {
+          this->drawChannelLine();
+        }
       #endif
       #ifdef HAS_ILI9341
         display_obj.touchToExit();
@@ -8063,10 +8069,10 @@ void WiFiScan::signalAnalyzerLoop(uint32_t tick) {
 
 void WiFiScan::drawChannelLine() {
   #ifdef HAS_SCREEN
-    #ifdef HAS_FULL_SCREEN
+    //#ifdef HAS_FULL_SCREEN
       display_obj.tft.fillRect(0, TFT_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2), TFT_WIDTH, (CHAR_WIDTH * 2) - 1, TFT_MAGENTA);
-    #else
-    #endif
+    //#else
+    //#endif
     Serial.println("Drawing channel line...");
     #ifndef HAS_DUAL_BAND
       for (int i = 1; i < CHAN_PER_PAGE + 1; i++) {
