@@ -356,7 +356,7 @@ jobs:
           name: ${{ needs.decide.outputs.short_sha }}_nightly
           tag_name: nightly_${{ needs.decide.outputs.short_sha }}
           prerelease: true
-          generate_release_notes: true
+          generate_release_notes: false
           draft: false
           files: |
             esp32_marauder_v*.bin
