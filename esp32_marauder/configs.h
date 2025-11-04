@@ -226,7 +226,7 @@
     #define HAS_TOUCH
     #define HAS_FLIPPER_LED
     //#define FLIPPER_ZERO_HAT
-    #define HAS_BATTERY
+    //#define HAS_BATTERY
     #define HAS_BT
     #define HAS_BT_REMOTE
     #define HAS_BUTTONS
@@ -245,7 +245,7 @@
     #define HAS_TOUCH
     #define HAS_FLIPPER_LED
     //#define FLIPPER_ZERO_HAT
-    #define HAS_BATTERY
+    //#define HAS_BATTERY
     #define HAS_BT
     #define HAS_BT_REMOTE
     #define HAS_BUTTONS
@@ -265,7 +265,7 @@
     #define HAS_TOUCH
     #define HAS_FLIPPER_LED
     //#define FLIPPER_ZERO_HAT
-    #define HAS_BATTERY
+    //#define HAS_BATTERY
     #define HAS_BT
     #define HAS_BT_REMOTE
     #define HAS_BUTTONS
@@ -2196,6 +2196,8 @@
     #define STANDARD_FONT_CHAR_LIMIT 40
     #define FLASH_BUTTON -1
 
+    #define CHAN_PER_PAGE 7
+
     #include <FS.h>
     #include <functional>
     #include <LinkedList.h>
@@ -2302,16 +2304,16 @@
       #define GPS_RX 13
     #elif defined(MARAUDER_CYD_MICRO)
       #define GPS_SERIAL_INDEX 2
-      #define GPS_TX 1 // Community pinout matching old forks and even bruce firmware allowing for hardware standardization
-      #define GPS_RX 3
+      #define GPS_TX 22 // Whoever thought it would be a good idea to use UART0 for GPS...
+      #define GPS_RX 27 // Now maybe we will be able to use CLI
     #elif defined(MARAUDER_CYD_2USB)
       #define GPS_SERIAL_INDEX 2
-      #define GPS_TX 1 // Community pinout matching old forks and even bruce firmware allowing for hardware standardization
-      #define GPS_RX 3
+      #define GPS_TX 22 // Whoever thought it would be a good idea to use UART0 for GPS...
+      #define GPS_RX 27 // Now maybe we will be able to use CLI
     #elif defined(MARAUDER_CYD_3_5_INCH)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 21
-      #define GPS_RX 22
+      #define GPS_RX 25
     #elif defined(MARAUDER_CYD_GUITION)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 21 // Fits the extended I/O
@@ -2430,6 +2432,11 @@
     #ifdef MARAUDER_CYD_3_5_INCH
       #define I2C_SDA 32
       #define I2C_SCL 25
+    #endif
+
+    #ifdef MARAUDER_CYD_GUITION
+      #define I2C_SDA 22
+      #define I2C_SCL 21
     #endif
 
     #ifdef MARAUDER_V8
