@@ -1128,6 +1128,18 @@ void MenuFunctions::main(uint32_t currentTime)
             else
               wifi_scan_obj.changeChannel(1);
           }
+          else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
+            #ifndef HAS_DUAL_BAND
+              if (wifi_scan_obj.activity_page < MAX_CHANNEL / CHAN_PER_PAGE) {
+                wifi_scan_obj.activity_page++;
+              }
+            #else
+              if (wifi_scan_obj.activity_page < DUAL_BAND_CHANNELS / CHAN_PER_PAGE) {
+                wifi_scan_obj.activity_page++;
+              }
+            #endif
+            wifi_scan_obj.drawChannelLine();
+          }
         }
         if (menu_button == DOWN_BUTTON) {
           if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
@@ -1171,6 +1183,18 @@ void MenuFunctions::main(uint32_t currentTime)
               wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
             else
               wifi_scan_obj.changeChannel(14);
+          }
+          else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
+            #ifndef HAS_DUAL_BAND
+              if (wifi_scan_obj.activity_page > 1) {
+                wifi_scan_obj.activity_page--;
+              }
+            #else
+              if (wifi_scan_obj.activity_page > 0) {
+                wifi_scan_obj.activity_page--;
+              }
+            #endif
+            wifi_scan_obj.drawChannelLine();
           }
         }
         if(menu_button == SELECT_BUTTON) {
@@ -1272,6 +1296,18 @@ void MenuFunctions::main(uint32_t currentTime)
                 else
                   wifi_scan_obj.changeChannel(1);
               }
+              else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
+                #ifndef HAS_DUAL_BAND
+                  if (wifi_scan_obj.activity_page < MAX_CHANNEL / CHAN_PER_PAGE) {
+                    wifi_scan_obj.activity_page++;
+                  }
+                #else
+                  if (wifi_scan_obj.activity_page < DUAL_BAND_CHANNELS / CHAN_PER_PAGE) {
+                    wifi_scan_obj.activity_page++;
+                  }
+                #endif
+                wifi_scan_obj.drawChannelLine();
+              }
             }
         #endif
       #endif
@@ -1323,6 +1359,18 @@ void MenuFunctions::main(uint32_t currentTime)
             wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
           else
             wifi_scan_obj.changeChannel(14);
+        }
+        else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
+          #ifndef HAS_DUAL_BAND
+            if (wifi_scan_obj.activity_page > 1) {
+              wifi_scan_obj.activity_page--;
+            }
+          #else
+            if (wifi_scan_obj.activity_page > 0) {
+              wifi_scan_obj.activity_page--;
+            }
+          #endif
+          wifi_scan_obj.drawChannelLine();
         }
       }
       #endif
