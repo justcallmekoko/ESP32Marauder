@@ -4049,6 +4049,18 @@ void MenuFunctions::setGraphScale(float scale) {
   this->_graph_scale = scale;
 }
 
+float MenuFunctions::calculateGraphScale(uint8_t value) {
+  if ((value * this->_graph_scale < GRAPH_VERT_LIM) && (value * this->_graph_scale > GRAPH_VERT_LIM * 0.75)) {
+    return this->_graph_scale;  // No scaling needed if the value is within the limit
+  }
+
+  if (value < GRAPH_VERT_LIM)
+    return 1.0;
+
+  // Calculate the multiplier proportionally
+  return (0.75 * GRAPH_VERT_LIM) / value;
+}
+
 float MenuFunctions::calculateGraphScale(int16_t value) {
   if ((value * this->_graph_scale < GRAPH_VERT_LIM) && (value * this->_graph_scale > GRAPH_VERT_LIM * 0.75)) {
     return this->_graph_scale;  // No scaling needed if the value is within the limit
@@ -4081,10 +4093,10 @@ float MenuFunctions::graphScaleCheck(const int16_t array[TFT_WIDTH]) {
 }
 
 float MenuFunctions::graphScaleCheckSmall(const uint8_t array[CHAN_PER_PAGE]) {
-  int16_t maxValue = 0;
+  uint8_t maxValue = 0;
 
   // Iterate through the array to find the highest value
-  for (int16_t i = 0; i < CHAN_PER_PAGE; i++) {
+  for (uint8_t i = 0; i < CHAN_PER_PAGE; i++) {
     if (array[i] > maxValue) {
       maxValue = array[i];
     }
@@ -4107,12 +4119,20 @@ void MenuFunctions::drawMaxLine(int16_t value, uint16_t color) {
   display_obj.tft.println((String)(value / BASE_MULTIPLIER));
 }
 
+void MenuFunctions::drawMaxLine(uint8_t value, uint16_t color) {
+  //display_obj.tft.drawLine(0, TFT_HEIGHT - (value * this->_graph_scale), TFT_WIDTH, TFT_HEIGHT - (value * this->_graph_scale), color);
+  display_obj.tft.setCursor(0, TFT_HEIGHT - (value * this->_graph_scale));
+  display_obj.tft.setTextColor(color, TFT_BLACK);
+  display_obj.tft.setTextSize(1);
+  display_obj.tft.println((String)value);
+}
+
 void MenuFunctions::drawGraphSmall(uint8_t *values) {
-  int16_t maxValue = 0;
+  uint8_t maxValue = 0;
   //(i + (CHAN_PER_PAGE * (this->activity_page - 1)))
 
   int bar_width = TFT_WIDTH / (CHAN_PER_PAGE * 2);
-  display_obj.tft.fillRect(0, TFT_HEIGHT / 2 + 1, TFT_WIDTH, (TFT_HEIGHT / 2) + 1, TFT_BLACK);
+  //display_obj.tft.fillRect(0, TFT_HEIGHT / 2 + 1, TFT_WIDTH, (TFT_HEIGHT / 2) + 1, TFT_BLACK);
 
   #ifndef HAS_DUAL_BAND
     for (int i = 1; i < CHAN_PER_PAGE + 1; i++) {
@@ -4124,9 +4144,26 @@ void MenuFunctions::drawGraphSmall(uint8_t *values) {
         maxValue = values[targ_val];
       }
 
+      display_obj.tft.fillRect(x_coord, TFT_HEIGHT / 2 + 1, bar_width, TFT_HEIGHT / 2 + 1, TFT_BLACK);
       display_obj.tft.fillRect(x_coord, TFT_HEIGHT - (values[targ_val] * this->_graph_scale), bar_width, values[targ_val] * this->_graph_scale, TFT_CYAN);
+
+      display_obj.tft.drawLine(x_coord - 2, TFT_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2), x_coord - 2, TFT_HEIGHT, TFT_WHITE);
     }
   #else
+    for (int i = 1; i < CHAN_PER_PAGE + 1; i++) {
+      int targ_val = i + (CHAN_PER_PAGE * (wifi_scan_obj.activity_page - 1)) - 1;
+      int x_mult = (i * 2) - 1;
+      int x_coord = (TFT_WIDTH / (CHAN_PER_PAGE * 2)) * (x_mult - 1);
+
+      if (values[targ_val] > maxValue) {
+        maxValue = values[targ_val];
+      }
+
+      display_obj.tft.fillRect(x_coord, TFT_HEIGHT / 2 + 1, bar_width, TFT_HEIGHT / 2 + 1, TFT_BLACK);
+      display_obj.tft.fillRect(x_coord, TFT_HEIGHT - (values[targ_val] * this->_graph_scale), bar_width, values[targ_val] * this->_graph_scale, TFT_CYAN);
+
+      display_obj.tft.drawLine(x_coord - 2, TFT_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2), x_coord - 2, TFT_HEIGHT, TFT_WHITE);
+    }
   #endif
 
   this->drawMaxLine(maxValue, TFT_GREEN); // Draw max
@@ -4156,7 +4193,7 @@ void MenuFunctions::drawGraph(int16_t *values) {
   }
 
   this->drawMaxLine(maxValue, TFT_GREEN); // Draw max
-  this->drawMaxLine(total / TFT_WIDTH, TFT_ORANGE); // Draw average
+  this->drawMaxLine((int16_t)(total / TFT_WIDTH), TFT_ORANGE); // Draw average
 }
 
 void MenuFunctions::renderGraphUI(uint8_t scan_mode) {
