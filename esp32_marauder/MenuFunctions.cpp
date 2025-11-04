@@ -819,6 +819,15 @@ void MenuFunctions::main(uint32_t currentTime)
           this->drawGraph(wifi_scan_obj._analyzer_values);
         #endif
       }
+
+      if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
+        #ifdef HAS_SCREEN
+          this->setGraphScale(this->graphScaleCheckSmall(wifi_scan_obj.channel_activity));
+
+          this->drawGraphSmall(wifi_scan_obj.channel_activity);
+
+        #endif
+      }
     }
   }
 
@@ -1021,6 +1030,7 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_ACTIVE_LIST_EAPOL) ||
             (wifi_scan_obj.currentScanMode == WIFI_PACKET_MONITOR) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ANALYZER) ||
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_PACKET_RATE) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_ANALYZER))
         {
@@ -1062,6 +1072,7 @@ void MenuFunctions::main(uint32_t currentTime)
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_PACKET_RATE) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_RAW_CAPTURE) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_CHAN_ANALYZER) &&
+        (wifi_scan_obj.currentScanMode != WIFI_SCAN_CHAN_ACT) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_SIG_STREN) &&
 		(wifi_scan_obj.currentScanMode != WIFI_ATTACK_FUNNY_BEACON) &&
         (wifi_scan_obj.currentScanMode != WIFI_ATTACK_RICK_ROLL))
@@ -2259,6 +2270,12 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     this->renderGraphUI(WIFI_SCAN_CHAN_ANALYZER);
     wifi_scan_obj.StartScan(WIFI_SCAN_CHAN_ANALYZER, TFT_CYAN);
+  });
+  this->addNodes(&wifiSnifferMenu, "Channel Summary", TFTORANGE, NULL, PACKET_MONITOR, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    this->renderGraphUI(WIFI_SCAN_CHAN_ACT);
+    wifi_scan_obj.StartScan(WIFI_SCAN_CHAN_ACT, TFT_CYAN);
   });
 
   this->addNodes(&wifiSnifferMenu, text_table1[58], TFTWHITE, NULL, PACKET_MONITOR, [this]() {
@@ -4015,12 +4032,56 @@ float MenuFunctions::graphScaleCheck(const int16_t array[TFT_WIDTH]) {
   return 1.0;
 }
 
+float MenuFunctions::graphScaleCheckSmall(const uint8_t array[CHAN_PER_PAGE]) {
+  int16_t maxValue = 0;
+
+  // Iterate through the array to find the highest value
+  for (int16_t i = 0; i < CHAN_PER_PAGE; i++) {
+    if (array[i] > maxValue) {
+      maxValue = array[i];
+    }
+  }
+
+  // If the highest value exceeds GRAPH_VERT_LIM, call calculateMultiplier
+  if (maxValue > GRAPH_VERT_LIM) {
+    return this->calculateGraphScale(maxValue);
+  }
+
+  // If the highest value does not exceed GRAPH_VERT_LIM, return 1.0
+  return 1.0;
+}
+
 void MenuFunctions::drawMaxLine(int16_t value, uint16_t color) {
   display_obj.tft.drawLine(0, TFT_HEIGHT - (value * this->_graph_scale), TFT_WIDTH, TFT_HEIGHT - (value * this->_graph_scale), color);
   display_obj.tft.setCursor(0, TFT_HEIGHT - (value * this->_graph_scale));
   display_obj.tft.setTextColor(color, TFT_BLACK);
   display_obj.tft.setTextSize(1);
   display_obj.tft.println((String)(value / BASE_MULTIPLIER));
+}
+
+void MenuFunctions::drawGraphSmall(uint8_t *values) {
+  int16_t maxValue = 0;
+  //(i + (CHAN_PER_PAGE * (this->activity_page - 1)))
+
+  int bar_width = TFT_WIDTH / (CHAN_PER_PAGE * 2);
+  display_obj.tft.fillRect(0, TFT_HEIGHT / 2 + 1, TFT_WIDTH, (TFT_HEIGHT / 2) + 1, TFT_BLACK);
+
+  #ifndef HAS_DUAL_BAND
+    for (int i = 1; i < CHAN_PER_PAGE + 1; i++) {
+      int targ_val = i + (CHAN_PER_PAGE * (wifi_scan_obj.activity_page - 1)) - 1;
+      int x_mult = (i * 2) - 1;
+      int x_coord = (TFT_WIDTH / (CHAN_PER_PAGE * 2)) * (x_mult - 1);
+
+      if (values[targ_val] > maxValue) {
+        maxValue = values[targ_val];
+      }
+
+      display_obj.tft.fillRect(x_coord, TFT_HEIGHT - (values[targ_val] * this->_graph_scale), bar_width, values[targ_val] * this->_graph_scale, TFT_CYAN);
+    }
+  #else
+  #endif
+
+  this->drawMaxLine(maxValue, TFT_GREEN); // Draw max
 }
 
 void MenuFunctions::drawGraph(int16_t *values) {
