@@ -7255,6 +7255,8 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
   else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
     #ifndef HAS_DUAL_BAND
       wifi_scan_obj.channel_activity[wifi_scan_obj.set_channel - 1] = wifi_scan_obj.channel_activity[wifi_scan_obj.set_channel - 1] + 1;
+    #else
+      wifi_scan_obj.channel_activity[wifi_scan_obj.dual_band_channel_index] = wifi_scan_obj.channel_activity[wifi_scan_obj.dual_band_channel_index] + 1;
     #endif
   }
   else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_PACKET_RATE) {
@@ -8070,7 +8072,7 @@ void WiFiScan::signalAnalyzerLoop(uint32_t tick) {
 void WiFiScan::drawChannelLine() {
   #ifdef HAS_SCREEN
     //#ifdef HAS_FULL_SCREEN
-      display_obj.tft.fillRect(0, TFT_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2), TFT_WIDTH, (CHAR_WIDTH * 2) - 1, TFT_MAGENTA);
+      display_obj.tft.fillRect(0, TFT_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2), TFT_WIDTH, (CHAR_WIDTH * 2) - 1, TFT_BLACK);
     //#else
     //#endif
     Serial.println("Drawing channel line...");
@@ -8084,10 +8086,22 @@ void WiFiScan::drawChannelLine() {
           display_obj.tft.setTextSize(1);
         #endif
         display_obj.tft.setCursor(x_coord, TFT_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2));
-        display_obj.tft.setTextColor(TFT_BLACK, TFT_CYAN);
+        display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
         display_obj.tft.print((String)(i + (CHAN_PER_PAGE * (this->activity_page - 1))));
       }
     #else
+      for (int i = 1; i < CHAN_PER_PAGE + 1; i++) {
+        int x_mult = (i * 2) - 1;
+        int x_coord = (TFT_WIDTH / (CHAN_PER_PAGE * 2)) * (x_mult - 1);
+        //#ifdef HAS_FULL_SCREEN
+        //  display_obj.tft.setTextSize(2);
+        //#else
+          display_obj.tft.setTextSize(1);
+        //#endif
+        display_obj.tft.setCursor(x_coord, TFT_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2));
+        display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+        display_obj.tft.print((String)this->dual_band_channels[(i + (CHAN_PER_PAGE * (this->activity_page - 1)) - 1)]);
+      }
     #endif
   #endif
 }
@@ -8108,7 +8122,11 @@ void WiFiScan::channelActivityLoop(uint32_t tick) {
       initTime = millis();
       Serial.println("--------------");
       for (int i = (activity_page * CHAN_PER_PAGE) - CHAN_PER_PAGE; i < activity_page * CHAN_PER_PAGE; i++) {
-        Serial.println((String)(i+1) + ": " + (String)channel_activity[i]);
+        #ifndef HAS_DUAL_BAND
+          Serial.println((String)(i+1) + ": " + (String)channel_activity[i]);
+        #else
+          Serial.println((String)this->dual_band_channels[i] + ": " + (String)channel_activity[i]);
+        #endif
         channel_activity[i] = 0;
       }
     }
