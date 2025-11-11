@@ -315,6 +315,8 @@ jobs:
         id: meta
         shell: bash
         run: |
+          VERSION=$(grep '#define MARAUDER_VERSION' ./esp32_marauder/configs.h | sed -E 's/.*"v([^"]+)"/v\1/' | tr '.' '_')
+          DATE=$(date +%Y%m%d)
           SHORT_SHA="$(git rev-parse --short HEAD)"
           if [[ "${{ github.event_name }}" == "schedule" ]]; then
             echo "name=${SHORT_SHA}_nightly" >> $GITHUB_OUTPUT
@@ -326,6 +328,10 @@ jobs:
             echo "tag=manual-$(date -u +'%Y%m%d')-${SHORT_SHA}" >> $GITHUB_OUTPUT
             echo "prerelease=false" >> $GITHUB_OUTPUT
           fi
+          
+          echo "wild_card=esp32_marauder_${VERSION}_beta_${DATE}_*.bin" >> $GITHUB_ENV
+          
+          echo ${{ env.wild_card }}
           
       - name: Delete old assets on nightly release (if any)
         uses: actions/github-script@v7
