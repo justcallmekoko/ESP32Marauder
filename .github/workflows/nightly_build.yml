@@ -289,6 +289,7 @@ jobs:
 
           echo "artifact_name=$OUTPUT_BIN" >> $GITHUB_ENV
           echo "artifact_path=$BUILD_DIR/$OUTPUT_BIN" >> $GITHUB_ENV
+          echo "wild_card=esp32_marauder_${VERSION}_beta_${DATE}_*.bin" >> $GITHUB_ENV
           
       - name: Upload ${{ matrix.board.name }} Artifact
         uses: actions/upload-artifact@v4
@@ -359,7 +360,7 @@ jobs:
           generate_release_notes: false
           draft: false
           files: |
-            esp32_marauder_v*.bin
+            ${{ env.wild_card }}
           body: |
             [justcallmekokollc.com](https://justcallmekokollc.com)
 
