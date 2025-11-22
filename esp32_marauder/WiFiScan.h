@@ -139,6 +139,8 @@
 #define BT_SCAN_AIRTAG_MON 70
 #define WIFI_SCAN_CHAN_ACT 71
 #define BT_SCAN_FLOCK 72
+#define BT_SCAN_SIMPLE 73
+#define BT_SCAN_SIMPLE_TWO 74
 
 #define WIFI_ATTACK_FUNNY_BEACON 99 
 
@@ -616,6 +618,8 @@ class WiFiScan
     uint32_t eapol_frames = 0;
     int8_t min_rssi = 0;
     int8_t max_rssi = -128;
+
+    int bt_frames = 0;
 
     bool force_pmkid = false;
     bool force_probe = false;

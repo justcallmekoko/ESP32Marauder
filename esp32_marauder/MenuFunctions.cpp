@@ -921,6 +921,8 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == BT_SCAN_AIRTAG_MON) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_FLIPPER) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_FLOCK) ||
+          (wifi_scan_obj.currentScanMode == BT_SCAN_SIMPLE) ||
+          (wifi_scan_obj.currentScanMode == BT_SCAN_SIMPLE_TWO) ||
           (wifi_scan_obj.currentScanMode == BT_ATTACK_SOUR_APPLE) ||
           (wifi_scan_obj.currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
           (wifi_scan_obj.currentScanMode == BT_ATTACK_SPAM_ALL) ||
@@ -1017,6 +1019,8 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == BT_SCAN_AIRTAG_MON) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_FLIPPER) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_FLOCK) ||
+            (wifi_scan_obj.currentScanMode == BT_SCAN_SIMPLE) ||
+            (wifi_scan_obj.currentScanMode == BT_SCAN_SIMPLE_TWO) ||
             (wifi_scan_obj.currentScanMode == BT_ATTACK_SOUR_APPLE) ||
             (wifi_scan_obj.currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
             (wifi_scan_obj.currentScanMode == BT_ATTACK_SPAM_ALL) ||
@@ -3172,6 +3176,16 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_SCAN_FLOCK, TFT_ORANGE);
   });
+  /*this->addNodes(&bluetoothSnifferMenu, "Simple Sniff", TFTWHITE, NULL, BLUETOOTH_SNIFF, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(BT_SCAN_SIMPLE, TFT_ORANGE);
+  });
+  this->addNodes(&bluetoothSnifferMenu, "Simple Sniff 2", TFTWHITE, NULL, BLUETOOTH_SNIFF, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(BT_SCAN_SIMPLE_TWO, TFT_ORANGE);
+  });*/
 
   // Bluetooth Attack menu
   bluetoothAttackMenu.parentMenu = &bluetoothMenu; // Second Menu is third menu parent

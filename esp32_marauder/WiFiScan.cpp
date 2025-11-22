@@ -623,6 +623,12 @@ extern "C" {
             // (struct FlockBattery { String mac; String name; String serial; int rssi; uint32_t last_seen; }; etc.)
           }
         }
+        else if (wifi_scan_obj.currentScanMode == BT_SCAN_SIMPLE) {
+          wifi_scan_obj.bt_frames++;
+        }
+        else if (wifi_scan_obj.currentScanMode == BT_SCAN_SIMPLE_TWO) {
+          wifi_scan_obj.bt_frames++;
+        }
 
         return;
       }
@@ -1223,7 +1229,9 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
           (scan_mode == BT_SCAN_AIRTAG_MON) ||
           (scan_mode == BT_SCAN_FLIPPER) ||
           (scan_mode == BT_SCAN_FLOCK) ||
-          (scan_mode == BT_SCAN_ANALYZER)) {
+          (scan_mode == BT_SCAN_ANALYZER) ||
+          (scan_mode == BT_SCAN_SIMPLE) ||
+          (scan_mode == BT_SCAN_SIMPLE_TWO)) {
     #ifdef HAS_BT
       RunBluetoothScan(scan_mode, color);
     #endif
@@ -1409,6 +1417,7 @@ bool WiFiScan::shutdownBLE() {
       NimBLEDevice::deinit();
 
       this->_analyzer_value = 0;
+      this->bt_frames = 0;
     
       this->ble_initialized = false;
     }
@@ -1553,7 +1562,9 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   (currentScanMode == BT_SCAN_WAR_DRIVE) ||
   (currentScanMode == BT_SCAN_WAR_DRIVE_CONT) ||
   (currentScanMode == BT_SCAN_SKIMMERS) ||
-  (currentScanMode == BT_SCAN_ANALYZER))
+  (currentScanMode == BT_SCAN_ANALYZER) ||
+  (currentScanMode == BT_SCAN_SIMPLE) ||
+  (currentScanMode == BT_SCAN_SIMPLE_TWO))
   {
     #ifdef HAS_BT
       #ifdef HAS_SCREEN
@@ -4006,13 +4017,18 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
     if (scan_mode == BT_SCAN_FLOCK)
       NimBLEDevice::setScanDuplicateCacheSize(0);
 
+    if ((scan_mode == BT_SCAN_SIMPLE) || (scan_mode == BT_SCAN_SIMPLE_TWO))
+      NimBLEDevice::setScanDuplicateCacheSize(0);
+
     NimBLEDevice::init("");
     pBLEScan = NimBLEDevice::getScan(); //create new scan
     if ((scan_mode == BT_SCAN_ALL) ||
         (scan_mode == BT_SCAN_AIRTAG) ||
         (scan_mode == BT_SCAN_AIRTAG_MON) ||
         (scan_mode == BT_SCAN_FLIPPER) ||
-        (scan_mode == BT_SCAN_FLOCK))
+        (scan_mode == BT_SCAN_FLOCK) ||
+        (scan_mode == BT_SCAN_SIMPLE) ||
+        (scan_mode == BT_SCAN_SIMPLE_TWO))
     {
       #ifdef HAS_SCREEN
         display_obj.TOP_FIXED_AREA_2 = 48;
@@ -4032,6 +4048,10 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
             display_obj.tft.drawCentreString("Flipper Sniff", TFT_WIDTH / 2, 16, 2);
           else if (scan_mode == BT_SCAN_FLOCK)
             display_obj.tft.drawCentreString("Flock Sniff", TFT_WIDTH / 2, 16, 2);
+          else if (scan_mode == BT_SCAN_SIMPLE)
+            display_obj.tft.drawCentreString("Simple Sniff", TFT_WIDTH / 2, 16, 2);
+          else if (scan_mode == BT_SCAN_SIMPLE_TWO)
+            display_obj.tft.drawCentreString("Simple Sniff 2", TFT_WIDTH / 2, 16, 2);
           #ifdef HAS_ILI9341
             display_obj.touchToExit();
           #endif
@@ -4051,6 +4071,12 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
       }
       else if (scan_mode == BT_SCAN_FLOCK) {
         pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), true);
+      }
+      else if (scan_mode == BT_SCAN_SIMPLE) {
+        pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), true);
+      }
+      else if (scan_mode == BT_SCAN_SIMPLE_TWO) {
+        pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), false);
       }
     }
     else if ((scan_mode == BT_SCAN_WAR_DRIVE) || (scan_mode == BT_SCAN_WAR_DRIVE_CONT)) {
@@ -4130,14 +4156,11 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
       #endif
       pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), false);
     }
-    if (scan_mode != BT_SCAN_FLOCK)
-      pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
-    else
-      pBLEScan->setActiveScan(false);
+    pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
     pBLEScan->setInterval(100);
     pBLEScan->setWindow(99);  // less or equal setInterval value
     pBLEScan->setMaxResults(0);
-    if ((scan_mode == BT_SCAN_WAR_DRIVE_CONT) || (scan_mode == BT_SCAN_ANALYZER) || (scan_mode == BT_SCAN_FLOCK))
+    if ((scan_mode == BT_SCAN_WAR_DRIVE_CONT) || (scan_mode == BT_SCAN_ANALYZER) || (scan_mode == BT_SCAN_FLOCK) || (scan_mode == BT_SCAN_SIMPLE) || (scan_mode == BT_SCAN_SIMPLE_TWO))
       pBLEScan->setDuplicateFilter(false);
     pBLEScan->start(0, scanCompleteCB, false);
     Serial.println("Started BLE Scan");
@@ -9117,6 +9140,17 @@ void WiFiScan::main(uint32_t currentTime)
     #ifdef HAS_SCREEN
       eapolMonitorMain(currentTime);
     #endif    
+  }
+  else if ((currentScanMode == BT_SCAN_SIMPLE) || (currentScanMode == BT_SCAN_SIMPLE_TWO)) {
+    if (currentTime - initTime >= 1000) {
+      initTime = millis();
+      String displayString = "BT Frames: ";
+      displayString.concat(this->bt_frames);
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+        display_obj.showCenterText(displayString, TFT_HEIGHT / 2);
+      #endif
+    }
   }
   else if (currentScanMode == WIFI_ATTACK_AUTH) {
     for (int i = 0; i < 55; i++)
