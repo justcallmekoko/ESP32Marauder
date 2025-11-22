@@ -8892,10 +8892,12 @@ void WiFiScan::main(uint32_t currentTime)
   else if (currentScanMode == BT_SCAN_FLOCK) {
     if (currentTime - initTime >= 5000) {
       initTime = millis();
-      pBLEScan->stop();
-      delay(5);
-      pBLEScan->clearResults();
-      pBLEScan->start(0, scanCompleteCB, false);
+      #ifdef HAS_BT
+        pBLEScan->stop();
+        delay(5);
+        pBLEScan->clearResults();
+        pBLEScan->start(0, scanCompleteCB, false);
+      #endif
     }
   }
   else if (currentScanMode == WIFI_PING_SCAN) {
