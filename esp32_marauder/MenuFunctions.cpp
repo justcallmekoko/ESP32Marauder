@@ -3171,7 +3171,7 @@ void MenuFunctions::RunSetup()
     this->renderGraphUI(BT_SCAN_ANALYZER);
     wifi_scan_obj.StartScan(BT_SCAN_ANALYZER, TFT_CYAN);
   });
-  this->addNodes(&bluetoothSnifferMenu, "Flock Sniff", TFTORANGE, NULL, BLUETOOTH_SNIFF, [this]() {
+  this->addNodes(&bluetoothSnifferMenu, "Flock Sniff", TFTORANGE, NULL, FLOCK, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_SCAN_FLOCK, TFT_ORANGE);
