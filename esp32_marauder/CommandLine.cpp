@@ -1154,40 +1154,31 @@ void CommandLine::runCommand(String input) {
             int cont_sw = this->argSearch(&cmd_args, "-c");
 
             if (cont_sw == -1) {
-              Serial.println("Starting BT Wardrive. Stop with " + (String)STOPSCAN_CMD);
+              Serial.println("Starting BT Wardrive. Stop with button press.");
               #ifdef HAS_SCREEN
                 display_obj.clearScreen();
                 menu_function_obj.drawStatusBar();
               #endif
               wifi_scan_obj.StartScan(BT_SCAN_WAR_DRIVE, TFT_GREEN);
             }
-            else {Serial.println("Starting Continuous BT Wardrive. Stop with " + (String)STOPSCAN_CMD);
+            else {
+              Serial.println("Starting Continuous BT Wardrive. Stop with button press.");
               #ifdef HAS_SCREEN
                 display_obj.clearScreen();
                 menu_function_obj.drawStatusBar();
               #endif
-              wifi_scan_obj.StartScan(BT_SCAN_WAR_DRIVE_CONT, TFT_GREEN);
+
+              if (wifi_scan_obj.StartScan(BT_SCAN_WAR_DRIVE_CONT, TFT_GREEN)) {
+                isContinuousWardriveActive = true;
+              }
             }
           }
-          else
+          else {
             Serial.println("GPS Module not detected");
+          }
         #else
           Serial.println("GPS not supported");
         #endif
-      #else
-        Serial.println("Bluetooth not supported");
-      #endif
-      
-    }
-    // Bluetooth CC Skimmer scan
-    else if (cmd_args.get(0) == BT_SKIM_CMD) {
-      #ifdef HAS_BT
-        Serial.println("Starting Bluetooth CC Skimmer scan. Stop with " + (String)STOPSCAN_CMD);
-        #ifdef HAS_SCREEN
-          display_obj.clearScreen();
-          menu_function_obj.drawStatusBar();
-        #endif
-        wifi_scan_obj.StartScan(BT_SCAN_SKIMMERS, TFT_MAGENTA);
       #else
         Serial.println("Bluetooth not supported");
       #endif
