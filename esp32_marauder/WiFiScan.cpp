@@ -8912,7 +8912,11 @@ void WiFiScan::main(uint32_t currentTime)
       channelHop();
     }
   }
-  else if (currentScanMode == BT_SCAN_FLOCK) {
+  else if ((currentScanMode == BT_SCAN_FLOCK) ||
+          (currentScanMode == BT_SCAN_WAR_DRIVE) ||
+          (currentScanMode == BT_SCAN_WAR_DRIVE_CONT) ||
+          (currentScanMode == BT_SCAN_FLIPPER) || 
+          (currentScanMode == BT_SCAN_AIRTAG)) {
     if (currentTime - initTime >= 5000) {
       initTime = millis();
       #ifdef HAS_BT
@@ -8956,6 +8960,13 @@ void WiFiScan::main(uint32_t currentTime)
   else if (currentScanMode == BT_SCAN_AIRTAG_MON) {
     if (currentTime - initTime >= this->channel_hop_delay * 500) {
       initTime = millis();
+
+      #ifdef HAS_BT
+        pBLEScan->stop();
+        delay(5);
+        pBLEScan->clearResults();
+        pBLEScan->start(0, scanCompleteCB, false);
+      #endif
 
       #ifdef HAS_SCREEN
         display_obj.tft.fillRect(0,
@@ -9004,6 +9015,15 @@ void WiFiScan::main(uint32_t currentTime)
   else if ((currentScanMode == WIFI_SCAN_CHAN_ANALYZER) ||
           (currentScanMode == BT_SCAN_ANALYZER)) {
     this->channelAnalyzerLoop(currentTime);
+
+    if (currentScanMode == BT_SCAN_ANALYZER) {
+      #ifdef HAS_BT
+        pBLEScan->stop();
+        delay(5);
+        pBLEScan->clearResults();
+        pBLEScan->start(0, scanCompleteCB, false);
+      #endif
+    }
   }
   else if (currentScanMode == WIFI_SCAN_CHAN_ACT) {
     this->channelActivityLoop(currentTime);
