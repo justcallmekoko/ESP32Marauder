@@ -93,6 +93,7 @@ extern Settings settings_obj;
 #define JOINED 38
 #define FORCE 39
 #define FUNNY_BEACON 40
+#define FLOCK 41
 
 PROGMEM void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p);
 PROGMEM bool my_touchpad_read(lv_indev_drv_t * indev_driver, lv_indev_data_t * data);
