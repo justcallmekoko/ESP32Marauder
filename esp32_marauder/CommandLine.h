@@ -99,8 +99,8 @@ const char PROGMEM LOAD_CMD[] = "load";
 const char PROGMEM JOIN_CMD[] = "join";
 const char PROGMEM MAC_CMD_A[] = "randapmac";
 const char PROGMEM MAC_CMD_B[] = "randstamac";
-const char PROGMEM MAC_CMD_C[] = "setapmac";
-const char PROGMEM MAC_CMD_D[] = "setstamac";
+const char PROGMEM MAC_CMD_C[] = "cloneapmac";
+const char PROGMEM MAC_CMD_D[] = "clonestamac";
 
 // Bluetooth sniff/scan
 const char PROGMEM BT_SPAM_CMD[] = "blespam";
@@ -172,8 +172,8 @@ const char PROGMEM HELP_LOAD_CMD[] = "load -a/-s";
 const char PROGMEM HELP_JOIN_CMD[] = "join -a <index> -p <password>/-s";
 const char PROGMEM HELP_MAC_CMD_A[] = "randapmac";
 const char PROGMEM HELP_MAC_CMD_B[] = "randstamac";
-const char PROGMEM HELP_MAC_CMD_C[] = "setapmac [-a <index>]";
-const char PROGMEM HELP_MAC_CMD_D[] = "setstamac [-s <index>]";
+const char PROGMEM HELP_MAC_CMD_C[] = "cloneapmac [-a <index>]";
+const char PROGMEM HELP_MAC_CMD_D[] = "clonestamac [-s <index>]";
 
 // Bluetooth sniff/scan
 const char PROGMEM HELP_BT_SNIFF_CMD[] = "sniffbt [-t] <airtag/flipper>";
