@@ -262,6 +262,10 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_SAVE_CMD);
     Serial.println(HELP_LOAD_CMD);
     Serial.println(HELP_JOIN_CMD);
+    Serial.println(HELP_MAC_CMD_A);
+    Serial.println(HELP_MAC_CMD_B);
+    Serial.println(HELP_MAC_CMD_C);
+    Serial.println(HELP_MAC_CMD_D);
     
     // Bluetooth sniff/scan
     #ifdef HAS_BT
