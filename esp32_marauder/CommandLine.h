@@ -97,6 +97,10 @@ const char PROGMEM SSID_CMD[] = "ssid";
 const char PROGMEM SAVE_CMD[] = "save";
 const char PROGMEM LOAD_CMD[] = "load";
 const char PROGMEM JOIN_CMD[] = "join";
+const char PROGMEM MAC_CMD_A[] = "randapmac";
+const char PROGMEM MAC_CMD_B[] = "randstamac";
+const char PROGMEM MAC_CMD_C[] = "cloneapmac";
+const char PROGMEM MAC_CMD_D[] = "clonestamac";
 
 // Bluetooth sniff/scan
 const char PROGMEM BT_SPAM_CMD[] = "blespam";
@@ -166,9 +170,13 @@ const char PROGMEM HELP_SSID_CMD_B[] = "ssid -r <index>";
 const char PROGMEM HELP_SAVE_CMD[] = "save -a/-s";
 const char PROGMEM HELP_LOAD_CMD[] = "load -a/-s";
 const char PROGMEM HELP_JOIN_CMD[] = "join -a <index> -p <password>/-s";
+const char PROGMEM HELP_MAC_CMD_A[] = "randapmac";
+const char PROGMEM HELP_MAC_CMD_B[] = "randstamac";
+const char PROGMEM HELP_MAC_CMD_C[] = "cloneapmac [-a <index>]";
+const char PROGMEM HELP_MAC_CMD_D[] = "clonestamac [-s <index>]";
 
 // Bluetooth sniff/scan
-const char PROGMEM HELP_BT_SNIFF_CMD[] = "sniffbt [-t] <airtag/flipper>";
+const char PROGMEM HELP_BT_SNIFF_CMD[] = "sniffbt [-t] <airtag/flipper/flock>";
 const char PROGMEM HELP_BT_SPAM_CMD[] = "blespam -t <apple/google/samsung/windows/flipper/all>";
 const char PROGMEM HELP_BT_SPOOFAT_CMD[] = "spoofat -t <index>";
 //const char PROGMEM HELP_BT_SOUR_APPLE_CMD[] = "sourapple";
