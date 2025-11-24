@@ -97,10 +97,10 @@ const char PROGMEM SSID_CMD[] = "ssid";
 const char PROGMEM SAVE_CMD[] = "save";
 const char PROGMEM LOAD_CMD[] = "load";
 const char PROGMEM JOIN_CMD[] = "join";
-const char PROGMEM MAC_CMD[] = "randapmac";
-const char PROGMEM MAC_CMD[] = "randstamac";
-const char PROGMEM MAC_CMD[] = "setapmac";
-const char PROGMEM MAC_CMD[] = "setstamac";
+const char PROGMEM MAC_CMD_A[] = "randapmac";
+const char PROGMEM MAC_CMD_B[] = "randstamac";
+const char PROGMEM MAC_CMD_C[] = "setapmac";
+const char PROGMEM MAC_CMD_D[] = "setstamac";
 
 // Bluetooth sniff/scan
 const char PROGMEM BT_SPAM_CMD[] = "blespam";
@@ -170,10 +170,10 @@ const char PROGMEM HELP_SSID_CMD_B[] = "ssid -r <index>";
 const char PROGMEM HELP_SAVE_CMD[] = "save -a/-s";
 const char PROGMEM HELP_LOAD_CMD[] = "load -a/-s";
 const char PROGMEM HELP_JOIN_CMD[] = "join -a <index> -p <password>/-s";
-const char PROGMEM HELP_MAC_CMD[] = "randapmac";
-const char PROGMEM HELP_MAC_CMD[] = "randstamac";
-const char PROGMEM HELP_MAC_CMD[] = "setapmac [-a <index>]";
-const char PROGMEM HELP_MAC_CMD[] = "setstamac [-s <index>]";
+const char PROGMEM HELP_MAC_CMD_A[] = "randapmac";
+const char PROGMEM HELP_MAC_CMD_B[] = "randstamac";
+const char PROGMEM HELP_MAC_CMD_C[] = "setapmac [-a <index>]";
+const char PROGMEM HELP_MAC_CMD_D[] = "setstamac [-s <index>]";
 
 // Bluetooth sniff/scan
 const char PROGMEM HELP_BT_SNIFF_CMD[] = "sniffbt [-t] <airtag/flipper>";
