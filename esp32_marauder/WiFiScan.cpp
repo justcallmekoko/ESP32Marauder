@@ -1835,12 +1835,14 @@ bool WiFiScan::mac_cmp(struct mac_addr addr1, struct mac_addr addr2) {
   return true;
 }
 
-void WiFiScan::copyNimbleMac(const BLEAddress &addr, unsigned char out[6]) {
-    const uint8_t* bytes = addr.getNative();  // NimBLE gives MAC as uint8_t[6]
-    for (int i = 0; i < 6; i++) {
-        out[i] = bytes[i];
-    }
-}
+#ifdef HAS_BT
+  void WiFiScan::copyNimbleMac(const BLEAddress &addr, unsigned char out[6]) {
+      const uint8_t* bytes = addr.getNative();  // NimBLE gives MAC as uint8_t[6]
+      for (int i = 0; i < 6; i++) {
+          out[i] = bytes[i];
+      }
+  }
+#endif
 
 bool WiFiScan::seen_mac(unsigned char* mac) {
   //Return true if this MAC address is in the recently seen array.

@@ -721,7 +721,9 @@ class WiFiScan
     #endif
     bool seen_mac(unsigned char* mac);
     void save_mac(unsigned char* mac);
-    void copyNimbleMac(const BLEAddress &addr, unsigned char out[6]);
+    #ifdef HAS_BT
+      void copyNimbleMac(const BLEAddress &addr, unsigned char out[6]);
+    #endif
     bool filterActive();
     bool RunGPSInfo(bool tracker = false, bool display = true, bool poi = false);
     void logPoint(String lat, String lon, float alt, String datetime, bool poi = false);
