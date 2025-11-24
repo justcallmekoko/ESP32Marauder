@@ -855,9 +855,8 @@ void CommandLine::runCommand(String input) {
           display_obj.clearScreen();
           menu_function_obj.drawStatusBar();
         #endif
-        for (int i = 0; i < access_points->size(); i++) {
-          wifi_scan_obj.RunSetMac(access_points->get(i).bssid, true);
-        }
+        int filter_ap = cmd_args.get(ap_sw + 1).toInt();
+        wifi_scan_obj.RunSetMac(access_points->get(filter_ap).bssid, true);
       }
     }
 
@@ -882,9 +881,8 @@ void CommandLine::runCommand(String input) {
           display_obj.clearScreen();
           menu_function_obj.drawStatusBar();
         #endif
-        for (int i = 0; i < stations->size(); i++) {
-          wifi_scan_obj.RunSetMac(stations->get(i).mac, false);
-        }
+        int filter_sta = cmd_args.get(cl_sw + 1).toInt();
+        wifi_scan_obj.RunSetMac(stations->get(filter_sta).mac, false);
       }
     }
     //// End MAC Address commands    (Added by H4W9_4)
