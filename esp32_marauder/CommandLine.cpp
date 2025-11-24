@@ -262,6 +262,10 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_SAVE_CMD);
     Serial.println(HELP_LOAD_CMD);
     Serial.println(HELP_JOIN_CMD);
+    Serial.println(HELP_MAC_CMD_A);
+    Serial.println(HELP_MAC_CMD_B);
+    Serial.println(HELP_MAC_CMD_C);
+    Serial.println(HELP_MAC_CMD_D);
     
     // Bluetooth sniff/scan
     #ifdef HAS_BT
@@ -809,6 +813,81 @@ void CommandLine::runCommand(String input) {
       }
     }    
 
+
+  //// MAC Address commands    (Added by H4W9_4)
+	// Generate random MAC for AP
+    if (cmd_args.get(0) == MAC_CMD_A) {
+      #ifdef HAS_SCREEN
+        display_obj.clearScreen();
+        menu_function_obj.drawStatusBar();
+      #endif
+      wifi_scan_obj.RunGenerateRandomMac(true);
+    }
+
+	  // Generate random MAC for STA
+	  else if (cmd_args.get(0) == MAC_CMD_B) {
+      //Serial.println("Setting STA MAC: " + macToString(this->sta_mac));
+      #ifdef HAS_SCREEN
+        display_obj.clearScreen();
+        menu_function_obj.drawStatusBar();
+      #endif
+      wifi_scan_obj.RunGenerateRandomMac(false);
+    }
+
+	  // Clone MAC for AP
+	  else if (cmd_args.get(0) == MAC_CMD_C) {
+      int ap_sw = this->argSearch(&cmd_args, "-a"); // APs
+      
+      if (ap_sw == -1) {
+        Serial.println("You did not provide a target index");
+        return;
+      }
+
+      int ap_index = cmd_args.get(ap_sw + 1).toInt();
+
+      if ((ap_index < 0) || (ap_index > access_points->size() - 1)) {
+        Serial.println("The provided index was not in range");
+        return;
+      }
+      
+      if (ap_sw != -1) {
+        #ifdef HAS_SCREEN
+          display_obj.clearScreen();
+          menu_function_obj.drawStatusBar();
+        #endif
+        int filter_ap = cmd_args.get(ap_sw + 1).toInt();
+        wifi_scan_obj.RunSetMac(access_points->get(filter_ap).bssid, true);
+      }
+    }
+
+    // Clone MAC for STA
+	  else if (cmd_args.get(0) == MAC_CMD_D) {
+      int cl_sw = this->argSearch(&cmd_args, "-s"); // Stations
+            
+      if (cl_sw == -1) {
+        Serial.println("You did not provide a target index");
+        return;
+      }
+
+      int sta_index = cmd_args.get(cl_sw + 1).toInt();
+
+      if ((sta_index < 0) || (sta_index > stations->size() - 1)) {
+        Serial.println("The provided index was not in range");
+        return;
+      }
+
+      if (cl_sw != -1) {
+        #ifdef HAS_SCREEN
+          display_obj.clearScreen();
+          menu_function_obj.drawStatusBar();
+        #endif
+        int filter_sta = cmd_args.get(cl_sw + 1).toInt();
+        wifi_scan_obj.RunSetMac(stations->get(filter_sta).mac, false);
+      }
+    }
+    //// End MAC Address commands    (Added by H4W9_4)
+
+    
     //// WiFi attack commands
     // attack
     if (cmd_args.get(0) == ATTACK_CMD) {
