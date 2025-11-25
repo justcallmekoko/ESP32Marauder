@@ -308,11 +308,11 @@ void CommandLine::runCommand(String input) {
     wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
 
     if(old_scan_mode == WIFI_SCAN_GPS_NMEA)
-      Serial.println("END OF NMEA STREAM");
+      Serial.println(F("END OF NMEA STREAM"));
     else if(old_scan_mode == WIFI_SCAN_GPS_DATA)
-      Serial.println("Stopping GPS data updates");
+      Serial.println(F("Stopping GPS data updates"));
     else
-      Serial.println("Stopping WiFi tran/recv");
+      Serial.println(F("Stopping WiFi tran/recv"));
 
     // If we don't do this, the text and button coordinates will be off
     #ifdef HAS_SCREEN
@@ -375,7 +375,7 @@ void CommandLine::runCommand(String input) {
               Serial.println(gps_obj.getNmeaNotparsed());
           }
           else
-            Serial.println("You did not provide a valid argument");
+            Serial.println(F("You did not provide a valid argument"));
         }
         else if(nmea_arg != -1){
           String nmea_type = cmd_args.get(nmea_arg + 1);
@@ -391,7 +391,7 @@ void CommandLine::runCommand(String input) {
             Serial.println("GPS Output Type Set To: " + nmea_type);
           }
           else
-            Serial.println("You did not provide a valid argument");
+            Serial.println(F("You did not provide a valid argument"));
         }
         else if (track_arg != -1) {
           wifi_scan_obj.currentScanMode = GPS_TRACKER;
@@ -401,9 +401,9 @@ void CommandLine::runCommand(String input) {
           wifi_scan_obj.StartScan(GPS_TRACKER, TFT_CYAN);
         }
         else if(cmd_args.size()>1)
-          Serial.println("You did not provide a valid flag");
+          Serial.println(F("You did not provide a valid flag"));
         else
-          Serial.println("You did not provide an argument");
+          Serial.println(F("You did not provide an argument"));
       }
     #endif
   }
@@ -413,7 +413,7 @@ void CommandLine::runCommand(String input) {
         #ifdef HAS_SCREEN
           menu_function_obj.changeMenu(&menu_function_obj.gpsInfoMenu);
         #endif
-        Serial.println("NMEA STREAM FOLLOWS");
+        Serial.println(F("NMEA STREAM FOLLOWS"));
         wifi_scan_obj.currentScanMode = WIFI_SCAN_GPS_NMEA;
         wifi_scan_obj.StartScan(WIFI_SCAN_GPS_NMEA, TFT_CYAN);
       }
@@ -444,7 +444,7 @@ void CommandLine::runCommand(String input) {
         }
       }
     #else
-      Serial.println("This hardware does not support neopixel");
+      Serial.println(F("This hardware does not support neopixel"));
     #endif
   }
   // ls command
@@ -453,9 +453,9 @@ void CommandLine::runCommand(String input) {
       if (cmd_args.size() > 1)
         sd_obj.listDir(cmd_args.get(1));
       else
-        Serial.println("You did not provide a dir to list");
+        Serial.println(F("You did not provide a dir to list"));
     #else
-      Serial.println("SD support disabled, cannot use command");
+      Serial.println(F("SD support disabled, cannot use command"));
       return;
     #endif
   }
@@ -524,7 +524,7 @@ void CommandLine::runCommand(String input) {
       else if (da_sw != -1)
         result = settings_obj.saveSetting<bool>(setting_name, false);
       else {
-        Serial.println("You did not properly enable/disable this setting.");
+        Serial.println(F("You did not properly enable/disable this setting."));
         return;
       }
 
@@ -536,7 +536,7 @@ void CommandLine::runCommand(String input) {
   }
 
   else if (cmd_args.get(0) == REBOOT_CMD) {
-    Serial.println("Rebooting...");
+    Serial.println(F("Rebooting..."));
     ESP.restart();
   }
 
@@ -587,9 +587,9 @@ void CommandLine::runCommand(String input) {
           }
         }
         else
-          Serial.println("GPS Module not detected");
+          Serial.println(F("GPS Module not detected"));
       #else
-        Serial.println("GPS not supported");
+        Serial.println(F("GPS not supported"));
       #endif
     }
     // Karma
@@ -597,14 +597,14 @@ void CommandLine::runCommand(String input) {
       int pr_sw = this->argSearch(&cmd_args, "-p");
 
       if (pr_sw == -1) {
-        Serial.println("You did not provide a target index");
+        Serial.println(F("You did not provide a target index"));
         return;
       }
 
       int pr_index = cmd_args.get(pr_sw + 1).toInt();
 
       if ((pr_index < 0) || (pr_index > probe_req_ssids->size() - 1)) {
-        Serial.println("The provided index was not in range");
+        Serial.println(F("The provided index was not in range"));
         return;
       }
 
@@ -618,7 +618,7 @@ void CommandLine::runCommand(String input) {
         wifi_scan_obj.setMac();
       }
       else {
-        Serial.println("Unable to set AP ESSID");
+        Serial.println(F("Unable to set AP ESSID"));
         return;
       }
 
@@ -839,14 +839,14 @@ void CommandLine::runCommand(String input) {
       int ap_sw = this->argSearch(&cmd_args, "-a"); // APs
       
       if (ap_sw == -1) {
-        Serial.println("You did not provide a target index");
+        Serial.println(F("You did not provide a target index"));
         return;
       }
 
       int ap_index = cmd_args.get(ap_sw + 1).toInt();
 
       if ((ap_index < 0) || (ap_index > access_points->size() - 1)) {
-        Serial.println("The provided index was not in range");
+        Serial.println(F("The provided index was not in range"));
         return;
       }
       
@@ -865,14 +865,14 @@ void CommandLine::runCommand(String input) {
       int cl_sw = this->argSearch(&cmd_args, "-s"); // Stations
             
       if (cl_sw == -1) {
-        Serial.println("You did not provide a target index");
+        Serial.println(F("You did not provide a target index"));
         return;
       }
 
       int sta_index = cmd_args.get(cl_sw + 1).toInt();
 
       if ((sta_index < 0) || (sta_index > stations->size() - 1)) {
-        Serial.println("The provided index was not in range");
+        Serial.println(F("The provided index was not in range"));
         return;
       }
 
@@ -900,7 +900,7 @@ void CommandLine::runCommand(String input) {
       int targ_sw = this->argSearch(&cmd_args, "-c");
   
       if (attack_type_switch == -1) {
-        Serial.println("You must specify an attack type");
+        Serial.println(F("You must specify an attack type"));
         return;
       }
       else {
@@ -911,7 +911,7 @@ void CommandLine::runCommand(String input) {
         if (attack_type == ATTACK_TYPE_DEAUTH) {
           // Default to broadcast
           if ((dst_addr_sw == -1) && (targ_sw == -1)) {
-            Serial.println("Sending to broadcast...");
+            Serial.println(F("Sending to broadcast..."));
             wifi_scan_obj.dst_mac = "ff:ff:ff:ff:ff:ff";
           }
           // Dest addr specified
@@ -921,7 +921,7 @@ void CommandLine::runCommand(String input) {
           }
           // Station list specified
           else if (targ_sw != -1)
-            Serial.println("Sending to Station list");
+            Serial.println(F("Sending to Station list"));
 
           // Source addr not specified
           if (src_addr_sw == -1) {
@@ -1066,7 +1066,7 @@ void CommandLine::runCommand(String input) {
           wifi_scan_obj.StartScan(WIFI_ATTACK_FUNNY_BEACON, TFT_CYAN);
         }
         else {
-          Serial.println("Attack type not properly defined");
+          Serial.println(F("Attack type not properly defined"));
           return;
         }
       }
@@ -1120,7 +1120,7 @@ void CommandLine::runCommand(String input) {
           wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_GREEN);
         }
       #else
-        Serial.println("Bluetooth not supported");
+        Serial.println(F("Bluetooth not supported"));
       #endif
     }
     else if (cmd_args.get(0) == BT_SPOOFAT_CMD) {
@@ -1165,7 +1165,7 @@ void CommandLine::runCommand(String input) {
             #endif
             wifi_scan_obj.StartScan(BT_ATTACK_SOUR_APPLE, TFT_GREEN);
           #else
-            Serial.println("Bluetooth not supported");
+            Serial.println(F("Bluetooth not supported"));
           #endif
         }
         else if (bt_type == "windows") {
@@ -1177,7 +1177,7 @@ void CommandLine::runCommand(String input) {
             #endif
             wifi_scan_obj.StartScan(BT_ATTACK_SWIFTPAIR_SPAM, TFT_CYAN);
           #else
-            Serial.println("Bluetooth not supported");
+            Serial.println(F("Bluetooth not supported"));
           #endif
         }
         else if (bt_type == "samsung") {
@@ -1189,7 +1189,7 @@ void CommandLine::runCommand(String input) {
             #endif
             wifi_scan_obj.StartScan(BT_ATTACK_SAMSUNG_SPAM, TFT_CYAN);
           #else
-            Serial.println("Bluetooth not supported");
+            Serial.println(F("Bluetooth not supported"));
           #endif
         }
         else if (bt_type == "google") {
@@ -1201,7 +1201,7 @@ void CommandLine::runCommand(String input) {
             #endif
             wifi_scan_obj.StartScan(BT_ATTACK_GOOGLE_SPAM, TFT_CYAN);
           #else
-            Serial.println("Bluetooth not supported");
+            Serial.println(F("Bluetooth not supported"));
           #endif
         }
         else if (bt_type == "flipper") {
@@ -1213,7 +1213,7 @@ void CommandLine::runCommand(String input) {
             #endif
             wifi_scan_obj.StartScan(BT_ATTACK_FLIPPER_SPAM, TFT_ORANGE);
           #else
-            Serial.println("Bluetooth not supported");
+            Serial.println(F("Bluetooth not supported"));
           #endif
         }
         else if (bt_type == "all") {
@@ -1225,11 +1225,11 @@ void CommandLine::runCommand(String input) {
             #endif
             wifi_scan_obj.StartScan(BT_ATTACK_SPAM_ALL, TFT_MAGENTA);
           #else
-            Serial.println("Bluetooth not supported");
+            Serial.println(F("Bluetooth not supported"));
           #endif
         }
         else {
-          Serial.println("You did not specify a correct spam type");
+          Serial.println(F("You did not specify a correct spam type"));
         }
       }
     }
@@ -1257,12 +1257,12 @@ void CommandLine::runCommand(String input) {
             }
           }
           else
-            Serial.println("GPS Module not detected");
+            Serial.println(F("GPS Module not detected"));
         #else
-          Serial.println("GPS not supported");
+          Serial.println(F("GPS not supported"));
         #endif
       #else
-        Serial.println("Bluetooth not supported");
+        Serial.println(F("Bluetooth not supported"));
       #endif
       
     }
@@ -1276,7 +1276,7 @@ void CommandLine::runCommand(String input) {
         #endif
         wifi_scan_obj.StartScan(BT_SCAN_SKIMMERS, TFT_MAGENTA);
       #else
-        Serial.println("Bluetooth not supported");
+        Serial.println(F("Bluetooth not supported"));
       #endif
     }
 
@@ -1298,13 +1298,13 @@ void CommandLine::runCommand(String input) {
       if (sd_sw != -1) {
         #ifdef HAS_SD
           if (!sd_obj.supported) {
-            Serial.println("SD card is not connected. Cannot perform SD Update");
+            Serial.println(F("SD card is not connected. Cannot perform SD Update"));
             return;
           }
           wifi_scan_obj.currentScanMode = OTA_UPDATE;
           sd_obj.runUpdate();
         #else
-          Serial.println("SD card support disabled. Cannot perform SD Update");
+          Serial.println(F("SD card support disabled. Cannot perform SD Update"));
           return;
         #endif
       }
@@ -1376,7 +1376,7 @@ void CommandLine::runCommand(String input) {
           #endif
         }
       #else
-        Serial.println("Your hardware doesn't have GPS, silly");
+        Serial.println(F("Your hardware doesn't have GPS, silly"));
         return;
       #endif
     }
@@ -1406,7 +1406,7 @@ void CommandLine::runCommand(String input) {
           }
         }
         else {
-          Serial.println("The IP index specified is out of range");
+          Serial.println(F("The IP index specified is out of range"));
           return;
         }
       }
@@ -1438,12 +1438,12 @@ void CommandLine::runCommand(String input) {
           wifi_scan_obj.StartScan(target_mode, TFT_CYAN);
         }
         else {
-          Serial.println("You did not specify a supported service");
+          Serial.println(F("You did not specify a supported service"));
           return;
         }
       }
       else {
-        Serial.println("You did not specify an IP index");
+        Serial.println(F("You did not specify an IP index"));
         return;
       }
     }
@@ -1525,7 +1525,7 @@ void CommandLine::runCommand(String input) {
       }
     }
     else {
-      Serial.println("You did not specify which list to show");
+      Serial.println(F("You did not specify which list to show"));
       return;
     }
   }
@@ -1573,11 +1573,11 @@ void CommandLine::runCommand(String input) {
         #endif
       }
       else {
-        Serial.println("There are no saved WiFi credentials");
+        Serial.println(F("There are no saved WiFi credentials"));
       }
     }
     else {
-      Serial.println("You did not provide the proper args");
+      Serial.println(F("You did not provide the proper args"));
       return;
     }
   }
@@ -1747,7 +1747,7 @@ void CommandLine::runCommand(String input) {
       this->showCounts(count_selected, count_unselected);
     }
     else {
-      Serial.println("You did not specify which list to select from");
+      Serial.println(F("You did not specify which list to select from"));
       return;
     }
   }
@@ -1806,7 +1806,7 @@ void CommandLine::runCommand(String input) {
         wifi_scan_obj.addSSID(essid);
       }
       else {
-        Serial.println("You did not specify how to add SSIDs");
+        Serial.println(F("You did not specify how to add SSIDs"));
       }
     }
     // Remove SSID
@@ -1819,7 +1819,7 @@ void CommandLine::runCommand(String input) {
       ssids->remove(index);
     }
     else {
-      Serial.println("You did not specify whether to add or remove SSIDs");
+      Serial.println(F("You did not specify whether to add or remove SSIDs"));
       return;
     }
   }

@@ -58,7 +58,7 @@ MenuFunctions::MenuFunctions()
   
     if(touchX>WIDTH_1 || touchY > HEIGHT_1)
     {
-      Serial.println("Y or y outside of expected parameters..");
+      Serial.println(F("Y or y outside of expected parameters.."));
       Serial.print("y:");
       Serial.print(touchX);
       Serial.print(" x:");
@@ -170,13 +170,13 @@ MenuFunctions::MenuFunctions()
       if (btn_text != text09) {
       }
       else {
-        Serial.println("Exiting...");
+        Serial.println(F("Exiting..."));
         lv_obj_del_async(lv_obj_get_parent(lv_obj_get_parent(btn)));
   
         for (int i = 0; i < stations->size(); i++) {
           if (stations->get(i).selected) {
             wifi_scan_obj.getMAC(addr, stations->get(i).mac, 0);
-            Serial.print("Selected: ");
+            Serial.print(F("Selected: "));
             Serial.println(addr);
           }
         }
@@ -193,7 +193,7 @@ MenuFunctions::MenuFunctions()
         for (int i = 0; i < stations->size(); i++) {
           wifi_scan_obj.getMAC(addr, stations->get(i).mac, 0); 
           if (strcmp(addr, btn_text.c_str()) == 0) {
-            Serial.print("Adding Station: ");
+            Serial.print(F("Adding Station: "));
             Serial.println(addr);
             Station sta = stations->get(i);
             sta.selected = true;
@@ -205,7 +205,7 @@ MenuFunctions::MenuFunctions()
         for (int i = 0; i < stations->size(); i++) {
           wifi_scan_obj.getMAC(addr, stations->get(i).mac, 0); 
           if (strcmp(addr, btn_text.c_str()) == 0) {
-            Serial.print("Removing Station: ");
+            Serial.print(F("Removing Station: "));
             Serial.println(addr);
             Station sta = stations->get(i);
             sta.selected = false;
@@ -256,7 +256,7 @@ MenuFunctions::MenuFunctions()
       if (btn_text != text09) {
       }
       else {
-        Serial.println("Exiting...");
+        Serial.println(F("Exiting..."));
         lv_obj_del_async(lv_obj_get_parent(lv_obj_get_parent(btn)));
   
         for (int i = 1; i < evil_portal_obj.html_files->size(); i++) {
@@ -360,7 +360,7 @@ MenuFunctions::MenuFunctions()
       }
       // It's the back button
       else {
-        Serial.println("Exiting...");
+        Serial.println(F("Exiting..."));
         lv_obj_del_async(lv_obj_get_parent(lv_obj_get_parent(btn)));
   
         for (int i = 0; i < airtags->size(); i++) {
@@ -430,7 +430,7 @@ MenuFunctions::MenuFunctions()
       if (btn_text != text09) {
       }
       else {
-        Serial.println("Exiting...");
+        Serial.println(F("Exiting..."));
         lv_obj_del_async(lv_obj_get_parent(lv_obj_get_parent(btn)));
   
         for (int i = 0; i < access_points->size(); i++) {
@@ -496,7 +496,7 @@ MenuFunctions::MenuFunctions()
         }
       }
       else {
-        Serial.println("Exiting...");
+        Serial.println(F("Exiting..."));
         lv_obj_del_async(lv_obj_get_parent(lv_obj_get_parent(btn)));
   
         printf("LV_EVENT_CANCEL\n");
@@ -4051,7 +4051,7 @@ void MenuFunctions::showMenuList(Menu * menu, int layer)
     // Depending on layer, indent
     for (uint8_t x = 0; x < layer * 4; x++)
       Serial.print(" ");
-    Serial.print("Node: ");
+    Serial.print(F("Node: "));
     Serial.println(menu->list->get(i).name);
   }
   Serial.println();
