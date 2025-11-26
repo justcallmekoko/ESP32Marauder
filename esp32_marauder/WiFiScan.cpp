@@ -4788,7 +4788,7 @@ void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color)
   this->setMac();
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
-  esp_wifi_set_promiscuous_rx_cb(&rawSnifferCallback);
+  esp_wifi_set_promiscuous_rx_cb(&beaconSnifferCallback);
   esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   this->wifi_initialized = true;
   initTime = millis();
@@ -6743,9 +6743,21 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
   #endif
 
   wifi_promiscuous_pkt_t *snifferPacket = (wifi_promiscuous_pkt_t*)buf;
-  WifiMgmtHdr *frameControl = (WifiMgmtHdr*)snifferPacket->payload;
-  wifi_pkt_rx_ctrl_t ctrl = (wifi_pkt_rx_ctrl_t)snifferPacket->rx_ctrl;
   int len = snifferPacket->rx_ctrl.sig_len;
+
+  uint8_t src_addr[] = {snifferPacket->payload[10],
+                        snifferPacket->payload[11],
+                        snifferPacket->payload[12],
+                        snifferPacket->payload[13],
+                        snifferPacket->payload[14],
+                        snifferPacket->payload[15]};
+
+  uint8_t dst_addr[] = {snifferPacket->payload[4],
+                        snifferPacket->payload[5],
+                        snifferPacket->payload[6],
+                        snifferPacket->payload[7],
+                        snifferPacket->payload[8],
+                        snifferPacket->payload[9]};
 
   String display_string = "";
   String essid = "";
@@ -6756,9 +6768,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
       (wifi_scan_obj.currentScanMode == WIFI_SCAN_PWN)) {
     if (type == WIFI_PKT_MGMT) {
       len -= 4;
-      int fctl = ntohs(frameControl->fctl);
       const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)snifferPacket->payload;
-      const WifiMgmtHdr *hdr = &ipkt->hdr;
 
 
       uint8_t target_mac[6] = {0xde, 0xad, 0xbe, 0xef, 0xde, 0xad};
@@ -6767,7 +6777,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
       if (snifferPacket->payload[0] == 0x80) {
         bool mac_match = true;
         for (int i = 0; i < 6; i++) {
-          if (snifferPacket->payload[10 + i] != target_mac[i]) {
+          if (src_addr[i] != target_mac[i]) {
             mac_match = false;
             break;
           }
@@ -6794,15 +6804,9 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
           // Check list of APs
           for (int i = 0; i < access_points->size(); i++) {
             if (access_points->get(i).selected) {
-              uint8_t addr[] = {snifferPacket->payload[10],
-                                snifferPacket->payload[11],
-                                snifferPacket->payload[12],
-                                snifferPacket->payload[13],
-                                snifferPacket->payload[14],
-                                snifferPacket->payload[15]};
               // Compare AP bssid to ssid of recvd packet
               for (int x = 0; x < 6; x++) {
-                if (addr[x] != access_points->get(i).bssid[x]) {
+                if (src_addr[x] != access_points->get(i).bssid[x]) {
                   found = false;
                   break;
                 }
@@ -7073,6 +7077,80 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
       }
     }
   }
+  else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_RAW_CAPTURE) {
+    if (type == WIFI_PKT_MGMT)
+    {
+      len -= 4;
+      wifi_scan_obj.mgmt_frames++;
+
+      // Do our counts
+      if (snifferPacket->payload[0] == 0x40) // Probe request
+        wifi_scan_obj.req_frames++;
+      else if (snifferPacket->payload[0] == 0x50) // Probe response
+        wifi_scan_obj.resp_frames++;
+      else if (snifferPacket->payload[0] == 0x80) // Beacon
+        wifi_scan_obj.beacon_frames++;
+      else if (snifferPacket->payload[0] == 0xC0) // Deauth
+        wifi_scan_obj.deauth_frames++;
+      else if (((snifferPacket->payload[30] == 0x88 && snifferPacket->payload[31] == 0x8e) || ( snifferPacket->payload[32] == 0x88 && snifferPacket->payload[33] == 0x8e))) // eapol
+        wifi_scan_obj.eapol_frames++;
+
+      // Get min/max rssi
+      if (snifferPacket->rx_ctrl.rssi < wifi_scan_obj.min_rssi)
+        wifi_scan_obj.min_rssi = snifferPacket->rx_ctrl.rssi;
+      
+      if (snifferPacket->rx_ctrl.rssi > wifi_scan_obj.max_rssi)
+        wifi_scan_obj.max_rssi = snifferPacket->rx_ctrl.rssi;
+    }
+    else {
+      wifi_scan_obj.data_frames++;
+    }
+    buffer_obj.append(snifferPacket, len);
+  }
+  else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN) {
+    bool found = false;
+    uint8_t targ_index = 0;
+    AccessPoint targ_ap;
+
+    // Check list of APs
+    for (int i = 0; i < access_points->size(); i++) {
+      if (access_points->get(i).selected) {
+        uint8_t addr[] = {snifferPacket->payload[10],
+                          snifferPacket->payload[11],
+                          snifferPacket->payload[12],
+                          snifferPacket->payload[13],
+                          snifferPacket->payload[14],
+                          snifferPacket->payload[15]};
+        // Compare AP bssid to ssid of recvd packet
+        for (int x = 0; x < 6; x++) {
+          if (addr[x] != access_points->get(i).bssid[x]) {
+            found = false;
+            break;
+          }
+          else
+            found = true;
+        }
+        if (found) {
+          targ_ap = access_points->get(i);
+          targ_index = i;
+          break;
+        }
+      }
+    }
+    if (!found)
+      return;
+
+    if ((targ_ap.rssi + 1 < snifferPacket->rx_ctrl.rssi) || (snifferPacket->rx_ctrl.rssi + 1 < targ_ap.rssi)) {
+      targ_ap.rssi = snifferPacket->rx_ctrl.rssi;
+      access_points->set(targ_index, targ_ap);
+
+      Serial.println((String)access_points->get(targ_index).essid + " RSSI: " + (String)access_points->get(targ_index).rssi);
+    }
+    else
+      return;
+
+    buffer_obj.append(snifferPacket, len);
+  }
 }
 
 void WiFiScan::stationSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) {
@@ -7245,7 +7323,7 @@ void WiFiScan::stationSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t typ
   buffer_obj.append(snifferPacket, len);
 }
 
-void WiFiScan::rawSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
+/*void WiFiScan::rawSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 {
   extern WiFiScan wifi_scan_obj;
 
@@ -7325,38 +7403,13 @@ void WiFiScan::rawSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
       access_points->set(targ_index, targ_ap);
 
       Serial.println((String)access_points->get(targ_index).essid + " RSSI: " + (String)access_points->get(targ_index).rssi);
-
-      /*display_string.concat((String)access_points->get(targ_index).essid);
-      #ifndef HAS_MINI_SCREEN
-        display_string.concat(" RSSI: ");
-        display_string.concat((String)access_points->get(targ_index).rssi);
-      #endif
-      int temp_len = display_string.length();
-      for (int i = 0; i < 50 - temp_len; i++)
-      {
-        display_string.concat(" ");
-      }
-      #ifdef HAS_SCREEN
-        display_obj.display_buffer->add(display_string);
-        #ifdef HAS_MINI_SCREEN
-          display_string = "";
-          display_string.concat("RSSI: ");
-          display_string.concat((String)access_points->get(targ_index).rssi);
-          temp_len = display_string.length();
-          for (int i = 0; i < 50 - temp_len; i++)
-          {
-            display_string.concat(" ");
-          }
-          display_obj.display_buffer->add(display_string);
-        #endif
-      #endif*/
     }
     else
       return;
   }
 
   buffer_obj.append(snifferPacket, len);
-}
+}*/
 
 void WiFiScan::deauthSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 {
