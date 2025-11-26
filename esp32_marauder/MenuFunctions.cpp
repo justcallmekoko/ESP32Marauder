@@ -2036,7 +2036,7 @@ void MenuFunctions::RunSetup()
   settingsMenu.list = new LinkedList<MenuNode>();
   specSettingMenu.list = new LinkedList<MenuNode>();
   infoMenu.list = new LinkedList<MenuNode>();
-  languageMenu.list = new LinkedList<MenuNode>();
+  //languageMenu.list = new LinkedList<MenuNode>();
 
   // WiFi menu stuff
   wifiSnifferMenu.list = new LinkedList<MenuNode>();
@@ -2051,9 +2051,9 @@ void MenuFunctions::RunSetup()
   apInfoMenu.list = new LinkedList<MenuNode>();
   setMacMenu.list = new LinkedList<MenuNode>();
   genAPMacMenu.list = new LinkedList<MenuNode>();
-  #ifdef HAS_BT
-    airtagMenu.list = new LinkedList<MenuNode>();
-  #endif
+  //#ifdef HAS_BT
+  //  airtagMenu.list = new LinkedList<MenuNode>();
+  //#endif
   //#ifndef HAS_ILI9341
     wifiStationMenu.list = new LinkedList<MenuNode>();
   //#endif
@@ -2102,7 +2102,7 @@ void MenuFunctions::RunSetup()
   //whichUpdateMenu.name = text_table1[12];
   confirmMenu.name = text_table1[13];
   updateMenu.name = text_table1[15];
-  languageMenu.name = text_table1[16]; 
+  //languageMenu.name = text_table1[16]; 
   infoMenu.name = text_table1[17];
   settingsMenu.name = text_table1[18];
   bluetoothMenu.name = text_table1[19];
@@ -2123,14 +2123,14 @@ void MenuFunctions::RunSetup()
   generateSSIDsMenu.name = text_table1[27];
   clearSSIDsMenu.name = text_table1[28];
   clearAPsMenu.name = text_table1[29];
-  wifiAPMenu.name = "Access Points";
+  wifiAPMenu.name = "Select";
   wifiIPMenu.name = "Active IPs";
   apInfoMenu.name = "AP Info";
   setMacMenu.name = "Set MACs";
   genAPMacMenu.name = "Generate AP MAC";
-  #ifdef HAS_BT
-    airtagMenu.name = "Select Airtag";
-  #endif
+  //#ifdef HAS_BT
+  //  airtagMenu.name = "Select Airtag";
+  //#endif
   //#ifndef HAS_ILI9341
     wifiStationMenu.name = "Select Stations";
   //#endif
@@ -2209,11 +2209,13 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_PING_SCAN, TFT_CYAN);
   });
-  this->addNodes(&wifiScannerMenu, "ARP Scan", TFTCYAN, NULL, SCANNERS, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_ARP_SCAN, TFT_CYAN);
-  });
+  #ifndef HAS_DUAL_BAND
+    this->addNodes(&wifiScannerMenu, "ARP Scan", TFTCYAN, NULL, SCANNERS, [this]() {
+      display_obj.clearScreen();
+      this->drawStatusBar();
+      wifi_scan_obj.StartScan(WIFI_ARP_SCAN, TFT_CYAN);
+    });
+  #endif
   this->addNodes(&wifiScannerMenu, "Port Scan All", TFTMAGENTA, NULL, BEACON_LIST, [this](){
     // Add the back button
     wifiIPMenu.list->clear();
@@ -2357,32 +2359,26 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_MULTISSID, TFT_ORANGE);
   });
-  //#ifndef HAS_ILI9341
-    this->addNodes(&wifiSnifferMenu, text_table1[49], TFTMAGENTA, NULL, BEACON_SNIFF, [this]() {
-      display_obj.clearScreen();
-      this->drawStatusBar();
-      wifi_scan_obj.StartScan(WIFI_SCAN_TARGET_AP, TFT_MAGENTA);
-    });
-  //#endif
+  /*this->addNodes(&wifiSnifferMenu, text_table1[49], TFTMAGENTA, NULL, BEACON_SNIFF, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_SCAN_TARGET_AP, TFT_MAGENTA);
+  });*/
   this->addNodes(&wifiSnifferMenu, "Scan All", TFTLIME, NULL, BEACON_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_AP_STA, 0x97e0);
   });
-  //#ifndef HAS_ILI9341
-    this->addNodes(&wifiSnifferMenu, text_table1[59], TFTORANGE, NULL, PACKET_MONITOR, [this]() {
-      display_obj.clearScreen();
-      this->drawStatusBar();
-      wifi_scan_obj.StartScan(WIFI_SCAN_STATION, TFT_WHITE);
-    });
-  //#endif
-  //#ifdef HAS_ILI9341
+  /*this->addNodes(&wifiSnifferMenu, text_table1[59], TFTORANGE, NULL, PACKET_MONITOR, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_SCAN_STATION, TFT_WHITE);
+  });*/
   this->addNodes(&wifiSnifferMenu, "Signal Monitor", TFTCYAN, NULL, PACKET_MONITOR, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_CYAN);
   });
-  //#endif
 
   // Build Wardriving menu
   #ifdef HAS_GPS
@@ -2649,7 +2645,9 @@ void MenuFunctions::RunSetup()
   #if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
     this->addNodes(&wifiGeneralMenu, text_table1[1], TFTNAVY, NULL, KEYBOARD_ICO, [this](){
       this->changeMenu(&miniKbMenu, true);
-      this->miniKeyboard(&miniKbMenu);
+      #ifndef HAS_MINI_KB
+        this->miniKeyboard(&miniKbMenu);
+      #endif
     });
   #endif
   this->addNodes(&wifiGeneralMenu, text_table1[28], TFTSILVER, NULL, CLEAR_ICO, [this]() {
@@ -3244,9 +3242,9 @@ void MenuFunctions::RunSetup()
     // Select Airtag on Mini
       this->addNodes(&bluetoothAttackMenu, "Spoof Airtag", TFTWHITE, NULL, ATTACKS, [this](){
           // Clear nodes and add back button
-          airtagMenu.list->clear();
-          this->addNodes(&airtagMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
-          this->changeMenu(airtagMenu.parentMenu, true);
+          wifiAPMenu.list->clear();
+          this->addNodes(&wifiAPMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
+          this->changeMenu(wifiAPMenu.parentMenu, true);
         });
 
         // Add buttons for all airtags
@@ -3259,7 +3257,7 @@ void MenuFunctions::RunSetup()
 
         // Create the menu nodes for all of the list items
         for (int i = 0; i < menu_limit; i++) {
-          this->addNodes(&airtagMenu, airtags->get(i).mac, TFTWHITE, NULL, BLUETOOTH, [this, i](){
+          this->addNodes(&wifiAPMenu, airtags->get(i).mac, TFTWHITE, NULL, BLUETOOTH, [this, i](){
             AirTag new_at = airtags->get(i);
             new_at.selected = true;
 
@@ -3281,12 +3279,12 @@ void MenuFunctions::RunSetup()
 
           });
         }
-        this->changeMenu(&airtagMenu, true);
+        this->changeMenu(&wifiAPMenu, true);
       });
 
-      airtagMenu.parentMenu = &bluetoothAttackMenu;
-      this->addNodes(&airtagMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
-        this->changeMenu(airtagMenu.parentMenu, true);
+      wifiAPMenu.parentMenu = &bluetoothAttackMenu;
+      this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+        this->changeMenu(wifiAPMenu.parentMenu, true);
       });
     #endif
 
@@ -3320,35 +3318,17 @@ void MenuFunctions::RunSetup()
         this->changeMenu(&sdDeleteMenu, true);
       });
     }
-
-    /*if (sd_obj.supported) {
-      addNodes(&whichUpdateMenu, text_table1[40], TFTMAGENTA, NULL, SD_UPDATE, [this]() {
-        wifi_scan_obj.currentScanMode = OTA_UPDATE;
-        this->changeMenu(&confirmMenu, true);
-      });
-    }
-
-    // Confirm SD update menu
-    confirmMenu.parentMenu = &whichUpdateMenu;
-    this->addNodes(&confirmMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
-      this->changeMenu(confirmMenu.parentMenu, true);
-    });
-    this->addNodes(&confirmMenu, text14, TFTORANGE, NULL, UPDATE, [this]() {
-      wifi_scan_obj.currentScanMode = OTA_UPDATE;
-      this->changeMenu(&failedUpdateMenu, true);
-      sd_obj.runUpdate();
-    });*/
   #endif
 
   this->addNodes(&deviceMenu, "Save/Load Files", TFTCYAN, NULL, SD_UPDATE, [this]() {
     this->changeMenu(&saveFileMenu, true);
   });
 
-  this->addNodes(&deviceMenu, text_table1[16], TFTGREEN, NULL, LANGUAGE, [this]() {
+  /*this->addNodes(&deviceMenu, text_table1[16], TFTGREEN, NULL, LANGUAGE, [this]() {
 
     wifi_scan_obj.currentScanMode = SHOW_INFO;
     this->changeMenu(&languageMenu, true);   
-  });
+  });*/
   this->addNodes(&deviceMenu, text_table1[17], TFTWHITE, NULL, DEVICE_INFO, [this]() {
     wifi_scan_obj.currentScanMode = SHOW_INFO;
     this->changeMenu(&infoMenu, true);
@@ -3567,11 +3547,11 @@ void MenuFunctions::RunSetup()
     this->changeMenu(infoMenu.parentMenu, true);
   });
   //language info menu
-  languageMenu.parentMenu = &deviceMenu;
-    this->addNodes(&languageMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
-      wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
-      this->changeMenu(infoMenu.parentMenu, true);
-    });
+  /*languageMenu.parentMenu = &deviceMenu;
+  this->addNodes(&languageMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+    wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
+    this->changeMenu(infoMenu.parentMenu, true);
+  });*/
   // Set the current menu to the mainMenu
   this->changeMenu(&mainMenu, true);
 
@@ -3579,6 +3559,7 @@ void MenuFunctions::RunSetup()
 }
 
 //#if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
+#ifdef HAS_MINI_KB
   String MenuFunctions::miniKeyboard(Menu * targetMenu, bool do_pass) {
     // Prepare a char array and reset temp SSID string
     extern LinkedList<ssid>* ssids;
@@ -3982,7 +3963,7 @@ void MenuFunctions::RunSetup()
       //#endif
     #endif
   }
-//#endif
+#endif
 
 void MenuFunctions::setupSDFileList(bool update) {
   sd_obj.sd_files->clear();

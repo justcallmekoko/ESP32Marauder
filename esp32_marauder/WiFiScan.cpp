@@ -1856,6 +1856,23 @@ int WiFiScan::generateSSIDs(int count) {
   return num_gen;
 }
 
+void WiFiScan::setNetworkInfo() {
+  this->ip_addr = WiFi.localIP();
+  this->gateway = WiFi.gatewayIP();
+  this->subnet = WiFi.subnetMask();
+}
+
+void WiFiScan::showNetworkInfo() {
+  Serial.print(F("IP address: "));
+  Serial.println(this->ip_addr);
+  Serial.print(F("Gateway: "));
+  Serial.println(this->gateway);
+  Serial.print(F("Netmask: "));
+  Serial.println(this->subnet);
+  Serial.print(F("MAC: "));
+  Serial.println(WiFi.macAddress());
+}
+
 bool WiFiScan::joinWiFi(String ssid, String password, bool gui)
 {
   static const char * btns[] ={text16, ""};
@@ -1952,19 +1969,8 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui)
     lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); //Align to the corner
   #endif
   this->connected_network = ssid;
-  this->ip_addr = WiFi.localIP();
-  this->gateway = WiFi.gatewayIP();
-  this->subnet = WiFi.subnetMask();
-  
-  Serial.println(F("\nConnected to the WiFi network"));
-  Serial.print(F("IP address: "));
-  Serial.println(this->ip_addr);
-  Serial.print(F("Gateway: "));
-  Serial.println(this->gateway);
-  Serial.print(F("Netmask: "));
-  Serial.println(this->subnet);
-  Serial.print(F("MAC: "));
-  Serial.println(WiFi.macAddress());
+  this->setNetworkInfo();  
+  this->showNetworkInfo();
 
   #ifdef HAS_SCREEN
     #ifdef HAS_MINI_KB
@@ -2054,19 +2060,9 @@ bool WiFiScan::startWiFi(String ssid, String password, bool gui)
     lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); //Align to the corner
   #endif
   this->connected_network = ssid;
-  this->ip_addr = WiFi.softAPIP();
-  this->gateway = WiFi.gatewayIP();
-  this->subnet = WiFi.subnetMask();
+  this->setNetworkInfo();
   
-  Serial.println(F("\nStarted AP"));
-  Serial.print(F("IP address: "));
-  Serial.println(this->ip_addr);
-  Serial.print(F("Gateway: "));
-  Serial.println(this->gateway);
-  Serial.print(F("Netmask: "));
-  Serial.println(this->subnet);
-  Serial.print(F("MAC: "));
-  Serial.println(WiFi.macAddress());
+  this->showNetworkInfo();
 
   #ifdef HAS_SCREEN
     #ifdef HAS_MINI_KB
@@ -2831,14 +2827,7 @@ void WiFiScan::RunPingScan(uint8_t scan_mode, uint16_t color)
     Serial.println(F("Starting Ping Scan with..."));
   else if (scan_mode == WIFI_ARP_SCAN)
     Serial.println(F("Starting ARP Scan with..."));
-  Serial.print(F("IP address: "));
-  Serial.println(this->ip_addr);
-  Serial.print(F("Gateway: "));
-  Serial.println(this->gateway);
-  Serial.print(F("Netmask: "));
-  Serial.println(this->subnet);
-  Serial.print(F("MAC: "));
-  Serial.println(WiFi.macAddress());
+  this->showNetworkInfo();
 
   if (scan_mode == WIFI_PING_SCAN)
     buffer_obj.append("Starting Ping Scan with...");
@@ -2855,9 +2844,6 @@ void WiFiScan::RunPingScan(uint8_t scan_mode, uint16_t color)
   buffer_obj.append("\n");
 
   this->scan_complete = false;
-
-  //if (scan_mode == WIFI_ARP_SCAN)
-  //  this->fullARP();
   
   initTime = millis();
 }
@@ -2936,14 +2922,7 @@ void WiFiScan::RunPortScanAll(uint8_t scan_mode, uint16_t color)
     this->current_scan_ip = this->gateway;
 
   Serial.println(F("Starting Port Scan with..."));
-  Serial.print(F("IP address: "));
-  Serial.println(this->ip_addr);
-  Serial.print(F("Gateway: "));
-  Serial.println(this->gateway);
-  Serial.print(F("Netmask: "));
-  Serial.println(this->subnet);
-  Serial.print(F("MAC: "));
-  Serial.println(WiFi.macAddress());
+  this->showNetworkInfo();
 
   buffer_obj.append("Starting Port Scan with...");
   buffer_obj.append("\nSSID: " + (String)this->connected_network);
@@ -5701,7 +5680,8 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
       Serial.println(ap_addr);
     }
 
-    display_string.concat(replaceOUIWithManufacturer(sta_addr));
+    //display_string.concat(replaceOUIWithManufacturer(sta_addr));
+    display_string.concat(sta_addr);
 
     display_string.concat(" -> ");
     display_string.concat(access_points->get(ap_index).essid);
@@ -7286,7 +7266,8 @@ void WiFiScan::stationSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t typ
     Serial.println(ap_addr);
   }
 
-  display_string.concat(replaceOUIWithManufacturer(sta_addr));
+  //display_string.concat(replaceOUIWithManufacturer(sta_addr));
+  display_string.concat(sta_addr);
 
   //display_string.concat(sta_addr);
   display_string.concat(" -> ");
@@ -9756,96 +9737,124 @@ bool WiFiScan::checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout) {
   return false;
 }
 
-bool WiFiScan::readARP(IPAddress targ_ip) {
-  // Convert IPAddress to ip4_addr_t using IP4_ADDR
-  ip4_addr_t test_ip;
-  IP4_ADDR(&test_ip, targ_ip[0], targ_ip[1], targ_ip[2], targ_ip[3]);
+#ifndef HAS_DUAL_BAND
+  bool WiFiScan::readARP(IPAddress targ_ip) {
+    // Convert IPAddress to ip4_addr_t using IP4_ADDR
+    ip4_addr_t test_ip;
+    IP4_ADDR(&test_ip, targ_ip[0], targ_ip[1], targ_ip[2], targ_ip[3]);
 
-  // Get the netif interface for STA mode
-  //void* netif = NULL;
-  //tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
-  //struct netif* netif_interface = (struct netif*)netif;
+    // Get the netif interface for STA mode
+    //void* netif = NULL;
+    //tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
+    //struct netif* netif_interface = (struct netif*)netif;
 
-  const ip4_addr_t* ipaddr_ret = NULL;
-  struct eth_addr* eth_ret = NULL;
+    const ip4_addr_t* ipaddr_ret = NULL;
+    struct eth_addr* eth_ret = NULL;
 
-  // Use actual interface instead of NULL
-  if (etharp_find_addr(NULL, &test_ip, &eth_ret, &ipaddr_ret) >= 0) {
-    return true;
+    // Use actual interface instead of NULL
+    if (etharp_find_addr(NULL, &test_ip, &eth_ret, &ipaddr_ret) >= 0) {
+      return true;
+    }
+
+    return false;
   }
 
-  return false;
-}
+  bool WiFiScan::singleARP(IPAddress ip_addr) {
 
-bool WiFiScan::singleARP(IPAddress ip_addr) {
+    #ifndef HAS_DUAL_BAND
+      void* netif = NULL;
+      tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
+      struct netif* netif_interface = (struct netif*)netif;
+    #else
+      struct netif* netif_interface = (struct netif*)esp_netif_get_netif_impl(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"));
+      //esp_netif_t* netif_interface = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+      //struct netif* netif_interface = (struct netif*)netif;
+      //struct netif* netif_interface = esp_netif_get_netif_impl(*netif);
+    #endif
 
-  #ifndef HAS_DUAL_BAND
-    void* netif = NULL;
-    tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
-    struct netif* netif_interface = (struct netif*)netif;
-  #else
-    struct netif* netif_interface = (struct netif*)esp_netif_get_netif_impl(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"));
-    //esp_netif_t* netif_interface = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
-    //struct netif* netif_interface = (struct netif*)netif;
-    //struct netif* netif_interface = esp_netif_get_netif_impl(*netif);
-  #endif
-
-  ip4_addr_t lwip_ip;
-  IP4_ADDR(&lwip_ip,
-            ip_addr[0],
-            ip_addr[1],
-            ip_addr[2],
-            ip_addr[3]);
-
-  etharp_request(netif_interface, &lwip_ip);
-
-  delay(250);
-
-  if (this->readARP(ip_addr))
-    return true;
-
-  return false;
-}
-
-void WiFiScan::fullARP() {
-  String display_string = "";
-  String output_line = "";
-
-  #ifndef HAS_DUAL_BAND
-    void* netif = NULL;
-    tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
-    struct netif* netif_interface = (struct netif*)netif;
-  #else
-    struct netif* netif_interface = (struct netif*)esp_netif_get_netif_impl(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"));
-    //esp_netif_t* netif_interface = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
-    //struct netif* netif_interface = (struct netif*)netif;
-    //struct netif* netif_interface = esp_netif_get_netif_impl(*netif);
-  #endif
-
-  //this->arp_count = 0;
-
-  if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
     ip4_addr_t lwip_ip;
     IP4_ADDR(&lwip_ip,
-             this->current_scan_ip[0],
-             this->current_scan_ip[1],
-             this->current_scan_ip[2],
-             this->current_scan_ip[3]);
+              ip_addr[0],
+              ip_addr[1],
+              ip_addr[2],
+              ip_addr[3]);
 
     etharp_request(netif_interface, &lwip_ip);
 
-    delay(100);
+    delay(250);
 
-    this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
+    if (this->readARP(ip_addr))
+      return true;
 
-    this->arp_count++;
+    return false;
+  }
 
-    if (this->arp_count >= 10) {
-      delay(250);
+  void WiFiScan::fullARP() {
+    String display_string = "";
+    String output_line = "";
 
-      this->arp_count = 0;
+    #ifndef HAS_DUAL_BAND
+      void* netif = NULL;
+      tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
+      struct netif* netif_interface = (struct netif*)netif;
+    #else
+      struct netif* netif_interface = (struct netif*)esp_netif_get_netif_impl(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"));
+      //esp_netif_t* netif_interface = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+      //struct netif* netif_interface = (struct netif*)netif;
+      //struct netif* netif_interface = esp_netif_get_netif_impl(*netif);
+    #endif
 
-      for (int i = 10; i > 0; i--) {
+    //this->arp_count = 0;
+
+    if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
+      ip4_addr_t lwip_ip;
+      IP4_ADDR(&lwip_ip,
+              this->current_scan_ip[0],
+              this->current_scan_ip[1],
+              this->current_scan_ip[2],
+              this->current_scan_ip[3]);
+
+      etharp_request(netif_interface, &lwip_ip);
+
+      delay(100);
+
+      this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
+
+      this->arp_count++;
+
+      if (this->arp_count >= 10) {
+        delay(250);
+
+        this->arp_count = 0;
+
+        for (int i = 10; i > 0; i--) {
+          IPAddress check_ip = getPrevIP(this->current_scan_ip, this->subnet, i);
+          display_string = "";
+          output_line = "";
+          if (this->readARP(check_ip)) {
+            ipList->add(check_ip);
+            output_line = check_ip.toString();
+            display_string.concat(output_line);
+            uint8_t temp_len = display_string.length();
+            for (uint8_t i = 0; i < 40 - temp_len; i++)
+            {
+              display_string.concat(" ");
+            }
+            #ifdef HAS_SCREEN
+              display_obj.display_buffer->add(display_string);
+            #endif
+            buffer_obj.append(output_line + "\n");
+            Serial.println(output_line);
+          }
+        }
+      }
+    }
+
+    if (this->current_scan_ip == IPAddress(0, 0, 0, 0)) {
+
+      for (int i = this->arp_count; i > 0; i--) {
+        delay(250);
+
         IPAddress check_ip = getPrevIP(this->current_scan_ip, this->subnet, i);
         display_string = "";
         output_line = "";
@@ -9865,42 +9874,16 @@ void WiFiScan::fullARP() {
           Serial.println(output_line);
         }
       }
-    }
-  }
-
-  if (this->current_scan_ip == IPAddress(0, 0, 0, 0)) {
-
-    for (int i = this->arp_count; i > 0; i--) {
-      delay(250);
-
-      IPAddress check_ip = getPrevIP(this->current_scan_ip, this->subnet, i);
-      display_string = "";
-      output_line = "";
-      if (this->readARP(check_ip)) {
-        ipList->add(check_ip);
-        output_line = check_ip.toString();
-        display_string.concat(output_line);
-        uint8_t temp_len = display_string.length();
-        for (uint8_t i = 0; i < 40 - temp_len; i++)
-        {
-          display_string.concat(" ");
-        }
+      this->arp_count = 0;
+      if (!this->scan_complete) {
+        this->scan_complete = true;
         #ifdef HAS_SCREEN
-          display_obj.display_buffer->add(display_string);
+          display_obj.display_buffer->add("Scan complete");
         #endif
-        buffer_obj.append(output_line + "\n");
-        Serial.println(output_line);
       }
     }
-    this->arp_count = 0;
-    if (!this->scan_complete) {
-      this->scan_complete = true;
-      #ifdef HAS_SCREEN
-        display_obj.display_buffer->add("Scan complete");
-      #endif
-    }
   }
-}
+#endif
 
 void WiFiScan::pingScan(uint8_t scan_mode) {
   String display_string = "";
@@ -9973,50 +9956,6 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
       }
     }
   }
-
-  /*else if (scan_mode == WIFI_SCAN_SSH) {
-    if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
-      this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
-      #ifndef HAS_DUAL_BAND
-        if (this->singleARP(this->current_scan_ip)) {
-      #else
-        if (this->isHostAlive(this->current_scan_ip)) {
-      #endif
-        Serial.println(this->current_scan_ip);
-        this->portScan(scan_mode, 22);
-      }
-    }
-    else {
-      if (!this->scan_complete) {
-        this->scan_complete = true;
-        #ifdef HAS_SCREEN
-          display_obj.display_buffer->add("Scan complete");
-        #endif
-      }
-    }
-  }
-
-  else if (scan_mode == WIFI_SCAN_TELNET) {
-    if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
-      this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
-      #ifndef HAS_DUAL_BAND
-        if (this->singleARP(this->current_scan_ip)) {
-      #else
-        if (this->isHostAlive(this->current_scan_ip)) {
-      #endif
-        Serial.println(this->current_scan_ip);
-        this->portScan(scan_mode, 23);
-      }
-    }
-    else {
-      if (!this->scan_complete) {
-        this->scan_complete = true;
-        #ifdef HAS_SCREEN
-          display_obj.display_buffer->add("Scan complete");
-        #endif
-      }
-    }
-  }*/
 }
 
 void WiFiScan::portScan(uint8_t scan_mode, uint16_t targ_port) {
@@ -10116,7 +10055,9 @@ void WiFiScan::main(uint32_t currentTime)
     this->pingScan();
   }
   else if (currentScanMode == WIFI_ARP_SCAN) {
-    this->fullARP();
+    #ifndef HAS_DUAL_BAND
+      this->fullARP();
+    #endif
   }
   else if (currentScanMode == WIFI_PORT_SCAN_ALL) {
     this->portScan(WIFI_PORT_SCAN_ALL);
