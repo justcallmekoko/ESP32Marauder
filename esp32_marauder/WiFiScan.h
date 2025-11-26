@@ -28,12 +28,14 @@
 #include "esp_wifi.h"
 #include "esp_wifi_types.h"
 #include <esp_timer.h>
-#include <lwip/etharp.h>
-#include <lwip/ip_addr.h>
+#ifndef HAS_DUAL_BAND
+  #include <lwip/etharp.h>
+  #include <lwip/ip_addr.h>
+#endif
 #ifdef HAS_DUAL_BAND
   #include "esp_system.h"
 #endif
-#ifdef HAS_BT
+#if defined(HAS_BT) && !defined(HAS_DUAL_BAND)
   #include "esp_bt.h"
 #endif
 #ifdef HAS_SCREEN
@@ -523,6 +525,8 @@ class WiFiScan
       NimBLEAdvertisementData GetUniversalAdvertisementData(EBLEPayloadType type);
     #endif
 
+    void showNetworkInfo();
+    void setNetworkInfo();
     void fullARP();
     bool readARP(IPAddress targ_ip);
     bool singleARP(IPAddress ip_addr);

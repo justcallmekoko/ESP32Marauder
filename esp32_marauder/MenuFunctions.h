@@ -175,13 +175,13 @@ class MenuFunctions
     Menu deviceMenu;
 
     // Device menu stuff
-    Menu whichUpdateMenu;
+    //Menu whichUpdateMenu;
     Menu failedUpdateMenu;
     Menu confirmMenu;
     Menu updateMenu;
     Menu settingsMenu;
     Menu specSettingMenu;
-    Menu languageMenu;
+    //Menu languageMenu;
     Menu sdDeleteMenu;
 
     // WiFi menu stuff
@@ -195,9 +195,9 @@ class MenuFunctions
     Menu wifiAPMenu;
     Menu wifiIPMenu;
     Menu ssidsMenu;
-    #ifdef HAS_BT
-      Menu airtagMenu;
-    #endif
+    //#ifdef HAS_BT
+    //  Menu airtagMenu;
+    //#endif
     //#ifndef HAS_ILI9341
       Menu wifiStationMenu;
     //#endif
@@ -253,7 +253,9 @@ class MenuFunctions
     void buttonSelected(int b, int x = -1);
     void buttonNotSelected(int b, int x = -1);
     //#if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
+    #ifdef HAS_MINI_KB
       String miniKeyboard(Menu * targetMenu, bool do_pass = false);
+    #endif
     //#endif
 
     #ifdef MARAUDER_CARDPUTER
