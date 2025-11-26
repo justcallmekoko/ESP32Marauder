@@ -6941,7 +6941,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
           #endif
         }      
       }
-      else if ((snifferPacket->payload[0] == 0x40) && (buf == 0)) {
+      else if (snifferPacket->payload[0] == 0x40) {
         if (wifi_scan_obj.currentScanMode == WIFI_SCAN_PROBE) {
           String probe_req_essid;
 
