@@ -787,7 +787,7 @@ class WiFiScan
     static void getMAC(char *addr, uint8_t* data, uint16_t offset);
     static void pwnSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
-    static void rawSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
+    //static void rawSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void stationSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type);
