@@ -9,6 +9,10 @@
   #include "Keyboard.h"
 #endif
 
+#ifdef HAS_TOUCH
+  #include "TouchKeyboard.h"
+#endif
+
 #ifdef HAS_SCREEN
 
 #define BATTERY_ANALOG_ON 0
