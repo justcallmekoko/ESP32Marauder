@@ -1045,9 +1045,9 @@ void Display::buildBanner(String msg, int xpos)
 
 void Display::main(uint8_t scan_mode)
 {  
-  if ((scan_mode == LV_JOIN_WIFI) ||
+  /*if ((scan_mode == LV_JOIN_WIFI) ||
       (scan_mode == LV_ADD_SSID))
-    lv_task_handler();
+    lv_task_handler();*/
   return;
 }
 // End SPIFFS_functions

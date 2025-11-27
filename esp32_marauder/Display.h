@@ -12,7 +12,7 @@
 //#include <JPEGDecoder.h>
 #include <LinkedList.h>
 #include <SPI.h>
-#include <lvgl.h>
+//#include <lvgl.h>
 #include <Ticker.h>
 #include "SPIFFS.h"
 #include "Assets.h"

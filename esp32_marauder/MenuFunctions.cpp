@@ -5,10 +5,10 @@
 #ifdef HAS_SCREEN
 
 extern const unsigned char menu_icons[][66];
-PROGMEM lv_obj_t * slider_label;
-PROGMEM lv_obj_t * ta1;
-PROGMEM lv_obj_t * ta2;
-PROGMEM lv_obj_t * save_name;
+//PROGMEM lv_obj_t * slider_label;
+//PROGMEM lv_obj_t * ta1;
+//PROGMEM lv_obj_t * ta2;
+//PROGMEM lv_obj_t * save_name;
 
 MenuFunctions::MenuFunctions()
 {
@@ -18,12 +18,11 @@ MenuFunctions::MenuFunctions()
 /* Interrupt driven periodic handler */
 
 #ifdef HAS_ILI9341
-  void MenuFunctions::lv_tick_handler()
+  /*void MenuFunctions::lv_tick_handler()
   {
     lv_tick_inc(LVGL_TICK_PERIOD);
   }
   
-  /* Display flushing */
   void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p)
   {
     extern Display display_obj;
@@ -103,11 +102,11 @@ MenuFunctions::MenuFunctions()
   void MenuFunctions::deinitLVGL() {
     Serial.println(F("Deinit LVGL"));
     //lv_deinit();
-  }
+  }*/
   
   
   // Event handler for settings drop down menus
-  void setting_dropdown_cb(lv_obj_t * obj, lv_event_t event) {
+  /*void setting_dropdown_cb(lv_obj_t * obj, lv_event_t event) {
 
   }
   
@@ -273,17 +272,17 @@ MenuFunctions::MenuFunctions()
       if (wifi_scan_obj.connected_network != "")
         wifi_scan_obj.currentScanMode = WIFI_CONNECTED;
     }
-  }
+  }*/
   
   
-  void ta_event_cb(lv_obj_t * ta, lv_event_t event)
+  /*void ta_event_cb(lv_obj_t * ta, lv_event_t event)
   {
     if(event == LV_EVENT_CLICKED) {
       if(kb != NULL)
         lv_keyboard_set_textarea(kb, ta);
     }
   
-  }
+  }*/
 
 #endif
 //// END LV_ARDUINO STUFF
@@ -1610,9 +1609,9 @@ void MenuFunctions::RunSetup()
 
   this->disable_touch = false;
   
-  #ifdef HAS_ILI9341
-    this->initLVGL();
-  #endif
+  //#ifdef HAS_ILI9341
+  //  this->initLVGL();
+  //#endif
 
   #ifdef MARAUDER_CARDPUTER
     M5CardputerKeyboard.begin();
@@ -2240,16 +2239,33 @@ void MenuFunctions::RunSetup()
   clearSSIDsMenu.parentMenu = &wifiGeneralMenu;
 
   #ifdef HAS_ILI9341
-    this->addNodes(&wifiGeneralMenu, text_table1[1], TFTNAVY, NULL, KEYBOARD_ICO, [this](){
+    /*this->addNodes(&wifiGeneralMenu, text_table1[1], TFTNAVY, NULL, KEYBOARD_ICO, [this](){
       display_obj.clearScreen(); 
       wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_YELLOW); 
       addSSIDGFX();
+    });*/
+    this->addNodes(&wifiGeneralMenu, text_table1[1], TFTNAVY, NULL, KEYBOARD_ICO, [this](){
+      char ssidBuf[64] = {0};
+      bool keep_going = true;
+      while (keep_going) {
+        display_obj.clearScreen(); 
+        if (keyboardInput(ssidBuf, sizeof(ssidBuf), "Enter SSID")) {
+          if (ssidBuf[0] != 0)
+            wifi_scan_obj.addSSID(String(ssidBuf));
+          for (int i = 0; i < 64; i++)
+            ssidBuf[i] = NULL;
+        }
+        else
+          keep_going = false;
+      }
+
+      this->changeMenu(current_menu);
     });
   #endif
   #if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
     this->addNodes(&wifiGeneralMenu, text_table1[1], TFTNAVY, NULL, KEYBOARD_ICO, [this](){
       this->changeMenu(&miniKbMenu, true);
-      #ifndef HAS_MINI_KB
+      #ifdef HAS_MINI_KB
         this->miniKeyboard(&miniKbMenu);
       #endif
     });
@@ -2473,9 +2489,17 @@ void MenuFunctions::RunSetup()
 
           // Join WiFi using touch screen keyboard
           #ifdef HAS_TOUCH
-            wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
+            char passwordBuf[64] = {0};  // or prefill with existing SSID
+            if (keyboardInput(passwordBuf, sizeof(passwordBuf), "Enter Password")) {
+              //wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
+              //wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
+              wifi_scan_obj.joinWiFi(access_points->get(i).essid, String(passwordBuf), true);
+            }
+
+            this->changeMenu(&wifiGeneralMenu, false);
+            /*wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
             wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
-            joinWiFiGFX(access_points->get(i).essid);
+            joinWiFiGFX(access_points->get(i).essid);*/
           #endif
         });
       }
@@ -2516,9 +2540,17 @@ void MenuFunctions::RunSetup()
 
             // Join WiFi using touch screen keyboard
             #ifdef HAS_TOUCH
-              wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
+              char passwordBuf[64] = {0};  // or prefill with existing SSID
+              if (keyboardInput(passwordBuf, sizeof(passwordBuf), "Enter Password")) {
+                //wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
+                //wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
+                wifi_scan_obj.joinWiFi(access_points->get(i).essid, String(passwordBuf), true);
+              }
+
+              this->changeMenu(&wifiGeneralMenu, false);
+              /*wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
               wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
-              joinWiFiGFX(access_points->get(i).essid);
+              joinWiFiGFX(access_points->get(i).essid);*/
             #endif
           });
         }
@@ -2554,73 +2586,31 @@ void MenuFunctions::RunSetup()
 
           // Join WiFi using touch screen keyboard
           #ifdef HAS_TOUCH
-            wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
+            /*wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
             wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
-            joinWiFiGFX(ssids->get(i).essid, true);
+            joinWiFiGFX(ssids->get(i).essid, true);*/
+            char passwordBuf[64] = {0};  // or prefill with existing SSID
+            if (keyboardInput(passwordBuf, sizeof(passwordBuf), "Enter Password")) {
+              //wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
+              //wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW);
+              Serial.println("Using SSID: " + (String)ssids->get(i).essid + " Password: " + String(passwordBuf));
+              wifi_scan_obj.startWiFi(ssids->get(i).essid, String(passwordBuf));
+            }
+
+            this->changeMenu(&wifiGeneralMenu, false);
+            /*wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
+            wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
+            joinWiFiGFX(access_points->get(i).essid);*/
           #endif
         });
       }
       this->changeMenu(&ssidsMenu, true);
     });
 
-    /*this->addNodes(&wifiGeneralMenu, "Start Saved AP", TFTWHITE, NULL, KEYBOARD_ICO, [this](){
-      String ssid = settings_obj.loadSetting<String>("APSSID");
-      String pw = settings_obj.loadSetting<String>("APPW");
-
-      if ((ssid != "") && (pw != "")) {
-        wifi_scan_obj.startWiFi(ssid, pw, false);
-        this->changeMenu(&wifiGeneralMenu);
-      }
-      else {
-        // Add the back button
-        wifiAPMenu.list->clear();
-          this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
-          this->changeMenu(wifiAPMenu.parentMenu);
-        });
-
-        // Populate the menu with buttons
-        for (int i = 0; i < ssids->size(); i++) {
-          // This is the menu node
-          this->addNodes(&wifiAPMenu, ssids->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
-            // Join WiFi using mini keyboard
-            #ifdef HAS_MINI_KB
-              this->changeMenu(&miniKbMenu);
-              String password = this->miniKeyboard(&miniKbMenu, true);
-              if (password != "") {
-                Serial.println("Using SSID: " + (String)ssids->get(i).essid + " Password: " + (String)password);
-                wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
-                wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
-                wifi_scan_obj.startWiFi(ssids->get(i).essid, password);
-                this->changeMenu(current_menu);
-              }
-            #endif
-
-            // Join WiFi using touch screen keyboard
-            #ifdef HAS_TOUCH
-              wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
-              wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
-              joinWiFiGFX(ssids->get(i).essid, true);
-            #endif
-          });
-        }
-        this->changeMenu(&wifiAPMenu);
-      }
-    });*/
-
     wifiStationMenu.parentMenu = &ssidsMenu;
     this->addNodes(&wifiStationMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
       this->changeMenu(wifiStationMenu.parentMenu, true);
     });
-  //#endif
-
-  //#ifdef HAS_ILI9341
-  //  this->addNodes(&wifiGeneralMenu, "View AP Info", TFTLIGHTGREY, NULL, 0, [this]() {
-  //    display_obj.clearScreen();
-  //    wifi_scan_obj.currentScanMode = LV_ADD_SSID;
-  //    wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_WHITE);
-  //    addAPGFX("AP Info");
-  //  });
-  //#endif
 
   this->addNodes(&wifiGeneralMenu, "Set MACs", TFTLIGHTGREY, NULL, 0, [this]() {
     this->changeMenu(&setMacMenu, true);
