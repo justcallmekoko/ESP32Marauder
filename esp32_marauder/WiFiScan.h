@@ -629,6 +629,13 @@ class WiFiScan
     bool save_pcap = false;
     bool ep_deauth = false;
 
+    char* flock_ssid[4] = {
+      "flock",
+      "penguin",
+      "pigvision",
+      "fs ext battery"
+    };
+
     #ifdef HAS_DUAL_BAND
       uint8_t channel_activity[DUAL_BAND_CHANNELS] = {};
     #else

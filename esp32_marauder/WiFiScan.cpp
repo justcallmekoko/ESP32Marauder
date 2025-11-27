@@ -2209,6 +2209,8 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     #ifdef HAS_BT
       RunBluetoothScan(scan_mode, color);
     #endif
+    if (scan_mode == BT_SCAN_FLOCK)
+      this->RunProbeScan(scan_mode, color);
   }
   else if (scan_mode == BT_ATTACK_SOUR_APPLE) {
     #ifdef HAS_BT
@@ -2485,6 +2487,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   (currentScanMode == WIFI_SCAN_CHAN_ACT) ||
   (currentScanMode == WIFI_SCAN_PACKET_RATE) ||
   (currentScanMode == WIFI_CONNECTED) ||
+  (currentScanMode == BT_SCAN_FLOCK) ||
   (currentScanMode == LV_JOIN_WIFI) ||
   (this->wifi_initialized))
   {
@@ -4828,10 +4831,13 @@ void WiFiScan::RunDeauthScan(uint8_t scan_mode, uint16_t color)
 // Function for running probe request scan
 void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
 {
-  probe_req_ssids->clear();
+  if (scan_mode == WIFI_SCAN_PROBE)
+    probe_req_ssids->clear();
 
   if (scan_mode == WIFI_SCAN_PROBE)
     startPcap("probe");
+  else if (scan_mode == BT_SCAN_FLOCK)
+    startPcap("flock");
   else if (scan_mode == WIFI_SCAN_STATION_WAR_DRIVE) {
     #ifdef HAS_GPS
       if (gps_obj.getGpsModuleStatus()) {
@@ -4866,7 +4872,10 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
     display_obj.tft.setTextColor(TFT_BLACK, color);
     #ifdef HAS_FULL_SCREEN
       display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
-      display_obj.tft.drawCentreString(text_table4[40],TFT_WIDTH / 2,16,2);
+      if (scan_mode != BT_SCAN_FLOCK)
+        display_obj.tft.drawCentreString(text_table4[40],TFT_WIDTH / 2,16,2);
+      else
+        display_obj.tft.drawCentreString("Flock Sniff",TFT_WIDTH / 2,16,2);
     #endif
     #ifdef HAS_ILI9341
       display_obj.touchToExit();
@@ -7130,6 +7139,90 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
       return;
 
     buffer_obj.append(snifferPacket, len);
+  }
+  else if (wifi_scan_obj.currentScanMode == BT_SCAN_FLOCK) {
+    if (type == WIFI_PKT_MGMT) {
+      len -= 4;
+      if (snifferPacket->payload[0] == 0x40) {
+        String probe_req_essid;
+
+        for (int i = 0; i < snifferPacket->payload[25]; i++) {
+          Serial.print((char)snifferPacket->payload[26 + i]);
+          probe_req_essid.concat((char)snifferPacket->payload[26 + i]);
+        }
+
+        for (int i = 0; i < sizeof(flock_ssid)/sizeof(wifi_scan_obj.flock_ssid[0]); i++) {
+          if (strcasestr(probe_req_essid.c_str(), wifi_scan_obj.flock_ssid[i])) {
+            Serial.print(F("Probe Request: "));
+            Serial.println(probe_req_essid);
+
+            char addr[] = "00:00:00:00:00:00";
+            getMAC(addr, snifferPacket->payload, 10);
+            display_string.concat(MAGENTA_KEY);
+            display_string.concat((String)snifferPacket->rx_ctrl.rssi);
+            display_string.concat("PRBE ");
+            display_string.concat(addr);
+            display_string.concat(" -> ");
+            display_string.concat(probe_req_essid);
+
+            int temp_len = display_string.length();
+
+            #ifdef HAS_SCREEN
+              for (int i = 0; i < 40 - temp_len; i++)
+              {
+                display_string.concat(" ");
+              }
+
+              display_obj.display_buffer->add(display_string);
+            #endif
+
+            Serial.println(display_string);
+
+            buffer_obj.append(snifferPacket, len);
+            break;
+          }
+        }
+      }
+
+      else if (snifferPacket->payload[0] == 0x80) {
+        if (snifferPacket->payload[37] > 0) {
+          for (int i = 0; i < snifferPacket->payload[37]; i++)
+            essid.concat((char)snifferPacket->payload[i + 38]);
+
+          for (int i = 0; i < sizeof(flock_ssid)/sizeof(wifi_scan_obj.flock_ssid[0]); i++) {
+            if (strcasestr(essid.c_str(), wifi_scan_obj.flock_ssid[i])) {
+              Serial.print(F("Beacon : "));
+              Serial.println(essid);
+
+              char addr[] = "00:00:00:00:00:00";
+              getMAC(addr, snifferPacket->payload, 10);
+              display_string.concat(GREEN_KEY);
+              display_string.concat((String)snifferPacket->rx_ctrl.rssi);
+              display_string.concat("BECN ");
+              display_string.concat(addr);
+              display_string.concat(" -> ");
+              display_string.concat(essid);
+
+              int temp_len = display_string.length();
+
+              #ifdef HAS_SCREEN
+                for (int i = 0; i < 40 - temp_len; i++)
+                {
+                  display_string.concat(" ");
+                }
+
+                display_obj.display_buffer->add(display_string);
+              #endif
+
+              Serial.println(display_string);
+
+              buffer_obj.append(snifferPacket, len);
+              break;
+            }
+          }
+        }
+      }
+    }
   }
 }
 
