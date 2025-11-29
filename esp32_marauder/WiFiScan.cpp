@@ -2208,11 +2208,12 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
           (scan_mode == BT_SCAN_ANALYZER) ||
           (scan_mode == BT_SCAN_SIMPLE) ||
           (scan_mode == BT_SCAN_SIMPLE_TWO)) {
+    if (scan_mode == BT_SCAN_FLOCK)
+      this->RunProbeScan(scan_mode, color);
+
     #ifdef HAS_BT
       RunBluetoothScan(scan_mode, color);
     #endif
-    if (scan_mode == BT_SCAN_FLOCK)
-      this->RunProbeScan(scan_mode, color);
   }
   else if (scan_mode == BT_ATTACK_SOUR_APPLE) {
     #ifdef HAS_BT
@@ -2490,6 +2491,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   (currentScanMode == WIFI_SCAN_PACKET_RATE) ||
   (currentScanMode == WIFI_CONNECTED) ||
   (currentScanMode == BT_SCAN_FLOCK) ||
+  (currentScanMode == BT_SCAN_FLOCK_WARDRIVE) ||
   (currentScanMode == LV_JOIN_WIFI) ||
   (this->wifi_initialized))
   {
@@ -2523,13 +2525,13 @@ void WiFiScan::StopScan(uint8_t scan_mode)
     evil_portal_obj.has_ap = false;
   }
 
-  else if ((currentScanMode == GPS_TRACKER) ||
+  if ((currentScanMode == GPS_TRACKER) ||
           (currentScanMode == GPS_POI)) {
     this->writeFooter(currentScanMode == GPS_POI);
   }
 
   
-  else if ((currentScanMode == BT_SCAN_ALL) ||
+  if ((currentScanMode == BT_SCAN_ALL) ||
   (currentScanMode == BT_SCAN_AIRTAG) ||
   (currentScanMode == BT_SCAN_AIRTAG_MON) ||
   (currentScanMode == BT_SCAN_FLIPPER) ||
@@ -4876,8 +4878,10 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
       display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
       if (scan_mode != BT_SCAN_FLOCK)
         display_obj.tft.drawCentreString(text_table4[40],TFT_WIDTH / 2,16,2);
-      else
+      else {
+        Serial.println(F("Starting WiFi sniff for Flock..."));
         display_obj.tft.drawCentreString("Flock Sniff",TFT_WIDTH / 2,16,2);
+      }
     #endif
     #ifdef HAS_ILI9341
       display_obj.touchToExit();
@@ -7148,15 +7152,16 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
       if (snifferPacket->payload[0] == 0x40) {
         String probe_req_essid;
 
-        for (int i = 0; i < snifferPacket->payload[25]; i++) {
-          Serial.print((char)snifferPacket->payload[26 + i]);
+        for (int i = 0; i < snifferPacket->payload[25]; i++)
           probe_req_essid.concat((char)snifferPacket->payload[26 + i]);
-        }
+
+        Serial.println(probe_req_essid);
+
 
         for (int i = 0; i < sizeof(flock_ssid)/sizeof(wifi_scan_obj.flock_ssid[0]); i++) {
           if (strcasestr(probe_req_essid.c_str(), wifi_scan_obj.flock_ssid[i])) {
-            Serial.print(F("Probe Request: "));
-            Serial.println(probe_req_essid);
+            //Serial.print(F("Probe Request: "));
+            //Serial.println(probe_req_essid);
 
             char addr[] = "00:00:00:00:00:00";
             getMAC(addr, snifferPacket->payload, 10);
@@ -7170,12 +7175,16 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
             int temp_len = display_string.length();
 
             #ifdef HAS_SCREEN
-              for (int i = 0; i < 40 - temp_len; i++)
+              for (int i = 0; i < 40; i++)
               {
                 display_string.concat(" ");
               }
 
+              while (display_obj.printing)
+                delay(1);
+              display_obj.loading = true;
               display_obj.display_buffer->add(display_string);
+              display_obj.loading = false;
             #endif
 
             Serial.println(display_string);
@@ -7191,10 +7200,12 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
           for (int i = 0; i < snifferPacket->payload[37]; i++)
             essid.concat((char)snifferPacket->payload[i + 38]);
 
+          Serial.println(essid);
+
           for (int i = 0; i < sizeof(flock_ssid)/sizeof(wifi_scan_obj.flock_ssid[0]); i++) {
             if (strcasestr(essid.c_str(), wifi_scan_obj.flock_ssid[i])) {
-              Serial.print(F("Beacon : "));
-              Serial.println(essid);
+              //Serial.print(F("Beacon : "));
+              //Serial.println(essid);
 
               char addr[] = "00:00:00:00:00:00";
               getMAC(addr, snifferPacket->payload, 10);
@@ -7208,12 +7219,16 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
               int temp_len = display_string.length();
 
               #ifdef HAS_SCREEN
-                for (int i = 0; i < 40 - temp_len; i++)
+                for (int i = 0; i < 40; i++)
                 {
                   display_string.concat(" ");
                 }
 
+                while (display_obj.printing)
+                  delay(1);
+                display_obj.loading = true;
                 display_obj.display_buffer->add(display_string);
+                display_obj.loading = false;
               #endif
 
               Serial.println(display_string);
@@ -10122,8 +10137,7 @@ void WiFiScan::main(uint32_t currentTime)
   (currentScanMode == WIFI_SCAN_MULTISSID) ||
   (currentScanMode == WIFI_SCAN_DEAUTH) ||
   (currentScanMode == WIFI_SCAN_STATION_WAR_DRIVE) ||
-  (currentScanMode == WIFI_SCAN_ALL) ||
-  (currentScanMode == BT_SCAN_FLOCK))
+  (currentScanMode == WIFI_SCAN_ALL))
   {
     if (currentTime - initTime >= this->channel_hop_delay * HOP_DELAY)
     {
@@ -10137,14 +10151,22 @@ void WiFiScan::main(uint32_t currentTime)
           (currentScanMode == BT_SCAN_WAR_DRIVE_CONT) ||
           (currentScanMode == BT_SCAN_FLIPPER) || 
           (currentScanMode == BT_SCAN_AIRTAG)) {
-    if (currentTime - initTime >= 5000) {
+    if (currentTime - initTime >= this->channel_hop_delay * HOP_DELAY) {
       initTime = millis();
       #ifdef HAS_BT
-        pBLEScan->stop();
-        delay(5);
-        pBLEScan->clearResults();
-        pBLEScan->start(0, scanCompleteCB, false);
+        if (this->ble_scanning) {
+          pBLEScan->stop();
+          pBLEScan->clearResults();
+          this->ble_scanning = false;
+        }
+        else {
+          pBLEScan->start(0, scanCompleteCB, false);
+          this->ble_scanning = true;
+          return;
+        }
       #endif
+      if (currentScanMode == BT_SCAN_FLOCK)
+        channelHop();
     }
   }
   else if (currentScanMode == WIFI_PING_SCAN) {

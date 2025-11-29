@@ -628,6 +628,7 @@ class WiFiScan
     bool force_probe = false;
     bool save_pcap = false;
     bool ep_deauth = false;
+    bool ble_scanning = false;
 
     char* flock_ssid[4] = {
       "flock",
