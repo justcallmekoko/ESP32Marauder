@@ -1,291 +1,13 @@
 #include "MenuFunctions.h"
 #include "lang_var.h"
-//#include "icons.h"
 
 #ifdef HAS_SCREEN
 
 extern const unsigned char menu_icons[][66];
-//PROGMEM lv_obj_t * slider_label;
-//PROGMEM lv_obj_t * ta1;
-//PROGMEM lv_obj_t * ta2;
-//PROGMEM lv_obj_t * save_name;
 
 MenuFunctions::MenuFunctions()
 {
 }
-
-// LVGL Stuff
-/* Interrupt driven periodic handler */
-
-#ifdef HAS_ILI9341
-  /*void MenuFunctions::lv_tick_handler()
-  {
-    lv_tick_inc(LVGL_TICK_PERIOD);
-  }
-  
-  void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p)
-  {
-    extern Display display_obj;
-    uint16_t c;
-  
-    display_obj.tft.startWrite();
-    display_obj.tft.setAddrWindow(area->x1, area->y1, (area->x2 - area->x1 + 1), (area->y2 - area->y1 + 1));
-    for (int y = area->y1; y <= area->y2; y++) {
-      for (int x = area->x1; x <= area->x2; x++) {
-        c = color_p->full;
-        display_obj.tft.writeColor(c, 1);
-        color_p++;
-      }
-    }
-    display_obj.tft.endWrite();
-    lv_disp_flush_ready(disp);
-  }
-  
-  
-  bool my_touchpad_read(lv_indev_drv_t * indev_driver, lv_indev_data_t * data)
-  {
-    extern Display display_obj;
-    
-    uint16_t touchX, touchY;
-  
-    bool touched = display_obj.updateTouch(&touchX, &touchY, 600);
-  
-    if(!touched)
-    {
-      return false;
-    }
-  
-    if(touchX>WIDTH_1 || touchY > HEIGHT_1)
-    {
-      Serial.println(F("Y or y outside of expected parameters.."));
-      Serial.print("y:");
-      Serial.print(touchX);
-      Serial.print(" x:");
-      Serial.print(touchY);
-    }
-    else
-    {
-  
-      data->state = touched ? LV_INDEV_STATE_PR : LV_INDEV_STATE_REL; 
-       
-      data->point.x = touchX;
-      data->point.y = touchY;
-  
-    }
-  
-    return false;
-  }
-  
-  void MenuFunctions::initLVGL() {
-    tick.attach_ms(LVGL_TICK_PERIOD, lv_tick_handler);
-    
-    lv_init();
-  
-    lv_disp_buf_init(&disp_buf, buf, NULL, LV_HOR_RES_MAX * 10);
-  
-    lv_disp_drv_t disp_drv;
-    lv_disp_drv_init(&disp_drv);
-    disp_drv.hor_res = WIDTH_1;
-    disp_drv.ver_res = HEIGHT_1;
-    disp_drv.flush_cb = my_disp_flush;
-    disp_drv.buffer = &disp_buf;
-    lv_disp_drv_register(&disp_drv);
-  
-    lv_indev_drv_t indev_drv;
-    lv_indev_drv_init(&indev_drv);             
-    indev_drv.type = LV_INDEV_TYPE_POINTER;    
-    indev_drv.read_cb = my_touchpad_read;      
-    lv_indev_drv_register(&indev_drv);         
-  }
-  
-  
-  void MenuFunctions::deinitLVGL() {
-    Serial.println(F("Deinit LVGL"));
-    //lv_deinit();
-  }*/
-  
-  
-  // Event handler for settings drop down menus
-  /*void setting_dropdown_cb(lv_obj_t * obj, lv_event_t event) {
-
-  }
-  
-  void MenuFunctions::addSSIDGFX(){
-    extern LinkedList<ssid>* ssids;
-    
-    String display_string = "";
-    // Create a keyboard and apply the styles
-    kb = lv_keyboard_create(lv_scr_act(), NULL);
-    lv_obj_set_size(kb, LV_HOR_RES, LV_VER_RES / 2);
-    lv_obj_set_event_cb(kb, add_ssid_keyboard_event_cb);
-  
-    // Create one text area
-    // Store all SSIDs
-    ta1 = lv_textarea_create(lv_scr_act(), NULL);
-    lv_textarea_set_one_line(ta1, false);
-    lv_obj_set_width(ta1, LV_HOR_RES);
-    lv_obj_set_height(ta1, (LV_VER_RES / 2) - 35);
-    lv_obj_set_pos(ta1, 5, 20);
-    lv_textarea_set_cursor_hidden(ta1, true);
-    lv_obj_align(ta1, NULL, LV_ALIGN_IN_TOP_MID, NULL, NULL);
-    lv_textarea_set_placeholder_text(ta1, text_table1[0]);
-  
-    // Create second text area
-    // Add SSIDs
-    ta2 = lv_textarea_create(lv_scr_act(), ta1);
-    lv_textarea_set_cursor_hidden(ta2, false);
-    lv_textarea_set_one_line(ta2, true);
-    lv_obj_align(ta2, NULL, LV_ALIGN_IN_TOP_MID, NULL, (LV_VER_RES / 2) - 35);
-    lv_textarea_set_text(ta2, "");
-    lv_textarea_set_placeholder_text(ta2, text_table1[1]);
-  
-    // After generating text areas, add text to first text box
-    for (int i = 0; i < ssids->size(); i++)
-      display_string.concat((String)ssids->get(i).essid + "\n");
-      
-    lv_textarea_set_text(ta1, display_string.c_str());
-  
-    // Focus it on one of the text areas to start
-    lv_keyboard_set_textarea(kb, ta2);
-    lv_keyboard_set_cursor_manage(kb, true);
-    
-  }
-  
-  // Keyboard callback dedicated to joining wifi
-  void add_ssid_keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event){
-    extern Display display_obj;
-    extern MenuFunctions menu_function_obj;
-    extern WiFiScan wifi_scan_obj;
-    extern LinkedList<ssid>* ssids;
-    
-    lv_keyboard_def_event_cb(kb, event);
-  
-    // User has applied text box
-    if(event == LV_EVENT_APPLY){
-      String display_string = "";
-      printf("LV_EVENT_APPLY\n");
-  
-      // Get text from SSID text box
-      String ta2_text = lv_textarea_get_text(ta2);
-      Serial.println(ta2_text);
-  
-      // Add text box text to list of SSIDs
-      wifi_scan_obj.addSSID(ta2_text);
-  
-      // Update large text box with ssid
-      for (int i = 0; i < ssids->size(); i++)
-        display_string.concat((String)ssids->get(i).essid + "\n");
-      lv_textarea_set_text(ta1, display_string.c_str());
-  
-      lv_textarea_set_text(ta2, "");
-    }else if(event == LV_EVENT_CANCEL){
-      printf("LV_EVENT_CANCEL\n");
-      menu_function_obj.deinitLVGL();
-      display_obj.exit_draw = true; // set everything back to normal
-    }
-  }
-
-  void MenuFunctions::joinWiFiGFX(String essid, bool start_ap){
-
-    // Create one text area
-    ta1 = lv_textarea_create(lv_scr_act(), NULL);
-    lv_textarea_set_one_line(ta1, true);
-    lv_obj_set_width(ta1, LV_HOR_RES / 2 - 20);
-    lv_obj_set_pos(ta1, 5, 20);
-    lv_textarea_set_text(ta1, essid.c_str());
-    lv_obj_set_event_cb(ta1, ta_event_cb);
-
-    // Create first label
-    lv_obj_t * ssid_label = lv_label_create(lv_scr_act(), NULL);
-    lv_label_set_text(ssid_label, "SSID:");
-    lv_obj_align(ssid_label, ta1, LV_ALIGN_OUT_TOP_LEFT, 0, 0);
-
-    // Create second text area
-    ta2 = lv_textarea_create(lv_scr_act(), ta1);
-    lv_textarea_set_cursor_hidden(ta2, true);
-    lv_obj_align(ta2, NULL, LV_ALIGN_IN_TOP_RIGHT, -5, 20);
-
-    // Create second label
-    lv_obj_t * pw_label = lv_label_create(lv_scr_act(), NULL);
-    lv_label_set_text(pw_label, "Password:");
-    lv_textarea_set_text(ta2, "");
-    lv_obj_align(pw_label, ta2, LV_ALIGN_OUT_TOP_LEFT, 0, 0);
-
-    // Create a keyboard and apply the styles
-    kb = lv_keyboard_create(lv_scr_act(), NULL);
-    lv_obj_set_size(kb, LV_HOR_RES, LV_VER_RES / 2);
-
-    if (!start_ap)
-      lv_obj_set_event_cb(kb, join_wifi_keyboard_event_cb);
-    else
-      lv_obj_set_event_cb(kb, start_ap_keyboard_event_cb);
-
-    // Focus it on one of the text areas to start
-    lv_keyboard_set_textarea(kb, ta1);
-    lv_keyboard_set_cursor_manage(kb, true);
-    
-  }
-
-  void join_wifi_keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event){
-    extern Display display_obj;
-    extern MenuFunctions menu_function_obj;
-    extern WiFiScan wifi_scan_obj;
-    lv_keyboard_def_event_cb(kb, event);
-    if(event == LV_EVENT_APPLY){
-      printf("LV_EVENT_APPLY\n");
-      String ta1_text = lv_textarea_get_text(ta1);
-      String ta2_text = lv_textarea_get_text(ta2);
-      Serial.println(ta1_text);
-      Serial.println(ta2_text);
-      if (wifi_scan_obj.joinWiFi(ta1_text, ta2_text))
-        wifi_scan_obj.currentScanMode = WIFI_CONNECTED;
-      else
-        wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
-    }else if(event == LV_EVENT_CANCEL){
-      printf("LV_EVENT_CANCEL\n");
-      menu_function_obj.deinitLVGL();
-      display_obj.exit_draw = true; // set everything back to normal
-      if (wifi_scan_obj.connected_network != "")
-        wifi_scan_obj.currentScanMode = WIFI_CONNECTED;
-    }
-  }
-
-  void start_ap_keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event){
-    extern Display display_obj;
-    extern MenuFunctions menu_function_obj;
-    extern WiFiScan wifi_scan_obj;
-    lv_keyboard_def_event_cb(kb, event);
-    if(event == LV_EVENT_APPLY){
-      printf("LV_EVENT_APPLY\n");
-      String ta1_text = lv_textarea_get_text(ta1);
-      String ta2_text = lv_textarea_get_text(ta2);
-      Serial.println(ta1_text);
-      Serial.println(ta2_text);
-      if (wifi_scan_obj.startWiFi(ta1_text, ta2_text))
-        wifi_scan_obj.currentScanMode = WIFI_CONNECTED;
-      else
-        wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
-    }else if(event == LV_EVENT_CANCEL){
-      printf("LV_EVENT_CANCEL\n");
-      menu_function_obj.deinitLVGL();
-      display_obj.exit_draw = true; // set everything back to normal
-      if (wifi_scan_obj.connected_network != "")
-        wifi_scan_obj.currentScanMode = WIFI_CONNECTED;
-    }
-  }*/
-  
-  
-  /*void ta_event_cb(lv_obj_t * ta, lv_event_t event)
-  {
-    if(event == LV_EVENT_CLICKED) {
-      if(kb != NULL)
-        lv_keyboard_set_textarea(kb, ta);
-    }
-  
-  }*/
-
-#endif
-//// END LV_ARDUINO STUFF
 
 void MenuFunctions::buttonNotSelected(int b, int x) {
   if (x == -1)
@@ -1608,10 +1330,6 @@ void MenuFunctions::RunSetup()
   extern LinkedList<ssid>* ssids;
 
   this->disable_touch = false;
-  
-  //#ifdef HAS_ILI9341
-  //  this->initLVGL();
-  //#endif
 
   #ifdef MARAUDER_CARDPUTER
     M5CardputerKeyboard.begin();
@@ -1633,14 +1351,11 @@ void MenuFunctions::RunSetup()
 
   // Device menu stuff
   failedUpdateMenu.list = new LinkedList<MenuNode>();
-  //whichUpdateMenu.list = new LinkedList<MenuNode>();
   confirmMenu.list = new LinkedList<MenuNode>();
   updateMenu.list = new LinkedList<MenuNode>();
   settingsMenu.list = new LinkedList<MenuNode>();
   specSettingMenu.list = new LinkedList<MenuNode>();
   infoMenu.list = new LinkedList<MenuNode>();
-  //languageMenu.list = new LinkedList<MenuNode>();
-
   // WiFi menu stuff
   wifiSnifferMenu.list = new LinkedList<MenuNode>();
   wifiScannerMenu.list = new LinkedList<MenuNode>();
@@ -1654,26 +1369,15 @@ void MenuFunctions::RunSetup()
   apInfoMenu.list = new LinkedList<MenuNode>();
   setMacMenu.list = new LinkedList<MenuNode>();
   genAPMacMenu.list = new LinkedList<MenuNode>();
-  //#ifdef HAS_BT
-  //  airtagMenu.list = new LinkedList<MenuNode>();
-  //#endif
-  //#ifndef HAS_ILI9341
-    wifiStationMenu.list = new LinkedList<MenuNode>();
-  //#endif
+  wifiStationMenu.list = new LinkedList<MenuNode>();
   selectProbeSSIDsMenu.list = new LinkedList<MenuNode>();
 
   // WiFi HTML menu stuff
   htmlMenu.list = new LinkedList<MenuNode>();
-  //#if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
-    miniKbMenu.list = new LinkedList<MenuNode>();
-  //#endif
-  //#ifndef HAS_ILI9341
-  //  #ifdef HAS_BUTTONS
-      #ifdef HAS_SD
-        sdDeleteMenu.list = new LinkedList<MenuNode>();
-      #endif
-  //  #endif
-  //#endif
+  miniKbMenu.list = new LinkedList<MenuNode>();
+  #ifdef HAS_SD
+    sdDeleteMenu.list = new LinkedList<MenuNode>();
+  #endif
 
   // Bluetooth menu stuff
   bluetoothSnifferMenu.list = new LinkedList<MenuNode>();
@@ -1702,10 +1406,8 @@ void MenuFunctions::RunSetup()
   wifiMenu.name = text_table1[7];
   deviceMenu.name = text_table1[9];
   failedUpdateMenu.name = text_table1[11];
-  //whichUpdateMenu.name = text_table1[12];
   confirmMenu.name = text_table1[13];
   updateMenu.name = text_table1[15];
-  //languageMenu.name = text_table1[16]; 
   infoMenu.name = text_table1[17];
   settingsMenu.name = text_table1[18];
   bluetoothMenu.name = text_table1[19];
@@ -1731,25 +1433,16 @@ void MenuFunctions::RunSetup()
   apInfoMenu.name = "AP Info";
   setMacMenu.name = "Set MACs";
   genAPMacMenu.name = "Generate AP MAC";
-  //#ifdef HAS_BT
-  //  airtagMenu.name = "Select Airtag";
-  //#endif
-  //#ifndef HAS_ILI9341
-    wifiStationMenu.name = "Select Stations";
-  //#endif
+  wifiStationMenu.name = "Select Stations";
   #ifdef HAS_GPS
     gpsMenu.name = "GPS"; 
     gpsInfoMenu.name = "GPS Data";
     wardrivingMenu.name = "Wardriving";
   #endif  
   htmlMenu.name = "EP HTML List";
-  //#if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
-    miniKbMenu.name = "Mini Keyboard";
-  //#endif
+  miniKbMenu.name = "Mini Keyboard";
   #ifdef HAS_SD
-  //  #ifndef HAS_ILI9341
-      sdDeleteMenu.name = "Delete SD Files";
-  //  #endif
+    sdDeleteMenu.name = "Delete SD Files";
   #endif
   selectProbeSSIDsMenu.name = "Probe Requests";
   evilPortalMenu.name = "Evil Portal";
@@ -1919,12 +1612,6 @@ void MenuFunctions::RunSetup()
       this->drawStatusBar();
       wifi_scan_obj.StartScan(WIFI_PACKET_MONITOR, TFT_BLUE);
     });
-    /*this->addNodes(&wifiSnifferMenu, "Packet Count", TFTORANGE, NULL, PACKET_MONITOR, [this]() {
-      display_obj.clearScreen();
-      this->drawStatusBar();
-      wifi_scan_obj.StartScan(WIFI_SCAN_PACKET_RATE, TFT_ORANGE);
-      wifi_scan_obj.renderPacketRate();
-    });*/
   #endif
   this->addNodes(&wifiSnifferMenu, "Channel Analyzer", TFTCYAN, NULL, PACKET_MONITOR, [this]() {
     display_obj.clearScreen();
@@ -1962,21 +1649,21 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_MULTISSID, TFT_ORANGE);
   });
-  /*this->addNodes(&wifiSnifferMenu, text_table1[49], TFTMAGENTA, NULL, BEACON_SNIFF, [this]() {
+  this->addNodes(&wifiSnifferMenu, text_table1[49], TFTMAGENTA, NULL, BEACON_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_TARGET_AP, TFT_MAGENTA);
-  });*/
+  });
   this->addNodes(&wifiSnifferMenu, "Scan AP/STA", TFTLIME, NULL, BEACON_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_AP_STA, 0x97e0);
   });
-  /*this->addNodes(&wifiSnifferMenu, text_table1[59], TFTORANGE, NULL, PACKET_MONITOR, [this]() {
+  this->addNodes(&wifiSnifferMenu, text_table1[59], TFTORANGE, NULL, PACKET_MONITOR, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_STATION, TFT_WHITE);
-  });*/
+  });
   this->addNodes(&wifiSnifferMenu, "Signal Monitor", TFTCYAN, NULL, PACKET_MONITOR, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
@@ -2037,12 +1724,6 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_ATTACK_AUTH, TFT_RED);
   });
-  /*this->addNodes(&wifiAttackMenu, "Evil Portal", TFTORANGE, NULL, BEACON_SNIFF, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_EVIL_PORTAL, TFT_ORANGE);
-    wifi_scan_obj.setMac();
-  });*/
   this->addNodes(&wifiAttackMenu, "Evil Portal", TFTORANGE, NULL, BEACON_SNIFF, [this]() {
 
     wifiAPMenu.list->clear();
@@ -2239,11 +1920,6 @@ void MenuFunctions::RunSetup()
   clearSSIDsMenu.parentMenu = &wifiGeneralMenu;
 
   #ifdef HAS_ILI9341
-    /*this->addNodes(&wifiGeneralMenu, text_table1[1], TFTNAVY, NULL, KEYBOARD_ICO, [this](){
-      display_obj.clearScreen(); 
-      wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_YELLOW); 
-      addSSIDGFX();
-    });*/
     this->addNodes(&wifiGeneralMenu, text_table1[1], TFTNAVY, NULL, KEYBOARD_ICO, [this](){
       char ssidBuf[64] = {0};
       bool keep_going = true;
@@ -2491,15 +2167,10 @@ void MenuFunctions::RunSetup()
           #ifdef HAS_TOUCH
             char passwordBuf[64] = {0};  // or prefill with existing SSID
             if (keyboardInput(passwordBuf, sizeof(passwordBuf), "Enter Password")) {
-              //wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
-              //wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
               wifi_scan_obj.joinWiFi(access_points->get(i).essid, String(passwordBuf), true);
             }
 
             this->changeMenu(&wifiGeneralMenu, false);
-            /*wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
-            wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
-            joinWiFiGFX(access_points->get(i).essid);*/
           #endif
         });
       }
@@ -2542,15 +2213,10 @@ void MenuFunctions::RunSetup()
             #ifdef HAS_TOUCH
               char passwordBuf[64] = {0};  // or prefill with existing SSID
               if (keyboardInput(passwordBuf, sizeof(passwordBuf), "Enter Password")) {
-                //wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
-                //wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
                 wifi_scan_obj.joinWiFi(access_points->get(i).essid, String(passwordBuf), true);
               }
 
               this->changeMenu(&wifiGeneralMenu, false);
-              /*wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
-              wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
-              joinWiFiGFX(access_points->get(i).essid);*/
             #endif
           });
         }
@@ -2586,21 +2252,13 @@ void MenuFunctions::RunSetup()
 
           // Join WiFi using touch screen keyboard
           #ifdef HAS_TOUCH
-            /*wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
-            wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
-            joinWiFiGFX(ssids->get(i).essid, true);*/
             char passwordBuf[64] = {0};  // or prefill with existing SSID
             if (keyboardInput(passwordBuf, sizeof(passwordBuf), "Enter Password")) {
-              //wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
-              //wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW);
               Serial.println("Using SSID: " + (String)ssids->get(i).essid + " Password: " + String(passwordBuf));
               wifi_scan_obj.startWiFi(ssids->get(i).essid, String(passwordBuf));
             }
 
             this->changeMenu(&wifiGeneralMenu, false);
-            /*wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
-            wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
-            joinWiFiGFX(access_points->get(i).essid);*/
           #endif
         });
       }
@@ -2775,16 +2433,6 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_SCAN_FLOCK_WARDRIVE, TFT_CYAN);
   });
-  /*this->addNodes(&bluetoothSnifferMenu, "Simple Sniff", TFTWHITE, NULL, BLUETOOTH_SNIFF, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(BT_SCAN_SIMPLE, TFT_ORANGE);
-  });
-  this->addNodes(&bluetoothSnifferMenu, "Simple Sniff 2", TFTWHITE, NULL, BLUETOOTH_SNIFF, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(BT_SCAN_SIMPLE_TWO, TFT_ORANGE);
-  });*/
 
   // Bluetooth Attack menu
   bluetoothAttackMenu.parentMenu = &bluetoothMenu; // Second Menu is third menu parent
@@ -2821,15 +2469,6 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_ATTACK_SPAM_ALL, TFT_MAGENTA);
   });
-
-  /*#ifdef HAS_ILI9341
-    this->addNodes(&bluetoothAttackMenu, "Spoof Airtag", TFTWHITE, NULL, ATTACKS, [this](){
-      display_obj.clearScreen();
-      wifi_scan_obj.currentScanMode = LV_ADD_SSID;
-      wifi_scan_obj.StartScan(LV_ADD_SSID, TFT_WHITE);
-      addAPGFX("Airtag");
-    });
-  #endif*/
 
   //#ifndef HAS_ILI9341
     #ifdef HAS_BT
@@ -2889,10 +2528,6 @@ void MenuFunctions::RunSetup()
   this->addNodes(&deviceMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
     this->changeMenu(deviceMenu.parentMenu, true);
   });
-  /*this->addNodes(&deviceMenu, text_table1[15], TFTORANGE, NULL, UPDATE, [this]() {
-    wifi_scan_obj.currentScanMode = OTA_UPDATE;
-    this->changeMenu(&whichUpdateMenu, true);
-  });*/
 
   #ifdef HAS_SD
     if (sd_obj.supported) {
@@ -2918,11 +2553,6 @@ void MenuFunctions::RunSetup()
     this->changeMenu(&saveFileMenu, true);
   });
 
-  /*this->addNodes(&deviceMenu, text_table1[16], TFTGREEN, NULL, LANGUAGE, [this]() {
-
-    wifi_scan_obj.currentScanMode = SHOW_INFO;
-    this->changeMenu(&languageMenu, true);   
-  });*/
   this->addNodes(&deviceMenu, text_table1[17], TFTWHITE, NULL, DEVICE_INFO, [this]() {
     wifi_scan_obj.currentScanMode = SHOW_INFO;
     this->changeMenu(&infoMenu, true);
@@ -2951,17 +2581,6 @@ void MenuFunctions::RunSetup()
       });
     }
   #endif
-
-  /*#ifdef HAS_SD
-    //#ifndef HAS_ILI9341
-      #ifdef HAS_BUTTONS
-        sdDeleteMenu.parentMenu = &deviceMenu;
-        this->addNodes(&sdDeleteMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
-          this->changeMenu(sdDeleteMenu.parentMenu);
-        });
-      #endif
-    //#endif
-  #endif*/
 
   // Save Files Menu
   saveFileMenu.parentMenu = &deviceMenu;
@@ -3064,10 +2683,6 @@ void MenuFunctions::RunSetup()
         this->changeMenu(gpsPOIMenu.parentMenu, true);
       });
       this->addNodes(&gpsPOIMenu, "Mark POI", TFTCYAN, NULL, GPS_MENU, [this]() {
-        /*if (wifi_scan_obj.currentScanMode != GPS_POI) {
-          wifi_scan_obj.currentScanMode = GPS_POI;
-          wifi_scan_obj.StartScan(GPS_POI, TFT_CYAN);
-        }*/
         wifi_scan_obj.currentScanMode = GPS_POI;
         display_obj.tft.setCursor(0, TFT_HEIGHT / 2);
         display_obj.clearScreen();
@@ -3077,7 +2692,6 @@ void MenuFunctions::RunSetup()
           display_obj.showCenterText("POI Log Failed", TFT_HEIGHT / 2);
         wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
         delay(2000);
-        //wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
         this->changeMenu(&gpsPOIMenu, true);
       });
 
@@ -3116,13 +2730,6 @@ void MenuFunctions::RunSetup()
   addNodes(&specSettingMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
     this->changeMenu(specSettingMenu.parentMenu, true);
   });
- 
-  // Select update
-  /*whichUpdateMenu.parentMenu = &deviceMenu;
-  this->addNodes(&whichUpdateMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
-    wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
-    this->changeMenu(whichUpdateMenu.parentMenu, true);
-  });*/
 
   // Web Update
   updateMenu.parentMenu = &deviceMenu;
@@ -3140,12 +2747,7 @@ void MenuFunctions::RunSetup()
     wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
     this->changeMenu(infoMenu.parentMenu, true);
   });
-  //language info menu
-  /*languageMenu.parentMenu = &deviceMenu;
-  this->addNodes(&languageMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
-    wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
-    this->changeMenu(infoMenu.parentMenu, true);
-  });*/
+
   // Set the current menu to the mainMenu
   this->changeMenu(&mainMenu, true);
 
@@ -3598,8 +3200,6 @@ void MenuFunctions::buildSDFileMenu(bool update) {
           display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
           display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
           display_obj.tft.println("Deleting /" + sd_obj.sd_files->get(x) + "...");
-          //sd_obj.sd_files->remove(x);
-          //sdDeleteMenu.list->remove(x + 1); // +1 for "Back"
           this->buildSDFileMenu();
           this->changeMenu(&sdDeleteMenu, true);
         }
@@ -3634,18 +3234,10 @@ void MenuFunctions::showMenuList(Menu * menu, int layer)
 
 
 // Function to add MenuNodes to a menu
-/*void MenuFunctions::addNodes(Menu * menu, String name, uint16_t color, Menu * child, int place, std::function<void()> callable, bool selected, String command)
-{
-  TFT_eSPI_Button new_button;
-  menu->list->add(MenuNode{name, false, color, place, &new_button, selected, callable});
-  //menu->list->add(MenuNode{name, false, color, place, selected, callable});
-}*/
-
 void MenuFunctions::addNodes(Menu * menu, String name, uint8_t color, Menu * child, int place, std::function<void()> callable, bool selected, String command)
 {
   TFT_eSPI_Button new_button;
   menu->list->add(MenuNode{name, false, color, place, &new_button, selected, callable});
-  //menu->list->add(MenuNode{name, false, color, place, selected, callable});
 }
 
 void MenuFunctions::setGraphScale(float scale) {
@@ -3947,29 +3539,18 @@ void MenuFunctions::displayCurrentMenu(int start_index)
       display_obj.tft.setTextSize(1);
     #endif
 
-    // Draw the up, down, select buttons
-    /*#ifdef HAS_ILI9341
-      for (int i = BUTTON_ARRAY_LEN; i < BUTTON_ARRAY_LEN + 3; i++) {
-        display_obj.key[i].drawButton(true);
-      }
-    #endif*/
-
     for (uint16_t i = start_index; i < min(start_index + BUTTON_SCREEN_LIMIT, current_menu->list->size()); i++)
     {
       if (!current_menu || !current_menu->list || i >= current_menu->list->size())
         continue;
       uint16_t color = this->getColor(current_menu->list->get(i).color);
       #ifdef HAS_FULL_SCREEN
-        //#ifndef HAS_ILI9341
-          if ((current_menu->list->get(i).selected) || (current_menu->selected == i)) {
-            display_obj.key[i - start_index].drawButton(true, current_menu->list->get(i).name);
-          }
-          else {
-            display_obj.key[i - start_index].drawButton(false, current_menu->list->get(i).name);          
-          }
-        //#else
-        //  display_obj.key[i].drawButton(false, current_menu->list->get(i).name); 
-        //#endif
+        if ((current_menu->list->get(i).selected) || (current_menu->selected == i)) {
+          display_obj.key[i - start_index].drawButton(true, current_menu->list->get(i).name);
+        }
+        else {
+          display_obj.key[i - start_index].drawButton(false, current_menu->list->get(i).name);          
+        }
         
         if ((current_menu->list->get(i).name != text09) && (current_menu->list->get(i).icon != 255))
           display_obj.tft.drawXBitmap(0,
