@@ -1881,15 +1881,6 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui)
   int count = 0;
   
   if ((WiFi.status() == WL_CONNECTED) && (ssid == connected_network) && (ssid != "")) {
-    /*#ifdef HAS_TOUCH
-      if (gui) {
-        lv_obj_t * mbox1 = lv_msgbox_create(lv_scr_act(), NULL);
-        lv_msgbox_set_text(mbox1, text_table4[2]);
-        lv_msgbox_add_btns(mbox1, btns);
-        lv_obj_set_width(mbox1, 200);
-        lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); //Align to the corner
-      }
-    #endif*/
     this->wifi_initialized = true;
     this->currentScanMode = WIFI_CONNECTED;
     return true;
@@ -1910,15 +1901,13 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui)
   WiFi.begin(ssid.c_str(), password.c_str());
 
   #ifdef HAS_SCREEN
-    //#ifdef HAS_MINI_KB
-      if (gui) {
-        display_obj.clearScreen();
-        display_obj.tft.setCursor(0, TFT_HEIGHT / 2);
-        display_obj.tft.setTextSize(1);
-        display_obj.tft.print("Connecting");
-        display_obj.tft.setTextWrap(true, false);
-      }
-    //#endif
+    if (gui) {
+      display_obj.clearScreen();
+      display_obj.tft.setCursor(0, TFT_HEIGHT / 2);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.print("Connecting");
+      display_obj.tft.setTextWrap(true, false);
+    }
   #endif
 
   Serial.print(F("Connecting to WiFi"));
@@ -1926,34 +1915,20 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui)
     delay(500);
     Serial.print(".");
     #ifdef HAS_SCREEN
-      //#ifdef HAS_MINI_KB
-        if (gui) {
-          display_obj.tft.print(".");
-        }
-      //#endif
+      if (gui) {
+        display_obj.tft.print(".");
+      }
     #endif
     count++;
     if (count == 20)
     {
       Serial.println(F("\nCould not connect to WiFi network"));
       #ifdef HAS_SCREEN
-        //#ifdef HAS_MINI_KB
-          if (gui) {
-            display_obj.tft.println("\nFailed to connect");
-            delay(1000);
-          }
-        //#endif
-      #endif
-      /*#ifdef HAS_TOUCH
         if (gui) {
-          lv_obj_t * mbox1 = lv_msgbox_create(lv_scr_act(), NULL);
-          lv_msgbox_set_text(mbox1, text_table4[3]);
-          lv_msgbox_add_btns(mbox1, btns);
-          lv_obj_set_width(mbox1, 200);
-          //lv_obj_set_event_cb(mbox1, event_handler);
-          lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); //Align to the corner
+          display_obj.tft.println("\nFailed to connect");
+          delay(1000);
         }
-      #endif*/
+      #endif
       this->wifi_initialized = true;
       this->StartScan(WIFI_SCAN_OFF, TFT_BLACK);
       #ifdef HAS_SCREEN
@@ -1962,32 +1937,22 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui)
       return false;
     }
   }
-  
-  /*#ifdef HAS_TOUCH
-    lv_obj_t * mbox1 = lv_msgbox_create(lv_scr_act(), NULL);
-    lv_msgbox_set_text(mbox1, text_table4[4]);
-    lv_msgbox_add_btns(mbox1, btns);
-    lv_obj_set_width(mbox1, 200);
-    lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); //Align to the corner
-  #endif*/
   this->connected_network = ssid;
   this->setNetworkInfo();  
   this->showNetworkInfo();
 
   #ifdef HAS_SCREEN
-    //#ifdef HAS_MINI_KB
-      display_obj.tft.println("\nConnected!");
-      display_obj.tft.print("IP address: ");
-      display_obj.tft.println(this->ip_addr);
-      display_obj.tft.print("Gateway: ");
-      display_obj.tft.println(this->gateway);
-      display_obj.tft.print("Netmask: ");
-      display_obj.tft.println(this->subnet);
-      display_obj.tft.print("MAC: ");
-      display_obj.tft.println(WiFi.macAddress());
-      display_obj.tft.println("Returning...");
-      delay(2000);
-    //#endif
+    display_obj.tft.println("\nConnected!");
+    display_obj.tft.print("IP address: ");
+    display_obj.tft.println(this->ip_addr);
+    display_obj.tft.print("Gateway: ");
+    display_obj.tft.println(this->gateway);
+    display_obj.tft.print("Netmask: ");
+    display_obj.tft.println(this->subnet);
+    display_obj.tft.print("MAC: ");
+    display_obj.tft.println(WiFi.macAddress());
+    display_obj.tft.println("Returning...");
+    delay(2000);
   #endif
   this->wifi_initialized = true;
   #ifndef HAS_TOUCH
@@ -2009,15 +1974,6 @@ bool WiFiScan::startWiFi(String ssid, String password, bool gui)
   int count = 0;
   
   if ((WiFi.status() == WL_CONNECTED) && (ssid == connected_network) && (ssid != "")) {
-    /*#ifdef HAS_TOUCH
-      if (gui) {
-        lv_obj_t * mbox1 = lv_msgbox_create(lv_scr_act(), NULL);
-        lv_msgbox_set_text(mbox1, text_table4[2]);
-        lv_msgbox_add_btns(mbox1, btns);
-        lv_obj_set_width(mbox1, 200);
-        lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); //Align to the corner
-      }
-    #endif*/
     this->wifi_initialized = true;
     this->currentScanMode = WIFI_CONNECTED;
     return true;
@@ -2031,7 +1987,6 @@ bool WiFiScan::startWiFi(String ssid, String password, bool gui)
   delay(100);
   WiFi.mode(WIFI_MODE_AP);
 
-  //esp_wifi_set_mode(WIFI_IF_STA);
 
   this->setMac();
     
@@ -2041,56 +1996,40 @@ bool WiFiScan::startWiFi(String ssid, String password, bool gui)
     WiFi.softAP(ssid.c_str());
 
   #ifdef HAS_SCREEN
-    //#ifdef HAS_MINI_KB
-      if (gui) {
-        display_obj.clearScreen();
-        display_obj.tft.setCursor(0, TFT_HEIGHT / 2);
-        display_obj.tft.setTextSize(1);
-        display_obj.tft.print("Starting");
-        display_obj.tft.setTextWrap(true, false);
-      }
-    //#endif
+    if (gui) {
+      display_obj.clearScreen();
+      display_obj.tft.setCursor(0, TFT_HEIGHT / 2);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.print("Starting");
+      display_obj.tft.setTextWrap(true, false);
+    }
   #endif
 
   Serial.print(F("Started WiFi"));
   
-  /*#ifdef HAS_TOUCH
-    lv_obj_t * mbox1 = lv_msgbox_create(lv_scr_act(), NULL);
-    lv_msgbox_set_text(mbox1, text_table4[4]);
-    lv_msgbox_add_btns(mbox1, btns);
-    lv_obj_set_width(mbox1, 200);
-    lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); //Align to the corner
-  #endif*/
   this->connected_network = ssid;
   this->setNetworkInfo();
   
   this->showNetworkInfo();
 
   #ifdef HAS_SCREEN
-    //#ifdef HAS_MINI_KB
-      display_obj.tft.println(F("\nStarted AP"));
-      display_obj.tft.print(F("IP address: "));
-      display_obj.tft.println(this->ip_addr);
-      display_obj.tft.print(F("Gateway: "));
-      display_obj.tft.println(this->gateway);
-      display_obj.tft.print(F("Netmask: "));
-      display_obj.tft.println(this->subnet);
-      display_obj.tft.print(F("MAC: "));
-      display_obj.tft.println(WiFi.macAddress());
-      display_obj.tft.println(F("Returning..."));
-      delay(2000);
-    //#endif
+    display_obj.tft.println(F("\nStarted AP"));
+    display_obj.tft.print(F("IP address: "));
+    display_obj.tft.println(this->ip_addr);
+    display_obj.tft.print(F("Gateway: "));
+    display_obj.tft.println(this->gateway);
+    display_obj.tft.print(F("Netmask: "));
+    display_obj.tft.println(this->subnet);
+    display_obj.tft.print(F("MAC: "));
+    display_obj.tft.println(WiFi.macAddress());
+    display_obj.tft.println(F("Returning..."));
+    delay(2000);
   #endif
   this->wifi_initialized = true;
-  //#ifndef HAS_TOUCH
-    this->currentScanMode = WIFI_CONNECTED;
-    #ifdef HAS_SCREEN
-      display_obj.tft.setTextWrap(false, false);
-    #endif
-  //#endif
-
-  //settings_obj.saveSetting<bool>("APSSID", ssid);
-  //settings_obj.saveSetting<bool>("APPW", password);
+  this->currentScanMode = WIFI_CONNECTED;
+  #ifdef HAS_SCREEN
+    display_obj.tft.setTextWrap(false, false);
+  #endif
 
   return true;
 }
@@ -2239,16 +2178,6 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
   else if (scan_mode == BT_SCAN_SKIMMERS) {
     #ifdef HAS_BT
       RunBluetoothScan(scan_mode, color);
-    #endif
-  }
-  else if (scan_mode == LV_ADD_SSID) {
-    #ifdef HAS_SCREEN
-      RunLvJoinWiFi(scan_mode, color);
-    #endif
-  }
-  else if (scan_mode == LV_JOIN_WIFI) {
-    #ifdef HAS_SCREEN
-      RunLvJoinWiFi(scan_mode, color);
     #endif
   }
   else if (scan_mode == WIFI_SCAN_GPS_NMEA){
@@ -3364,28 +3293,6 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
   this->wifi_initialized = true;
   initTime = millis();
 }
-
-#ifdef HAS_SCREEN
-  void WiFiScan::RunLvJoinWiFi(uint8_t scan_mode, uint16_t color) {
-  
-    /*#ifdef HAS_TOUCH
-      display_obj.init();
-      display_obj.tft.setRotation(1);
-    #endif
-    
-    #ifndef HAS_CYD_TOUCH
-      display_obj.setCalData(true);
-    #else
-      //display_obj.touchscreen.setRotation(1);
-    #endif
-    
-    #ifdef HAS_TOUCH
-      lv_obj_t * scr = lv_cont_create(NULL, NULL);
-      lv_disp_load_scr(scr);
-    #endif*/
-  
-  }
-#endif
 
 void WiFiScan::RunClearStations() {
   #ifdef HAS_SCREEN
@@ -7180,11 +7087,13 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
                 display_string.concat(" ");
               }
 
-              while (display_obj.printing)
-                delay(1);
-              display_obj.loading = true;
-              display_obj.display_buffer->add(display_string);
-              display_obj.loading = false;
+              //while (display_obj.printing)
+              //  delay(1);
+              if (!display_obj.printing) {
+                display_obj.loading = true;
+                display_obj.display_buffer->add(display_string);
+                display_obj.loading = false;
+              }
             #endif
 
             Serial.println(display_string);
@@ -7224,11 +7133,13 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
                   display_string.concat(" ");
                 }
 
-                while (display_obj.printing)
-                  delay(1);
-                display_obj.loading = true;
-                display_obj.display_buffer->add(display_string);
-                display_obj.loading = false;
+                //while (display_obj.printing)
+                //  delay(1);
+                if (!display_obj.printing) {
+                  display_obj.loading = true;
+                  display_obj.display_buffer->add(display_string);
+                  display_obj.loading = false;
+                }
               #endif
 
               Serial.println(display_string);
