@@ -569,21 +569,31 @@ void CommandLine::runCommand(String input) {
       #ifdef HAS_GPS
         if (gps_obj.getGpsModuleStatus()) {
           int sta_sw = this->argSearch(&cmd_args, "-s");
+          int flk_sw = this->argSearch(&cmd_args, "-f");
 
-          if (sta_sw == -1) {
+          if (flk_sw == -1) {
+            Serial.println("Starting Flock Wardrive. Stop with " + (String)STOPSCAN_CMD);
+            #ifdef HAS_SCREEN
+              display_obj.clearScreen();
+              menu_function_obj.drawStatusBar();
+            #endif
+            wifi_scan_obj.StartScan(BT_SCAN_FLOCK_WARDRIVE, TFT_GREEN);
+          }
+          else if (sta_sw != -1) {
+            Serial.println("Starting Station Wardrive. Stop with " + (String)STOPSCAN_CMD);
+            #ifdef HAS_SCREEN
+              display_obj.clearScreen();
+              menu_function_obj.drawStatusBar();
+            #endif
+            wifi_scan_obj.StartScan(WIFI_SCAN_STATION_WAR_DRIVE, TFT_GREEN);
+          }
+          else {
             Serial.println("Starting Wardrive. Stop with " + (String)STOPSCAN_CMD);
             #ifdef HAS_SCREEN
               display_obj.clearScreen();
               menu_function_obj.drawStatusBar();
             #endif
             wifi_scan_obj.StartScan(WIFI_SCAN_WAR_DRIVE, TFT_GREEN);
-          }
-          else {Serial.println("Starting Station Wardrive. Stop with " + (String)STOPSCAN_CMD);
-            #ifdef HAS_SCREEN
-              display_obj.clearScreen();
-              menu_function_obj.drawStatusBar();
-            #endif
-            wifi_scan_obj.StartScan(WIFI_SCAN_STATION_WAR_DRIVE, TFT_GREEN);
           }
         }
         else

@@ -7072,16 +7072,16 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
 
             char addr[] = "00:00:00:00:00:00";
             getMAC(addr, snifferPacket->payload, 10);
-            display_string.concat(MAGENTA_KEY);
-            display_string.concat((String)snifferPacket->rx_ctrl.rssi);
-            display_string.concat(" ");
-            display_string.concat(addr);
-            display_string.concat(" -> ");
-            display_string.concat(probe_req_essid);
-
-            int temp_len = display_string.length();
-
             #ifdef HAS_SCREEN
+              display_string.concat(MAGENTA_KEY);
+              display_string.concat((String)snifferPacket->rx_ctrl.rssi);
+              display_string.concat(" ");
+              display_string.concat(addr);
+              display_string.concat(" -> ");
+              display_string.concat(probe_req_essid);
+
+              int temp_len = display_string.length();
+
               for (int i = 0; i < 40; i++)
               {
                 display_string.concat(" ");
@@ -7118,16 +7118,16 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
 
               char addr[] = "00:00:00:00:00:00";
               getMAC(addr, snifferPacket->payload, 10);
-              display_string.concat(GREEN_KEY);
-              display_string.concat((String)snifferPacket->rx_ctrl.rssi);
-              display_string.concat(" ");
-              display_string.concat(addr);
-              display_string.concat(" -> ");
-              display_string.concat(essid);
-
-              int temp_len = display_string.length();
-
               #ifdef HAS_SCREEN
+                display_string.concat(GREEN_KEY);
+                display_string.concat((String)snifferPacket->rx_ctrl.rssi);
+                display_string.concat(" ");
+                display_string.concat(addr);
+                display_string.concat(" -> ");
+                display_string.concat(essid);
+
+                int temp_len = display_string.length();
+
                 for (int i = 0; i < 40; i++)
                 {
                   display_string.concat(" ");
