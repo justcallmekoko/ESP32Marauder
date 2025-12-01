@@ -28,12 +28,14 @@
 #include "esp_wifi.h"
 #include "esp_wifi_types.h"
 #include <esp_timer.h>
-#include <lwip/etharp.h>
-#include <lwip/ip_addr.h>
+#ifndef HAS_DUAL_BAND
+  #include <lwip/etharp.h>
+  #include <lwip/ip_addr.h>
+#endif
 #ifdef HAS_DUAL_BAND
   #include "esp_system.h"
 #endif
-#ifdef HAS_BT
+#if defined(HAS_BT) && !defined(HAS_DUAL_BAND)
   #include "esp_bt.h"
 #endif
 #ifdef HAS_SCREEN
@@ -523,6 +525,8 @@ class WiFiScan
       NimBLEAdvertisementData GetUniversalAdvertisementData(EBLEPayloadType type);
     #endif
 
+    void showNetworkInfo();
+    void setNetworkInfo();
     void fullARP();
     bool readARP(IPAddress targ_ip);
     bool singleARP(IPAddress ip_addr);
@@ -590,7 +594,6 @@ class WiFiScan
     void RunBluetoothScan(uint8_t scan_mode, uint16_t color);
     void RunSourApple(uint8_t scan_mode, uint16_t color);
     void RunSwiftpairSpam(uint8_t scan_mode, uint16_t color);
-    void RunLvJoinWiFi(uint8_t scan_mode, uint16_t color);
     void RunEvilPortal(uint8_t scan_mode, uint16_t color);
     void RunPingScan(uint8_t scan_mode, uint16_t color);
     void RunPortScanAll(uint8_t scan_mode, uint16_t color);
@@ -624,6 +627,14 @@ class WiFiScan
     bool force_probe = false;
     bool save_pcap = false;
     bool ep_deauth = false;
+    bool ble_scanning = false;
+
+    char* flock_ssid[4] = {
+      "flock",
+      "penguin",
+      "pigvision",
+      "fs ext battery"
+    };
 
     #ifdef HAS_DUAL_BAND
       uint8_t channel_activity[DUAL_BAND_CHANNELS] = {};
@@ -787,12 +798,12 @@ class WiFiScan
     static void getMAC(char *addr, uint8_t* data, uint16_t offset);
     static void pwnSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
-    static void rawSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
+    //static void rawSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void stationSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type);
     static void deauthSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
-    static void probeSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
+    //static void probeSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void beaconListSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);

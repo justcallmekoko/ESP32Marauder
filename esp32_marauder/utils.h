@@ -8,7 +8,7 @@
 
 #include "configs.h"
 
-#include "esp_heap_caps.h"
+//#include "esp_heap_caps.h"
 
 struct mac_addr {
    unsigned char bytes[6];
@@ -27,7 +27,7 @@ struct ProbeReqSsid {
     uint8_t requests;
 };
 
-const char apple_ouis[][9] PROGMEM = {
+/*const char apple_ouis[][9] PROGMEM = {
   "00:17:F2", "00:1E:C2", "00:26:08", "F8:1E:DF", "BC:92:6B", 
   "28:E0:2C", "3C:07:54", "7C:D1:C3", "DC:A9:04", "F0:D1:A9",
   "C0:2C:5C", "00:03:93", "00:03:94", "00:03:95", "00:03:96",
@@ -114,14 +114,7 @@ const char linksys_ouis[][9] PROGMEM = {
 };
 
 const char netgear_ouis[][9] PROGMEM = {
-  "00:09:5B", "00:0F:B5", "00:14:6C", "00:1B:2F", "00:1E:2A", "00:1F:33", "00:22:3F", "00:22:4B", "00:26:F2",
-  "00:8E:F2", "08:02:8E", "08:36:C9", "08:BD:43", "10:0C:6B", "10:0D:7F", "10:DA:43", "14:59:C0", "20:4E:7F",
-  "20:E5:2A", "28:80:88", "28:94:01", "28:C6:8E", "2C:30:33", "2C:B0:5D", "30:46:9A", "34:98:B5", "38:94:ED",
-  "3C:37:86", "40:5D:82", "44:A5:6E", "4C:60:DE", "50:4A:6E", "50:6A:03", "54:07:7D", "58:EF:68", "60:38:E0",
-  "6C:B0:CE", "6C:CD:D6", "74:44:01", "80:37:73", "84:1B:5E", "8C:3B:AD", "94:18:65", "9C:3D:CF", "9C:C9:EB",
-  "9C:D3:6D", "A0:04:60", "A0:21:B7", "A0:40:A0", "A4:2B:8C", "B0:39:56", "B0:7F:B9", "B0:B9:8A", "BC:A5:11",
-  "C0:3F:0E", "C0:FF:D4", "C4:04:15", "C4:3D:C7", "C8:9E:43", "CC:40:D0", "DC:EF:09", "E0:46:9A", "E0:46:EE",
-  "E0:91:F5", "E4:F4:C6", "E8:FC:AF", "F8:73:94"
+  "00:09:5B", "00:0F:B5", "00:14:6C"
 };
 
 const char oneplus_ouis[][9] PROGMEM = {
@@ -154,7 +147,7 @@ const char tplink_ouis[][9] PROGMEM = {
 const char xiaomi_ouis[][9] PROGMEM = {
   "04:CF:8C", "18:59:36", "38:1A:2D", "64:B4:73", "78:02:F8", 
   "90:4E:91", "C4:0B:CB", "D0:DB:32"
-};
+};*/
 
 uint8_t getDRAMUsagePercent() {
   //size_t total = heap_caps_get_total_size(MALLOC_CAP_8BIT);
@@ -171,7 +164,7 @@ uint8_t getDRAMUsagePercent() {
 
 #ifdef HAS_PSRAM
   uint8_t getPSRAMUsagePercent() {
-    //size_t total = heap_caps_get_total_size(MALLOC_CAP_SPIRAM);
+    /*//size_t total = heap_caps_get_total_size(MALLOC_CAP_SPIRAM);
     //size_t free  = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
 
     size_t total = ESP.getPsramSize();
@@ -181,7 +174,8 @@ uint8_t getDRAMUsagePercent() {
 
     size_t used = total - free;
     uint8_t percent = (used * 100) / total;
-    return percent;
+    return percent;*/
+    return getDRAMUsagePercent();
   }
 #endif
 
@@ -299,7 +293,7 @@ void convertMacStringToUint8(const String& macStr, uint8_t macAddr[6]) {
 }
 
 // Function to check if the given MAC address matches any known OUI
-const char* getManufacturer(const char *addr) {
+/*const char* getManufacturer(const char *addr) {
   static char oui[9]; // Temporary buffer for extracted OUI
 
   // Extract the first three bytes (OUI) from addr
@@ -316,7 +310,7 @@ const char* getManufacturer(const char *addr) {
     for (uint8_t i = 0; i < sizeof(list) / sizeof(list[0]); i++) { \
       char storedOUI[9]; \
       strcpy_P(storedOUI, list[i]); \
-      /* Convert the stored OUI to lowercase */ \
+       \
       for (int j = 0; j < 8; j++) { \
         storedOUI[j] = tolower(storedOUI[j]); \
       } \
@@ -355,7 +349,7 @@ String replaceOUIWithManufacturer(const char *sta_addr) {
 
   // Construct the new address: manufacturer + the remaining MAC address (after the first 3 bytes)
   return String(manufacturer) + mac_suffix;
-}
+}*/
 
 IPAddress getNextIP(IPAddress currentIP, IPAddress subnetMask) {
   // Convert IPAddress to uint32_t

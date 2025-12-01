@@ -298,6 +298,16 @@ void setup()
     menu_function_obj.RunSetup();
   #endif
 
+  /*char ssidBuf[64] = {0};  // or prefill with existing SSID
+  if (keyboardInput(ssidBuf, sizeof(ssidBuf), "Enter SSID")) {
+    // user pressed OK
+    Serial.println(ssidBuf);
+  } else {
+    Serial.println(F("User exited keyboard"));
+  }
+
+  menu_function_obj.changeMenu(menu_function_obj.current_menu);*/
+
   wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
   
   Serial.println(F("CLI Ready"));

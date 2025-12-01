@@ -82,10 +82,10 @@ bool SDInterface::initSD() {
       }
 
       if (!SD.exists("/SCRIPTS")) {
-        Serial.println("/SCRIPTS does not exist. Creating...");
+        Serial.println(F("/SCRIPTS does not exist. Creating..."));
 
         SD.mkdir("/SCRIPTS");
-        Serial.println("/SCRIPTS created");
+        Serial.println(F("/SCRIPTS created"));
       }
 
       this->sd_files = new LinkedList<String>();
@@ -96,7 +96,7 @@ bool SDInterface::initSD() {
   }
 
   #else
-    Serial.println("SD support disabled, skipping init");
+    Serial.println(F("SD support disabled, skipping init"));
     return false;
   #endif
 }
@@ -280,7 +280,7 @@ void SDInterface::performUpdate(Stream &updateSource, size_t updateSize) {
           display_obj.tft.setTextColor(TFT_RED);
           display_obj.tft.println(text_table2[12]);
         #endif
-        Serial.println("Update not finished? Something went wrong!");
+        Serial.println(F("Update not finished? Something went wrong!"));
         #ifdef HAS_SCREEN
           display_obj.tft.setTextColor(TFT_WHITE);
         #endif
@@ -299,7 +299,7 @@ void SDInterface::performUpdate(Stream &updateSource, size_t updateSize) {
     #ifdef HAS_SCREEN
       display_obj.tft.println(text_table2[14]);
     #endif
-    Serial.println("Not enough space to begin OTA");
+    Serial.println(F("Not enough space to begin OTA"));
   }
 }
 

