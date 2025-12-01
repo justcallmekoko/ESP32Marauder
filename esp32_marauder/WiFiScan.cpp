@@ -1835,7 +1835,11 @@ int WiFiScan::clearSSIDs() {
 }
 
 bool WiFiScan::addSSID(String essid) {
-  ssid s = {essid, random(1, 12), {random(256), random(256), random(256), random(256), random(256), random(256)}, false};
+  #ifndef HAS_DUAL_BAND
+    ssid s = {essid, random(1, 12), {random(256), random(256), random(256), random(256), random(256), random(256)}, false};
+  #else
+    ssid s = {essid, dual_band_channels[random(0, DUAL_BAND_CHANNELS)], {random(256), random(256), random(256), random(256), random(256), random(256)}, false};
+  #endif
   ssids->add(s);
   Serial.println(ssids->get(ssids->size() - 1).essid);
 
@@ -1850,7 +1854,11 @@ int WiFiScan::generateSSIDs(int count) {
     for (uint8_t i = 0; i < 6; i++)
       essid.concat(alfa[random(65)]);
 
-    ssid s = {essid, random(1, 12), {random(256), random(256), random(256), random(256), random(256), random(256)}, false};
+    #ifndef HAS_DUAL_BAND
+      ssid s = {essid, random(1, 12), {random(256), random(256), random(256), random(256), random(256), random(256)}, false};
+    #else
+      ssid s = {essid, dual_band_channels[random(0, DUAL_BAND_CHANNELS)], {random(256), random(256), random(256), random(256), random(256), random(256)}, false};
+    #endif
     ssids->add(s);
     Serial.println(ssids->get(ssids->size() - 1).essid);
   }
@@ -2252,7 +2260,8 @@ void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_
   esp_wifi_set_config(WIFI_IF_AP, &ap_config);
   esp_wifi_start();
   this->setMac();
-  esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
+  this->changeChannel(this->set_channel);
+  //esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   
   //WiFi.mode(WIFI_AP_STA);
   
@@ -3289,7 +3298,8 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
   esp_wifi_set_promiscuous_rx_cb(&apSnifferCallbackFull);
-  esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
+  this->changeChannel(this->set_channel);
+  //esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   this->wifi_initialized = true;
   initTime = millis();
 }
@@ -3987,7 +3997,8 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
   esp_wifi_set_promiscuous_rx_cb(&wifiSnifferCallback);
-  esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
+  this->changeChannel(this->set_channel);
+  //esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   this->wifi_initialized = true;
   uint32_t initTime = millis();
 }
@@ -4099,7 +4110,8 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
     esp_wifi_set_promiscuous_rx_cb(&activeEapolSnifferCallback);
   else
     esp_wifi_set_promiscuous_rx_cb(&eapolSnifferCallback);
-  esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
+  this->changeChannel(this->set_channel);
+  //esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   this->wifi_initialized = true;
   initTime = millis();
 }
@@ -4190,7 +4202,8 @@ void WiFiScan::RunPineScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
   esp_wifi_set_promiscuous_rx_cb(&pineScanSnifferCallback);
-  esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
+  this->changeChannel(this->set_channel);
+  //esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   this->wifi_initialized = true;
   initTime = millis();
 }
@@ -4243,7 +4256,8 @@ void WiFiScan::RunMultiSSIDScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
   esp_wifi_set_promiscuous_rx_cb(&multiSSIDSnifferCallback);
-  esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
+  this->changeChannel(this->set_channel);
+  //esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   this->wifi_initialized = true;
   initTime = millis();
 }
@@ -4293,7 +4307,8 @@ void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
   esp_wifi_set_promiscuous_rx_cb(&beaconSnifferCallback);
-  esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
+  this->changeChannel(this->set_channel);
+  //esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   this->wifi_initialized = true;
   initTime = millis();
 }
@@ -4537,7 +4552,8 @@ void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color)
     esp_wifi_set_promiscuous(true);
     esp_wifi_set_promiscuous_filter(&filt);
     esp_wifi_set_promiscuous_rx_cb(&beaconSnifferCallback);
-    esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
+    this->changeChannel(this->set_channel);
+    //esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   }
   else {
     this->startWardriverWiFi();
@@ -4611,7 +4627,8 @@ void WiFiScan::RunStationScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
   esp_wifi_set_promiscuous_rx_cb(&stationSnifferCallback);
-  esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
+  this->changeChannel(this->set_channel);
+  //esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   this->wifi_initialized = true;
   initTime = millis();
 }
@@ -4682,7 +4699,8 @@ void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
   esp_wifi_set_promiscuous_rx_cb(&beaconSnifferCallback);
-  esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
+  this->changeChannel(this->set_channel);
+  //esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   this->wifi_initialized = true;
   initTime = millis();
 }
@@ -4733,7 +4751,8 @@ void WiFiScan::RunDeauthScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
   esp_wifi_set_promiscuous_rx_cb(&deauthSnifferCallback);
-  esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
+  this->changeChannel(this->set_channel);
+  //esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   this->wifi_initialized = true;
   initTime = millis();
 }
@@ -4809,7 +4828,8 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
   esp_wifi_set_promiscuous_rx_cb(&beaconSnifferCallback);
-  esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
+  this->changeChannel(this->set_channel);
+  //esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   this->wifi_initialized = true;
   initTime = millis();
 }
@@ -7698,8 +7718,12 @@ void WiFiScan::beaconListSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t 
 }
 
 void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_ssid) {
-  set_channel = random(1,12); 
-  esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
+  #ifndef HAS_DUAL_BAND
+    set_channel = random(1,12); 
+  #else
+    set_channel = dual_band_channels[random(0, DUAL_BAND_CHANNELS)];
+  #endif
+  this->changeChannel(this->set_channel);
   delay(1);  
 
   //if (custom_ssid.beacon->size() == 0)
@@ -7760,7 +7784,7 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_s
 
 void WiFiScan::broadcastCustomBeacon(uint32_t current_time, ssid custom_ssid) {
   set_channel = custom_ssid.channel;
-  esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
+  this->changeChannel(this->set_channel);
   delay(1);  
 
   // Randomize SRC MAC
@@ -7806,8 +7830,13 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, ssid custom_ssid) {
 
 // Function to send beacons with random ESSID length
 void WiFiScan::broadcastSetSSID(uint32_t current_time, const char* ESSID) {
-  set_channel = random(1,12); 
-  esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
+  #ifndef HAS_DUAL_BAND
+    set_channel = random(1,12); 
+  #else
+    set_channel = dual_band_channels[random(0, DUAL_BAND_CHANNELS)];
+  #endif
+  this->changeChannel(this->set_channel);
+
   delay(1);  
 
   // Randomize SRC MAC
@@ -7852,8 +7881,12 @@ void WiFiScan::broadcastSetSSID(uint32_t current_time, const char* ESSID) {
 // Function for sending crafted beacon frames
 void WiFiScan::broadcastRandomSSID(uint32_t currentTime) {
 
-  set_channel = random(1,12); 
-  esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
+  #ifndef HAS_DUAL_BAND
+    set_channel = random(1,12); 
+  #else
+    set_channel = dual_band_channels[random(0, DUAL_BAND_CHANNELS)];
+  #endif
+  this->changeChannel(this->set_channel);
   delay(1);  
 
   // Randomize SRC MAC
@@ -7901,7 +7934,7 @@ void WiFiScan::sendProbeAttack(uint32_t currentTime) {
     // Check if active
     if (access_points->get(i).selected) {
       this->set_channel = access_points->get(i).channel;
-      esp_wifi_set_channel(this->set_channel, WIFI_SECOND_CHAN_NONE);
+      this->changeChannel(this->set_channel);
       delay(1);
       
       // Build packet
@@ -7956,7 +7989,7 @@ void WiFiScan::sendProbeAttack(uint32_t currentTime) {
 
 void WiFiScan::sendDeauthFrame(uint8_t bssid[6], int channel, uint8_t mac[6]) {
   WiFiScan::set_channel = channel;
-  esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+  this->changeChannel(channel);
   delay(1);
   
   // Build AP source packet
@@ -8022,7 +8055,7 @@ void WiFiScan::sendDeauthFrame(uint8_t bssid[6], int channel, String dst_mac_str
   // Itterate through all access points in list
   // Check if active
   WiFiScan::set_channel = channel;
-  esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+  this->changeChannel(channel);
   delay(1);
   
   // Build packet
@@ -8054,7 +8087,7 @@ void WiFiScan::sendDeauthFrame(uint8_t bssid[6], int channel, String dst_mac_str
 
 void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6], uint8_t sec) {
   WiFiScan::set_channel = channel;
-  esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+  this->changeChannel(channel);
   delay(1);
 
   uint8_t frame_size = 153;
@@ -8106,7 +8139,7 @@ void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6], u
 
 void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, String dst_mac_str, uint8_t sec) {
   WiFiScan::set_channel = channel;
-  esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+  this->changeChannel(channel);
   delay(1);
 
   uint8_t frame_size = 153;
@@ -8154,7 +8187,7 @@ void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, String dst_mac_st
 
 void WiFiScan::sendAssociationSleep(const char* ESSID, uint8_t bssid[6], int channel, uint8_t mac[6]) {
   WiFiScan::set_channel = channel;
-  esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+  this->changeChannel(channel);
   delay(1);
 
   static uint16_t sequence_number = 0;
@@ -8281,7 +8314,7 @@ void WiFiScan::sendAssociationSleep(const char* ESSID, uint8_t bssid[6], int cha
 
 void WiFiScan::sendAssociationSleep(const char* ESSID, uint8_t bssid[6], int channel, String dst_mac_str) {
   WiFiScan::set_channel = channel;
-  esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+  this->changeChannel(channel);
   delay(1);
 
   static uint16_t sequence_number = 0;
@@ -8465,7 +8498,7 @@ void WiFiScan::sendDeauthAttack(uint32_t currentTime, String dst_mac_str) {
     // Check if active
     if (access_points->get(i).selected) {
       this->set_channel = access_points->get(i).channel;
-      esp_wifi_set_channel(this->set_channel, WIFI_SECOND_CHAN_NONE);
+      this->changeChannel(this->set_channel);
       delay(1);
       
       // Build packet
@@ -9363,7 +9396,8 @@ void WiFiScan::channelHop(bool filtered, bool ranged)
     #endif
   }
 
-  esp_wifi_set_channel(this->set_channel, WIFI_SECOND_CHAN_NONE);
+  //esp_wifi_set_channel(this->set_channel, WIFI_SECOND_CHAN_NONE);
+  this->changeChannel(this->set_channel);
   delay(1);
 }
 
@@ -10479,13 +10513,23 @@ void WiFiScan::main(uint32_t currentTime)
     // Need this for loop because getTouch causes ~10ms delay
     // which makes beacon spam less effective
     for (int i = 0; i < access_points->size(); i++) {
-      if (access_points->get(i).selected)
-        this->broadcastCustomBeacon(currentTime, ssid{access_points->get(i).essid, random(1, 12), {random(256), 
-                                                                                                   random(256),
-                                                                                                   random(256),
-                                                                                                   random(256),
-                                                                                                   random(256),
-                                                                                                   random(256)}});
+      if (access_points->get(i).selected) {
+        #ifndef HAS_DUAL_BAND
+          this->broadcastCustomBeacon(currentTime, ssid{access_points->get(i).essid, random(1, 12), {random(256), 
+                                                                                                    random(256),
+                                                                                                    random(256),
+                                                                                                    random(256),
+                                                                                                    random(256),
+                                                                                                    random(256)}});
+        #else
+          this->broadcastCustomBeacon(currentTime, ssid{access_points->get(i).essid, dual_band_channels[random(0, DUAL_BAND_CHANNELS)], {random(256), 
+                                                                                                    random(256),
+                                                                                                    random(256),
+                                                                                                    random(256),
+                                                                                                    random(256),
+                                                                                                    random(256)}});
+        #endif
+      }
     }
       
 
