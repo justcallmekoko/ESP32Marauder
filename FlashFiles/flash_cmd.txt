@@ -1,0 +1,1 @@
+./esptool.exe --chip esp32 --port COM4 --baud 921600 write_flash -z 0x1000 /c/Users/culrP/Downloads/esp32_marauder.ino.bootloader.bin 0x8000 /c/Users/culrP/Downloads/esp32_marauder.ino.partitions.bin 0xE000 /c/Users/culrP/Downloads/boot_app0.bin 0x10000 /c/Users/culrP/Downloads/esp32_marauder_v1_8_9_20251030_v6_1.bin
