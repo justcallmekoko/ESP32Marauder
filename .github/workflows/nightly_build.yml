@@ -252,7 +252,7 @@ jobs:
             done
           fi
           
-          if [[ ${{ matrix.board.idf_ver }} == "3.3.0" ]]; then
+          if [[ ${{ matrix.board.idf_ver }} == "3.3.4" ]]; then
             for i in $(find /home/runner/.arduino15/packages/esp32/hardware/esp32/ -name "platform.txt"); do
               sed -i 's/compiler.c.elf.extra_flags=/compiler.c.elf.extra_flags=-Wl,-zmuldefs /' "$i"
             done
