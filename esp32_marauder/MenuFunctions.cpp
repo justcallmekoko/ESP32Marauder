@@ -2039,6 +2039,8 @@ void MenuFunctions::RunSetup()
     });
 
     this->addNodes(&wifiGeneralMenu, "View AP Info", TFTCYAN, NULL, KEYBOARD_ICO, [this](){
+      wifiAPMenu.parentMenu = &wifiGeneralMenu;
+      
       // Add the back button
       wifiAPMenu.list->clear();
         this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
@@ -2074,6 +2076,8 @@ void MenuFunctions::RunSetup()
 
     // Select Stations on Mini v2
     this->addNodes(&wifiGeneralMenu, "Select Stations", TFTCYAN, NULL, KEYBOARD_ICO, [this](){
+      wifiAPMenu.parentMenu = &wifiGeneralMenu;
+
       wifiAPMenu.list->clear();
         this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
         this->changeMenu(wifiAPMenu.parentMenu, true);
@@ -2140,6 +2144,9 @@ void MenuFunctions::RunSetup()
     });
 
     this->addNodes(&wifiGeneralMenu, "Join WiFi", TFTWHITE, NULL, KEYBOARD_ICO, [this](){
+
+      wifiAPMenu.parentMenu = &wifiGeneralMenu;
+
       // Add the back button
       wifiAPMenu.list->clear();
         this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
@@ -2186,6 +2193,8 @@ void MenuFunctions::RunSetup()
         this->changeMenu(&wifiGeneralMenu, true);
       }
       else {
+        wifiAPMenu.parentMenu = &wifiGeneralMenu;
+
         // Add the back button
         wifiAPMenu.list->clear();
           this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
@@ -2303,6 +2312,8 @@ void MenuFunctions::RunSetup()
   // Clone AP MAC to ESP32 for button folks
   //#ifndef HAS_ILI9341
     this->addNodes(&setMacMenu, "Clone AP MAC", TFTRED, NULL, CLEAR_ICO, [this](){
+      wifiAPMenu.parentMenu = &wifiGeneralMenu;
+
       // Add the back button
       wifiAPMenu.list->clear();
         this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
@@ -2321,6 +2332,8 @@ void MenuFunctions::RunSetup()
     });
 
     this->addNodes(&setMacMenu, "Clone STA MAC", TFTMAGENTA, NULL, CLEAR_ICO, [this](){
+      wifiAPMenu.parentMenu = &wifiGeneralMenu;
+
       // Add the back button
       wifiAPMenu.list->clear();
         this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
@@ -2474,6 +2487,8 @@ void MenuFunctions::RunSetup()
     #ifdef HAS_BT
     // Select Airtag on Mini
       this->addNodes(&bluetoothAttackMenu, "Spoof Airtag", TFTWHITE, NULL, ATTACKS, [this](){
+          wifiAPMenu.parentMenu = &bluetoothAttackMenu;
+
           // Clear nodes and add back button
           wifiAPMenu.list->clear();
           this->addNodes(&wifiAPMenu, text09, TFT_LIGHTGREY, NULL, 0, [this]() {
