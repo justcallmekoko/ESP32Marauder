@@ -198,6 +198,7 @@ void setup()
     delay(10);
   #endif
 
+  Serial.setRxBufferSize(32768);
   Serial.begin(115200);
 
   while(!Serial)
