@@ -2499,6 +2499,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
       #endif
 
       this->shutdownBLE();
+      this->ble_scanning = false;
     #endif
   }
 
@@ -4426,7 +4427,12 @@ void WiFiScan::executeWarDrive() {
         return;
       }
       else if (scan_status == WIFI_SCAN_FAILED) {
-        Serial.println("WiFi scan failed to start");
+        Serial.println("WiFi scan failed to start. Restarting...");
+        this->wifi_initialized = true;
+        this->shutdownWiFi();
+        this->startWardriverWiFi();
+        this->wifi_initialized = true;
+        delay(100);
       }
       
       /*#ifndef HAS_DUAL_BAND
@@ -4507,14 +4513,14 @@ void WiFiScan::executeWarDrive() {
             buffer_obj.append(wardrive_line);
           }
         }
+
+        // Free up that memory, you sexy devil
+        WiFi.scanDelete();
       }
 
       /*#ifndef HAS_DUAL_BAND
         this->channelHop();
       #endif*/
-
-      // Free up that memory, you sexy devil
-      WiFi.scanDelete();
 
       if (!this->ble_scanning)
         WiFi.scanNetworks(true, true, false, 80);
