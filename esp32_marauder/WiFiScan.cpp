@@ -5041,6 +5041,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
           else if (scan_mode == BT_SCAN_FLOCK_WARDRIVE) {
             startLog("flock_wardrive");
             this->startWardriverWiFi();
+            this->wifi_initialized = true;
           }
           String header_line = "WigleWifi-1.4,appRelease=" + (String)MARAUDER_VERSION + ",model=ESP32 Marauder,release=" + (String)MARAUDER_VERSION + ",device=ESP32 Marauder,display=SPI TFT,board=ESP32 Marauder,brand=JustCallMeKoko\nMAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\n";
           buffer_obj.append(header_line);
