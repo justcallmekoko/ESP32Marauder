@@ -4414,21 +4414,31 @@ void WiFiScan::executeWarDrive() {
       bool do_save;
       String display_string;
       
-      while (WiFi.scanComplete() == WIFI_SCAN_RUNNING) {
+      /*while (WiFi.scanComplete() == WIFI_SCAN_RUNNING) {
         Serial.println(F("Scan running..."));
         delay(500);
+      }*/
+
+      int scan_status = WiFi.scanComplete();
+
+      if (scan_status == WIFI_SCAN_RUNNING) {
+        delay(1);
+        return;
+      }
+      else if (scan_status == WIFI_SCAN_FAILED) {
+        Serial.println("WiFi scan failed to start");
       }
       
-      #ifndef HAS_DUAL_BAND
+      /*#ifndef HAS_DUAL_BAND
         int n = WiFi.scanNetworks(false, true, false, 110, this->set_channel);
       #else
         int n = WiFi.scanNetworks(false, true, false, 110);
-      #endif
+      #endif*/
 
       bool do_continue = false;
 
-      if (n > 0) {
-        for (int i = 0; i < n; i++) {
+      if (scan_status > 0) {
+        for (int i = 0; i < scan_status; i++) {
           do_continue = true;
           display_string = "";
           do_save = false;
@@ -4499,12 +4509,15 @@ void WiFiScan::executeWarDrive() {
         }
       }
 
-      #ifndef HAS_DUAL_BAND
+      /*#ifndef HAS_DUAL_BAND
         this->channelHop();
-      #endif
+      #endif*/
 
       // Free up that memory, you sexy devil
       WiFi.scanDelete();
+
+      if (!this->ble_scanning)
+        WiFi.scanNetworks(true, true, false, 80);
     }
   #endif
 }
@@ -10131,9 +10144,11 @@ void WiFiScan::main(uint32_t currentTime)
           this->ble_scanning = false;
         }
         else {
-          pBLEScan->start(0, scanCompleteCB, false);
-          this->ble_scanning = true;
-          return;
+          if (WiFi.scanComplete() != WIFI_SCAN_RUNNING) {
+            pBLEScan->start(0, scanCompleteCB, false);
+            this->ble_scanning = true;
+            return;
+          }
         }
       #endif
       if (currentScanMode == BT_SCAN_FLOCK)
