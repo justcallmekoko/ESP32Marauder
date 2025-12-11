@@ -2127,6 +2127,23 @@
     #define BUTTON_PADDING 10
   #endif
 
+  #ifdef MARAUDER_TDISPLAY
+    #define BANNER_TIME 50
+
+    #define COMMAND_PREFIX "!"
+
+    #define KEY_X (TFT_WIDTH/2)
+    #define KEY_Y (TFT_HEIGHT/4.5)
+    #define KEY_W TFT_WIDTH
+    #define KEY_H (TFT_HEIGHT/12.8)
+    #define KEY_SPACING_X 0
+    #define KEY_SPACING_Y 1
+    #define KEY_TEXTSIZE 1
+    #define ICON_W 22
+    #define ICON_H 22
+    #define BUTTON_PADDING 10
+  #endif
+
   #ifdef MARAUDER_M5STICKC
     #define BANNER_TIME 50
     
@@ -2353,6 +2370,8 @@
   #elif defined(XIAO_ESP32_S3)
     #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_C5)
+    #define MEM_LOWER_LIM 10000
+  #elif defined(MARAUDER_TDISPLAY)
     #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_V8)
     #define MEM_LOWER_LIM 10000
