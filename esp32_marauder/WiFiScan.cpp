@@ -432,7 +432,16 @@ extern "C" {
               if (gps_obj.getGpsModuleStatus()) {
                 bool do_save = false;
                 if (buf >= 0)
-                {                
+                {      
+
+                  unsigned char mac_char[6];
+                  wifi_scan_obj.copyNimbleMac(advertisedDevice->getAddress(), mac_char);
+
+                  if (wifi_scan_obj.currentScanMode != BT_SCAN_WAR_DRIVE_CONT) {
+                    if (wifi_scan_obj.seen_mac(mac_char))
+                      return;
+                  }    
+                    
                   Serial.print(F("Device: "));
                   if(advertisedDevice->getName().length() != 0)
                   {
@@ -476,6 +485,10 @@ extern "C" {
 
                   if (do_save)
                     buffer_obj.append(wardrive_line);
+
+                  if (wifi_scan_obj.currentScanMode != BT_SCAN_WAR_DRIVE_CONT) {
+                    wifi_scan_obj.save_mac(mac_char);
+                  }
                 }
               }
             #endif
@@ -1153,6 +1166,14 @@ extern "C" {
                 bool do_save = false;
                 if (buf >= 0)
                 {                
+                  unsigned char mac_char[6];
+                  wifi_scan_obj.copyNimbleMac(advertisedDevice->getAddress(), mac_char);
+
+                  if (wifi_scan_obj.currentScanMode != BT_SCAN_WAR_DRIVE_CONT) {
+                    if (wifi_scan_obj.seen_mac(mac_char))
+                      return;
+                  }  
+
                   Serial.print(F("Device: "));
                   if(advertisedDevice->getName().length() != 0)
                   {
@@ -1196,6 +1217,10 @@ extern "C" {
 
                   if (do_save)
                     buffer_obj.append(wardrive_line);
+                    
+                  if (wifi_scan_obj.currentScanMode != BT_SCAN_WAR_DRIVE_CONT) {
+                    wifi_scan_obj.save_mac(mac_char);
+                  }
                 }
               }
             #endif
@@ -4984,6 +5009,8 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
     NimBLEDevice::init("");
     pBLEScan = NimBLEDevice::getScan(); //create new scan
     if ((scan_mode == BT_SCAN_ALL) ||
+        (scan_mode == BT_SCAN_WAR_DRIVE) ||
+        (scan_mode == BT_SCAN_WAR_DRIVE_CONT) ||
         (scan_mode == BT_SCAN_AIRTAG) ||
         (scan_mode == BT_SCAN_AIRTAG_MON) ||
         (scan_mode == BT_SCAN_FLIPPER) ||
@@ -4992,6 +5019,28 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
         (scan_mode == BT_SCAN_SIMPLE) ||
         (scan_mode == BT_SCAN_SIMPLE_TWO))
     {
+      #ifdef HAS_GPS
+        if (gps_obj.getGpsModuleStatus()) {
+          if (scan_mode == BT_SCAN_WAR_DRIVE) {
+            startLog("bt_wardrive");
+          }
+          else if (scan_mode == BT_SCAN_WAR_DRIVE_CONT) {
+            startLog("bt_wardrive_cont");
+          }
+          else if (scan_mode == BT_SCAN_FLOCK_WARDRIVE) {
+            startLog("flock_wardrive");
+            this->startWardriverWiFi();
+            this->wifi_initialized = true;
+          }
+          String header_line = "WigleWifi-1.4,appRelease=" + (String)MARAUDER_VERSION + ",model=ESP32 Marauder,release=" + (String)MARAUDER_VERSION + ",device=ESP32 Marauder,display=SPI TFT,board=ESP32 Marauder,brand=JustCallMeKoko\nMAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\n";
+          buffer_obj.append(header_line);
+        } else {
+          return;
+        }
+      #else
+        return;
+      #endif
+
       #ifdef HAS_SCREEN
         display_obj.TOP_FIXED_AREA_2 = 48;
         display_obj.tteBar = true;
@@ -5016,6 +5065,10 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
             display_obj.tft.drawCentreString("Simple Sniff", TFT_WIDTH / 2, 16, 2);
           else if (scan_mode == BT_SCAN_SIMPLE_TWO)
             display_obj.tft.drawCentreString("Simple Sniff 2", TFT_WIDTH / 2, 16, 2);
+          if (scan_mode == BT_SCAN_WAR_DRIVE)
+            display_obj.tft.drawCentreString("BT Wardrive",TFT_WIDTH / 2,16,2);
+          else if (scan_mode == BT_SCAN_WAR_DRIVE_CONT)
+            display_obj.tft.drawCentreString("BT Wardrive Continuous",TFT_WIDTH / 2,16,2);
           #ifdef HAS_ILI9341
             display_obj.touchToExit();
           #endif
@@ -5030,6 +5083,8 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
           pBLEScan->setScanCallbacks(new bluetoothScanAllCallback(), false);
         #endif
       else if ((scan_mode == BT_SCAN_FLIPPER) ||
+                (scan_mode == BT_SCAN_WAR_DRIVE) ||
+                (scan_mode == BT_SCAN_WAR_DRIVE_CONT) ||
                 (scan_mode == BT_SCAN_FLOCK) ||
                 (scan_mode == BT_SCAN_FLOCK_WARDRIVE) ||
                 (scan_mode == BT_SCAN_SIMPLE) ||
@@ -5103,8 +5158,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
         #endif
         
     }
-    else if (scan_mode == BT_SCAN_SKIMMERS)
-    {
+    else if (scan_mode == BT_SCAN_SKIMMERS) {
       #ifdef HAS_SCREEN
         display_obj.TOP_FIXED_AREA_2 = 160;
         display_obj.tteBar = true;
