@@ -10,6 +10,7 @@
   //#define MARAUDER_M5STICKC
   //#define MARAUDER_M5STICKCP2
   //#define MARAUDER_TDISPLAY
+  //#define MARAUDER_TDISPLAY_SD
   //#define MARAUDER_MINI
   //#define MARAUDER_V4
   //#define MARAUDER_V6
@@ -44,6 +45,8 @@
     #define HARDWARE_NAME "M5Stick-C Plus"
   #elif defined(MARAUDER_TDISPLAY)
     #define HARDWARE_NAME "TTGO T-Display V18"
+  #elif defined(MARAUDER_TDISPLAY_SD)
+    #define HARDWARE_NAME "TTGO T-Display V18 (SD)"
   #elif defined(MARAUDER_M5STICKCP2)
     #define HARDWARE_NAME "M5Stick-C Plus2"
   #elif defined(MARAUDER_CARDPUTER)
@@ -120,6 +123,22 @@
     #define HAS_MINI_SCREEN
     //#define HAS_SD
     //#define USE_SD
+    //#define HAS_TEMP_SENSOR
+    //#define HAS_GPS
+  #endif
+
+  #ifdef MARAUDER_TDISPLAY_SD
+    //#define FLIPPER_ZERO_HAT
+    //#define HAS_BATTERY
+    #define HAS_BT
+    #define HAS_BUTTONS
+    //#define HAS_NEOPIXEL_LED
+    //#define HAS_PWR_MGMT
+    #define HAS_SCREEN
+    #define HAS_MINI_SCREEN
+    #define HAS_SD
+    #define USE_SD
+    #define HAS_SEPARATE_SD
     //#define HAS_TEMP_SENSOR
     //#define HAS_GPS
   #endif
@@ -582,7 +601,7 @@
       #define D_PULL true
     #endif
 
-    #ifdef MARAUDER_TDISPLAY
+    #if defined(MARAUDER_TDISPLAY) || defined(MARAUDER_TDISPLAY_SD)
       #define L_BTN -1
       #define C_BTN 0
       #define U_BTN -1
@@ -824,7 +843,7 @@
 
     #endif
 
-    #ifdef MARAUDER_TDISPLAY
+    #if defined(MARAUDER_TDISPLAY) || defined(MARAUDER_TDISPLAY_SD)
       #define CHAN_PER_PAGE 7
 
       #define SCREEN_CHAR_WIDTH 40
@@ -2127,7 +2146,7 @@
     #define BUTTON_PADDING 10
   #endif
 
-  #ifdef MARAUDER_TDISPLAY
+  #if defined(MARAUDER_TDISPLAY) || defined(MARAUDER_TDISPLAY_SD)
     #define BANNER_TIME 50
 
     #define COMMAND_PREFIX "!"
@@ -2242,6 +2261,13 @@
       #define SD_SCK  40
       #define SD_MISO 39
       #define SD_MOSI 14
+    #endif
+
+    #ifdef MARAUDER_TDISPLAY_SD
+      #define SD_CS   33
+      #define SD_SCK  25
+      #define SD_MOSI 26
+      #define SD_MISO 36
     #endif
 
     #ifdef MARAUDER_FLIPPER
@@ -2371,7 +2397,7 @@
     #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_C5)
     #define MEM_LOWER_LIM 10000
-  #elif defined(MARAUDER_TDISPLAY)
+  #elif defined(MARAUDER_TDISPLAY) || defined(MARAUDER_TDISPLAY_SD)
     #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_V8)
     #define MEM_LOWER_LIM 10000
