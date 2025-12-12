@@ -2267,7 +2267,7 @@
       #define SD_CS   33
       #define SD_SCK  25
       #define SD_MOSI 26
-      #define SD_MISO 36
+      #define SD_MISO 27
     #endif
 
     #ifdef MARAUDER_FLIPPER
