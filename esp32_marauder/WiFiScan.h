@@ -687,7 +687,9 @@ class WiFiScan
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
 
-    #ifndef HAS_DUAL_BAND
+    #if defined(HAS_DUAL_BAND) || defined(CONFIG_IDF_TARGET_ESP32C6) || defined(MARAUDER_WAVESHARE_ESP32C6_LCD_147)
+      wifi_init_config_t cfg2 = WIFI_INIT_CONFIG_DEFAULT();
+    #else
       wifi_init_config_t cfg2 = { \
           .event_handler = &esp_event_send_internal, \
           .osi_funcs = &g_wifi_osi_funcs, \
@@ -713,7 +715,9 @@ class WiFiScan
           .espnow_max_encrypt_num = 0, \
           .magic = WIFI_INIT_CONFIG_MAGIC\
       };
-    #else
+    #endif
+
+    #ifdef HAS_DUAL_BAND
       wifi_country_t country = {
         .cc = "PH",
         .schan = 1,
