@@ -425,7 +425,6 @@
   #endif
 
   #ifdef MARAUDER_WAVESHARE_ESP32C6_LCD_147
-    #define HAS_BT
     #define HAS_SCREEN
     #define HAS_MINI_SCREEN
     #define HAS_SD
