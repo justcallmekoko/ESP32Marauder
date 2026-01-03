@@ -571,7 +571,7 @@ void CommandLine::runCommand(String input) {
           int sta_sw = this->argSearch(&cmd_args, "-s");
           int flk_sw = this->argSearch(&cmd_args, "-f");
 
-          if (flk_sw == -1) {
+          if (flk_sw != -1) {
             Serial.println("Starting Flock Wardrive. Stop with " + (String)STOPSCAN_CMD);
             #ifdef HAS_SCREEN
               display_obj.clearScreen();
