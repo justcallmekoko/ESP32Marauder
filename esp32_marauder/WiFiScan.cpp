@@ -2099,6 +2099,8 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     StopScan(scan_mode);
   else if (scan_mode == WIFI_SCAN_PROBE)
     RunProbeScan(scan_mode, color);
+  else if (scan_mode == WIFI_SCAN_DETECT_FOLLOW)
+    RunProbeScan(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_STATION_WAR_DRIVE)
     RunProbeScan(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_EVIL_PORTAL)
@@ -2455,6 +2457,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   (currentScanMode == WIFI_CONNECTED) ||
   (currentScanMode == BT_SCAN_FLOCK) ||
   (currentScanMode == BT_SCAN_FLOCK_WARDRIVE) ||
+  (currentScanMode == WIFI_SCAN_DETECT_FOLLOW) ||
   (currentScanMode == LV_JOIN_WIFI) ||
   (this->wifi_initialized))
   {
@@ -4870,8 +4873,10 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
     display_obj.tft.setTextColor(TFT_BLACK, color);
     #ifdef HAS_FULL_SCREEN
       display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
-      if (scan_mode != BT_SCAN_FLOCK)
+      if (scan_mode == WIFI_SCAN_PROBE)
         display_obj.tft.drawCentreString(text_table4[40],TFT_WIDTH / 2,16,2);
+      else if (scan_mode == WIFI_SCAN_DETECT_FOLLOW) 
+        display_obj.tft.drawCentreString("MAC Monitor",TFT_WIDTH / 2,16,2);
       else {
         Serial.println(F("Starting WiFi sniff for Flock..."));
         display_obj.tft.drawCentreString("Flock Sniff",TFT_WIDTH / 2,16,2);
@@ -7270,6 +7275,9 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
         }
       }
     }
+  }
+  else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_DETECT_FOLLOW) {
+
   }
 }
 

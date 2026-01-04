@@ -144,6 +144,7 @@
 #define BT_SCAN_SIMPLE 73
 #define BT_SCAN_SIMPLE_TWO 74
 #define BT_SCAN_FLOCK_WARDRIVE 75
+#define WIFI_SCAN_DETECT_FOLLOW 76
 
 #define WIFI_ATTACK_FUNNY_BEACON 99 
 
@@ -219,6 +220,18 @@ esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx, const void *buffer, int len, b
   esp_err_t esp_base_mac_addr_set(uint8_t *Mac);
 #endif
 
+#pragma pack(push, 1)
+struct MacEntry {
+  uint8_t  mac[6];
+  uint32_t last_seen_ms;
+  uint16_t frame_count;
+  int16_t  dlat_e5;
+  int16_t  dlon_e5;
+  uint8_t  flags;
+  uint8_t  _pad;
+};
+#pragma pack(pop)
+
 struct AirTag {
     String mac;                  // MAC address of the AirTag
     std::vector<uint8_t> payload; // Payload data
@@ -245,6 +258,9 @@ class WiFiScan
     #ifndef HAS_PSRAM
       struct mac_addr mac_history[mac_history_len];
     #endif
+
+    static MacEntry mac_entries[mac_history_len];
+    static uint8_t mac_entry_state[mac_history_len];
 
     uint32_t chanActTime = 0;
 
