@@ -220,6 +220,10 @@ esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx, const void *buffer, int len, b
   esp_err_t esp_base_mac_addr_set(uint8_t *Mac);
 #endif
 
+#define EMPTY_ENTRY 0
+#define VALID_ENTRY 1
+#define TOMBSTONE_ENTRY 2
+
 #pragma pack(push, 1)
 struct MacEntry {
   uint8_t  mac[6];
@@ -258,9 +262,6 @@ class WiFiScan
     #ifndef HAS_PSRAM
       struct mac_addr mac_history[mac_history_len];
     #endif
-
-    static MacEntry mac_entries[mac_history_len];
-    static uint8_t mac_entry_state[mac_history_len];
 
     uint32_t chanActTime = 0;
 
@@ -556,6 +557,7 @@ class WiFiScan
     uint8_t getSecurityType(const uint8_t* beacon, uint16_t len);
     void addAnalyzerValue(int16_t value, int rssi_avg, int16_t target_array[], int array_size);
     bool mac_cmp(struct mac_addr addr1, struct mac_addr addr2);
+    bool mac_cmp(uint8_t addr1[6], uint8_t addr2[6]);
     void clearMacHistory();
     void executeWarDrive();
     void executeSourApple();
@@ -625,6 +627,9 @@ class WiFiScan
     //AccessPoint ap_list;
 
     //LinkedList<ssid>* ssids;
+
+    static MacEntry mac_entries[mac_history_len];
+    static uint8_t mac_entry_state[mac_history_len];
 
     // Stuff for RAW stats
     uint32_t mgmt_frames = 0;
@@ -746,7 +751,11 @@ class WiFiScan
     #ifdef HAS_SCREEN
       int8_t checkAnalyzerButtons(uint32_t currentTime);
     #endif
-    bool seen_mac(unsigned char* mac);
+    bool seen_mac(unsigned char* mac, bool simple = true);
+    int16_t seen_mac_int(unsigned char* mac, bool simple = true);
+    int update_mac_entry(const uint8_t mac[6]);
+    inline void insert_mac_entry(uint32_t idx, const uint8_t mac[6], uint32_t now_ms);
+    void evict_and_insert(const uint8_t mac[6], uint32_t now_ms);
     void save_mac(unsigned char* mac);
     #ifdef HAS_BT
       void copyNimbleMac(const BLEAddress &addr, unsigned char out[6]);
@@ -827,5 +836,6 @@ class WiFiScan
     static void pineScanSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type); // Pineapple
     static int extractPineScanChannel(const uint8_t* payload, int len); // Pineapple
     static void multiSSIDSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type); // MultiSSID
+    static inline uint32_t hash_mac(const uint8_t mac[6]);
 };
 #endif
