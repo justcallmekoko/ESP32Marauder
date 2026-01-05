@@ -6,6 +6,9 @@
   struct mac_addr* mac_history = nullptr;
 #endif
 
+MacEntry WiFiScan::mac_entries[mac_history_len];
+uint8_t WiFiScan::mac_entry_state[mac_history_len];
+
 int num_beacon = 0;
 int num_deauth = 0;
 int num_probe = 0;
@@ -1739,6 +1742,9 @@ void WiFiScan::RunSetup() {
     mac_history = (struct mac_addr*) ps_malloc(mac_history_len * sizeof(struct mac_addr));
   #endif
 
+  for (int i = 0; i < mac_history_len; i++)
+    mac_entry_state[i] = 0;
+
   #ifdef HAS_BT
     watch_models = new WatchModel[26] {
       {0x1A, "Fallback Watch"},
@@ -2611,6 +2617,16 @@ bool WiFiScan::mac_cmp(struct mac_addr addr1, struct mac_addr addr2) {
   return true;
 }
 
+bool WiFiScan::mac_cmp(uint8_t addr1[6], uint8_t addr2[6]) {
+  //Return true if 2 mac_addr structs are equal.
+  for (int y = 0; y < 6 ; y++) {
+    if (addr1[y] != addr2[y]) {
+      return false;
+    }
+  }
+  return true;
+}
+
 #ifdef HAS_BT
   void WiFiScan::copyNimbleMac(const BLEAddress &addr, unsigned char out[6]) {
       #ifndef HAS_DUAL_BAND
@@ -2625,13 +2641,14 @@ bool WiFiScan::mac_cmp(struct mac_addr addr1, struct mac_addr addr2) {
   }
 #endif
 
-bool WiFiScan::seen_mac(unsigned char* mac) {
+bool WiFiScan::seen_mac(unsigned char* mac, bool simple) {
   //Return true if this MAC address is in the recently seen array.
 
   struct mac_addr tmp;
   for (int x = 0; x < 6 ; x++) {
     tmp.bytes[x] = mac[x];
   }
+
 
   for (int x = 0; x < mac_history_len; x++) {
     if (this->mac_cmp(tmp, mac_history[x])) {
@@ -2640,6 +2657,150 @@ bool WiFiScan::seen_mac(unsigned char* mac) {
   }
   return false;
 }
+
+int16_t WiFiScan::seen_mac_int(unsigned char* mac, bool simple) {
+  //Return true if this MAC address is in the recently seen array.
+
+  uint8_t tmp[6];
+  for (int x = 0; x < 6 ; x++) {
+    tmp[x] = mac[x];
+  }
+
+  for (int x = 0; x < mac_history_len; x++) {
+    if (this->mac_cmp(tmp, mac_entries[x].mac)) {
+      return x;
+    }
+  }
+  return -1;
+}
+
+inline uint32_t WiFiScan::hash_mac(const uint8_t mac[6]) {
+  uint32_t hash = 2166136261u;  // FNV offset basis
+
+  for (int i = 0; i < 6; i++) {
+    hash ^= mac[i];
+    hash *= 16777619u;          // FNV prime
+  }
+
+  return hash;
+}
+
+int WiFiScan::update_mac_entry(const uint8_t mac[6]) {
+  const uint32_t now_ms = millis();
+  const uint32_t start_idx = hash_mac(mac) & (mac_history_len - 1);
+
+  int32_t first_tombstone = -1;
+
+  for (uint32_t probe = 0; probe < mac_history_len; probe++) {
+    const uint32_t idx = (start_idx + probe) & (mac_history_len - 1);
+
+    switch (mac_entry_state[idx]) {
+
+      case EMPTY_ENTRY:
+        // Insert new entry (prefer earlier tombstone if found)
+        if (first_tombstone >= 0) {
+          insert_mac_entry(first_tombstone, mac, now_ms);
+        } else {
+          insert_mac_entry(idx, mac, now_ms);
+        }
+        return EMPTY_ENTRY;
+
+      case TOMBSTONE_ENTRY:
+        // Remember first tombstone for possible reuse
+        if (first_tombstone < 0) {
+          first_tombstone = idx;
+        }
+        break;
+
+      case VALID_ENTRY:
+        // Check for MAC match
+        if (memcmp(mac_entries[idx].mac, mac, 6) == 0) {
+          mac_entries[idx].last_seen_ms = now_ms;
+
+          if (mac_entries[idx].frame_count < UINT16_MAX) {
+            mac_entries[idx].frame_count++;
+          }
+
+          return idx;
+        }
+        break;
+    }
+  }
+
+  // Table full: evict something (simple policy: overwrite first tombstone or oldest)
+  evict_and_insert(mac, now_ms);
+
+  return TOMBSTONE_ENTRY;
+}
+
+inline void WiFiScan::insert_mac_entry(uint32_t idx, const uint8_t mac[6], uint32_t now_ms) {
+  memcpy(mac_entries[idx].mac, mac, 6);
+  mac_entries[idx].last_seen_ms = now_ms;
+  mac_entries[idx].frame_count = 1;
+  mac_entries[idx].flags = 0;  // set as needed
+  mac_entry_state[idx] = VALID_ENTRY;
+}
+
+void WiFiScan::evict_and_insert(const uint8_t mac[6], uint32_t now_ms) {
+  constexpr uint32_t EVICT_AGE_MS = 60 * 1000UL;
+
+  // 1) Safety: if any tombstone exists, reuse it.
+  for (uint32_t i = 0; i < mac_history_len; i++) {
+    if (mac_entry_state[i] == TOMBSTONE_ENTRY) {
+      insert_mac_entry(i, mac, now_ms);
+      return;
+    }
+  }
+
+  // 2) Find a VALID entry older than EVICT_AGE_MS (prefer stalest among those).
+  int32_t best_old_idx = -1;
+  uint32_t best_old_age = 0;
+
+  // 3) Fallback: track absolute oldest VALID entry in case none exceed 60s.
+  int32_t oldest_idx = -1;
+  uint32_t oldest_age = 0;
+
+  for (uint32_t i = 0; i < mac_history_len; i++) {
+    if (mac_entry_state[i] != VALID_ENTRY) {
+      continue;
+    }
+
+    const uint32_t age = (uint32_t)(now_ms - mac_entries[i].last_seen_ms);
+
+    // Track absolute oldest
+    if (oldest_idx < 0 || age > oldest_age) {
+      oldest_idx = (int32_t)i;
+      oldest_age = age;
+    }
+
+    // Track best eviction candidate over threshold
+    if (age > EVICT_AGE_MS) {
+      if (best_old_idx < 0 || age > best_old_age) {
+        best_old_idx = (int32_t)i;
+        best_old_age = age;
+      }
+    }
+  }
+
+  // Choose eviction target
+  int32_t victim = (best_old_idx >= 0) ? best_old_idx : oldest_idx;
+
+  if (victim >= 0) {
+    // Optional: mark tombstone first (not strictly required if you're overwriting,
+    // but keeps state transitions explicit).
+    mac_entry_state[victim] = TOMBSTONE_ENTRY;
+
+    // Overwrite with new entry
+    insert_mac_entry((uint32_t)victim, mac, now_ms);
+    Serial.println(macToString(mac_entries[victim].mac) + " expired");
+    return;
+  }
+
+  // If we got here, something is inconsistent (no valid entries but "full" insert path).
+  // As a last resort, just insert at 0.
+  insert_mac_entry(0, mac, now_ms);
+}
+
 
 void WiFiScan::save_mac(unsigned char* mac) {
   //Save a MAC address into the recently seen array.
@@ -7278,6 +7439,31 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
   }
   else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_DETECT_FOLLOW) {
 
+    // Skip if is a management frame that isn't probe request
+    if (type == WIFI_PKT_MGMT) {
+      if (snifferPacket->payload[0] != 0x40)
+        return;
+    }
+
+    char addr[] = "00:00:00:00:00:00";
+    getMAC(addr, snifferPacket->payload, 10);
+
+    int frame_check = wifi_scan_obj.update_mac_entry(src_addr);
+
+    Serial.print(addr);
+
+    if (frame_check == EMPTY_ENTRY) {
+      Serial.println(" Added to table.");
+    }
+    else if (frame_check == VALID_ENTRY) {
+      Serial.println(" Updated in table");
+    }
+    else if (frame_check == TOMBSTONE_ENTRY) {
+      Serial.println(" Evicted");
+    }
+    else {
+      Serial.println(" Frames: " + (String)mac_entries[frame_check].frame_count + " Last Seen: " + (String)(millis() - mac_entries[frame_check].last_seen_ms));
+    }
   }
 }
 
@@ -10193,6 +10379,12 @@ void WiFiScan::main(uint32_t currentTime)
   {
     if (currentTime - initTime >= this->channel_hop_delay * HOP_DELAY)
     {
+      initTime = millis();
+      channelHop();
+    }
+  }
+  else if (currentScanMode == WIFI_SCAN_DETECT_FOLLOW) {
+    if (currentTime - initTime >= this->channel_hop_delay * HOP_DELAY) {
       initTime = millis();
       channelHop();
     }
