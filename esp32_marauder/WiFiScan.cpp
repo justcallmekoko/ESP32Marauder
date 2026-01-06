@@ -2717,6 +2717,11 @@ int WiFiScan::update_mac_entry(const uint8_t mac[6]) {
         if (memcmp(mac_entries[idx].mac, mac, 6) == 0) {
           mac_entries[idx].last_seen_ms = now_ms;
 
+          #ifdef HAS_GPS
+            mac_entries[idx].last_lat_e6 = gps_obj.getLatInt();
+            mac_entries[idx].last_lon_e6 = gps_obj.getLonInt();
+          #endif
+
           if (mac_entries[idx].frame_count < UINT16_MAX) {
             mac_entries[idx].frame_count++;
           }
@@ -2737,12 +2742,24 @@ inline void WiFiScan::insert_mac_entry(uint32_t idx, const uint8_t mac[6], uint3
   memcpy(mac_entries[idx].mac, mac, 6);
   mac_entries[idx].last_seen_ms = now_ms;
   mac_entries[idx].frame_count = 1;
-  mac_entries[idx].flags = 0;  // set as needed
+  #ifdef HAS_GPS
+    mac_entries[idx].first_lat_e6 = gps_obj.getLatInt();
+    mac_entries[idx].first_lon_e6 = gps_obj.getLonInt();
+    mac_entries[idx].last_lat_e6 = gps_obj.getLatInt();
+    mac_entries[idx].last_lon_e6 = gps_obj.getLonInt();
+  #else
+    mac_entries[idx].first_lat_e6 = 0;
+    mac_entries[idx].first_lon_e6 = 0;
+    mac_entries[idx].last_lat_e6 = 0;
+    mac_entries[idx].last_lon_e6 = 0;
+  #endif
+  mac_entries[idx].following = false;
+  mac_entries[idx].dloc = 0;
   mac_entry_state[idx] = VALID_ENTRY;
 }
 
 void WiFiScan::evict_and_insert(const uint8_t mac[6], uint32_t now_ms) {
-  constexpr uint32_t EVICT_AGE_MS = 60 * 1000UL;
+  constexpr uint32_t EVICT_AGE_MS = TRACK_EVICT_SEC * 1000UL;
 
   // 1) Safety: if any tombstone exists, reuse it.
   for (uint32_t i = 0; i < mac_history_len; i++) {
@@ -2752,11 +2769,11 @@ void WiFiScan::evict_and_insert(const uint8_t mac[6], uint32_t now_ms) {
     }
   }
 
-  // 2) Find a VALID entry older than EVICT_AGE_MS (prefer stalest among those).
+  // 2) Find a VALID entry older than EVICT_AGE_MS (prefer oldest among those).
   int32_t best_old_idx = -1;
   uint32_t best_old_age = 0;
 
-  // 3) Fallback: track absolute oldest VALID entry in case none exceed 60s.
+  // 3) Fallback: track absolute oldest VALID entry in case none exceed TRACK_EVICT_SEC.
   int32_t oldest_idx = -1;
   uint32_t oldest_age = 0;
 
@@ -2786,7 +2803,7 @@ void WiFiScan::evict_and_insert(const uint8_t mac[6], uint32_t now_ms) {
   int32_t victim = (best_old_idx >= 0) ? best_old_idx : oldest_idx;
 
   if (victim >= 0) {
-    // Optional: mark tombstone first (not strictly required if you're overwriting,
+    // Optional: mark tombstone first (not strictly required if overwriting,
     // but keeps state transitions explicit).
     mac_entry_state[victim] = TOMBSTONE_ENTRY;
 
@@ -2797,8 +2814,144 @@ void WiFiScan::evict_and_insert(const uint8_t mac[6], uint32_t now_ms) {
   }
 
   // If we got here, something is inconsistent (no valid entries but "full" insert path).
-  // As a last resort, just insert at 0.
+  // Just insert at 0.
   insert_mac_entry(0, mac, now_ms);
+}
+
+static inline uint32_t age_ms(uint32_t now_ms, uint32_t last_seen_ms) {
+  return (uint32_t)(now_ms - last_seen_ms); // wrap-safe
+}
+
+static inline int32_t iabs32(int32_t v) {
+  return (v < 0) ? -v : v;
+}
+
+// Uses e6 degrees. No meters conversion at runtime.
+// Writes computed location delta (e6 degrees) into out_dloc if provided.
+static inline bool is_following_candidate_light(
+    const MacEntry& e,
+    uint32_t now_ms,
+    int32_t* out_dloc = nullptr
+) {
+  const bool has_first = !(e.first_lat_e6 == 0 && e.first_lon_e6 == 0);
+  const bool has_last  = !(e.last_lat_e6  == 0 && e.last_lon_e6  == 0);
+  if (!has_first || !has_last) {
+    if (out_dloc) 
+      *out_dloc = 0;
+
+    return false;
+  }
+
+  // Optional freshness limit (avoid super old "following" marks)
+  const uint32_t MAX_AGE_MS = 10UL * 60UL * 1000UL; // 10 minutes
+  if (age_ms(now_ms, e.last_seen_ms) > MAX_AGE_MS) {
+    if (out_dloc)
+      *out_dloc = 0;
+
+    return false;
+  }
+
+  // Movement threshold:
+  // meters are e6 degrees = meters * 9
+  const int32_t THRESH_E6 = (int32_t)(75 * 9); // ~75 m to-do: needs tuning
+
+  int32_t dlat = iabs32(e.last_lat_e6 - e.first_lat_e6);
+  int32_t dlon = iabs32(e.last_lon_e6 - e.first_lon_e6);
+
+  // Rough longitude scaling for mid-latitudes (~0.75)
+  dlon = (dlon * 3) / 4;
+
+  // Cheap distance proxy
+  int32_t d = (dlat > dlon) ? dlat : dlon;
+
+  if (out_dloc) *out_dloc = d;
+
+  return d >= THRESH_E6;
+}
+
+// Returns how many entries were written to out_top10 (0..10)
+uint8_t WiFiScan::build_top10_for_ui(MacEntry* out_top10, MacSortMode mode) {
+  if (!out_top10) return 0;
+
+  const uint32_t now_ms = millis();
+
+  int32_t top_idx[10];
+  uint8_t top_count = 0;
+
+  for (int i = 0; i < 10; i++)
+    top_idx[i] = -1;
+
+  auto better = [&](uint32_t a_idx, uint32_t b_idx) -> bool {
+    const MacEntry& A = mac_entries[a_idx];
+    const MacEntry& B = mac_entries[b_idx];
+
+    const bool A_follow = is_following_candidate_light(A, now_ms);
+    const bool B_follow = is_following_candidate_light(B, now_ms);
+
+    // Following entries always rank ahead of non-following
+    if (A_follow != B_follow)
+      return A_follow && !B_follow;
+
+    // Original sort rules
+    if (mode == MacSortMode::MOST_FRAMES) {
+      if (A.frame_count != B.frame_count)
+        return A.frame_count > B.frame_count;
+
+      return age_ms(now_ms, A.last_seen_ms) < age_ms(now_ms, B.last_seen_ms);
+    } else {
+      const uint32_t ageA = age_ms(now_ms, A.last_seen_ms);
+      const uint32_t ageB = age_ms(now_ms, B.last_seen_ms);
+      if (ageA != ageB)
+        return ageA < ageB;
+
+      return A.frame_count > B.frame_count;
+    }
+  };
+
+  for (uint32_t i = 0; i < mac_history_len; i++) {
+    if (mac_entry_state[i] != VALID_ENTRY)
+      continue;
+
+    if (top_count < 10) {
+      int pos = (int)top_count;
+      while (pos > 0 && top_idx[pos - 1] >= 0 && better(i, (uint32_t)top_idx[pos - 1])) {
+        top_idx[pos] = top_idx[pos - 1];
+        pos--;
+      }
+      top_idx[pos] = (int32_t)i;
+      top_count++;
+      continue;
+    }
+
+    const int32_t worst_idx = top_idx[9];
+    if (worst_idx < 0)
+      continue;
+
+    if (better(i, (uint32_t)worst_idx)) {
+      int pos = 9;
+      while (pos > 0 && top_idx[pos - 1] >= 0 && better(i, (uint32_t)top_idx[pos - 1])) {
+        top_idx[pos] = top_idx[pos - 1];
+        pos--;
+      }
+      top_idx[pos] = (int32_t)i;
+    }
+  }
+
+  for (uint8_t k = 0; k < top_count; k++) {
+    const int32_t src = top_idx[k];
+    if (src >= 0) {
+      int32_t dloc = 0;
+      out_top10[k] = mac_entries[(uint32_t)src];
+      out_top10[k].following = is_following_candidate_light(out_top10[k], now_ms, &dloc);
+      out_top10[k].dloc = dloc;
+    }
+  }
+
+  for (uint8_t k = top_count; k < 10; k++) {
+    memset(&out_top10[k], 0, sizeof(MacEntry));
+  }
+
+  return top_count;
 }
 
 
@@ -2957,7 +3110,8 @@ void WiFiScan::RunPingScan(uint8_t scan_mode, uint16_t color)
     display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
   #endif
   this->current_scan_ip = this->gateway;
-  Serial.println("Cleared IPs: " + (String)this->clearIPs());
+  Serial.print(F("Cleared IPs: "));
+  Serial.println((String)this->clearIPs());
   if (scan_mode == WIFI_PING_SCAN)
     Serial.println(F("Starting Ping Scan with..."));
   else if (scan_mode == WIFI_ARP_SCAN)
@@ -3551,7 +3705,8 @@ void WiFiScan::setMac() {
       ((currentWiFiMode == WIFI_MODE_AP) || (currentWiFiMode == WIFI_MODE_APSTA) || (currentWiFiMode == WIFI_MODE_NULL)))
         Serial.printf("Failed to set AP MAC: %s | 0x%X\n", macToString(this->ap_mac), result);
   else if ((currentWiFiMode == WIFI_MODE_AP) || (currentWiFiMode == WIFI_MODE_APSTA) || (currentWiFiMode == WIFI_MODE_NULL))
-    Serial.println("Successfully set AP MAC: " + macToString(this->ap_mac));
+    Serial.print(F("Successfully set AP MAC: "));
+    Serial.println(macToString(this->ap_mac));
 
   // Do the station  
   result = esp_wifi_set_mac(WIFI_IF_STA, this->sta_mac);
@@ -3559,7 +3714,8 @@ void WiFiScan::setMac() {
       ((currentWiFiMode == WIFI_MODE_STA) || (currentWiFiMode == WIFI_MODE_APSTA)))
         Serial.printf("Failed to set STA MAC: %s | 0x%X\n", macToString(this->sta_mac), result);
   else if ((currentWiFiMode == WIFI_MODE_STA) || (currentWiFiMode == WIFI_MODE_APSTA))
-    Serial.println("Successfully set STA MAC: " + macToString(this->sta_mac));
+    Serial.print(F("Successfully set STA MAC: "));
+    Serial.println(macToString(this->sta_mac));
 }
 
 void WiFiScan::RunSetMac(uint8_t * mac, bool ap) {
@@ -7440,17 +7596,17 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
   else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_DETECT_FOLLOW) {
 
     // Skip if is a management frame that isn't probe request
-    if (type == WIFI_PKT_MGMT) {
+    /*if (type == WIFI_PKT_MGMT) {
       if (snifferPacket->payload[0] != 0x40)
         return;
-    }
+    }*/
 
     char addr[] = "00:00:00:00:00:00";
     getMAC(addr, snifferPacket->payload, 10);
 
     int frame_check = wifi_scan_obj.update_mac_entry(src_addr);
 
-    Serial.print(addr);
+    /*Serial.print(addr);
 
     if (frame_check == EMPTY_ENTRY) {
       Serial.println(" Added to table.");
@@ -7463,7 +7619,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
     }
     else {
       Serial.println(" Frames: " + (String)mac_entries[frame_check].frame_count + " Last Seen: " + (String)(millis() - mac_entries[frame_check].last_seen_ms));
-    }
+    }*/
   }
 }
 
@@ -10360,6 +10516,35 @@ void WiFiScan::portScan(uint8_t scan_mode, uint16_t targ_port) {
   }
 }
 
+void WiFiScan::updateTrackerUI() {
+  MacEntry ui_list[10];
+  uint8_t n = this->build_top10_for_ui(ui_list, MacSortMode::MOST_FRAMES);
+
+  display_obj.tft.fillRect(0,
+                          (STATUS_BAR_WIDTH * 2) + 1 + EXT_BUTTON_WIDTH,
+                          TFT_WIDTH,
+                          TFT_HEIGHT - STATUS_BAR_WIDTH + 1,
+                          TFT_BLACK);
+  display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH + EXT_BUTTON_WIDTH);
+  display_obj.tft.setTextSize(1);
+
+  Serial.println(F("---------------"));
+
+  for (int i = 0; i < n; i++) {
+    if (ui_list[i].following) {
+      display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+      Serial.print(F("FOLLOWING "));
+    }
+    else
+      display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+
+    display_obj.tft.println(macToString(ui_list[i].mac) + " Tx: " + (String)ui_list[i].frame_count + " " + (String)((millis() - ui_list[i].last_seen_ms) / 1000) + "s " + (String)ui_list[i].dloc);
+
+    Serial.print(macToString(ui_list[i].mac));
+    Serial.println(" Frames: " + (String)ui_list[i].frame_count + " Last Seen: " + (String)((millis() - ui_list[i].last_seen_ms) / 1000) + "s");
+  }
+}
+
 
 // Function for updating scan status
 void WiFiScan::main(uint32_t currentTime)
@@ -10387,6 +10572,11 @@ void WiFiScan::main(uint32_t currentTime)
     if (currentTime - initTime >= this->channel_hop_delay * HOP_DELAY) {
       initTime = millis();
       channelHop();
+    }
+
+    if (currentTime - this->last_ui_update >= 1000) {
+      this->last_ui_update = millis();
+      this->updateTrackerUI();
     }
   }
   else if ((currentScanMode == BT_SCAN_FLOCK) ||

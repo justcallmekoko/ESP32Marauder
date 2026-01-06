@@ -32,9 +32,11 @@
   //#define MARAUDER_V8
   //// END BOARD TARGETS
 
-  #define MARAUDER_VERSION "v1.9.1"
+  #define MARAUDER_VERSION "v1.10.0"
 
   #define GRAPH_REFRESH   100
+
+  #define TRACK_EVICT_SEC 120 // Seconds before marking tracked MAC as tombstone
 
   #define DUAL_BAND_CHANNELS 51
 

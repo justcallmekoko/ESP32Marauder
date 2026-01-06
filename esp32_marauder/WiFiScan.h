@@ -229,10 +229,12 @@ struct MacEntry {
   uint8_t  mac[6];
   uint32_t last_seen_ms;
   uint16_t frame_count;
-  int16_t  dlat_e5;
-  int16_t  dlon_e5;
-  uint8_t  flags;
-  uint8_t  _pad;
+  int32_t  first_lat_e6;
+  int32_t  first_lon_e6;
+  int32_t  last_lat_e6;
+  int32_t  last_lon_e6;
+  bool following;
+  int32_t dloc;
 };
 #pragma pack(pop)
 
@@ -253,6 +255,11 @@ struct Flipper {
 #ifdef HAS_PSRAM
   extern struct mac_addr* mac_history;
 #endif
+
+enum class MacSortMode : uint8_t {
+  MOST_RECENT,
+  MOST_FRAMES
+};
 
 class WiFiScan
 {
@@ -298,6 +305,7 @@ class WiFiScan
     //int num_deauth = 0; // RED
 
     uint32_t initTime = 0;
+    uint32_t last_ui_update = 0;
     bool run_setup = true;
     void initWiFi(uint8_t scan_mode);
     uint8_t bluetoothScanTime = 5;
@@ -542,6 +550,7 @@ class WiFiScan
       NimBLEAdvertisementData GetUniversalAdvertisementData(EBLEPayloadType type);
     #endif
 
+    void updateTrackerUI();
     void showNetworkInfo();
     void setNetworkInfo();
     void fullARP();
@@ -756,6 +765,7 @@ class WiFiScan
     int update_mac_entry(const uint8_t mac[6]);
     inline void insert_mac_entry(uint32_t idx, const uint8_t mac[6], uint32_t now_ms);
     void evict_and_insert(const uint8_t mac[6], uint32_t now_ms);
+    uint8_t build_top10_for_ui(MacEntry* out_top10, MacSortMode mode);
     void save_mac(unsigned char* mac);
     #ifdef HAS_BT
       void copyNimbleMac(const BLEAddress &addr, unsigned char out[6]);
