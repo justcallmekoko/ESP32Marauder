@@ -235,6 +235,7 @@ struct MacEntry {
   int32_t  last_lon_e6;
   bool following;
   int32_t dloc;
+  int8_t rssi;
 };
 #pragma pack(pop)
 
@@ -762,8 +763,8 @@ class WiFiScan
     #endif
     bool seen_mac(unsigned char* mac, bool simple = true);
     int16_t seen_mac_int(unsigned char* mac, bool simple = true);
-    int update_mac_entry(const uint8_t mac[6]);
-    inline void insert_mac_entry(uint32_t idx, const uint8_t mac[6], uint32_t now_ms);
+    int update_mac_entry(const uint8_t mac[6], int8_t rssi = 0);
+    inline void insert_mac_entry(uint32_t idx, const uint8_t mac[6], uint32_t now_ms, int8_t rssi = 0);
     void evict_and_insert(const uint8_t mac[6], uint32_t now_ms);
     uint8_t build_top10_for_ui(MacEntry* out_top10, MacSortMode mode);
     void save_mac(unsigned char* mac);

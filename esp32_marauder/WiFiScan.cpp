@@ -2685,7 +2685,7 @@ inline uint32_t WiFiScan::hash_mac(const uint8_t mac[6]) {
   return hash;
 }
 
-int WiFiScan::update_mac_entry(const uint8_t mac[6]) {
+int WiFiScan::update_mac_entry(const uint8_t mac[6], int8_t rssi) {
   const uint32_t now_ms = millis();
   const uint32_t start_idx = hash_mac(mac) & (mac_history_len - 1);
 
@@ -2699,9 +2699,9 @@ int WiFiScan::update_mac_entry(const uint8_t mac[6]) {
       case EMPTY_ENTRY:
         // Insert new entry (prefer earlier tombstone if found)
         if (first_tombstone >= 0) {
-          insert_mac_entry(first_tombstone, mac, now_ms);
+          insert_mac_entry(first_tombstone, mac, now_ms, rssi);
         } else {
-          insert_mac_entry(idx, mac, now_ms);
+          insert_mac_entry(idx, mac, now_ms, rssi);
         }
         return EMPTY_ENTRY;
 
@@ -2726,6 +2726,8 @@ int WiFiScan::update_mac_entry(const uint8_t mac[6]) {
             mac_entries[idx].frame_count++;
           }
 
+          mac_entries[idx].rssi = rssi;
+
           return idx;
         }
         break;
@@ -2738,7 +2740,7 @@ int WiFiScan::update_mac_entry(const uint8_t mac[6]) {
   return TOMBSTONE_ENTRY;
 }
 
-inline void WiFiScan::insert_mac_entry(uint32_t idx, const uint8_t mac[6], uint32_t now_ms) {
+inline void WiFiScan::insert_mac_entry(uint32_t idx, const uint8_t mac[6], uint32_t now_ms, int8_t rssi) {
   memcpy(mac_entries[idx].mac, mac, 6);
   mac_entries[idx].last_seen_ms = now_ms;
   mac_entries[idx].frame_count = 1;
@@ -2755,13 +2757,14 @@ inline void WiFiScan::insert_mac_entry(uint32_t idx, const uint8_t mac[6], uint3
   #endif
   mac_entries[idx].following = false;
   mac_entries[idx].dloc = 0;
+  mac_entries[idx].rssi = rssi;
   mac_entry_state[idx] = VALID_ENTRY;
 }
 
 void WiFiScan::evict_and_insert(const uint8_t mac[6], uint32_t now_ms) {
-  constexpr uint32_t EVICT_AGE_MS = TRACK_EVICT_SEC * 1000UL;
+  const uint32_t EVICT_AGE_MS = TRACK_EVICT_SEC * 1000UL;
 
-  // 1) Safety: if any tombstone exists, reuse it.
+  // 1) Prefer reusing a tombstone if any exist.
   for (uint32_t i = 0; i < mac_history_len; i++) {
     if (mac_entry_state[i] == TOMBSTONE_ENTRY) {
       insert_mac_entry(i, mac, now_ms);
@@ -2769,52 +2772,59 @@ void WiFiScan::evict_and_insert(const uint8_t mac[6], uint32_t now_ms) {
     }
   }
 
-  // 2) Find a VALID entry older than EVICT_AGE_MS (prefer oldest among those).
-  int32_t best_old_idx = -1;
-  uint32_t best_old_age = 0;
+  // Candidate among "expired" (age > EVICT_AGE_MS): lowest frame_count, then oldest
+  int32_t victim_expired = -1;
+  uint16_t victim_expired_frames = 0xFFFF;
+  uint32_t victim_expired_age = 0;
 
-  // 3) Fallback: track absolute oldest VALID entry in case none exceed TRACK_EVICT_SEC.
-  int32_t oldest_idx = -1;
-  uint32_t oldest_age = 0;
+  // Fallback candidate among all VALID: lowest frame_count, then oldest
+  int32_t victim_any = -1;
+  uint16_t victim_any_frames = 0xFFFF;
+  uint32_t victim_any_age = 0;
 
   for (uint32_t i = 0; i < mac_history_len; i++) {
-    if (mac_entry_state[i] != VALID_ENTRY) {
-      continue;
-    }
+    if (mac_entry_state[i] != VALID_ENTRY) continue;
 
     const uint32_t age = (uint32_t)(now_ms - mac_entries[i].last_seen_ms);
+    const uint16_t frames = mac_entries[i].frame_count;
 
-    // Track absolute oldest
-    if (oldest_idx < 0 || age > oldest_age) {
-      oldest_idx = (int32_t)i;
-      oldest_age = age;
+    // Fallback (any valid): lowest frames, then oldest
+    if (victim_any < 0 ||
+        frames < victim_any_frames ||
+        (frames == victim_any_frames && age > victim_any_age)) {
+      victim_any = (int32_t)i;
+      victim_any_frames = frames;
+      victim_any_age = age;
     }
 
-    // Track best eviction candidate over threshold
+    // Expired group: lowest frames, then oldest (only if age exceeds threshold)
     if (age > EVICT_AGE_MS) {
-      if (best_old_idx < 0 || age > best_old_age) {
-        best_old_idx = (int32_t)i;
-        best_old_age = age;
+      if (victim_expired < 0 ||
+          frames < victim_expired_frames ||
+          (frames == victim_expired_frames && age > victim_expired_age)) {
+        victim_expired = (int32_t)i;
+        victim_expired_frames = frames;
+        victim_expired_age = age;
       }
     }
   }
 
-  // Choose eviction target
-  int32_t victim = (best_old_idx >= 0) ? best_old_idx : oldest_idx;
+  // Choose victim: prefer expired-group, else fallback group
+  const int32_t victim = (victim_expired >= 0) ? victim_expired : victim_any;
 
   if (victim >= 0) {
-    // Optional: mark tombstone first (not strictly required if overwriting,
-    // but keeps state transitions explicit).
-    mac_entry_state[victim] = TOMBSTONE_ENTRY;
+    // Save evicted MAC for logging
+    uint8_t evicted_mac[6];
+    memcpy(evicted_mac, mac_entries[victim].mac, 6);
 
-    // Overwrite with new entry
+    // Overwrite victim with new entry
     insert_mac_entry((uint32_t)victim, mac, now_ms);
-    Serial.println(macToString(mac_entries[victim].mac) + " expired");
+
+    Serial.println(macToString(evicted_mac) + " expired");
     return;
   }
 
-  // If we got here, something is inconsistent (no valid entries but "full" insert path).
-  // Just insert at 0.
+  // If table is somehow inconsistent, just insert at 0.
   insert_mac_entry(0, mac, now_ms);
 }
 
@@ -7604,7 +7614,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
     char addr[] = "00:00:00:00:00:00";
     getMAC(addr, snifferPacket->payload, 10);
 
-    int frame_check = wifi_scan_obj.update_mac_entry(src_addr);
+    int frame_check = wifi_scan_obj.update_mac_entry(src_addr, snifferPacket->rx_ctrl.rssi);
 
     /*Serial.print(addr);
 
@@ -10546,7 +10556,12 @@ void WiFiScan::updateTrackerUI() {
     }
 
     #ifdef HAS_SCREEN
-      display_obj.tft.println(macToString(ui_list[i].mac) + " Tx: " + (String)ui_list[i].frame_count + " " + (String)((millis() - ui_list[i].last_seen_ms) / 1000) + "s " + (String)ui_list[i].dloc);
+      #ifndef HAS_MINI_SCREEN
+        display_obj.tft.println((String)ui_list[i].rssi + " " + macToString(ui_list[i].mac) + " Tx: " + (String)ui_list[i].frame_count + " " + (String)((millis() - ui_list[i].last_seen_ms) / 1000) + "s " + (String)ui_list[i].dloc);
+      #else
+        String mac_str = macToString(ui_list[i].mac);
+        display_obj.tft.println(mac_str.substring(mac_str.length() / 2) + " Tx: " + (String)ui_list[i].frame_count + " " + (String)((millis() - ui_list[i].last_seen_ms) / 1000) + "s ");
+      #endif
     #endif
 
     Serial.print(macToString(ui_list[i].mac));
