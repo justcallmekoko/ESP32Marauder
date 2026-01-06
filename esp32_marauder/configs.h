@@ -36,7 +36,7 @@
 
   #define GRAPH_REFRESH   100
 
-  #define TRACK_EVICT_SEC 120 // Seconds before marking tracked MAC as tombstone
+  #define TRACK_EVICT_SEC 90 // Seconds before marking tracked MAC as tombstone
 
   #define DUAL_BAND_CHANNELS 51
 
