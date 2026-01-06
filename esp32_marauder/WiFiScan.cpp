@@ -10520,25 +10520,34 @@ void WiFiScan::updateTrackerUI() {
   MacEntry ui_list[10];
   uint8_t n = this->build_top10_for_ui(ui_list, MacSortMode::MOST_FRAMES);
 
-  display_obj.tft.fillRect(0,
-                          (STATUS_BAR_WIDTH * 2) + 1 + EXT_BUTTON_WIDTH,
-                          TFT_WIDTH,
-                          TFT_HEIGHT - STATUS_BAR_WIDTH + 1,
-                          TFT_BLACK);
-  display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH + EXT_BUTTON_WIDTH);
-  display_obj.tft.setTextSize(1);
+  #ifdef HAS_SCREEN
+    display_obj.tft.fillRect(0,
+                            (STATUS_BAR_WIDTH * 2) + 1 + EXT_BUTTON_WIDTH,
+                            TFT_WIDTH,
+                            TFT_HEIGHT - STATUS_BAR_WIDTH + 1,
+                            TFT_BLACK);
+    display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH + EXT_BUTTON_WIDTH);
+    display_obj.tft.setTextSize(1);
+  #endif
 
   Serial.println(F("---------------"));
 
   for (int i = 0; i < n; i++) {
     if (ui_list[i].following) {
-      display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+      #endif
       Serial.print(F("FOLLOWING "));
     }
-    else
-      display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    else {
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      #endif
+    }
 
-    display_obj.tft.println(macToString(ui_list[i].mac) + " Tx: " + (String)ui_list[i].frame_count + " " + (String)((millis() - ui_list[i].last_seen_ms) / 1000) + "s " + (String)ui_list[i].dloc);
+    #ifdef HAS_SCREEN
+      display_obj.tft.println(macToString(ui_list[i].mac) + " Tx: " + (String)ui_list[i].frame_count + " " + (String)((millis() - ui_list[i].last_seen_ms) / 1000) + "s " + (String)ui_list[i].dloc);
+    #endif
 
     Serial.print(macToString(ui_list[i].mac));
     Serial.println(" Frames: " + (String)ui_list[i].frame_count + " Last Seen: " + (String)((millis() - ui_list[i].last_seen_ms) / 1000) + "s");
