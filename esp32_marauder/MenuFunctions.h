@@ -193,7 +193,7 @@ class MenuFunctions
 
     Menu evilPortalMenu;
 
-    static void lv_tick_handler();
+    //static void lv_tick_handler();
 
     // Menu icons
 
@@ -260,7 +260,7 @@ class MenuFunctions
     Menu infoMenu;
     Menu apInfoMenu;
 
-    Ticker tick;
+    //Ticker tick;
 
     uint16_t x = -1, y = -1;
     boolean pressed = false;
