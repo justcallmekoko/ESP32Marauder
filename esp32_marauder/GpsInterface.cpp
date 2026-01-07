@@ -10,6 +10,10 @@ MicroNMEA nmea(nmeaBuffer, sizeof(nmeaBuffer));
 
 HardwareSerial Serial2(GPS_SERIAL_INDEX);
 
+static const char *PCAS_SET_115200 = "$PCAS01,5*19\r\n";
+
+static const uint32_t PROBE_MS = 1200;
+
 void GpsInterface::begin() {
 
   /*#ifdef MARAUDER_MINI
@@ -26,6 +30,17 @@ void GpsInterface::begin() {
 
   
   Serial2.begin(9600, SERIAL_8N1, GPS_TX, GPS_RX);
+
+  uint32_t gps_baud = this->initGpsBaudAndForce115200();
+
+  if (gps_baud == 9600)
+    Serial.println("GPS running at 9600");
+  else if (gps_baud == 115200)
+    Serial.println("GPS running at 115200");
+  else
+    Serial.println("Could not detect GPS baudrate");
+
+  delay(1000);
 
   MicroNMEA::sendSentence(Serial2, "$PSTMSETPAR,1201,0x00000042");
   MicroNMEA::sendSentence(Serial2, "$PSTMSAVEPAR");
@@ -56,6 +71,67 @@ void GpsInterface::begin() {
 
   nmea.setUnknownSentenceHandler(gps_nmea_notimp);
 
+}
+
+bool GpsInterface::probeBaud(uint32_t baud) {
+  Serial2.end();
+  delay(50);
+
+  Serial2.begin(baud, SERIAL_8N1, GPS_TX, GPS_RX);
+
+  uint32_t start = millis();
+  bool sawDollar = false;
+  bool parsedSentence = false;
+
+  while (millis() - start < PROBE_MS) {
+    while (Serial2.available()) {
+      char c = (char)Serial2.read();
+
+      if (c == '$') {
+        sawDollar = true;
+      }
+
+      // Feed characters directly to MicroNMEA
+      if (nmea.process(c)) {
+        parsedSentence = true;
+      }
+
+      // If we’ve seen real NMEA traffic and MicroNMEA parsed something,
+      // this baud is almost certainly correct
+      if (sawDollar && parsedSentence) {
+        return true;
+      }
+    }
+    delay(1);
+  }
+
+  return false;
+}
+
+void GpsInterface::setGpsTo115200From9600() {
+  Serial2.print(PCAS_SET_115200);
+  Serial2.flush();
+  delay(200);
+}
+
+uint32_t GpsInterface::initGpsBaudAndForce115200() {
+  if (probeBaud(115200)) {
+    return 115200;
+  }
+
+  if (probeBaud(9600)) {
+    setGpsTo115200From9600();
+
+    if (probeBaud(115200)) {
+      return 115200;
+    }
+
+    probeBaud(9600);
+    return 9600;
+  }
+
+  probeBaud(9600);
+  return 0;
 }
 
 //passthrough for other objects

@@ -121,6 +121,9 @@ class GpsInterface {
     void flush_queue_nmea();
     String dt_string_from_gps();
     void setGPSInfo();
+    bool probeBaud(uint32_t baud);
+    void setGpsTo115200From9600();
+    uint32_t initGpsBaudAndForce115200();
 };
 
 #endif
