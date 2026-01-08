@@ -244,6 +244,7 @@ void CommandLine::runCommand(String input) {
     #ifdef HAS_GPS
       Serial.println(HELP_WARDRIVE_CMD);
     #endif
+    Serial.println(HELP_MAC_TRACK_CMD);
     
     // WiFi attack
     Serial.println(HELP_ATTACK_CMD);
@@ -822,6 +823,15 @@ void CommandLine::runCommand(String input) {
         wifi_scan_obj.StartScan(WIFI_SCAN_ACTIVE_EAPOL, TFT_VIOLET);
       }
     }    
+    // MAC Tracking
+    else if (cmd_args.get(0) == MAC_TRACK_CMD) {
+      Serial.println("Starting MAC Tracker. Stop with " + (String)STOPSCAN_CMD);
+      #ifdef HAS_SCREEN
+        display_obj.clearScreen();
+        menu_function_obj.drawStatusBar();
+      #endif
+      wifi_scan_obj.StartScan(WIFI_SCAN_DETECT_FOLLOW, TFT_MAGENTA);
+    }
 
 
   //// MAC Address commands    (Added by H4W9_4)

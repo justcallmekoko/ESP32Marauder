@@ -78,6 +78,7 @@ const char PROGMEM WARDRIVE_CMD[] = "wardrive";
 const char PROGMEM PING_CMD[] = "pingscan";
 const char PROGMEM PORT_SCAN_CMD[] = "portscan";
 const char PROGMEM ARP_SCAN_CMD[] = "arpscan";
+const char PROGMEM MAC_TRACK_CMD[] = "mactrack";
 
 // WiFi attack
 const char PROGMEM ATTACK_CMD[] = "attack";
@@ -152,6 +153,7 @@ const char PROGMEM HELP_WARDRIVE_CMD[] = "wardrive [-s/-f]";
 const char PROGMEM HELP_PING_CMD[] = "pingscan";
 const char PROGMEM HELP_PORT_SCAN_CMD[] = "portscan [-a -t <ip index>]/[-s <ssh/telnet/dns/http/smtp/https/rdp>]";
 const char PROGMEM HELP_ARP_SCAN_CMD[] = "arpscan [-f]";
+const char PROGMEM HELP_MAC_TRACK_CMD[] = "mactrack";
 
 // WiFi attack
 const char PROGMEM HELP_ATTACK_CMD[] = "attack -t <beacon [-l/-r/-a]/deauth [-c]/[-s <src mac>] [-d <dst mac>]/probe/rickroll/badmsg [-c]/sleep [-c]>";
