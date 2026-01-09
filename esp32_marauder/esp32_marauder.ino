@@ -154,6 +154,10 @@ void backlightOff() {
 
 void setup()
 {
+  #ifndef DEVELOPER
+    esp_log_level_set("*", ESP_LOG_NONE);
+  #endif
+  
   #ifndef HAS_DUAL_BAND
     esp_spiram_init();
   #endif

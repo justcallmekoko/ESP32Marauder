@@ -25,6 +25,7 @@ class Buffer {
     void append(wifi_promiscuous_pkt_t *packet, int len);
     void append(String log);
     void save();
+    String getFileName();
   private:
     void createFile(String name, bool is_pcap, bool is_gpx = false);
     void open(bool is_pcap);
