@@ -236,6 +236,7 @@ struct MacEntry {
   bool following;
   int32_t dloc;
   int8_t rssi;
+  bool bt;
 };
 #pragma pack(pop)
 
@@ -629,6 +630,7 @@ class WiFiScan
     void parseBSSID(const char* bssidStr, uint8_t* bssid);
     void writeHeader(bool poi = false);
     void writeFooter(bool poi = false);
+    void displayWardriveStats();
 
 
   public:
@@ -763,8 +765,8 @@ class WiFiScan
     #endif
     bool seen_mac(unsigned char* mac, bool simple = true);
     int16_t seen_mac_int(unsigned char* mac, bool simple = true);
-    int update_mac_entry(const uint8_t mac[6], int8_t rssi = 0);
-    inline void insert_mac_entry(uint32_t idx, const uint8_t mac[6], uint32_t now_ms, int8_t rssi = 0);
+    int update_mac_entry(const uint8_t mac[6], int8_t rssi = 0, bool bt = false);
+    inline void insert_mac_entry(uint32_t idx, const uint8_t mac[6], uint32_t now_ms, int8_t rssi = 0, bool bt = false);
     void evict_and_insert(const uint8_t mac[6], uint32_t now_ms);
     uint8_t build_top10_for_ui(MacEntry* out_top10, MacSortMode mode);
     void save_mac(unsigned char* mac);

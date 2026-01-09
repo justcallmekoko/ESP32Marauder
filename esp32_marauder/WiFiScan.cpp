@@ -430,7 +430,9 @@ extern "C" {
               #endif
             }
           }
-          else if ((wifi_scan_obj.currentScanMode == BT_SCAN_WAR_DRIVE)  || (wifi_scan_obj.currentScanMode == BT_SCAN_WAR_DRIVE_CONT)) {
+          else if ((wifi_scan_obj.currentScanMode == BT_SCAN_WAR_DRIVE) ||
+                  (wifi_scan_obj.currentScanMode == BT_SCAN_WAR_DRIVE_CONT) ||
+                  (wifi_scan_obj.currentScanMode == WIFI_SCAN_WAR_DRIVE)) {
             #ifdef HAS_GPS
               if (gps_obj.getGpsModuleStatus()) {
                 bool do_save = false;
@@ -467,7 +469,7 @@ extern "C" {
                     display_string.concat(" | GPS: No Fix");
                   }
           
-                  #ifdef HAS_SCREEN
+                  /*#ifdef HAS_SCREEN
                     uint8_t temp_len = display_string.length();
                     for (uint8_t i = 0; i < 40 - temp_len; i++)
                     {
@@ -481,7 +483,7 @@ extern "C" {
                     display_obj.loading = true;
                     display_obj.display_buffer->add(display_string);
                     display_obj.loading = false;
-                  #endif
+                  #endif*/
 
                   String wardrive_line = (String)advertisedDevice->getAddress().toString().c_str() + ",,[BLE]," + gps_obj.getDatetime() + ",0," + (String)advertisedDevice->getRSSI() + "," + gps_obj.getLat() + "," + gps_obj.getLon() + "," + gps_obj.getAlt() + "," + gps_obj.getAccuracy() + ",BLE\n";
                   Serial.print(wardrive_line);
@@ -492,6 +494,8 @@ extern "C" {
                   if (wifi_scan_obj.currentScanMode != BT_SCAN_WAR_DRIVE_CONT) {
                     wifi_scan_obj.save_mac(mac_char);
                   }
+
+                  wifi_scan_obj.bt_frames++;
                 }
               }
             #endif
@@ -910,6 +914,12 @@ extern "C" {
               Serial.print(F(" RSSI: "));
               Serial.println(advertisedDevice->getRSSI());
             }
+          }
+          else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_DETECT_FOLLOW) {
+            unsigned char mac_char[6];
+            wifi_scan_obj.copyNimbleMac(advertisedDevice->getAddress(), mac_char);
+
+            int frame_check = wifi_scan_obj.update_mac_entry(mac_char, advertisedDevice->getRSSI());
           }
 
           return;
@@ -1163,7 +1173,9 @@ extern "C" {
               #endif
             }
           }
-          else if ((wifi_scan_obj.currentScanMode == BT_SCAN_WAR_DRIVE)  || (wifi_scan_obj.currentScanMode == BT_SCAN_WAR_DRIVE_CONT)) {
+          else if ((wifi_scan_obj.currentScanMode == BT_SCAN_WAR_DRIVE) ||
+                  (wifi_scan_obj.currentScanMode == BT_SCAN_WAR_DRIVE_CONT) ||
+                  (wifi_scan_obj.currentScanMode == WIFI_SCAN_WAR_DRIVE)) {
             #ifdef HAS_GPS
               if (gps_obj.getGpsModuleStatus()) {
                 bool do_save = false;
@@ -1199,7 +1211,7 @@ extern "C" {
                     display_string.concat(" | GPS: No Fix");
                   }
           
-                  #ifdef HAS_SCREEN
+                  /*#ifdef HAS_SCREEN
                     uint8_t temp_len = display_string.length();
                     for (uint8_t i = 0; i < 40 - temp_len; i++)
                     {
@@ -1213,7 +1225,7 @@ extern "C" {
                     display_obj.loading = true;
                     display_obj.display_buffer->add(display_string);
                     display_obj.loading = false;
-                  #endif
+                  #endif*/
 
                   String wardrive_line = (String)advertisedDevice->getAddress().toString().c_str() + ",,[BLE]," + gps_obj.getDatetime() + ",0," + (String)advertisedDevice->getRSSI() + "," + gps_obj.getLat() + "," + gps_obj.getLon() + "," + gps_obj.getAlt() + "," + gps_obj.getAccuracy() + ",BLE\n";
                   Serial.print(wardrive_line);
@@ -1224,6 +1236,7 @@ extern "C" {
                   if (wifi_scan_obj.currentScanMode != BT_SCAN_WAR_DRIVE_CONT) {
                     wifi_scan_obj.save_mac(mac_char);
                   }
+                  wifi_scan_obj.bt_frames++;
                 }
               }
             #endif
@@ -1641,6 +1654,16 @@ extern "C" {
               }
               Serial.print(F(" RSSI: "));
               Serial.println(advertisedDevice->getRSSI());
+            }
+          }
+          else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_DETECT_FOLLOW) {
+            unsigned char mac_char[6];
+            wifi_scan_obj.copyNimbleMac(advertisedDevice->getAddress(), mac_char);
+
+            int frame_check = wifi_scan_obj.update_mac_entry(mac_char, advertisedDevice->getRSSI(), true);
+            if (frame_check == EMPTY_ENTRY) {
+              Serial.print("BT: ");
+              Serial.println(advertisedDevice->getAddress().toString().c_str());
             }
           }
           return;
@@ -2105,8 +2128,12 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     StopScan(scan_mode);
   else if (scan_mode == WIFI_SCAN_PROBE)
     RunProbeScan(scan_mode, color);
-  else if (scan_mode == WIFI_SCAN_DETECT_FOLLOW)
+  else if (scan_mode == WIFI_SCAN_DETECT_FOLLOW) {
+    #ifdef HAS_BT
+      RunBluetoothScan(scan_mode, color);
+    #endif
     RunProbeScan(scan_mode, color);
+  }
   else if (scan_mode == WIFI_SCAN_STATION_WAR_DRIVE)
     RunProbeScan(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_EVIL_PORTAL)
@@ -2119,8 +2146,12 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     RunEapolScan(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_AP)
     RunBeaconScan(scan_mode, color);
-  else if (scan_mode == WIFI_SCAN_WAR_DRIVE)
+  else if (scan_mode == WIFI_SCAN_WAR_DRIVE) {
+    #ifdef HAS_BT
+      RunBluetoothScan(scan_mode, color);
+    #endif
     RunBeaconScan(scan_mode, color);
+  }
   else if (scan_mode == WIFI_SCAN_SIG_STREN)
     RunRawScan(scan_mode, color);    
   else if (scan_mode == WIFI_SCAN_RAW_CAPTURE)
@@ -2521,7 +2552,9 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   (currentScanMode == BT_SCAN_SKIMMERS) ||
   (currentScanMode == BT_SCAN_ANALYZER) ||
   (currentScanMode == BT_SCAN_SIMPLE) ||
-  (currentScanMode == BT_SCAN_SIMPLE_TWO))
+  (currentScanMode == WIFI_SCAN_WAR_DRIVE) ||
+  (currentScanMode == BT_SCAN_SIMPLE_TWO) ||
+  (currentScanMode == WIFI_SCAN_DETECT_FOLLOW))
   {
     #ifdef HAS_BT
       #ifdef HAS_SCREEN
@@ -2685,7 +2718,7 @@ inline uint32_t WiFiScan::hash_mac(const uint8_t mac[6]) {
   return hash;
 }
 
-int WiFiScan::update_mac_entry(const uint8_t mac[6], int8_t rssi) {
+int WiFiScan::update_mac_entry(const uint8_t mac[6], int8_t rssi, bool bt) {
   const uint32_t now_ms = millis();
   const uint32_t start_idx = hash_mac(mac) & (mac_history_len - 1);
 
@@ -2699,9 +2732,9 @@ int WiFiScan::update_mac_entry(const uint8_t mac[6], int8_t rssi) {
       case EMPTY_ENTRY:
         // Insert new entry (prefer earlier tombstone if found)
         if (first_tombstone >= 0) {
-          insert_mac_entry(first_tombstone, mac, now_ms, rssi);
+          insert_mac_entry(first_tombstone, mac, now_ms, rssi, bt);
         } else {
-          insert_mac_entry(idx, mac, now_ms, rssi);
+          insert_mac_entry(idx, mac, now_ms, rssi, bt);
         }
         return EMPTY_ENTRY;
 
@@ -2740,7 +2773,7 @@ int WiFiScan::update_mac_entry(const uint8_t mac[6], int8_t rssi) {
   return TOMBSTONE_ENTRY;
 }
 
-inline void WiFiScan::insert_mac_entry(uint32_t idx, const uint8_t mac[6], uint32_t now_ms, int8_t rssi) {
+inline void WiFiScan::insert_mac_entry(uint32_t idx, const uint8_t mac[6], uint32_t now_ms, int8_t rssi, bool bt) {
   memcpy(mac_entries[idx].mac, mac, 6);
   mac_entries[idx].last_seen_ms = now_ms;
   mac_entries[idx].frame_count = 1;
@@ -2758,6 +2791,7 @@ inline void WiFiScan::insert_mac_entry(uint32_t idx, const uint8_t mac[6], uint3
   mac_entries[idx].following = false;
   mac_entries[idx].dloc = 0;
   mac_entries[idx].rssi = rssi;
+  mac_entries[idx].bt = bt;
   mac_entry_state[idx] = VALID_ENTRY;
 }
 
@@ -4769,11 +4803,17 @@ void WiFiScan::executeWarDrive() {
     if (gps_obj.getGpsModuleStatus()) {
       bool do_save;
       String display_string;
-      
-      /*while (WiFi.scanComplete() == WIFI_SCAN_RUNNING) {
-        Serial.println(F("Scan running..."));
-        delay(500);
-      }*/
+
+      if (currentScanMode == WIFI_SCAN_WAR_DRIVE) {
+        #ifdef HAS_BT
+          if (pBLEScan->isScanning()) {
+            this->ble_scanning = true;
+            return;
+          }
+          else
+            this->ble_scanning = false;
+        #endif
+      }
 
       int scan_status = WiFi.scanComplete();
 
@@ -4782,7 +4822,6 @@ void WiFiScan::executeWarDrive() {
         return;
       }
       else if (scan_status == WIFI_SCAN_FAILED) {
-        Serial.println("WiFi scan failed to start. Restarting...");
         this->wifi_initialized = true;
         this->shutdownWiFi();
         this->startWardriverWiFi();
@@ -4790,18 +4829,11 @@ void WiFiScan::executeWarDrive() {
         delay(100);
       }
       
-      /*#ifndef HAS_DUAL_BAND
-        int n = WiFi.scanNetworks(false, true, false, 110, this->set_channel);
-      #else
-        int n = WiFi.scanNetworks(false, true, false, 110);
-      #endif*/
-
       bool do_continue = false;
 
       if (scan_status > 0) {
         for (int i = 0; i < scan_status; i++) {
           do_continue = true;
-          display_string = "";
           do_save = false;
           uint8_t *this_bssid_raw = WiFi.BSSID(i);
           char this_bssid[18] = {0};
@@ -4813,8 +4845,6 @@ void WiFiScan::executeWarDrive() {
           this->save_mac(this_bssid_raw);
 
           String ssid = WiFi.SSID(i);
-
-          //Serial.println(ssid);
 
           if (this->currentScanMode == BT_SCAN_FLOCK_WARDRIVE) {
             for (int x = 0; x < sizeof(flock_ssid)/sizeof(this->flock_ssid[0]); x++) {
@@ -4833,33 +4863,34 @@ void WiFiScan::executeWarDrive() {
 
           ssid.replace(",","_");
 
-          if (ssid != "") {
-            display_string.concat(ssid);
-          }
-          else {
-            display_string.concat(this_bssid);
-          }
-
-          if (gps_obj.getFixStatus()) {
-            do_save = true;
-            display_string.concat(" | Lt: " + gps_obj.getLat());
-            display_string.concat(" | Ln: " + gps_obj.getLon());
-          }
-          else {
-            display_string.concat(" | GPS: No Fix");
-          }
-
-          int temp_len = display_string.length();
-
-          #ifdef HAS_SCREEN
-            for (int i = 0; i < 40 - temp_len; i++)
-            {
-              display_string.concat(" ");
+          if (currentScanMode == BT_SCAN_FLOCK_WARDRIVE) {
+            if (ssid != "") {
+              display_string.concat(ssid);
             }
-            
-            display_obj.display_buffer->add(display_string);
-          #endif
+            else {
+              display_string.concat(this_bssid);
+            }
 
+            if (gps_obj.getFixStatus()) {
+              do_save = true;
+              display_string.concat(" | Lt: " + gps_obj.getLat());
+              display_string.concat(" | Ln: " + gps_obj.getLon());
+            }
+            else {
+              display_string.concat(" | GPS: No Fix");
+            }
+
+            int temp_len = display_string.length();
+
+            #ifdef HAS_SCREEN
+              for (int i = 0; i < 40 - temp_len; i++)
+              {
+                display_string.concat(" ");
+              }
+              
+              display_obj.display_buffer->add(display_string);
+            #endif
+          }
 
           String wardrive_line = WiFi.BSSIDstr(i) + "," + ssid + "," + this->security_int_to_string(WiFi.encryptionType(i)) + "," + gps_obj.getDatetime() + "," + (String)WiFi.channel(i) + "," + (String)WiFi.RSSI(i) + "," + gps_obj.getLat() + "," + gps_obj.getLon() + "," + gps_obj.getAlt() + "," + gps_obj.getAccuracy() + ",WIFI\n";
           Serial.print((String)this->mac_history_cursor + " | " + wardrive_line);
@@ -4867,19 +4898,80 @@ void WiFiScan::executeWarDrive() {
           if (do_save) {
             buffer_obj.append(wardrive_line);
           }
+
+          this->beacon_frames++;
         }
+
+        Serial.println("APs: " + (String)this->beacon_frames);
+        Serial.println("BLE: " + (String)this->bt_frames);
 
         // Free up that memory, you sexy devil
         WiFi.scanDelete();
-      }
 
-      /*#ifndef HAS_DUAL_BAND
-        this->channelHop();
-      #endif*/
+        // WiFi has completed scan.
+        // Start a BLE scan
+        if (currentScanMode == WIFI_SCAN_WAR_DRIVE) {
+          #ifdef HAS_BT
+            #ifdef HAS_DUAL_BAND
+              pBLEScan->start(500, false, false); // Scan is in MS
+            #else
+              pBLEScan->start(1, scanCompleteCB, false); // Scan is in Seconds
+            #endif
+            this->ble_scanning = true;
+          #endif
+        }
+      }
 
       if (!this->ble_scanning)
         WiFi.scanNetworks(true, true, false, 80);
     }
+  #endif
+}
+
+void WiFiScan::displayWardriveStats() {
+  #ifdef HAS_SCREEN
+    #ifdef HAS_GPS
+      uint8_t line_count = 0;
+      display_obj.tft.fillRect(0,
+                              (STATUS_BAR_WIDTH * 2) + 1 + EXT_BUTTON_WIDTH,
+                              TFT_WIDTH,
+                              TFT_HEIGHT - STATUS_BAR_WIDTH + 1,
+                              TFT_BLACK);
+
+      #ifndef HAS_MINI_SCREEN
+        display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 4) + CHAR_WIDTH + EXT_BUTTON_WIDTH);
+      #else
+        display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 3) + CHAR_WIDTH + EXT_BUTTON_WIDTH);
+      #endif
+
+      #ifndef HAS_MINI_SCREEN
+        display_obj.tft.setTextSize(3);
+      #else
+        display_obj.tft.setTextSize(2);
+      #endif
+      display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+      display_obj.tft.println(this->beacon_frames);
+
+      display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+      display_obj.tft.println((String)this->bt_frames + "\n");
+
+      #ifndef HAS_MINI_SCREEN
+        display_obj.tft.setTextSize(2);
+      #else
+        display_obj.tft.setTextSize(1);
+      #endif
+      display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+
+      display_obj.tft.println("Sats: " + (String)gps_obj.getNumSats() + "\n");
+
+      display_obj.tft.setTextSize(1);
+
+      #ifdef HAS_SD
+        display_obj.tft.println("File: " + buffer_obj.getFileName());
+        display_obj.tft.println("Size: " + (String)((float)sd_obj.getFile(buffer_obj.getFileName()).size() / 1024) + "KB");
+      #endif
+
+    #endif
   #endif
 }
 
@@ -5327,6 +5419,8 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
 
     if ((scan_mode == BT_SCAN_FLOCK) ||
         (scan_mode == BT_SCAN_FLOCK_WARDRIVE) ||
+        (scan_mode == WIFI_SCAN_WAR_DRIVE) ||
+        (scan_mode == WIFI_SCAN_DETECT_FOLLOW) ||
         (scan_mode == BT_SCAN_SIMPLE) ||
         (scan_mode == BT_SCAN_SIMPLE_TWO) ||
         (scan_mode == BT_SCAN_WAR_DRIVE_CONT) || 
@@ -5534,19 +5628,31 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
       #endif
 
     }
+    else if ((scan_mode == WIFI_SCAN_WAR_DRIVE) ||
+            (scan_mode == WIFI_SCAN_DETECT_FOLLOW)) {
+      #ifndef HAS_DUAL_BAND
+        pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), true);
+      #else
+        pBLEScan->setScanCallbacks(new bluetoothScanAllCallback(), true);
+      #endif
+    }
     pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
     pBLEScan->setInterval(100);
     pBLEScan->setWindow(99);  // less or equal setInterval value
     pBLEScan->setMaxResults(0);
     if ((scan_mode == BT_SCAN_WAR_DRIVE_CONT) ||
+        (scan_mode == WIFI_SCAN_WAR_DRIVE) ||
         (scan_mode == BT_SCAN_ANALYZER) ||
         (scan_mode == BT_SCAN_FLOCK) ||
         (scan_mode == BT_SCAN_SIMPLE) ||
         (scan_mode == BT_SCAN_SIMPLE_TWO) ||
         (scan_mode == BT_SCAN_FLOCK_WARDRIVE))
       pBLEScan->setDuplicateFilter(false);
-    pBLEScan->start(0, scanCompleteCB, false);
-    Serial.println(F("Started BLE Scan"));
+    if ((scan_mode != WIFI_SCAN_WAR_DRIVE) ||
+        (scan_mode != WIFI_SCAN_DETECT_FOLLOW)) {
+      pBLEScan->start(0, scanCompleteCB, false);
+      Serial.println(F("Started BLE Scan"));
+    }
     this->ble_initialized = true;
 
     #ifdef HAS_FLIPPER_LED
@@ -10549,6 +10655,11 @@ void WiFiScan::updateTrackerUI() {
       #endif
       Serial.print(F("FOLLOWING "));
     }
+    else if (ui_list[i].bt) {
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+      #endif
+    }
     else {
       #ifdef HAS_SCREEN
         display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
@@ -10595,6 +10706,20 @@ void WiFiScan::main(uint32_t currentTime)
   else if (currentScanMode == WIFI_SCAN_DETECT_FOLLOW) {
     if (currentTime - initTime >= this->channel_hop_delay * HOP_DELAY) {
       initTime = millis();
+      #ifdef HAS_BT
+        if (this->ble_scanning) {
+          pBLEScan->stop();
+          pBLEScan->clearResults();
+          this->ble_scanning = false;
+        }
+        else {
+          if (WiFi.scanComplete() != WIFI_SCAN_RUNNING) {
+            pBLEScan->start(0, scanCompleteCB, false);
+            this->ble_scanning = true;
+            return;
+          }
+        }
+      #endif
       channelHop();
     }
 
@@ -10803,6 +10928,10 @@ void WiFiScan::main(uint32_t currentTime)
         if (gps_obj.getGpsModuleStatus())
           this->executeWarDrive();
       #endif
+    }
+    if (currentTime - this->last_ui_update >= 3000) {
+      this->last_ui_update = millis();
+      this->displayWardriveStats();
     }
   }
   else if (currentScanMode == WIFI_SCAN_GPS_DATA) {
