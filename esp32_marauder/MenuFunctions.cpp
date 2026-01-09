@@ -1401,7 +1401,9 @@ void MenuFunctions::RunSetup()
   evilPortalMenu.list = new LinkedList<MenuNode>();
   ssidsMenu.list = new LinkedList<MenuNode>();
 
-  gpsPOIMenu.list = new LinkedList<MenuNode>();
+  #ifdef HAS_GPS
+    gpsPOIMenu.list = new LinkedList<MenuNode>();
+  #endif
 
   // Work menu names
   mainMenu.name = text_table1[6];
@@ -1450,7 +1452,9 @@ void MenuFunctions::RunSetup()
   evilPortalMenu.name = "Evil Portal";
   ssidsMenu.name = "SSIDs";
 
-  gpsPOIMenu.name = "GPS POI";
+  #ifdef HAS_GPS
+    gpsPOIMenu.name = "GPS POI";
+  #endif
 
   // Build Main Menu
   mainMenu.parentMenu = NULL;
