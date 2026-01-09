@@ -52,6 +52,10 @@ void Buffer::open(bool is_pcap){
   }
 }
 
+String Buffer::getFileName() {
+  return this->fileName;
+}
+
 void Buffer::openFile(String file_name, fs::FS* fs, bool serial, bool is_pcap, bool is_gpx) {
   bool save_pcap = settings_obj.loadSetting<bool>("SavePCAP");
   if (!save_pcap) {
