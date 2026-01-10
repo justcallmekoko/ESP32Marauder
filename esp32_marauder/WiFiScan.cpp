@@ -5648,7 +5648,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color)
         (scan_mode == BT_SCAN_SIMPLE_TWO) ||
         (scan_mode == BT_SCAN_FLOCK_WARDRIVE))
       pBLEScan->setDuplicateFilter(false);
-    if ((scan_mode != WIFI_SCAN_WAR_DRIVE) ||
+    if ((scan_mode != WIFI_SCAN_WAR_DRIVE) &&
         (scan_mode != WIFI_SCAN_DETECT_FOLLOW)) {
       pBLEScan->start(0, scanCompleteCB, false);
       Serial.println(F("Started BLE Scan"));
@@ -10637,8 +10637,19 @@ void WiFiScan::updateTrackerUI() {
   uint8_t n = this->build_top10_for_ui(ui_list, MacSortMode::MOST_FRAMES);
 
   #ifdef HAS_SCREEN
+
+    display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 1) + CHAR_WIDTH + EXT_BUTTON_WIDTH + 1);
+
+    display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+    display_obj.tft.print("FOLLOW");
+    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    display_obj.tft.print(" | WIFI | ");
+    display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    display_obj.tft.print("BLE");
+
+  
     display_obj.tft.fillRect(0,
-                            (STATUS_BAR_WIDTH * 2) + 1 + EXT_BUTTON_WIDTH,
+                            (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH - 1 + EXT_BUTTON_WIDTH,
                             TFT_WIDTH,
                             TFT_HEIGHT - STATUS_BAR_WIDTH + 1,
                             TFT_BLACK);
