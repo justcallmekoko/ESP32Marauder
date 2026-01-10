@@ -6,7 +6,7 @@
 
   #define POLISH_POTATO
 
-  #define DEVELOPER
+  //#define DEVELOPER
 
   //// BOARD TARGETS
   //#define MARAUDER_M5STICKC
