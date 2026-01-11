@@ -2897,7 +2897,7 @@ static inline bool is_following_candidate_light(
 
   // Movement threshold:
   // meters are e6 degrees = meters * 9
-  const int32_t THRESH_E6 = (int32_t)(75 * 9); // ~75 m to-do: needs tuning
+  const int32_t THRESH_E6 = (int32_t)(2000 * 9); // ~75 m to-do: needs tuning
 
   int32_t dlat = iabs32(e.last_lat_e6 - e.first_lat_e6);
   int32_t dlon = iabs32(e.last_lon_e6 - e.first_lon_e6);
