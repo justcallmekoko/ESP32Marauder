@@ -242,12 +242,8 @@ extern "C" {
         void onResult(NimBLEAdvertisedDevice *advertisedDevice) {
 
           extern WiFiScan wifi_scan_obj;
-    
-          //#ifdef HAS_SCREEN
-          //  int buf = display_obj.display_buffer->size();
-          //#else
+          
           int buf = 0;
-          //#endif
             
           String display_string = "";
 
@@ -919,61 +915,16 @@ extern "C" {
             unsigned char mac_char[6];
             wifi_scan_obj.copyNimbleMac(advertisedDevice->getAddress(), mac_char);
 
-            int frame_check = wifi_scan_obj.update_mac_entry(mac_char, advertisedDevice->getRSSI());
+            int frame_check = wifi_scan_obj.update_mac_entry(mac_char, advertisedDevice->getRSSI(), true);
+            if (frame_check == EMPTY_ENTRY) {
+              Serial.print("BT: ");
+              Serial.println(advertisedDevice->getAddress().toString().c_str());
+            }
           }
 
           return;
         }
     };
-    
-    /*class bluetoothScanSkimmersCallback: public BLEAdvertisedDeviceCallbacks {
-        void onResult(BLEAdvertisedDevice *advertisedDevice) {
-          String bad_list[bad_list_length] = {"HC-03", "HC-05", "HC-06"};
-    
-          #ifdef HAS_SCREEN
-            int buf = display_obj.display_buffer->size();
-          #else
-            int buf = 0;
-          #endif
-            
-          if (buf >= 0)
-          {
-            Serial.print(F("Device: "));
-            String display_string = "";
-            if(advertisedDevice->getName().length() != 0)
-            {
-              Serial.print(advertisedDevice->getName().c_str());
-              for(uint8_t i = 0; i < bad_list_length; i++)
-              {
-                #ifdef HAS_SCREEN
-                  if(strcmp(advertisedDevice->getName().c_str(), bad_list[i].c_str()) == 0)
-                  {
-                    display_string.concat(text_table4[1]);
-                    display_string.concat(" ");
-                    display_string.concat(advertisedDevice->getName().c_str());
-                    uint8_t temp_len = display_string.length();
-                    for (uint8_t i = 0; i < 40 - temp_len; i++)
-                    {
-                      display_string.concat(" ");
-                    }
-                    while (display_obj.printing)
-                      delay(1);
-                    display_obj.loading = true;
-                    display_obj.display_buffer->add(display_string);
-                    display_obj.loading = false;
-                  }
-                #endif
-              }
-            }
-            else
-            {
-              Serial.print(advertisedDevice->getAddress().toString().c_str());
-            }
-            Serial.print(F(" RSSI: "));
-            Serial.println(advertisedDevice->getRSSI());
-          }
-        }
-    };*/
   #else
     class bluetoothScanAllCallback: public NimBLEScanCallbacks {
     
@@ -981,11 +932,7 @@ extern "C" {
 
           extern WiFiScan wifi_scan_obj;
     
-          //#ifdef HAS_SCREEN
-          //  int buf = display_obj.display_buffer->size();
-          //#else
           int buf = 0;
-          //#endif
             
           String display_string = "";
 
@@ -1669,55 +1616,6 @@ extern "C" {
           return;
         }
     };
-    
-    /*class bluetoothScanSkimmersCallback: public NimBLEScanCallbacks {
-        void onResult(const NimBLEAdvertisedDevice* advertisedDevice) override {
-          String bad_list[bad_list_length] = {"HC-03", "HC-05", "HC-06"};
-    
-          #ifdef HAS_SCREEN
-            int buf = display_obj.display_buffer->size();
-          #else
-            int buf = 0;
-          #endif
-            
-          if (buf >= 0)
-          {
-            Serial.print(F("Device: "));
-            String display_string = "";
-            if(advertisedDevice->getName().length() != 0)
-            {
-              Serial.print(advertisedDevice->getName().c_str());
-              for(uint8_t i = 0; i < bad_list_length; i++)
-              {
-                #ifdef HAS_SCREEN
-                  if(strcmp(advertisedDevice->getName().c_str(), bad_list[i].c_str()) == 0)
-                  {
-                    display_string.concat(text_table4[1]);
-                    display_string.concat(" ");
-                    display_string.concat(advertisedDevice->getName().c_str());
-                    uint8_t temp_len = display_string.length();
-                    for (uint8_t i = 0; i < 40 - temp_len; i++)
-                    {
-                      display_string.concat(" ");
-                    }
-                    while (display_obj.printing)
-                      delay(1);
-                    display_obj.loading = true;
-                    display_obj.display_buffer->add(display_string);
-                    display_obj.loading = false;
-                  }
-                #endif
-              }
-            }
-            else
-            {
-              Serial.print(advertisedDevice->getAddress().toString().c_str());
-            }
-            Serial.print(F(" RSSI: "));
-            Serial.println(advertisedDevice->getRSSI());
-          }
-        }
-    };*/
   #endif
 #endif
 
@@ -2761,7 +2659,7 @@ int WiFiScan::update_mac_entry(const uint8_t mac[6], int8_t rssi, bool bt) {
 
           mac_entries[idx].rssi = rssi;
 
-          return idx;
+          return idx + mac_history_len;
         }
         break;
     }
@@ -4834,7 +4732,7 @@ void WiFiScan::executeWarDrive() {
       if (scan_status > 0) {
         for (int i = 0; i < scan_status; i++) {
           do_continue = true;
-          do_save = false;
+          do_save = gps_obj.getFixStatus();
           uint8_t *this_bssid_raw = WiFi.BSSID(i);
           char this_bssid[18] = {0};
           sprintf(this_bssid, "%02X:%02X:%02X:%02X:%02X:%02X", this_bssid_raw[0], this_bssid_raw[1], this_bssid_raw[2], this_bssid_raw[3], this_bssid_raw[4], this_bssid_raw[5]);
@@ -5258,6 +5156,8 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
     startPcap("probe");
   else if (scan_mode == BT_SCAN_FLOCK)
     startPcap("flock");
+  else if (scan_mode == WIFI_SCAN_DETECT_FOLLOW)
+    startPcap("mac_track");
   else if (scan_mode == WIFI_SCAN_STATION_WAR_DRIVE) {
     #ifdef HAS_GPS
       if (gps_obj.getGpsModuleStatus()) {
@@ -7710,32 +7610,12 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
     }
   }
   else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_DETECT_FOLLOW) {
-
-    // Skip if is a management frame that isn't probe request
-    /*if (type == WIFI_PKT_MGMT) {
-      if (snifferPacket->payload[0] != 0x40)
-        return;
-    }*/
-
-    char addr[] = "00:00:00:00:00:00";
-    getMAC(addr, snifferPacket->payload, 10);
-
     int frame_check = wifi_scan_obj.update_mac_entry(src_addr, snifferPacket->rx_ctrl.rssi);
 
-    /*Serial.print(addr);
-
-    if (frame_check == EMPTY_ENTRY) {
-      Serial.println(" Added to table.");
+    if (frame_check >= mac_history_len) {
+      if (wifi_scan_obj.mac_entries[frame_check - mac_history_len].following)
+        buffer_obj.append(snifferPacket, len);
     }
-    else if (frame_check == VALID_ENTRY) {
-      Serial.println(" Updated in table");
-    }
-    else if (frame_check == TOMBSTONE_ENTRY) {
-      Serial.println(" Evicted");
-    }
-    else {
-      Serial.println(" Frames: " + (String)mac_entries[frame_check].frame_count + " Last Seen: " + (String)(millis() - mac_entries[frame_check].last_seen_ms));
-    }*/
   }
 }
 
