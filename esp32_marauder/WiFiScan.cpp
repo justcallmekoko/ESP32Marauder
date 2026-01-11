@@ -4834,7 +4834,7 @@ void WiFiScan::executeWarDrive() {
       if (scan_status > 0) {
         for (int i = 0; i < scan_status; i++) {
           do_continue = true;
-          do_save = false;
+          do_save = gps_obj.getFixStatus();
           uint8_t *this_bssid_raw = WiFi.BSSID(i);
           char this_bssid[18] = {0};
           sprintf(this_bssid, "%02X:%02X:%02X:%02X:%02X:%02X", this_bssid_raw[0], this_bssid_raw[1], this_bssid_raw[2], this_bssid_raw[3], this_bssid_raw[4], this_bssid_raw[5]);
