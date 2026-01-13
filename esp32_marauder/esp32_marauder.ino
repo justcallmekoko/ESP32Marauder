@@ -154,6 +154,8 @@ void backlightOff() {
 
 void setup()
 {
+  randomSeed(esp_random());
+  
   #ifndef DEVELOPER
     esp_log_level_set("*", ESP_LOG_NONE);
   #endif

@@ -34,6 +34,7 @@
 #endif
 #ifdef HAS_DUAL_BAND
   #include "esp_system.h"
+  #include "esp_mac.h"
 #endif
 #if defined(HAS_BT) && !defined(HAS_DUAL_BAND)
   #include "esp_bt.h"
@@ -216,9 +217,9 @@ extern Settings settings_obj;
 
 esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx, const void *buffer, int len, bool en_sys_seq);
 
-#ifdef HAS_DUAL_BAND
-  esp_err_t esp_base_mac_addr_set(uint8_t *Mac);
-#endif
+//#ifdef HAS_DUAL_BAND
+//  esp_err_t esp_base_mac_addr_set(uint8_t *Mac);
+//#endif
 
 #define EMPTY_ENTRY 0
 #define VALID_ENTRY 1
@@ -308,6 +309,7 @@ class WiFiScan
 
     uint32_t initTime = 0;
     uint32_t last_ui_update = 0;
+    uint32_t last_sour_apple_update = 0;
     bool run_setup = true;
     void initWiFi(uint8_t scan_mode);
     uint8_t bluetoothScanTime = 5;
