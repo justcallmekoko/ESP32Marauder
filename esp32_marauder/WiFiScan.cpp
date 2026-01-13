@@ -7675,9 +7675,16 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
   else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_DETECT_FOLLOW) {
     int frame_check = wifi_scan_obj.update_mac_entry(src_addr, snifferPacket->rx_ctrl.rssi);
 
+    Serial.println(frame_check);
+
     if (frame_check >= mac_history_len) {
-      if (wifi_scan_obj.mac_entries[frame_check - mac_history_len].following)
+      int32_t dloc = 0;
+      bool is_following = is_following_candidate_light(wifi_scan_obj.mac_entries[frame_check - mac_history_len], millis(), &dloc);
+      if (is_following) {
+        wifi_scan_obj.mac_entries[frame_check - mac_history_len].dloc = dloc;
+        wifi_scan_obj.mac_entries[frame_check - mac_history_len].following = is_following;
         buffer_obj.append(snifferPacket, len);
+      }
     }
   }
 }
