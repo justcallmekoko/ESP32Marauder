@@ -1258,23 +1258,13 @@ void CommandLine::runCommand(String input) {
       #ifdef HAS_BT
         #ifdef HAS_GPS
           if (gps_obj.getGpsModuleStatus()) {
-            int cont_sw = this->argSearch(&cmd_args, "-c");
 
-            if (cont_sw == -1) {
-              Serial.println("Starting BT Wardrive. Stop with " + (String)STOPSCAN_CMD);
-              #ifdef HAS_SCREEN
-                display_obj.clearScreen();
-                menu_function_obj.drawStatusBar();
-              #endif
-              wifi_scan_obj.StartScan(BT_SCAN_WAR_DRIVE, TFT_GREEN);
-            }
-            else {Serial.println("Starting Continuous BT Wardrive. Stop with " + (String)STOPSCAN_CMD);
-              #ifdef HAS_SCREEN
-                display_obj.clearScreen();
-                menu_function_obj.drawStatusBar();
-              #endif
-              wifi_scan_obj.StartScan(BT_SCAN_WAR_DRIVE_CONT, TFT_GREEN);
-            }
+            Serial.println("Starting BT Wardrive. Stop with " + (String)STOPSCAN_CMD);
+            #ifdef HAS_SCREEN
+              display_obj.clearScreen();
+              menu_function_obj.drawStatusBar();
+            #endif
+            wifi_scan_obj.StartScan(BT_SCAN_WAR_DRIVE, TFT_GREEN);
           }
           else
             Serial.println(F("GPS Module not detected"));

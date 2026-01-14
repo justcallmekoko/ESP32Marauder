@@ -2425,11 +2425,6 @@ void MenuFunctions::RunSetup()
         this->drawStatusBar();
         wifi_scan_obj.StartScan(BT_SCAN_WAR_DRIVE, TFT_GREEN);
       });
-      this->addNodes(&bluetoothSnifferMenu, "BT Wardrive Continuous", TFTRED, NULL, REBOOT, [this]() {
-        display_obj.clearScreen();
-        this->drawStatusBar();
-        wifi_scan_obj.StartScan(BT_SCAN_WAR_DRIVE_CONT, TFT_GREEN);
-      });
     }
   #endif
   this->addNodes(&bluetoothSnifferMenu, text_table1[35], TFTMAGENTA, NULL, CC_SKIMMERS, [this]() {
