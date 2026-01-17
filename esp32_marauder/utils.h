@@ -56,6 +56,25 @@ uint8_t getDRAMUsagePercent() {
   }
 #endif
 
+String hexDump(const uint8_t *buf, size_t len) {
+  String out;
+  out.reserve(len * 3);  // "FF " per byte (approx)
+
+  for (size_t i = 0; i < len; i++) {
+    if (buf[i] < 0x10) {
+      out += '0';
+    }
+    out += String(buf[i], HEX);
+
+    if (i < len - 1) {
+      out += ' ';
+    }
+  }
+
+  out.toUpperCase();
+  return out;
+}
+
 String byteArrayToHexString(const std::vector<uint8_t>& byteArray) {
   String result;
 
