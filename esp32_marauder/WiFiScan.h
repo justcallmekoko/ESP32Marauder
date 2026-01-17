@@ -146,6 +146,7 @@
 #define BT_SCAN_SIMPLE_TWO 74
 #define BT_SCAN_FLOCK_WARDRIVE 75
 #define WIFI_SCAN_DETECT_FOLLOW 76
+#define WIFI_SCAN_SAE_COMMIT 77
 
 #define WIFI_ATTACK_FUNNY_BEACON 99 
 
@@ -621,6 +622,7 @@ class WiFiScan
     void RunDeauthScan(uint8_t scan_mode, uint16_t color);
     void RunEapolScan(uint8_t scan_mode, uint16_t color);
     void RunProbeScan(uint8_t scan_mode, uint16_t color);
+    void RunSAEScan(uint8_t scan_mode, uint16_t color);
     void RunPacketMonitor(uint8_t scan_mode, uint16_t color);
     void RunBluetoothScan(uint8_t scan_mode, uint16_t color);
     void RunSourApple(uint8_t scan_mode, uint16_t color);
@@ -835,6 +837,10 @@ class WiFiScan
     void startGPX(String file_name);
     //String macToString(const Station& station);
 
+    static bool parse_sae_commit_act(const uint8_t *frame, size_t frame_len, uint16_t &group_out, size_t &act_len_out, size_t & act_off_out);
+    static bool sae_group_sizes(uint16_t group, size_t &scalar_len, size_t &element_len);
+    static bool mac_cmp(const uint8_t *a, const uint8_t *b);
+    static inline uint16_t le16(const uint8_t *p);
     static void getMAC(char *addr, uint8_t* data, uint16_t offset);
     static void pwnSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);

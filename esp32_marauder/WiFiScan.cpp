@@ -6,6 +6,9 @@
   struct mac_addr* mac_history = nullptr;
 #endif
 
+static const uint8_t *g_filter_bssid = nullptr;
+uint8_t *current_act = nullptr;
+
 MacEntry WiFiScan::mac_entries[mac_history_len];
 uint8_t WiFiScan::mac_entry_state[mac_history_len];
 
@@ -2066,6 +2069,8 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     StopScan(scan_mode);
   else if (scan_mode == WIFI_SCAN_PROBE)
     RunProbeScan(scan_mode, color);
+  else if (scan_mode == WIFI_SCAN_SAE_COMMIT)
+    RunSAEScan(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_DETECT_FOLLOW) {
     #ifdef HAS_BT
       RunBluetoothScan(scan_mode, color);
@@ -2384,6 +2389,7 @@ int WiFiScan::clearMultiSSID() {
 void WiFiScan::StopScan(uint8_t scan_mode)
 {
   if ((currentScanMode == WIFI_SCAN_PROBE) ||
+  (currentScanMode == WIFI_SCAN_SAE_COMMIT) ||
   (currentScanMode == WIFI_SCAN_AP) ||
   (currentScanMode == WIFI_SCAN_WAR_DRIVE) ||
   (currentScanMode == WIFI_SCAN_STATION_WAR_DRIVE) ||
@@ -5208,6 +5214,58 @@ void WiFiScan::RunDeauthScan(uint8_t scan_mode, uint16_t color)
   initTime = millis();
 }
 
+void WiFiScan::RunSAEScan(uint8_t scan_mode, uint16_t color) {
+  if (scan_mode == WIFI_SCAN_SAE_COMMIT)
+    this->startPcap("sae_commit");
+  else
+    return;
+
+  #ifdef HAS_FLIPPER_LED
+    flipper_led.sniffLED();
+  #elif defined(XIAO_ESP32_S3)
+    xiao_led.sniffLED();
+  #elif defined(MARAUDER_M5STICKC)
+    stickc_led.sniffLED();
+  #else
+    led_obj.setMode(MODE_SNIFF);
+  #endif
+  
+  #ifdef HAS_SCREEN
+    display_obj.TOP_FIXED_AREA_2 = 48;
+    display_obj.tteBar = true;
+    display_obj.print_delay_1 = 15;
+    display_obj.print_delay_2 = 10;
+    display_obj.initScrollValues(true);
+    display_obj.tft.setTextWrap(false);
+    display_obj.tft.setTextColor(TFT_BLACK, color);
+    #ifdef HAS_FULL_SCREEN
+      display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
+      display_obj.tft.drawCentreString("SAE Commit",TFT_WIDTH / 2,16,2);
+    #endif
+    #ifdef HAS_ILI9341
+      display_obj.touchToExit();
+    #endif
+    display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+    display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
+  #endif
+
+  esp_wifi_init(&cfg2);
+  #ifdef HAS_DUAL_BAND
+    esp_wifi_set_country(&country);
+    esp_event_loop_create_default();
+  #endif
+  esp_wifi_set_storage(WIFI_STORAGE_RAM);
+  esp_wifi_set_mode(WIFI_MODE_NULL);
+  esp_wifi_start();
+  this->setMac();
+  esp_wifi_set_promiscuous(true);
+  esp_wifi_set_promiscuous_filter(&filt);
+  esp_wifi_set_promiscuous_rx_cb(&beaconSnifferCallback);
+  this->changeChannel(this->set_channel);
+  //esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
+  this->wifi_initialized = true;
+  initTime = millis();
+}
 
 // Function for running probe request scan
 void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
@@ -7155,6 +7213,137 @@ void WiFiScan::multiSSIDSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t t
   }
 }
 
+inline uint16_t WiFiScan::le16(const uint8_t *p) {
+  return (uint16_t)p[0] | ((uint16_t)p[1] << 8);
+}
+
+bool WiFiScan::sae_group_sizes(uint16_t group, size_t &scalar_len, size_t &element_len) {
+  switch (group) {
+    case 19: scalar_len = 32; element_len = 64; return true;   // P-256
+    case 20: scalar_len = 48; element_len = 96; return true;   // P-384
+    case 21: scalar_len = 66; element_len = 132; return true;  // P-521
+    default: return false;
+  }
+}
+
+
+bool WiFiScan::mac_cmp(const uint8_t *a, const uint8_t *b) {
+  return memcmp(a, b, 6) == 0;
+}
+
+bool WiFiScan::parse_sae_commit_act(const uint8_t *frame, size_t frame_len, uint16_t &group_out, size_t &act_len_out, size_t &act_off_out) {
+  act_len_out = 0;
+  group_out = 0;
+  act_off_out = 24 + 6 + 2;
+
+  // Frame data must match expected offset
+  if (frame_len < act_off_out) return false;
+
+  // Frame must be auth
+  if (frame[0] != 0xB0) return false;
+
+  // Frame must not be retry
+  if (frame[1] & 0x08) return false;
+
+  const uint8_t *addr1 = frame + 4;   // Dest
+  const uint8_t *addr2 = frame + 10;  // Src
+  const uint8_t *addr3 = frame + 16;  // bssid
+
+  // Match target bssid if filtering
+  if (g_filter_bssid) {
+    if (!mac_cmp(addr3, g_filter_bssid) && !mac_cmp(addr1, g_filter_bssid)) {
+      return false;
+    }
+  }
+
+  const uint8_t *body = frame + 24;
+  const size_t body_len = frame_len - 24;
+
+  if (body_len < 6) return false;
+
+  const uint16_t alg  = le16(body + 0); // auth algorithm
+  const uint16_t seq  = le16(body + 2); // transaction sequence
+
+  // Must be SAE 3 and commit 1
+  if (alg != 3 || seq != 1) return false;
+
+  // SAE Commit payload starts after fixed auth fields (6 bytes)
+  const uint8_t *sae = body + 6;
+  size_t sae_len = body_len - 6;
+
+  if (sae_len < 2) return false;
+
+  const uint16_t group = le16(sae);
+  group_out = group;
+
+  size_t scalar_len = 0, element_len = 0;
+  if (!sae_group_sizes(group, scalar_len, element_len)) {
+    // If not group 19, return true but stop here
+    return true;
+  }
+
+  // Remaining bytes after group
+  const uint8_t *after_group = sae + 2;
+  size_t rem = sae_len - 2;
+
+  // Check both with or without FCS.
+  const size_t base = scalar_len + element_len;
+
+  // Must have at least scalar+element (or scalar+element+4 if FCS is present).
+  if (rem < base) return true;
+
+  bool has_fcs = false;
+  if (rem == base) {
+    act_len_out = 0;
+    return true;
+  }
+  if (rem == base + 4) {
+    act_len_out = 0;
+    return true;
+  }
+
+  // If more than base, treat the extra as ACT length (optionally ignoring trailing FCS).
+  if (rem > base) {
+    size_t extra = rem - base;
+
+    // If the last 4 bytes look like FCS presence, allow subtracting it.
+    if (extra >= 4) {
+      // Prefer interpreting +4 as FCS if it gives reasonable ACT length.
+      has_fcs = true;
+      act_len_out = extra - 4;
+      // If 0, default to treating all extra as ACT
+      if (act_len_out == 0) {
+        has_fcs = false;
+        act_len_out = extra;
+      }
+    } else {
+      act_len_out = extra;
+    }
+
+    // Sanity check
+    if (act_len_out > 64) {
+      // Not actually act
+      act_len_out = 0;
+    }
+  }
+
+  // Copy ACT for injection use
+  if (act_len_out != 0) {
+    if (current_act)
+      free(current_act);
+
+    current_act = (uint8_t *)malloc(act_len_out);
+    if (current_act)
+      memcpy(current_act, frame + act_off_out, act_len_out);
+    else
+      Serial.println("Could not copy anti-clogging token");
+  }
+
+  (void)after_group;
+  (void)has_fcs;
+  return true;
+}
+
 void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 {
   extern WiFiScan wifi_scan_obj;
@@ -7681,6 +7870,88 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
       if (is_following) {
         wifi_scan_obj.mac_entries[frame_check - mac_history_len].dloc = dloc;
         wifi_scan_obj.mac_entries[frame_check - mac_history_len].following = is_following;
+        buffer_obj.append(snifferPacket, len);
+      }
+    }
+  }
+  else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_SAE_COMMIT) {
+    if (type == WIFI_PKT_MGMT) {
+      /*if ((len > 32) &&
+          (snifferPacket->payload[0] == 0xB0) && // Authentication
+          (snifferPacket->payload[24] == 0x03) && // SAE authentication
+          (snifferPacket->payload[26] == 0x01)) {
+
+        String src_addr_str = macToString(src_addr);
+        String dst_addr_str = macToString(dst_addr);
+
+        Serial.println(macToString(src_addr));
+
+        uint16_t group = 0;
+        size_t act_len = 0;
+
+        #ifdef HAS_SCREEN
+          display_string.concat(WHITE_KEY);
+          display_string.concat((String)snifferPacket->rx_ctrl.rssi);
+          display_string.concat(" ");
+          display_string.concat(src_addr_str);
+          display_string.concat(" -> ");
+          display_string.concat(dst_addr_str);
+
+          int temp_len = display_string.length();
+
+          for (int i = 0; i < 40; i++)
+          {
+            display_string.concat(" ");
+          }
+
+          //while (display_obj.printing)
+          //  delay(1);
+          if (!display_obj.printing) {
+            display_obj.loading = true;
+            display_obj.display_buffer->add(display_string);
+            display_obj.loading = false;
+          }
+        #endif
+
+        buffer_obj.append(snifferPacket, len);
+      }*/
+      uint16_t group = 0;
+      size_t act_len = 0;
+      size_t act_off = 0;
+
+      String src_addr_str = macToString(src_addr);
+      String dst_addr_str = macToString(dst_addr);
+
+      if (wifi_scan_obj.parse_sae_commit_act(snifferPacket->payload, len, group, act_len, act_off)) {
+        #ifdef HAS_SCREEN
+          display_string.concat(WHITE_KEY);
+          display_string.concat((String)snifferPacket->rx_ctrl.rssi);
+          display_string.concat(" ");
+          display_string.concat(src_addr_str);
+          display_string.concat(" -> ");
+          display_string.concat(dst_addr_str);
+
+          int temp_len = display_string.length();
+
+          for (int i = 0; i < 40; i++)
+          {
+            display_string.concat(" ");
+          }
+
+          //while (display_obj.printing)
+          //  delay(1);
+          if (!display_obj.printing) {
+            display_obj.loading = true;
+            display_obj.display_buffer->add(display_string);
+            display_obj.loading = false;
+          }
+        #endif
+
+        Serial.print(src_addr_str + " -> " + dst_addr_str);
+        if (current_act) {
+          Serial.print(" ACT: " + hexDump(current_act, act_len));
+        }
+
         buffer_obj.append(snifferPacket, len);
       }
     }
@@ -10654,7 +10925,8 @@ void WiFiScan::main(uint32_t currentTime)
   (currentScanMode == WIFI_SCAN_MULTISSID) ||
   (currentScanMode == WIFI_SCAN_DEAUTH) ||
   (currentScanMode == WIFI_SCAN_STATION_WAR_DRIVE) ||
-  (currentScanMode == WIFI_SCAN_ALL))
+  (currentScanMode == WIFI_SCAN_ALL) ||
+  (currentScanMode == WIFI_SCAN_SAE_COMMIT))
   {
     if (currentTime - initTime >= this->channel_hop_delay * HOP_DELAY)
     {
