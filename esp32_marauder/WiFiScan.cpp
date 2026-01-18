@@ -7245,6 +7245,8 @@ bool WiFiScan::parse_sae_commit_act(const uint8_t *frame, size_t frame_len, uint
   // Frame must not be retry
   if (frame[1] & 0x08) return false;
 
+  if (frame[28] == 0x4C) Serial.println("ACT Required!");
+
   const uint8_t *addr1 = frame + 4;   // Dest
   const uint8_t *addr2 = frame + 10;  // Src
   const uint8_t *addr3 = frame + 16;  // bssid
@@ -7297,13 +7299,12 @@ bool WiFiScan::parse_sae_commit_act(const uint8_t *frame, size_t frame_len, uint
     act_len_out = 0;
     return true;
   }
-  if (rem == base + 4) {
-    act_len_out = 0;
-    return true;
-  }
+
+  if (rem == base + 4)
+    act_len_out = 4;
 
   // If more than base, treat the extra as ACT length (optionally ignoring trailing FCS).
-  if (rem > base) {
+  else if (rem > base) {
     size_t extra = rem - base;
 
     // If the last 4 bytes look like FCS presence, allow subtracting it.
@@ -7335,8 +7336,6 @@ bool WiFiScan::parse_sae_commit_act(const uint8_t *frame, size_t frame_len, uint
     current_act = (uint8_t *)malloc(act_len_out);
     if (current_act)
       memcpy(current_act, frame + act_off_out, act_len_out);
-    else
-      Serial.println("Could not copy anti-clogging token");
   }
 
   (void)after_group;
@@ -7948,9 +7947,11 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
         #endif
 
         Serial.print(src_addr_str + " -> " + dst_addr_str);
-        if (current_act) {
+        if (act_len > 0) {
           Serial.print(" ACT: " + hexDump(current_act, act_len));
         }
+
+        Serial.println(" Frame Len: " + (String)len);
 
         buffer_obj.append(snifferPacket, len);
       }
@@ -10925,8 +10926,7 @@ void WiFiScan::main(uint32_t currentTime)
   (currentScanMode == WIFI_SCAN_MULTISSID) ||
   (currentScanMode == WIFI_SCAN_DEAUTH) ||
   (currentScanMode == WIFI_SCAN_STATION_WAR_DRIVE) ||
-  (currentScanMode == WIFI_SCAN_ALL) ||
-  (currentScanMode == WIFI_SCAN_SAE_COMMIT))
+  (currentScanMode == WIFI_SCAN_ALL))
   {
     if (currentTime - initTime >= this->channel_hop_delay * HOP_DELAY)
     {
