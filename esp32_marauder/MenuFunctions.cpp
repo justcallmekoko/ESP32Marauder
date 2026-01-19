@@ -173,6 +173,7 @@ void MenuFunctions::main(uint32_t currentTime)
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_BAD_MSG_TARGETED) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_BAD_MSG) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_SLEEP) &&
+      (wifi_scan_obj.currentScanMode != WIFI_ATTACK_SAE_COMMIT) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_SLEEP_TARGETED) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_MIMIC) &&
 	  (wifi_scan_obj.currentScanMode != WIFI_ATTACK_FUNNY_BEACON) &&
@@ -239,6 +240,7 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_BAD_MSG) ||
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_SLEEP) ||
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_SLEEP_TARGETED) ||
+          (wifi_scan_obj.currentScanMode == WIFI_ATTACK_SAE_COMMIT) ||
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_MIMIC) ||
 		      (wifi_scan_obj.currentScanMode == WIFI_ATTACK_FUNNY_BEACON) ||
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_RICK_ROLL) ||
@@ -340,6 +342,7 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_BAD_MSG) ||
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_SLEEP) ||
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_SLEEP_TARGETED) ||
+            (wifi_scan_obj.currentScanMode == WIFI_ATTACK_SAE_COMMIT) ||
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_MIMIC) ||
 			      (wifi_scan_obj.currentScanMode == WIFI_ATTACK_FUNNY_BEACON) ||
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_RICK_ROLL) ||
@@ -405,6 +408,7 @@ void MenuFunctions::main(uint32_t currentTime)
         (wifi_scan_obj.currentScanMode != WIFI_ATTACK_BAD_MSG) &&
         (wifi_scan_obj.currentScanMode != WIFI_ATTACK_SLEEP) &&
         (wifi_scan_obj.currentScanMode != WIFI_ATTACK_SLEEP_TARGETED) &&
+        (wifi_scan_obj.currentScanMode != WIFI_ATTACK_SAE_COMMIT) &&
         (wifi_scan_obj.currentScanMode != WIFI_ATTACK_MIMIC) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_PACKET_RATE) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_RAW_CAPTURE) &&
@@ -1848,6 +1852,11 @@ void MenuFunctions::RunSetup()
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_ATTACK_SLEEP_TARGETED, TFT_MAGENTA);
+  });
+  this->addNodes(&wifiAttackMenu, "SAE Commit Flood", TFTLIME, NULL, EAPOL, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_ATTACK_SAE_COMMIT, TFT_GREEN);
   });
 
   evilPortalMenu.parentMenu = &wifiAttackMenu;
