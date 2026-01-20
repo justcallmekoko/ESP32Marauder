@@ -173,7 +173,6 @@ void MenuFunctions::main(uint32_t currentTime)
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_BAD_MSG_TARGETED) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_BAD_MSG) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_SLEEP) &&
-      (wifi_scan_obj.currentScanMode != WIFI_ATTACK_SAE_COMMIT) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_SLEEP_TARGETED) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_MIMIC) &&
 	  (wifi_scan_obj.currentScanMode != WIFI_ATTACK_FUNNY_BEACON) &&

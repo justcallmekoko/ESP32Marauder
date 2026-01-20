@@ -1860,8 +1860,7 @@ void WiFiScan::showNetworkInfo() {
   Serial.println(WiFi.macAddress());
 }
 
-bool WiFiScan::joinWiFi(String ssid, String password, bool gui)
-{
+bool WiFiScan::joinWiFi(String ssid, String password, bool gui) {
   static const char * btns[] ={text16, ""};
   int count = 0;
   
@@ -1953,8 +1952,7 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui)
   return true;
 }
 
-bool WiFiScan::startWiFi(String ssid, String password, bool gui)
-{
+bool WiFiScan::startWiFi(String ssid, String password, bool gui) {
   static const char * btns[] ={text16, ""};
   int count = 0;
   
@@ -2044,14 +2042,13 @@ bool WiFiScan::scanning() {
 }
 
 // Function to prepare to run a specific scan
-void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
-{  
+void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {  
   this->initWiFi(scan_mode);
   if (scan_mode == WIFI_SCAN_OFF)
     StopScan(scan_mode);
   else if (scan_mode == WIFI_SCAN_PROBE)
     RunProbeScan(scan_mode, color);
-  else if (scan_mode == WIFI_SCAN_SAE_COMMIT)
+  else if ((scan_mode == WIFI_SCAN_SAE_COMMIT) || (scan_mode == WIFI_ATTACK_SAE_COMMIT))
     RunSAEScan(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_DETECT_FOLLOW) {
     #ifdef HAS_BT
@@ -2133,8 +2130,8 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color)
     this->startWiFiAttacks(scan_mode, color, "Sleep");
   else if (scan_mode == WIFI_ATTACK_SLEEP_TARGETED)
     this->startWiFiAttacks(scan_mode, color, "Sleep Targeted");
-  else if (scan_mode == WIFI_ATTACK_SAE_COMMIT)
-    this->startWiFiAttacks(scan_mode, color, "SAE Commit");
+  //else if (scan_mode == WIFI_ATTACK_SAE_COMMIT)
+  //  this->startWiFiAttacks(scan_mode, color, "SAE Commit");
   else if (scan_mode == WIFI_ATTACK_AP_SPAM)
     this->startWiFiAttacks(scan_mode, color, " AP Beacon Spam ");
   else if ((scan_mode == BT_SCAN_ALL) ||
@@ -5176,7 +5173,7 @@ void WiFiScan::RunDeauthScan(uint8_t scan_mode, uint16_t color)
 void WiFiScan::RunSAEScan(uint8_t scan_mode, uint16_t color) {
   if (scan_mode == WIFI_SCAN_SAE_COMMIT)
     this->startPcap("sae_commit");
-  else
+  else if (scan_mode != WIFI_ATTACK_SAE_COMMIT)
     return;
 
   #ifdef HAS_FLIPPER_LED
@@ -5208,13 +5205,22 @@ void WiFiScan::RunSAEScan(uint8_t scan_mode, uint16_t color) {
     display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
   #endif
 
-  esp_wifi_init(&cfg2);
+  if (scan_mode == WIFI_ATTACK_SAE_COMMIT)
+    this->initMbedtls();
+
+  if (scan_mode != WIFI_ATTACK_SAE_COMMIT)
+    esp_wifi_init(&cfg2);
+  else
+    esp_wifi_init(&cfg);
   #ifdef HAS_DUAL_BAND
     esp_wifi_set_country(&country);
     esp_event_loop_create_default();
   #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
-  esp_wifi_set_mode(WIFI_MODE_NULL);
+  if (scan_mode != WIFI_ATTACK_SAE_COMMIT)
+    esp_wifi_set_mode(WIFI_MODE_NULL);
+  else
+    esp_wifi_set_mode(WIFI_MODE_STA);
   esp_wifi_start();
   this->setMac();
   esp_wifi_set_promiscuous(true);
@@ -7999,7 +8005,8 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
       }
     }
   }
-  else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_SAE_COMMIT) {
+  else if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_SAE_COMMIT) ||
+           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_SAE_COMMIT)) {
     if (type == WIFI_PKT_MGMT) {
       /*if ((len > 32) &&
           (snifferPacket->payload[0] == 0xB0) && // Authentication
@@ -8048,40 +8055,42 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
       String dst_addr_str = macToString(dst_addr);
 
       if (wifi_scan_obj.getSAEACT(snifferPacket->payload, len, group, act_len)) {
-        #ifdef HAS_SCREEN
-          display_string.concat(WHITE_KEY);
-          display_string.concat((String)snifferPacket->rx_ctrl.rssi);
-          display_string.concat(" ");
-          display_string.concat(src_addr_str);
-          display_string.concat(" -> ");
-          display_string.concat(dst_addr_str);
-
-          int temp_len = display_string.length();
-
-          for (int i = 0; i < 40; i++)
-          {
+        if (wifi_scan_obj.currentScanMode != WIFI_ATTACK_SAE_COMMIT) {
+          #ifdef HAS_SCREEN
+            display_string.concat(WHITE_KEY);
+            display_string.concat((String)snifferPacket->rx_ctrl.rssi);
             display_string.concat(" ");
+            display_string.concat(src_addr_str);
+            display_string.concat(" -> ");
+            display_string.concat(dst_addr_str);
+
+            int temp_len = display_string.length();
+
+            for (int i = 0; i < 40; i++)
+            {
+              display_string.concat(" ");
+            }
+
+            //while (display_obj.printing)
+            //  delay(1);
+            if (!display_obj.printing) {
+              display_obj.loading = true;
+              display_obj.display_buffer->add(display_string);
+              display_obj.loading = false;
+            }
+          #endif
+
+          Serial.print(src_addr_str + " -> " + dst_addr_str);
+          if (act_len > 0) {
+            Serial.print(F(" ACT: "));
+            Serial.print(hexDump(current_act, act_len));
           }
 
-          //while (display_obj.printing)
-          //  delay(1);
-          if (!display_obj.printing) {
-            display_obj.loading = true;
-            display_obj.display_buffer->add(display_string);
-            display_obj.loading = false;
-          }
-        #endif
+          Serial.print(F(" Frame Len: "));
+          Serial.println(len);
 
-        Serial.print(src_addr_str + " -> " + dst_addr_str);
-        if (act_len > 0) {
-          Serial.print(F(" ACT: "));
-          Serial.print(hexDump(current_act, act_len));
+          buffer_obj.append(snifferPacket, len);
         }
-
-        Serial.print(F(" Frame Len: "));
-        Serial.println(len);
-
-        buffer_obj.append(snifferPacket, len);
       }
     }
   }
