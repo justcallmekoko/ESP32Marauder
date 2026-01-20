@@ -7179,7 +7179,7 @@ void WiFiScan::multiSSIDSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t t
   }
 }
 
-void WiFiScan::saeAttackLoop() {
+void WiFiScan::saeAttackLoop(uint32_t currentTime) {
   for (int i = 0; i < access_points->size(); i++) { // Find selected APs
     if (access_points->get(i).selected) {
       if (this->set_channel != access_points->get(i).channel) // Set channel to AP's channel
@@ -7197,6 +7197,51 @@ void WiFiScan::saeAttackLoop() {
       }
     }
   }
+
+  #ifdef HAS_SCREEN
+    if (currentTime - this->last_ui_update >= 1000) {
+      this->last_ui_update = millis();
+
+      uint8_t line_count = 0;
+      display_obj.tft.fillRect(0,
+                              (STATUS_BAR_WIDTH * 2) + 1 + EXT_BUTTON_WIDTH,
+                              TFT_WIDTH,
+                              TFT_HEIGHT - STATUS_BAR_WIDTH + 1,
+                              TFT_BLACK);
+
+      #ifndef HAS_MINI_SCREEN
+        display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 4) + CHAR_WIDTH + EXT_BUTTON_WIDTH);
+      #else
+        display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 3) + CHAR_WIDTH + EXT_BUTTON_WIDTH);
+      #endif
+
+      #ifndef HAS_MINI_SCREEN
+        display_obj.tft.setTextSize(3);
+      #else
+        display_obj.tft.setTextSize(2);
+      #endif
+      display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+      display_obj.tft.print(F("SAE TX: "));
+      display_obj.tft.println(this->data_frames);
+
+      display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+      display_obj.tft.print(F("SAE RX: "));
+      display_obj.tft.println((String)this->mgmt_frames + "\n");
+
+      #ifndef HAS_MINI_SCREEN
+        display_obj.tft.setTextSize(2);
+      #else
+        display_obj.tft.setTextSize(1);
+      #endif
+
+      display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      if (current_act)
+        display_obj.tft.print(F("ACT: SET"));
+      else
+        display_obj.tft.print(F("ACT: NOT SET"));
+
+    }
+  #endif
 }
 
 inline uint16_t WiFiScan::le16(const uint8_t *p) {
@@ -7307,6 +7352,8 @@ bool WiFiScan::sendSAECommitFrame(uint8_t* targ_addr, uint8_t* src_addr) {
 
   if (esp_wifi_80211_tx(WIFI_IF_STA, frame, current_index - frame, false) != ESP_OK)
     return false;
+
+  this->data_frames++;
 
   return true;
 }
@@ -8055,6 +8102,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
       String dst_addr_str = macToString(dst_addr);
 
       if (wifi_scan_obj.getSAEACT(snifferPacket->payload, len, group, act_len)) {
+        wifi_scan_obj.mgmt_frames++;
         if (wifi_scan_obj.currentScanMode != WIFI_ATTACK_SAE_COMMIT) {
           #ifdef HAS_SCREEN
             display_string.concat(WHITE_KEY);
@@ -11062,6 +11110,12 @@ void WiFiScan::main(uint32_t currentTime)
       channelHop();
     }
   }
+  else if (currentScanMode == WIFI_SCAN_SAE_COMMIT) {
+    if (currentTime - initTime >= 250) {
+      initTime = millis();
+      this->channelHop(true);
+    }
+  }
   else if (currentScanMode == WIFI_SCAN_DETECT_FOLLOW) {
     if (currentTime - initTime >= this->channel_hop_delay * HOP_DELAY) {
       initTime = millis();
@@ -11433,7 +11487,7 @@ void WiFiScan::main(uint32_t currentTime)
     }
   }
   else if (currentScanMode == WIFI_ATTACK_SAE_COMMIT) {
-    this->saeAttackLoop();
+    this->saeAttackLoop(currentTime);
   }
   else if (currentScanMode == WIFI_ATTACK_DEAUTH) {
     for (int i = 0; i < 55; i++) {
