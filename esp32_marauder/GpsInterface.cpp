@@ -16,28 +16,12 @@ static const uint32_t PROBE_MS = 1200;
 
 void GpsInterface::begin() {
 
-  /*#ifdef MARAUDER_MINI
-    pinMode(26, OUTPUT);
-
-    delay(1);
-
-    analogWrite(26, 243);
-    delay(1);
-
-    Serial.println("Activated GPS");
-    delay(100);
-  #endif*/
-
   
   Serial2.begin(9600, SERIAL_8N1, GPS_TX, GPS_RX);
 
   uint32_t gps_baud = this->initGpsBaudAndForce115200();
 
-  if (gps_baud == 9600)
-    Serial.println("GPS running at 9600");
-  else if (gps_baud == 115200)
-    Serial.println("GPS running at 115200");
-  else
+  if ((gps_baud != 9600) && (gps_baud != 115200))
     Serial.println("Could not detect GPS baudrate");
 
   delay(1000);
@@ -50,7 +34,6 @@ void GpsInterface::begin() {
   delay(1000);
 
   if (Serial2.available()) {
-    Serial.println("GPS Attached Successfully");
     this->gps_enabled = true;
     while (Serial2.available()) {
       //Fetch the character one by one

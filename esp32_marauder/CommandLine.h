@@ -79,6 +79,7 @@ const char PROGMEM PING_CMD[] = "pingscan";
 const char PROGMEM PORT_SCAN_CMD[] = "portscan";
 const char PROGMEM ARP_SCAN_CMD[] = "arpscan";
 const char PROGMEM MAC_TRACK_CMD[] = "mactrack";
+const char PROGMEM SNIFF_SAE_CMD[] = "sniffsae";
 
 // WiFi attack
 const char PROGMEM ATTACK_CMD[] = "attack";
@@ -89,6 +90,7 @@ const char PROGMEM ATTACK_TYPE_FUNNY[] = "funny";
 const char PROGMEM ATTACK_TYPE_RR[] = "rickroll";
 const char PROGMEM ATTACK_TYPE_BM[] = "badmsg";
 const char PROGMEM ATTACK_TYPE_S[] = "sleep";
+const char PROGMEM ATTACK_TYPE_SAE[] = "sae";
 
 // WiFi Aux
 const char PROGMEM LIST_AP_CMD[] = "list";
@@ -154,9 +156,10 @@ const char PROGMEM HELP_PING_CMD[] = "pingscan";
 const char PROGMEM HELP_PORT_SCAN_CMD[] = "portscan [-a -t <ip index>]/[-s <ssh/telnet/dns/http/smtp/https/rdp>]";
 const char PROGMEM HELP_ARP_SCAN_CMD[] = "arpscan [-f]";
 const char PROGMEM HELP_MAC_TRACK_CMD[] = "mactrack";
+const char PROGMEM HELP_SNIFF_SAE_CMD[] = "sniffsae";
 
 // WiFi attack
-const char PROGMEM HELP_ATTACK_CMD[] = "attack -t <beacon [-l/-r/-a]/deauth [-c]/[-s <src mac>] [-d <dst mac>]/probe/rickroll/badmsg [-c]/sleep [-c]>";
+const char PROGMEM HELP_ATTACK_CMD[] = "attack -t <sae/beacon [-l/-r/-a]/deauth [-c]/[-s <src mac>] [-d <dst mac>]/probe/rickroll/badmsg [-c]/sleep [-c]>";
 
 // WiFi Aux
 const char PROGMEM HELP_LIST_AP_CMD_A[] = "list -s";
