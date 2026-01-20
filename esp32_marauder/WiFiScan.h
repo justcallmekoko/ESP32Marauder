@@ -594,7 +594,7 @@ class WiFiScan
     void executeSpoofAirtag();
     void executeSwiftpairSpam(EBLEPayloadType type);
     void startWardriverWiFi();
-    void saeAttackLoop();
+    void saeAttackLoop(uint32_t currentTime);
     //void generateRandomMac(uint8_t* mac);
     //void generateRandomName(char *name, size_t length);
     String processPwnagotchiBeacon(const uint8_t* frame, int length);
