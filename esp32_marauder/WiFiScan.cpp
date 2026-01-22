@@ -4628,13 +4628,13 @@ void WiFiScan::executeSourApple() {
     delay(60);
     pAdvertising->stop();
 
-    #ifndef HAS_DUAL_BAND
+    //#ifndef HAS_DUAL_BAND
       if ((now_time - this->last_sour_apple_update > 1000) || (this->last_sour_apple_update == 0)) {
         this->last_sour_apple_update = now_time;
         NimBLEDevice::deinit();
         this->ble_initialized = false;
       }
-    #endif
+    //#endif
 
   #endif
 }
@@ -4683,9 +4683,9 @@ void WiFiScan::executeSpoofAirtag() {
         delay(10);
         pAdvertising->stop();
 
-        #ifndef HAS_DUAL_BAND
+        //#ifndef HAS_DUAL_BAND
           NimBLEDevice::deinit();
-        #endif
+        //#endif
 
         break;
       }
@@ -4715,9 +4715,9 @@ void WiFiScan::executeSwiftpairSpam(EBLEPayloadType type) {
     delay(10);
     pAdvertising->stop();
 
-    #ifndef HAS_DUAL_BAND
+    //#ifndef HAS_DUAL_BAND
       NimBLEDevice::deinit();
-    #endif
+    //#endif
   #endif
 }
 
