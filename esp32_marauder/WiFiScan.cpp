@@ -2329,9 +2329,9 @@ bool WiFiScan::shutdownBLE() {
       
       pBLEScan->clearResults();
 
-      #ifndef HAS_DUAL_BAND
+      //#ifndef HAS_DUAL_BAND
         NimBLEDevice::deinit();
-      #endif
+      //#endif
 
       this->_analyzer_value = 0;
       this->bt_frames = 0;
