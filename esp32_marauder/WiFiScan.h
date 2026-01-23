@@ -40,7 +40,7 @@
   #include "esp_system.h"
   #include "esp_mac.h"
 #endif
-#if defined(HAS_BT) && !defined(HAS_DUAL_BAND)
+#if defined(HAS_BT) && !defined(HAS_NIMBLE_2)
   #include "esp_bt.h"
 #endif
 #ifdef HAS_SCREEN
