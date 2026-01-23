@@ -140,6 +140,7 @@
     #define USE_SD
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
+    #define HAS_NIMBLE_2
   #endif
 
   #ifdef MARAUDER_V7
@@ -157,6 +158,7 @@
     #define USE_SD
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
+    #define HAS_NIMBLE_2
   #endif
 
   #ifdef MARAUDER_V7_1
@@ -175,6 +177,7 @@
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
     #define HAS_PSRAM
+    #define HAS_NIMBLE_2
   #endif
 
   #ifdef MARAUDER_REV_FEATHER
@@ -207,6 +210,7 @@
     #define USE_SD
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
+    #define HAS_NIMBLE_2
   #endif
 
   #if defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
@@ -224,6 +228,7 @@
     #define USE_SD
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
+    #define HAS_NIMBLE_2
   #endif
 
   #ifdef MARAUDER_CYD_MICRO
@@ -243,6 +248,7 @@
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
     #define HAS_CYD_TOUCH
+    #define HAS_NIMBLE_2
   #endif
 
   #ifdef MARAUDER_CYD_2USB
@@ -263,6 +269,7 @@
     #define HAS_GPS
     #define HAS_CYD_TOUCH
     #define HAS_CYD_PORTRAIT
+    #define HAS_NIMBLE_2
   #endif
 
   #ifdef MARAUDER_CYD_3_5_INCH
@@ -284,6 +291,7 @@
     //#define HAS_CYD_TOUCH
     #define HAS_SEPARATE_SD
     #define HAS_CYD_PORTRAIT
+    #define HAS_NIMBLE_2
   #endif
 
   #ifdef MARAUDER_CYD_GUITION
@@ -303,6 +311,7 @@
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
     //#define HAS_CYD_TOUCH
+    #define HAS_NIMBLE_2
   #endif
 
   #ifdef MARAUDER_KIT
@@ -319,6 +328,7 @@
     #define USE_SD
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
+    #define HAS_NIMBLE_2
   #endif
 
   #ifdef GENERIC_ESP32
@@ -332,6 +342,7 @@
     //#define HAS_SD
     //#define HAS_TEMP_SENSOR
     //#define HAS_GPS
+    #define HAS_NIMBLE_2
   #endif
 
   #ifdef MARAUDER_FLIPPER
@@ -378,6 +389,7 @@
     #define USE_SD
     //#define HAS_TEMP_SENSOR
     //#define HAS_GPS
+    #define HAS_NIMBLE_2
   #endif
 
   #ifdef MARAUDER_DEV_BOARD_PRO
@@ -392,6 +404,7 @@
     #define USE_SD
     //#define HAS_TEMP_SENSOR
     #define HAS_GPS
+    #define HAS_NIMBLE_2
   #endif
 
   #ifdef XIAO_ESP32_S3
@@ -423,6 +436,7 @@
     #define HAS_DUAL_BAND
     //#define HAS_PSRAM
     //#define HAS_TEMP_SENSOR
+    #define HAS_NIMBLE_2
   #endif
 
   #ifdef MARAUDER_V8
@@ -443,6 +457,7 @@
     #define HAS_DUAL_BAND
     #define HAS_PSRAM
     //#define HAS_TEMP_SENSOR
+    #define HAS_NIMBLE_2
   #endif
   //// END BOARD FEATURES
 
