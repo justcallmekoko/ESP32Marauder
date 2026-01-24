@@ -1772,7 +1772,7 @@ void WiFiScan::RunSetup() {
 
     Serial.println("Setting up wifi...");
     esp_wifi_init(&cfg);
-    #ifdef HAS_DUAL_BAND
+    #ifdef HAS_IDF_3
       esp_wifi_set_country(&country);
       esp_event_loop_create_default();
     #endif
@@ -2282,7 +2282,7 @@ void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_
         
   packets_sent = 0;
   esp_wifi_init(&cfg);
-  #ifdef HAS_DUAL_BAND
+  #ifdef HAS_IDF_3
     esp_wifi_set_country(&country);
   #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
@@ -2564,7 +2564,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
 void WiFiScan::getMAC(bool get_sta, uint8_t* mac) {
   char *buf;
   esp_wifi_init(&cfg2);
-  #ifdef HAS_DUAL_BAND
+  #ifdef HAS_IDF_3
     esp_wifi_set_country(&country);
   #endif
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
@@ -3544,7 +3544,7 @@ void WiFiScan::RunEvilPortal(uint8_t scan_mode, uint16_t color)
     display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
   #endif
 
-  #ifdef HAS_DUAL_BAND
+  #ifdef HAS_IDF_3
     esp_wifi_init(&cfg);
     //esp_wifi_set_country(&country);
   #endif
@@ -3612,7 +3612,7 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
   esp_event_loop_create_default();
 
   esp_wifi_init(&cfg2);
-  #ifdef HAS_DUAL_BAND
+  #ifdef HAS_IDF_3
     esp_wifi_set_country(&country);
     esp_event_loop_create_default();
   #endif
@@ -4316,7 +4316,7 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color)
 
   Serial.println(F("Running packet scan..."));
   esp_wifi_init(&cfg2);
-  #ifdef HAS_DUAL_BAND
+  #ifdef HAS_IDF_3
     esp_wifi_set_country(&country);
     esp_event_loop_create_default();
   #endif
@@ -4399,7 +4399,7 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
   #endif
 
   esp_wifi_init(&cfg);
-  #ifdef HAS_DUAL_BAND
+  #ifdef HAS_IDF_3
     esp_wifi_set_country(&country);
     esp_event_loop_create_default();
   #endif
@@ -4469,7 +4469,7 @@ void WiFiScan::RunMimicFlood(uint8_t scan_mode, uint16_t color) {
   
   packets_sent = 0;
   esp_wifi_init(&cfg);
-  #ifdef HAS_DUAL_BAND
+  #ifdef HAS_IDF_3
     esp_wifi_set_country(&country);
     esp_event_loop_create_default();
   #endif
@@ -4521,7 +4521,7 @@ void WiFiScan::RunPineScan(uint8_t scan_mode, uint16_t color)
   #endif
   
   esp_wifi_init(&cfg2);
-  #ifdef HAS_DUAL_BAND
+  #ifdef HAS_IDF_3
     esp_wifi_set_country(&country);
     esp_event_loop_create_default();
   #endif
@@ -4575,7 +4575,7 @@ void WiFiScan::RunMultiSSIDScan(uint8_t scan_mode, uint16_t color)
   #endif
   
   esp_wifi_init(&cfg2);
-  #ifdef HAS_DUAL_BAND
+  #ifdef HAS_IDF_3
     esp_wifi_set_country(&country);
     esp_event_loop_create_default();
   #endif
@@ -4626,7 +4626,7 @@ void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color)
   #endif
   
   esp_wifi_init(&cfg2);
-  #ifdef HAS_DUAL_BAND
+  #ifdef HAS_IDF_3
     esp_wifi_set_country(&country);
     esp_event_loop_create_default();
   #endif
@@ -4994,7 +4994,7 @@ void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color)
   if (scan_mode != WIFI_SCAN_WAR_DRIVE) {
   
     esp_wifi_init(&cfg2);
-    #ifdef HAS_DUAL_BAND
+    #ifdef HAS_IDF_3
       esp_wifi_set_country(&country);
       esp_event_loop_create_default();
     #endif
@@ -5069,7 +5069,7 @@ void WiFiScan::RunStationScan(uint8_t scan_mode, uint16_t color)
   } else {
     Serial.println(F("Wi-Fi init succeeded with custom config."));
   }
-  #ifdef HAS_DUAL_BAND
+  #ifdef HAS_IDF_3
     esp_wifi_set_country(&country);
     esp_event_loop_create_default();
   #endif
@@ -5141,7 +5141,7 @@ void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color)
   #endif
   
   esp_wifi_init(&cfg2);
-  #ifdef HAS_DUAL_BAND
+  #ifdef HAS_IDF_3
     esp_wifi_set_country(&country);
     esp_event_loop_create_default();
   #endif
@@ -5192,7 +5192,7 @@ void WiFiScan::RunDeauthScan(uint8_t scan_mode, uint16_t color)
   #endif
   
   esp_wifi_init(&cfg2);
-  #ifdef HAS_DUAL_BAND
+  #ifdef HAS_IDF_3
     esp_wifi_set_country(&country);
     esp_event_loop_create_default();
   #endif
@@ -5252,7 +5252,7 @@ void WiFiScan::RunSAEScan(uint8_t scan_mode, uint16_t color) {
     esp_wifi_init(&cfg2);
   else
     esp_wifi_init(&cfg);
-  #ifdef HAS_DUAL_BAND
+  #ifdef HAS_IDF_3
     esp_wifi_set_country(&country);
     esp_event_loop_create_default();
   #endif
@@ -5335,7 +5335,7 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
   #endif
   
   esp_wifi_init(&cfg2);
-  #ifdef HAS_DUAL_BAND
+  #ifdef HAS_IDF_3
     esp_wifi_set_country(&country);
     esp_event_loop_create_default();
   #endif
@@ -10793,7 +10793,7 @@ bool WiFiScan::checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout) {
   return false;
 }
 
-#ifndef HAS_DUAL_BAND
+#ifndef HAS_IDF_3
   bool WiFiScan::readARP(IPAddress targ_ip) {
     // Convert IPAddress to ip4_addr_t using IP4_ADDR
     ip4_addr_t test_ip;
@@ -10817,7 +10817,7 @@ bool WiFiScan::checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout) {
 
   bool WiFiScan::singleARP(IPAddress ip_addr) {
 
-    #ifndef HAS_DUAL_BAND
+    #ifndef HAS_IDF_3
       void* netif = NULL;
       tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
       struct netif* netif_interface = (struct netif*)netif;
@@ -10849,7 +10849,7 @@ bool WiFiScan::checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout) {
     String display_string = "";
     String output_line = "";
 
-    #ifndef HAS_DUAL_BAND
+    #ifndef HAS_IDF_3
       void* netif = NULL;
       tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
       struct netif* netif_interface = (struct netif*)netif;
@@ -10994,7 +10994,7 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
 
     if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
       this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
-      #ifndef HAS_DUAL_BAND
+      #ifndef HAS_IDF_3
         if (this->singleARP(this->current_scan_ip)) {
       #else
         if (this->isHostAlive(this->current_scan_ip)) {
@@ -11221,7 +11221,7 @@ void WiFiScan::main(uint32_t currentTime)
     this->pingScan();
   }
   else if (currentScanMode == WIFI_ARP_SCAN) {
-    #ifndef HAS_DUAL_BAND
+    #ifndef HAS_IDF_3
       this->fullARP();
     #endif
   }
