@@ -169,9 +169,9 @@
 #define TFT_DC   16  // Data Command control pin
 #define TFT_RST  5  // Reset pin (could connect to NodeMCU RST, see next line)
 #define TOUCH_CS -1
-//#define TFT_MISO 19
-//#define TFT_MOSI 23
-//#define TFT_SCLK 18
+#define TFT_MISO 19
+#define TFT_MOSI 23
+#define TFT_SCLK 18
 //#define TFT_BL   32
 
 /*
