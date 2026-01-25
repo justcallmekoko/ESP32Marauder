@@ -160,9 +160,14 @@ void setup()
     esp_log_level_set("*", ESP_LOG_NONE);
   #endif
   
-  #ifndef HAS_DUAL_BAND
+  #ifndef HAS_IDF_3
     esp_spiram_init();
   #endif
+
+  Serial.begin(115200);
+
+  while(!Serial)
+    delay(10);
 
   #ifdef HAS_C5_SD
     Serial.println("Starting shared SPI for C5 SD configuration...");
@@ -204,10 +209,10 @@ void setup()
     delay(10);
   #endif
 
-  Serial.begin(115200);
+  //Serial.begin(115200);
 
-  while(!Serial)
-    delay(10);
+  //while(!Serial)
+  //  delay(10);
 
   Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
 
@@ -217,6 +222,15 @@ void setup()
     } else {
       Serial.println("PSRAM not available");
     }
+  #endif
+
+  #ifdef HAS_SIMPLEX_DISPLAY
+    #if defined(HAS_SD)
+      // Do some SD stuff
+      if(!sd_obj.initSD())
+        Serial.println(F("SD Card NOT Supported"));
+
+    #endif
   #endif
 
   #ifdef HAS_SCREEN
@@ -257,11 +271,14 @@ void setup()
   settings_obj.begin();
 
   buffer_obj = Buffer();
-  #if defined(HAS_SD)
-    // Do some SD stuff
-    if(!sd_obj.initSD())
-      Serial.println(F("SD Card NOT Supported"));
 
+  #ifndef HAS_SIMPLEX_DISPLAY
+    #if defined(HAS_SD)
+      // Do some SD stuff
+      if(!sd_obj.initSD())
+        Serial.println(F("SD Card NOT Supported"));
+
+    #endif
   #endif
 
   wifi_scan_obj.RunSetup();

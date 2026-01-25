@@ -141,6 +141,9 @@
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
     #define HAS_NIMBLE_2
+    #define HAS_IDF_3
+    //#define HAS_C5_SD
+    #define HAS_SIMPLEX_DISPLAY
   #endif
 
   #ifdef MARAUDER_V7
@@ -159,6 +162,7 @@
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
     #define HAS_NIMBLE_2
+    #define HAS_IDF_3
   #endif
 
   #ifdef MARAUDER_V7_1
@@ -177,7 +181,7 @@
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
     #define HAS_PSRAM
-    #define HAS_NIMBLE_2
+    //#define HAS_NIMBLE_2
   #endif
 
   #ifdef MARAUDER_REV_FEATHER
@@ -211,6 +215,8 @@
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
     #define HAS_NIMBLE_2
+    #define HAS_IDF_3
+    #define HAS_C5_SD
   #endif
 
   #if defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
@@ -229,6 +235,8 @@
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
     #define HAS_NIMBLE_2
+    #define HAS_IDF_3
+    #define HAS_C5_SD
   #endif
 
   #ifdef MARAUDER_CYD_MICRO
@@ -248,7 +256,7 @@
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
     #define HAS_CYD_TOUCH
-    #define HAS_NIMBLE_2
+    //#define HAS_NIMBLE_2
   #endif
 
   #ifdef MARAUDER_CYD_2USB
@@ -269,7 +277,7 @@
     #define HAS_GPS
     #define HAS_CYD_TOUCH
     #define HAS_CYD_PORTRAIT
-    #define HAS_NIMBLE_2
+    //#define HAS_NIMBLE_2
   #endif
 
   #ifdef MARAUDER_CYD_3_5_INCH
@@ -291,7 +299,7 @@
     //#define HAS_CYD_TOUCH
     #define HAS_SEPARATE_SD
     #define HAS_CYD_PORTRAIT
-    #define HAS_NIMBLE_2
+    //#define HAS_NIMBLE_2
   #endif
 
   #ifdef MARAUDER_CYD_GUITION
@@ -311,7 +319,7 @@
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
     //#define HAS_CYD_TOUCH
-    #define HAS_NIMBLE_2
+    //#define HAS_NIMBLE_2
   #endif
 
   #ifdef MARAUDER_KIT
@@ -329,6 +337,8 @@
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
     #define HAS_NIMBLE_2
+    #define HAS_IDF_3
+    #define HAS_C5_SD
   #endif
 
   #ifdef GENERIC_ESP32
@@ -342,7 +352,7 @@
     //#define HAS_SD
     //#define HAS_TEMP_SENSOR
     //#define HAS_GPS
-    #define HAS_NIMBLE_2
+    //#define HAS_NIMBLE_2
   #endif
 
   #ifdef MARAUDER_FLIPPER
@@ -390,6 +400,7 @@
     //#define HAS_TEMP_SENSOR
     //#define HAS_GPS
     #define HAS_NIMBLE_2
+    #define HAS_IDF_3
   #endif
 
   #ifdef MARAUDER_DEV_BOARD_PRO
@@ -405,6 +416,7 @@
     //#define HAS_TEMP_SENSOR
     #define HAS_GPS
     #define HAS_NIMBLE_2
+    #define HAS_IDF_3
   #endif
 
   #ifdef XIAO_ESP32_S3
@@ -437,6 +449,7 @@
     //#define HAS_PSRAM
     //#define HAS_TEMP_SENSOR
     #define HAS_NIMBLE_2
+    #define HAS_IDF_3
   #endif
 
   #ifdef MARAUDER_V8
@@ -458,6 +471,7 @@
     #define HAS_PSRAM
     //#define HAS_TEMP_SENSOR
     #define HAS_NIMBLE_2
+    #define HAS_IDF_3
   #endif
   //// END BOARD FEATURES
 
@@ -2551,6 +2565,36 @@
     #endif
 
     #ifdef MARAUDER_V8
+      #define SD_MISO TFT_MISO
+      #define SD_MOSI TFT_MOSI
+      #define SD_SCK  TFT_SCLK
+    #endif
+
+    #ifdef MARAUDER_V4
+      #define SD_MISO TFT_MISO
+      #define SD_MOSI TFT_MOSI
+      #define SD_SCK  TFT_SCLK
+    #endif
+
+    #ifdef MARAUDER_V6
+      #define SD_MISO TFT_MISO
+      #define SD_MOSI TFT_MOSI
+      #define SD_SCK  TFT_SCLK
+    #endif
+
+    #ifdef MARAUDER_V6_1
+      #define SD_MISO TFT_MISO
+      #define SD_MOSI TFT_MOSI
+      #define SD_SCK  TFT_SCLK
+    #endif
+
+    #ifdef MARAUDER_KIT
+      #define SD_MISO TFT_MISO
+      #define SD_MOSI TFT_MOSI
+      #define SD_SCK  TFT_SCLK
+    #endif
+
+    #ifdef MARAUDER_MINI
       #define SD_MISO TFT_MISO
       #define SD_MOSI TFT_MOSI
       #define SD_SCK  TFT_SCLK
