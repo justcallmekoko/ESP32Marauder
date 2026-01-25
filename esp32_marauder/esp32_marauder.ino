@@ -218,9 +218,9 @@ void setup()
 
   #ifdef HAS_PSRAM
     if (psramInit()) {
-      Serial.println("PSRAM is correctly initialized");
+      Serial.println(F("PSRAM is correctly initialized"));
     } else {
-      Serial.println("PSRAM not available");
+      Serial.println(F("PSRAM not available"));
     }
   #endif
 
@@ -263,7 +263,7 @@ void setup()
 
         backlightOff();
 
-        Serial.println("Headless Mode enabled");
+        Serial.println(F("Headless Mode enabled"));
       }
     #endif
   #endif
