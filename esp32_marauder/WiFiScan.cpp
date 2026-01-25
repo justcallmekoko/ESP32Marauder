@@ -1699,8 +1699,6 @@ void WiFiScan::RunSetup() {
   else
     this->wsl_bypass_enabled = false;
 
-  Serial.println("Getting settings...");
-
   #ifdef HAS_PSRAM
     ssids = new (ps_malloc(sizeof(LinkedList<ssid>))) LinkedList<ssid>();
     new (ssids) LinkedList<ssid>();
@@ -1759,18 +1757,14 @@ void WiFiScan::RunSetup() {
       {0x20, "Green Watch6 Classic 43m"},
     };
     
-    Serial.println("Setting up BLE...");
-
     NimBLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DEVICE);
     NimBLEDevice::setScanDuplicateCacheSize(200);
     NimBLEDevice::init("");
     pBLEScan = NimBLEDevice::getScan(); //create new scan
     this->ble_initialized = true;
     
-    Serial.println("Shutting down BLE...");
     this->shutdownBLE();
 
-    Serial.println("Setting up wifi...");
     esp_wifi_init(&cfg);
     #ifdef HAS_IDF_3
       esp_wifi_set_country(&country);
