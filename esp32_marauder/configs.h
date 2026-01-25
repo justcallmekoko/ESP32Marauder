@@ -140,9 +140,10 @@
     #define USE_SD
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
-    //#define HAS_NIMBLE_2
-    //#define HAS_IDF_3
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3
     //#define HAS_C5_SD
+    #define HAS_SIMPLEX_DISPLAY
   #endif
 
   #ifdef MARAUDER_V7
@@ -160,7 +161,8 @@
     #define USE_SD
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
-    //#define HAS_NIMBLE_2
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3
   #endif
 
   #ifdef MARAUDER_V7_1
@@ -212,7 +214,9 @@
     #define USE_SD
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
-    //#define HAS_NIMBLE_2
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3
+    #define HAS_C5_SD
   #endif
 
   #if defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
@@ -332,7 +336,9 @@
     #define USE_SD
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
-    //#define HAS_NIMBLE_2
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3
+    #define HAS_C5_SD
   #endif
 
   #ifdef GENERIC_ESP32
@@ -393,7 +399,8 @@
     #define USE_SD
     //#define HAS_TEMP_SENSOR
     //#define HAS_GPS
-    //#define HAS_NIMBLE_2
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3
   #endif
 
   #ifdef MARAUDER_DEV_BOARD_PRO
@@ -408,7 +415,8 @@
     #define USE_SD
     //#define HAS_TEMP_SENSOR
     #define HAS_GPS
-    //#define HAS_NIMBLE_2
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3
   #endif
 
   #ifdef XIAO_ESP32_S3
@@ -2562,6 +2570,12 @@
       #define SD_SCK  TFT_SCLK
     #endif
 
+    #ifdef MARAUDER_V4
+      #define SD_MISO TFT_MISO
+      #define SD_MOSI TFT_MOSI
+      #define SD_SCK  TFT_SCLK
+    #endif
+
     #ifdef MARAUDER_V6
       #define SD_MISO TFT_MISO
       #define SD_MOSI TFT_MOSI
@@ -2569,6 +2583,18 @@
     #endif
 
     #ifdef MARAUDER_V6_1
+      #define SD_MISO TFT_MISO
+      #define SD_MOSI TFT_MOSI
+      #define SD_SCK  TFT_SCLK
+    #endif
+
+    #ifdef MARAUDER_KIT
+      #define SD_MISO TFT_MISO
+      #define SD_MOSI TFT_MOSI
+      #define SD_SCK  TFT_SCLK
+    #endif
+
+    #ifdef MARAUDER_MINI
       #define SD_MISO TFT_MISO
       #define SD_MOSI TFT_MOSI
       #define SD_SCK  TFT_SCLK

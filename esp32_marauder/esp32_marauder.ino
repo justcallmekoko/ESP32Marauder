@@ -224,6 +224,15 @@ void setup()
     }
   #endif
 
+  #ifdef HAS_SIMPLEX_DISPLAY
+    #if defined(HAS_SD)
+      // Do some SD stuff
+      if(!sd_obj.initSD())
+        Serial.println(F("SD Card NOT Supported"));
+
+    #endif
+  #endif
+
   #ifdef HAS_SCREEN
     display_obj.RunSetup();
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
@@ -262,11 +271,14 @@ void setup()
   settings_obj.begin();
 
   buffer_obj = Buffer();
-  #if defined(HAS_SD)
-    // Do some SD stuff
-    if(!sd_obj.initSD())
-      Serial.println(F("SD Card NOT Supported"));
 
+  #ifndef HAS_SIMPLEX_DISPLAY
+    #if defined(HAS_SD)
+      // Do some SD stuff
+      if(!sd_obj.initSD())
+        Serial.println(F("SD Card NOT Supported"));
+
+    #endif
   #endif
 
   wifi_scan_obj.RunSetup();
