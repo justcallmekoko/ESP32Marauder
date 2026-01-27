@@ -128,7 +128,7 @@ void EvilPortal::setupServer() {
 }
 
 void EvilPortal::setHtmlFromSerial() {
-  Serial.println("Setting HTML from serial...");
+  Serial.println(F("Setting HTML from serial..."));
   const char *htmlStr = Serial.readString().c_str();
   #ifdef HAS_PSRAM
     index_html = (char*) ps_malloc(MAX_HTML_SIZE);
@@ -215,10 +215,10 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
     // Could not open config file. return false
     if (!ap_config_file) {
       #ifdef HAS_SCREEN
-        this->sendToDisplay("Could not find /ap.config.txt.");
-        this->sendToDisplay("Touch to exit...");
+        this->sendToDisplay(F("Could not find /ap.config.txt."));
+        this->sendToDisplay(F("Touch to exit..."));
       #endif
-      Serial.println("Could not find /ap.config.txt. Use stopscan...");
+      Serial.println(F("Could not find /ap.config.txt. Use stopscan..."));
       return false;
     }
     // Config file good. Proceed
@@ -226,7 +226,7 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
       // ap name too long. return false        
       if (ap_config_file.size() > MAX_AP_NAME_SIZE) {
         #ifdef HAS_SCREEN
-          this->sendToDisplay("The given AP name is too large.");
+          this->sendToDisplay(F("The given AP name is too large."));
           this->sendToDisplay("The Byte limit is " + (String)MAX_AP_NAME_SIZE);
           this->sendToDisplay("Touch to exit...");
         #endif
@@ -242,7 +242,7 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
         }
       }
       #ifdef HAS_SCREEN
-        this->sendToDisplay("AP name from config file");
+        this->sendToDisplay(F("AP name from config file"));
         this->sendToDisplay("AP name: " + ap_config);
       #endif
       Serial.println("AP name from config file: " + ap_config);
@@ -255,7 +255,7 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
     ap_config = ssids->get(0).essid;
     if (ap_config.length() > MAX_AP_NAME_SIZE) {
       #ifdef HAS_SCREEN
-        this->sendToDisplay("The given AP name is too large.");
+        this->sendToDisplay(F("The given AP name is too large."));
         this->sendToDisplay("The Byte limit is " + (String)MAX_AP_NAME_SIZE);
         this->sendToDisplay("Touch to exit...");
       #endif
@@ -263,7 +263,7 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
       return false;
     }
     #ifdef HAS_SCREEN
-      this->sendToDisplay("AP name from SSID list");
+      this->sendToDisplay(F("AP name from SSID list"));
       this->sendToDisplay("AP name: " + ap_config);
     #endif
     Serial.println("AP name from SSID list: " + ap_config);
@@ -271,7 +271,7 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
   else if (temp_ap_name != "") {
     if (temp_ap_name.length() > MAX_AP_NAME_SIZE) {
       #ifdef HAS_SCREEN
-        this->sendToDisplay("The given AP name is too large.");
+        this->sendToDisplay(F("The given AP name is too large."));
         this->sendToDisplay("The Byte limit is " + (String)MAX_AP_NAME_SIZE);
         this->sendToDisplay("Touch to exit...");
       #endif
@@ -280,24 +280,24 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
     else {
       ap_config = temp_ap_name;
       #ifdef HAS_SCREEN
-        this->sendToDisplay("AP name from AP list");
+        this->sendToDisplay(F("AP name from AP list"));
         this->sendToDisplay("AP name: " + ap_config);
       #endif
       Serial.println("AP name from AP list: " + ap_config);
     }
   }
   else {
-    Serial.println("Could not configure Access Point. Use stopscan...");
+    Serial.println(F("Could not configure Access Point. Use stopscan..."));
     #ifdef HAS_SCREEN
-      this->sendToDisplay("Could not configure Access Point.");
-      this->sendToDisplay("Touch to exit...");
+      this->sendToDisplay(F("Could not configure Access Point."));
+      this->sendToDisplay(F("Touch to exit..."));
     #endif
   }
 
   if (ap_config != "") {
     strncpy(apName, ap_config.c_str(), MAX_AP_NAME_SIZE);
     this->has_ap = true;
-    Serial.println("ap config set");
+    Serial.println(F("ap config set"));
     this->ap_index = targ_ap_index;
     return true;
   }
@@ -331,7 +331,7 @@ void EvilPortal::startAP() {
   WiFi.softAP(apName);
 
   #ifdef HAS_SCREEN
-    this->sendToDisplay("AP started");
+    this->sendToDisplay(F("AP started"));
   #endif
 
   Serial.print(F("ap ip address: "));
@@ -348,7 +348,7 @@ void EvilPortal::startAP() {
   server.begin();
   Serial.println(F("Server started"));
   #ifdef HAS_SCREEN
-    this->sendToDisplay("Evil Portal READY");
+    this->sendToDisplay(F("Evil Portal READY"));
   #endif
 }
 

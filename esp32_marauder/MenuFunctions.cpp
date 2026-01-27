@@ -3513,7 +3513,6 @@ void MenuFunctions::buildButtons(Menu *menu, int starting_index, String button_n
       button_name.toCharArray(buf, button_name.length() + 1);
 
     if (i >= BUTTON_SCREEN_LIMIT) {
-      Serial.println("Error: Trying to access out-of-bounds button index " + (String)i);
       break;
     }
 

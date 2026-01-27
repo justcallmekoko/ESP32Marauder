@@ -274,7 +274,6 @@ extern "C" {
         break;
       }
       default: {
-        Serial.println(F("Please Provide a Company Type"));
         break;
       }
     }
@@ -705,7 +704,6 @@ extern "C" {
               mac.toUpperCase();
               int rssi = advertisedDevice->getRSSI();
 
-              Serial.println(F("[FLOCK PENGUIN BATTERY CANDIDATE]"));
               Serial.println(rssi);
               Serial.print(F("  MAC:  "));
               Serial.println(mac);
@@ -1389,7 +1387,6 @@ extern "C" {
               mac.toUpperCase();
               int rssi = advertisedDevice->getRSSI();
 
-              Serial.println(F("[FLOCK PENGUIN BATTERY CANDIDATE]"));
               Serial.println(rssi);
               Serial.print(F("  MAC:  "));
               Serial.println(mac);
@@ -3228,7 +3225,6 @@ void WiFiScan::RunLoadATList() {
     DynamicJsonDocument doc(10048);
     DeserializationError error = deserializeJson(doc, file);
     if (error) {
-      Serial.print(F("JSON deserialize error: "));
       Serial.println(error.c_str());
       file.close();
       #ifdef HAS_SCREEN
@@ -3238,7 +3234,6 @@ void WiFiScan::RunLoadATList() {
         display_obj.tft.setTextSize(1);
         display_obj.tft.setTextColor(TFT_CYAN);
       
-        display_obj.tft.println(F("Could not deserialize JSON"));
         display_obj.tft.println(error.c_str());
       #endif
       return;
@@ -3773,22 +3768,22 @@ void WiFiScan::logPoint(String lat, String lon, float alt, String datetime, bool
 
 void WiFiScan::writeHeader(bool poi) {
   Serial.println(F("Writing header to GPX file..."));
-  buffer_obj.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-  buffer_obj.append("<gpx version=\"1.1\" creator=\"ESP32 GPS Logger\" xmlns=\"http://www.topografix.com/GPX/1/1\">\n");
+  buffer_obj.append(F("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"));
+  buffer_obj.append(F("<gpx version=\"1.1\" creator=\"ESP32 GPS Logger\" xmlns=\"http://www.topografix.com/GPX/1/1\">\n"));
   if (!poi)
-    buffer_obj.append("  <trk>\n");
-  buffer_obj.append("    <name>ESP32 Track</name>\n");
+    buffer_obj.append(F("  <trk>\n"));
+  buffer_obj.append(F("    <name>ESP32 Track</name>\n"));
   if (!poi)
-    buffer_obj.append("    <trkseg>\n");
+    buffer_obj.append(F("    <trkseg>\n"));
 }
 
 void WiFiScan::writeFooter(bool poi) {
   Serial.println(F("Writing footer to GPX file...\n"));
   if (!poi) {
-    buffer_obj.append("    </trkseg>\n");
-    buffer_obj.append("  </trk>\n");
+    buffer_obj.append(F("    </trkseg>\n"));
+    buffer_obj.append(F("  </trk>\n"));
   }
-  buffer_obj.append("</gpx>\n");
+  buffer_obj.append(F("</gpx>\n"));
 }
 
 void WiFiScan::RunSetupGPSTracker(uint8_t scan_mode) {

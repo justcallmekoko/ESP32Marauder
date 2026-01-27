@@ -26,8 +26,6 @@ void BatteryInterface::RunSetup() {
 
   #ifdef HAS_BATTERY
 
-    Serial.println("Checking for battery monitors...");
-
     #ifndef HAS_AXP2101
       Wire.begin(I2C_SDA, I2C_SCL);
 
@@ -35,7 +33,7 @@ void BatteryInterface::RunSetup() {
       error = Wire.endTransmission();
 
       if (error == 0) {
-        Serial.println("Detected IP5306");
+        Serial.println(F("Detected IP5306"));
         this->has_ip5306 = true;
         this->i2c_supported = true;
       }
@@ -45,7 +43,7 @@ void BatteryInterface::RunSetup() {
 
       if (error == 0) {
         if (maxlipo.begin()) {
-          Serial.println("Detected MAX17048");
+          Serial.println(F("Detected MAX17048"));
           this->has_max17048 = true;
           this->i2c_supported = true;
         }
@@ -56,7 +54,7 @@ void BatteryInterface::RunSetup() {
       if (!result)
         return;
 
-      Serial.println("Detected AXP2101");
+      Serial.println(F("Detected AXP2101"));
 
       this->i2c_supported = true;
       this->has_axp2101 = true;
