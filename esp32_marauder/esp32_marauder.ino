@@ -170,7 +170,6 @@ void setup()
     delay(10);
 
   #ifdef HAS_C5_SD
-    Serial.println("Starting shared SPI for C5 SD configuration...");
     sharedSPI.begin(SD_SCK, SD_MISO, SD_MOSI);
     delay(100);
   #endif

@@ -22,7 +22,7 @@ void GpsInterface::begin() {
   uint32_t gps_baud = this->initGpsBaudAndForce115200();
 
   if ((gps_baud != 9600) && (gps_baud != 115200))
-    Serial.println("Could not detect GPS baudrate");
+    Serial.println(F("Could not detect GPS baudrate"));
 
   delay(1000);
 
@@ -45,7 +45,7 @@ void GpsInterface::begin() {
   }
   else {
     this->gps_enabled = false;
-    Serial.println("GPS Not Found");
+    Serial.println(F("GPS Not Found"));
   }
   
 

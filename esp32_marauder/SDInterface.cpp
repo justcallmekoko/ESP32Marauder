@@ -47,11 +47,11 @@ bool SDInterface::initSD() {
       #else
         this->spiExt = new SPIClass(FSPI);
       #endif
-      Serial.println("Using external SPI configuration...");
+      Serial.println(F("Using external SPI configuration..."));
       this->spiExt->begin(SPI_SCK, SPI_MISO, SPI_MOSI, SD_CS);
       if (!SD.begin(SD_CS, *(this->spiExt))) {
     #elif defined(HAS_C5_SD)
-      Serial.println("Using C5 SD configuration...");
+      Serial.println(F("Using C5 SD configuration..."));
       if (!SD.begin(SD_CS, *_spi)) {
     #else
       if (!SD.begin(SD_CS)) {
@@ -82,10 +82,8 @@ bool SDInterface::initSD() {
       }
 
       if (!SD.exists("/SCRIPTS")) {
-        Serial.println(F("/SCRIPTS does not exist. Creating..."));
 
         SD.mkdir("/SCRIPTS");
-        Serial.println(F("/SCRIPTS created"));
       }
 
       this->sd_files = new LinkedList<String>();
@@ -96,7 +94,6 @@ bool SDInterface::initSD() {
   }
 
   #else
-    Serial.println(F("SD support disabled, skipping init"));
     return false;
   #endif
 }
