@@ -163,6 +163,7 @@
     #define HAS_GPS
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
+    #define HAS_C5_SD
   #endif
 
   #ifdef MARAUDER_V7_1
@@ -2595,6 +2596,12 @@
     #endif
 
     #ifdef MARAUDER_MINI
+      #define SD_MISO TFT_MISO
+      #define SD_MOSI TFT_MOSI
+      #define SD_SCK  TFT_SCLK
+    #endif
+
+    #ifdef MARAUDER_V7
       #define SD_MISO TFT_MISO
       #define SD_MOSI TFT_MOSI
       #define SD_SCK  TFT_SCLK
