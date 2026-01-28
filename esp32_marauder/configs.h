@@ -34,13 +34,15 @@
   //#define MARAUDER_V8
   //// END BOARD TARGETS
 
-  #define MARAUDER_VERSION "v1.10.1"
+  #define MARAUDER_VERSION "v1.10.2"
 
   #define GRAPH_REFRESH   100
 
   #define TRACK_EVICT_SEC 90 // Seconds before marking tracked MAC as tombstone
 
   #define DUAL_BAND_CHANNELS 51
+
+  #define DISPLAY_BUFFER_LIMIT 20
 
   //// HARDWARE NAMES
   #ifdef MARAUDER_M5STICKC

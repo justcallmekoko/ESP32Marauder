@@ -505,21 +505,26 @@ void Display::displayBuffer(bool do_clear)
 {
   if (this->display_buffer->size() > 0)
   {
+
     int print_count = 10;
+
     while ((display_buffer->size() > 0) && (print_count > 0))
     {
+      // Freeze adding to display buffer
+      if (display_buffer->size() > DISPLAY_BUFFER_LIMIT)
+        this->printing = true;
 
       #ifndef SCREEN_BUFFER
         xPos = 0;
         if ((display_buffer->size() > 0) && (!loading))
         {
-          printing = true;
+          //printing = true;
           delay(print_delay_1);
           yDraw = scroll_line(TFT_RED);
           tft.setCursor(xPos, yDraw);
           tft.setTextColor(TFT_GREEN, TFT_BLACK);
           tft.print(display_buffer->shift());
-          printing = false;
+          //printing = false;
           delay(print_delay_2);
         }
         if (!tteBar)
@@ -545,6 +550,8 @@ void Display::displayBuffer(bool do_clear)
 
       print_count--;
     }
+
+    this->printing = false;
   }
 }
 

@@ -493,11 +493,11 @@ extern "C" {
         
                 Serial.println();
         
-                while (display_obj.printing)
-                  delay(1);
-                display_obj.loading = true;
-                display_obj.display_buffer->add(display_string);
-                display_obj.loading = false;
+                if (!display_obj.printing) {
+                  display_obj.loading = true;
+                  display_obj.display_buffer->add(display_string);
+                  display_obj.loading = false;
+                }
               #endif
             }
           }
@@ -971,11 +971,11 @@ extern "C" {
                       {
                         display_string.concat(" ");
                       }
-                      while (display_obj.printing)
-                        delay(1);
-                      display_obj.loading = true;
-                      display_obj.display_buffer->add(display_string);
-                      display_obj.loading = false;
+                      if (!display_obj.printing) {
+                        display_obj.loading = true;
+                        display_obj.display_buffer->add(display_string);
+                        display_obj.loading = false;
+                      }
                     }
                   #endif
                 }
@@ -1194,11 +1194,11 @@ extern "C" {
         
                 Serial.println();
         
-                while (display_obj.printing)
-                  delay(1);
-                display_obj.loading = true;
-                display_obj.display_buffer->add(display_string);
-                display_obj.loading = false;
+                if (!display_obj.printing) {
+                  display_obj.loading = true;
+                  display_obj.display_buffer->add(display_string);
+                  display_obj.loading = false;
+                }
               #endif
             }
           }
@@ -1654,11 +1654,11 @@ extern "C" {
                       {
                         display_string.concat(" ");
                       }
-                      while (display_obj.printing)
-                        delay(1);
-                      display_obj.loading = true;
-                      display_obj.display_buffer->add(display_string);
-                      display_obj.loading = false;
+                      if (!display_obj.printing) {
+                        display_obj.loading = true;
+                        display_obj.display_buffer->add(display_string);
+                        display_obj.loading = false;
+                      }
                     }
                   #endif
                 }
@@ -7701,7 +7701,11 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
       
             Serial.print(F(" "));
       
-            display_obj.display_buffer->add(display_string);
+            if (!display_obj.printing) {
+              display_obj.loading = true;
+              display_obj.display_buffer->add(display_string);
+              display_obj.loading = false;
+            }
           #endif
 
           Serial.println();
