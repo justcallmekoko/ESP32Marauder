@@ -1762,6 +1762,8 @@ void WiFiScan::RunSetup() {
     
     this->shutdownBLE();
 
+    Serial.println("Initializing WiFi...");
+
     esp_wifi_init(&cfg);
     #ifdef HAS_IDF_3
       esp_wifi_set_country(&country);
@@ -1773,7 +1775,9 @@ void WiFiScan::RunSetup() {
     esp_wifi_get_mac(WIFI_IF_STA, this->sta_mac);
     delay(10);
     esp_wifi_get_mac(WIFI_IF_AP, this->ap_mac);
+    Serial.println("Setting MAC...");
     this->setMac();
+    Serial.println("Shutting down WiFi...");
     this->shutdownWiFi();
   #endif
 
@@ -2359,6 +2363,10 @@ bool WiFiScan::shutdownBLE() {
       pBLEScan->stop();
       
       pBLEScan->clearResults();
+
+      delay(100);
+
+      Serial.println("Deinitializing NimBLE...");
 
       //#ifndef HAS_DUAL_BAND
         NimBLEDevice::deinit();
