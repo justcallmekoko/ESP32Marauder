@@ -2411,6 +2411,7 @@
     #endif
   #else
     #define mac_history_len 100
+    #define mac_history_len_half (mac_history_len / 2)
   #endif
   //// END GPS STUFF
 
