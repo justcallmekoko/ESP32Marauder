@@ -2,7 +2,11 @@
 
 #ifdef HAS_PSRAM
   char* index_html = nullptr;
+#else
+  char index_html[MAX_HTML_SIZE] = "TEST";
 #endif
+
+char apName[MAX_AP_NAME_SIZE] = "PORTAL";
 
 AsyncWebServer server(80);
 

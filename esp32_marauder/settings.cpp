@@ -41,6 +41,8 @@ bool Settings::begin() {
   //Serial.println("Settings: " + (String)json_string + "\n");
   //this->printJsonSettings(json_string);
 
+  settingsFile.close();
+
   this->json_settings_string = json_string;
   
   return true;
@@ -177,7 +179,7 @@ template <typename T>
 T Settings::saveSetting(String key, String value) {}
 
 template<>
-bool Settings::saveSetting<bool>(String key, String value) {
+String Settings::saveSetting<String>(String key, String value) {
    DynamicJsonDocument json(1024); // ArduinoJson v6
 
   if (deserializeJson(json, this->json_settings_string)) {
@@ -196,7 +198,7 @@ bool Settings::saveSetting<bool>(String key, String value) {
 
       if (!settingsFile) {
         Serial.println(F("Failed to create settings file"));
-        return false;
+        return "";
       }
 
       if (serializeJson(json, settingsFile) == 0) {
@@ -213,10 +215,10 @@ bool Settings::saveSetting<bool>(String key, String value) {
     
       this->printJsonSettings(settings_string);
       
-      return true;
+      return value;
     }
   }
-  return false;
+  return "";
 }
 
 bool Settings::toggleSetting(String key) {

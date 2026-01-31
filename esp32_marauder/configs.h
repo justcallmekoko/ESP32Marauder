@@ -745,6 +745,9 @@
 
   //// DISPLAY DEFINITIONS
   #ifdef HAS_SCREEN
+    #ifndef ST7789_VSCRDEF
+      #define ST7789_VSCRDEF 0x33
+    #endif
 
     #ifdef MARAUDER_M5STICKC
       #define CHAN_PER_PAGE 7
