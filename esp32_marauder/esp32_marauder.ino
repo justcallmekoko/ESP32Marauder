@@ -125,11 +125,11 @@ uint32_t currentTime  = 0;
 
 void backlightOn() {
   #ifdef HAS_SCREEN
-    #ifdef MARAUDER_MINI
+    #if defined(MARAUDER_MINI)
       digitalWrite(TFT_BL, LOW);
     #endif
   
-    #ifndef MARAUDER_MINI
+    #if !defined(MARAUDER_MINI)
       digitalWrite(TFT_BL, HIGH);
     #endif
   #endif
@@ -137,11 +137,11 @@ void backlightOn() {
 
 void backlightOff() {
   #ifdef HAS_SCREEN
-    #ifdef MARAUDER_MINI
+    #if defined(MARAUDER_MINI)
       digitalWrite(TFT_BL, HIGH);
     #endif
   
-    #ifndef MARAUDER_MINI
+    #if !defined(MARAUDER_MINI)
       digitalWrite(TFT_BL, LOW);
     #endif
   #endif

@@ -463,10 +463,19 @@ void MenuFunctions::main(uint32_t currentTime)
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_PACKET_RATE) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN)) {
-            if (wifi_scan_obj.set_channel < 14)
-              wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
-            else
-              wifi_scan_obj.changeChannel(1);
+            #ifndef HAS_DUAL_BAND
+              if (wifi_scan_obj.set_channel < 14)
+                wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
+              else
+                wifi_scan_obj.changeChannel(1);
+            #else
+              if (wifi_scan_obj.dual_band_channel_index < DUAL_BAND_CHANNELS - 1)
+                wifi_scan_obj.dual_band_channel_index++;
+              else
+                wifi_scan_obj.dual_band_channel_index = 0;
+
+              wifi_scan_obj.changeChannel(wifi_scan_obj.dual_band_channel[wifi_scan_obj.dual_band_channel_index]);
+            #endif
           }
           else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
             #ifndef HAS_DUAL_BAND
@@ -519,10 +528,19 @@ void MenuFunctions::main(uint32_t currentTime)
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_PACKET_RATE) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN)) {
-            if (wifi_scan_obj.set_channel > 1)
-              wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
-            else
-              wifi_scan_obj.changeChannel(14);
+            #ifndef HAS_DUAL_BAND
+              if (wifi_scan_obj.set_channel > 1)
+                wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
+              else
+                wifi_scan_obj.changeChannel(14);
+            #else
+              if (wifi_scan_obj.dual_band_channel_index > 0)
+                wifi_scan_obj.dual_band_channel_index--;
+              else
+                wifi_scan_obj.dual_band_channel_index = DUAL_BAND_CHANNELS - 1;
+
+              wifi_scan_obj.changeChannel(wifi_scan_obj.dual_band_channels[wifi_scan_obj.dual_band_channel_index]);
+            #endif
           }
           else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
             #ifndef HAS_DUAL_BAND
@@ -631,10 +649,19 @@ void MenuFunctions::main(uint32_t currentTime)
                       (wifi_scan_obj.currentScanMode == WIFI_SCAN_PACKET_RATE) ||
                       (wifi_scan_obj.currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
                       (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN)) {
-                if (wifi_scan_obj.set_channel < 14)
-                  wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
-                else
-                  wifi_scan_obj.changeChannel(1);
+                #ifndef HAS_DUAL_BAND
+                  if (wifi_scan_obj.set_channel < 14)
+                    wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
+                  else
+                    wifi_scan_obj.changeChannel(1);
+                #else
+                  if (wifi_scan_obj.dual_band_channel_index < DUAL_BAND_CHANNELS - 1)
+                    wifi_scan_obj.dual_band_channel_index++;
+                  else
+                    wifi_scan_obj.dual_band_channel_index = 0;
+
+                  wifi_scan_obj.changeChannel(wifi_scan_obj.dual_band_channels[wifi_scan_obj.dual_band_channel_index]);
+                #endif
               }
               else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
                 #ifndef HAS_DUAL_BAND
@@ -695,10 +722,19 @@ void MenuFunctions::main(uint32_t currentTime)
                 (wifi_scan_obj.currentScanMode == WIFI_SCAN_PACKET_RATE) ||
                 (wifi_scan_obj.currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
                 (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN)) {
-          if (wifi_scan_obj.set_channel > 1)
-            wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
-          else
-            wifi_scan_obj.changeChannel(14);
+          #ifndef HAS_DUAL_BAND
+            if (wifi_scan_obj.set_channel > 1)
+              wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
+            else
+              wifi_scan_obj.changeChannel(14);
+          #else
+            if (wifi_scan_obj.dual_band_channel_index > 0)
+              wifi_scan_obj.dual_band_channel_index--;
+            else
+              wifi_scan_obj.dual_band_channel_index = DUAL_BAND_CHANNELS - 1;
+
+            wifi_scan_obj.changeChannel(wifi_scan_obj.dual_band_channels[wifi_scan_obj.dual_band_channel_index]);
+          #endif
         }
         else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
           #ifndef HAS_DUAL_BAND
@@ -722,10 +758,19 @@ void MenuFunctions::main(uint32_t currentTime)
       if (this->isKeyPressed('/')) {
       #endif
         if (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
-          if (wifi_scan_obj.set_channel < 14)
-            wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
-          else
-            wifi_scan_obj.changeChannel(1);
+          #ifndef HAS_DUAL_BAND
+            if (wifi_scan_obj.set_channel < 14)
+              wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
+            else
+              wifi_scan_obj.changeChannel(1);
+          #else
+            if (wifi_scan_obj.dual_band_channel_index < DUAL_BAND_CHANNELS - 1)
+              wifi_scan_obj.dual_band_channel_index++;
+            else
+              wifi_scan_obj.dual_band_channel_index = 0;
+
+            wifi_scan_obj.changeChannel(wifi_scan_obj.dual_band_channels[wifi_scan_obj.dual_band_channel_index]);
+          #endif
         }
       }
       #endif
@@ -737,10 +782,19 @@ void MenuFunctions::main(uint32_t currentTime)
       if (this->isKeyPressed(',')) {
       #endif
         if (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
-          if (wifi_scan_obj.set_channel > 1)
-            wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
-          else
-            wifi_scan_obj.changeChannel(14);
+          #ifndef HAS_DUAL_BAND
+            if (wifi_scan_obj.set_channel > 1)
+              wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
+            else
+              wifi_scan_obj.changeChannel(14);
+          #else
+            if (wifi_scan_obj.dual_band_channel_index > 0)
+              wifi_scan_obj.dual_band_channel_index--;
+            else
+              wifi_scan_obj.dual_band_channel_index = DUAL_BAND_CHANNELS - 1;
+
+            wifi_scan_obj.changeChannel(wifi_scan_obj.dual_band_channels[wifi_scan_obj.dual_band_channel_index]);
+          #endif
         }
       }
       #endif
@@ -864,7 +918,7 @@ void MenuFunctions::updateStatusBar()
 
   bool status_changed = false;
   
-  #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_CARDPUTER)
+  #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_MINI_V3)
     display_obj.tft.setFreeFont(NULL);
   #endif
   
@@ -918,7 +972,7 @@ void MenuFunctions::updateStatusBar()
 
   if ((current_channel != wifi_scan_obj.old_channel) || (status_changed)) {
     wifi_scan_obj.old_channel = current_channel;
-    #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_CARDPUTER)
+    #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_MINI_V3)
       display_obj.tft.fillRect(TFT_WIDTH/4, 0, CHAR_WIDTH * 6, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
     #elif defined(HAS_DUAL_BAND)
       display_obj.tft.fillRect(50, 0, (CHAR_WIDTH / 2) * 8, STATUS_BAR_WIDTH, STATUSBAR_COLOR);

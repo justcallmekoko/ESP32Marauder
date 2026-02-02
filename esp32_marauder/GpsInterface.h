@@ -16,7 +16,7 @@
 //#define GPS_NMEA_SCRNWRAP true //default:true, except on MARAUDER_MINI where false
 //#define GPS_NMEA_MAXQUEUE 30 //default:30 messages max in queue
 
-#ifdef MARAUDER_MINI
+#if defined(MARAUDER_MINI) || defined(MARAUDER_MINI_V3)
   #ifndef GPS_NMEA_SCRNWRAP
     #define GPS_NMEA_SCRNWRAP false
   #endif
