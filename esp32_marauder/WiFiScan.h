@@ -657,6 +657,8 @@ class WiFiScan
     volatile bool bt_cb_busy = false;
     volatile bool bt_pending_clear = false;
 
+    bool send_deauth = false;
+
 
     static MacEntry mac_entries[mac_history_len_half];
     static uint8_t mac_entry_state[mac_history_len_half];
