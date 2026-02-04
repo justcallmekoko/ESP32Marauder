@@ -26,31 +26,43 @@ jobs:
             const owner = context.repo.owner;
             const repo  = context.repo.repo;
 
-            // Find default branch and its HEAD
+            // Get default branch info
             const repoInfo = await github.rest.repos.get({ owner, repo });
             const defaultBranch = repoInfo.data.default_branch;
-            const head = await github.rest.repos.getBranch({ owner, repo, branch: defaultBranch });
-            const headSha = head.data.commit.sha;
-            const shortSha = headSha.slice(0,7);
 
-            // Try get the existing nightly release (single static tag)
-            let nightlyRelease = null;
-            try {
-              nightlyRelease = await github.rest.repos.getReleaseByTag({
-                owner, repo, tag: 'nightly'
-              });
-            } catch (e) {
-              if (e.status !== 404) throw e;
+            const head = await github.rest.repos.getBranch({
+              owner,
+              repo,
+              branch: defaultBranch
+            });
+
+            const headSha = head.data.commit.sha;
+            const shortSha = headSha.slice(0, 7);
+
+            // List releases and find the most recent "<sha>_nightly"
+            const releases = await github.rest.repos.listReleases({
+              owner,
+              repo,
+              per_page: 50
+            });
+
+            let latestNightlySha = null;
+
+            for (const rel of releases.data) {
+              const name = rel.name || "";
+
+              const match = name.match(/^([0-9a-f]{7})_nightly$/i);
+              if (match) {
+                latestNightlySha = match[1];
+                break;   // releases are returned newest-first
+              }
             }
 
-            // Decide if we need to rebuild: compare short SHA in the release name
-            // Name format we set: "<shortsha>_nightly"
             let shouldBuild = true;
-            if (nightlyRelease) {
-              const name = nightlyRelease.data.name || '';
-              const m = name.match(/^([0-9a-f]{7})_nightly$/i);
-              if (m && m[1] === shortSha) {
-                shouldBuild = false; // no new commits since last nightly
+
+            if (latestNightlySha) {
+              if (latestNightlySha === shortSha) {
+                shouldBuild = false;
               }
             }
 
@@ -62,6 +74,8 @@ jobs:
   compile_sketch:
     name: build ${{ matrix.board.name }}
     runs-on: ubuntu-latest
+    needs: decide
+    if: ${{ needs.decide.outputs.should_build == 'true' }}
     strategy:
       fail-fast: false
       matrix:
