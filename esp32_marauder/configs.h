@@ -283,7 +283,8 @@
     #define HAS_GPS
     #define HAS_CYD_TOUCH
     #define HAS_CYD_PORTRAIT
-    //#define HAS_NIMBLE_2
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3
   #endif
 
   #ifdef MARAUDER_CYD_3_5_INCH
