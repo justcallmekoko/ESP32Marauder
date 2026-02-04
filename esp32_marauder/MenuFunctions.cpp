@@ -414,7 +414,8 @@ void MenuFunctions::main(uint32_t currentTime)
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_CHAN_ANALYZER) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_CHAN_ACT) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_SIG_STREN) &&
-		(wifi_scan_obj.currentScanMode != WIFI_ATTACK_FUNNY_BEACON) &&
+		    (wifi_scan_obj.currentScanMode != WIFI_ATTACK_FUNNY_BEACON) &&
+        (wifi_scan_obj.currentScanMode != WIFI_SCAN_EAPOL) &&
         (wifi_scan_obj.currentScanMode != WIFI_ATTACK_RICK_ROLL))
     {
       // Need this to set all keys to false
@@ -474,7 +475,7 @@ void MenuFunctions::main(uint32_t currentTime)
               else
                 wifi_scan_obj.dual_band_channel_index = 0;
 
-              wifi_scan_obj.changeChannel(wifi_scan_obj.dual_band_channel[wifi_scan_obj.dual_band_channel_index]);
+              wifi_scan_obj.changeChannel(wifi_scan_obj.dual_band_channels[wifi_scan_obj.dual_band_channel_index]);
             #endif
           }
           else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
@@ -1657,6 +1658,8 @@ void MenuFunctions::RunSetup()
   });
   #ifdef HAS_ILI9341
     this->addNodes(&wifiSnifferMenu, text_table1[46], TFTVIOLET, NULL, EAPOL, [this]() {
+      display_obj.clearScreen();
+      this->drawStatusBar();
       wifi_scan_obj.StartScan(WIFI_SCAN_EAPOL, TFT_VIOLET);
     });
     this->addNodes(&wifiSnifferMenu, text_table1[45], TFTBLUE, NULL, PACKET_MONITOR, [this]() {
