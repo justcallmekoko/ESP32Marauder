@@ -65,6 +65,10 @@ struct AccessPoint {
   uint8_t sec;
   bool wps;
   String man;
+  bool has_msg_1;
+  bool has_msg_2;
+  bool has_msg_3;
+  bool has_msg_4;
 };
 
 class CaptiveRequestHandler : public AsyncWebHandler {

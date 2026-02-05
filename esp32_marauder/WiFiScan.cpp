@@ -2497,6 +2497,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
       this->min_rssi = 0;
       this->max_rssi = -128;
       this->send_deauth = false;
+      this->complete_eapol = 0;
 
       evil_portal_obj.cleanup();
     #endif
@@ -3369,6 +3370,10 @@ void WiFiScan::RunLoadAPList() {
       ap.sec      = obj.containsKey("sec")    ? obj["sec"].as<uint8_t>()       : 0;
       ap.wps      = obj.containsKey("wps")    ? obj["wps"].as<bool>()          : false;
       ap.man      = obj.containsKey("man")    ? obj["man"].as<String>()        : "Unknown";
+      ap.has_msg_1 = false;
+      ap.has_msg_2 = false;
+      ap.has_msg_3 = false;
+      ap.has_msg_4 = false;
 
       access_points->add(ap);
       Serial.println("Got: " + ap.essid);
@@ -4024,6 +4029,11 @@ void WiFiScan::RunAPInfo(uint16_t index, bool do_display) {
   Serial.println("  Frames: " + (String)access_points->get(index).packets);
   Serial.println("Stations: " + (String)access_points->get(index).stations->size());
   Serial.println("   Brand: " + (String)access_points->get(index).man);
+  Serial.print(F("Complete EAPOL: "));
+  if (this->getCompleteEapol(index) > 0)
+    Serial.println(F("TRUE"));
+  else
+    Serial.println(F("FALSE"));
   
   uint8_t sec = access_points->get(index).sec;
   bool wps = access_points->get(index).wps;
@@ -4058,6 +4068,11 @@ void WiFiScan::RunAPInfo(uint16_t index, bool do_display) {
       display_obj.tft.println("  Frames: " + (String)access_points->get(index).packets);
       display_obj.tft.println("Stations: " + (String)access_points->get(index).stations->size());
       display_obj.tft.println("   Brand: " + (String)access_points->get(index).man);
+      display_obj.tft.print(F("Complete EAPOL: "));
+      if (this->getCompleteEapol(index) > 0)
+        display_obj.tft.println(F("TRUE"));
+      else
+        display_obj.tft.println(F("FALSE"));
 
       display_obj.tft.print("Security: ");
       switch (sec) {
@@ -6035,6 +6050,10 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
           ap.bssid[5] = snifferPacket->payload[15];
           ap.selected = false;
           ap.stations = new LinkedList<uint16_t>();
+          ap.has_msg_1 = false;
+          ap.has_msg_2 = false;
+          ap.has_msg_3 = false;
+          ap.has_msg_4 = false;
           
           //ap.beacon = new LinkedList<char>();
 
@@ -9774,12 +9793,38 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
   }
 }
 
+uint32_t WiFiScan::getCompleteEapol(int check_index) {
+  uint32_t total_complete = 0;
+  if (check_index < 0) {
+    for (int i = 0; i < access_points->size(); i++) {
+      if ((access_points->get(i).has_msg_1) &&
+          (access_points->get(i).has_msg_2) &&
+          (access_points->get(i).has_msg_3) &&
+          (access_points->get(i).has_msg_4))
+        total_complete++;
+    }
+  } else {
+    if ((access_points->get(check_index).has_msg_1) &&
+        (access_points->get(check_index).has_msg_2) &&
+        (access_points->get(check_index).has_msg_3) &&
+        (access_points->get(check_index).has_msg_4))
+      total_complete++;
+  }
+
+  return total_complete;
+}
+
 void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 {
   extern WiFiScan wifi_scan_obj;
 
   bool is_beacon = false;
   bool is_eapol = false;
+  int ap_index = -1;
+  char addr[] = "00:00:00:00:00:00";
+  char addr2[] = "00:00:00:00:00:00";
+  String essid = "";
+  String bssid = "";
   
   wifi_promiscuous_pkt_t *snifferPacket = (wifi_promiscuous_pkt_t*)buf;
   WifiMgmtHdr *frameControl = (WifiMgmtHdr*)snifferPacket->payload;
@@ -9796,20 +9841,70 @@ void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
     const WifiMgmtHdr *hdr = &ipkt->hdr;
 
     // Do our counts
-    if (snifferPacket->payload[0] == 0x40) // Probe request
+    if (snifferPacket->payload[0] == 0x40) { // Probe request
       wifi_scan_obj.req_frames++;
-    else if (snifferPacket->payload[0] == 0x50) // Probe response
+      return;
+    }
+    else if (snifferPacket->payload[0] == 0x50) { // Probe response
       wifi_scan_obj.resp_frames++;
+      return;
+    }
     else if (snifferPacket->payload[0] == 0x80) { // Beacon
       is_beacon = true;
       wifi_scan_obj.beacon_frames++;
+      getMAC(addr, snifferPacket->payload, 10);
+      ap_index = wifi_scan_obj.checkMatchAP(addr);
+      if (ap_index < 0) { // Check for existing AP in list. Create if not found
+
+        if (snifferPacket->payload[37] > 0) {
+          for (int i = 0; i < snifferPacket->payload[37]; i++)
+            essid.concat((char)snifferPacket->payload[i + 38]);
+        }
+
+        bssid.concat(addr);
+
+        if (essid == "")
+          essid = bssid;
+
+        uint8_t security_type = wifi_scan_obj.getSecurityType(snifferPacket->payload, len);
+
+        AccessPoint ap;
+        ap.essid = essid;
+        ap.channel = snifferPacket->rx_ctrl.channel;
+        ap.bssid[0] = snifferPacket->payload[10];
+        ap.bssid[1] = snifferPacket->payload[11];
+        ap.bssid[2] = snifferPacket->payload[12];
+        ap.bssid[3] = snifferPacket->payload[13];
+        ap.bssid[4] = snifferPacket->payload[14];
+        ap.bssid[5] = snifferPacket->payload[15];
+        ap.selected = false;
+        ap.stations = new LinkedList<uint16_t>();
+        ap.has_msg_1 = false;
+        ap.has_msg_2 = false;
+        ap.has_msg_3 = false;
+        ap.has_msg_4 = false;
+        ap.beacon[0] = snifferPacket->payload[34];
+        ap.beacon[1] = snifferPacket->payload[35];
+        ap.sec = security_type;
+        ap.wps = false;
+        ap.packets = 0;
+        access_points->add(ap);
+      }
     }
-    else if (snifferPacket->payload[0] == 0xC0) // Deauth
+    else if (snifferPacket->payload[0] == 0xC0) { // Deauth
       wifi_scan_obj.deauth_frames++;
-    else if (((snifferPacket->payload[30] == 0x88 && snifferPacket->payload[31] == 0x8e) || ( snifferPacket->payload[32] == 0x88 && snifferPacket->payload[33] == 0x8e))) // eapol
-      wifi_scan_obj.eapol_frames++;
+      return;
+    }
   } else {
     wifi_scan_obj.data_frames++;
+  }
+
+  getMAC(addr, snifferPacket->payload, 10);
+  ap_index = wifi_scan_obj.checkMatchAP(addr);
+
+  if (ap_index < 0) {
+    getMAC(addr2, snifferPacket->payload, 4);
+    ap_index = wifi_scan_obj.checkMatchAP(addr2);
   }
 
   #ifdef HAS_SCREEN
@@ -9825,6 +9920,7 @@ void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
   if (snifferPacket->rx_ctrl.rssi > wifi_scan_obj.max_rssi)
     wifi_scan_obj.max_rssi = snifferPacket->rx_ctrl.rssi;
 
+  
   // Found beacon frame. Decide whether to deauth
   if (wifi_scan_obj.send_deauth) {
     if (snifferPacket->payload[0] == 0x80) {    
@@ -9845,7 +9941,7 @@ void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
       wifi_scan_obj.deauth_frame_default[21] = snifferPacket->payload[15];      
     
       // Send packet
-      for (int i = 0; i < 3; i++)
+      for (int i = 0; i < 5; i++)
         esp_wifi_80211_tx(WIFI_IF_AP, wifi_scan_obj.deauth_frame_default, sizeof(wifi_scan_obj.deauth_frame_default), false);
       delay(1);
     }
@@ -9857,35 +9953,76 @@ void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 
   // Check for and apply filters
   if (filter) {
-    bool found = false;
-    int ap_index = -1;
-
-    char addr[] = "00:00:00:00:00:00";
-    getMAC(addr, snifferPacket->payload, 10);
-    ap_index = wifi_scan_obj.checkMatchAP(addr);
-
-    if (ap_index < 0) {
-      char addr2[] = "00:00:00:00:00:00";
-      getMAC(addr2, snifferPacket->payload, 4);
-      ap_index = wifi_scan_obj.checkMatchAP(addr2);
-    }
-
-    if ((ap_index < 0) || (!access_points->get(ap_index).selected))
+    if ((ap_index < 0) || (!access_points->get(ap_index).selected)) {
       return;
-
-    //Serial.println("Received frame for " + access_points->get(ap_index).essid + ". Processing...");   
+    }
   }
 
-  if (( (snifferPacket->payload[30] == 0x88 && snifferPacket->payload[31] == 0x8e)|| ( snifferPacket->payload[32] == 0x88 && snifferPacket->payload[33] == 0x8e) )){
+  uint8_t handshake_msg = 0;
+
+  int eapol_offset = -1;
+
+  if (snifferPacket->payload[30] == 0x88 && snifferPacket->payload[31] == 0x8e)
+    eapol_offset = 32;
+  else if (snifferPacket->payload[32] == 0x88 && snifferPacket->payload[33] == 0x8e)
+    eapol_offset = 34;
+
+  if (eapol_offset > 0)
+  {
     is_eapol = true;
     wifi_scan_obj.eapol_frames++;
     Serial.print(F("Received EAPOL: "));
 
-    char addr[] = "00:00:00:00:00:00";
     getMAC(addr, snifferPacket->payload, 10);
 
     Serial.print(addr);
     Serial.println();
+
+    // Get the handshake sequence number
+    int key_info_offset = eapol_offset + 5;
+
+    if (key_info_offset + 1 < len)
+    {
+      uint16_t key_info = (snifferPacket->payload[key_info_offset] << 8) |
+                           snifferPacket->payload[key_info_offset + 1];
+
+      bool key_ack = key_info & (1 << 7);
+      bool key_mic = key_info & (1 << 8);
+      bool secure  = key_info & (1 << 9);
+
+      if ( key_ack && !key_mic && !secure ) {
+        handshake_msg = 1;
+        if (ap_index >= 0) {
+          AccessPoint temp_ap = access_points->get(ap_index);
+          temp_ap.has_msg_1 = true;
+          access_points->set(ap_index, temp_ap);
+        }
+      }
+      else if ( !key_ack && key_mic && !secure ) {
+        handshake_msg = 2;
+        if (ap_index >= 0) {
+          AccessPoint temp_ap = access_points->get(ap_index);
+          temp_ap.has_msg_2 = true;
+          access_points->set(ap_index, temp_ap);
+        }
+      }
+      else if ( key_ack && key_mic && secure ) {
+        handshake_msg = 3;
+        if (ap_index >= 0) {
+          AccessPoint temp_ap = access_points->get(ap_index);
+          temp_ap.has_msg_3 = true;
+          access_points->set(ap_index, temp_ap);
+        }
+      }
+      else if ( !key_ack && key_mic && secure ) {
+        handshake_msg = 4;
+        if (ap_index >= 0) {
+          AccessPoint temp_ap = access_points->get(ap_index);
+          temp_ap.has_msg_4 = true;
+          access_points->set(ap_index, temp_ap);
+        }
+      }
+    }
   }
 
   if ((is_eapol) || (is_beacon))
@@ -10716,18 +10853,25 @@ void WiFiScan::renderRawStats() {
                             TFT_BLACK);
     display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH + EXT_BUTTON_WIDTH);
     display_obj.tft.setTextSize(1);
-    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
 
-    display_obj.tft.println(F("Stats\n"));
+    display_obj.tft.println(F("Stats"));
+
+    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
     display_obj.tft.println("     Mgmt: " + (String)this->mgmt_frames);
     display_obj.tft.println("     Data: " + (String)this->data_frames);
-    display_obj.tft.println("  Channel: " + (String)this->set_channel);
     display_obj.tft.println("   Beacon: " + (String)this->beacon_frames);
     display_obj.tft.println("Probe Req: " + (String)this->req_frames);
     display_obj.tft.println("Probe Res: " + (String)this->resp_frames);
     display_obj.tft.println("   Deauth: " + (String)this->deauth_frames);
     display_obj.tft.println("    EAPOL: " + (String)this->eapol_frames);
+    if ((this->currentScanMode == WIFI_SCAN_EAPOL) ||
+        (this->currentScanMode == WIFI_SCAN_ACTIVE_EAPOL)) {
+      display_obj.tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
+      display_obj.tft.println("Complete EAPOL: " + (String)this->getCompleteEapol());
+      display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    }
     display_obj.tft.println("     RSSI: " + (String)this->min_rssi + " - " + (String)this->max_rssi);
     if (this->send_deauth) {
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
@@ -10747,6 +10891,10 @@ void WiFiScan::renderRawStats() {
   Serial.println("Probe Res: " + (String)this->resp_frames);
   Serial.println("   Deauth: " + (String)this->deauth_frames);
   Serial.println("    EAPOL: " + (String)this->eapol_frames);
+  if ((this->currentScanMode == WIFI_SCAN_EAPOL) ||
+      (this->currentScanMode == WIFI_SCAN_ACTIVE_EAPOL)) {
+    Serial.println("Complete EAPOL: " + (String)this->getCompleteEapol());
+  }
   Serial.println("     RSSI: " + (String)this->min_rssi + " - " + (String)this->max_rssi);
   if (this->send_deauth)
   Serial.println(F("\nDEAUTH TX: TRUE"));
