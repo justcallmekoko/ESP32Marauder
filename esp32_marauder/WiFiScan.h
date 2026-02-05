@@ -675,6 +675,7 @@ class WiFiScan
     uint32_t resp_frames = 0;
     uint32_t deauth_frames = 0;
     uint32_t eapol_frames = 0;
+    uint32_t complete_eapol = 0;
     int8_t min_rssi = 0;
     int8_t max_rssi = -128;
 
@@ -783,6 +784,7 @@ class WiFiScan
 
     wifi_config_t ap_config;
 
+    uint32_t getCompleteEapol(int check_index = -1);
     void drawChannelLine();
     #ifdef HAS_SCREEN
       int8_t checkAnalyzerButtons(uint32_t currentTime);
