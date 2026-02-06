@@ -10935,8 +10935,8 @@ void WiFiScan::renderPacketRate() {
 }
 
 void WiFiScan::packetRateLoop(uint32_t tick) {
-  if (tick - this->initTime >= BANNER_TIME * 10) {
-    this->initTime = millis();
+  if (tick - this->last_ui_update >= BANNER_TIME * 10) {
+    this->last_ui_update = millis();
     if (this->currentScanMode == WIFI_SCAN_PACKET_RATE)
       this->renderPacketRate();
     else if ((this->currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
@@ -11676,6 +11676,13 @@ void WiFiScan::main(uint32_t currentTime)
         eapolMonitorMain(currentTime);
       #endif
     #endif*/
+    #ifndef HAS_SCREEN
+      if (currentTime - initTime >= 2000) {
+        initTime = millis();
+        this->channelHop();
+      }
+    #endif
+
     this->packetRateLoop(currentTime);
   }
   else if (currentScanMode == WIFI_SCAN_ACTIVE_LIST_EAPOL) {
