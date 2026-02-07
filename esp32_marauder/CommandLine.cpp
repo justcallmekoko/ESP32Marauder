@@ -1,6 +1,10 @@
 #include "CommandLine.h"
 
 CommandLine::CommandLine() {
+  if (!serial_buffer_initialized) {
+    memset(CommandLine::serial_buffer, '\0', 255);
+    serial_buffer_initialized = true;
+  }
 }
 
 void CommandLine::RunSetup() {
@@ -16,19 +20,125 @@ void CommandLine::RunSetup() {
 }
 
 String CommandLine::getSerialInput() {
-  String input = "";
+  int bytes_received = 0;
+  int bytes_available = 0;
+  String command_line = "";
+  char command_buffer[255];
+  
+  memset(command_buffer, '\0', 255);
 
-  if (Serial.available() > 0)
-    input = Serial.readStringUntil('\n');
+  if (Serial.available() > 0 && serial_buffer_idx < 255) {
+    bytes_available = Serial.available();
+    //Serial.println("Should have bytes available: " + bytes_available);
+    int bytes_to_read = bytes_available < (254 - serial_buffer_idx) ? bytes_available : (254 - serial_buffer_idx);
+    bytes_received = Serial.readBytes(&serial_buffer[serial_buffer_idx], bytes_to_read);
 
-  input.trim();
-  return input;
+    // Echo what we just got to the terminal
+    for (int i = serial_buffer_idx; i < serial_buffer_idx + bytes_received; i++) {
+      // Support backspace
+      if (serial_buffer[i] == '\x7f') {
+        // j starts at i + 1 which is the next
+        // valid character. We skip copying the
+        // backspace Ox7f character.
+        for (int j = i + 1; j < 255; j++) {
+          if (j <= 1) {
+            break;
+          } else if (j == 254 || j > serial_buffer_idx + bytes_received) {
+            serial_buffer[j] = '\0';
+          } else {
+            serial_buffer[j-2] = serial_buffer[j];
+          }
+        }
+        if (serial_buffer_idx > 0) {
+          Serial.print('\b');
+          Serial.print(' ');
+          Serial.print('\b');
+        }
+        // This is kinda weird because we decrement serial_buffer_idx ...
+        // there's a better way to do this I'm sure. TODO(jstockdale): Fix me!
+        serial_buffer_idx = (serial_buffer_idx >= 1) ? serial_buffer_idx - 2 : (bytes_received == 1) ? -1 : 0;
+        // send cursor back on serial console, blank previous character, send cursor back once more
+      }
+      // Skip printing \n or \r to the terminal
+      if (serial_buffer[i] != '\n' && serial_buffer[i] != '\r') {
+        Serial.print(serial_buffer[i]);
+      }
+    }
+
+    serial_buffer_idx += bytes_received;
+    
+    if (serial_buffer_idx < 254) {
+      serial_buffer[serial_buffer_idx+1] = '\0';
+    } else if (serial_buffer_idx >= 254) {
+      Serial.println("Serial buffer overrun?");
+    }
+//    Serial.println("Received bytes over serial: " + String(bytes_received));
+//    Serial.println("Buffer: " + String(serial_buffer));
+//    Serial.println("Buffer idx: " + String(serial_buffer_idx));
+  }
+
+  int index_of_newline = -1;
+
+  for (int i = 0; i < serial_buffer_idx; i++) {
+    
+    // This is mind boggling that we sometimes
+    // just get \r and not \n and also not \r\n ... 
+    // but hey. why not. :D I inspected the hex values
+    // and this is definitely what's coming over the line.
+    // We try to handle all of the possible combinations.
+    if (serial_buffer[i] == '\n' || serial_buffer[i] == '\r') {
+      //Serial.println("Found \"newline\" at index: " + String(i));
+      index_of_newline = i;
+      if (i == 0) {
+        command_buffer[0] = '\n';
+      }
+    } else if (i == 254) {
+        command_buffer[i] = '\0';
+    } else {
+      command_buffer[i] = serial_buffer[i];
+    }
+  }
+  
+  command_line = command_buffer;
+
+  if (index_of_newline > -1) {
+    // if we got a \r with a \n, treat the \n as the correct newline
+    if (serial_buffer[index_of_newline] == '\r' && serial_buffer[index_of_newline+1] == '\n') {
+      index_of_newline++;
+    }
+    // Move the unconsumed portion of the buffer over
+    // and zero extra bytes.
+    for (int i = index_of_newline + 1; i < 255; i++) {
+      // Copy any characters we have after the newline, if they exist
+      serial_buffer[i - (index_of_newline + 1)] = serial_buffer[i];
+      serial_buffer[i] = '\0';
+    }
+
+    // make sure to set correct buffer index for remaining data
+    serial_buffer_idx = serial_buffer_idx - (index_of_newline + 1);
+
+    command_line.trim();
+    return command_line;
+  } else if (index_of_newline == -1 && serial_buffer_idx == 254) {
+    // flush buffer if we're full; don't let it overrun
+    Serial.println("Serial buffer full! Processing command and flushing buffer.");
+    serial_buffer_idx = 0;
+    for (int i = 0; i < 255; ++i) {
+      serial_buffer[i] = '\0';
+    }
+    command_line.trim();
+    return command_line;
+  } else {
+    return "";
+  }
 }
 
 void CommandLine::main(uint32_t currentTime) {
   String input = this->getSerialInput();
 
-  this->runCommand(input);
+  if (input != "\n") {
+    this->runCommand(input);
+  }
 
   if (input != "")
     Serial.print("> ");
@@ -199,7 +309,7 @@ void CommandLine::runCommand(String input) {
     if(input != STOPSCAN_CMD) return;    
   }
   else
-    Serial.println("#" + input);
+    Serial.println("# " + input);
 
   LinkedList<String> cmd_args = this->parseCommand(input, " ");
   
@@ -1908,3 +2018,4 @@ void CommandLine::runCommand(String input) {
     }
   }
 }
+
