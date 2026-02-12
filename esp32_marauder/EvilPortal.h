@@ -37,7 +37,7 @@ extern Buffer buffer_obj;
 #define MAX_AP_NAME_SIZE 32
 #define WIFI_SCAN_EVIL_PORTAL 30
 
-char apName[MAX_AP_NAME_SIZE] = "PORTAL";
+extern char apName[MAX_AP_NAME_SIZE];
 
 #ifndef HAS_PSRAM
   char index_html[MAX_HTML_SIZE] = "TEST";
