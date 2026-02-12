@@ -75,6 +75,8 @@ extern "C" {
         memcpy(&AdvData_Raw[i], Name, name_len);
         i += name_len;
 
+        free((void*)Name); // generateRandomName() mallocs; caller must free
+
         #ifndef HAS_NIMBLE_2
           AdvData.addData(std::string((char *)AdvData_Raw, 7 + name_len));
         #else
@@ -1812,6 +1814,10 @@ bool WiFiScan::checkMem() {
 
 int WiFiScan::clearAPs() {
   int num_cleared = access_points->size();
+  // Free inner stations LinkedList before removing each AP
+  for (int i = 0; i < access_points->size(); i++) {
+    delete access_points->get(i).stations;
+  }
   while (access_points->size() > 0)
     access_points->remove(0);
   return num_cleared;
@@ -2509,7 +2515,11 @@ void WiFiScan::StopScan(uint8_t scan_mode)
     this->writeFooter(currentScanMode == GPS_POI);
   }
 
-  
+  // Clear probe request SSIDs on stop to prevent accumulation across scan cycles
+  if (probe_req_ssids)
+    probe_req_ssids->clear();
+
+
   if ((currentScanMode == BT_SCAN_ALL) ||
   (currentScanMode == BT_SCAN_AIRTAG) ||
   (currentScanMode == BT_SCAN_AIRTAG_MON) ||
@@ -2543,6 +2553,10 @@ void WiFiScan::StopScan(uint8_t scan_mode)
 
       this->shutdownBLE();
       this->ble_scanning = false;
+
+      // Clear BT device lists to prevent accumulation across scan cycles
+      if (airtags) airtags->clear();
+      if (flippers) flippers->clear();
     #endif
   }
 
@@ -3608,6 +3622,10 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color)
     display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
   #endif
 
+  // Free inner stations LinkedList before deleting the AP list
+  for (int i = 0; i < access_points->size(); i++) {
+    delete access_points->get(i).stations;
+  }
   delete access_points;
   access_points = new LinkedList<AccessPoint>();
 
