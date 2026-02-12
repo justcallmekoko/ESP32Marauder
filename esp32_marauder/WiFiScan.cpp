@@ -2359,10 +2359,10 @@ bool WiFiScan::shutdownBLE() {
     this->bt_pending_clear = false;
     if (this->ble_initialized) {
       Serial.println(F("Shutting down BLE"));
-      pAdvertising->stop();
-      pBLEScan->stop();
-      
-      pBLEScan->clearResults();
+      if (pAdvertising) pAdvertising->stop();
+      if (pBLEScan) pBLEScan->stop();
+
+      if (pBLEScan) pBLEScan->clearResults();
 
       delay(100);
 
