@@ -1886,8 +1886,11 @@ void CommandLine::runCommand(String input) {
 
       String mac_str = cmd_args.get(bssid_sw + 1);
       uint8_t mac[6];
-      sscanf(mac_str.c_str(), "%2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx",
-             &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
+      if (sscanf(mac_str.c_str(), "%2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx",
+             &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]) != 6) {
+        Serial.println(F("Invalid MAC address format: use XX:XX:XX:XX:XX:XX"));
+        return;
+      }
 
       // Duplicate check
       for (int i = 0; i < access_points->size(); i++) {
@@ -1967,8 +1970,11 @@ void CommandLine::runCommand(String input) {
 
       String mac_str = cmd_args.get(bssid_sw + 1);
       uint8_t mac[6];
-      sscanf(mac_str.c_str(), "%2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx",
-             &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
+      if (sscanf(mac_str.c_str(), "%2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx",
+             &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]) != 6) {
+        Serial.println(F("Invalid MAC address format: use XX:XX:XX:XX:XX:XX"));
+        return;
+      }
 
       // Duplicate check
       for (int i = 0; i < stations->size(); i++) {
