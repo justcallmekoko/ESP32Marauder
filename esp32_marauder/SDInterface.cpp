@@ -12,7 +12,7 @@ bool SDInterface::initSD() {
 
     #ifdef KIT
       pinMode(SD_DET, INPUT);
-      if {
+      if (digitalRead(SD_DET) != LOW) {
         this->supported = false;
         return false;
       }
