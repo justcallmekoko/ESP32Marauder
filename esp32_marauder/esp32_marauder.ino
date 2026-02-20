@@ -12,16 +12,16 @@ https://www.online-utility.org/image/convert/to/XBM
   #define Display_h
 #endif
 
-#include <WiFi.h>
-#include "EvilPortal.h"
-#include <Wire.h>
-#include "esp_wifi.h"
-#include "esp_wifi_types.h"
+//#include <WiFi.h>
+//#include "EvilPortal.h"
+//#include <Wire.h>
+//#include "esp_wifi.h"
+//#include "esp_wifi_types.h"
 #include <stdio.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_system.h"
-#include <Arduino.h>
+//#include "freertos/FreeRTOS.h"
+//#include "freertos/task.h"
+//#include "esp_system.h"
+//#include <Arduino.h>
 
 #ifdef HAS_GPS
   #include "GpsInterface.h"
@@ -216,9 +216,7 @@ void setup()
   Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
 
   #ifdef HAS_PSRAM
-    if (psramInit()) {
-      Serial.println(F("PSRAM is correctly initialized"));
-    } else {
+    if (!psramInit()) {
       Serial.println(F("PSRAM not available"));
     }
   #endif

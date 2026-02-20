@@ -196,64 +196,6 @@ inline void convertMacStringToUint8(const String& macStr, uint8_t macAddr[6]) {
     }
 }
 
-// Function to check if the given MAC address matches any known OUI
-/*const char* getManufacturer(const char *addr) {
-  static char oui[9]; // Temporary buffer for extracted OUI
-
-  // Extract the first three bytes (OUI) from addr
-  strncpy(oui, addr, 8);
-  oui[8] = '\0'; // Ensure null termination
-
-  // Convert the addr (OUI) to lowercase
-  for (int i = 0; i < 8; i++) {
-    oui[i] = tolower(oui[i]);
-  }
-
-  // Helper macro to check against an array stored in PROGMEM
-  #define CHECK_OUI(manufacturer, list) \
-    for (uint8_t i = 0; i < sizeof(list) / sizeof(list[0]); i++) { \
-      char storedOUI[9]; \
-      strcpy_P(storedOUI, list[i]); \
-       \
-      for (int j = 0; j < 8; j++) { \
-        storedOUI[j] = tolower(storedOUI[j]); \
-      } \
-      if (strcmp(oui, storedOUI) == 0) return manufacturer; \
-    }
-
-  // Check against known manufacturers
-  CHECK_OUI("Apple", apple_ouis);
-  CHECK_OUI("Asus", asus_ouis);
-  CHECK_OUI("Belkin", belkin_ouis);
-  CHECK_OUI("Cisco", cisco_ouis);
-  CHECK_OUI("DLink", dlink_ouis);
-  CHECK_OUI("Google", google_ouis);
-  CHECK_OUI("Huawei", huawei_ouis);
-  CHECK_OUI("LG", lg_ouis);
-  CHECK_OUI("Linksys", linksys_ouis);
-  CHECK_OUI("Netgear", netgear_ouis);
-  CHECK_OUI("OnePlus", oneplus_ouis);
-  CHECK_OUI("Samsung", samsung_ouis);
-  CHECK_OUI("Sony", sony_ouis);
-  CHECK_OUI("TP-Link", tplink_ouis);
-  CHECK_OUI("Xiaomi", xiaomi_ouis);
-
-  return ""; // Return "Unknown" if no match is found
-}
-
-String replaceOUIWithManufacturer(const char *sta_addr) {
-  const char *manufacturer = getManufacturer(sta_addr);
-
-  if (manufacturer == nullptr || strlen(manufacturer) == 0) {
-    return String(sta_addr); // Return original if no manufacturer found
-  }
-
-  // Skip the first 8 characters (3 bytes and 2 colons)
-  const char *mac_suffix = sta_addr + 8;
-
-  // Construct the new address: manufacturer + the remaining MAC address (after the first 3 bytes)
-  return String(manufacturer) + mac_suffix;
-}*/
 
 inline IPAddress getNextIP(IPAddress currentIP, IPAddress subnetMask) {
   // Convert IPAddress to uint32_t

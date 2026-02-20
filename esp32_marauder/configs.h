@@ -35,7 +35,7 @@
   //#define MARAUDER_MINI_V3
   //// END BOARD TARGETS
 
-  #define MARAUDER_VERSION "v1.10.2"
+  #define MARAUDER_VERSION "v1.10.3"
 
   #define GRAPH_REFRESH   100
 
