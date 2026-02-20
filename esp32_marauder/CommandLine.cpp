@@ -447,8 +447,8 @@ void CommandLine::runCommand(String input) {
           led_obj.setMode(MODE_RAINBOW);
         }
       }
-    #else
-      Serial.println(F("This hardware does not support neopixel"));
+    //#else
+    //  Serial.println(F("This hardware does not support neopixel"));
     #endif
   }
   // ls command

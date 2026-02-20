@@ -3,6 +3,8 @@
 #ifndef stickcLED_H
 #define stickcLED_H
 
+#if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
+
 #include "configs.h"
 #include "settings.h"
 
@@ -21,4 +23,5 @@ class stickcLED {
         void offLED();
 };
 
+#endif
 #endif  /* stickcLED_H */

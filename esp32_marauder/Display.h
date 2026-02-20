@@ -9,11 +9,8 @@
 
 #include <FS.h>
 #include <functional>
-//#include <JPEGDecoder.h>
 #include <LinkedList.h>
 #include <SPI.h>
-//#include <lvgl.h>
-//#include <Ticker.h>
 #include "SPIFFS.h"
 #include "Assets.h"
 
@@ -138,8 +135,6 @@ class Display
     void initScrollValues(bool tte = false);
     //void jpegInfo();
     //void jpegRender(int xpos, int ypos);
-    void listDir(fs::FS &fs, const char * dirname, uint8_t levels);
-    void listFiles();
     void init();
     void main(uint8_t scan_mode);
     void RunSetup();

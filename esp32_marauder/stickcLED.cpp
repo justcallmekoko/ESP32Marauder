@@ -11,6 +11,8 @@
     #define STICKC_LED_PIN 10
 #endif
 
+#if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
+
 void stickcLED::RunSetup() {
     pinMode(STICKC_LED_PIN, OUTPUT);
 
@@ -62,3 +64,5 @@ void stickcLED::offLED() {
 void stickcLED::main() {
   // do nothing
 }
+
+#endif
