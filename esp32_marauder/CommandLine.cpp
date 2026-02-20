@@ -268,7 +268,9 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_MAC_CMD_B);
     Serial.println(HELP_MAC_CMD_C);
     Serial.println(HELP_MAC_CMD_D);
-    
+    Serial.println(HELP_ADD_CMD_A);
+    Serial.println(HELP_ADD_CMD_B);
+
     // Bluetooth sniff/scan
     #ifdef HAS_BT
       Serial.println(HELP_BT_SNIFF_CMD);
@@ -1866,6 +1868,148 @@ void CommandLine::runCommand(String input) {
         menu_function_obj.changeMenu(&menu_function_obj.loadSSIDsMenu);
       #endif
       wifi_scan_obj.RunLoadSSIDList();
+    }
+  }
+
+  // Add AP or station manually
+  else if (cmd_args.get(0) == ADD_CMD) {
+    int ap_sw = this->argSearch(&cmd_args, "-a");
+    int sta_sw = this->argSearch(&cmd_args, "-c");
+    int bssid_sw = this->argSearch(&cmd_args, "-b");
+
+    if (ap_sw != -1) {
+      // add -a -b <mac> [-ch <channel>] [-e <ssid>]
+      if (bssid_sw == -1 || !this->checkValueExists(&cmd_args, bssid_sw)) {
+        Serial.println(F("BSSID required: add -a -b <mac>"));
+        return;
+      }
+
+      String mac_str = cmd_args.get(bssid_sw + 1);
+      uint8_t mac[6];
+      sscanf(mac_str.c_str(), "%2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx",
+             &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
+
+      // Duplicate check
+      for (int i = 0; i < access_points->size(); i++) {
+        bool match = true;
+        for (int x = 0; x < 6; x++) {
+          if (mac[x] != access_points->get(i).bssid[x]) {
+            match = false;
+            break;
+          }
+        }
+        if (match) {
+          Serial.print(F("AP already exists at ["));
+          Serial.print(i);
+          Serial.print(F("]: "));
+          Serial.println(access_points->get(i).essid);
+          return;
+        }
+      }
+
+      int ch_sw = this->argSearch(&cmd_args, "-ch");
+      uint8_t channel = 1;
+      if (ch_sw != -1 && this->checkValueExists(&cmd_args, ch_sw))
+        channel = cmd_args.get(ch_sw + 1).toInt();
+
+      int essid_sw = this->argSearch(&cmd_args, "-e");
+      String essid = mac_str;
+      if (essid_sw != -1 && this->checkValueExists(&cmd_args, essid_sw))
+        essid = cmd_args.get(essid_sw + 1);
+
+      AccessPoint ap;
+      ap.essid = essid;
+      ap.channel = channel;
+      memcpy(ap.bssid, mac, 6);
+      ap.selected = true;
+      ap.stations = new LinkedList<uint16_t>();
+      ap.beacon[0] = 0;
+      ap.beacon[1] = 0;
+      ap.rssi = -127;
+      ap.packets = 0;
+      ap.sec = 0;
+      ap.wps = false;
+      ap.man = "";
+      ap.has_msg_1 = false;
+      ap.has_msg_2 = false;
+      ap.has_msg_3 = false;
+      ap.has_msg_4 = false;
+
+      access_points->add(ap);
+
+      Serial.print(F("Added AP ["));
+      Serial.print(access_points->size() - 1);
+      Serial.print(F("][CH:"));
+      Serial.print(channel);
+      Serial.print(F("] "));
+      Serial.print(essid);
+      Serial.println(F(" (selected)"));
+    }
+    else if (sta_sw != -1) {
+      // add -c -b <mac> -ap <ap_index>
+      if (bssid_sw == -1 || !this->checkValueExists(&cmd_args, bssid_sw)) {
+        Serial.println(F("MAC required: add -c -b <mac> -ap <index>"));
+        return;
+      }
+
+      int ap_idx_sw = this->argSearch(&cmd_args, "-ap");
+      if (ap_idx_sw == -1 || !this->checkValueExists(&cmd_args, ap_idx_sw)) {
+        Serial.println(F("AP index required: add -c -b <mac> -ap <index>"));
+        return;
+      }
+
+      int ap_index = cmd_args.get(ap_idx_sw + 1).toInt();
+      if (!this->inRange(access_points->size(), ap_index)) {
+        Serial.print(F("AP index not in range: "));
+        Serial.println(ap_index);
+        return;
+      }
+
+      String mac_str = cmd_args.get(bssid_sw + 1);
+      uint8_t mac[6];
+      sscanf(mac_str.c_str(), "%2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx",
+             &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
+
+      // Duplicate check
+      for (int i = 0; i < stations->size(); i++) {
+        bool match = true;
+        for (int x = 0; x < 6; x++) {
+          if (mac[x] != stations->get(i).mac[x]) {
+            match = false;
+            break;
+          }
+        }
+        if (match) {
+          Serial.print(F("Station already exists at ["));
+          Serial.print(i);
+          Serial.println(F("]"));
+          return;
+        }
+      }
+
+      Station sta;
+      memcpy(sta.mac, mac, 6);
+      sta.selected = true;
+      sta.packets = 0;
+      sta.ap = ap_index;
+
+      stations->add(sta);
+
+      // Link station to AP
+      AccessPoint ap = access_points->get(ap_index);
+      ap.stations->add(stations->size() - 1);
+      access_points->set(ap_index, ap);
+
+      Serial.print(F("Added station ["));
+      Serial.print(stations->size() - 1);
+      Serial.print(F("] -> AP ["));
+      Serial.print(ap_index);
+      Serial.print(F("] "));
+      Serial.print(ap.essid);
+      Serial.println(F(" (selected)"));
+    }
+    else {
+      Serial.println(F("Usage: add -a -b <mac> or add -c -b <mac> -ap <index>"));
     }
   }
 
