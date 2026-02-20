@@ -12,11 +12,7 @@ bool SDInterface::initSD() {
 
     #ifdef KIT
       pinMode(SD_DET, INPUT);
-      if (digitalRead(SD_DET) == LOW) {
-        Serial.println(F("SD Card Detect Pin Detected"));
-      }
-      else {
-        Serial.println(F("SD Card Detect Pin Not Detected"));
+      if (digitalRead(SD_DET) != LOW) {
         this->supported = false;
         return false;
       }
@@ -184,7 +180,9 @@ void SDInterface::runUpdate(String file_name) {
         display_obj.tft.setTextColor(TFT_RED);
         display_obj.tft.println(F(text_table2[0]));
       #endif
-      Serial.println("Error, could not find \"" + file_name + "\"");
+      Serial.print(F("Error, could not find \""));
+      Serial.print(file_name);
+      Serial.println(F("\""));
       #ifdef HAS_SCREEN
         display_obj.tft.setTextColor(TFT_WHITE);
       #endif
@@ -220,13 +218,10 @@ void SDInterface::runUpdate(String file_name) {
       display_obj.tft.println(F(text_table2[3]));
     #endif
     const esp_partition_t *running = esp_ota_get_running_partition();
-    Serial.printf("Currently running: %s at 0x%X\n", running->label, running->address);
 
     const esp_partition_t *next = esp_ota_get_next_update_partition(NULL);
-    Serial.printf("Next OTA partition: %s at 0x%X\n", next->label, next->address);
 
     esp_err_t result = esp_ota_set_boot_partition(next);
-    Serial.printf("esp_ota_set_boot_partition result: %s\n", esp_err_to_name(result));
 
     Serial.println(F("rebooting..."));
     //SD.remove("/update.bin");      
@@ -256,16 +251,22 @@ void SDInterface::performUpdate(Stream &updateSource, size_t updateSize) {
       #ifdef HAS_SCREEN
         display_obj.tft.println(text_table2[7] + String(written) + text_table2[10]);
       #endif
-      Serial.println("Written : " + String(written) + " successfully");
+      Serial.print(F("Written : "));
+      Serial.print(written);
+      Serial.println(F(" successfully"));
     }
     else {
       #ifdef HAS_SCREEN
         display_obj.tft.println(text_table2[8] + String(written) + "/" + String(updateSize) + text_table2[9]);
       #endif
-      Serial.println("Written only : " + String(written) + "/" + String(updateSize) + ". Retry?");
+      Serial.print(F("Written only : "));
+      Serial.print(written);
+      Serial.print(F("/"));
+      Serial.print(updateSize);
+      Serial.println(F(". Retry?"));
     }
     if (Update.end()) {
-      Serial.println("OTA done!");
+      Serial.println(F("OTA done!"));
       if (Update.isFinished()) {
         #ifdef HAS_SCREEN
           display_obj.tft.println(F(text_table2[11]));
@@ -287,7 +288,8 @@ void SDInterface::performUpdate(Stream &updateSource, size_t updateSize) {
       #ifdef HAS_SCREEN
         display_obj.tft.println(text_table2[13] + String(Update.getError()));
       #endif
-      Serial.println("Error Occurred. Error #: " + String(Update.getError()));
+      Serial.print(F("Error Occurred. Error #: "));
+      Serial.println(Update.getError());
     }
 
   }

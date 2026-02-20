@@ -27,7 +27,7 @@ struct ProbeReqSsid {
     uint8_t requests;
 };
 
-uint8_t getDRAMUsagePercent() {
+inline uint8_t getDRAMUsagePercent() {
   //size_t total = heap_caps_get_total_size(MALLOC_CAP_8BIT);
   //size_t free = heap_caps_get_free_size(MALLOC_CAP_8BIT);
   size_t free = ESP.getFreeHeap();
@@ -41,7 +41,7 @@ uint8_t getDRAMUsagePercent() {
 }
 
 #ifdef HAS_PSRAM
-  uint8_t getPSRAMUsagePercent() {
+  inline uint8_t getPSRAMUsagePercent() {
     //size_t total = heap_caps_get_total_size(MALLOC_CAP_SPIRAM);
     //size_t free  = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
 
@@ -56,7 +56,7 @@ uint8_t getDRAMUsagePercent() {
   }
 #endif
 
-String hexDump(const uint8_t *buf, size_t len) {
+inline String hexDump(const uint8_t *buf, size_t len) {
   String out;
   out.reserve(len * 3);  // "FF " per byte (approx)
 
@@ -75,7 +75,7 @@ String hexDump(const uint8_t *buf, size_t len) {
   return out;
 }
 
-String byteArrayToHexString(const std::vector<uint8_t>& byteArray) {
+inline String byteArrayToHexString(const std::vector<uint8_t>& byteArray) {
   String result;
 
   for (size_t i = 0; i < byteArray.size(); i++) {
@@ -95,7 +95,7 @@ String byteArrayToHexString(const std::vector<uint8_t>& byteArray) {
   return result;
 }
 
-std::vector<uint8_t> hexStringToByteArray(const String& hexString) {
+inline std::vector<uint8_t> hexStringToByteArray(const String& hexString) {
   std::vector<uint8_t> byteArray;
 
   // Split the input string by spaces
@@ -125,7 +125,7 @@ std::vector<uint8_t> hexStringToByteArray(const String& hexString) {
   return byteArray;
 }
 
-void generateRandomName(char *name, size_t length) {
+inline void generateRandomName(char *name, size_t length) {
     static const char alphabet[] = "abcdefghijklmnopqrstuvwxyz";
     
     // Generate the first character as uppercase
@@ -138,7 +138,7 @@ void generateRandomName(char *name, size_t length) {
     name[length - 1] = '\0';  // Null-terminate the string
 }
 
-const char* generateRandomName() {
+inline const char* generateRandomName() {
   const char* charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
   int len = rand() % 10 + 1; // Generate a random length between 1 and 10
   char* randomName = (char*)malloc((len + 1) * sizeof(char)); // Allocate memory for the random name
@@ -149,7 +149,7 @@ const char* generateRandomName() {
   return randomName;
 }
 
-void generateRandomMac(uint8_t* mac) {
+inline void generateRandomMac(uint8_t* mac) {
   // Set the locally administered bit and unicast bit for the first byte
   mac[0] = 0x02; // The locally administered bit is the second least significant bit
 
@@ -159,7 +159,7 @@ void generateRandomMac(uint8_t* mac) {
   }
 }
 
-String macToString(const Station& station) {
+inline String macToString(const Station& station) {
   char macStr[18]; // 6 pairs of hex digits + 5 colons + null terminator
   snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
            station.mac[0], station.mac[1], station.mac[2],
@@ -167,7 +167,7 @@ String macToString(const Station& station) {
   return String(macStr);
 }
 
-String macToString(uint8_t macAddr[6]) {
+inline String macToString(uint8_t macAddr[6]) {
   char macStr[18]; // 17 characters for "XX:XX:XX:XX:XX:XX" + 1 null terminator
   snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X", 
     macAddr[0], macAddr[1], macAddr[2], 
@@ -175,7 +175,7 @@ String macToString(uint8_t macAddr[6]) {
   return String(macStr);
 }
 
-String macToString(const uint8_t macAddr[6]) {
+inline String macToString(const uint8_t macAddr[6]) {
   char macStr[18]; // 17 characters for "XX:XX:XX:XX:XX:XX" + 1 null terminator
   snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X", 
     macAddr[0], macAddr[1], macAddr[2], 
@@ -183,7 +183,7 @@ String macToString(const uint8_t macAddr[6]) {
   return String(macStr);
 }
 
-void convertMacStringToUint8(const String& macStr, uint8_t macAddr[6]) {
+inline void convertMacStringToUint8(const String& macStr, uint8_t macAddr[6]) {
     // Ensure the input string is in the format "XX:XX:XX:XX:XX:XX"
     if (macStr.length() != 17) {
         Serial.println("Invalid MAC address format");
@@ -196,66 +196,8 @@ void convertMacStringToUint8(const String& macStr, uint8_t macAddr[6]) {
     }
 }
 
-// Function to check if the given MAC address matches any known OUI
-/*const char* getManufacturer(const char *addr) {
-  static char oui[9]; // Temporary buffer for extracted OUI
 
-  // Extract the first three bytes (OUI) from addr
-  strncpy(oui, addr, 8);
-  oui[8] = '\0'; // Ensure null termination
-
-  // Convert the addr (OUI) to lowercase
-  for (int i = 0; i < 8; i++) {
-    oui[i] = tolower(oui[i]);
-  }
-
-  // Helper macro to check against an array stored in PROGMEM
-  #define CHECK_OUI(manufacturer, list) \
-    for (uint8_t i = 0; i < sizeof(list) / sizeof(list[0]); i++) { \
-      char storedOUI[9]; \
-      strcpy_P(storedOUI, list[i]); \
-       \
-      for (int j = 0; j < 8; j++) { \
-        storedOUI[j] = tolower(storedOUI[j]); \
-      } \
-      if (strcmp(oui, storedOUI) == 0) return manufacturer; \
-    }
-
-  // Check against known manufacturers
-  CHECK_OUI("Apple", apple_ouis);
-  CHECK_OUI("Asus", asus_ouis);
-  CHECK_OUI("Belkin", belkin_ouis);
-  CHECK_OUI("Cisco", cisco_ouis);
-  CHECK_OUI("DLink", dlink_ouis);
-  CHECK_OUI("Google", google_ouis);
-  CHECK_OUI("Huawei", huawei_ouis);
-  CHECK_OUI("LG", lg_ouis);
-  CHECK_OUI("Linksys", linksys_ouis);
-  CHECK_OUI("Netgear", netgear_ouis);
-  CHECK_OUI("OnePlus", oneplus_ouis);
-  CHECK_OUI("Samsung", samsung_ouis);
-  CHECK_OUI("Sony", sony_ouis);
-  CHECK_OUI("TP-Link", tplink_ouis);
-  CHECK_OUI("Xiaomi", xiaomi_ouis);
-
-  return ""; // Return "Unknown" if no match is found
-}
-
-String replaceOUIWithManufacturer(const char *sta_addr) {
-  const char *manufacturer = getManufacturer(sta_addr);
-
-  if (manufacturer == nullptr || strlen(manufacturer) == 0) {
-    return String(sta_addr); // Return original if no manufacturer found
-  }
-
-  // Skip the first 8 characters (3 bytes and 2 colons)
-  const char *mac_suffix = sta_addr + 8;
-
-  // Construct the new address: manufacturer + the remaining MAC address (after the first 3 bytes)
-  return String(manufacturer) + mac_suffix;
-}*/
-
-IPAddress getNextIP(IPAddress currentIP, IPAddress subnetMask) {
+inline IPAddress getNextIP(IPAddress currentIP, IPAddress subnetMask) {
   // Convert IPAddress to uint32_t
   uint32_t ipInt = (currentIP[0] << 24) | (currentIP[1] << 16) | (currentIP[2] << 8) | currentIP[3];
   uint32_t maskInt = (subnetMask[0] << 24) | (subnetMask[1] << 16) | (subnetMask[2] << 8) | subnetMask[3];
@@ -280,7 +222,7 @@ IPAddress getNextIP(IPAddress currentIP, IPAddress subnetMask) {
   );
 }
 
-IPAddress getPrevIP(IPAddress currentIP, IPAddress subnetMask, uint16_t stepsBack) {
+inline IPAddress getPrevIP(IPAddress currentIP, IPAddress subnetMask, uint16_t stepsBack) {
   // Convert IPAddress to uint32_t
   uint32_t ipInt = (currentIP[0] << 24) | (currentIP[1] << 16) | (currentIP[2] << 8) | currentIP[3];
   uint32_t maskInt = (subnetMask[0] << 24) | (subnetMask[1] << 16) | (subnetMask[2] << 8) | subnetMask[3];
@@ -303,7 +245,7 @@ IPAddress getPrevIP(IPAddress currentIP, IPAddress subnetMask, uint16_t stepsBac
   );
 }
 
-uint16_t getNextPort(uint16_t port) {
+inline uint16_t getNextPort(uint16_t port) {
   return port + 1;
 }
 
