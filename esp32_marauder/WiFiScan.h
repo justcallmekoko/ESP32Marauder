@@ -659,6 +659,8 @@ class WiFiScan
 
     bool send_deauth = false;
 
+    bool channel_hop = false;
+
 
     static MacEntry mac_entries[mac_history_len_half];
     static uint8_t mac_entry_state[mac_history_len_half];

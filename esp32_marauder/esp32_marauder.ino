@@ -267,6 +267,11 @@ void setup()
 
   settings_obj.begin();
 
+  if (settings_obj.getSettingType("ChanHop") == "") {
+    Serial.println(F("Current settings format not supported. Installing new default settings..."));
+    settings_obj.createDefaultSettings(SPIFFS);
+  }
+
   buffer_obj = Buffer();
 
   #ifndef HAS_SIMPLEX_DISPLAY

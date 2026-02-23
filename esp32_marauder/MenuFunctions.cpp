@@ -1340,6 +1340,9 @@ String MenuFunctions::callSetting(String key) {
 void MenuFunctions::displaySetting(String key, Menu* menu, int index) {
   specSettingMenu.name = key;
 
+  Serial.print(F("displaySetting: "));
+  Serial.println(key);
+
   bool setting_value = settings_obj.loadSetting<bool>(key);
 
   // Make a local copy of menu node
@@ -2804,13 +2807,15 @@ void MenuFunctions::RunSetup()
   for (int i = 0; i < settings_obj.getNumberSettings(); i++) {
     if (this->callSetting(settings_obj.setting_index_to_name(i)) == "bool")
       this->addNodes(&settingsMenu, settings_obj.setting_index_to_name(i), TFTLIGHTGREY, NULL, 0, [this, i]() {
-      settings_obj.toggleSetting(settings_obj.setting_index_to_name(i));
-      this->changeMenu(&specSettingMenu, true);
-      this->displaySetting(settings_obj.setting_index_to_name(i), &settingsMenu, i + 1);
-      wifi_scan_obj.force_pmkid = settings_obj.loadSetting<bool>(text_table4[5]);
-      wifi_scan_obj.force_probe = settings_obj.loadSetting<bool>(text_table4[6]);
-      wifi_scan_obj.save_pcap = settings_obj.loadSetting<bool>(text_table4[7]);
-      wifi_scan_obj.ep_deauth = settings_obj.loadSetting<bool>("EPDeauth");
+        settings_obj.toggleSetting(settings_obj.setting_index_to_name(i));
+        this->callSetting(settings_obj.setting_index_to_name(i));
+        this->changeMenu(&specSettingMenu, true);
+        this->displaySetting(settings_obj.setting_index_to_name(i), &settingsMenu, i + 1);
+        wifi_scan_obj.force_pmkid = settings_obj.loadSetting<bool>(text_table4[5]);
+        wifi_scan_obj.force_probe = settings_obj.loadSetting<bool>(text_table4[6]);
+        wifi_scan_obj.save_pcap = settings_obj.loadSetting<bool>(text_table4[7]);
+        wifi_scan_obj.ep_deauth = settings_obj.loadSetting<bool>("EPDeauth");
+        wifi_scan_obj.channel_hop = settings_obj.loadSetting<bool>("ChanHop");
     }, settings_obj.loadSetting<bool>(settings_obj.setting_index_to_name(i)));
   }
 
