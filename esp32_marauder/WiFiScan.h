@@ -872,7 +872,7 @@ class WiFiScan
     static void stationSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type);
-    static void deauthSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
+    //static void deauthSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     //static void probeSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void beaconListSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
