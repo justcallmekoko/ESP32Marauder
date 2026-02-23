@@ -5214,7 +5214,7 @@ void WiFiScan::RunDeauthScan(uint8_t scan_mode, uint16_t color)
   this->setMac();
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
-  esp_wifi_set_promiscuous_rx_cb(&deauthSnifferCallback);
+  esp_wifi_set_promiscuous_rx_cb(&beaconSnifferCallback);
   this->changeChannel(this->set_channel);
   //esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   this->wifi_initialized = true;
@@ -8206,6 +8206,42 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
       }
     }
   }
+  else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_DEAUTH) {
+    if (type == WIFI_PKT_MGMT) {
+      if ((snifferPacket->payload[0] == 0xA0 || snifferPacket->payload[0] == 0xC0 )) {
+        Serial.print(snifferPacket->rx_ctrl.rssi);
+        Serial.print(F(" Ch: "));
+        Serial.print((String)snifferPacket->rx_ctrl.channel + " ");
+        Serial.print(macToString(src_addr));
+        Serial.print(F(" -> "));
+        Serial.print(macToString(dst_addr));
+
+        #ifdef HAS_SCREEN
+          display_string.concat(snifferPacket->rx_ctrl.rssi);
+
+          display_string.concat(" ");
+          display_string.concat((String)snifferPacket->rx_ctrl.channel);
+          display_string.concat(" ");
+          display_string.concat(macToString(src_addr));
+          display_string.concat(" > ");
+          display_string.concat(macToString(dst_addr));
+
+          for (int i = 0; i < 19 - snifferPacket->payload[37]; i++)
+          {
+            display_string.concat(" ");
+          }
+    
+          Serial.print(F(" "));
+    
+          display_obj.display_buffer->add(display_string);
+        #endif
+        
+        Serial.println();
+
+        buffer_obj.append(snifferPacket, len);
+      }
+    }
+  }
 }
 
 void WiFiScan::stationSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) {
@@ -8462,7 +8498,7 @@ void WiFiScan::stationSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t typ
   buffer_obj.append(snifferPacket, len);
 }*/
 
-void WiFiScan::deauthSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
+/*void WiFiScan::deauthSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 {
   wifi_promiscuous_pkt_t *snifferPacket = (wifi_promiscuous_pkt_t*)buf;
   WifiMgmtHdr *frameControl = (WifiMgmtHdr*)snifferPacket->payload;
@@ -8520,7 +8556,7 @@ void WiFiScan::deauthSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
       buffer_obj.append(snifferPacket, len);
     }
   }
-}
+}*/
 
 /*void WiFiScan::probeSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) {
 
