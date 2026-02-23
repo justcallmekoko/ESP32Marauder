@@ -1718,6 +1718,8 @@ void WiFiScan::RunSetup() {
   confirmed_multissid = new LinkedList<ConfirmedMultiSSID>();
   multissid_list_full_reported = false;
 
+  settings_obj.loadSetting<bool>("ChanHop");
+
   #ifdef HAS_PSRAM
     mac_history = (struct mac_addr*) ps_malloc(mac_history_len * sizeof(struct mac_addr));
   #endif

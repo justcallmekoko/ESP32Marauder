@@ -35,8 +35,12 @@ bool Settings::begin() {
   }
 
   String json_string;
-  DynamicJsonDocument jsonBuffer(1024);
+  DynamicJsonDocument jsonBuffer(JSON_SETTING_SIZE);
   DeserializationError error = deserializeJson(jsonBuffer, settingsFile);
+  if (error) {
+    Serial.print("Could not parse json during setup: ");
+    Serial.println(error.f_str());
+  }
   serializeJson(jsonBuffer, json_string);
   //Serial.println("Settings: " + (String)json_string + "\n");
   //this->printJsonSettings(json_string);
@@ -52,7 +56,7 @@ T Settings::loadSetting(String key) {}
 // Get type int settings
 template<>
 int Settings::loadSetting<int>(String key) {
-  DynamicJsonDocument json(1024); // ArduinoJson v6
+  DynamicJsonDocument json(JSON_SETTING_SIZE); // ArduinoJson v6
 
   if (deserializeJson(json, this->json_settings_string)) {
     Serial.println("\nCould not parse json");
@@ -71,7 +75,7 @@ template<>
 String Settings::loadSetting<String>(String key) {
   //return this->json_settings_string;
   
-  DynamicJsonDocument json(1024); // ArduinoJson v6
+  DynamicJsonDocument json(JSON_SETTING_SIZE); // ArduinoJson v6
 
   if (deserializeJson(json, this->json_settings_string)) {
     Serial.println("\nCould not parse json");
@@ -92,7 +96,7 @@ String Settings::loadSetting<String>(String key) {
 // Get type bool settings
 template<>
 bool Settings::loadSetting<bool>(String key) {
-  DynamicJsonDocument json(1024); // ArduinoJson v6
+  DynamicJsonDocument json(JSON_SETTING_SIZE); // ArduinoJson v6
 
   if (deserializeJson(json, this->json_settings_string)) {
     Serial.println("Could not parse json to load");
@@ -113,7 +117,7 @@ bool Settings::loadSetting<bool>(String key) {
 //Get type uint8_t settings
 template<>
 uint8_t Settings::loadSetting<uint8_t>(String key) {
-  DynamicJsonDocument json(1024); // ArduinoJson v6
+  DynamicJsonDocument json(JSON_SETTING_SIZE); // ArduinoJson v6
 
   if (deserializeJson(json, this->json_settings_string)) {
     Serial.println("\nCould not parse json");
@@ -132,7 +136,7 @@ T Settings::saveSetting(String key, bool value) {}
 
 template<>
 bool Settings::saveSetting<bool>(String key, bool value) {
-  DynamicJsonDocument json(1024); // ArduinoJson v6
+  DynamicJsonDocument json(JSON_SETTING_SIZE); // ArduinoJson v6
 
   if (deserializeJson(json, this->json_settings_string)) {
     Serial.println("\nCould not parse json");
@@ -178,7 +182,7 @@ T Settings::saveSetting(String key, String value) {}
 
 template<>
 bool Settings::saveSetting<bool>(String key, String value) {
-   DynamicJsonDocument json(1024); // ArduinoJson v6
+   DynamicJsonDocument json(JSON_SETTING_SIZE); // ArduinoJson v6
 
   if (deserializeJson(json, this->json_settings_string)) {
     Serial.println("\nCould not parse json");
@@ -220,7 +224,7 @@ bool Settings::saveSetting<bool>(String key, String value) {
 }
 
 bool Settings::toggleSetting(String key) {
-  DynamicJsonDocument json(1024); // ArduinoJson v6
+  DynamicJsonDocument json(JSON_SETTING_SIZE); // ArduinoJson v6
 
   if (deserializeJson(json, this->json_settings_string)) {
     Serial.println("\nCould not parse json");
@@ -245,7 +249,7 @@ bool Settings::toggleSetting(String key) {
 }
 
 String Settings::setting_index_to_name(int i) {
-  DynamicJsonDocument json(1024); // ArduinoJson v6
+  DynamicJsonDocument json(JSON_SETTING_SIZE); // ArduinoJson v6
 
   if (deserializeJson(json, this->json_settings_string)) {
     Serial.println("\nCould not parse json");
@@ -255,7 +259,7 @@ String Settings::setting_index_to_name(int i) {
 }
 
 int Settings::getNumberSettings() {
-  DynamicJsonDocument json(1024); // ArduinoJson v6
+  DynamicJsonDocument json(JSON_SETTING_SIZE); // ArduinoJson v6
 
   if (deserializeJson(json, this->json_settings_string)) {
     Serial.println("\nCould not parse json");
@@ -265,20 +269,25 @@ int Settings::getNumberSettings() {
 }
 
 String Settings::getSettingType(String key) {
-  DynamicJsonDocument json(1024); // ArduinoJson v6
+  DynamicJsonDocument json(JSON_SETTING_SIZE); // ArduinoJson v6
 
-  if (deserializeJson(json, this->json_settings_string)) {
-    Serial.println("\nCould not parse json");
+  DeserializationError error = deserializeJson(json, this->json_settings_string);
+
+  if (error) {
+    Serial.print("\nCould not parse json: ");
+    Serial.println(error.f_str());
   }
   
   for (int i = 0; i < json["Settings"].size(); i++) {
     if (json["Settings"][i]["name"].as<String>() == key)
       return json["Settings"][i]["type"];
   }
+
+  return "";
 }
 
 void Settings::printJsonSettings(String json_string) {
-  DynamicJsonDocument json(1024); // ArduinoJson v6
+  DynamicJsonDocument json(JSON_SETTING_SIZE); // ArduinoJson v6
 
   if (deserializeJson(json, json_string)) {
     Serial.println("\nCould not parse json");
@@ -306,7 +315,7 @@ bool Settings::createDefaultSettings(fs::FS &fs, bool spec, uint8_t index, Strin
   String settings_string;
 
   if (!spec) {
-    DynamicJsonDocument jsonBuffer(1024);
+    DynamicJsonDocument jsonBuffer(JSON_SETTING_SIZE);
 
     jsonBuffer["Settings"][0]["name"] = "ForcePMKID";
     jsonBuffer["Settings"][0]["type"] = "bool";
@@ -338,17 +347,23 @@ bool Settings::createDefaultSettings(fs::FS &fs, bool spec, uint8_t index, Strin
     jsonBuffer["Settings"][4]["range"]["min"] = false;
     jsonBuffer["Settings"][4]["range"]["max"] = true;
 
-    jsonBuffer["Settings"][5]["name"] = "ClientSSID";
-    jsonBuffer["Settings"][5]["type"] = "String";
-    jsonBuffer["Settings"][5]["value"] = "";
-    jsonBuffer["Settings"][5]["range"]["min"] = "";
-    jsonBuffer["Settings"][5]["range"]["max"] = "";
+    jsonBuffer["Settings"][5]["name"] = "ChanHop";
+    jsonBuffer["Settings"][5]["type"] = "bool";
+    jsonBuffer["Settings"][5]["value"] = false;
+    jsonBuffer["Settings"][5]["range"]["min"] = false;
+    jsonBuffer["Settings"][5]["range"]["max"] = true;
 
-    jsonBuffer["Settings"][6]["name"] = "ClientPW";
+    jsonBuffer["Settings"][6]["name"] = "ClientSSID";
     jsonBuffer["Settings"][6]["type"] = "String";
     jsonBuffer["Settings"][6]["value"] = "";
     jsonBuffer["Settings"][6]["range"]["min"] = "";
     jsonBuffer["Settings"][6]["range"]["max"] = "";
+
+    jsonBuffer["Settings"][7]["name"] = "ClientPW";
+    jsonBuffer["Settings"][7]["type"] = "String";
+    jsonBuffer["Settings"][7]["value"] = "";
+    jsonBuffer["Settings"][7]["range"]["min"] = "";
+    jsonBuffer["Settings"][7]["range"]["max"] = "";
 
     //jsonBuffer.printTo(settingsFile);
     if (serializeJson(jsonBuffer, settingsFile) == 0) {
@@ -360,7 +375,7 @@ bool Settings::createDefaultSettings(fs::FS &fs, bool spec, uint8_t index, Strin
   }
 
   else {
-    DynamicJsonDocument json(1024); // ArduinoJson v6
+    DynamicJsonDocument json(JSON_SETTING_SIZE); // ArduinoJson v6
 
     if (deserializeJson(json, this->json_settings_string)) {
       Serial.println("Could not parse json to create new setting");
@@ -371,7 +386,7 @@ bool Settings::createDefaultSettings(fs::FS &fs, bool spec, uint8_t index, Strin
       Serial.println("Creating bool setting...");
       json["Settings"][index]["name"] = name;
       json["Settings"][index]["type"] = typeStr;
-      json["Settings"][index]["value"] = false;
+      json["Settings"][index]["value"] = true;
       json["Settings"][index]["range"]["min"] = false;
       json["Settings"][index]["range"]["max"] = true;
 
