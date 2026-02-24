@@ -5158,6 +5158,8 @@ void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color)
           display_obj.setupScrollArea((STATUS_BAR_WIDTH * 2) + CHAR_WIDTH - 1, BOT_FIXED_AREA);
         display_obj.tftDrawChannelScaleButtons(set_channel, false);
         display_obj.tftDrawExitScaleButtons(false);
+        if (scan_mode == WIFI_SCAN_RAW_CAPTURE)
+          display_obj.tftDrawChanHopButton(false, settings_obj.loadSetting<bool>("ChanHop"));
       }
     #endif
   #endif
@@ -10502,7 +10504,8 @@ void WiFiScan::channelHop(bool filtered, bool ranged)
       ((this->currentScanMode == WIFI_SCAN_AP) ||
        (this->currentScanMode == WIFI_SCAN_PROBE) ||
        (this->currentScanMode == WIFI_SCAN_DEAUTH) ||
-       (this->currentScanMode == WIFI_SCAN_EAPOL)))
+       (this->currentScanMode == WIFI_SCAN_EAPOL) ||
+       (this->currentScanMode == WIFI_SCAN_RAW_CAPTURE)))
     return;
 
   if (!filtered) {
@@ -11598,6 +11601,10 @@ void WiFiScan::main(uint32_t currentTime)
   }
   else if ((currentScanMode == WIFI_SCAN_PACKET_RATE) ||
             (currentScanMode == WIFI_SCAN_RAW_CAPTURE)) {
+    if (currentTime - chanActTime >= 100) {
+      chanActTime = millis();
+      this->channelHop();
+    }
     this->packetRateLoop(currentTime);
   }
   else if ((currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
