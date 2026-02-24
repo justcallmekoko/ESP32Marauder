@@ -202,8 +202,7 @@ void MenuFunctions::main(uint32_t currentTime)
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_GPS_NMEA))
     {
       // Stop the current scan
-      if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_PROBE) ||
-          (wifi_scan_obj.currentScanMode == WIFI_SCAN_SAE_COMMIT) ||
+      if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_SAE_COMMIT) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_DETECT_FOLLOW) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_STATION_WAR_DRIVE) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_STATION) ||
@@ -227,7 +226,6 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_MULTISSID) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_ESPRESSIF) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_ALL) ||
-          (wifi_scan_obj.currentScanMode == WIFI_SCAN_DEAUTH) ||
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_BEACON_SPAM) ||
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_AP_SPAM) ||
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_AUTH) ||
@@ -414,6 +412,8 @@ void MenuFunctions::main(uint32_t currentTime)
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_CHAN_ACT) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_SIG_STREN) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_AP) &&
+        (wifi_scan_obj.currentScanMode != WIFI_SCAN_PROBE) &&
+        (wifi_scan_obj.currentScanMode != WIFI_SCAN_DEAUTH) &&
 		    (wifi_scan_obj.currentScanMode != WIFI_ATTACK_FUNNY_BEACON) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_EAPOL) &&
         (wifi_scan_obj.currentScanMode != WIFI_ATTACK_RICK_ROLL))

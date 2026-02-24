@@ -4400,9 +4400,10 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color)
       //  display_obj.touchToExit();
       //#endif
       display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
-      display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
+      //display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
       display_obj.tftDrawChannelScaleButtons(set_channel, false);
       display_obj.tftDrawExitScaleButtons(false);
+      display_obj.tftDrawChanHopButton(false, settings_obj.loadSetting<bool>("ChanHop"));
     #endif
 //  #endif
 
@@ -5205,11 +5206,11 @@ void WiFiScan::RunDeauthScan(uint8_t scan_mode, uint16_t color)
       display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
       display_obj.tft.drawCentreString(text_table4[39],TFT_WIDTH / 2,16,2);
     #endif
-    #ifdef HAS_ILI9341
-      display_obj.touchToExit();
-    #endif
     display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
-    display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
+
+    display_obj.tftDrawChannelScaleButtons(set_channel, false);
+    display_obj.tftDrawExitScaleButtons(false);
+    display_obj.tftDrawChanHopButton(false, settings_obj.loadSetting<bool>("ChanHop"));
   #endif
   
   esp_wifi_init(&cfg2);
@@ -5351,10 +5352,17 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color)
       }
     #endif
     #ifdef HAS_ILI9341
-      display_obj.touchToExit();
+      if (scan_mode != WIFI_SCAN_PROBE)
+        display_obj.touchToExit();
     #endif
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
-    display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
+    if (scan_mode != WIFI_SCAN_PROBE)
+      display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
+    else {
+      display_obj.tftDrawChannelScaleButtons(set_channel, false);
+      display_obj.tftDrawExitScaleButtons(false);
+      display_obj.tftDrawChanHopButton(false, settings_obj.loadSetting<bool>("ChanHop"));
+    }
   #endif
   
   esp_wifi_init(&cfg2);
@@ -10234,6 +10242,12 @@ bool WiFiScan::filterActive() {
             this->orient_display = true;
             return;
           }
+          else if (b == CHAN_HOP_INDEX) {
+            settings_obj.toggleSetting("ChanHop");
+            this->channel_hop = settings_obj.loadSetting<bool>("ChanHop");
+            display_obj.tftDrawChanHopButton(false, this->channel_hop);
+            return;
+          }
       //  }
       //}
   
@@ -10485,7 +10499,10 @@ void WiFiScan::channelHop(bool filtered, bool ranged)
   int bot_chan = 0;
 
   if ((!settings_obj.loadSetting<bool>("ChanHop")) &&
-      (this->currentScanMode == WIFI_SCAN_AP))
+      ((this->currentScanMode == WIFI_SCAN_AP) ||
+       (this->currentScanMode == WIFI_SCAN_PROBE) ||
+       (this->currentScanMode == WIFI_SCAN_DEAUTH) ||
+       (this->currentScanMode == WIFI_SCAN_EAPOL)))
     return;
 
   if (!filtered) {
@@ -10968,7 +10985,7 @@ void WiFiScan::packetRateLoop(uint32_t tick) {
           return;
         }
       #else
-        if (this->dual_band_channel_index > 1) {
+        if (this->dual_band_channel_index > 0) {
           this->dual_band_channel_index--;
           this->set_channel = this->dual_band_channels[this->dual_band_channel_index];
           display_obj.tftDrawChannelScaleButtons(this->set_channel, false);
@@ -10999,6 +11016,12 @@ void WiFiScan::packetRateLoop(uint32_t tick) {
           return;
         }
       #endif
+    }
+    else if (b == CHAN_HOP_INDEX) {
+      settings_obj.toggleSetting("ChanHop");
+      this->channel_hop = settings_obj.loadSetting<bool>("ChanHop");
+      display_obj.tftDrawChanHopButton(false, this->channel_hop);
+      return;
     }
   #endif
 }
@@ -11372,7 +11395,9 @@ void WiFiScan::main(uint32_t currentTime)
       initTime = millis();
       channelHop();
     }
-    if (currentScanMode == WIFI_SCAN_AP) {
+    if ((currentScanMode == WIFI_SCAN_AP) || 
+        (currentScanMode == WIFI_SCAN_PROBE) ||
+        (currentScanMode == WIFI_SCAN_DEAUTH)){
       #ifdef HAS_ILI9341
         this->signalAnalyzerLoop(currentTime);
       #endif
@@ -11688,12 +11713,12 @@ void WiFiScan::main(uint32_t currentTime)
         eapolMonitorMain(currentTime);
       #endif
     #endif*/
-    #ifndef HAS_SCREEN
+    //#ifndef HAS_SCREEN
       if (currentTime - initTime >= 2000) {
         initTime = millis();
         this->channelHop();
       }
-    #endif
+    //#endif
 
     this->packetRateLoop(currentTime);
   }
