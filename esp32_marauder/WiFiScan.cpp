@@ -5004,7 +5004,7 @@ void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color)
     if (scan_mode != WIFI_SCAN_AP)
       display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
     else {
-      display_obj.setupScrollArea((STATUS_BAR_WIDTH * 2) + CHAR_WIDTH - 1, BOT_FIXED_AREA);
+      //display_obj.setupScrollArea((STATUS_BAR_WIDTH * 2) + EXT_BUTTON_WIDTH, BOT_FIXED_AREA);
       display_obj.tftDrawChannelScaleButtons(set_channel, false);
       display_obj.tftDrawExitScaleButtons(false);
       display_obj.tftDrawChanHopButton(false, settings_obj.loadSetting<bool>("ChanHop"));
@@ -10168,8 +10168,11 @@ bool WiFiScan::filterActive() {
         // Check buttons for presses
         for (int8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
         {
-          if (pressed && display_obj.key[b].contains(t_x, t_y))
+          if (pressed && display_obj.key[b].contains(t_x, t_y)) {
+            //display_obj.tft.fillCircle(t_x, t_y, 2, TFT_WHITE);
             display_obj.key[b].press(true);
+            //Serial.println(b);
+          }
           else
             display_obj.key[b].press(false);
         }
@@ -10201,7 +10204,7 @@ bool WiFiScan::filterActive() {
           int8_t b = this->checkAnalyzerButtons(currentTime);
   
           // Channel - button pressed
-          if (b == 4) {
+          if (b == CHAN_MINUS_INDEX) {
             if (set_channel > 1) {
               set_channel--;
               delay(70);
@@ -10214,7 +10217,7 @@ bool WiFiScan::filterActive() {
           }
   
           // Channel + button pressed
-          else if (b == 5) {
+          else if (b == CHAN_PLUS_INDEX) {
             if (set_channel < MAX_CHANNEL) {
               set_channel++;
               delay(70);
@@ -10225,7 +10228,7 @@ bool WiFiScan::filterActive() {
               //break;
             }
           }
-          else if (b == 6) {
+          else if (b == EXIT_BUTTON_INDEX) {
             this->StartScan(WIFI_SCAN_OFF);
             //display_obj.init();
             this->orient_display = true;
@@ -10304,7 +10307,7 @@ bool WiFiScan::filterActive() {
       int8_t b = this->checkAnalyzerButtons(currentTime);
           
           // X - button pressed
-          if (b == 0) {
+          if (b == X_MINUS_INDEX) {
             if (x_scale > 1) {
               x_scale--;
               delay(70);
@@ -10317,7 +10320,7 @@ bool WiFiScan::filterActive() {
             }
           }
           // X + button pressed
-          else if (b == 1) {
+          else if (b == X_PLUS_INDEX) {
             if (x_scale < 6) {
               x_scale++;
               delay(70);
@@ -10331,7 +10334,7 @@ bool WiFiScan::filterActive() {
           }
   
           // Y - button pressed
-          else if (b == 2) {
+          else if (b == Y_MINUS_INDEX) {
             if (y_scale > 1) {
               y_scale--;
               delay(70);
@@ -10346,7 +10349,7 @@ bool WiFiScan::filterActive() {
           }
   
           // Y + button pressed
-          else if (b == 3) {
+          else if (b == Y_PLUS_INDEX) {
             if (y_scale < 9) {
               y_scale++;
               delay(70);
@@ -10361,7 +10364,7 @@ bool WiFiScan::filterActive() {
           }
   
           // Channel - button pressed
-          else if (b == 4) {
+          else if (b == CHAN_MINUS_INDEX) {
             if (set_channel > 1) {
               set_channel--;
               delay(70);
@@ -10376,7 +10379,7 @@ bool WiFiScan::filterActive() {
           }
   
           // Channel + button pressed
-          else if (b == 5) {
+          else if (b == CHAN_PLUS_INDEX) {
             if (set_channel < MAX_CHANNEL) {
               set_channel++;
               delay(70);
@@ -10389,7 +10392,7 @@ bool WiFiScan::filterActive() {
               //break;
             }
           }
-          else if (b == 6) {
+          else if (b == EXIT_BUTTON_INDEX) {
             this->StartScan(WIFI_SCAN_OFF);
             this->orient_display = true;
             return;
@@ -10591,12 +10594,12 @@ void WiFiScan::signalAnalyzerLoop(uint32_t tick) {
     #ifdef HAS_ILI9341
       int8_t b = this->checkAnalyzerButtons(millis());
 
-      if (b == 6) {
+      if (b == EXIT_BUTTON_INDEX) {
         this->StartScan(WIFI_SCAN_OFF);
         this->orient_display = true;
         return;
       }
-      else if (b == 4) {
+      else if (b == CHAN_MINUS_INDEX) {
         #ifndef HAS_DUAL_BAND
           if (set_channel > 1) {
             set_channel--;
@@ -10618,7 +10621,7 @@ void WiFiScan::signalAnalyzerLoop(uint32_t tick) {
       }
 
       // Channel + button pressed
-      else if (b == 5) {
+      else if (b == CHAN_PLUS_INDEX) {
         #ifndef HAS_DUAL_BAND
           if (set_channel < MAX_CHANNEL) {
             set_channel++;
@@ -10639,7 +10642,7 @@ void WiFiScan::signalAnalyzerLoop(uint32_t tick) {
         #endif
       }
 
-      else if (b == 7) {
+      else if (b == CHAN_HOP_INDEX) {
         settings_obj.toggleSetting("ChanHop");
         this->channel_hop = settings_obj.loadSetting<bool>("ChanHop");
         display_obj.tftDrawChanHopButton(false, this->channel_hop);
@@ -10714,12 +10717,12 @@ void WiFiScan::channelActivityLoop(uint32_t tick) {
     #ifdef HAS_ILI9341
       int8_t b = this->checkAnalyzerButtons(millis());
 
-      if (b == 6) {
+      if (b == EXIT_BUTTON_INDEX) {
         this->StartScan(WIFI_SCAN_OFF);
         this->orient_display = true;
         return;
       }
-      else if (b == 4) {
+      else if (b == CHAN_MINUS_INDEX) {
         #ifndef HAS_DUAL_BAND
           if (this->activity_page > 1) {
             this->activity_page--;
@@ -10740,7 +10743,7 @@ void WiFiScan::channelActivityLoop(uint32_t tick) {
       }
 
       // Channel + button pressed
-      else if (b == 5) {
+      else if (b == CHAN_PLUS_INDEX) {
         #ifndef HAS_DUAL_BAND
           if (this->activity_page < MAX_CHANNEL / CHAN_PER_PAGE) {
             this->activity_page++;
@@ -10778,12 +10781,12 @@ void WiFiScan::channelAnalyzerLoop(uint32_t tick) {
     #ifdef HAS_ILI9341
       int8_t b = this->checkAnalyzerButtons(millis());
 
-      if (b == 6) {
+      if (b == EXIT_BUTTON_INDEX) {
         this->StartScan(WIFI_SCAN_OFF);
         this->orient_display = true;
         return;
       }
-      else if (b == 4) {
+      else if (b == CHAN_MINUS_INDEX) {
         #ifndef HAS_DUAL_BAND
           if (set_channel > 1) {
             set_channel--;
@@ -10805,7 +10808,7 @@ void WiFiScan::channelAnalyzerLoop(uint32_t tick) {
       }
 
       // Channel + button pressed
-      else if (b == 5) {
+      else if (b == CHAN_PLUS_INDEX) {
         #ifndef HAS_DUAL_BAND
           if (set_channel < MAX_CHANNEL) {
             set_channel++;
@@ -10950,12 +10953,12 @@ void WiFiScan::packetRateLoop(uint32_t tick) {
   #ifdef HAS_ILI9341
     int8_t b = this->checkAnalyzerButtons(millis());
 
-    if (b == 6) {
+    if (b == EXIT_BUTTON_INDEX) {
       this->StartScan(WIFI_SCAN_OFF);
       this->orient_display = true;
       return;
     }
-    else if (b == 4) {
+    else if (b == CHAN_MINUS_INDEX) {
       #ifndef HAS_DUAL_BAND
         if (set_channel > 1) {
           set_channel--;
@@ -10977,7 +10980,7 @@ void WiFiScan::packetRateLoop(uint32_t tick) {
     }
 
     // Channel + button pressed
-    else if (b == 5) {
+    else if (b == CHAN_PLUS_INDEX) {
       #ifndef HAS_DUAL_BAND
         if (set_channel < MAX_CHANNEL) {
           set_channel++;
