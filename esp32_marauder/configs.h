@@ -1115,7 +1115,7 @@
 
       #define SCREEN_BUFFER
 
-      #define MAX_SCREEN_BUFFER 22
+      #define MAX_SCREEN_BUFFER 21
 
       #define SCREEN_ORIENTATION 0
     
@@ -1189,7 +1189,7 @@
 
       #define SCREEN_BUFFER
 
-      #define MAX_SCREEN_BUFFER 22
+      #define MAX_SCREEN_BUFFER 21
 
       #define SCREEN_ORIENTATION 0
     
@@ -1258,7 +1258,7 @@
 
       #define SCREEN_BUFFER
 
-      #define MAX_SCREEN_BUFFER 22
+      #define MAX_SCREEN_BUFFER 21
 
       #define SCREEN_ORIENTATION 0
     
@@ -1328,7 +1328,7 @@
 
       #define SCREEN_BUFFER
 
-      #define MAX_SCREEN_BUFFER 22
+      #define MAX_SCREEN_BUFFER 21
 
       #define SCREEN_ORIENTATION 0
     
@@ -1471,7 +1471,7 @@
 
       #define SCREEN_BUFFER
 
-      #define MAX_SCREEN_BUFFER 22
+      #define MAX_SCREEN_BUFFER 21
 
       #define SCREEN_ORIENTATION 0
     

@@ -74,7 +74,7 @@ class Display
   public:
     Display();
     TFT_eSPI tft = TFT_eSPI();
-    TFT_eSPI_Button key[BUTTON_ARRAY_LEN + 3];
+    TFT_eSPI_Button key[BUTTON_ARRAY_LEN + 4];
     const String PROGMEM version_number = MARAUDER_VERSION;
 
     #ifdef HAS_CYD_TOUCH
@@ -127,6 +127,7 @@ class Display
     void tftDrawYScaleButtons(byte y_scale);
     void tftDrawChannelScaleButtons(int set_channel, bool lnd_an = true);
     void tftDrawExitScaleButtons(bool lnd_an = true);
+    void tftDrawChanHopButton(bool lnd_an = true, bool en = false);
     void buildBanner(String msg, int xpos);
     void clearScreen();
     void displayBuffer(bool do_clear = false);

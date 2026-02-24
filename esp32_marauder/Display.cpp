@@ -382,6 +382,64 @@ void Display::tftDrawChannelScaleButtons(int set_channel, bool lnd_an)
   key[5].drawButton();
 }
 
+void Display::tftDrawChanHopButton(bool lnd_an, bool en) {
+  if (lnd_an) {
+    if (!en) {
+      key[7].initButton(&tft, // Exit box
+                        137,
+                        10, // x, y, w, h, outline, fill, text
+                        EXT_BUTTON_WIDTH,
+                        EXT_BUTTON_WIDTH,
+                        TFT_ORANGE, // Outline
+                        TFT_RED, // Fill
+                        TFT_BLACK, // Text
+                        "X",
+                        2);
+    } else {
+      key[7].initButton(&tft, // Exit box
+                        137,
+                        10, // x, y, w, h, outline, fill, text
+                        EXT_BUTTON_WIDTH,
+                        EXT_BUTTON_WIDTH,
+                        TFT_WHITE, // Outline
+                        TFT_GREEN, // Fill
+                        TFT_BLACK, // Text
+                        "O",
+                        2);
+    }
+  }
+
+  else {
+    if (!en) {
+      key[7].initButton(&tft, // Exit box
+                        (EXT_BUTTON_WIDTH / 2) * 14,
+                        (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH - 1, // x, y, w, h, outline, fill, text
+                        EXT_BUTTON_WIDTH,
+                        EXT_BUTTON_WIDTH,
+                        TFT_ORANGE, // Outline
+                        TFT_RED, // Fill
+                        TFT_BLACK, // Text
+                        "HOP",
+                        1);
+    } else {
+      key[7].initButton(&tft, // Exit box
+                        (EXT_BUTTON_WIDTH / 2) * 14,
+                        (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH - 1, // x, y, w, h, outline, fill, text
+                        EXT_BUTTON_WIDTH,
+                        EXT_BUTTON_WIDTH,
+                        TFT_WHITE, // Outline
+                        TFT_GREEN, // Fill
+                        TFT_BLACK, // Text
+                        "HOP",
+                        1);
+    }
+  }
+
+  key[7].setLabelDatum(1, 5, MC_DATUM);
+
+  key[7].drawButton();
+}
+
 void Display::tftDrawExitScaleButtons(bool lnd_an)
 {
   //tft.drawFastVLine(178, 0, 20, TFT_WHITE);
@@ -403,7 +461,7 @@ void Display::tftDrawExitScaleButtons(bool lnd_an)
 
   else {
     key[6].initButton(&tft, // Exit box
-                      EXT_BUTTON_WIDTH / 2,
+                      EXT_BUTTON_WIDTH,
                       (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH - 1, // x, y, w, h, outline, fill, text
                       EXT_BUTTON_WIDTH,
                       EXT_BUTTON_WIDTH,
@@ -506,7 +564,7 @@ void Display::displayBuffer(bool do_clear)
   if (this->display_buffer->size() > 0)
   {
 
-    int print_count = 10;
+    int print_count = 2;
 
     while ((display_buffer->size() > 0) && (print_count > 0))
     {
@@ -539,10 +597,11 @@ void Display::displayBuffer(bool do_clear)
         screen_buffer->add(display_buffer->shift());
 
         for (int i = 0; i < this->screen_buffer->size(); i++) {
-          //tft.setCursor(xPos, (i * 12) + (SCREEN_HEIGHT / 6));
-          //String spaces = String(' ', TFT_WIDTH / CHAR_WIDTH);
-          //tft.print(spaces);
-          tft.setCursor(xPos, (i * 12) + (SCREEN_HEIGHT / 6));
+          #ifdef HAS_TOUCH
+            tft.setCursor(xPos, (i * 12) + ((TFT_HEIGHT / 6) * 1.1));
+          #else
+            tft.setCursor(xPos, (i * 12) + (TFT_HEIGHT / 6));
+          #endif
 
           this->processAndPrintString(tft, this->screen_buffer->get(i));
         }

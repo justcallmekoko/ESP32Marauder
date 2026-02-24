@@ -4996,11 +4996,19 @@ void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color)
         display_obj.tft.drawCentreString("Wardrive", TFT_WIDTH / 2, 16, 2);
       }
       #ifdef HAS_ILI9341
-        display_obj.touchToExit();
+        if (scan_mode != WIFI_SCAN_AP)
+          display_obj.touchToExit();
       #endif
     #endif
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
-    display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
+    if (scan_mode != WIFI_SCAN_AP)
+      display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
+    else {
+      display_obj.setupScrollArea((STATUS_BAR_WIDTH * 2) + CHAR_WIDTH - 1, BOT_FIXED_AREA);
+      display_obj.tftDrawChannelScaleButtons(set_channel, false);
+      display_obj.tftDrawExitScaleButtons(false);
+      display_obj.tftDrawChanHopButton(false, settings_obj.loadSetting<bool>("ChanHop"));
+    }
   #endif
 
   if (scan_mode != WIFI_SCAN_WAR_DRIVE) {
@@ -10151,32 +10159,36 @@ bool WiFiScan::filterActive() {
     // Do the touch stuff
     #ifdef HAS_ILI9341
       pressed = display_obj.updateTouch(&t_x, &t_y);
-      //pressed = display_obj.tft.getTouch(&t_x, &t_y);
     #endif
 
-    // Check buttons for presses
-    for (int8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
-    {
-      if (pressed && display_obj.key[b].contains(t_x, t_y))
-      {
-        display_obj.key[b].press(true);
-      } else {
-        display_obj.key[b].press(false);
+    if (pressed) {
+      while(display_obj.updateTouch(&t_x, &t_y)) {
+
+
+        // Check buttons for presses
+        for (int8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
+        {
+          if (pressed && display_obj.key[b].contains(t_x, t_y))
+            display_obj.key[b].press(true);
+          else
+            display_obj.key[b].press(false);
+        }
       }
+    } else {
+      for (int8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
+        display_obj.key[b].press(false);
     }
 
     // Which buttons pressed
     for (int8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
-    {  
-      if (display_obj.key[b].justReleased()) return b;
-    }
+      if (display_obj.key[b].justReleased())
+        return b;
     return -1;
   }
 #endif
 
 #ifdef HAS_SCREEN
-  void WiFiScan::eapolMonitorMain(uint32_t currentTime)
-  {  
+  void WiFiScan::eapolMonitorMain(uint32_t currentTime) {  
     for (x_pos = (11 + x_scale); x_pos <= 320; x_pos = x_pos)
     {
       currentTime = millis();
@@ -10288,41 +10300,6 @@ bool WiFiScan::filterActive() {
       y_pos_x = 0;
       y_pos_y = 0;
       y_pos_z = 0;
-      /*boolean pressed = false;
-      
-      uint16_t t_x = 0, t_y = 0; // To store the touch coordinates
-  
-      // Do the touch stuff
-      #ifdef HAS_ILI9341
-        pressed = display_obj.tft.getTouch(&t_x, &t_y);
-      #endif
-  
-      if (pressed) {
-        Serial.print("Got touch | X: ");
-        Serial.print(t_x);
-        Serial.print(" Y: ");
-        Serial.println(t_y);
-      }
-  
-  
-      // Check buttons for presses
-      for (uint8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
-      {
-        if (pressed && display_obj.key[b].contains(t_x, t_y))
-        {
-          display_obj.key[b].press(true);
-        } else {
-          display_obj.key[b].press(false);
-        }
-      }*/
-      
-      // Which buttons pressed
-      //for (uint8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
-      //{
-  
-      //  if (display_obj.key[b].justReleased())
-      //  {
-      //    do_break = true;
 
       int8_t b = this->checkAnalyzerButtons(currentTime);
           
@@ -10504,6 +10481,10 @@ void WiFiScan::channelHop(bool filtered, bool ranged)
   int top_chan = 0;
   int bot_chan = 0;
 
+  if ((!settings_obj.loadSetting<bool>("ChanHop")) &&
+      (this->currentScanMode == WIFI_SCAN_AP))
+    return;
+
   if (!filtered) {
     #ifndef HAS_DUAL_BAND
       if (ranged) {
@@ -10625,7 +10606,7 @@ void WiFiScan::signalAnalyzerLoop(uint32_t tick) {
             return;
           }
         #else
-          if (this->dual_band_channel_index > 1) {
+          if (this->dual_band_channel_index > 0) {
             this->dual_band_channel_index--;
             this->set_channel = this->dual_band_channels[this->dual_band_channel_index];
             display_obj.tftDrawChannelScaleButtons(this->set_channel, false);
@@ -10656,6 +10637,13 @@ void WiFiScan::signalAnalyzerLoop(uint32_t tick) {
             return;
           }
         #endif
+      }
+
+      else if (b == 7) {
+        settings_obj.toggleSetting("ChanHop");
+        this->channel_hop = settings_obj.loadSetting<bool>("ChanHop");
+        display_obj.tftDrawChanHopButton(false, this->channel_hop);
+        return;
       }
     #endif
   #endif
@@ -11377,10 +11365,14 @@ void WiFiScan::main(uint32_t currentTime)
   (currentScanMode == WIFI_SCAN_STATION_WAR_DRIVE) ||
   (currentScanMode == WIFI_SCAN_ALL))
   {
-    if (currentTime - initTime >= this->channel_hop_delay * HOP_DELAY)
-    {
+    if (currentTime - initTime >= this->channel_hop_delay * HOP_DELAY) {
       initTime = millis();
       channelHop();
+    }
+    if (currentScanMode == WIFI_SCAN_AP) {
+      #ifdef HAS_ILI9341
+        this->signalAnalyzerLoop(currentTime);
+      #endif
     }
   }
   else if (currentScanMode == WIFI_SCAN_SAE_COMMIT) {
