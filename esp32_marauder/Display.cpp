@@ -564,7 +564,7 @@ void Display::displayBuffer(bool do_clear)
   if (this->display_buffer->size() > 0)
   {
 
-    int print_count = 10;
+    int print_count = 2;
 
     while ((display_buffer->size() > 0) && (print_count > 0))
     {

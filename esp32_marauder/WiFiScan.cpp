@@ -10159,32 +10159,36 @@ bool WiFiScan::filterActive() {
     // Do the touch stuff
     #ifdef HAS_ILI9341
       pressed = display_obj.updateTouch(&t_x, &t_y);
-      //pressed = display_obj.tft.getTouch(&t_x, &t_y);
     #endif
 
-    // Check buttons for presses
-    for (int8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
-    {
-      if (pressed && display_obj.key[b].contains(t_x, t_y))
-      {
-        display_obj.key[b].press(true);
-      } else {
-        display_obj.key[b].press(false);
+    if (pressed) {
+      while(display_obj.updateTouch(&t_x, &t_y)) {
+
+
+        // Check buttons for presses
+        for (int8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
+        {
+          if (pressed && display_obj.key[b].contains(t_x, t_y))
+            display_obj.key[b].press(true);
+          else
+            display_obj.key[b].press(false);
+        }
       }
+    } else {
+      for (int8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
+        display_obj.key[b].press(false);
     }
 
     // Which buttons pressed
     for (int8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
-    {  
-      if (display_obj.key[b].justReleased()) return b;
-    }
+      if (display_obj.key[b].justReleased())
+        return b;
     return -1;
   }
 #endif
 
 #ifdef HAS_SCREEN
-  void WiFiScan::eapolMonitorMain(uint32_t currentTime)
-  {  
+  void WiFiScan::eapolMonitorMain(uint32_t currentTime) {  
     for (x_pos = (11 + x_scale); x_pos <= 320; x_pos = x_pos)
     {
       currentTime = millis();
@@ -10602,7 +10606,7 @@ void WiFiScan::signalAnalyzerLoop(uint32_t tick) {
             return;
           }
         #else
-          if (this->dual_band_channel_index > 1) {
+          if (this->dual_band_channel_index > 0) {
             this->dual_band_channel_index--;
             this->set_channel = this->dual_band_channels[this->dual_band_channel_index];
             display_obj.tftDrawChannelScaleButtons(this->set_channel, false);
