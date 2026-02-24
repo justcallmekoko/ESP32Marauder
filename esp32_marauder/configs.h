@@ -1042,7 +1042,7 @@
 
       #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
 
-      #define EXT_BUTTON_WIDTH 20
+      #define EXT_BUTTON_WIDTH 30
 
       #define SCREEN_ORIENTATION 0
 
@@ -1111,7 +1111,7 @@
 
       #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
 
-      #define EXT_BUTTON_WIDTH 20
+      #define EXT_BUTTON_WIDTH 30
 
       #define SCREEN_BUFFER
 
@@ -1185,7 +1185,7 @@
 
       #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
 
-      #define EXT_BUTTON_WIDTH 20
+      #define EXT_BUTTON_WIDTH 30
 
       #define SCREEN_BUFFER
 
@@ -1254,7 +1254,7 @@
 
       #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
 
-      #define EXT_BUTTON_WIDTH 20
+      #define EXT_BUTTON_WIDTH 30
 
       #define SCREEN_BUFFER
 
@@ -1324,7 +1324,7 @@
 
       #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
 
-      #define EXT_BUTTON_WIDTH 20
+      #define EXT_BUTTON_WIDTH 30
 
       #define SCREEN_BUFFER
 
@@ -1396,7 +1396,7 @@
 
       #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
 
-      #define EXT_BUTTON_WIDTH 20
+      #define EXT_BUTTON_WIDTH 30
 
       #define SCREEN_BUFFER
 
@@ -1467,7 +1467,7 @@
 
       #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
 
-      #define EXT_BUTTON_WIDTH 20
+      #define EXT_BUTTON_WIDTH 30
 
       #define SCREEN_BUFFER
 
@@ -1681,7 +1681,7 @@
       #define TFT_DIY
       #define KIT
 
-      #define EXT_BUTTON_WIDTH 20
+      #define EXT_BUTTON_WIDTH 30
 
       #define SCREEN_ORIENTATION 0
     

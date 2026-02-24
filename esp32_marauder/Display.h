@@ -50,6 +50,15 @@
 #define SELECT_BUTTON 1
 #define DOWN_BUTTON   2
 
+#define EXIT_BUTTON_INDEX 0 // 6
+#define CHAN_MINUS_INDEX  1 // 4
+#define CHAN_PLUS_INDEX   2 // 5
+#define CHAN_HOP_INDEX    5 // 7
+#define X_MINUS_INDEX     6
+#define X_PLUS_INDEX      7
+#define Y_MINUS_INDEX     8
+#define Y_PLUS_INDEX      9
+
 class Display
 {
   private:

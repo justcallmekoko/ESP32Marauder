@@ -125,7 +125,8 @@ void Display::setCalData(bool landscape) {
       #elif defined(MARAUDER_CYD_3_5_INCH)
         uint16_t calData[5] = { 239, 3560, 262, 3643, 4 };
       #elif defined(MARAUDER_V8)
-        uint16_t calData[5] = { 351, 3279, 214, 3394, 2 };
+        //uint16_t calData[5] = { 351, 3279, 214, 3394, 2 };
+        uint16_t calData[5] = { 312, 3431, 191, 3456, 2 };
       #elif defined(TFT_DIY)
         uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // tft.setRotation(0); // Portrait with DIY TFT
       #endif
@@ -151,8 +152,7 @@ void Display::setCalData(bool landscape) {
 }
 
 // Function to prepare the display and the menus
-void Display::RunSetup()
-{
+void Display::RunSetup() {
   run_setup = false;
 
   // Need to declare new
@@ -258,12 +258,11 @@ void Display::tftDrawColorKey()
   tft.fillRect(14, 16, 15, 8, TFT_BLUE); tft.setCursor(30, 16); tft.print(" - Probes");
 }
 
-void Display::tftDrawXScaleButtons(byte x_scale)
-{
+void Display::tftDrawXScaleButtons(byte x_scale) {
   tft.drawFastVLine(234, 0, 20, TFT_WHITE);
   tft.setCursor(208, 21); tft.setTextColor(TFT_WHITE); tft.setTextSize(1); tft.print("X Scale:"); tft.print(x_scale);
 
-  key[0].initButton(&tft, // x - box
+  key[X_MINUS_INDEX].initButton(&tft, // x - box
                         220,
                         10, // x, y, w, h, outline, fill, text
                         20,
@@ -273,7 +272,7 @@ void Display::tftDrawXScaleButtons(byte x_scale)
                         TFT_BLACK, // Text
                         "-",
                         2);
-  key[1].initButton(&tft, // x + box
+  key[X_PLUS_INDEX].initButton(&tft, // x + box
                         249,
                         10, // x, y, w, h, outline, fill, text
                         20,
@@ -284,11 +283,11 @@ void Display::tftDrawXScaleButtons(byte x_scale)
                         "+",
                         2);
 
-  key[0].setLabelDatum(1, 5, MC_DATUM);
-  key[1].setLabelDatum(1, 5, MC_DATUM);
+  key[X_PLUS_INDEX].setLabelDatum(1, 5, MC_DATUM);
+  key[X_MINUS_INDEX].setLabelDatum(1, 5, MC_DATUM);
 
-  key[0].drawButton();
-  key[1].drawButton();
+  key[X_PLUS_INDEX].drawButton();
+  key[X_MINUS_INDEX].drawButton();
 }
 
 void Display::tftDrawYScaleButtons(byte y_scale)
@@ -296,7 +295,7 @@ void Display::tftDrawYScaleButtons(byte y_scale)
   tft.drawFastVLine(290, 0, 20, TFT_WHITE);
   tft.setCursor(265, 21); tft.setTextColor(TFT_WHITE); tft.setTextSize(1); tft.print("Y Scale:"); tft.print(y_scale);
 
-  key[2].initButton(&tft, // y - box
+  key[Y_MINUS_INDEX].initButton(&tft, // y - box
                         276,
                         10, // x, y, w, h, outline, fill, text
                         20,
@@ -306,7 +305,7 @@ void Display::tftDrawYScaleButtons(byte y_scale)
                         TFT_BLACK, // Text
                         "-",
                         2);
-  key[3].initButton(&tft, // y + box
+  key[Y_PLUS_INDEX].initButton(&tft, // y + box
                         305,
                         10, // x, y, w, h, outline, fill, text
                         20,
@@ -317,34 +316,33 @@ void Display::tftDrawYScaleButtons(byte y_scale)
                         "+",
                         2);
 
-  key[2].setLabelDatum(1, 5, MC_DATUM);
-  key[3].setLabelDatum(1, 5, MC_DATUM);
+  key[Y_MINUS_INDEX].setLabelDatum(1, 5, MC_DATUM);
+  key[Y_PLUS_INDEX].setLabelDatum(1, 5, MC_DATUM);
 
-  key[2].drawButton();
-  key[3].drawButton();
+  key[Y_MINUS_INDEX].drawButton();
+  key[Y_PLUS_INDEX].drawButton();
 }
 
-void Display::tftDrawChannelScaleButtons(int set_channel, bool lnd_an)
-{
+void Display::tftDrawChannelScaleButtons(int set_channel, bool lnd_an) {
   if (lnd_an) {
     tft.drawFastVLine(178, 0, 20, TFT_WHITE);
     tft.setCursor(145, 21); tft.setTextColor(TFT_WHITE); tft.setTextSize(1); tft.print(text10); tft.print(set_channel);
 
-    key[4].initButton(&tft, // channel - box
+    key[CHAN_MINUS_INDEX].initButton(&tft, // channel - box
                           164,
                           10, // x, y, w, h, outline, fill, text
-                          EXT_BUTTON_WIDTH,
-                          EXT_BUTTON_WIDTH,
+                          EXT_BUTTON_WIDTH - (EXT_BUTTON_WIDTH * 0.33),
+                          EXT_BUTTON_WIDTH - (EXT_BUTTON_WIDTH * 0.33),
                           TFT_BLACK, // Outline
                           TFT_BLUE, // Fill
                           TFT_BLACK, // Text
                           "-",
                           2);
-    key[5].initButton(&tft, // channel + box
+    key[CHAN_PLUS_INDEX].initButton(&tft, // channel + box
                           193,
                           10, // x, y, w, h, outline, fill, text
-                          EXT_BUTTON_WIDTH,
-                          EXT_BUTTON_WIDTH,
+                          EXT_BUTTON_WIDTH - (EXT_BUTTON_WIDTH * 0.33),
+                          EXT_BUTTON_WIDTH - (EXT_BUTTON_WIDTH * 0.33),
                           TFT_BLACK, // Outline
                           TFT_BLUE, // Fill
                           TFT_BLACK, // Text
@@ -353,39 +351,39 @@ void Display::tftDrawChannelScaleButtons(int set_channel, bool lnd_an)
   }
 
   else {
-    key[4].initButton(&tft, // channel - box
+    key[CHAN_MINUS_INDEX].initButton(&tft, // channel - box
                           (EXT_BUTTON_WIDTH / 2) * 6,
-                          (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH - 1, // x, y, w, h, outline, fill, text
+                          (STATUS_BAR_WIDTH * 2) + (EXT_BUTTON_WIDTH / 2), // x, y, w, h, outline, fill, text
                           EXT_BUTTON_WIDTH,
                           EXT_BUTTON_WIDTH,
                           TFT_BLACK, // Outline
                           TFT_BLUE, // Fill
                           TFT_BLACK, // Text
                           "-",
-                          2);
-    key[5].initButton(&tft, // channel + box
+                          1);
+    key[CHAN_PLUS_INDEX].initButton(&tft, // channel + box
                           (EXT_BUTTON_WIDTH / 2) * 10,
-                          (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH - 1, // x, y, w, h, outline, fill, text
+                          (STATUS_BAR_WIDTH * 2) + (EXT_BUTTON_WIDTH / 2), // x, y, w, h, outline, fill, text
                           EXT_BUTTON_WIDTH,
                           EXT_BUTTON_WIDTH,
                           TFT_BLACK, // Outline
                           TFT_BLUE, // Fill
                           TFT_BLACK, // Text
                           "+",
-                          2);
+                          1);
   }
 
-  key[4].setLabelDatum(1, 5, MC_DATUM);
-  key[5].setLabelDatum(1, 5, MC_DATUM);
+  key[CHAN_MINUS_INDEX].setLabelDatum(1, 5, MC_DATUM);
+  key[CHAN_PLUS_INDEX].setLabelDatum(1, 5, MC_DATUM);
 
-  key[4].drawButton();
-  key[5].drawButton();
+  key[CHAN_MINUS_INDEX].drawButton();
+  key[CHAN_PLUS_INDEX].drawButton();
 }
 
 void Display::tftDrawChanHopButton(bool lnd_an, bool en) {
   if (lnd_an) {
     if (!en) {
-      key[7].initButton(&tft, // Exit box
+      key[CHAN_HOP_INDEX].initButton(&tft, // Exit box
                         137,
                         10, // x, y, w, h, outline, fill, text
                         EXT_BUTTON_WIDTH,
@@ -396,7 +394,7 @@ void Display::tftDrawChanHopButton(bool lnd_an, bool en) {
                         "X",
                         2);
     } else {
-      key[7].initButton(&tft, // Exit box
+      key[CHAN_HOP_INDEX].initButton(&tft, // Exit box
                         137,
                         10, // x, y, w, h, outline, fill, text
                         EXT_BUTTON_WIDTH,
@@ -411,9 +409,9 @@ void Display::tftDrawChanHopButton(bool lnd_an, bool en) {
 
   else {
     if (!en) {
-      key[7].initButton(&tft, // Exit box
+      key[CHAN_HOP_INDEX].initButton(&tft, // Exit box
                         (EXT_BUTTON_WIDTH / 2) * 14,
-                        (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH - 1, // x, y, w, h, outline, fill, text
+                        (STATUS_BAR_WIDTH * 2) + (EXT_BUTTON_WIDTH / 2), // x, y, w, h, outline, fill, text
                         EXT_BUTTON_WIDTH,
                         EXT_BUTTON_WIDTH,
                         TFT_ORANGE, // Outline
@@ -422,9 +420,9 @@ void Display::tftDrawChanHopButton(bool lnd_an, bool en) {
                         "HOP",
                         1);
     } else {
-      key[7].initButton(&tft, // Exit box
+      key[CHAN_HOP_INDEX].initButton(&tft, // Exit box
                         (EXT_BUTTON_WIDTH / 2) * 14,
-                        (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH - 1, // x, y, w, h, outline, fill, text
+                        (STATUS_BAR_WIDTH * 2) + (EXT_BUTTON_WIDTH / 2), // x, y, w, h, outline, fill, text
                         EXT_BUTTON_WIDTH,
                         EXT_BUTTON_WIDTH,
                         TFT_WHITE, // Outline
@@ -435,23 +433,22 @@ void Display::tftDrawChanHopButton(bool lnd_an, bool en) {
     }
   }
 
-  key[7].setLabelDatum(1, 5, MC_DATUM);
+  key[CHAN_HOP_INDEX].setLabelDatum(1, 5, MC_DATUM);
 
-  key[7].drawButton();
+  key[CHAN_HOP_INDEX].drawButton();
 }
 
-void Display::tftDrawExitScaleButtons(bool lnd_an)
-{
+void Display::tftDrawExitScaleButtons(bool lnd_an) {
   //tft.drawFastVLine(178, 0, 20, TFT_WHITE);
   //tft.setCursor(145, 21); tft.setTextColor(TFT_WHITE); tft.setTextSize(1); tft.print("Channel:"); tft.print(set_channel);
 
   if (lnd_an) {
 
-    key[6].initButton(&tft, // Exit box
+    key[EXIT_BUTTON_INDEX].initButton(&tft, // Exit box
                       137,
                       10, // x, y, w, h, outline, fill, text
-                      EXT_BUTTON_WIDTH,
-                      EXT_BUTTON_WIDTH,
+                      EXT_BUTTON_WIDTH - (EXT_BUTTON_WIDTH * 0.33),
+                      EXT_BUTTON_WIDTH - (EXT_BUTTON_WIDTH * 0.33),
                       TFT_ORANGE, // Outline
                       TFT_RED, // Fill
                       TFT_BLACK, // Text
@@ -460,21 +457,21 @@ void Display::tftDrawExitScaleButtons(bool lnd_an)
   }
 
   else {
-    key[6].initButton(&tft, // Exit box
+    key[EXIT_BUTTON_INDEX].initButton(&tft, // Exit box
                       EXT_BUTTON_WIDTH,
-                      (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH - 1, // x, y, w, h, outline, fill, text
+                      (STATUS_BAR_WIDTH * 2) + (EXT_BUTTON_WIDTH / 2), // x, y, w, h, outline, fill, text
                       EXT_BUTTON_WIDTH,
                       EXT_BUTTON_WIDTH,
                       TFT_ORANGE, // Outline
                       TFT_RED, // Fill
                       TFT_BLACK, // Text
                       "X",
-                      2);
+                      1);
   }
 
-  key[6].setLabelDatum(1, 5, MC_DATUM);
+  key[EXIT_BUTTON_INDEX].setLabelDatum(1, 5, MC_DATUM);
 
-  key[6].drawButton();
+  key[EXIT_BUTTON_INDEX].drawButton();
 }
 
 void Display::twoPartDisplay(String center_text)
@@ -598,7 +595,7 @@ void Display::displayBuffer(bool do_clear)
 
         for (int i = 0; i < this->screen_buffer->size(); i++) {
           #ifdef HAS_TOUCH
-            tft.setCursor(xPos, (i * 12) + ((TFT_HEIGHT / 6) * 1.1));
+            tft.setCursor(xPos, (i * 12) + ((TFT_HEIGHT / 6) * 1.3));
           #else
             tft.setCursor(xPos, (i * 12) + (TFT_HEIGHT / 6));
           #endif
