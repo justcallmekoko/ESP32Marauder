@@ -91,6 +91,8 @@ const char PROGMEM ATTACK_TYPE_RR[] = "rickroll";
 const char PROGMEM ATTACK_TYPE_BM[] = "badmsg";
 const char PROGMEM ATTACK_TYPE_S[] = "sleep";
 const char PROGMEM ATTACK_TYPE_SAE[] = "sae";
+const char PROGMEM ATTACK_TYPE_CSA[] = "csa";
+const char PROGMEM ATTACK_TYPE_QUIET[] = "quiet";
 
 // WiFi Aux
 const char PROGMEM LIST_AP_CMD[] = "list";
