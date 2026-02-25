@@ -970,7 +970,6 @@ void CommandLine::runCommand(String input) {
         String attack_type = cmd_args.get(attack_type_switch + 1);
   
         // Branch on attack type
-        // Deauth
         if (attack_type == ATTACK_TYPE_DEAUTH) {
           // Default to broadcast
           if ((dst_addr_sw == -1) && (targ_sw == -1)) {
@@ -1018,7 +1017,6 @@ void CommandLine::runCommand(String input) {
             wifi_scan_obj.StartScan(WIFI_ATTACK_DEAUTH_MANUAL, TFT_RED);            
           }
         }
-        // Bad Msg
         else if (attack_type == ATTACK_TYPE_BM) {
           // Attack all
           if (targ_sw == -1) {
@@ -1059,7 +1057,6 @@ void CommandLine::runCommand(String input) {
             wifi_scan_obj.StartScan(WIFI_ATTACK_SLEEP_TARGETED, TFT_MAGENTA);
           }
         }
-        // Beacon
         else if (attack_type == ATTACK_TYPE_BEACON) {
           // spam by list
           if (list_beacon_sw != -1) {
@@ -1137,6 +1134,24 @@ void CommandLine::runCommand(String input) {
             menu_function_obj.drawStatusBar();
           #endif
           wifi_scan_obj.StartScan(WIFI_ATTACK_SAE_COMMIT, TFT_CYAN);
+        }
+        else if (attack_type == ATTACK_TYPE_CSA) {
+          Serial.print(F("Starting Channel Switch Announcement attack. Stop with "));
+          Serial.println(STOPSCAN_CMD);
+          #ifdef HAS_SCREEN
+            display_obj.clearScreen();
+            menu_function_obj.drawStatusBar();
+          #endif
+          wifi_scan_obj.StartScan(WIFI_ATTACK_CSA, TFT_CYAN);
+        }
+        else if (attack_type == ATTACK_TYPE_QUIET) {
+          Serial.print(F("Starting Quite Time attack. Stop with "));
+          Serial.println(STOPSCAN_CMD);
+          #ifdef HAS_SCREEN
+            display_obj.clearScreen();
+            menu_function_obj.drawStatusBar();
+          #endif
+          wifi_scan_obj.StartScan(WIFI_ATTACK_QUIET, TFT_CYAN);
         }
         else {
           Serial.println(F("Attack type not properly defined"));

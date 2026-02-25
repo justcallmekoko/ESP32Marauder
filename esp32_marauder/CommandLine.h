@@ -91,6 +91,8 @@ const char PROGMEM ATTACK_TYPE_RR[] = "rickroll";
 const char PROGMEM ATTACK_TYPE_BM[] = "badmsg";
 const char PROGMEM ATTACK_TYPE_S[] = "sleep";
 const char PROGMEM ATTACK_TYPE_SAE[] = "sae";
+const char PROGMEM ATTACK_TYPE_CSA[] = "csa";
+const char PROGMEM ATTACK_TYPE_QUIET[] = "quiet";
 
 // WiFi Aux
 const char PROGMEM LIST_AP_CMD[] = "list";
@@ -160,7 +162,7 @@ const char PROGMEM HELP_MAC_TRACK_CMD[] = "mactrack";
 const char PROGMEM HELP_SNIFF_SAE_CMD[] = "sniffsae";
 
 // WiFi attack
-const char PROGMEM HELP_ATTACK_CMD[] = "attack -t <sae/beacon [-l/-r/-a]/deauth [-c]/[-s <src mac>] [-d <dst mac>]/probe/rickroll/badmsg [-c]/sleep [-c]>";
+const char PROGMEM HELP_ATTACK_CMD[] = "attack -t <quiet/csa/sae/beacon [-l/-r/-a]/deauth [-c]/[-s <src mac>] [-d <dst mac>]/probe/rickroll/badmsg [-c]/sleep [-c]>";
 
 // WiFi Aux
 const char PROGMEM HELP_LIST_AP_CMD_A[] = "list -s";
