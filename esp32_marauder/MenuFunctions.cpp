@@ -167,6 +167,7 @@ void MenuFunctions::main(uint32_t currentTime)
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_BEACON_SPAM) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_AP_SPAM) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_CSA) &&
+      (wifi_scan_obj.currentScanMode != WIFI_ATTACK_QUIET) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_AUTH) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_DEAUTH) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_DEAUTH_MANUAL) &&
@@ -230,6 +231,7 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_BEACON_SPAM) ||
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_AP_SPAM) ||
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_CSA) ||
+          (wifi_scan_obj.currentScanMode == WIFI_ATTACK_QUIET) ||
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_AUTH) ||
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_DEAUTH) ||
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_DEAUTH_MANUAL) ||
@@ -333,6 +335,7 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_BEACON_SPAM) ||
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_AP_SPAM) ||
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_CSA) ||
+            (wifi_scan_obj.currentScanMode == WIFI_ATTACK_QUIET) ||
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_AUTH) ||
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_DEAUTH) ||
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_DEAUTH_MANUAL) ||
@@ -400,6 +403,7 @@ void MenuFunctions::main(uint32_t currentTime)
     if ((wifi_scan_obj.currentScanMode != WIFI_ATTACK_BEACON_SPAM) &&
         (wifi_scan_obj.currentScanMode != WIFI_ATTACK_AP_SPAM) &&
         (wifi_scan_obj.currentScanMode != WIFI_ATTACK_CSA) &&
+        (wifi_scan_obj.currentScanMode != WIFI_ATTACK_QUIET) &&
         (wifi_scan_obj.currentScanMode != WIFI_ATTACK_AUTH) &&
         (wifi_scan_obj.currentScanMode != WIFI_ATTACK_DEAUTH) &&
         (wifi_scan_obj.currentScanMode != WIFI_ATTACK_DEAUTH_MANUAL) &&
@@ -1937,6 +1941,11 @@ void MenuFunctions::RunSetup()
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_ATTACK_CSA, TFT_GREEN);
+  });
+  this->addNodes(&wifiAttackMenu, "Quiet Time", TFTRED, NULL, BEACON_LIST, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_ATTACK_QUIET, TFT_GREEN);
   });
 
   evilPortalMenu.parentMenu = &wifiAttackMenu;

