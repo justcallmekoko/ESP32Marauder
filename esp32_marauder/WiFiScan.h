@@ -152,6 +152,7 @@
 #define WIFI_SCAN_DETECT_FOLLOW 76
 #define WIFI_SCAN_SAE_COMMIT 77
 #define WIFI_ATTACK_SAE_COMMIT 78
+#define WIFI_ATTACK_CSA 79
 
 #define WIFI_ATTACK_FUNNY_BEACON 99 
 
@@ -618,7 +619,7 @@ class WiFiScan
     //void sendAssociationSleep(const char* ESSID, uint8_t bssid[6], int channel, String dst_mac_str = "ff:ff:ff:ff:ff:ff");
     void broadcastRandomSSID(uint32_t currentTime);
     void broadcastCustomBeacon(uint32_t current_time, ssid custom_ssid);
-    void broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_ssid);
+    void broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_ssid, bool csa = false);
     void broadcastSetSSID(uint32_t current_time, const char* ESSID);
     void RunAPScan(uint8_t scan_mode, uint16_t color);
     void RunGPSNmea();
