@@ -1848,11 +1848,11 @@ int WiFiScan::clearSSIDs() {
 }
 
 bool WiFiScan::addSSID(String essid) {
-  #ifndef HAS_DUAL_BAND
-    ssid s = {essid, random(1, 12), {random(256), random(256), random(256), random(256), random(256), random(256)}, false};
-  #else
-    ssid s = {essid, dual_band_channels[random(0, DUAL_BAND_CHANNELS)], {random(256), random(256), random(256), random(256), random(256), random(256)}, false};
-  #endif
+  //#ifndef HAS_DUAL_BAND
+    ssid s = {essid, random(1, 15), {random(256), random(256), random(256), random(256), random(256), random(256)}, false};
+  //#else
+  //  ssid s = {essid, dual_band_channels[random(0, DUAL_BAND_CHANNELS)], {random(256), random(256), random(256), random(256), random(256), random(256)}, false};
+  //#endif
   ssids->add(s);
   Serial.println(ssids->get(ssids->size() - 1).essid);
 
@@ -1867,11 +1867,11 @@ int WiFiScan::generateSSIDs(int count) {
     for (uint8_t i = 0; i < 6; i++)
       essid.concat(alfa[random(65)]);
 
-    #ifndef HAS_DUAL_BAND
-      ssid s = {essid, random(1, 12), {random(256), random(256), random(256), random(256), random(256), random(256)}, false};
-    #else
-      ssid s = {essid, dual_band_channels[random(0, DUAL_BAND_CHANNELS)], {random(256), random(256), random(256), random(256), random(256), random(256)}, false};
-    #endif
+    //#ifndef HAS_DUAL_BAND
+      ssid s = {essid, random(1, 15), {random(256), random(256), random(256), random(256), random(256), random(256)}, false};
+    //#else
+    //  ssid s = {essid, dual_band_channels[random(0, DUAL_BAND_CHANNELS)], {random(256), random(256), random(256), random(256), random(256), random(256)}, false};
+    //#endif
     ssids->add(s);
     Serial.println(ssids->get(ssids->size() - 1).essid);
   }
