@@ -9035,32 +9035,6 @@ void WiFiScan::broadcastSetSSID(uint32_t current_time, const char* ESSID) {
 
 // Function for sending crafted beacon frames
 void WiFiScan::broadcastRandomSSID(uint32_t currentTime) {
-  int ssidLen = random(1, 33);
-  int fullLen = ssidLen;
-
-  #ifndef HAS_DUAL_BAND
-    set_channel = random(1,12); 
-  #else
-    set_channel = dual_band_channels[random(0, DUAL_BAND_CHANNELS)];
-  #endif
-  this->changeChannel(this->set_channel);
-  delay(1);  
-
-  // Randomize SRC MAC
-  packet[10] = packet[16] = (random(256) & 0xFE) | 0x02;
-  packet[11] = packet[17] = random(256);
-  packet[12] = packet[18] = random(256);
-  packet[13] = packet[19] = random(256);
-  packet[14] = packet[20] = random(256);
-  packet[15] = packet[21] = random(256);
-
-  packet[37] = ssidLen;
-  
-  for (int i = 0; i < ssidLen; i++)
-    packet[38 + i] = alfa[random(65)];
-  
-  packet[50 + fullLen] = set_channel;
-
   static const uint8_t post_base[] = {
     0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x24, 0x30, 0x48, 0x6c,
     0x03, 0x01, 0x04, 0x30, 0x18, 0x01, 0x00, 0x00, 0x0f, 0xac, 
@@ -9068,14 +9042,47 @@ void WiFiScan::broadcastRandomSSID(uint32_t currentTime) {
     0x04, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x02, 0x00, 0x00
   };
 
+  int ssidLen = random(1, 33);
+  int fullLen = ssidLen;
+
+  /*#ifndef HAS_DUAL_BAND
+    set_channel = random(1,12); 
+  #else
+    set_channel = dual_band_channels[random(0, DUAL_BAND_CHANNELS)];
+  #endif
+  this->changeChannel(this->set_channel);
+  delay(1);*/
+
+  // Randomize SRC MAC
+
+  int frame_len = 37 + sizeof(post_base) + fullLen + 1;
+
+
+  uint8_t temp_frame[frame_len];
+  memcpy(temp_frame, packet, frame_len);
+
+  temp_frame[10] = temp_frame[16] = (random(256) & 0xFE) | 0x02;
+  temp_frame[11] = temp_frame[17] = random(256);
+  temp_frame[12] = temp_frame[18] = random(256);
+  temp_frame[13] = temp_frame[19] = random(256);
+  temp_frame[14] = temp_frame[20] = random(256);
+  temp_frame[15] = temp_frame[21] = random(256);
+
+  temp_frame[37] = ssidLen;
+  
+  for (int i = 0; i < ssidLen; i++)
+    temp_frame[38 + i] = alfa[random(65)];
+  
+  temp_frame[50 + fullLen] = set_channel;
+
   int post_len = sizeof(post_base);
 
-  memcpy(packet + (38 + fullLen), post_base, post_len);
+  memcpy(temp_frame + (38 + fullLen), post_base, post_len);
 
-  for (int i = 0; i < 3; i++)
-    esp_wifi_80211_tx(WIFI_IF_AP, packet, sizeof(packet), false);
+  for (int i = 0; i < 2; i++)
+    esp_wifi_80211_tx(WIFI_IF_AP, temp_frame, sizeof(temp_frame), false);
 
-  packets_sent = packets_sent + 3;
+  packets_sent = packets_sent + 2;
 }
 
 // Function to send probe flood to all "active" access points
@@ -12006,11 +12013,19 @@ void WiFiScan::main(uint32_t currentTime)
   {
     // Need this for loop because getTouch causes ~10ms delay
     // which makes beacon spam less effective
-    for (int i = 0; i < 55; i++)
-      broadcastRandomSSID(currentTime);
+    //for (int i = 0; i < 55; i++)
+    broadcastRandomSSID(currentTime);
 
     if (currentTime - initTime >= 1000)
     {
+      #ifndef HAS_DUAL_BAND
+        set_channel = random(1,12); 
+      #else
+        set_channel = dual_band_channels[random(0, DUAL_BAND_CHANNELS)];
+      #endif
+      //set_channel = 6; // REMOVE THIS
+      this->changeChannel(this->set_channel);
+      delay(1);
       initTime = millis();
       //Serial.print("packets/sec: ");
       //Serial.println(packets_sent);

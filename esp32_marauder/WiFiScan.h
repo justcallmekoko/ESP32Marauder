@@ -197,6 +197,8 @@
 #define WPS_CONFIG_VIRT_DISPLAY      0x4000
 #define WPS_CONFIG_PHY_DISPLAY       0x8000
 
+#define BEACON_FRAME_LEN 109
+
 extern EvilPortal evil_portal_obj;
 
 #ifdef HAS_SCREEN
@@ -453,8 +455,8 @@ class WiFiScan
                     /*16*/  0x01, 0x02, 0x03, 0x04, 0x05, 0x06, //BSSID - overwritten to the same as the source address
                     /*22*/  0xc0, 0x6c, //Seq-ctl
                     /*24*/  0x83, 0x51, 0xf7, 0x8f, 0x0f, 0x00, 0x00, 0x00, //timestamp - the number of microseconds the AP has been active
-                    /*32*/  0x64, 0x00, //Beacon interval
-                    /*34*/  0x01, 0x04, //Capability info
+                    /*32*/  0xe8, 0x03, //Beacon interval
+                    /*34*/  0x31, 0x00, //Capability info
                     /* SSID */
                     /*36*/  0x00
                     };
