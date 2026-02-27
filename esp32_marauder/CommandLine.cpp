@@ -1200,6 +1200,15 @@ void CommandLine::runCommand(String input) {
             #endif
             wifi_scan_obj.StartScan(BT_SCAN_FLOCK, TFT_ORANGE);
           }
+          else if (bt_type == "meta") {
+            Serial.print(F("Starting Meta sniff. Stop with "));
+            Serial.println(STOPSCAN_CMD);
+            #ifdef HAS_SCREEN
+              display_obj.clearScreen();
+              menu_function_obj.drawStatusBar();
+            #endif
+            wifi_scan_obj.StartScan(BT_SCAN_RAYBAN, TFT_ORANGE);
+          }
         }
         // General bluetooth sniff
         else {
