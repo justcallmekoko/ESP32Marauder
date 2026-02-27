@@ -1082,7 +1082,8 @@ extern "C" {
                   display_obj.display_buffer->add(display_string);
                 #endif
               }
-
+            }
+          }
           wifi_scan_obj.bt_cb_busy = false;
           return;
         }
