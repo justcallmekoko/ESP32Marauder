@@ -626,7 +626,7 @@ class WiFiScan
     void broadcastSetSSID(uint32_t current_time, const char* ESSID);
     void RunAPScan(uint8_t scan_mode, uint16_t color);
     void RunGPSNmea();
-    void RunMimicFlood(uint8_t scan_mode, uint16_t color);
+    //void RunMimicFlood(uint8_t scan_mode, uint16_t color);
     void RunPwnScan(uint8_t scan_mode, uint16_t color);
     void RunPineScan(uint8_t scan_mode, uint16_t color);
     void RunMultiSSIDScan(uint8_t scan_mode, uint16_t color);
