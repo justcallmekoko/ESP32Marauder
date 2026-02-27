@@ -620,7 +620,6 @@ void Display::showCenterText(String text, int y)
 
 void Display::initScrollValues(bool tte)
 {
-  //Serial.println(F("initScrollValues()"));
   yDraw = YMAX - BOT_FIXED_AREA - TEXT_HEIGHT;
 
   xPos = 0;

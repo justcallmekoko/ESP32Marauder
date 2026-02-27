@@ -56,6 +56,15 @@ inline uint8_t getDRAMUsagePercent() {
   }
 #endif
 
+inline uint16_t extract16BitFromUUID(String uuid) {
+  if(uuid.length() == 36) {
+    // Extract characters at positions 4-7 (the XXXX part)
+    String hex = uuid.substring(4, 8);
+    return (uint16_t)strtol(hex.c_str(), NULL, 16);
+  }
+  return 0;
+}
+
 inline String hexDump(const uint8_t *buf, size_t len) {
   String out;
   out.reserve(len * 3);  // "FF " per byte (approx)
