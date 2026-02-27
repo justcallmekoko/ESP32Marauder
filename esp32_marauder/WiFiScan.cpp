@@ -12022,11 +12022,11 @@ void WiFiScan::main(uint32_t currentTime)
 
     if (currentTime - initTime >= 1000)
     {
-      #ifndef HAS_DUAL_BAND
+      //#ifndef HAS_DUAL_BAND
         set_channel = random(1,12); 
-      #else
-        set_channel = dual_band_channels[random(0, DUAL_BAND_CHANNELS)];
-      #endif
+      //#else
+      //  set_channel = dual_band_channels[random(0, DUAL_BAND_CHANNELS)];
+      //#endif
       //set_channel = 6; // REMOVE THIS
       this->changeChannel(this->set_channel);
       delay(1);
