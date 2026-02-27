@@ -999,9 +999,9 @@ extern "C" {
 
             // Check manufacturer ID
             if ((advertisedDevice->haveManufacturerData()) && (!match)) {
-              String m_data = advertisedDevice->getManufacturerData();
+              std::string m_data = advertisedDevice->getManufacturerData();
               if (m_data.length() >= 2) {
-                uint16_t companyId = ((uint8_t)mfgData[1] << 8) | (uint8_t)mfgData[0];
+                uint16_t companyId = ((uint8_t)m_data[1] << 8) | (uint8_t)m_data[0];
 
                 if (wifi_scan_obj.isBlockedIdentifier(companyId))
                   return;
@@ -1032,7 +1032,7 @@ extern "C" {
 
             // Check Service Data
             if ((advertisedDevice->haveServiceData()) && (!match)) {
-              BLEUUID svcDataUUID = device.getServiceDataUUID();
+              BLEUUID svcDataUUID = advertisedDevice->getServiceDataUUID();
               String uuidStr = String(svcDataUUID.toString().c_str());
               uuidStr.toLowerCase();
               
@@ -1054,9 +1054,9 @@ extern "C" {
               if (!wifi_scan_obj.seen_mac(mac_char)) {
                 wifi_scan_obj.save_mac(mac_char);
 
-                display_string.concat("Meta Device: ");
+                display_string = "Meta Device: ";
                 display_string.concat((String)advertisedDevice->getRSSI());
-                display_string.concat(" ");
+                display_string.concat(F(" "));
                 Serial.print(F("Meta Device: "));
                 Serial.print(advertisedDevice->getRSSI());
                 Serial.print(F(" "));
@@ -1064,7 +1064,6 @@ extern "C" {
                 {
                   display_string.concat(advertisedDevice->getName().c_str());
                   Serial.println(advertisedDevice->getName().c_str());
-                  
                 }
                 else
                 {
