@@ -135,20 +135,31 @@ uint32_t currentTime  = 0;
   Preferences bl_prefs;
 #endif
 
+// Helper macros for LEDC API compatibility (2.x vs 3.x board package)
+#ifdef HAS_SCREEN
+  #if ESP_ARDUINO_VERSION_MAJOR >= 3
+    #define BL_SETUP()       ledcAttach(TFT_BL, BL_FREQ, BL_RESOLUTION)
+    #define BL_SET(duty)     ledcWrite(TFT_BL, (duty))
+  #else
+    #define BL_SETUP()       do { ledcSetup(BL_CHANNEL, BL_FREQ, BL_RESOLUTION); ledcAttachPin(TFT_BL, BL_CHANNEL); } while(0)
+    #define BL_SET(duty)     ledcWrite(BL_CHANNEL, (duty))
+  #endif
+#endif
+
 void brightnessInit() {
   #ifdef HAS_SCREEN
-    ledcAttach(TFT_BL, BL_FREQ, BL_RESOLUTION);
+    BL_SETUP();
     bl_prefs.begin("backlight", false);
     bl_level_idx = bl_prefs.getUChar("level", 9);
     if (bl_level_idx >= BL_NUM_LEVELS) bl_level_idx = 9;
-    ledcWrite(TFT_BL, BL_LEVELS[bl_level_idx]);
+    BL_SET(BL_LEVELS[bl_level_idx]);
   #endif
 }
 
 void brightnessCycle() {
   #ifdef HAS_SCREEN
     bl_level_idx = (bl_level_idx + 1) % BL_NUM_LEVELS;
-    ledcWrite(TFT_BL, BL_LEVELS[bl_level_idx]);
+    BL_SET(BL_LEVELS[bl_level_idx]);
     bl_prefs.putUChar("level", bl_level_idx);
     Serial.print(F("[Brightness] Level "));
     Serial.print(bl_level_idx + 1);
@@ -172,20 +183,20 @@ void brightnessSave(uint8_t level) {
   #ifdef HAS_SCREEN
     if (level >= BL_NUM_LEVELS) level = BL_NUM_LEVELS - 1;
     bl_level_idx = level;
-    ledcWrite(TFT_BL, BL_LEVELS[bl_level_idx]);
+    BL_SET(BL_LEVELS[bl_level_idx]);
     bl_prefs.putUChar("level", bl_level_idx);
   #endif
 }
 
 void backlightOn() {
   #ifdef HAS_SCREEN
-    ledcWrite(TFT_BL, BL_LEVELS[bl_level_idx]);
+    BL_SET(BL_LEVELS[bl_level_idx]);
   #endif
 }
 
 void backlightOff() {
   #ifdef HAS_SCREEN
-    ledcWrite(TFT_BL, 0);
+    BL_SET(0);
   #endif
 }
 
