@@ -14,7 +14,7 @@
   //#define MARAUDER_MINI
   //#define MARAUDER_V4
   //#define MARAUDER_V6
-  //#define MARAUDER_V6_1
+  #define MARAUDER_V6_1
   //#define MARAUDER_V7
   //#define MARAUDER_V7_1
   //#define MARAUDER_KIT

@@ -2728,7 +2728,13 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
     this->writeFooter(currentScanMode == GPS_POI);
   }
 
-  
+  // Close POI file if wardrive was active
+  if ((currentScanMode == WIFI_SCAN_WAR_DRIVE) ||
+      (currentScanMode == WIFI_SCAN_STATION_WAR_DRIVE)) {
+    this->closePoiFile();
+  }
+
+
   if ((currentScanMode == BT_SCAN_ALL) ||
   (currentScanMode == BT_SCAN_RAYBAN) ||
   (currentScanMode == BT_SCAN_AIRTAG) ||
@@ -4993,6 +4999,83 @@ void WiFiScan::executeWarDrive() {
   #endif
 }
 
+void WiFiScan::openPoiFile() {
+  #if defined(HAS_GPS) && defined(HAS_SD)
+    int fileIndex = 0;
+    while (SD.exists("/wardrive_poi_" + String(fileIndex) + ".gpx"))
+      fileIndex++;
+    poiFileName = "/wardrive_poi_" + String(fileIndex) + ".gpx";
+    poiFile = SD.open(poiFileName, FILE_WRITE);
+    if (poiFile) {
+      poiFile.print("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<gpx version=\"1.1\" creator=\"ESP32Marauder\">\n");
+      poiFile.close();
+      poiFileOpen = true;
+      poiCount = 0;
+      Serial.println("POI file opened: " + poiFileName);
+    } else {
+      Serial.println("Failed to open POI file");
+    }
+  #endif
+}
+
+void WiFiScan::closePoiFile() {
+  #if defined(HAS_GPS) && defined(HAS_SD)
+    if (poiFileOpen) {
+      if (poiCount > 0) {
+        poiFile = SD.open(poiFileName, FILE_APPEND);
+        if (poiFile) {
+          poiFile.print("</gpx>\n");
+          poiFile.close();
+        }
+        Serial.println("POI file closed: " + poiFileName + " (" + String(poiCount) + " points)");
+      } else {
+        sd_obj.removeFile(poiFileName);
+        Serial.println("POI file removed (empty): " + poiFileName);
+      }
+      poiFileOpen = false;
+      poiCount = 0;
+    }
+  #endif
+}
+
+void WiFiScan::tagPOI(const char* label) {
+  #if defined(HAS_GPS) && defined(HAS_SD)
+    if (currentScanMode != WIFI_SCAN_WAR_DRIVE && currentScanMode != WIFI_SCAN_STATION_WAR_DRIVE) {
+      Serial.println("POI tagging requires active wardrive");
+      return;
+    }
+    if (!gps_obj.getFixStatus()) {
+      Serial.println("No GPS fix");
+      return;
+    }
+    if (!poiFileOpen) {
+      Serial.println("POI file not open");
+      return;
+    }
+    poiCount++;
+    String poiLabel;
+    if (label == nullptr || strlen(label) == 0)
+      poiLabel = "POI " + String(poiCount);
+    else
+      poiLabel = String(label);
+
+    String datetime = gps_obj.getDatetime();
+    datetime.replace(" ", "T");
+    datetime += "Z";
+
+    poiFile = SD.open(poiFileName, FILE_APPEND);
+    if (poiFile) {
+      poiFile.print("  <wpt lat=\"" + gps_obj.getLat() + "\" lon=\"" + gps_obj.getLon() + "\">\n");
+      poiFile.print("    <ele>" + String(gps_obj.getAlt(), 2) + "</ele>\n");
+      poiFile.print("    <time>" + datetime + "</time>\n");
+      poiFile.print("    <name>" + poiLabel + "</name>\n");
+      poiFile.print("  </wpt>\n");
+      poiFile.close();
+    }
+    Serial.println("POI tagged: " + poiLabel + " (" + gps_obj.getLat() + ", " + gps_obj.getLon() + ")");
+  #endif
+}
+
 void WiFiScan::displayWardriveStats() {
   #ifdef HAS_SCREEN
     #ifdef HAS_GPS
@@ -5036,6 +5119,15 @@ void WiFiScan::displayWardriveStats() {
         display_obj.tft.println("Size: " + (String)((float)sd_obj.getFile(buffer_obj.getFileName()).size() / 1024) + "KB");
       #endif
 
+      // POI button — full width bottom bar
+      display_obj.tft.drawRect(0, 270, 240, 50, TFT_MAGENTA);
+      display_obj.tft.setTextSize(2);
+      display_obj.tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
+      String poiText = "POI (" + String(this->poiCount) + ")";
+      int16_t poiTextWidth = poiText.length() * 12; // 12px per char at size 2
+      display_obj.tft.setCursor((240 - poiTextWidth) / 2, 287);
+      display_obj.tft.print(poiText);
+
     #endif
   #endif
 }
@@ -5050,6 +5142,7 @@ void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color) {
         startLog(F("wardrive"));
         String header_line = "WigleWifi-1.4,appRelease=" + (String)MARAUDER_VERSION + ",model=ESP32 Marauder,release=" + (String)MARAUDER_VERSION + ",device=ESP32 Marauder,display=SPI TFT,board=ESP32 Marauder,brand=JustCallMeKoko\nMAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\n";
         buffer_obj.append(header_line);
+        this->openPoiFile();
       } else {
         return;
       }
