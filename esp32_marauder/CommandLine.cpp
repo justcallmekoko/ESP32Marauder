@@ -258,6 +258,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_STOPSCAN_CMD);
     #ifdef HAS_GPS
       Serial.println(HELP_WARDRIVE_CMD);
+      Serial.println(HELP_WARDRIVEPOI_CMD);
     #endif
     Serial.println(HELP_MAC_TRACK_CMD);
     
@@ -1301,6 +1302,26 @@ void CommandLine::runCommand(String input) {
           Serial.println(getBrightnessLevel());
         }
       #endif
+    }
+
+    // Wardrive POI command
+    else if (cmd_args.get(0) == WARDRIVEPOI_CMD) {
+      if (wifi_scan_obj.currentScanMode == WIFI_SCAN_WAR_DRIVE ||
+          wifi_scan_obj.currentScanMode == WIFI_SCAN_STATION_WAR_DRIVE) {
+        if (cmd_args.size() > 1) {
+          // Join remaining args as label
+          String label = "";
+          for (int i = 1; i < cmd_args.size(); i++) {
+            if (i > 1) label += " ";
+            label += cmd_args.get(i);
+          }
+          wifi_scan_obj.tagPOI(label.c_str());
+        } else {
+          wifi_scan_obj.tagPOI(nullptr);
+        }
+      } else {
+        Serial.println(F("No active wardrive. Start wardrive first."));
+      }
     }
 
     // Update command
