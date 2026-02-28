@@ -3750,6 +3750,13 @@ void MenuFunctions::brightnessMode() {
   const uint8_t numLevels = 10;
   uint8_t level = getBrightnessLevel();
 
+  // LEDC write compatibility (2.x vs 3.x board package)
+  #if ESP_ARDUINO_VERSION_MAJOR >= 3
+    #define BL_PREVIEW(duty) ledcWrite(TFT_BL, (duty))
+  #else
+    #define BL_PREVIEW(duty) ledcWrite(0, (duty))
+  #endif
+
   display_obj.tft.fillScreen(TFT_BLACK);
   display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
   display_obj.tft.drawCentreString("BRIGHTNESS", TFT_WIDTH/2, 30, 2);
@@ -3793,13 +3800,13 @@ void MenuFunctions::brightnessMode() {
       if (ty < zoneUp) {
         if (level < numLevels - 1) {
           level++;
-          ledcWrite(TFT_BL, levels[level]);
+          BL_PREVIEW(levels[level]);
           drawBar();
         }
       } else if (ty >= zoneDown) {
         if (level > 0) {
           level--;
-          ledcWrite(TFT_BL, levels[level]);
+          BL_PREVIEW(levels[level]);
           drawBar();
         }
       } else {
@@ -3812,6 +3819,7 @@ void MenuFunctions::brightnessMode() {
     delay(30);
   }
 
+  #undef BL_PREVIEW
   this->changeMenu(current_menu, true);
 }
 
