@@ -1,5 +1,9 @@
 #include "CommandLine.h"
 
+// Brightness functions defined in esp32_marauder.ino
+extern void brightnessCycle();
+extern uint8_t getBrightnessLevel();
+
 CommandLine::CommandLine() {
 }
 
@@ -284,6 +288,7 @@ void CommandLine::runCommand(String input) {
       #endif
       Serial.println(HELP_BT_SKIM_CMD);
     #endif
+    Serial.println(HELP_BRIGHTNESS_CMD);
     Serial.println(HELP_FOOT);
     return;
   }
@@ -1379,6 +1384,28 @@ void CommandLine::runCommand(String input) {
       #else
         Serial.println(F("Bluetooth not supported"));
       #endif
+    }
+
+    // Brightness command
+    else if (cmd_args.get(0) == BRIGHTNESS_CMD) {
+      int c_arg = this->argSearch(&cmd_args, "-c");
+      int s_arg = this->argSearch(&cmd_args, "-s");
+      if (c_arg != -1) {
+        brightnessCycle();
+      } else if (s_arg != -1) {
+        uint8_t lvl = cmd_args.get(s_arg + 1).toInt();
+        if (lvl < 10) {
+          extern void brightnessSave(uint8_t level);
+          brightnessSave(lvl);
+          Serial.print(F("[Brightness] Set to level "));
+          Serial.println(lvl);
+        } else {
+          Serial.println(F("Level must be 0-9"));
+        }
+      } else {
+        Serial.print(F("[Brightness] Current level: "));
+        Serial.println(getBrightnessLevel());
+      }
     }
 
     // Update command
