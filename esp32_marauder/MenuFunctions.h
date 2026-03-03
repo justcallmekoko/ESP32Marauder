@@ -272,7 +272,9 @@ class MenuFunctions
     void changeMenu(Menu* menu, bool simple_change = false);
     void drawStatusBar();
     void displayCurrentMenu(int start_index = 0);
-    void brightnessMode();
+    #ifndef HAS_MINI_SCREEN
+      void brightnessMode();
+    #endif
     void main(uint32_t currentTime);
     void RunSetup();
     void orientDisplay();
