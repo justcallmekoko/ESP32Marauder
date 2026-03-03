@@ -7,10 +7,18 @@
 extern Display display_obj;
 
 // Keyboard will occupy the bottom half of the screen.
-static inline int16_t kbHeight()  { return TFT_HEIGHT / 2; }
-static inline int16_t kbYStart()  { return TFT_HEIGHT - kbHeight(); }
-static inline int16_t kbWidth()   { return TFT_WIDTH; }
-static inline int16_t kbXStart()  { return 0; }
+static inline int16_t kbHeight() {
+  return TFT_HEIGHT / 2;
+}
+static inline int16_t kbYStart() {
+  return TFT_HEIGHT - kbHeight();
+}
+static inline int16_t kbWidth() {
+  return TFT_WIDTH;
+}
+static inline int16_t kbXStart() {
+  return 0;
+}
 
 static const int KEY_ROWS = 5;
 
@@ -54,13 +62,13 @@ static void drawTextArea(const char *title, const char *buffer) {
 }
 
 static void drawKeyboard(KeyboardLayout layout, bool caps) {
-  const int16_t kY      = kbYStart();
-  const int16_t kH      = kbHeight();
-  const int16_t kX      = kbXStart();
-  const int16_t kW      = kbWidth();
+  const int16_t kY = kbYStart();
+  const int16_t kH = kbHeight();
+  const int16_t kX = kbXStart();
+  const int16_t kW = kbWidth();
 
   const int maxCols = 10;
-  const int rows    = KEY_ROWS;
+  const int rows = KEY_ROWS;
 
   const int16_t cellW = kW / maxCols;
   const int16_t cellH = kH / rows;
@@ -77,8 +85,8 @@ static void drawKeyboard(KeyboardLayout layout, bool caps) {
   };
 
   const char **rowsPtr = (layout == LAYOUT_ALPHA)
-                         ? (const char **)rowStringsAlpha
-                         : (const char **)rowStringsSym;
+                           ? (const char **)rowStringsAlpha
+                           : (const char **)rowStringsSym;
 
   // Draw normal character rows (0–3)
   for (int r = 0; r < 4; ++r) {
@@ -148,13 +156,13 @@ static void drawKeyboard(KeyboardLayout layout, bool caps) {
 
   // Divide width into 6 segments:
   // [CANCEL][SYMB][SPACE (2 segments)][BKSP][OK]
-  int16_t segW  = kW / 6;
+  int16_t segW = kW / 6;
   int16_t x0 = kX;
-  int16_t x1 = x0 + segW;         // end CANCEL
-  int16_t x2 = x1 + segW;         // end SYMB
-  int16_t x3 = x2 + 2 * segW;     // end SPACE
-  int16_t x4 = x3 + segW;         // end BKSP
-  int16_t x5 = x4 + segW;         // end OK
+  int16_t x1 = x0 + segW;      // end CANCEL
+  int16_t x2 = x1 + segW;      // end SYMB
+  int16_t x3 = x2 + 2 * segW;  // end SPACE
+  int16_t x4 = x3 + segW;      // end BKSP
+  int16_t x5 = x4 + segW;      // end OK
 
   // CANCEL
   display_obj.tft.drawRect(x0, rowY, segW, cellH, TFT_BLACK);
@@ -199,10 +207,10 @@ static KeyboardResult handleKeyboardTouch(uint16_t tx, uint16_t ty,
                                           bool caps) {
   if (!buffer || bufLen < 2) return KB_NONE;
 
-  const int16_t kY      = kbYStart();
-  const int16_t kH      = kbHeight();
-  const int16_t kX      = kbXStart();
-  const int16_t kW      = kbWidth();
+  const int16_t kY = kbYStart();
+  const int16_t kH = kbHeight();
+  const int16_t kX = kbXStart();
+  const int16_t kW = kbWidth();
 
   if (ty < kY || ty >= (kY + kH)) {
     // Touch is outside keyboard area
@@ -210,7 +218,7 @@ static KeyboardResult handleKeyboardTouch(uint16_t tx, uint16_t ty,
   }
 
   const int maxCols = 10;
-  const int rows    = KEY_ROWS;
+  const int rows = KEY_ROWS;
   const int16_t cellW = kW / maxCols;
   const int16_t cellH = kH / rows;
 
@@ -225,8 +233,8 @@ static KeyboardResult handleKeyboardTouch(uint16_t tx, uint16_t ty,
   };
 
   const char **rowsPtr = (layout == LAYOUT_ALPHA)
-                         ? (const char **)rowStringsAlpha
-                         : (const char **)rowStringsSym;
+                           ? (const char **)rowStringsAlpha
+                           : (const char **)rowStringsSym;
 
   // Normal rows (0..3)
   if (rowIndex >= 0 && rowIndex <= 3) {
@@ -238,7 +246,7 @@ static KeyboardResult handleKeyboardTouch(uint16_t tx, uint16_t ty,
     // Alpha row 3: characters on columns 0..7, CAPS on columns 8..9
     if (layout == LAYOUT_ALPHA && rowIndex == 3) {
       int16_t capsXStart = kX + 8 * cellW;
-      int16_t capsXEnd   = capsXStart + 2 * cellW;
+      int16_t capsXEnd = capsXStart + 2 * cellW;
 
       // Check CAPS region
       if (tx >= capsXStart && tx < capsXEnd) {
@@ -297,13 +305,13 @@ static KeyboardResult handleKeyboardTouch(uint16_t tx, uint16_t ty,
   if (rowIndex == 4) {
     int16_t rowY = kY + rowIndex * cellH;
 
-    int16_t segW  = kW / 6;
+    int16_t segW = kW / 6;
     int16_t x0 = kX;
-    int16_t x1 = x0 + segW;         // end CANCEL
-    int16_t x2 = x1 + segW;         // end SYMB
-    int16_t x3 = x2 + 2 * segW;     // end SPACE
-    int16_t x4 = x3 + segW;         // end BKSP
-    int16_t x5 = x4 + segW;         // end OK
+    int16_t x1 = x0 + segW;      // end CANCEL
+    int16_t x2 = x1 + segW;      // end SYMB
+    int16_t x3 = x2 + 2 * segW;  // end SPACE
+    int16_t x4 = x3 + segW;      // end BKSP
+    int16_t x5 = x4 + segW;      // end OK
 
     // CANCEL
     if (tx >= x0 && tx < x1) {

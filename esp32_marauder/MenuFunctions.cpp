@@ -5,10 +5,6 @@
 
 extern const unsigned char menu_icons[][66];
 
-MenuFunctions::MenuFunctions()
-{
-}
-
 void MenuFunctions::buttonNotSelected(int b, int x) {
   if (x == -1)
     x = b;
@@ -2374,7 +2370,7 @@ void MenuFunctions::RunSetup()
       }
     });
 
-    this->addNodes(&wifiGeneralMenu, "Start AP", TFTGREEN, NULL, KEYBOARD_ICO, [this](){
+    /*this->addNodes(&wifiGeneralMenu, "Start AP", TFTGREEN, NULL, KEYBOARD_ICO, [this](){
       ssidsMenu.parentMenu = &wifiGeneralMenu;
 
       // Add the back button
@@ -2413,7 +2409,7 @@ void MenuFunctions::RunSetup()
         });
       }
       this->changeMenu(&ssidsMenu, true);
-    });
+    });*/
 
     wifiStationMenu.parentMenu = &ssidsMenu;
     this->addNodes(&wifiStationMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
@@ -3379,21 +3375,6 @@ void MenuFunctions::buildSDFileMenu(bool update) {
   }
 }
 
-// Function to show all MenuNodes in a Menu
-void MenuFunctions::showMenuList(Menu * menu, int layer)
-{
-  // Iterate through all of the menu nodes in the menu
-  for (uint8_t i = 0; i < menu->list->size(); i++)
-  {
-    // Depending on layer, indent
-    for (uint8_t x = 0; x < layer * 4; x++)
-      Serial.print(" ");
-    Serial.print(F("Node: "));
-    Serial.println(menu->list->get(i).name);
-  }
-  Serial.println();
-}
-
 
 // Function to add MenuNodes to a menu
 void MenuFunctions::addNodes(Menu * menu, String name, uint8_t color, Menu * child, int place, std::function<void()> callable, bool selected, String command)
@@ -3600,8 +3581,8 @@ uint16_t MenuFunctions::getColor(uint16_t color) {
 // Function to change menu
 void MenuFunctions::changeMenu(Menu* menu, bool simple_change) {
   if (!simple_change) {
-    display_obj.initScrollValues();
-    display_obj.setupScrollArea(TOP_FIXED_AREA, BOT_FIXED_AREA);
+    //display_obj.initScrollValues();
+    //display_obj.setupScrollArea(TOP_FIXED_AREA, BOT_FIXED_AREA);
     display_obj.init();
   }
   current_menu = menu;

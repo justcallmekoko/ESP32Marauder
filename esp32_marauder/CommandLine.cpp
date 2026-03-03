@@ -4,9 +4,6 @@
 extern void brightnessCycle();
 extern uint8_t getBrightnessLevel();
 
-CommandLine::CommandLine() {
-}
-
 void CommandLine::RunSetup() {
   Serial.println(this->ascii_art);
 
@@ -101,14 +98,14 @@ bool CommandLine::inRange(int max, int index) {
   return false;
 }
 
-bool CommandLine::apSelected() {
+/*bool CommandLine::apSelected() {
   for (int i = 0; i < access_points->size(); i++) {
     if (access_points->get(i).selected)
       return true;
   }
 
   return false;
-}
+}*/
 
 bool CommandLine::hasSSIDs() {
   if (ssids->size() == 0)
@@ -196,6 +193,18 @@ void CommandLine::filterAccessPoints(String filter) {
   this->showCounts(count_selected, count_unselected);
 }
 
+void CommandLine::startScanFromCLI(int scan_mode, uint16_t color, String scan_name) {
+  Serial.print(F("Starting"));
+  Serial.print(scan_name);
+  Serial.print(F(". Stop with "));
+  Serial.println(STOPSCAN_CMD);
+  #ifdef HAS_SCREEN
+    display_obj.clearScreen();
+    menu_function_obj.drawStatusBar();
+  #endif
+  wifi_scan_obj.StartScan(scan_mode, color);
+}
+
 void CommandLine::runCommand(String input) {
   if (input == "") return;
 
@@ -241,7 +250,6 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_SNIFF_PWN_CMD);
     Serial.println(HELP_SNIFF_PINESCAN_CMD);
     Serial.println(HELP_SNIFF_MULTISSID_CMD);
-    Serial.println(HELP_SNIFF_ESP_CMD);
     Serial.println(HELP_SNIFF_DEAUTH_CMD);
     Serial.println(HELP_SNIFF_PMKID_CMD);
     Serial.println(HELP_SNIFF_SAE_CMD);
@@ -280,9 +288,6 @@ void CommandLine::runCommand(String input) {
       Serial.println(HELP_BT_SNIFF_CMD);
       Serial.println(HELP_BT_SPAM_CMD);
       Serial.println(HELP_BT_SPOOFAT_CMD);
-      //Serial.println(HELP_BT_SWIFTPAIR_SPAM_CMD);
-      //Serial.println(HELP_BT_SAMSUNG_SPAM_CMD);
-      //Serial.println(HELP_BT_SPAM_ALL_CMD);
       #ifdef HAS_GPS
         Serial.println(HELP_BT_WARDRIVE_CMD);
       #endif
@@ -295,16 +300,6 @@ void CommandLine::runCommand(String input) {
 
   // Stop Scan
   if (cmd_args.get(0) == STOPSCAN_CMD) {
-    //if (wifi_scan_obj.currentScanMode == OTA_UPDATE) {
-    //  wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
-      //#ifdef HAS_SCREEN
-      //  menu_function_obj.changeMenu(menu_function_obj.updateMenu.parentMenu);
-      //#endif
-    //  WiFi.softAPdisconnect(true);
-    //  web_obj.shutdownServer();
-    //  return;
-    //}
-
     int f_arg = this->argSearch(&cmd_args, "-f");
     
     uint8_t old_scan_mode=wifi_scan_obj.currentScanMode;
@@ -434,7 +429,7 @@ void CommandLine::runCommand(String input) {
   else if (cmd_args.get(0) == LED_CMD) {
     int hex_arg = this->argSearch(&cmd_args, "-s");
     int pat_arg = this->argSearch(&cmd_args, "-p");
-    #ifdef PIN
+    #if defined(PIN) && defined(HAS_NEOPIXEL_LED) 
       if (hex_arg != -1) {
         String hexstring = cmd_args.get(hex_arg + 1);
         int number = (int)strtol(&hexstring[1], NULL, 16);
@@ -465,9 +460,6 @@ void CommandLine::runCommand(String input) {
         sd_obj.listDir(cmd_args.get(1));
       else
         Serial.println(F("You did not provide a dir to list"));
-    #else
-      Serial.println(F("SD support disabled, cannot use command"));
-      return;
     #endif
   }
 
@@ -475,17 +467,13 @@ void CommandLine::runCommand(String input) {
   else if (cmd_args.get(0) == CH_CMD) {
     // Search for channel set arg
     int ch_set = this->argSearch(&cmd_args, "-s");
-    
-    if (cmd_args.size() == 1) {
-      Serial.print(F("Current channel: "));
-      Serial.println(wifi_scan_obj.set_channel);
-    }
-    else if (ch_set != -1) {
+
+    if (ch_set != -1) {
       wifi_scan_obj.set_channel = cmd_args.get(ch_set + 1).toInt();
       wifi_scan_obj.changeChannel();
-      Serial.print(F("Set channel: "));
       Serial.println(wifi_scan_obj.set_channel);
     }
+    Serial.println(wifi_scan_obj.set_channel);
   }
   // Clear APs
   else if (cmd_args.get(0) == CLEARAP_CMD) {
@@ -549,10 +537,8 @@ void CommandLine::runCommand(String input) {
     }
   }
 
-  else if (cmd_args.get(0) == REBOOT_CMD) {
-    Serial.println(F("Rebooting..."));
+  else if (cmd_args.get(0) == REBOOT_CMD)
     ESP.restart();
-  }
 
   //// WiFi/Bluetooth Scan/Attack commands
   if (!wifi_scan_obj.scanning()) {
@@ -561,24 +547,24 @@ void CommandLine::runCommand(String input) {
 
     // Signal strength scan
     if (cmd_args.get(0) == SIGSTREN_CMD) {
-      Serial.print(F("Starting Signal Strength Scan. Stop with "));
-      Serial.println(STOPSCAN_CMD);
+      this->startScanFromCLI(WIFI_SCAN_SIG_STREN, TFT_MAGENTA, "Signal Strength Scan");
+      /*Serial.println(STOPSCAN_CMD);
       #ifdef HAS_SCREEN
         display_obj.clearScreen();
         menu_function_obj.drawStatusBar();
       #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_MAGENTA);
+      wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_MAGENTA);*/
       wifi_scan_obj.renderPacketRate();
     }
     // Packet count
     else if (cmd_args.get(0) == PACKET_COUNT_CMD) {
-      Serial.print(F("Starting Packet Count Scan. Stop with "));
-      Serial.println(STOPSCAN_CMD);
+      this->startScanFromCLI(WIFI_SCAN_PACKET_RATE, TFT_ORANGE, "Packet Count Scan");
+      /*Serial.println(STOPSCAN_CMD);
       #ifdef HAS_SCREEN
         display_obj.clearScreen();
         menu_function_obj.drawStatusBar();
       #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_PACKET_RATE, TFT_ORANGE);
+      wifi_scan_obj.StartScan(WIFI_SCAN_PACKET_RATE, TFT_ORANGE);*/
     }
     // Wardrive
     else if (cmd_args.get(0) == WARDRIVE_CMD) {
@@ -588,31 +574,31 @@ void CommandLine::runCommand(String input) {
           int flk_sw = this->argSearch(&cmd_args, "-f");
 
           if (flk_sw != -1) {
-            Serial.print(F("Starting Flock Wardrive. Stop with "));
-            Serial.println(STOPSCAN_CMD);
+            this->startScanFromCLI(BT_SCAN_FLOCK_WARDRIVE, TFT_GREEN, "Flock Wardrive");
+            /*Serial.println(STOPSCAN_CMD);
             #ifdef HAS_SCREEN
               display_obj.clearScreen();
               menu_function_obj.drawStatusBar();
             #endif
-            wifi_scan_obj.StartScan(BT_SCAN_FLOCK_WARDRIVE, TFT_GREEN);
+            wifi_scan_obj.StartScan(BT_SCAN_FLOCK_WARDRIVE, TFT_GREEN);*/
           }
           else if (sta_sw != -1) {
-            Serial.print(F("Starting Station Wardrive. Stop with "));
-            Serial.println(STOPSCAN_CMD);
+            this->startScanFromCLI(WIFI_SCAN_STATION_WAR_DRIVE, TFT_GREEN, "Station Wardrive");
+            /*Serial.println(STOPSCAN_CMD);
             #ifdef HAS_SCREEN
               display_obj.clearScreen();
               menu_function_obj.drawStatusBar();
             #endif
-            wifi_scan_obj.StartScan(WIFI_SCAN_STATION_WAR_DRIVE, TFT_GREEN);
+            wifi_scan_obj.StartScan(WIFI_SCAN_STATION_WAR_DRIVE, TFT_GREEN);*/
           }
           else {
-            Serial.print(F("Starting Wardrive. Stop with "));
-            Serial.println(STOPSCAN_CMD);
+            this->startScanFromCLI(WIFI_SCAN_WAR_DRIVE, TFT_GREEN, "Wardrive");
+            /*Serial.println(STOPSCAN_CMD);
             #ifdef HAS_SCREEN
               display_obj.clearScreen();
               menu_function_obj.drawStatusBar();
             #endif
-            wifi_scan_obj.StartScan(WIFI_SCAN_WAR_DRIVE, TFT_GREEN);
+            wifi_scan_obj.StartScan(WIFI_SCAN_WAR_DRIVE, TFT_GREEN);*/
           }
         }
         else
@@ -638,15 +624,13 @@ void CommandLine::runCommand(String input) {
       }
 
       if (evil_portal_obj.setAP(probe_req_ssids->get(pr_index).essid)) {
-        Serial.print(F("Starting Karma Attack with "));
-        Serial.print(probe_req_ssids->get(pr_index).essid);
-        Serial.print(F(". Stop with "));
-        Serial.println(STOPSCAN_CMD);
+        this->startScanFromCLI(WIFI_SCAN_EVIL_PORTAL, TFT_ORANGE, "Karma Attack");
+        /*Serial.println(STOPSCAN_CMD);
         #ifdef HAS_SCREEN
           display_obj.clearScreen();
           menu_function_obj.drawStatusBar();
         #endif
-        wifi_scan_obj.StartScan(WIFI_SCAN_EVIL_PORTAL, TFT_ORANGE);
+        wifi_scan_obj.StartScan(WIFI_SCAN_EVIL_PORTAL, TFT_ORANGE);*/
         wifi_scan_obj.setMac();
       }
       else {
@@ -735,13 +719,13 @@ void CommandLine::runCommand(String input) {
     }
     // Raw sniff
     else if (cmd_args.get(0) == SNIFF_RAW_CMD) {
-      Serial.print(F("Starting Raw sniff. Stop with "));
-      Serial.println(STOPSCAN_CMD);
+      this->startScanFromCLI(WIFI_SCAN_RAW_CAPTURE, TFT_WHITE, "Raw sniff");
+      /*Serial.println(STOPSCAN_CMD);
       #ifdef HAS_SCREEN
         display_obj.clearScreen();
         menu_function_obj.drawStatusBar();
       #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_RAW_CAPTURE, TFT_WHITE);
+      wifi_scan_obj.StartScan(WIFI_SCAN_RAW_CAPTURE, TFT_WHITE);*/
     }
     // Scan stations
     else if (cmd_args.get(0) == SCANSTA_CMD) {    
@@ -749,93 +733,83 @@ void CommandLine::runCommand(String input) {
         Serial.print(F("The AP list is empty. Scan APs first with "));
         Serial.println(SCANAP_CMD);  
 
-      Serial.print(F("Starting Station scan. Stop with "));
-      Serial.println(STOPSCAN_CMD);  
+      this->startScanFromCLI(WIFI_SCAN_STATION, TFT_ORANGE, "Station scan");
+      /*Serial.println(STOPSCAN_CMD);  
       #ifdef HAS_SCREEN
         display_obj.clearScreen();
         menu_function_obj.drawStatusBar();
       #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_STATION, TFT_ORANGE);
+      wifi_scan_obj.StartScan(WIFI_SCAN_STATION, TFT_ORANGE);*/
     }
     // Beacon sniff
     else if (cmd_args.get(0) == SNIFF_BEACON_CMD) {
-      Serial.print(F("Starting Beacon sniff. Stop with "));
-      Serial.println(STOPSCAN_CMD);
+      this->startScanFromCLI(WIFI_SCAN_AP, TFT_MAGENTA, "Beacon sniff");
+      /*Serial.println(STOPSCAN_CMD);
       #ifdef HAS_SCREEN
         display_obj.clearScreen();
         menu_function_obj.drawStatusBar();
       #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_AP, TFT_MAGENTA);
+      wifi_scan_obj.StartScan(WIFI_SCAN_AP, TFT_MAGENTA);*/
     }
     // SAE sniff
     else if (cmd_args.get(0) == SNIFF_SAE_CMD) {
-      Serial.print(F("Starting SAE Commit sniff. Stop with "));
-      Serial.println(STOPSCAN_CMD);
+      this->startScanFromCLI(WIFI_SCAN_SAE_COMMIT, TFT_MAGENTA, "Commit sniff");
+      /*Serial.println(STOPSCAN_CMD);
       #ifdef HAS_SCREEN
         display_obj.clearScreen();
         menu_function_obj.drawStatusBar();
       #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_SAE_COMMIT, TFT_MAGENTA);
+      wifi_scan_obj.StartScan(WIFI_SCAN_SAE_COMMIT, TFT_MAGENTA);*/
     }
     // Probe sniff
     else if (cmd_args.get(0) == SNIFF_PROBE_CMD) {
-      Serial.print(F("Starting Probe sniff. Stop with "));
-      Serial.println(STOPSCAN_CMD);
+      this->startScanFromCLI(WIFI_SCAN_PROBE, TFT_MAGENTA, "Probe sniff");
+      /*Serial.println(STOPSCAN_CMD);
       #ifdef HAS_SCREEN
         display_obj.clearScreen();
         menu_function_obj.drawStatusBar();
       #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_PROBE, TFT_MAGENTA);
+      wifi_scan_obj.StartScan(WIFI_SCAN_PROBE, TFT_MAGENTA);*/
     }
     // Deauth sniff
     else if (cmd_args.get(0) == SNIFF_DEAUTH_CMD) {
-      Serial.print(F("Starting Deauth sniff. Stop with "));
-      Serial.println(STOPSCAN_CMD);
+      this->startScanFromCLI(WIFI_SCAN_DEAUTH, TFT_RED, "Deauth sniff");
+      /*Serial.println(STOPSCAN_CMD);
       #ifdef HAS_SCREEN
         display_obj.clearScreen();
         menu_function_obj.drawStatusBar();
       #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_DEAUTH, TFT_RED);
+      wifi_scan_obj.StartScan(WIFI_SCAN_DEAUTH, TFT_RED);*/
     }
     // Pwn sniff
     else if (cmd_args.get(0) == SNIFF_PWN_CMD) {
-      Serial.print(F("Starting Pwnagotchi sniff. Stop with "));
-      Serial.println(STOPSCAN_CMD);
+      this->startScanFromCLI(WIFI_SCAN_PWN, TFT_MAGENTA, "Pwnagotchi sniff");
+      /*Serial.println(STOPSCAN_CMD);
       #ifdef HAS_SCREEN
         display_obj.clearScreen();
         menu_function_obj.drawStatusBar();
       #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_PWN, TFT_MAGENTA);
+      wifi_scan_obj.StartScan(WIFI_SCAN_PWN, TFT_MAGENTA);*/
     }
     // PineScan sniff
     else if (cmd_args.get(0) == SNIFF_PINESCAN_CMD) {
-      Serial.print(F("Starting Pinescan sniff. Stop with "));
-      Serial.println(STOPSCAN_CMD);
+      this->startScanFromCLI(WIFI_SCAN_PINESCAN, TFT_MAGENTA, "Pinescan sniff");
+      /*Serial.println(STOPSCAN_CMD);
       #ifdef HAS_SCREEN
         display_obj.clearScreen();
         menu_function_obj.drawStatusBar();
       #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_PINESCAN, TFT_MAGENTA);
+      wifi_scan_obj.StartScan(WIFI_SCAN_PINESCAN, TFT_MAGENTA);*/
     }
     // MultiSSID sniff
     else if (cmd_args.get(0) == SNIFF_MULTISSID_CMD) {
-      Serial.print(F("Starting MultiSSID sniff. Stop with "));
-      Serial.println(STOPSCAN_CMD);
+      this->startScanFromCLI(WIFI_SCAN_MULTISSID, TFT_MAGENTA, "MultiSSID sniff");
+      /*Serial.println(STOPSCAN_CMD);
       #ifdef HAS_SCREEN
         display_obj.clearScreen();
         menu_function_obj.drawStatusBar();
       #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_MULTISSID, TFT_MAGENTA);
-    }
-    // Espressif sniff
-    else if (cmd_args.get(0) == SNIFF_ESP_CMD) {
-      Serial.print(F("Starting Espressif device sniff. Stop with "));
-      Serial.println(STOPSCAN_CMD);
-      #ifdef HAS_SCREEN
-        display_obj.clearScreen();
-        menu_function_obj.drawStatusBar();
-      #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_ESPRESSIF, TFT_MAGENTA);
+      wifi_scan_obj.StartScan(WIFI_SCAN_MULTISSID, TFT_MAGENTA);*/
     }
     // PMKID sniff
     else if (cmd_args.get(0) == SNIFF_PMKID_CMD) {
@@ -844,7 +818,7 @@ void CommandLine::runCommand(String input) {
       int l_sw = this->argSearch(&cmd_args, "-l"); // Only run on list
 
       if (l_sw != -1) {
-        if (!this->apSelected()) {
+        if (!wifi_scan_obj.filterActive()) {
           Serial.println("You don't have any targets selected. Use " + (String)SEL_CMD);
           return;
         }
@@ -872,13 +846,13 @@ void CommandLine::runCommand(String input) {
     }    
     // MAC Tracking
     else if (cmd_args.get(0) == MAC_TRACK_CMD) {
-      Serial.print(F("Starting MAC Tracker. Stop with "));
-      Serial.println(STOPSCAN_CMD);
+      this->startScanFromCLI(WIFI_SCAN_DETECT_FOLLOW, TFT_MAGENTA, "MAC Tracker");
+      /*Serial.println(STOPSCAN_CMD);
       #ifdef HAS_SCREEN
         display_obj.clearScreen();
         menu_function_obj.drawStatusBar();
       #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_DETECT_FOLLOW, TFT_MAGENTA);
+      wifi_scan_obj.StartScan(WIFI_SCAN_DETECT_FOLLOW, TFT_MAGENTA);*/
     }
 
 
@@ -992,7 +966,7 @@ void CommandLine::runCommand(String input) {
 
           // Source addr not specified
           if (src_addr_sw == -1) {
-            if (!this->apSelected()) {
+            if (!wifi_scan_obj.filterActive()) {
               Serial.println("You don't have any targets selected. Use " + (String)SEL_CMD);
               return;
             }
@@ -1025,41 +999,45 @@ void CommandLine::runCommand(String input) {
         else if (attack_type == ATTACK_TYPE_BM) {
           // Attack all
           if (targ_sw == -1) {
-            Serial.println("Starting Bad Msg attack against all stations. Stop with " + (String)STOPSCAN_CMD);
+            this->startScanFromCLI(WIFI_ATTACK_BAD_MSG, TFT_RED, "Bad Msg attack against all stations");
+            /*Serial.prinln((String)STOPSCAN_CMD);
             #ifdef HAS_SCREEN
               display_obj.clearScreen();
               menu_function_obj.drawStatusBar();
             #endif
-            wifi_scan_obj.StartScan(WIFI_ATTACK_BAD_MSG, TFT_RED);
+            wifi_scan_obj.StartScan(WIFI_ATTACK_BAD_MSG, TFT_RED);*/
           }
           // Target clients
           else {
-            Serial.println("Starting targeted Bad Msg attack. Stop with " + (String)STOPSCAN_CMD);
+            this->startScanFromCLI(WIFI_ATTACK_BAD_MSG_TARGETED, TFT_YELLOW, "targeted Bad Msg attack");
+            /*Serial.println(STOPSCAN_CMD);
             #ifdef HAS_SCREEN
               display_obj.clearScreen();
               menu_function_obj.drawStatusBar();
             #endif
-            wifi_scan_obj.StartScan(WIFI_ATTACK_BAD_MSG_TARGETED, TFT_YELLOW);
+            wifi_scan_obj.StartScan(WIFI_ATTACK_BAD_MSG_TARGETED, TFT_YELLOW);*/
           }
         }
         else if (attack_type == ATTACK_TYPE_S) {
           // Attack all
           if (targ_sw == -1) {
-            Serial.println("Starting Sleep attack against all stations. Stop with " + (String)STOPSCAN_CMD);
+            this->startScanFromCLI(WIFI_ATTACK_SLEEP, TFT_RED, "Sleep attack against all stations");
+            /*Serial.println(STOPSCAN_CMD);
             #ifdef HAS_SCREEN
               display_obj.clearScreen();
               menu_function_obj.drawStatusBar();
             #endif
-            wifi_scan_obj.StartScan(WIFI_ATTACK_SLEEP, TFT_RED);
+            wifi_scan_obj.StartScan(WIFI_ATTACK_SLEEP, TFT_RED);*/
           }
           // Target clients
           else {
-            Serial.println("Starting targeted Sleep attack. Stop with " + (String)STOPSCAN_CMD);
+            this->startScanFromCLI(WIFI_ATTACK_SLEEP_TARGETED, TFT_MAGENTA, "targeted Sleep attack");
+            /*Serial.println(STOPSCAN_CMD);
             #ifdef HAS_SCREEN
               display_obj.clearScreen();
               menu_function_obj.drawStatusBar();
             #endif
-            wifi_scan_obj.StartScan(WIFI_ATTACK_SLEEP_TARGETED, TFT_MAGENTA);
+            wifi_scan_obj.StartScan(WIFI_ATTACK_SLEEP_TARGETED, TFT_MAGENTA);*/
           }
         }
         else if (attack_type == ATTACK_TYPE_BEACON) {
@@ -1087,7 +1065,7 @@ void CommandLine::runCommand(String input) {
           }
           // Spam from AP list
           else if (ap_beacon_sw != -1) {
-            if (!this->apSelected()) {
+            if (!wifi_scan_obj.filterActive()) {
               Serial.println("You don't have any targets selected. Use " + (String)SEL_CMD);
               return;
             }
@@ -1103,60 +1081,62 @@ void CommandLine::runCommand(String input) {
           }
         }
         else if (attack_type == ATTACK_TYPE_PROBE) {
-          if (!this->apSelected()) {
+          if (!wifi_scan_obj.filterActive()) {
             Serial.println("You don't have any targets selected. Use " + (String)SEL_CMD);
             return;
           }
-          Serial.println("Starting Probe spam. Stop with " + (String)STOPSCAN_CMD);
+          this->startScanFromCLI(WIFI_ATTACK_AUTH, TFT_RED, "Probe spam");
+          /*Serial.println(STOPSCAN_CMD);
           #ifdef HAS_SCREEN
             display_obj.clearScreen();
             menu_function_obj.drawStatusBar();
           #endif
-          wifi_scan_obj.StartScan(WIFI_ATTACK_AUTH, TFT_RED);
+          wifi_scan_obj.StartScan(WIFI_ATTACK_AUTH, TFT_RED);*/
         }
         else if (attack_type == ATTACK_TYPE_RR) {
-          Serial.println("Starting Rick Roll Beacon spam. Stop with " + (String)STOPSCAN_CMD);
+          this->startScanFromCLI(WIFI_ATTACK_RICK_ROLL, TFT_YELLOW, "Rick Roll Beacon spam");
+          /*Serial.println(STOPSCAN_CMD);
           #ifdef HAS_SCREEN
             display_obj.clearScreen();
             menu_function_obj.drawStatusBar();
           #endif
-          wifi_scan_obj.StartScan(WIFI_ATTACK_RICK_ROLL, TFT_YELLOW);
+          wifi_scan_obj.StartScan(WIFI_ATTACK_RICK_ROLL, TFT_YELLOW);*/
         }
         else if (attack_type == ATTACK_TYPE_FUNNY) {
-          Serial.print(F("Starting Funny SSID Beacon spam. Stop with "));
-          Serial.println(STOPSCAN_CMD);
+          this->startScanFromCLI(WIFI_ATTACK_FUNNY_BEACON, TFT_CYAN, "Funny SSID Beacon spam");
+          /*Serial.println(STOPSCAN_CMD);
           #ifdef HAS_SCREEN
             display_obj.clearScreen();
             menu_function_obj.drawStatusBar();
           #endif
-          wifi_scan_obj.StartScan(WIFI_ATTACK_FUNNY_BEACON, TFT_CYAN);
+          wifi_scan_obj.StartScan(WIFI_ATTACK_FUNNY_BEACON, TFT_CYAN);*/
         }
         else if (attack_type == ATTACK_TYPE_SAE) {
-          Serial.print(F("Starting SAE Commit spam. Stop with "));
-          Serial.println(STOPSCAN_CMD);
+          this->startScanFromCLI(WIFI_ATTACK_SAE_COMMIT, TFT_CYAN, "SAE Commit spam");
+          /*Serial.println(STOPSCAN_CMD);
           #ifdef HAS_SCREEN
             display_obj.clearScreen();
             menu_function_obj.drawStatusBar();
           #endif
-          wifi_scan_obj.StartScan(WIFI_ATTACK_SAE_COMMIT, TFT_CYAN);
+          wifi_scan_obj.StartScan(WIFI_ATTACK_SAE_COMMIT, TFT_CYAN);*/
         }
         else if (attack_type == ATTACK_TYPE_CSA) {
-          Serial.print(F("Starting Channel Switch Announcement attack. Stop with "));
-          Serial.println(STOPSCAN_CMD);
+          this->startScanFromCLI(WIFI_ATTACK_CSA, TFT_CYAN, "Channel Switch Announcement attack");
+          /*Serial.println(STOPSCAN_CMD);
           #ifdef HAS_SCREEN
             display_obj.clearScreen();
             menu_function_obj.drawStatusBar();
           #endif
-          wifi_scan_obj.StartScan(WIFI_ATTACK_CSA, TFT_CYAN);
+          wifi_scan_obj.StartScan(WIFI_ATTACK_CSA, TFT_CYAN);*/
         }
         else if (attack_type == ATTACK_TYPE_QUIET) {
-          Serial.print(F("Starting Quite Time attack. Stop with "));
-          Serial.println(STOPSCAN_CMD);
+          this->startScanFromCLI(WIFI_ATTACK_QUIET, TFT_CYAN, "Quite Time attack");
+          /*Serial.println(STOPSCAN_CMD);
           #ifdef HAS_SCREEN
             display_obj.clearScreen();
             menu_function_obj.drawStatusBar();
           #endif
-          wifi_scan_obj.StartScan(WIFI_ATTACK_QUIET, TFT_CYAN);
+          wifi_scan_obj.StartScan(WIFI_ATTACK_QUIET, TFT_CYAN);*/
         }
         else {
           Serial.println(F("Attack type not properly defined"));
@@ -1179,51 +1159,51 @@ void CommandLine::runCommand(String input) {
 
           // Airtag sniff
           if (bt_type == "airtag") {
-            Serial.print(F("Starting Airtag sniff. Stop with "));
-            Serial.println(STOPSCAN_CMD);
+            this->startScanFromCLI(BT_SCAN_AIRTAG, TFT_WHITE, "Airtag sniff");
+            /*Serial.println(STOPSCAN_CMD);
             #ifdef HAS_SCREEN
               display_obj.clearScreen();
               menu_function_obj.drawStatusBar();
             #endif
-            wifi_scan_obj.StartScan(BT_SCAN_AIRTAG, TFT_WHITE);
+            wifi_scan_obj.StartScan(BT_SCAN_AIRTAG, TFT_WHITE);*/
           }
           else if (bt_type == "flipper") {
-            Serial.print(F("Starting Flipper sniff. Stop with "));
-            Serial.println(STOPSCAN_CMD);
+            this->startScanFromCLI(BT_SCAN_FLIPPER, TFT_ORANGE, "Flipper sniff");
+            /*Serial.println(STOPSCAN_CMD);
             #ifdef HAS_SCREEN
               display_obj.clearScreen();
               menu_function_obj.drawStatusBar();
             #endif
-            wifi_scan_obj.StartScan(BT_SCAN_FLIPPER, TFT_ORANGE);
+            wifi_scan_obj.StartScan(BT_SCAN_FLIPPER, TFT_ORANGE);*/
           }
           else if (bt_type == "flock") {
-            Serial.print(F("Starting Flock sniff. Stop with "));
-            Serial.println(STOPSCAN_CMD);
+            this->startScanFromCLI(BT_SCAN_FLOCK, TFT_ORANGE, "Flock sniff");
+            /*Serial.println(STOPSCAN_CMD);
             #ifdef HAS_SCREEN
               display_obj.clearScreen();
               menu_function_obj.drawStatusBar();
             #endif
-            wifi_scan_obj.StartScan(BT_SCAN_FLOCK, TFT_ORANGE);
+            wifi_scan_obj.StartScan(BT_SCAN_FLOCK, TFT_ORANGE);*/
           }
           else if (bt_type == "meta") {
-            Serial.print(F("Starting Meta sniff. Stop with "));
-            Serial.println(STOPSCAN_CMD);
+            this->startScanFromCLI(BT_SCAN_RAYBAN, TFT_ORANGE, "Meta sniff");
+            /*Serial.println(STOPSCAN_CMD);
             #ifdef HAS_SCREEN
               display_obj.clearScreen();
               menu_function_obj.drawStatusBar();
             #endif
-            wifi_scan_obj.StartScan(BT_SCAN_RAYBAN, TFT_ORANGE);
+            wifi_scan_obj.StartScan(BT_SCAN_RAYBAN, TFT_ORANGE);*/
           }
         }
         // General bluetooth sniff
         else {
-          Serial.print(F("Starting Bluetooth scan. Stop with "));
-          Serial.println(STOPSCAN_CMD);
+          this->startScanFromCLI(BT_SCAN_ALL, TFT_GREEN, "Bluetooth scan");
+          /*Serial.println(STOPSCAN_CMD);
           #ifdef HAS_SCREEN
             display_obj.clearScreen();
             menu_function_obj.drawStatusBar();
           #endif
-          wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_GREEN);
+          wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_GREEN);*/
         }
       #else
         Serial.println(F("Bluetooth not supported"));
@@ -1243,13 +1223,12 @@ void CommandLine::runCommand(String input) {
                 at.selected = false;
               airtags->set(i, at);
             }
-            Serial.print(F("Spoofing Airtag: "));
-            Serial.println(airtags->get(target_mac).mac);
-            #ifdef HAS_SCREEN
+            this->startScanFromCLI(BT_SPOOF_AIRTAG, TFT_WHITE, "Spoofing Airtag");
+            /*#ifdef HAS_SCREEN
               display_obj.clearScreen();
               menu_function_obj.drawStatusBar();
             #endif
-            wifi_scan_obj.StartScan(BT_SPOOF_AIRTAG, TFT_WHITE);
+            wifi_scan_obj.StartScan(BT_SPOOF_AIRTAG, TFT_WHITE);*/
           }
           else {
             Serial.print(F("Provided index is out of range: "));
@@ -1266,78 +1245,78 @@ void CommandLine::runCommand(String input) {
 
         if (bt_type == "apple") {
           #ifdef HAS_BT
-            Serial.print(F("Starting Sour Apple attack. Stop with "));
-            Serial.println(STOPSCAN_CMD);
+            this->startScanFromCLI(BT_ATTACK_SOUR_APPLE, TFT_GREEN, "Sour Apple attack");
+            /*Serial.println(STOPSCAN_CMD);
             #ifdef HAS_SCREEN
               display_obj.clearScreen();
               menu_function_obj.drawStatusBar();
             #endif
-            wifi_scan_obj.StartScan(BT_ATTACK_SOUR_APPLE, TFT_GREEN);
+            wifi_scan_obj.StartScan(BT_ATTACK_SOUR_APPLE, TFT_GREEN);*/
           #else
             Serial.println(F("Bluetooth not supported"));
           #endif
         }
         else if (bt_type == "windows") {
           #ifdef HAS_BT
-            Serial.print(F("Starting Swiftpair Spam attack. Stop with "));
-            Serial.println(STOPSCAN_CMD);
+            this->startScanFromCLI(BT_ATTACK_SWIFTPAIR_SPAM, TFT_CYAN, "Swiftpair Spam attack");
+            /*Serial.println(STOPSCAN_CMD);
             #ifdef HAS_SCREEN
               display_obj.clearScreen();
               menu_function_obj.drawStatusBar();
             #endif
-            wifi_scan_obj.StartScan(BT_ATTACK_SWIFTPAIR_SPAM, TFT_CYAN);
+            wifi_scan_obj.StartScan(BT_ATTACK_SWIFTPAIR_SPAM, TFT_CYAN);*/
           #else
             Serial.println(F("Bluetooth not supported"));
           #endif
         }
         else if (bt_type == "samsung") {
           #ifdef HAS_BT
-            Serial.print(F("Starting Samsung Spam attack. Stop with "));
-            Serial.println(STOPSCAN_CMD);
+            this->startScanFromCLI(BT_ATTACK_SAMSUNG_SPAM, TFT_CYAN, "Samsung Spam attack");
+            /*Serial.println(STOPSCAN_CMD);
             #ifdef HAS_SCREEN
               display_obj.clearScreen();
               menu_function_obj.drawStatusBar();
             #endif
-            wifi_scan_obj.StartScan(BT_ATTACK_SAMSUNG_SPAM, TFT_CYAN);
+            wifi_scan_obj.StartScan(BT_ATTACK_SAMSUNG_SPAM, TFT_CYAN);*/
           #else
             Serial.println(F("Bluetooth not supported"));
           #endif
         }
         else if (bt_type == "google") {
           #ifdef HAS_BT
-            Serial.print(F("Starting Google Spam attack. Stop with "));
-            Serial.println(STOPSCAN_CMD);
+            this->startScanFromCLI(BT_ATTACK_GOOGLE_SPAM, TFT_CYAN, "Google Spam attack");
+            /*Serial.println(STOPSCAN_CMD);
             #ifdef HAS_SCREEN
               display_obj.clearScreen();
               menu_function_obj.drawStatusBar();
             #endif
-            wifi_scan_obj.StartScan(BT_ATTACK_GOOGLE_SPAM, TFT_CYAN);
+            wifi_scan_obj.StartScan(BT_ATTACK_GOOGLE_SPAM, TFT_CYAN);*/
           #else
             Serial.println(F("Bluetooth not supported"));
           #endif
         }
         else if (bt_type == "flipper") {
           #ifdef HAS_BT
-            Serial.print(F("Starting Flipper Spam attack. Stop with "));
-            Serial.println(STOPSCAN_CMD);
+            this->startScanFromCLI(BT_ATTACK_FLIPPER_SPAM, TFT_ORANGE, "Flipper Spam attack");
+            /*Serial.println(STOPSCAN_CMD);
             #ifdef HAS_SCREEN
               display_obj.clearScreen();
               menu_function_obj.drawStatusBar();
             #endif
-            wifi_scan_obj.StartScan(BT_ATTACK_FLIPPER_SPAM, TFT_ORANGE);
+            wifi_scan_obj.StartScan(BT_ATTACK_FLIPPER_SPAM, TFT_ORANGE);*/
           #else
             Serial.println(F("Bluetooth not supported"));
           #endif
         }
         else if (bt_type == "all") {
           #ifdef HAS_BT
-            Serial.print(F("Starting BT Spam All attack. Stop with "));
-            Serial.println(STOPSCAN_CMD);
+            this->startScanFromCLI(BT_ATTACK_SPAM_ALL, TFT_MAGENTA, "BT Spam All attack");
+            /*Serial.println(STOPSCAN_CMD);
             #ifdef HAS_SCREEN
               display_obj.clearScreen();
               menu_function_obj.drawStatusBar();
             #endif
-            wifi_scan_obj.StartScan(BT_ATTACK_SPAM_ALL, TFT_MAGENTA);
+            wifi_scan_obj.StartScan(BT_ATTACK_SPAM_ALL, TFT_MAGENTA);*/
           #else
             Serial.println(F("Bluetooth not supported"));
           #endif
@@ -1353,13 +1332,13 @@ void CommandLine::runCommand(String input) {
         #ifdef HAS_GPS
           if (gps_obj.getGpsModuleStatus()) {
 
-            Serial.print(F("Starting BT Wardrive. Stop with "));
-            Serial.println(STOPSCAN_CMD);
+            this->startScanFromCLI(BT_SCAN_WAR_DRIVE, TFT_GREEN, "BT Wardrive");
+            /*Serial.println(STOPSCAN_CMD);
             #ifdef HAS_SCREEN
               display_obj.clearScreen();
               menu_function_obj.drawStatusBar();
             #endif
-            wifi_scan_obj.StartScan(BT_SCAN_WAR_DRIVE, TFT_GREEN);
+            wifi_scan_obj.StartScan(BT_SCAN_WAR_DRIVE, TFT_GREEN);*/
           }
           else
             Serial.println(F("GPS Module not detected"));
@@ -1374,13 +1353,13 @@ void CommandLine::runCommand(String input) {
     // Bluetooth CC Skimmer scan
     else if (cmd_args.get(0) == BT_SKIM_CMD) {
       #ifdef HAS_BT
-        Serial.print(F("Starting Bluetooth CC Skimmer scan. Stop with "));
-        Serial.println(STOPSCAN_CMD);
+        this->startScanFromCLI(BT_SCAN_SKIMMERS, TFT_MAGENTA, "Bluetooth CC Skimmer scan");
+        /*Serial.println(STOPSCAN_CMD);
         #ifdef HAS_SCREEN
           display_obj.clearScreen();
           menu_function_obj.drawStatusBar();
         #endif
-        wifi_scan_obj.StartScan(BT_SCAN_SKIMMERS, TFT_MAGENTA);
+        wifi_scan_obj.StartScan(BT_SCAN_SKIMMERS, TFT_MAGENTA);*/
       #else
         Serial.println(F("Bluetooth not supported"));
       #endif
@@ -1442,24 +1421,24 @@ void CommandLine::runCommand(String input) {
   if (wifi_scan_obj.wifi_connected) {
     // Ping Scan
     if (cmd_args.get(0) == PING_CMD) {
-      Serial.print(F("Starting Ping Scan. Stop with "));
-      Serial.println(STOPSCAN_CMD);
+      this->startScanFromCLI(WIFI_PING_SCAN, TFT_GREEN, "Ping Scan");
+      /*Serial.println(STOPSCAN_CMD);
       #ifdef HAS_SCREEN
         display_obj.clearScreen();
         menu_function_obj.drawStatusBar();
       #endif
-      wifi_scan_obj.StartScan(WIFI_PING_SCAN, TFT_GREEN);
+      wifi_scan_obj.StartScan(WIFI_PING_SCAN, TFT_GREEN);*/
     }
 
     if (cmd_args.get(0) == ARP_SCAN_CMD) {
       #ifndef HAS_DUAL_BAND
-        Serial.print(F("Starting ARP Scan. Stop with "));
-        Serial.println(STOPSCAN_CMD);
+        this->startScanFromCLI(WIFI_ARP_SCAN, TFT_CYAN, "ARP Scan");
+        /*Serial.println(STOPSCAN_CMD);
         #ifdef HAS_SCREEN
           display_obj.clearScreen();
           menu_function_obj.drawStatusBar();
         #endif
-        wifi_scan_obj.StartScan(WIFI_ARP_SCAN, TFT_CYAN);
+        wifi_scan_obj.StartScan(WIFI_ARP_SCAN, TFT_CYAN);*/
       #endif
     }
 
@@ -1528,13 +1507,13 @@ void CommandLine::runCommand(String input) {
 
           // Full port scan
           if (all_sw != -1) {
-            Serial.println("Selected: " + ipList->get(ip_index).toString());
             wifi_scan_obj.current_scan_ip = ipList->get(ip_index);
-            #ifdef HAS_SCREEN
+            this->startScanFromCLI(WIFI_PORT_SCAN_ALL, TFT_BLUE, "Selected: " + ipList->get(ip_index).toString());
+            /*#ifdef HAS_SCREEN
               display_obj.clearScreen();
               menu_function_obj.drawStatusBar();
             #endif
-            wifi_scan_obj.StartScan(WIFI_PORT_SCAN_ALL, TFT_BLUE);
+            wifi_scan_obj.StartScan(WIFI_PORT_SCAN_ALL, TFT_BLUE);*/
           }
         }
         else {
@@ -1562,13 +1541,12 @@ void CommandLine::runCommand(String input) {
           target_mode = WIFI_SCAN_RDP;
 
         if (target_mode != 0) {
-          Serial.print(F("Starting port scan for service "));
-          Serial.println(port_name);
-          #ifdef HAS_SCREEN
+          this->startScanFromCLI(target_mode, TFT_CYAN, "port scan");
+          /*#ifdef HAS_SCREEN
             display_obj.clearScreen();
             menu_function_obj.drawStatusBar();
           #endif
-          wifi_scan_obj.StartScan(target_mode, TFT_CYAN);
+          wifi_scan_obj.StartScan(target_mode, TFT_CYAN);*/
         }
         else {
           Serial.println(F("You did not specify a supported service"));
@@ -1656,10 +1634,6 @@ void CommandLine::runCommand(String input) {
       for (int i = 0; i < airtags->size(); i++) {
         Serial.println("[" + (String)i + "]MAC: " + airtags->get(i).mac);
       }
-    }
-    else {
-      Serial.println(F("You did not specify which list to show"));
-      return;
     }
   }
   else if (cmd_args.get(0) == INFO_CMD) {
@@ -1881,10 +1855,6 @@ void CommandLine::runCommand(String input) {
         }
       }
       this->showCounts(count_selected, count_unselected);
-    }
-    else {
-      Serial.println(F("You did not specify which list to select from"));
-      return;
     }
   }
   else if (cmd_args.get(0) == SAVE_CMD) {

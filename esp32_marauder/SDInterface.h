@@ -42,7 +42,6 @@ class SDInterface {
     SPIClass* _spi;
     int _cs;
   #endif
-    bool checkDetectPin();
 
   public:
     #ifdef HAS_C5_SD
@@ -67,7 +66,6 @@ class SDInterface {
     File getFile(String path);
     void runUpdate(String file_name = "");
     void performUpdate(Stream &updateSource, size_t updateSize);
-    void main();
     bool removeFile(String file_path);
 };
 

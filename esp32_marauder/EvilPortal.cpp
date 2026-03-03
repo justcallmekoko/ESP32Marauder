@@ -166,11 +166,9 @@ bool EvilPortal::setHtml() {
   else {
     if (html_file.size() > MAX_HTML_SIZE) {
       #ifdef HAS_SCREEN
-        this->sendToDisplay(F("The given HTML is too large."));
-        this->sendToDisplay("The Byte limit is " + (String)MAX_HTML_SIZE);
-        this->sendToDisplay(F("Touch to exit..."));
+        this->sendToDisplay(F("The given HTML is too large. Touch to exit..."));
       #endif
-      Serial.println("The provided HTML is too large. Byte limit is " + (String)MAX_HTML_SIZE + "\nUse stopscan...");
+      Serial.println("The provided HTML is too large.\nUse stopscan...");
       return false;
     }
     String html = "";
@@ -228,11 +226,9 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
       // ap name too long. return false        
       if (ap_config_file.size() > MAX_AP_NAME_SIZE) {
         #ifdef HAS_SCREEN
-          this->sendToDisplay(F("The given AP name is too large."));
-          this->sendToDisplay("The Byte limit is " + (String)MAX_AP_NAME_SIZE);
-          this->sendToDisplay("Touch to exit...");
+          this->sendToDisplay(F("The given AP name is too large. Touch to exit..."));
         #endif
-        Serial.println("The provided AP name is too large. Byte limit is " + (String)MAX_AP_NAME_SIZE + "\nUse stopscan...");
+        Serial.println("The provided AP name is too large.\nUse stopscan...");
         return false;
       }
       // AP name length good. Read from file into var
@@ -257,11 +253,9 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
     ap_config = ssids->get(0).essid;
     if (ap_config.length() > MAX_AP_NAME_SIZE) {
       #ifdef HAS_SCREEN
-        this->sendToDisplay(F("The given AP name is too large."));
-        this->sendToDisplay("The Byte limit is " + (String)MAX_AP_NAME_SIZE);
-        this->sendToDisplay("Touch to exit...");
+        this->sendToDisplay(F("The given AP name is too large. Touch to exit..."));
       #endif
-      Serial.println("The provided AP name is too large. Byte limit is " + (String)MAX_AP_NAME_SIZE + "\nUse stopscan...");
+      Serial.println("The provided AP name is too large.\nUse stopscan...");
       return false;
     }
     #ifdef HAS_SCREEN
@@ -273,11 +267,9 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
   else if (temp_ap_name != "") {
     if (temp_ap_name.length() > MAX_AP_NAME_SIZE) {
       #ifdef HAS_SCREEN
-        this->sendToDisplay(F("The given AP name is too large."));
-        this->sendToDisplay("The Byte limit is " + (String)MAX_AP_NAME_SIZE);
-        this->sendToDisplay("Touch to exit...");
+        this->sendToDisplay(F("The given AP name is too large. Touch to exit..."));
       #endif
-      Serial.println("The given AP name is too large. Byte limit is " + (String)MAX_AP_NAME_SIZE + "\nUse stopscan...");
+      Serial.println("The given AP name is too large.\nUse stopscan...");
     }
     else {
       ap_config = temp_ap_name;
@@ -291,8 +283,7 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
   else {
     Serial.println(F("Could not configure Access Point. Use stopscan..."));
     #ifdef HAS_SCREEN
-      this->sendToDisplay(F("Could not configure Access Point."));
-      this->sendToDisplay(F("Touch to exit..."));
+      this->sendToDisplay(F("Could not configure Access Point.\nTouch to exit..."));
     #endif
   }
 
@@ -325,30 +316,19 @@ bool EvilPortal::setAP(String essid) {
 void EvilPortal::startAP() {
   const IPAddress AP_IP(172, 0, 0, 1);
 
-  Serial.print(F("starting ap "));
-  Serial.println(apName);
-
   WiFi.mode(WIFI_AP);
   WiFi.softAPConfig(AP_IP, AP_IP, IPAddress(255, 255, 255, 0));
   WiFi.softAP(apName);
-
-  #ifdef HAS_SCREEN
-    this->sendToDisplay(F("AP started"));
-  #endif
 
   Serial.print(F("ap ip address: "));
   Serial.println(WiFi.softAPIP());
 
   this->setupServer();
 
-  Serial.println(F("Server endpoints configured"));
-
   this->dnsServer.start(53, "*", WiFi.softAPIP());
-  Serial.println(F("DNS Server started"));
   server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);
-  Serial.println(F("Captive Portal handler started"));
   server.begin();
-  Serial.println(F("Server started"));
+  Serial.println(F("Evil Portal READY"));
   #ifdef HAS_SCREEN
     this->sendToDisplay(F("Evil Portal READY"));
   #endif

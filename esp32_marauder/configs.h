@@ -47,6 +47,12 @@
 
   #define DISPLAY_BUFFER_LIMIT 20
 
+  #define MODE_OFF 0
+  #define MODE_RAINBOW 1
+  #define MODE_ATTACK 2
+  #define MODE_SNIFF 3
+  #define MODE_CUSTOM 4
+
   //// HARDWARE NAMES
   #ifdef MARAUDER_M5STICKC
     #define HARDWARE_NAME "M5Stick-C Plus"
@@ -1044,6 +1050,10 @@
 
       #define EXT_BUTTON_WIDTH 30
 
+      #define SCREEN_BUFFER
+
+      #define MAX_SCREEN_BUFFER 21
+
       #define SCREEN_ORIENTATION 0
 
       #define CHAR_WIDTH 12
@@ -1682,6 +1692,10 @@
       #define KIT
 
       #define EXT_BUTTON_WIDTH 30
+
+      #define SCREEN_BUFFER
+
+      #define MAX_SCREEN_BUFFER 21
 
       #define SCREEN_ORIENTATION 0
     
