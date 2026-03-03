@@ -1,8 +1,10 @@
 #include "CommandLine.h"
 
 // Brightness functions defined in esp32_marauder.ino
-extern void brightnessCycle();
-extern uint8_t getBrightnessLevel();
+#ifndef HAS_MINI_SCREEN
+  extern void brightnessCycle();
+  extern uint8_t getBrightnessLevel();
+#endif
 
 void CommandLine::RunSetup() {
   Serial.println(this->ascii_art);
@@ -1367,24 +1369,26 @@ void CommandLine::runCommand(String input) {
 
     // Brightness command
     else if (cmd_args.get(0) == BRIGHTNESS_CMD) {
-      int c_arg = this->argSearch(&cmd_args, "-c");
-      int s_arg = this->argSearch(&cmd_args, "-s");
-      if (c_arg != -1) {
-        brightnessCycle();
-      } else if (s_arg != -1) {
-        uint8_t lvl = cmd_args.get(s_arg + 1).toInt();
-        if (lvl < 10) {
-          extern void brightnessSave(uint8_t level);
-          brightnessSave(lvl);
-          Serial.print(F("[Brightness] Set to level "));
-          Serial.println(lvl);
+      #ifndef HAS_MINI_SCREEN
+        int c_arg = this->argSearch(&cmd_args, "-c");
+        int s_arg = this->argSearch(&cmd_args, "-s");
+        if (c_arg != -1) {
+          brightnessCycle();
+        } else if (s_arg != -1) {
+          uint8_t lvl = cmd_args.get(s_arg + 1).toInt();
+          if (lvl < 10) {
+            extern void brightnessSave(uint8_t level);
+            brightnessSave(lvl);
+            Serial.print(F("[Brightness] Set to level "));
+            Serial.println(lvl);
+          } else {
+            Serial.println(F("Level must be 0-9"));
+          }
         } else {
-          Serial.println(F("Level must be 0-9"));
+          Serial.print(F("[Brightness] Current level: "));
+          Serial.println(getBrightnessLevel());
         }
-      } else {
-        Serial.print(F("[Brightness] Current level: "));
-        Serial.println(getBrightnessLevel());
-      }
+      #endif
     }
 
     // Update command
