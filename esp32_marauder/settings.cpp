@@ -6,7 +6,6 @@ String Settings::getSettingsString() {
 
 bool Settings::begin() {
   if(!SPIFFS.begin(FORMAT_SPIFFS_IF_FAILED)){
-    Serial.println("Settings SPIFFS Mount Failed");
     return false;
   }
 
@@ -19,7 +18,6 @@ bool Settings::begin() {
     
     if (!settingsFile) {
       settingsFile.close();
-      Serial.println(F("Could not find settings file"));
       if (this->createDefaultSettings(SPIFFS))
         return true;
       else
@@ -27,7 +25,6 @@ bool Settings::begin() {
     }
   }
   else {
-    Serial.println("Settings file does not exist");
     if (this->createDefaultSettings(SPIFFS))
       return true;
     else
@@ -367,10 +364,8 @@ bool Settings::createDefaultSettings(fs::FS &fs, bool spec, uint8_t index, Strin
 
     //jsonBuffer.printTo(settingsFile);
     if (serializeJson(jsonBuffer, settingsFile) == 0) {
-      Serial.println(F("Failed to write to file"));
     }
     if (serializeJson(jsonBuffer, settings_string) == 0) {
-      Serial.println(F("Failed to write to string"));
     }
   }
 
@@ -391,11 +386,9 @@ bool Settings::createDefaultSettings(fs::FS &fs, bool spec, uint8_t index, Strin
       json["Settings"][index]["range"]["max"] = true;
 
       if (serializeJson(json, settings_string) == 0) {
-        Serial.println("Failed to write to string");
       }
 
       if (serializeJson(json, settingsFile) == 0) {
-        Serial.println("Failed to write to file");
       }
     }
 
@@ -408,11 +401,9 @@ bool Settings::createDefaultSettings(fs::FS &fs, bool spec, uint8_t index, Strin
       json["Settings"][index]["range"]["max"] = "";
 
       if (serializeJson(json, settings_string) == 0) {
-        Serial.println("Failed to write to string");
       }
 
       if (serializeJson(json, settingsFile) == 0) {
-        Serial.println("Failed to write to file");
       }
     }
   }
@@ -425,8 +416,4 @@ bool Settings::createDefaultSettings(fs::FS &fs, bool spec, uint8_t index, Strin
   this->printJsonSettings(settings_string);
 
   return true;
-}
-
-void Settings::main(uint32_t currentTime) {
-  
 }

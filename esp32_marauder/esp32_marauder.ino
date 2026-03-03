@@ -12,16 +12,7 @@ https://www.online-utility.org/image/convert/to/XBM
   #define Display_h
 #endif
 
-//#include <WiFi.h>
-//#include "EvilPortal.h"
-//#include <Wire.h>
-//#include "esp_wifi.h"
-//#include "esp_wifi_types.h"
 #include <stdio.h>
-//#include "freertos/FreeRTOS.h"
-//#include "freertos/task.h"
-//#include "esp_system.h"
-//#include <Arduino.h>
 
 #ifdef HAS_GPS
   #include "GpsInterface.h"
@@ -111,7 +102,7 @@ CommandLine cli_obj;
   xiaoLED xiao_led;
 #elif defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
   stickcLED stickc_led;
-#else
+#elif defined(HAS_NEOPIXEL_LED)
   LedInterface led_obj;
 #endif
 
@@ -314,8 +305,6 @@ void setup()
         display_obj.headless_mode = true;
 
         backlightOff();
-
-        Serial.println(F("Headless Mode enabled"));
       }
     #endif
   #endif
@@ -362,7 +351,7 @@ void setup()
     xiao_led.RunSetup();
   #elif defined(MARAUDER_M5STICKC)
     stickc_led.RunSetup();
-  #else
+  #elif defined(HAS_NEOPIXEL_LED)
     led_obj.RunSetup();
   #endif
 
@@ -390,7 +379,6 @@ void setup()
 
   wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
   
-  Serial.println(F("CLI Ready"));
   cli_obj.RunSetup();
 }
 
@@ -424,18 +412,10 @@ void loop()
 
   // Update all of our objects
   cli_obj.main(currentTime);
-  #ifdef HAS_SCREEN
-    display_obj.main(wifi_scan_obj.currentScanMode);
-  #endif
   wifi_scan_obj.main(currentTime);
 
   #ifdef HAS_GPS
     gps_obj.main();
-  #endif
-  
-  // Detect SD card
-  #if defined(HAS_SD)
-    sd_obj.main();
   #endif
 
   // Save buffer to SD and/or serial
@@ -444,7 +424,6 @@ void loop()
   #ifdef HAS_BATTERY
     battery_obj.main(currentTime);
   #endif
-  settings_obj.main(currentTime);
   if ((wifi_scan_obj.currentScanMode != WIFI_PACKET_MONITOR) ||
       (mini)) {
     #ifdef HAS_SCREEN
@@ -457,7 +436,7 @@ void loop()
     xiao_led.main();
   #elif defined(MARAUDER_M5STICKC)
     stickc_led.main();
-  #else
+  #elif defined(HAS_NEOPIXEL_LED)
     led_obj.main(currentTime);
   #endif
 
