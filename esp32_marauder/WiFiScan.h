@@ -64,7 +64,7 @@
   #include "xiaoLED.h"
 #elif defined(MARAUDER_M5STICKC)
   #include "stickcLED.h"
-#else
+#elif defined(HAS_NEOPIXEL_LED)
   #include "LedInterface.h"
 #endif
 
@@ -220,7 +220,7 @@ extern Settings settings_obj;
   extern xiaoLED xiao_led;
 #elif defined(MARAUDER_M5STICKC)
   extern stickcLED stickc_led;
-#else
+#elif defined(HAS_NEOPIXEL_LED)
   extern LedInterface led_obj;
 #endif
 
@@ -321,9 +321,6 @@ class WiFiScan
     #ifdef HAS_BT
       NimBLEScan* pBLEScan;
     #endif
-
-    //String connected_network = "";
-    //const String alfa = "1234567890qwertyuiopasdfghjkklzxcvbnm QWERTYUIOPASDFGHJKLZXCVBNM_";
 
     const char* rick_roll[8] = {
       "01 Never gonna give you up",
@@ -566,6 +563,11 @@ class WiFiScan
       NimBLEAdvertisementData GetUniversalAdvertisementData(EBLEPayloadType type);
     #endif
 
+    void displayTransmitRate();
+    void prepareScanStage(uint16_t color_1, uint16_t color_2);
+    void setLEDMode(int mode);
+    void setWiFiMode(wifi_mode_t mode, wifi_promiscuous_cb_t cb);
+    void writeNetworkInfo();
     void setupScanDisplayArea(uint16_t background, uint16_t color);
     void updateTrackerUI();
     void showNetworkInfo();
@@ -579,7 +581,7 @@ class WiFiScan
     bool checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout = 100);
     String extractManufacturer(const uint8_t* payload);
     int checkMatchAP(char addr[], bool update_ap = true);
-    bool beaconHasWPS(const uint8_t* payload, int len);
+    //bool beaconHasWPS(const uint8_t* payload, int len);
     uint8_t getSecurityType(const uint8_t* beacon, uint16_t len);
     void addAnalyzerValue(int16_t value, int rssi_avg, int16_t target_array[], int array_size);
     bool mac_cmp(struct mac_addr addr1, struct mac_addr addr2);
@@ -606,10 +608,10 @@ class WiFiScan
     void updateMidway();
     bool sendSAECommitFrame(uint8_t* targ_addr, uint8_t* src_addr) ;
     void sendProbeAttack(uint32_t currentTime);
-    void sendDeauthAttack(uint32_t currentTime, String dst_mac_str = "ff:ff:ff:ff:ff:ff");
+    //void sendDeauthAttack(uint32_t currentTime, String dst_mac_str = "ff:ff:ff:ff:ff:ff");
     void sendBadMsgAttack(uint32_t currentTime, bool all = false);
     void sendAssocSleepAttack(uint32_t currentTime, bool all = false);
-    void sendDeauthFrame(uint8_t bssid[6], int channel, String dst_mac_str = "ff:ff:ff:ff:ff:ff");
+    //void sendDeauthFrame(uint8_t bssid[6], int channel, String dst_mac_str = "ff:ff:ff:ff:ff:ff");
     void sendDeauthFrame(uint8_t bssid[6], int channel, uint8_t mac[6]);
     void sendEapolBagMsg1(uint8_t bssid[6], int channel, String dst_mac_str = "ff:ff:ff:ff:ff:ff", uint8_t sec = WIFI_SECURITY_WPA2);
     void sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6], uint8_t sec = WIFI_SECURITY_WPA2);
@@ -645,8 +647,6 @@ class WiFiScan
 
 
   public:
-    WiFiScan();
-
     //AccessPoint ap_list;
 
     //LinkedList<ssid>* ssids;
@@ -840,7 +840,7 @@ class WiFiScan
     bool shutdownBLE();
     bool scanning();
     bool joinWiFi(String ssid, String password, bool gui = true);
-    bool startWiFi(String ssid, String password, bool gui = true);
+    //bool startWiFi(String ssid, String password, bool gui = true);
     void getMAC(bool get_sta, uint8_t* mac);
     void changeChannel(int chan = -1);
     void RunAPInfo(uint16_t index, bool do_display = true);
@@ -881,7 +881,6 @@ class WiFiScan
     static inline uint16_t le16(const uint8_t *p);
     static void getMAC(char *addr, uint8_t* data, uint16_t offset);
     static void getMAC(uint8_t* mac, const uint8_t* data, uint16_t offset);
-    static void pwnSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     //static void rawSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void stationSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
@@ -890,7 +889,7 @@ class WiFiScan
     //static void deauthSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     //static void probeSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     //static void beaconListSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
-    static void activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
+    //static void activeEapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void pineScanSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type); // Pineapple

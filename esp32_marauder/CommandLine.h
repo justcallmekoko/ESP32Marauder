@@ -16,7 +16,9 @@
   #include "SDInterface.h"
 #endif
 #include "settings.h"
-#include "LedInterface.h"
+#if defined(HAS_NEOPIXEL_LED)
+  #include "LedInterface.h"
+#endif
 
 #ifdef HAS_SCREEN
   extern MenuFunctions menu_function_obj;
@@ -29,7 +31,9 @@ extern WiFiScan wifi_scan_obj;
   extern SDInterface sd_obj;
 #endif
 extern Settings settings_obj;
-extern LedInterface led_obj;
+#if defined(HAS_NEOPIXEL_LED)
+  extern LedInterface led_obj;
+#endif
 extern LinkedList<AccessPoint>* access_points;
 extern LinkedList<AirTag>* airtags;
 extern LinkedList<ssid>* ssids;
@@ -70,7 +74,6 @@ const char PROGMEM SNIFF_PROBE_CMD[] = "sniffprobe";
 const char PROGMEM SNIFF_PWN_CMD[] = "sniffpwn";
 const char PROGMEM SNIFF_PINESCAN_CMD[] = "sniffpinescan";
 const char PROGMEM SNIFF_MULTISSID_CMD[] = "sniffmultissid";
-const char PROGMEM SNIFF_ESP_CMD[] = "sniffesp";
 const char PROGMEM SNIFF_DEAUTH_CMD[] = "sniffdeauth";
 const char PROGMEM SNIFF_PMKID_CMD[] = "sniffpmkid";
 const char PROGMEM STOPSCAN_CMD[] = "stopscan";
@@ -112,10 +115,6 @@ const char PROGMEM ADD_CMD[] = "add";
 const char PROGMEM BT_SPAM_CMD[] = "blespam";
 const char PROGMEM BT_SNIFF_CMD[] = "sniffbt";
 const char PROGMEM BT_SPOOFAT_CMD[] = "spoofat";
-//const char PROGMEM BT_SOUR_APPLE_CMD[] = "sourapple";
-//const char PROGMEM BT_SWIFTPAIR_SPAM_CMD[] = "swiftpair";
-//const char PROGMEM BT_SAMSUNG_SPAM_CMD[] = "samsungblespam";
-//onst char PROGMEM BT_SPAM_ALL_CMD[] = "btspamall";
 const char PROGMEM BT_WARDRIVE_CMD[] = "btwardrive";
 const char PROGMEM BT_SKIM_CMD[] = "sniffskim";
 
@@ -150,7 +149,6 @@ const char PROGMEM HELP_SNIFF_PROBE_CMD[] = "sniffprobe";
 const char PROGMEM HELP_SNIFF_PWN_CMD[] = "sniffpwn";
 const char PROGMEM HELP_SNIFF_PINESCAN_CMD[] = "sniffpinescan";
 const char PROGMEM HELP_SNIFF_MULTISSID_CMD[] = "sniffmultissid";
-const char PROGMEM HELP_SNIFF_ESP_CMD[] = "sniffesp";
 const char PROGMEM HELP_SNIFF_DEAUTH_CMD[] = "sniffdeauth";
 const char PROGMEM HELP_SNIFF_PMKID_CMD[] = "sniffpmkid [-c <channel>][-d][-l]";
 const char PROGMEM HELP_STOPSCAN_CMD[] = "stopscan [-f]";
@@ -195,6 +193,10 @@ const char PROGMEM HELP_BT_SPOOFAT_CMD[] = "spoofat -t <index>";
 //onst char PROGMEM HELP_BT_SPAM_ALL_CMD[] = "btspamall";
 const char PROGMEM HELP_BT_WARDRIVE_CMD[] = "btwardrive";
 const char PROGMEM HELP_BT_SKIM_CMD[] = "sniffskim";
+
+const char PROGMEM BRIGHTNESS_CMD[] = "brightness";
+const char PROGMEM HELP_BRIGHTNESS_CMD[] = "brightness [-c cycle] [-s <0-9>]";
+
 const char PROGMEM HELP_FOOT[] = "==================================";
 
 
@@ -207,10 +209,11 @@ class CommandLine {
     void runCommand(String input);
     bool checkValueExists(LinkedList<String>* cmd_args_list, int index);
     bool inRange(int max, int index);
-    bool apSelected();
+    //bool apSelected();
     bool hasSSIDs();
     void showCounts(int selected, int unselected = -1);
     int argSearch(LinkedList<String>* cmd_args, String key);
+    void startScanFromCLI(int scan_mode, uint16_t color, String scan_name);
 
     const char* ascii_art =
     "\r\n"
@@ -240,7 +243,6 @@ class CommandLine {
     "\r\n";
         
   public:
-    CommandLine();
 
     void RunSetup();
     void main(uint32_t currentTime);

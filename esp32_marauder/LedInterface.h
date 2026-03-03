@@ -12,12 +12,6 @@
 
 #define Pixels 1
 
-#define MODE_OFF 0
-#define MODE_RAINBOW 1
-#define MODE_ATTACK 2
-#define MODE_SNIFF 3
-#define MODE_CUSTOM 4
-
 extern Settings settings_obj;
 
 #ifdef HAS_NEOPIXEL_LED

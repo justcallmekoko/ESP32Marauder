@@ -569,7 +569,7 @@ void Display::displayBuffer(bool do_clear)
       if (display_buffer->size() > DISPLAY_BUFFER_LIMIT)
         this->printing = true;
 
-      #ifndef SCREEN_BUFFER
+      /*#ifndef SCREEN_BUFFER
         xPos = 0;
         if ((display_buffer->size() > 0) && (!loading))
         {
@@ -586,7 +586,7 @@ void Display::displayBuffer(bool do_clear)
           blank[(18+(yStart - TOP_FIXED_AREA) / TEXT_HEIGHT)%19] = xPos;
         else
           blank[(18+(yStart - TOP_FIXED_AREA_2) / TEXT_HEIGHT)%19] = xPos;
-      #else
+      #else*/
         xPos = 0;
         if (this->screen_buffer->size() >= MAX_SCREEN_BUFFER)
           this->scrollScreenBuffer();
@@ -602,7 +602,7 @@ void Display::displayBuffer(bool do_clear)
 
           this->processAndPrintString(tft, this->screen_buffer->get(i));
         }
-      #endif
+      //#endif
 
       print_count--;
     }
@@ -618,7 +618,7 @@ void Display::showCenterText(String text, int y)
 }
 
 
-void Display::initScrollValues(bool tte)
+/*void Display::initScrollValues(bool tte)
 {
   yDraw = YMAX - BOT_FIXED_AREA - TEXT_HEIGHT;
 
@@ -638,13 +638,12 @@ void Display::initScrollValues(bool tte)
   }
 
   for(uint8_t i = 0; i < 18; i++) blank[i] = 0;
-}
+}*/
 
 
 
 // Function to execute hardware scroll for TFT screen
-int Display::scroll_line(uint32_t color) {
-  //Serial.println("scroll_line()");
+/*int Display::scroll_line(uint32_t color) {
   int yTemp = yStart; // Store the old yStart, this is where we draw the next line
   // Use the record of line lengths to optimise the rectangle size we need to erase the top line
 
@@ -670,11 +669,11 @@ int Display::scroll_line(uint32_t color) {
   // Now we can scroll the display
   scrollAddress(yStart);
   return  yTemp;
-}
+}*/
 
 
 // Function to setup hardware scroll for TFT screen
-void Display::setupScrollArea(uint16_t tfa, uint16_t bfa) {
+/*void Display::setupScrollArea(uint16_t tfa, uint16_t bfa) {
   #ifdef HAS_ILI9341
     #ifdef HAS_ST7796
       tft.writecommand(0x33);
@@ -690,10 +689,10 @@ void Display::setupScrollArea(uint16_t tfa, uint16_t bfa) {
     tft.writedata(bfa >> 8);           // Bottom Fixed Area line count
     tft.writedata(bfa);
   #endif
-}
+}*/
 
 
-void Display::scrollAddress(uint16_t vsp) {
+/*void Display::scrollAddress(uint16_t vsp) {
   #ifdef HAS_ILI9341
     #ifdef HAS_ST7789
       tft.writecommand(ST7789_VSCRDEF); // Vertical scroll definition
@@ -705,7 +704,7 @@ void Display::scrollAddress(uint16_t vsp) {
     tft.writedata(vsp>>8);
     tft.writedata(vsp);
   #endif
-}
+}*/
 
 void Display::updateBanner(String msg)
 {
@@ -722,11 +721,6 @@ void Display::buildBanner(String msg, int xpos)
   this->tft.setTextSize(BANNER_TEXT_SIZE);           // Font size scaling is x1
   this->tft.setTextColor(TFT_WHITE, TFT_BLACK);  // Black text, no background colour
   this->showCenterText(msg, STATUS_BAR_WIDTH);
-}
-
-void Display::main(uint8_t scan_mode)
-{  
-  return;
 }
 
 #endif

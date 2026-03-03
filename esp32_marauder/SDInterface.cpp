@@ -301,23 +301,3 @@ void SDInterface::performUpdate(Stream &updateSource, size_t updateSize) {
     Serial.println(F("Not enough space to begin OTA"));
   }
 }
-
-bool SDInterface::checkDetectPin() {
-  #ifdef KIT
-    if (digitalRead(SD_DET) == LOW)
-      return true;
-    else
-      return false;
-  #endif
-
-  return false;
-}
-
-void SDInterface::main() {
-  if (!this->supported) {
-    if (checkDetectPin()) {
-      delay(100);
-      this->initSD();
-    }
-  }
-}
