@@ -779,9 +779,9 @@
     #ifdef MARAUDER_MINI_V3
       #define L_BTN 0
       #define C_BTN 1
-      #define U_BTN 4
-      #define R_BTN 8
-      #define D_BTN 9
+      #define U_BTN 8//4
+      #define R_BTN 9//8
+      #define D_BTN 4//9
 
       #define HAS_L
       #define HAS_R
