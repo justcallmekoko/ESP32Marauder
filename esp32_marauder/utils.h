@@ -194,10 +194,8 @@ inline String macToString(const uint8_t macAddr[6]) {
 
 inline void convertMacStringToUint8(const String& macStr, uint8_t macAddr[6]) {
     // Ensure the input string is in the format "XX:XX:XX:XX:XX:XX"
-    if (macStr.length() != 17) {
-        Serial.println("Invalid MAC address format");
+    if (macStr.length() != 17)
         return;
-    }
 
     // Parse the MAC address string and fill the uint8_t array
     for (int i = 0; i < 6; i++) {
