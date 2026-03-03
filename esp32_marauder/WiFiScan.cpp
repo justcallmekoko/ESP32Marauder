@@ -3283,11 +3283,13 @@ void WiFiScan::setWiFiMode(wifi_mode_t mode, wifi_promiscuous_cb_t cb) {
 }
 
 void WiFiScan::prepareScanStage(uint16_t color_1, uint16_t color_2) {
-  #ifdef HAS_ILI9341
+  #ifdef HAS_SCREEN
+    #ifdef HAS_ILI9341
       display_obj.touchToExit();
     #endif
     display_obj.tft.setTextColor(color_1, color_2);
     //display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
+  #endif
 }
 
 void WiFiScan::RunPingScan(uint8_t scan_mode, uint16_t color) {
@@ -5893,16 +5895,6 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
         //new_ap.wps = true;
         new_ap.man = man;
         access_points->set(index, new_ap);
-
-        #ifdef HAS_SCREEN
-          display_string = RED_KEY;
-          int temp_len = display_string.length();
-
-          for (int i = 0; i < 50 - temp_len; i++)
-            display_string.concat(" ");
-
-          display_obj.display_buffer->add(display_string);
-        #endif
       }
       //}
     }
@@ -5964,6 +5956,10 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
         }
   
         Serial.print(F(" "));
+
+        #ifdef HAS_SCREEN
+          display_obj.display_buffer->add(display_string);
+        #endif
         
         if (essid == "") {
           essid = bssid;
@@ -6152,6 +6148,8 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
       }
 
       Serial.print(F(" "));
+
+      display_obj.display_buffer->add(display_string);
     #endif
 
     if (mem_check) {
