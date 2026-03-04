@@ -5089,9 +5089,11 @@ void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color) {
       //display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
     //else {
       //display_obj.setupScrollArea((STATUS_BAR_WIDTH * 2) + EXT_BUTTON_WIDTH, BOT_FIXED_AREA);
+    if (scan_mode != WIFI_SCAN_WAR_DRIVE) {
       display_obj.tftDrawChannelScaleButtons(set_channel, false);
       display_obj.tftDrawExitScaleButtons(false);
       display_obj.tftDrawChanHopButton(false, settings_obj.loadSetting<bool>("ChanHop"));
+    }
     //}
   #endif
 
@@ -5415,7 +5417,9 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color) {
     //if (scan_mode != WIFI_SCAN_PROBE)
     //  display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
     //else {
-    if (scan_mode != WIFI_SCAN_DETECT_FOLLOW) {
+    if ((scan_mode != WIFI_SCAN_DETECT_FOLLOW) &&
+        (scan_mode != WIFI_SCAN_STATION_WAR_DRIVE) &&
+        (scan_mode != BT_SCAN_FLOCK)) {
       display_obj.tftDrawChannelScaleButtons(set_channel, false);
       display_obj.tftDrawExitScaleButtons(false);
       display_obj.tftDrawChanHopButton(false, settings_obj.loadSetting<bool>("ChanHop"));
