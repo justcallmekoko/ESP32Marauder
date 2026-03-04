@@ -33,6 +33,7 @@
   //#define MARAUDER_CARDPUTER
   //#define MARAUDER_V8
   //#define MARAUDER_MINI_V3
+  //#define DUAL_MINI_C5
   //// END BOARD TARGETS
 
   #define JSON_SETTING_SIZE 2048
@@ -100,6 +101,8 @@
     #define HARDWARE_NAME "Marauder v8"
   #elif defined(MARAUDER_MINI_V3)
     #define HARDWARE_NAME "Marauder Mini v3"
+  #elif defined(DUAL_MINI_C5)
+    #define HARDWARE_NAME "Dual Mini C5"
   #else
     #define HARDWARE_NAME "ESP32"
   #endif
@@ -107,6 +110,10 @@
   //// END HARDWARE NAMES
 
  //// BOARD FEATURES
+  #if defined(DUAL_MINI_C5)
+    #define MARAUDER_MINI_V3
+  #endif
+
   #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
     //#define FLIPPER_ZERO_HAT
     #define HAS_MINI_KB
@@ -777,11 +784,19 @@
     #endif
 
     #ifdef MARAUDER_MINI_V3
-      #define L_BTN 0
-      #define C_BTN 1
-      #define U_BTN 8//4
-      #define R_BTN 9//8
-      #define D_BTN 4//9
+      #ifndef DUAL_MINI_C5
+        #define L_BTN 0
+        #define C_BTN 1
+        #define U_BTN 8//4
+        #define R_BTN 9//8
+        #define D_BTN 4//9
+      #else
+        #define L_BTN 0
+        #define C_BTN 1
+        #define U_BTN 4
+        #define R_BTN 8
+        #define D_BTN 9
+      #endif
 
       #define HAS_L
       #define HAS_R
