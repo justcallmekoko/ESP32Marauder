@@ -465,7 +465,9 @@ extern "C" {
           else if (wifi_scan_obj.currentScanMode == BT_SCAN_ALL) {
             if (buf >= 0)
             {
-              display_string.concat(text_table4[0]);
+              #ifndef HAS_MINI_SCREEN
+                display_string.concat(text_table4[0]);
+              #endif
               display_string.concat(advertisedDevice->getRSSI());
               Serial.print(advertisedDevice->getRSSI());
       
@@ -1254,7 +1256,9 @@ extern "C" {
           else if (wifi_scan_obj.currentScanMode == BT_SCAN_ALL) {
             if (buf >= 0)
             {
-              display_string.concat(text_table4[0]);
+              #ifndef HAS_MINI_SCREEN
+                display_string.concat(text_table4[0]);
+              #endif
               display_string.concat(advertisedDevice->getRSSI());
               Serial.print(advertisedDevice->getRSSI());
       
@@ -5411,9 +5415,11 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color) {
     //if (scan_mode != WIFI_SCAN_PROBE)
     //  display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
     //else {
+    if (scan_mode != WIFI_SCAN_DETECT_FOLLOW) {
       display_obj.tftDrawChannelScaleButtons(set_channel, false);
       display_obj.tftDrawExitScaleButtons(false);
       display_obj.tftDrawChanHopButton(false, settings_obj.loadSetting<bool>("ChanHop"));
+    }
     //}
   #endif
   
@@ -10450,7 +10456,8 @@ void WiFiScan::channelHop(bool filtered, bool ranged) {
        (this->currentScanMode == WIFI_SCAN_PROBE) ||
        (this->currentScanMode == WIFI_SCAN_DEAUTH) ||
        (this->currentScanMode == WIFI_SCAN_EAPOL) ||
-       (this->currentScanMode == WIFI_SCAN_RAW_CAPTURE)))
+       (this->currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
+       (this->currentScanMode == WIFI_SCAN_PACKET_RATE)))
     return;
 
   if (!filtered) {
