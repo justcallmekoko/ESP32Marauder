@@ -490,7 +490,7 @@
   #endif
 
   #ifdef MARAUDER_MINI_V3
-    #define HAS_TOUCH
+    //#define HAS_TOUCH
     //#define HAS_FLIPPER_LED
     //#define FLIPPER_ZERO_HAT
     //#define HAS_BATTERY
