@@ -112,7 +112,7 @@ bool Display::isTouchHeld(uint16_t threshold) {
 void Display::init() {
   tft.init();
 
-  #ifdef HAS_DUAL_BAND
+  #if defined(HAS_DUAL_BAND) && !defined(MARAUDER_MINI_V3)
     digitalWrite(TFT_BL, HIGH);
   #endif
 }
@@ -504,7 +504,7 @@ void Display::clearScreen()
   #ifndef MARAUDER_V7
     tft.fillScreen(TFT_BLACK);
     tft.setCursor(0, 0);
-  #elif defined(MARAUDER_MINI)
+  #elif defined(MARAUDER_MINI) || defined(MARAUDER_MINI_V3)
     tft.fillRect(0, 0, TFT_WIDTH, TFT_HEIGHT, TFT_BLACK);
     tft.setCursor(0, 0);
   #else
