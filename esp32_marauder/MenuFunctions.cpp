@@ -3586,6 +3586,17 @@ void MenuFunctions::changeMenu(Menu* menu, bool simple_change) {
     //display_obj.initScrollValues();
     //display_obj.setupScrollArea(TOP_FIXED_AREA, BOT_FIXED_AREA);
     display_obj.init();
+
+    #ifdef HAS_ILI9341
+      extern uint8_t getBrightnessLevel();
+      #if ESP_ARDUINO_VERSION_MAJOR >= 3
+        #define BL_PREVIEW(duty) ledcWrite(TFT_BL, (duty))
+      #else
+        #define BL_PREVIEW(duty) ledcWrite(0, (duty))
+      #endif
+
+      BL_PREVIEW(getBrightnessLevel());
+    #endif
   }
   current_menu = menu;
 
