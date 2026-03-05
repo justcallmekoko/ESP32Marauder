@@ -4976,6 +4976,9 @@ void WiFiScan::executeWarDrive() {
         // Start a BLE scan
         if (currentScanMode == WIFI_SCAN_WAR_DRIVE) {
           #ifdef HAS_BT
+            this->bt_pending_clear = true;
+            while (bt_cb_busy)
+              delay(100);
             pBLEScan->clearResults();
             #ifdef HAS_NIMBLE_2
               pBLEScan->start(500, false, false); // Scan is in MS
@@ -4983,6 +4986,7 @@ void WiFiScan::executeWarDrive() {
               pBLEScan->start(1, scanCompleteCB, false); // Scan is in Seconds
             #endif
             this->ble_scanning = true;
+            this->bt_pending_clear = false;
           #endif
         }
       }
