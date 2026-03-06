@@ -1078,9 +1078,6 @@ void CommandLine::runCommand(String input) {
             Serial.println("Starting Targeted AP Beacon spam. Stop with " + (String)STOPSCAN_CMD);
             wifi_scan_obj.StartScan(WIFI_ATTACK_AP_SPAM, TFT_MAGENTA);
           }
-          else {
-            Serial.println("You did not specify a beacon attack type");
-          }
         }
         else if (attack_type == ATTACK_TYPE_PROBE) {
           if (!wifi_scan_obj.filterActive()) {
@@ -1141,7 +1138,6 @@ void CommandLine::runCommand(String input) {
           wifi_scan_obj.StartScan(WIFI_ATTACK_QUIET, TFT_CYAN);*/
         }
         else {
-          Serial.println(F("Attack type not properly defined"));
           return;
         }
       }
@@ -1323,9 +1319,6 @@ void CommandLine::runCommand(String input) {
             Serial.println(F("Bluetooth not supported"));
           #endif
         }
-        else {
-          Serial.println(F("You did not specify a correct spam type"));
-        }
       }
     }
     // Wardrive
@@ -1409,13 +1402,13 @@ void CommandLine::runCommand(String input) {
       if (sd_sw != -1) {
         #ifdef HAS_SD
           if (!sd_obj.supported) {
-            Serial.println(F("SD card is not connected. Cannot perform SD Update"));
+            Serial.println(F("SD card is not connected."));
             return;
           }
           wifi_scan_obj.currentScanMode = OTA_UPDATE;
           sd_obj.runUpdate();
         #else
-          Serial.println(F("SD card support disabled. Cannot perform SD Update"));
+          Serial.println(F("SD card support disabled."));
           return;
         #endif
       }
@@ -1913,7 +1906,7 @@ void CommandLine::runCommand(String input) {
       uint8_t mac[6];
       if (sscanf(mac_str.c_str(), "%2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx",
              &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]) != 6) {
-        Serial.println(F("Invalid MAC address format: use XX:XX:XX:XX:XX:XX"));
+        Serial.println(F("Format must be XX:XX:XX:XX:XX:XX"));
         return;
       }
 

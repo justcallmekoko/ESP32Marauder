@@ -5537,7 +5537,8 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
         (scan_mode == BT_SCAN_SIMPLE) ||
         (scan_mode == BT_SCAN_SIMPLE_TWO) ||
         (scan_mode == BT_SCAN_WAR_DRIVE_CONT) || 
-        (scan_mode == BT_SCAN_ANALYZER))
+        (scan_mode == BT_SCAN_ANALYZER) ||
+        (scan_mode == BT_SCAN_RAYBAN))
       NimBLEDevice::setScanDuplicateCacheSize(0);
     else {
       NimBLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DEVICE);
@@ -11410,8 +11411,9 @@ void WiFiScan::main(uint32_t currentTime)
           (currentScanMode == BT_SCAN_FLOCK_WARDRIVE) ||
           (currentScanMode == BT_SCAN_WAR_DRIVE) ||
           (currentScanMode == BT_SCAN_WAR_DRIVE_CONT) ||
-          (currentScanMode == BT_SCAN_FLIPPER) || 
-          (currentScanMode == BT_SCAN_AIRTAG)) {
+          (currentScanMode == BT_SCAN_FLIPPER) ||
+          (currentScanMode == BT_SCAN_AIRTAG) ||
+          (currentScanMode == BT_SCAN_RAYBAN)) {
     if (currentTime - initTime >= this->channel_hop_delay * HOP_DELAY) {
       initTime = millis();
       #ifdef HAS_BT
