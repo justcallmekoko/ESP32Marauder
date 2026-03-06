@@ -2314,7 +2314,7 @@ void MenuFunctions::RunSetup()
               wifi_scan_obj.joinWiFi(access_points->get(i).essid, String(passwordBuf), true);
             }
 
-            this->changeMenu(&wifiGeneralMenu, false);
+            this->changeMenu(&wifiGeneralMenu, true);
           #endif
         });
       }
@@ -2362,7 +2362,7 @@ void MenuFunctions::RunSetup()
                 wifi_scan_obj.joinWiFi(access_points->get(i).essid, String(passwordBuf), true);
               }
 
-              this->changeMenu(&wifiGeneralMenu, false);
+              this->changeMenu(&wifiGeneralMenu, true);
             #endif
           });
         }
