@@ -1005,8 +1005,10 @@ extern "C" {
               if (m_data.length() >= 2) {
                 uint16_t companyId = ((uint8_t)m_data[1] << 8) | (uint8_t)m_data[0];
 
-                if (wifi_scan_obj.isBlockedIdentifier(companyId))
+                if (wifi_scan_obj.isBlockedIdentifier(companyId)) {
+                  wifi_scan_obj.bt_cb_busy = false;
                   return;
+                }
 
                 if (wifi_scan_obj.isMetaIdentifier(companyId))
                   match = true;
@@ -1023,8 +1025,10 @@ extern "C" {
                 uint16_t identifier = extract16BitFromUUID(uuidStr);
 
                 if (identifier != 0) {
-                  if (wifi_scan_obj.isBlockedIdentifier(identifier))
+                  if (wifi_scan_obj.isBlockedIdentifier(identifier)) {
+                    wifi_scan_obj.bt_cb_busy = false;
                     return;
+                  }
 
                   if (wifi_scan_obj.isMetaIdentifier(identifier))
                     match = true;
@@ -1040,8 +1044,10 @@ extern "C" {
               
               uint16_t identifier = extract16BitFromUUID(uuidStr);
               if(identifier != 0) {
-                if (wifi_scan_obj.isBlockedIdentifier(identifier))
+                if (wifi_scan_obj.isBlockedIdentifier(identifier)) {
+                  wifi_scan_obj.bt_cb_busy = false;
                   return;
+                }
 
                 if (wifi_scan_obj.isMetaIdentifier(identifier))
                   match = true;
@@ -1778,8 +1784,10 @@ extern "C" {
               if (m_data.length() >= 2) {
                 uint16_t companyId = ((uint8_t)m_data[1] << 8) | (uint8_t)m_data[0];
 
-                if (wifi_scan_obj.isBlockedIdentifier(companyId))
+                if (wifi_scan_obj.isBlockedIdentifier(companyId)) {
+                  wifi_scan_obj.bt_cb_busy = false;
                   return;
+                }
 
                 if (wifi_scan_obj.isMetaIdentifier(companyId))
                   match = true;
@@ -1796,8 +1804,10 @@ extern "C" {
                 uint16_t identifier = extract16BitFromUUID(uuidStr);
 
                 if (identifier != 0) {
-                  if (wifi_scan_obj.isBlockedIdentifier(identifier))
+                  if (wifi_scan_obj.isBlockedIdentifier(identifier)) {
+                    wifi_scan_obj.bt_cb_busy = false;
                     return;
+                  }
 
                   if (wifi_scan_obj.isMetaIdentifier(identifier))
                     match = true;
@@ -1813,8 +1823,10 @@ extern "C" {
               
               uint16_t identifier = extract16BitFromUUID(uuidStr);
               if(identifier != 0) {
-                if (wifi_scan_obj.isBlockedIdentifier(identifier))
+                if (wifi_scan_obj.isBlockedIdentifier(identifier)) {
+                  wifi_scan_obj.bt_cb_busy = false;
                   return;
+                }
 
                 if (wifi_scan_obj.isMetaIdentifier(identifier))
                   match = true;
