@@ -1129,7 +1129,7 @@
       #ifndef TFT_HEIGHT
         #define TFT_HEIGHT 320
       #endif
-
+      #define TFT_SHIELD // For WH DIY <---------------------------------------------------------------------------------------------
       #ifndef MARAUDER_CYD_MICRO
         #define TFT_DIY      
       #endif
