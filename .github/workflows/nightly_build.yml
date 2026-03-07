@@ -233,7 +233,10 @@ jobs:
           repository: adafruit/Adafruit_MAX1704X
           ref: 1.0.2
           path: CustomAdafruit_MAX1704X
-          
+
+      - name: Install Adafruit_TCA8418
+        run: cp -r libraries/Adafruit_TCA8418 CustomAdafruit_TCA8418
+
       - name: Show Libraries
         run: |
           find /home/runner/ -name "Custom*"
@@ -415,6 +418,7 @@ jobs:
             | RL Phantom | `_cyd_2432S024_guition.bin` |
             | CYD 2432S028 2 USB | `_cyd_2432S028_2usb.bin` |
             | M5 Cardputer | `_m5cardputer.bin` (Available on M5 Burner) |
+            | M5 Cardputer ADV | `_m5cardputer_adv.bin` |
             | ESP32-C5 DevKit | [`_esp32c5_devkit.bin`](https://github.com/justcallmekoko/ESP32Marauder/wiki/ESP32%E2%80%90C5%E2%80%90DevKitC%E2%80%901) |
             | AWOK V2/V3 screen (white usb) | `_v6_1.bin` |
             | AWOK V2 flipper (orange usb) | `_flipper.bin` |

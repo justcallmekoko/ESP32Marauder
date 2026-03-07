@@ -3,7 +3,7 @@
 
 #include "configs.h"
 
-#ifdef MARAUDER_CARDPUTER
+#if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
 
 #define SHIFT 0x80
 
