@@ -2706,7 +2706,7 @@ void MenuFunctions::RunSetup()
   });
 
   #ifndef HAS_MINI_SCREEN
-    this->addNodes(&deviceMenu, "Brightness", TFTYELLOW, NULL, KEYBOARD_ICO, [this]() {
+    this->addNodes(&deviceMenu, "Brightness", TFTYELLOW, NULL, BRIGHTNESS, [this]() {
       this->brightnessMode();
     });
   #endif
@@ -2716,7 +2716,7 @@ void MenuFunctions::RunSetup()
     this->changeMenu(&infoMenu, true);
     wifi_scan_obj.RunInfo();
   });
-  this->addNodes(&deviceMenu, text08, TFTNAVY, NULL, KEYBOARD_ICO, [this]() {
+  this->addNodes(&deviceMenu, text08, TFTBLUE, NULL, SETTINGS, [this]() {
     this->changeMenu(&settingsMenu, true);
   });
 
@@ -2887,7 +2887,7 @@ void MenuFunctions::RunSetup()
 
   // Specific setting menu
   specSettingMenu.parentMenu = &settingsMenu;
-  addNodes(&specSettingMenu, text09, TFTLIGHTGREY, NULL, BRIGHTNESS, [this]() {
+  addNodes(&specSettingMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
     this->changeMenu(specSettingMenu.parentMenu, true);
   });
 
@@ -3820,5 +3820,6 @@ void MenuFunctions::displayCurrentMenu(int start_index)
 #endif
 
 #endif
+
 
 
