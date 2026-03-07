@@ -9239,33 +9239,33 @@ void WiFiScan::signalAnalyzerLoop(uint32_t tick) {
 void WiFiScan::drawChannelLine() {
   #ifdef HAS_SCREEN
     //#ifdef HAS_FULL_SCREEN
-      display_obj.tft.fillRect(0, TFT_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2), TFT_WIDTH, (CHAR_WIDTH * 2) - 1, TFT_BLACK);
+      display_obj.tft.fillRect(0, SCREEN_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2), SCREEN_WIDTH, (CHAR_WIDTH * 2) - 1, TFT_BLACK);
     //#else
     //#endif
     //Serial.println("Drawing channel line...");
     #ifndef HAS_DUAL_BAND
       for (int i = 1; i < CHAN_PER_PAGE + 1; i++) {
         int x_mult = (i * 2) - 1;
-        int x_coord = (TFT_WIDTH / (CHAN_PER_PAGE * 2)) * (x_mult - 1);
+        int x_coord = (SCREEN_WIDTH / (CHAN_PER_PAGE * 2)) * (x_mult - 1);
         #ifdef HAS_FULL_SCREEN
           display_obj.tft.setTextSize(2);
         #else
           display_obj.tft.setTextSize(1);
         #endif
-        display_obj.tft.setCursor(x_coord, TFT_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2));
+        display_obj.tft.setCursor(x_coord, SCREEN_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2));
         display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
         display_obj.tft.print((String)(i + (CHAN_PER_PAGE * (this->activity_page - 1))));
       }
     #else
       for (int i = 1; i < CHAN_PER_PAGE + 1; i++) {
         int x_mult = (i * 2) - 1;
-        int x_coord = (TFT_WIDTH / (CHAN_PER_PAGE * 2)) * (x_mult - 1);
+        int x_coord = (SCREEN_WIDTH / (CHAN_PER_PAGE * 2)) * (x_mult - 1);
         //#ifdef HAS_FULL_SCREEN
         //  display_obj.tft.setTextSize(2);
         //#else
           display_obj.tft.setTextSize(1);
         //#endif
-        display_obj.tft.setCursor(x_coord, TFT_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2));
+        display_obj.tft.setCursor(x_coord, SCREEN_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2));
         display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
         display_obj.tft.print((String)this->dual_band_channels[(i + (CHAN_PER_PAGE * (this->activity_page - 1)) - 1)]);
       }

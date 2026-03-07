@@ -973,7 +973,7 @@
     #endif
 
     #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
-      #define CHAN_PER_PAGE 7
+      #define CHAN_PER_PAGE 14
 
       #define SCREEN_CHAR_WIDTH 40
       //#define TFT_MISO -1
@@ -999,15 +999,14 @@
         #define TFT_HEIGHT 240
       #endif
 
-      #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
-
       #define EXT_BUTTON_WIDTH 0
 
       #define SCREEN_ORIENTATION 1
 
       #define CHAR_WIDTH 6
-      #define SCREEN_WIDTH TFT_HEIGHT // Originally 240
-      #define SCREEN_HEIGHT TFT_WIDTH // Originally 320
+      #define SCREEN_WIDTH TFT_HEIGHT // 240 in landscape
+      #define SCREEN_HEIGHT TFT_WIDTH // 135 in landscape
+      #define GRAPH_VERT_LIM SCREEN_HEIGHT/2 - 1
       #define HEIGHT_1 TFT_WIDTH
       #define WIDTH_1 TFT_WIDTH
       #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
@@ -2235,20 +2234,20 @@
 
   #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
     #define BANNER_TIME 50
-    
+
     #define COMMAND_PREFIX "!"
-    
+
     // Keypad start position, key sizes and spacing
-    #define KEY_X (TFT_WIDTH/2) // Centre of key
+    #define KEY_X (SCREEN_WIDTH/2) // Centre of key
     #define KEY_Y (TFT_HEIGHT/5)
-    #define KEY_W TFT_HEIGHT // Width and height
+    #define KEY_W SCREEN_WIDTH // Width and height
     #define KEY_H (TFT_HEIGHT/17)
     #define KEY_SPACING_X 0 // X and Y gap
     #define KEY_SPACING_Y 1
     #define KEY_TEXTSIZE 1   // Font size multiplier
     #define ICON_W 22
     #define ICON_H 22
-    #define BUTTON_PADDING 60
+    #define BUTTON_PADDING 7
   #endif
 
   #ifdef MARAUDER_MINI_V3
