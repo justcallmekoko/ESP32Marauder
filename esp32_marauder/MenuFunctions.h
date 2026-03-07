@@ -98,6 +98,8 @@ extern Settings settings_obj;
 #define FORCE 39
 #define FUNNY_BEACON 40
 #define FLOCK 41
+#define BRIGHTNESS 42
+#define SETTINGS 43
 
 struct Menu;
 
@@ -283,4 +285,5 @@ class MenuFunctions
 
 #endif
 #endif
+
 
