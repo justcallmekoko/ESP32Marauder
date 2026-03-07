@@ -2872,7 +2872,7 @@ void MenuFunctions::RunSetup()
   });
   for (int i = 0; i < settings_obj.getNumberSettings(); i++) {
     if (this->callSetting(settings_obj.setting_index_to_name(i)) == "bool")
-      this->addNodes(&settingsMenu, settings_obj.setting_index_to_name(i), TFTLIGHTGREY, NULL, 0, [this, i]() {
+      this->addNodes(&settingsMenu, settings_obj.setting_index_to_name(i), TFTLIGHTGREY, NULL, SETTINGS, [this, i]() {
         settings_obj.toggleSetting(settings_obj.setting_index_to_name(i));
         this->callSetting(settings_obj.setting_index_to_name(i));
         this->changeMenu(&specSettingMenu, true);
@@ -2887,7 +2887,7 @@ void MenuFunctions::RunSetup()
 
   // Specific setting menu
   specSettingMenu.parentMenu = &settingsMenu;
-  addNodes(&specSettingMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+  addNodes(&specSettingMenu, text09, TFTLIGHTGREY, NULL, BRIGHTNESS, [this]() {
     this->changeMenu(specSettingMenu.parentMenu, true);
   });
 
@@ -3820,4 +3820,5 @@ void MenuFunctions::displayCurrentMenu(int start_index)
 #endif
 
 #endif
+
 
