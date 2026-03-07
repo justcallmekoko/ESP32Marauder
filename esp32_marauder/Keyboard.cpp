@@ -1,5 +1,7 @@
 #include "Keyboard.h"
 
+#if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+
 #ifdef MARAUDER_CARDPUTER
 #include <driver/gpio.h>
 #include <Arduino.h>
@@ -31,9 +33,19 @@ uint8_t Keyboard_Class::_get_input(const std::vector<int> &pinList)
 
     return buffer;
 }
+#endif
+
+#ifdef MARAUDER_CARDPUTER_ADV
+volatile bool Keyboard_Class::_tca_interrupt = false;
+
+void IRAM_ATTR Keyboard_Class::_tca_isr() {
+    _tca_interrupt = true;
+}
+#endif
 
 void Keyboard_Class::begin()
 {
+#ifdef MARAUDER_CARDPUTER
     for (auto i : output_list)
     {
         gpio_reset_pin((gpio_num_t)i);
@@ -50,6 +62,20 @@ void Keyboard_Class::begin()
     }
 
     _set_output(output_list, 0);
+#elif defined(MARAUDER_CARDPUTER_ADV)
+    Wire.begin(8, 9);  // SDA=GPIO8, SCL=GPIO9
+    _tca_initialized = _tca8418.begin(TCA8418_DEFAULT_ADDR, &Wire);
+    if (_tca_initialized) {
+        _tca8418.matrix(7, 8);  // 7 rows x 8 cols
+        _tca8418.flush();
+        _tca8418.enableInterrupts();
+        pinMode(11, INPUT_PULLUP);
+        attachInterrupt(digitalPinToInterrupt(11), _tca_isr, FALLING);
+        _tca_interrupt = true;  // Force initial scan
+    } else {
+        Serial.println("[ERROR] TCA8418 keyboard not found on I2C (addr 0x34)");
+    }
+#endif
 }
 
 uint8_t Keyboard_Class::getKey(Point2D_t keyCoor)
@@ -76,6 +102,8 @@ void Keyboard_Class::updateKeyList()
 {
     _key_list_buffer.clear();
     Point2D_t coor;
+
+#ifdef MARAUDER_CARDPUTER
     uint8_t input_value = 0;
 
     for (int i = 0; i < 8; i++)
@@ -106,6 +134,63 @@ void Keyboard_Class::updateKeyList()
             }
         }
     }
+#elif defined(MARAUDER_CARDPUTER_ADV)
+    if (!_tca_initialized) return;
+
+    // Drain TCA8418 FIFO when interrupt signals new events
+    if (_tca_interrupt) {
+        _tca_interrupt = false;
+
+        int evt;
+        while ((evt = _tca8418.getEvent()) != 0) {
+            // Bit 7 = 1 means key press per TCA8418 datasheet (SCPS162).
+            // Note: the vendored Adafruit library comments have this backwards.
+            bool pressed = (evt & 0x80) != 0;
+            int key = (evt & 0x7F) - 1;  // Convert from 1-indexed key code to 0-indexed
+            if (key < 0 || key >= 70) continue;
+            // TCA8418 uses 10-column stride internally
+            int row = key / 10;
+            int col = key % 10;
+            if (row >= 7 || col >= 8) continue;
+
+            // Remap to match _key_value_map[4][14] coordinate system
+            coor.x = (row * 2) + (col > 3 ? 1 : 0);
+            coor.y = col % 4;
+
+            if (coor.x >= 14 || coor.y >= 4) continue;
+
+            if (pressed) {
+                // Prevent duplicate tracking (e.g. on missed release event)
+                bool already = false;
+                for (auto &k : _tca_pressed_keys) {
+                    if (k.x == coor.x && k.y == coor.y) { already = true; break; }
+                }
+                if (!already) _tca_pressed_keys.push_back(coor);
+            } else {
+                // Remove released key from tracked state
+                for (auto it = _tca_pressed_keys.begin(); it != _tca_pressed_keys.end(); ++it) {
+                    if (it->x == coor.x && it->y == coor.y) {
+                        _tca_pressed_keys.erase(it);
+                        break;
+                    }
+                }
+            }
+        }
+        // Check for FIFO overflow (bit 3) and recover
+        uint8_t int_stat = _tca8418.readRegister(TCA8418_REG_INT_STAT);
+        if (int_stat & 0x08) {
+            _tca8418.flush();
+            _tca_pressed_keys.clear();
+        }
+        // Clear all INT_STAT bits so the INT pin deasserts and can fire again
+        _tca8418.writeRegister(TCA8418_REG_INT_STAT, 0x0F);
+    }
+
+    // Always populate buffer from currently-held keys
+    for (auto &k : _tca_pressed_keys) {
+        _key_list_buffer.push_back(k);
+    }
+#endif
 }
 
 uint8_t Keyboard_Class::isPressed()

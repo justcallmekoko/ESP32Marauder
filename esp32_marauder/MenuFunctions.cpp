@@ -307,9 +307,9 @@ void MenuFunctions::main(uint32_t currentTime)
 
   #ifdef HAS_BUTTONS
 
-    #if (C_BTN >= 0) && !defined(MARAUDER_CARDPUTER)
+    #if (C_BTN >= 0) && !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
       bool c_btn_press = c_btn.justPressed();
-    #elif defined(MARAUDER_CARDPUTER)
+    #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
       bool c_btn_press = this->isKeyPressed('(');
     #endif
 
@@ -651,10 +651,10 @@ void MenuFunctions::main(uint32_t currentTime)
     // Don't do this for touch screens
     #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_CYD_MICRO) || defined(MARAUDER_CYD_GUITION) || defined(MARAUDER_CYD_2USB) || defined(MARAUDER_CYD_3_5_INCH))
       #if !defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
-        #if (U_BTN >= 0 || defined(MARAUDER_CARDPUTER))
+        #if (U_BTN >= 0 || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV))
           #if (U_BTN >= 0)
             if (u_btn.justPressed()) {
-          #elif defined(MARAUDER_CARDPUTER)
+          #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
             if (this->isKeyPressed(';')) {
           #endif
               if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
@@ -722,10 +722,10 @@ void MenuFunctions::main(uint32_t currentTime)
         #endif
       #endif
 
-      #if (D_BTN >= 0 || defined(MARAUDER_CARDPUTER))
+      #if (D_BTN >= 0 || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV))
       #if (D_BTN >= 0)
       if (d_btn.justPressed()){
-      #elif defined(MARAUDER_CARDPUTER)
+      #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
       if (this->isKeyPressed('.')){
       #endif
         if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
@@ -797,10 +797,10 @@ void MenuFunctions::main(uint32_t currentTime)
       }
       #endif
 
-      #if (R_BTN >= 0 || defined(MARAUDER_CARDPUTER))
+      #if (R_BTN >= 0 || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV))
       #if (R_BTN >= 0)
       if (r_btn.justPressed()) {
-      #elif defined(MARAUDER_CARDPUTER)
+      #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
       if (this->isKeyPressed('/')) {
       #endif
         if (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
@@ -821,10 +821,10 @@ void MenuFunctions::main(uint32_t currentTime)
       }
       #endif
 
-      #if (L_BTN >= 0 || defined(MARAUDER_CARDPUTER))
+      #if (L_BTN >= 0 || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV))
       #if (L_BTN >= 0)
       if (l_btn.justPressed()) {
-      #elif defined(MARAUDER_CARDPUTER)
+      #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
       if (this->isKeyPressed(',')) {
       #endif
         if (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
@@ -964,10 +964,10 @@ void MenuFunctions::updateStatusBar()
 
   bool status_changed = false;
   
-  #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_MINI_V3)
+  #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(MARAUDER_MINI_V3)
     display_obj.tft.setFreeFont(NULL);
   #endif
-  
+
   uint16_t the_color; 
 
   #ifdef HAS_GPS
@@ -1018,7 +1018,7 @@ void MenuFunctions::updateStatusBar()
 
   if ((current_channel != wifi_scan_obj.old_channel) || (status_changed)) {
     wifi_scan_obj.old_channel = current_channel;
-    #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_MINI_V3)
+    #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(MARAUDER_MINI_V3)
       display_obj.tft.fillRect(TFT_WIDTH/4, 0, CHAR_WIDTH * 6, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
     #elif defined(HAS_DUAL_BAND)
       display_obj.tft.fillRect(50, 0, (CHAR_WIDTH / 2) * 8, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
@@ -1415,7 +1415,7 @@ void MenuFunctions::displaySetting(String key, Menu* menu, int index) {
     
 }
 
-#ifdef MARAUDER_CARDPUTER
+#if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
 bool MenuFunctions::isKeyPressed(char c)
 {
   M5CardputerKeyboard.updateKeyList();
@@ -1441,7 +1441,7 @@ void MenuFunctions::RunSetup()
 
   this->disable_touch = false;
 
-  #ifdef MARAUDER_CARDPUTER
+  #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
     M5CardputerKeyboard.begin();
   #endif
    
@@ -2120,7 +2120,7 @@ void MenuFunctions::RunSetup()
 
     //#if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
       miniKbMenu.parentMenu = &wifiGeneralMenu;
-      #ifndef MARAUDER_CARDPUTER
+      #if !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
         this->addNodes(&miniKbMenu, "a", TFTCYAN, NULL, 0, [this]() {
           this->changeMenu(miniKbMenu.parentMenu, true);
         });
@@ -3071,7 +3071,7 @@ void MenuFunctions::RunSetup()
             #endif
 
             // Add SSID
-            #ifdef HAS_C && !defined(MARAUDER_CARDPUTER)
+            #if defined(HAS_C) && !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
               if (c_btn.justPressed()) {
                 while (!c_btn.justReleased()) {
                   c_btn.justPressed(); // Need to continue updating button hold status. My shitty library.
@@ -3097,7 +3097,7 @@ void MenuFunctions::RunSetup()
             #endif
           #endif
 
-          #ifdef MARAUDER_CARDPUTER
+          #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
             for (int i = 0; i < 95; i++) {
               if ((M5CardputerKeyboard._ascii_list[i] != '(') &&
                   (M5CardputerKeyboard._ascii_list[i] != '`')) {
@@ -3285,12 +3285,12 @@ void MenuFunctions::RunSetup()
 
             display_obj.tft.setTextColor(TFT_ORANGE, TFT_BLACK);
             #ifdef HAS_MINI_KB
-              #ifndef MARAUDER_CARDPUTER
+              #if !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
               display_obj.tft.println("U/D - Rem/Add Char");
               display_obj.tft.println("L/R - Prev/Nxt Char");
               #endif
               if (!do_pass) {
-                #ifdef MARAUDER_CARDPUTER
+                #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
                   display_obj.tft.println("Enter - Save");
                   display_obj.tft.println("Esc - Exit");
                 #else
@@ -3299,7 +3299,7 @@ void MenuFunctions::RunSetup()
                 #endif
               }
               else {
-                #ifdef MARAUDER_CARDPUTER
+                #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
                   display_obj.tft.println("Enter - Enter");
                 #else
                   display_obj.tft.println("C(Hold) - Enter");

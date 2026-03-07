@@ -31,6 +31,7 @@
   //#define MARAUDER_CYD_3_5_INCH
   //#define MARAUDER_C5
   //#define MARAUDER_CARDPUTER
+  //#define MARAUDER_CARDPUTER_ADV
   //#define MARAUDER_V8
   //#define MARAUDER_MINI_V3
   //#define DUAL_MINI_C5
@@ -61,6 +62,8 @@
     #define HARDWARE_NAME "M5Stick-C Plus2"
   #elif defined(MARAUDER_CARDPUTER)
     #define HARDWARE_NAME "M5 Cardputer"
+  #elif defined(MARAUDER_CARDPUTER_ADV)
+    #define HARDWARE_NAME "M5 Cardputer ADV"
   #elif defined(MARAUDER_MINI)
     #define HARDWARE_NAME "Marauder Mini"
   #elif defined(MARAUDER_V7)
@@ -130,7 +133,7 @@
     #define HAS_GPS
   #endif
 
-  #if defined(MARAUDER_CARDPUTER)
+  #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
     //#define FLIPPER_ZERO_HAT
     #define HAS_MINI_KB
     //#define HAS_BATTERY
@@ -643,7 +646,7 @@
       #define D_PULL true
     #endif
 
-    #ifdef MARAUDER_CARDPUTER
+    #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
       #define L_BTN -1
       #define C_BTN 0
       #define U_BTN -1
@@ -969,7 +972,7 @@
 
     #endif
 
-    #ifdef MARAUDER_CARDPUTER
+    #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
       #define CHAN_PER_PAGE 7
 
       #define SCREEN_CHAR_WIDTH 40
@@ -2230,7 +2233,7 @@
     #define BUTTON_PADDING 60
   #endif
 
-  #ifdef MARAUDER_CARDPUTER
+  #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
     #define BANNER_TIME 50
     
     #define COMMAND_PREFIX "!"
@@ -2322,7 +2325,7 @@
       #define SD_CS -1
     #endif
 
-    #ifdef MARAUDER_CARDPUTER
+    #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
       //#define SS      12
       #define SD_CS   12
       #define SD_SCK  40
@@ -2423,7 +2426,7 @@
   // These values are in bytes
   #ifdef MARAUDER_M5STICKC
     #define MEM_LOWER_LIM 10000
-  #elif defined(MARAUDER_CARDPUTER)
+  #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
     #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_MINI)
     #define MEM_LOWER_LIM 10000
@@ -2570,7 +2573,7 @@
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 33
       #define GPS_RX 32
-    #elif defined(MARAUDER_CARDPUTER)
+    #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 1
       #define GPS_RX 2
