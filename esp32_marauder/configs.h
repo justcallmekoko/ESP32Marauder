@@ -2572,10 +2572,14 @@
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 33
       #define GPS_RX 32
-    #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+    #elif defined(MARAUDER_CARDPUTER)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 1
       #define GPS_RX 2
+    #elif defined(MARAUDER_CARDPUTER_ADV)
+      #define GPS_SERIAL_INDEX 1
+      #define GPS_TX 15
+      #define GPS_RX 13
     #elif defined(MARAUDER_REV_FEATHER)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 6
