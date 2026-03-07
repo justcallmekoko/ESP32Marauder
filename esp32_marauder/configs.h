@@ -136,7 +136,9 @@
   #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
     //#define FLIPPER_ZERO_HAT
     #define HAS_MINI_KB
-    //#define HAS_BATTERY
+    #ifdef MARAUDER_CARDPUTER_ADV
+      #define HAS_BATTERY
+    #endif
     #define HAS_BT
     #define HAS_BUTTONS
     //#define HAS_NEOPIXEL_LED
@@ -2671,6 +2673,10 @@
       #define I2C_SDA 5
     #endif
 
+    #ifdef MARAUDER_CARDPUTER_ADV
+      #define I2C_SDA 8
+      #define I2C_SCL 9
+    #endif
   #endif
 
   //// MARAUDER TITLE STUFF
