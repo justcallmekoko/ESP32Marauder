@@ -1028,7 +1028,7 @@
       //#define MENU_FONT &FreeSansBold9pt7b
       #define BUTTON_SCREEN_LIMIT 6
       #define BUTTON_ARRAY_LEN 100
-      #define STATUS_BAR_WIDTH (TFT_HEIGHT/16)
+      #define STATUS_BAR_WIDTH (SCREEN_HEIGHT/16)
       #define LVGL_TICK_PERIOD 6
     
       #define FRAME_X 100
