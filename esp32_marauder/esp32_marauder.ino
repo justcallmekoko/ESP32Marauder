@@ -394,6 +394,9 @@ void setup()
   #endif
 
   #ifdef HAS_SCREEN
+    #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+      display_obj.clearScreen();
+    #endif
     menu_function_obj.RunSetup();
   #endif
 
