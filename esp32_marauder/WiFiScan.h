@@ -627,7 +627,7 @@ class WiFiScan
     void RunMultiSSIDScan(uint8_t scan_mode, uint16_t color);
     void RunBeaconScan(uint8_t scan_mode, uint16_t color);
     void RunRawScan(uint8_t scan_mode, uint16_t color);
-    void RunStationScan(uint8_t scan_mode, uint16_t color);
+    //void RunStationScan(uint8_t scan_mode, uint16_t color);
     void RunDeauthScan(uint8_t scan_mode, uint16_t color);
     void RunEapolScan(uint8_t scan_mode, uint16_t color);
     void RunProbeScan(uint8_t scan_mode, uint16_t color);
@@ -883,7 +883,7 @@ class WiFiScan
     static void getMAC(uint8_t* mac, const uint8_t* data, uint16_t offset);
     static void beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     //static void rawSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
-    static void stationSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
+    //static void stationSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     //static void apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type);
     //static void deauthSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
