@@ -245,7 +245,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_SIGSTREN_CMD);
     Serial.println(HELP_SCAN_ALL_CMD);
     Serial.println(HELP_SCANAP_CMD);
-    Serial.println(HELP_SCANSTA_CMD);
+    //Serial.println(HELP_SCANSTA_CMD);
     Serial.println(HELP_SNIFF_RAW_CMD);
     Serial.println(HELP_SNIFF_BEACON_CMD);
     Serial.println(HELP_SNIFF_PROBE_CMD);
@@ -572,7 +572,7 @@ void CommandLine::runCommand(String input) {
     else if (cmd_args.get(0) == WARDRIVE_CMD) {
       #ifdef HAS_GPS
         if (gps_obj.getGpsModuleStatus()) {
-          int sta_sw = this->argSearch(&cmd_args, "-s");
+          //int sta_sw = this->argSearch(&cmd_args, "-s");
           int flk_sw = this->argSearch(&cmd_args, "-f");
 
           if (flk_sw != -1) {
@@ -584,15 +584,9 @@ void CommandLine::runCommand(String input) {
             #endif
             wifi_scan_obj.StartScan(BT_SCAN_FLOCK_WARDRIVE, TFT_GREEN);*/
           }
-          else if (sta_sw != -1) {
+          /*else if (sta_sw != -1) {
             this->startScanFromCLI(WIFI_SCAN_STATION_WAR_DRIVE, TFT_GREEN, "Station Wardrive");
-            /*Serial.println(STOPSCAN_CMD);
-            #ifdef HAS_SCREEN
-              display_obj.clearScreen();
-              menu_function_obj.drawStatusBar();
-            #endif
-            wifi_scan_obj.StartScan(WIFI_SCAN_STATION_WAR_DRIVE, TFT_GREEN);*/
-          }
+          }*/
           else {
             this->startScanFromCLI(WIFI_SCAN_WAR_DRIVE, TFT_GREEN, "Wardrive");
             /*Serial.println(STOPSCAN_CMD);
@@ -730,19 +724,13 @@ void CommandLine::runCommand(String input) {
       wifi_scan_obj.StartScan(WIFI_SCAN_RAW_CAPTURE, TFT_WHITE);*/
     }
     // Scan stations
-    else if (cmd_args.get(0) == SCANSTA_CMD) {    
+    /*else if (cmd_args.get(0) == SCANSTA_CMD) {    
       if(access_points->size() < 1)
         Serial.print(F("The AP list is empty. Scan APs first with "));
         Serial.println(SCANAP_CMD);  
 
       this->startScanFromCLI(WIFI_SCAN_STATION, TFT_ORANGE, "Station scan");
-      /*Serial.println(STOPSCAN_CMD);  
-      #ifdef HAS_SCREEN
-        display_obj.clearScreen();
-        menu_function_obj.drawStatusBar();
-      #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_STATION, TFT_ORANGE);*/
-    }
+    }*/
     // Beacon sniff
     else if (cmd_args.get(0) == SNIFF_BEACON_CMD) {
       this->startScanFromCLI(WIFI_SCAN_AP, TFT_MAGENTA, "Beacon sniff");
