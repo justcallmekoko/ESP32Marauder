@@ -948,7 +948,11 @@ void MenuFunctions::battery(bool initial)
                                     STATUSBAR_COLOR,
                                     the_color);
       }*/
-      display_obj.tft.drawString((String)battery_obj.battery_level + "%", 204, 0, 2);
+      #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+        display_obj.tft.drawString((String)battery_obj.battery_level + "%", 204, 0, 1);
+      #else
+        display_obj.tft.drawString((String)battery_obj.battery_level + "%", 204, 0, 2);
+      #endif
     }
   #endif
 }
