@@ -601,11 +601,16 @@ void Display::buildBanner(String msg, int xpos)
 {
   int h = TEXT_HEIGHT;
 
-  this->tft.fillRect(0, STATUS_BAR_WIDTH, SCREEN_WIDTH, TEXT_HEIGHT, TFT_BLACK);
+  #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+    int banner_y = STATUS_BAR_WIDTH + 8;
+  #else
+    int banner_y = STATUS_BAR_WIDTH;
+  #endif
+  this->tft.fillRect(0, STATUS_BAR_WIDTH, SCREEN_WIDTH, TEXT_HEIGHT + (banner_y - STATUS_BAR_WIDTH), TFT_BLACK);
   this->tft.setFreeFont(NULL);           // Font 4 selected
   this->tft.setTextSize(BANNER_TEXT_SIZE);           // Font size scaling is x1
   this->tft.setTextColor(TFT_WHITE, TFT_BLACK);  // Black text, no background colour
-  this->showCenterText(msg, STATUS_BAR_WIDTH);
+  this->showCenterText(msg, banner_y);
 }
 
 #endif
