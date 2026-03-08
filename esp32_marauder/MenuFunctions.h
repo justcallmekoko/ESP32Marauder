@@ -163,9 +163,9 @@ class MenuFunctions
     Menu wifiSnifferMenu;
     Menu wifiScannerMenu;
     Menu wifiAttackMenu;
-    #ifdef HAS_GPS
+    /*#ifdef HAS_GPS
       Menu wardrivingMenu;
-    #endif
+    #endif*/
     Menu wifiGeneralMenu;
     Menu wifiAPMenu;
     Menu wifiIPMenu;
