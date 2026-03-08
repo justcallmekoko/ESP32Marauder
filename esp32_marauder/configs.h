@@ -136,20 +136,23 @@
   #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
     //#define FLIPPER_ZERO_HAT
     #define HAS_MINI_KB
-    #ifdef MARAUDER_CARDPUTER_ADV
-      #define HAS_BATTERY
-      #define BATTERY_ADC_PIN 10
-    #endif
     #define HAS_BT
     #define HAS_BUTTONS
     //#define HAS_NEOPIXEL_LED
     //#define HAS_PWR_MGMT
+    //#define HAS_BATTERY
     #define HAS_SCREEN
     #define HAS_MINI_SCREEN
     #define HAS_SD
     #define USE_SD
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
+
+    #ifdef MARAUDER_CARDPUTER_ADV
+      #define HAS_BATTERY
+      #define BATTERY_ADC_PIN 10
+      #define HAS_NEOPIXEL_LED
+    #endif
   #endif
 
   #ifdef MARAUDER_MINI
@@ -2492,6 +2495,8 @@
       #define PIN 27
     #elif defined(MARAUDER_V8)
       #define PIN 27
+    #elif defined(MARAUDER_CARDPUTER_ADV)
+      #define PIN 21
     #else
       #define PIN 25
     #endif
