@@ -2245,7 +2245,7 @@
 
     // Keypad start position, key sizes and spacing
     #define KEY_X (SCREEN_WIDTH/2) // Centre of key
-    #define KEY_Y (TFT_HEIGHT/5)
+    #define KEY_Y (TFT_HEIGHT/6)
     #define KEY_W SCREEN_WIDTH // Width and height
     #define KEY_H (TFT_HEIGHT/17)
     #define KEY_SPACING_X 0 // X and Y gap
