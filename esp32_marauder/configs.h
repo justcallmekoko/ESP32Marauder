@@ -138,6 +138,7 @@
     #define HAS_MINI_KB
     #ifdef MARAUDER_CARDPUTER_ADV
       #define HAS_BATTERY
+      #define BATTERY_ADC_PIN 10
     #endif
     #define HAS_BT
     #define HAS_BUTTONS
@@ -2673,10 +2674,6 @@
       #define I2C_SDA 5
     #endif
 
-    #ifdef MARAUDER_CARDPUTER_ADV
-      #define I2C_SDA 8
-      #define I2C_SCL 9
-    #endif
   #endif
 
   //// MARAUDER TITLE STUFF
