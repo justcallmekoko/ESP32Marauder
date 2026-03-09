@@ -1349,8 +1349,7 @@ void MenuFunctions::drawStatusBar()
   }
 }
 
-void MenuFunctions::orientDisplay()
-{
+void MenuFunctions::orientDisplay() {
   display_obj.init();
 
   display_obj.tft.setRotation(SCREEN_ORIENTATION); // Portrait
@@ -1365,7 +1364,7 @@ void MenuFunctions::orientDisplay()
     #endif
   #endif
 
-  changeMenu(current_menu);
+  changeMenu(current_menu, true);
 }
 
 void MenuFunctions::runBoolSetting(String key) {
