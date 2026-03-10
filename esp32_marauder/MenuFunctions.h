@@ -265,6 +265,7 @@ class MenuFunctions
     boolean pressed = false;
 
     bool disable_touch;
+    bool screen_blacked_out = false;
 
     String loaded_file = "";
 

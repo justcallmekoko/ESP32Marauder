@@ -213,6 +213,44 @@ void MenuFunctions::main(uint32_t currentTime)
     }
   #endif
 
+  // Screen blackout: hold top zone 2s during any scan → screen off
+  // Any tap while blacked out → restore at minimum brightness
+  #ifdef HAS_ILI9341
+    if (pressed && this->screen_blacked_out) {
+      // Wake from blackout at minimum brightness
+      while (display_obj.updateTouch(&t_x, &t_y)) delay(10);
+      extern void brightnessSave(uint8_t level);
+      brightnessSave(0);  // level 0 = duty 3 (~1%)
+      this->screen_blacked_out = false;
+      return;
+    }
+
+    if (pressed && wifi_scan_obj.currentScanMode != WIFI_SCAN_OFF &&
+        wifi_scan_obj.currentScanMode != WIFI_CONNECTED) {
+      uint16_t zoneUp = TFT_HEIGHT * 25 / 100;
+      if (t_y < zoneUp) {
+        uint32_t hold_start = millis();
+        uint16_t hx, hy;
+        bool held = false;
+        while (display_obj.updateTouch(&hx, &hy)) {
+          if (millis() - hold_start >= 2000) {
+            held = true;
+            break;
+          }
+          delay(10);
+        }
+        if (held) {
+          while (display_obj.updateTouch(&hx, &hy)) delay(10);
+          // Black out screen
+          extern void backlightOff();
+          backlightOff();
+          this->screen_blacked_out = true;
+          return;
+        }
+      }
+    }
+  #endif
+
   // This is if there are scans/attacks going on
   #ifdef HAS_ILI9341
     if ((wifi_scan_obj.currentScanMode != WIFI_SCAN_OFF) &&
@@ -3740,8 +3778,8 @@ void MenuFunctions::displayCurrentMenu(int start_index)
     extern void brightnessSave(uint8_t level);
     extern uint8_t getBrightnessLevel();
 
-    const uint8_t levels[] = {26, 51, 77, 102, 128, 153, 179, 204, 230, 255};
-    const uint8_t numLevels = 10;
+    const uint8_t levels[] = {3, 8, 15, 26, 51, 77, 102, 128, 153, 179, 204, 230, 255};
+    const uint8_t numLevels = 13;
     uint8_t level = getBrightnessLevel();
 
     // LEDC write compatibility (2.x vs 3.x board package)
@@ -3757,9 +3795,15 @@ void MenuFunctions::displayCurrentMenu(int start_index)
 
     display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
     display_obj.tft.drawCentreString("TAP TOP = BRIGHTER", TFT_WIDTH/2, 10, 1);
-    display_obj.tft.drawCentreString("TAP BOTTOM = DIMMER", TFT_WIDTH/2, TFT_HEIGHT - 20, 1);
+    display_obj.tft.drawCentreString("TAP BOTTOM = DIMMER", TFT_WIDTH/2, TFT_HEIGHT/2 + 45, 1);
     display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
-    display_obj.tft.drawCentreString("TAP MIDDLE or WAIT 3s = SAVE", TFT_WIDTH/2, TFT_HEIGHT/2 + 50, 1);
+    display_obj.tft.drawCentreString("TAP MIDDLE = SAVE", TFT_WIDTH/2, TFT_HEIGHT/2 + 60, 1);
+    // Blackout button — full width, 50px tall at bottom (same feel as POI button)
+    uint16_t boY = TFT_HEIGHT - 50;
+    display_obj.tft.fillRect(0, boY, TFT_WIDTH, 50, TFT_BLACK);
+    display_obj.tft.drawRect(0, boY, TFT_WIDTH, 50, TFT_RED);
+    display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+    display_obj.tft.drawCentreString("BLACKOUT", TFT_WIDTH/2, boY + 18, 2);
 
     auto drawBar = [&]() {
       uint16_t barX = 30, barY = TFT_HEIGHT/2 - 25, barW = TFT_WIDTH - 60, barH = 30;
@@ -3791,7 +3835,13 @@ void MenuFunctions::displayCurrentMenu(int start_index)
         // Wait for release
         while (display_obj.updateTouch(&tx, &ty)) delay(10);
 
-        if (ty < zoneUp) {
+        if (ty >= TFT_HEIGHT - 50) {
+          // Blackout button
+          extern void backlightOff();
+          backlightOff();
+          this->screen_blacked_out = true;
+          break;
+        } else if (ty < zoneUp) {
           if (level < numLevels - 1) {
             level++;
             BL_PREVIEW(levels[level]);

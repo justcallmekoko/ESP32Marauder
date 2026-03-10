@@ -195,7 +195,7 @@ const char PROGMEM HELP_BT_WARDRIVE_CMD[] = "btwardrive";
 const char PROGMEM HELP_BT_SKIM_CMD[] = "sniffskim";
 
 const char PROGMEM BRIGHTNESS_CMD[] = "brightness";
-const char PROGMEM HELP_BRIGHTNESS_CMD[] = "brightness [-c cycle] [-s <0-9>]";
+const char PROGMEM HELP_BRIGHTNESS_CMD[] = "brightness [-c cycle] [-s <0-12>]";
 
 const char PROGMEM HELP_FOOT[] = "==================================";
 
