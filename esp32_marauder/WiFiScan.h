@@ -587,6 +587,14 @@ class WiFiScan
     bool mac_cmp(struct mac_addr addr1, struct mac_addr addr2);
     bool mac_cmp(uint8_t addr1[6], uint8_t addr2[6]);
     void clearMacHistory();
+    // POI tagging during wardrive
+    File poiFile;
+    bool poiFileOpen = false;
+    String poiFileName = "";
+
+    void openPoiFile();
+    void closePoiFile();
+
     void executeWarDrive();
     void executeSourApple();
     void executeSpoofAirtag();
@@ -866,6 +874,9 @@ class WiFiScan
     void StopScan(uint8_t scan_mode);
     void setBaseMacAddress(uint8_t macAddr[6]);
     //const char* generateRandomName();
+
+    uint16_t poiCount = 0;
+    void tagPOI(const char* label = nullptr);
 
     bool save_serial = false;
     void startPcap(String file_name);
