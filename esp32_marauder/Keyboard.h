@@ -5,7 +5,7 @@
 
 #include "configs.h"
 
-#ifdef MARAUDER_CARDPUTER
+#if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
 
 /**
  * @file keyboard.h
@@ -23,6 +23,11 @@
 #include "Keyboard_def.h"
 #include "configs.h"
 
+#ifdef MARAUDER_CARDPUTER_ADV
+#include <Wire.h>
+#include "Adafruit_TCA8418.h"
+#endif
+
 struct Chart_t
 {
     uint8_t value;
@@ -36,10 +41,12 @@ struct Point2D_t
     int y;
 };
 
+#ifdef MARAUDER_CARDPUTER
 const std::vector<int> output_list = {8, 9, 11};
 const std::vector<int> input_list = {13, 15, 3, 4, 5, 6, 7};
 
 const Chart_t X_map_chart[7] = {{1, 0, 1}, {2, 2, 3}, {4, 4, 5}, {8, 6, 7}, {16, 8, 9}, {32, 10, 11}, {64, 12, 13}};
+#endif
 
 struct KeyValue_t
 {
@@ -152,8 +159,17 @@ private:
     bool _is_caps_locked;
     uint8_t _last_key_size;
 
+#ifdef MARAUDER_CARDPUTER
     void _set_output(const std::vector<int> &pinList, uint8_t output);
     uint8_t _get_input(const std::vector<int> &pinList);
+#endif
+#ifdef MARAUDER_CARDPUTER_ADV
+    Adafruit_TCA8418 _tca8418;
+    bool _tca_initialized = false;
+    static volatile bool _tca_interrupt;
+    static void IRAM_ATTR _tca_isr();
+    std::vector<Point2D_t> _tca_pressed_keys;  // Currently held keys
+#endif
 
 public:
     const char _ascii_list[95] = {'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p',

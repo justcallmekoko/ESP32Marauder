@@ -35,6 +35,7 @@
 //#include <User_Setup_cyd_guition.h>
 //#include <User_Setup_cyd_2usb.h>
 //#include <User_Setup_marauder_m5cardputer.h>
+//#include <User_Setup_marauder_m5cardputer_adv.h>
 //#include <User_Setup_cyd_3_5_inch.h>
 
 //#include <User_Setups/Setup1_ILI9341.h>  // Setup file configured for my ILI9341
