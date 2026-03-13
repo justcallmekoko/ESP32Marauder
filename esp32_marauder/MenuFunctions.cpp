@@ -850,6 +850,16 @@ void MenuFunctions::main(uint32_t currentTime)
       }
       #endif
 
+      #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+      if (this->isKeyPressed('`') || this->isKeyPressed(KEY_BACKSPACE)) {
+        if (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
+          if (current_menu->parentMenu != NULL) {
+            this->changeMenu(current_menu->parentMenu, true);
+          }
+        }
+      }
+      #endif
+
       if(c_btn_press){
         current_menu->list->get(current_menu->selected).callable();
       }
