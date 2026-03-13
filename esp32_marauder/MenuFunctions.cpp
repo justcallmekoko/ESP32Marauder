@@ -402,12 +402,17 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == BT_SCAN_ANALYZER))
         {
           wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
-    
-          // If we don't do this, the text and button coordinates will be off
-          display_obj.init();
-    
+
+          // Restore display state without full reinit to avoid screen flash
+          #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+            display_obj.tft.setRotation(SCREEN_ORIENTATION);
+            display_obj.clearScreen();
+          #else
+            display_obj.init();
+          #endif
+
           // Take us back to the menu
-          changeMenu(current_menu);
+          changeMenu(current_menu, true);
         }
     
         x = -1;
