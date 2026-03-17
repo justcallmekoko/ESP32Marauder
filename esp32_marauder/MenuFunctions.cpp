@@ -102,6 +102,10 @@ void MenuFunctions::displayMenuButtons() {
 // Function to check menu input
 void MenuFunctions::main(uint32_t currentTime)
 {
+  #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+    this->updateKeyboard();
+  #endif
+
   // Some function exited and we need to go back to normal
   if (display_obj.exit_draw) {
     if (wifi_scan_obj.currentScanMode != WIFI_CONNECTED)
@@ -1435,10 +1439,14 @@ void MenuFunctions::displaySetting(String key, Menu* menu, int index) {
 }
 
 #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
-bool MenuFunctions::isKeyPressed(char c)
+void MenuFunctions::updateKeyboard()
 {
   M5CardputerKeyboard.updateKeyList();
   M5CardputerKeyboard.updateKeysState();
+}
+
+bool MenuFunctions::isKeyPressed(char c)
+{
   bool pressed = M5CardputerKeyboard.isKeyPressed(c);
 
   if (pressed)

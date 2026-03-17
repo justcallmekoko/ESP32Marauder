@@ -234,6 +234,7 @@ class MenuFunctions
 
     #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
       Keyboard_Class M5CardputerKeyboard = Keyboard_Class();
+      void updateKeyboard();
       bool isKeyPressed(char c);
     #endif
 
