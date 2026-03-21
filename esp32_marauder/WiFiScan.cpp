@@ -3199,10 +3199,11 @@ String WiFiScan::security_int_to_string(int security_type) {
       authtype = "[WPA3_PSK]";
       break;
 
+    #ifdef HAS_IDF_3
     case WIFI_AUTH_WPA3_ENTERPRISE:
       authtype = "[WPA3]";
       break;
-
+    #endif
     case WIFI_AUTH_WPA2_WPA3_PSK:
       authtype = "[WPA2_WPA3_PSK]";
       break;
@@ -4785,7 +4786,10 @@ void WiFiScan::executeAppleJuice() { // Slower version of Sour Apple, pop up dev
       pAdvertising->setMaxInterval(0x20);
       pAdvertising->setPreferredParams(0x20, 0x20);
     #else
-      pAdvertising->setPreferredParams(0x20, 0x20);
+      pAdvertising->setMaxInterval(0x20);
+      pAdvertising->setMinInterval(0x20);
+      pAdvertising->setMinPreferred(0x20);
+      pAdvertising->setMaxPreferred(0x20);
     #endif
 
     pAdvertising->start();
