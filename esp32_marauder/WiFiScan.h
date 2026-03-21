@@ -590,6 +590,7 @@ class WiFiScan
     void clearMacHistory();
     void executeWarDrive();
     void executeSourApple();
+	void executeAppleJuice();
     void executeSpoofAirtag();
     void executeSwiftpairSpam(EBLEPayloadType type);
     void startWardriverWiFi();
