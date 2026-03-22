@@ -47,7 +47,6 @@ bool SDInterface::initSD() {
       this->spiExt->begin(SPI_SCK, SPI_MISO, SPI_MOSI, SD_CS);
       if (!SD.begin(SD_CS, *(this->spiExt))) {
     #elif defined(HAS_C5_SD)
-      Serial.println(F("Using C5 SD configuration..."));
       if (!SD.begin(SD_CS, *_spi)) {
     #else
       if (!SD.begin(SD_CS)) {
@@ -83,8 +82,6 @@ bool SDInterface::initSD() {
       }
 
       this->sd_files = new LinkedList<String>();
-
-      //this->sd_files->add("Back");
     
       return true;
   }
@@ -222,10 +219,7 @@ void SDInterface::runUpdate(String file_name) {
     const esp_partition_t *next = esp_ota_get_next_update_partition(NULL);
 
     esp_err_t result = esp_ota_set_boot_partition(next);
-
-    Serial.println(F("rebooting..."));
-    //SD.remove("/update.bin");      
-    delay(1000);
+     
     ESP.restart();
   }
   else {
@@ -266,12 +260,8 @@ void SDInterface::performUpdate(Stream &updateSource, size_t updateSize) {
       Serial.println(F(". Retry?"));
     }
     if (Update.end()) {
-      Serial.println(F("OTA done!"));
       if (Update.isFinished()) {
-        #ifdef HAS_SCREEN
-          display_obj.tft.println(F(text_table2[11]));
-        #endif
-        Serial.println(F("Update successfully completed. Rebooting."));
+
       }
       else {
         #ifdef HAS_SCREEN

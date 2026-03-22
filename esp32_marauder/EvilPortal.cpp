@@ -8,9 +8,6 @@ char apName[MAX_AP_NAME_SIZE] = "PORTAL";
 
 AsyncWebServer server(80);
 
-EvilPortal::EvilPortal() {
-}
-
 void EvilPortal::setup() {
   this->runServer = false;
   this->name_received = false;

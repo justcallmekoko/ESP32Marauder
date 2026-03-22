@@ -197,33 +197,6 @@ void Display::RunSetup() {
   #endif
 }
 
-void Display::drawFrame()
-{
-  tft.drawRect(FRAME_X, FRAME_Y, FRAME_W, FRAME_H, TFT_BLACK);
-}
-
-void Display::tftDrawRedOnOffButton() {
-  tft.fillRect(REDBUTTON_X, REDBUTTON_Y, REDBUTTON_W, REDBUTTON_H, TFT_RED);
-  tft.fillRect(GREENBUTTON_X, GREENBUTTON_Y, GREENBUTTON_W, GREENBUTTON_H, TFT_DARKGREY);
-  drawFrame();
-  tft.setTextColor(TFT_WHITE);
-  tft.setTextSize(2);
-  tft.setTextDatum(MC_DATUM);
-  tft.drawString(text03, GREENBUTTON_X + (GREENBUTTON_W / 2), GREENBUTTON_Y + (GREENBUTTON_H / 2));
-  this->SwitchOn = false;
-}
-
-void Display::tftDrawGreenOnOffButton() {
-  tft.fillRect(GREENBUTTON_X, GREENBUTTON_Y, GREENBUTTON_W, GREENBUTTON_H, TFT_GREEN);
-  tft.fillRect(REDBUTTON_X, REDBUTTON_Y, REDBUTTON_W, REDBUTTON_H, TFT_DARKGREY);
-  drawFrame();
-  tft.setTextColor(TFT_WHITE);
-  tft.setTextSize(2);
-  tft.setTextDatum(MC_DATUM);
-  tft.drawString(text04, REDBUTTON_X + (REDBUTTON_W / 2) + 1, REDBUTTON_Y + (REDBUTTON_H / 2));
-  this->SwitchOn = true;
-}
-
 void Display::tftDrawGraphObjects(byte x_scale)
 {
   //draw the graph objects
@@ -617,94 +590,6 @@ void Display::showCenterText(String text, int y)
   tft.println(text);
 }
 
-
-/*void Display::initScrollValues(bool tte)
-{
-  yDraw = YMAX - BOT_FIXED_AREA - TEXT_HEIGHT;
-
-  xPos = 0;
-
-  if (!tte)
-  {
-    yStart = TOP_FIXED_AREA;
-
-    yArea = YMAX - TOP_FIXED_AREA - BOT_FIXED_AREA;
-  }
-  else
-  {
-    yStart = TOP_FIXED_AREA_2;
-
-    yArea = YMAX - TOP_FIXED_AREA_2 - BOT_FIXED_AREA;
-  }
-
-  for(uint8_t i = 0; i < 18; i++) blank[i] = 0;
-}*/
-
-
-
-// Function to execute hardware scroll for TFT screen
-/*int Display::scroll_line(uint32_t color) {
-  int yTemp = yStart; // Store the old yStart, this is where we draw the next line
-  // Use the record of line lengths to optimise the rectangle size we need to erase the top line
-
-  // Check if we have the "touch to exit bar"
-  if (!tteBar)
-  {
-    tft.fillRect(0,yStart,blank[(yStart-TOP_FIXED_AREA)/TEXT_HEIGHT],TEXT_HEIGHT, color);
-  
-    // Change the top of the scroll area
-    yStart+=TEXT_HEIGHT;
-    // The value must wrap around as the screen memory is a circular buffer
-    if (yStart >= YMAX - BOT_FIXED_AREA) yStart = TOP_FIXED_AREA + (yStart - YMAX + BOT_FIXED_AREA);
-  }
-  else
-  {
-    tft.fillRect(0,yStart,blank[(yStart-TOP_FIXED_AREA_2)/TEXT_HEIGHT],TEXT_HEIGHT, color);
-  
-    // Change the top of the scroll area
-    yStart+=TEXT_HEIGHT;
-    // The value must wrap around as the screen memory is a circular buffer
-    if (yStart >= YMAX - BOT_FIXED_AREA) yStart = TOP_FIXED_AREA_2 + (yStart - YMAX + BOT_FIXED_AREA);
-  }
-  // Now we can scroll the display
-  scrollAddress(yStart);
-  return  yTemp;
-}*/
-
-
-// Function to setup hardware scroll for TFT screen
-/*void Display::setupScrollArea(uint16_t tfa, uint16_t bfa) {
-  #ifdef HAS_ILI9341
-    #ifdef HAS_ST7796
-      tft.writecommand(0x33);
-    #elif defined(HAS_ST7789)
-      tft.writecommand(ST7789_VSCRDEF); // Vertical scroll definition
-    #else
-      tft.writecommand(ILI9341_VSCRDEF);
-    #endif
-    tft.writedata(tfa >> 8);           // Top Fixed Area line count
-    tft.writedata(tfa);
-    tft.writedata((YMAX-tfa-bfa)>>8);  // Vertical Scrolling Area line count
-    tft.writedata(YMAX-tfa-bfa);
-    tft.writedata(bfa >> 8);           // Bottom Fixed Area line count
-    tft.writedata(bfa);
-  #endif
-}*/
-
-
-/*void Display::scrollAddress(uint16_t vsp) {
-  #ifdef HAS_ILI9341
-    #ifdef HAS_ST7789
-      tft.writecommand(ST7789_VSCRDEF); // Vertical scroll definition
-    #elif defined(HAS_ST7796)
-      tft.writecommand(0x33);
-    #else
-      tft.writecommand(ILI9341_VSCRDEF);
-    #endif
-    tft.writedata(vsp>>8);
-    tft.writedata(vsp);
-  #endif
-}*/
 
 void Display::updateBanner(String msg)
 {

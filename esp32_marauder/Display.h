@@ -127,8 +127,6 @@ class Display
     int8_t menuButton(uint16_t *x, uint16_t *y, bool pressed, bool check_hold = false);
     uint8_t updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold = 600);
     bool isTouchHeld(uint16_t threshold = 600);
-    void tftDrawRedOnOffButton();
-    void tftDrawGreenOnOffButton();
     void tftDrawGraphObjects(byte x_scale);
     void tftDrawEapolColorKey(bool filter = false);
     void tftDrawColorKey();
@@ -140,16 +138,9 @@ class Display
     void buildBanner(String msg, int xpos);
     void clearScreen();
     void displayBuffer(bool do_clear = false);
-    //void drawJpeg(const char *filename, int xpos, int ypos);
     void getTouchWhileFunction(bool pressed);
-    //void initScrollValues(bool tte = false);
-    //void jpegInfo();
-    //void jpegRender(int xpos, int ypos);
     void init();
     void RunSetup();
-    //void scrollAddress(uint16_t vsp);
-    //int scroll_line(uint32_t color);
-    //void setupScrollArea(uint16_t tfa, uint16_t bfa);
     void showCenterText(String text, int y);
     void touchToExit();
     void twoPartDisplay(String center_text);

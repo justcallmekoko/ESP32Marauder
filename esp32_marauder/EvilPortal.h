@@ -107,8 +107,6 @@ class EvilPortal {
     void sendToDisplay(String msg);
 
   public:
-    EvilPortal();
-
     int ap_index = -1;
 
     String target_html_name = "index.html";
