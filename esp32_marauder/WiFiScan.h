@@ -155,6 +155,7 @@
 #define WIFI_ATTACK_CSA 79
 #define WIFI_ATTACK_QUIET 80
 #define BT_SCAN_RAYBAN 81
+#define BT_ATTACK_APPLE_JUICE 82
 
 #define WIFI_ATTACK_FUNNY_BEACON 99 
 
@@ -589,6 +590,7 @@ class WiFiScan
     void clearMacHistory();
     void executeWarDrive();
     void executeSourApple();
+	void executeAppleJuice();
     void executeSpoofAirtag();
     void executeSwiftpairSpam(EBLEPayloadType type);
     void startWardriverWiFi();

