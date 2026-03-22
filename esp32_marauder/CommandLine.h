@@ -118,6 +118,8 @@ const char PROGMEM BT_SPOOFAT_CMD[] = "spoofat";
 //const char PROGMEM BT_WARDRIVE_CMD[] = "btwardrive";
 const char PROGMEM BT_SKIM_CMD[] = "sniffskim";
 
+// POI
+const char PROGMEM WARDRIVEPOI_CMD[] = "wardrivepoi";
 
 //// Command help messages
 // Admin
@@ -197,6 +199,7 @@ const char PROGMEM HELP_BT_SKIM_CMD[] = "sniffskim";
 const char PROGMEM BRIGHTNESS_CMD[] = "brightness";
 const char PROGMEM HELP_BRIGHTNESS_CMD[] = "brightness [-c cycle] [-s <0-9>]";
 
+const char PROGMEM HELP_WARDRIVEPOI_CMD[] = "wardrivepoi [label] - Tag a GPS POI during wardrive";
 const char PROGMEM HELP_FOOT[] = "==================================";
 
 

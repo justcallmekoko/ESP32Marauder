@@ -222,7 +222,6 @@ class MenuFunctions
     void battery(bool initial = false);
     void battery2(bool initial = false);
     String callSetting(String key);
-    void runBoolSetting(String ley);
     void displaySetting(String key, Menu* menu, int index);
     void buttonSelected(int b, int x = -1);
     void buttonNotSelected(int b, int x = -1);

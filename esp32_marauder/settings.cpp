@@ -39,8 +39,6 @@ bool Settings::begin() {
     Serial.println(error.f_str());
   }
   serializeJson(jsonBuffer, json_string);
-  //Serial.println("Settings: " + (String)json_string + "\n");
-  //this->printJsonSettings(json_string);
 
   this->json_settings_string = json_string;
   
@@ -70,7 +68,6 @@ int Settings::loadSetting<int>(String key) {
 // Get type string settings
 template<>
 String Settings::loadSetting<String>(String key) {
-  //return this->json_settings_string;
   
   DynamicJsonDocument json(JSON_SETTING_SIZE); // ArduinoJson v6
 
@@ -191,12 +188,9 @@ bool Settings::saveSetting<bool>(String key, String value) {
     if (json["Settings"][i]["name"].as<String>() == key) {
       json["Settings"][i]["value"] = value;
 
-      Serial.println("Saving setting...");
-
       File settingsFile = SPIFFS.open("/settings.json", FILE_WRITE);
 
       if (!settingsFile) {
-        Serial.println(F("Failed to create settings file"));
         return false;
       }
 
@@ -231,12 +225,10 @@ bool Settings::toggleSetting(String key) {
     if (json["Settings"][i]["name"].as<String>() == key) {
       if (json["Settings"][i]["value"]) {
         saveSetting<bool>(key, false);
-        Serial.println("Setting value to false");
         return false;
       }
       else {
         saveSetting<bool>(key, true);
-        Serial.println("Setting value to true");
         return true;
       }
 
@@ -290,12 +282,10 @@ void Settings::printJsonSettings(String json_string) {
     Serial.println("\nCould not parse json");
   }
   
-  Serial.println("Settings\n----------------------------------------------");
   for (int i = 0; i < json["Settings"].size(); i++) {
     Serial.println("Name: " + json["Settings"][i]["name"].as<String>());
     Serial.println("Type: " + json["Settings"][i]["type"].as<String>());
-    Serial.println("Value: " + json["Settings"][i]["value"].as<String>());
-    Serial.println("----------------------------------------------");
+    Serial.println("Value: " + json["Settings"][i]["value"].as<String>() + "\n");
   }
 }
 
@@ -377,8 +367,10 @@ bool Settings::createDefaultSettings(fs::FS &fs, bool spec, uint8_t index, Strin
       return false;
     }
 
+    Serial.println("Creating " + typeStr + " setting...");
+
     if (typeStr == "bool") {
-      Serial.println("Creating bool setting...");
+      
       json["Settings"][index]["name"] = name;
       json["Settings"][index]["type"] = typeStr;
       json["Settings"][index]["value"] = true;
@@ -393,7 +385,6 @@ bool Settings::createDefaultSettings(fs::FS &fs, bool spec, uint8_t index, Strin
     }
 
     else if (typeStr == "String") {
-      Serial.println("Creating String setting...");
       json["Settings"][index]["name"] = name;
       json["Settings"][index]["type"] = typeStr;
       json["Settings"][index]["value"] = "";

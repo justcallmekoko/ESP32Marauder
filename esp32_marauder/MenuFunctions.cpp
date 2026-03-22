@@ -213,6 +213,32 @@ void MenuFunctions::main(uint32_t currentTime)
     }
   #endif
 
+  // POI button interception during wardrive — full width bottom bar
+  #ifdef HAS_ILI9341
+    if (pressed &&
+        (wifi_scan_obj.currentScanMode == WIFI_SCAN_WAR_DRIVE ||
+         wifi_scan_obj.currentScanMode == WIFI_SCAN_STATION_WAR_DRIVE)) {
+      if (t_y >= 270) {
+        wifi_scan_obj.tagPOI(nullptr);
+        // Brief green flash
+        display_obj.tft.fillRect(0, 270, 240, 50, TFT_GREEN);
+        display_obj.tft.setTextSize(2);
+        if (gps_obj.getFixStatus())
+          display_obj.tft.setTextColor(TFT_BLACK, TFT_GREEN);
+        else
+          display_obj.tft.setTextColor(TFT_BLACK, TFT_RED);
+        String poiFlash = "POI (" + String(wifi_scan_obj.poiCount) + ")";
+        int16_t flashWidth = poiFlash.length() * 12;
+        display_obj.tft.setCursor((240 - flashWidth) / 2, 287);
+        display_obj.tft.print(poiFlash);
+        delay(200);
+        x = -1;
+        y = -1;
+        return;
+      }
+    }
+  #endif
+
   // This is if there are scans/attacks going on
   #ifdef HAS_ILI9341
     if ((wifi_scan_obj.currentScanMode != WIFI_SCAN_OFF) &&
@@ -606,43 +632,6 @@ void MenuFunctions::main(uint32_t currentTime)
             this->displayMenuButtons();
         }
       }
-  
-      // Check if any key has changed state
-      /*for (uint8_t b = 0; b < current_menu->list->size(); b++) {
-        display_obj.tft.setFreeFont(MENU_FONT);
-        if (display_obj.key[b].justPressed()) {
-          display_obj.key[b].drawButton(true, current_menu->list->get(b).name);
-          if (current_menu->list->get(b).name != text09)
-            display_obj.tft.drawXBitmap(0,
-                                        KEY_Y + b * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
-                                        menu_icons[current_menu->list->get(b).icon],
-                                        ICON_W,
-                                        ICON_H,
-                                        this->getColor(current_menu->list->get(b).color),
-                                        TFT_BLACK);
-        }
-  
-        // If button was just release, execute the button's function
-        if ((display_obj.key[b].justReleased()) && (!pressed))
-        {
-          display_obj.key[b].drawButton(false, current_menu->list->get(b).name);
-          current_menu->list->get(b).callable();
-        }
-        // This
-        else if ((display_obj.key[b].justReleased()) && (pressed)) {
-          display_obj.key[b].drawButton(false, current_menu->list->get(b).name);
-          if (current_menu->list->get(b).name != text09)
-            display_obj.tft.drawXBitmap(0,
-                                        KEY_Y + b * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
-                                        menu_icons[current_menu->list->get(b).icon],
-                                        ICON_W,
-                                        ICON_H,
-                                        TFT_BLACK,
-                                        this->getColor(current_menu->list->get(b).color));
-        }
-  
-        display_obj.tft.setFreeFont(NULL);
-      }*/
     }
     x = -1;
     y = -1;
@@ -941,15 +930,6 @@ void MenuFunctions::battery(bool initial)
       }
 
       display_obj.tft.setCursor(0, 1);
-      /*if (!this->disable_touch) {
-        display_obj.tft.drawXBitmap(186,
-                                    0,
-                                    menu_icons[STATUS_BAT],
-                                    16,
-                                    16,
-                                    STATUSBAR_COLOR,
-                                    the_color);
-      }*/
       display_obj.tft.drawString((String)battery_obj.battery_level + "%", 204, 0, 2);
     }
   #endif
@@ -1369,10 +1349,6 @@ void MenuFunctions::orientDisplay() {
   changeMenu(current_menu, true);
 }
 
-void MenuFunctions::runBoolSetting(String key) {
-  display_obj.tftDrawRedOnOffButton();
-}
-
 String MenuFunctions::callSetting(String key) {
   specSettingMenu.name = key;
   
@@ -1385,9 +1361,6 @@ String MenuFunctions::callSetting(String key) {
 
 void MenuFunctions::displaySetting(String key, Menu* menu, int index) {
   specSettingMenu.name = key;
-
-  Serial.print(F("displaySetting: "));
-  Serial.println(key);
 
   bool setting_value = settings_obj.loadSetting<bool>(key);
 
