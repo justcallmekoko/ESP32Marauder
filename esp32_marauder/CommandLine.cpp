@@ -290,9 +290,6 @@ void CommandLine::runCommand(String input) {
       Serial.println(HELP_BT_SNIFF_CMD);
       Serial.println(HELP_BT_SPAM_CMD);
       Serial.println(HELP_BT_SPOOFAT_CMD);
-      #ifdef HAS_GPS
-        Serial.println(HELP_BT_WARDRIVE_CMD);
-      #endif
       Serial.println(HELP_BT_SKIM_CMD);
     #endif
     Serial.println(HELP_BRIGHTNESS_CMD);
@@ -1232,12 +1229,6 @@ void CommandLine::runCommand(String input) {
         if (bt_type == "apple") {
           #ifdef HAS_BT
             this->startScanFromCLI(BT_ATTACK_SOUR_APPLE, TFT_GREEN, "Sour Apple attack");
-            /*Serial.println(STOPSCAN_CMD);
-            #ifdef HAS_SCREEN
-              display_obj.clearScreen();
-              menu_function_obj.drawStatusBar();
-            #endif
-            wifi_scan_obj.StartScan(BT_ATTACK_SOUR_APPLE, TFT_GREEN);*/
           #else
             Serial.println(F("Bluetooth not supported"));
           #endif
@@ -1245,12 +1236,6 @@ void CommandLine::runCommand(String input) {
         else if (bt_type == "windows") {
           #ifdef HAS_BT
             this->startScanFromCLI(BT_ATTACK_SWIFTPAIR_SPAM, TFT_CYAN, "Swiftpair Spam attack");
-            /*Serial.println(STOPSCAN_CMD);
-            #ifdef HAS_SCREEN
-              display_obj.clearScreen();
-              menu_function_obj.drawStatusBar();
-            #endif
-            wifi_scan_obj.StartScan(BT_ATTACK_SWIFTPAIR_SPAM, TFT_CYAN);*/
           #else
             Serial.println(F("Bluetooth not supported"));
           #endif
@@ -1258,12 +1243,6 @@ void CommandLine::runCommand(String input) {
         else if (bt_type == "samsung") {
           #ifdef HAS_BT
             this->startScanFromCLI(BT_ATTACK_SAMSUNG_SPAM, TFT_CYAN, "Samsung Spam attack");
-            /*Serial.println(STOPSCAN_CMD);
-            #ifdef HAS_SCREEN
-              display_obj.clearScreen();
-              menu_function_obj.drawStatusBar();
-            #endif
-            wifi_scan_obj.StartScan(BT_ATTACK_SAMSUNG_SPAM, TFT_CYAN);*/
           #else
             Serial.println(F("Bluetooth not supported"));
           #endif
@@ -1271,12 +1250,6 @@ void CommandLine::runCommand(String input) {
         else if (bt_type == "google") {
           #ifdef HAS_BT
             this->startScanFromCLI(BT_ATTACK_GOOGLE_SPAM, TFT_CYAN, "Google Spam attack");
-            /*Serial.println(STOPSCAN_CMD);
-            #ifdef HAS_SCREEN
-              display_obj.clearScreen();
-              menu_function_obj.drawStatusBar();
-            #endif
-            wifi_scan_obj.StartScan(BT_ATTACK_GOOGLE_SPAM, TFT_CYAN);*/
           #else
             Serial.println(F("Bluetooth not supported"));
           #endif
@@ -1284,12 +1257,6 @@ void CommandLine::runCommand(String input) {
         else if (bt_type == "flipper") {
           #ifdef HAS_BT
             this->startScanFromCLI(BT_ATTACK_FLIPPER_SPAM, TFT_ORANGE, "Flipper Spam attack");
-            /*Serial.println(STOPSCAN_CMD);
-            #ifdef HAS_SCREEN
-              display_obj.clearScreen();
-              menu_function_obj.drawStatusBar();
-            #endif
-            wifi_scan_obj.StartScan(BT_ATTACK_FLIPPER_SPAM, TFT_ORANGE);*/
           #else
             Serial.println(F("Bluetooth not supported"));
           #endif
@@ -1297,52 +1264,16 @@ void CommandLine::runCommand(String input) {
         else if (bt_type == "all") {
           #ifdef HAS_BT
             this->startScanFromCLI(BT_ATTACK_SPAM_ALL, TFT_MAGENTA, "BT Spam All attack");
-            /*Serial.println(STOPSCAN_CMD);
-            #ifdef HAS_SCREEN
-              display_obj.clearScreen();
-              menu_function_obj.drawStatusBar();
-            #endif
-            wifi_scan_obj.StartScan(BT_ATTACK_SPAM_ALL, TFT_MAGENTA);*/
           #else
             Serial.println(F("Bluetooth not supported"));
           #endif
         }
       }
     }
-    // Wardrive
-    else if (cmd_args.get(0) == BT_WARDRIVE_CMD) {
-      #ifdef HAS_BT
-        #ifdef HAS_GPS
-          if (gps_obj.getGpsModuleStatus()) {
-
-            this->startScanFromCLI(BT_SCAN_WAR_DRIVE, TFT_GREEN, "BT Wardrive");
-            /*Serial.println(STOPSCAN_CMD);
-            #ifdef HAS_SCREEN
-              display_obj.clearScreen();
-              menu_function_obj.drawStatusBar();
-            #endif
-            wifi_scan_obj.StartScan(BT_SCAN_WAR_DRIVE, TFT_GREEN);*/
-          }
-          else
-            Serial.println(F("GPS Module not detected"));
-        #else
-          Serial.println(F("GPS not supported"));
-        #endif
-      #else
-        Serial.println(F("Bluetooth not supported"));
-      #endif
-      
-    }
     // Bluetooth CC Skimmer scan
     else if (cmd_args.get(0) == BT_SKIM_CMD) {
       #ifdef HAS_BT
         this->startScanFromCLI(BT_SCAN_SKIMMERS, TFT_MAGENTA, "Bluetooth CC Skimmer scan");
-        /*Serial.println(STOPSCAN_CMD);
-        #ifdef HAS_SCREEN
-          display_obj.clearScreen();
-          menu_function_obj.drawStatusBar();
-        #endif
-        wifi_scan_obj.StartScan(BT_SCAN_SKIMMERS, TFT_MAGENTA);*/
       #else
         Serial.println(F("Bluetooth not supported"));
       #endif
@@ -1374,19 +1305,7 @@ void CommandLine::runCommand(String input) {
 
     // Update command
     if (cmd_args.get(0) == UPDATE_CMD) {
-      //int w_sw = this->argSearch(&cmd_args, "-w"); // Web update
       int sd_sw = this->argSearch(&cmd_args, "-s"); // SD Update
-
-      // Update via OTA
-      //if (w_sw != -1) {
-      //  Serial.println("Starting Marauder OTA Update. Stop with " + (String)STOPSCAN_CMD);
-      //  wifi_scan_obj.currentScanMode = OTA_UPDATE;
-        //#ifdef HAS_SCREEN
-        //  menu_function_obj.changeMenu(menu_function_obj.updateMenu);
-        //#endif
-      //  web_obj.setupOTAupdate();
-      //}
-      // Update via SD
       if (sd_sw != -1) {
         #ifdef HAS_SD
           if (!sd_obj.supported) {
@@ -1395,9 +1314,6 @@ void CommandLine::runCommand(String input) {
           }
           wifi_scan_obj.currentScanMode = OTA_UPDATE;
           sd_obj.runUpdate();
-        #else
-          Serial.println(F("SD card support disabled."));
-          return;
         #endif
       }
     }
@@ -1407,23 +1323,11 @@ void CommandLine::runCommand(String input) {
     // Ping Scan
     if (cmd_args.get(0) == PING_CMD) {
       this->startScanFromCLI(WIFI_PING_SCAN, TFT_GREEN, "Ping Scan");
-      /*Serial.println(STOPSCAN_CMD);
-      #ifdef HAS_SCREEN
-        display_obj.clearScreen();
-        menu_function_obj.drawStatusBar();
-      #endif
-      wifi_scan_obj.StartScan(WIFI_PING_SCAN, TFT_GREEN);*/
     }
 
     if (cmd_args.get(0) == ARP_SCAN_CMD) {
       #ifndef HAS_DUAL_BAND
         this->startScanFromCLI(WIFI_ARP_SCAN, TFT_CYAN, "ARP Scan");
-        /*Serial.println(STOPSCAN_CMD);
-        #ifdef HAS_SCREEN
-          display_obj.clearScreen();
-          menu_function_obj.drawStatusBar();
-        #endif
-        wifi_scan_obj.StartScan(WIFI_ARP_SCAN, TFT_CYAN);*/
       #endif
     }
 
@@ -1471,9 +1375,6 @@ void CommandLine::runCommand(String input) {
             menu_function_obj.changeMenu(menu_function_obj.gpsPOIMenu.parentMenu);
           #endif
         }
-      #else
-        Serial.println(F("Your hardware doesn't have GPS, silly"));
-        return;
       #endif
     }
 
@@ -1494,11 +1395,6 @@ void CommandLine::runCommand(String input) {
           if (all_sw != -1) {
             wifi_scan_obj.current_scan_ip = ipList->get(ip_index);
             this->startScanFromCLI(WIFI_PORT_SCAN_ALL, TFT_BLUE, "Selected: " + ipList->get(ip_index).toString());
-            /*#ifdef HAS_SCREEN
-              display_obj.clearScreen();
-              menu_function_obj.drawStatusBar();
-            #endif
-            wifi_scan_obj.StartScan(WIFI_PORT_SCAN_ALL, TFT_BLUE);*/
           }
         }
         else {
@@ -1527,20 +1423,7 @@ void CommandLine::runCommand(String input) {
 
         if (target_mode != 0) {
           this->startScanFromCLI(target_mode, TFT_CYAN, "port scan");
-          /*#ifdef HAS_SCREEN
-            display_obj.clearScreen();
-            menu_function_obj.drawStatusBar();
-          #endif
-          wifi_scan_obj.StartScan(target_mode, TFT_CYAN);*/
         }
-        else {
-          Serial.println(F("You did not specify a supported service"));
-          return;
-        }
-      }
-      else {
-        Serial.println(F("You did not specify an IP index"));
-        return;
       }
     }
   }
