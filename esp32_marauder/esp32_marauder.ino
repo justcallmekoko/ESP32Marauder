@@ -322,7 +322,7 @@ void setup()
   #endif
 
   #ifdef HAS_SCREEN
-    #ifndef MARAUDER_CARDPUTER
+    #if !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
       display_obj.tft.drawCentreString("ESP32 Marauder", TFT_WIDTH/2, TFT_HEIGHT * 0.33, 1);
       display_obj.tft.drawCentreString("JustCallMeKoko", TFT_WIDTH/2, TFT_HEIGHT * 0.5, 1);
       display_obj.tft.drawCentreString(display_obj.version_number, TFT_WIDTH/2, TFT_HEIGHT * 0.66, 1);
@@ -402,6 +402,9 @@ void setup()
   #endif
 
   #ifdef HAS_SCREEN
+    #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+      display_obj.clearScreen();
+    #endif
     menu_function_obj.RunSetup();
   #endif
 
