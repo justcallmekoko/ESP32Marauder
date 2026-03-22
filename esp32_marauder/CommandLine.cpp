@@ -1357,13 +1357,13 @@ void CommandLine::runCommand(String input) {
           brightnessCycle();
         } else if (s_arg != -1) {
           uint8_t lvl = cmd_args.get(s_arg + 1).toInt();
-          if (lvl < 10) {
+          if (lvl < 13) {
             extern void brightnessSave(uint8_t level);
             brightnessSave(lvl);
             Serial.print(F("[Brightness] Set to level "));
             Serial.println(lvl);
           } else {
-            Serial.println(F("Level must be 0-9"));
+            Serial.println(F("Level must be 0-12"));
           }
         } else {
           Serial.print(F("[Brightness] Current level: "));
