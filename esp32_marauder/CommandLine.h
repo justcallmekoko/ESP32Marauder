@@ -115,7 +115,7 @@ const char PROGMEM ADD_CMD[] = "add";
 const char PROGMEM BT_SPAM_CMD[] = "blespam";
 const char PROGMEM BT_SNIFF_CMD[] = "sniffbt";
 const char PROGMEM BT_SPOOFAT_CMD[] = "spoofat";
-const char PROGMEM BT_WARDRIVE_CMD[] = "btwardrive";
+//const char PROGMEM BT_WARDRIVE_CMD[] = "btwardrive";
 const char PROGMEM BT_SKIM_CMD[] = "sniffskim";
 
 
@@ -191,7 +191,7 @@ const char PROGMEM HELP_BT_SPOOFAT_CMD[] = "spoofat -t <index>";
 //const char PROGMEM HELP_BT_SWIFTPAIR_SPAM_CMD[] = "swiftpair";
 //const char PROGMEM HELP_BT_SAMSUNG_SPAM_CMD[] = "samsungblespam";
 //onst char PROGMEM HELP_BT_SPAM_ALL_CMD[] = "btspamall";
-const char PROGMEM HELP_BT_WARDRIVE_CMD[] = "btwardrive";
+//const char PROGMEM HELP_BT_WARDRIVE_CMD[] = "btwardrive";
 const char PROGMEM HELP_BT_SKIM_CMD[] = "sniffskim";
 
 const char PROGMEM BRIGHTNESS_CMD[] = "brightness";

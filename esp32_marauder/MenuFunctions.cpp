@@ -2549,15 +2549,6 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_SCAN_AIRTAG_MON, TFT_WHITE);
   });
-  #ifdef HAS_GPS
-    if (gps_obj.getGpsModuleStatus()) {
-      this->addNodes(&bluetoothSnifferMenu, "BT Wardrive", TFTCYAN, NULL, BLUETOOTH_SNIFF, [this]() {
-        display_obj.clearScreen();
-        this->drawStatusBar();
-        wifi_scan_obj.StartScan(BT_SCAN_WAR_DRIVE, TFT_GREEN);
-      });
-    }
-  #endif
   this->addNodes(&bluetoothSnifferMenu, text_table1[35], TFTMAGENTA, NULL, CC_SKIMMERS, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
