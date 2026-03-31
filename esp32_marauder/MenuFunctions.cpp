@@ -1507,8 +1507,9 @@ void MenuFunctions::RunSetup()
 
   evilPortalMenu.list = new LinkedList<MenuNode>();
   ssidsMenu.list = new LinkedList<MenuNode>();
-
-  gpsPOIMenu.list = new LinkedList<MenuNode>();
+  #ifdef HAS_GPS
+    gpsPOIMenu.list = new LinkedList<MenuNode>();
+  #endif
 
   // Work menu names
   mainMenu.name = text_table1[6];
@@ -1556,9 +1557,9 @@ void MenuFunctions::RunSetup()
   selectProbeSSIDsMenu.name = "Probe Requests";
   evilPortalMenu.name = "Evil Portal";
   ssidsMenu.name = "SSIDs";
-
-  gpsPOIMenu.name = "GPS POI";
-
+  #ifdef HAS_GPS
+    gpsPOIMenu.name = "GPS POI";
+  #endif
   // Build Main Menu
   mainMenu.parentMenu = NULL;
   this->addNodes(&mainMenu, text_table1[7], TFTGREEN, NULL, WIFI, [this]() {
