@@ -1,6 +1,129 @@
 #include "Display.h"
 #include "lang_var.h"
 
+// ============================================================
+// OLED (SH1106 I2C) implementation — ESP32_OLED target only
+// ============================================================
+#ifdef HAS_OLED
+
+Display::Display() : oled(128, 64, &Wire, -1) {}
+
+static bool oledAddressResponds(uint8_t address) {
+  Wire.beginTransmission(address);
+  return Wire.endTransmission() == 0;
+}
+
+void Display::init() {
+  Serial.println("[OLED] init() entered");
+  Serial.printf("[OLED] Using I2C SDA=%d SCL=%d\n", OLED_SDA, OLED_SCL);
+
+  Wire.begin(OLED_SDA, OLED_SCL);
+
+  bool found_3c = oledAddressResponds(0x3C);
+  bool found_3d = oledAddressResponds(0x3D);
+  Serial.printf("[OLED] Probe 0x3C: %s\n", found_3c ? "ACK" : "no response");
+  Serial.printf("[OLED] Probe 0x3D: %s\n", found_3d ? "ACK" : "no response");
+
+  uint8_t oled_addr = found_3c ? 0x3C : (found_3d ? 0x3D : 0x3C);
+  Serial.printf("[OLED] Initializing SSD1306 at 0x%02X\n", oled_addr);
+
+  if (!oled.begin(oled_addr, true)) {
+    Serial.println("[OLED] Display init failed");
+    return;
+  }
+  delay(100);
+  oled.setContrast(255);
+
+  oled.clearDisplay();
+  oled.display();
+  delay(50);
+  oled.setTextColor(OLED_WHITE);
+  oled.setTextSize(2);
+  oled.setCursor(10, 10);
+  oled.print("MARAUDER");
+  oled.setTextSize(1);
+  oled.setCursor(10, 32);
+  oled.print(version_number);
+  oled.setCursor(10, 44);
+  oled.print("ESP32 OLED");
+  oled.display();
+  Serial.println("[OLED] Display OK");
+}
+
+void Display::RunSetup() {
+  Serial.println("[OLED] RunSetup() entered");
+  run_setup = false;
+  display_buffer = new LinkedList<String>();
+  Serial.println("[OLED] display_buffer allocated");
+  init();
+}
+
+void Display::clearScreen() {
+  // Keep banner row, clear the scroll area below it
+  oled.fillRect(0, OLED_BANNER_H, 128, 64 - OLED_BANNER_H, OLED_BLACK);
+  scroll_y = OLED_BANNER_H;
+  oled.display();
+}
+
+void Display::showCenterText(String text, int y) {
+  int16_t x1, y1;
+  uint16_t w, h;
+  oled.setTextSize(1);
+  oled.getTextBounds(text, 0, y, &x1, &y1, &w, &h);
+  oled.setCursor((128 - w) / 2, y);
+  oled.setTextColor(OLED_WHITE);
+  oled.print(text);
+  oled.display();
+}
+
+void Display::updateBanner(String msg) {
+  oled.fillRect(0, 0, 128, OLED_BANNER_H, OLED_BLACK);
+  oled.setTextSize(1);
+  oled.setTextColor(OLED_WHITE);
+  oled.setCursor(0, 0);
+  oled.print(msg.substring(0, 21)); // max ~21 chars at size 1
+  oled.display();
+}
+
+void Display::twoPartDisplay(String center_text) {
+  oled.clearDisplay();
+  showCenterText(center_text, 28);
+}
+
+void Display::displayBuffer(bool do_clear) {
+  if (!display_buffer || display_buffer->size() == 0) return;
+
+  loading = true;
+  while (display_buffer->size() > 0) {
+    String line = display_buffer->shift();
+
+    // Scroll up if we've hit the bottom
+    if (scroll_y + OLED_LINE_HEIGHT > 64) {
+      // Shift framebuffer up by one line
+      for (int y = OLED_BANNER_H; y < 64 - OLED_LINE_HEIGHT; y++) {
+        for (int x = 0; x < 128; x++) {
+          // Copy pixel from row below into current row
+          oled.drawPixel(x, y, oled.getPixel(x, y + OLED_LINE_HEIGHT) ? OLED_WHITE : OLED_BLACK);
+        }
+      }
+      // Clear the bottom line
+      oled.fillRect(0, 64 - OLED_LINE_HEIGHT, 128, OLED_LINE_HEIGHT, OLED_BLACK);
+      scroll_y = 64 - OLED_LINE_HEIGHT;
+    }
+
+    oled.setTextSize(1);
+    oled.setTextColor(OLED_WHITE);
+    oled.setCursor(0, scroll_y);
+    oled.print(line.substring(0, 21));
+    scroll_y += OLED_LINE_HEIGHT;
+  }
+  oled.display();
+  loading = false;
+}
+
+#endif // HAS_OLED
+// ============================================================
+
 #ifdef HAS_SCREEN
 
 Display::Display()

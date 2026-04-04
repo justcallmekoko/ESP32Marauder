@@ -10,7 +10,7 @@
 
 #include "configs.h"
 #include "settings.h"
-#ifdef HAS_SCREEN
+#if defined(HAS_SCREEN) || defined(HAS_OLED)
   #include "Display.h"
   #include <LinkedList.h>
 #endif
@@ -20,7 +20,7 @@
 
 extern Settings settings_obj;
 extern SDInterface sd_obj;
-#ifdef HAS_SCREEN
+#if defined(HAS_SCREEN) || defined(HAS_OLED)
   extern Display display_obj;
 #endif
 extern Buffer buffer_obj; 
@@ -40,7 +40,7 @@ extern Buffer buffer_obj;
 extern char apName[MAX_AP_NAME_SIZE];
 
 #ifndef HAS_PSRAM
-  char index_html[MAX_HTML_SIZE] = "TEST";
+  extern char index_html[MAX_HTML_SIZE];
 #else
   extern char* index_html;
 #endif

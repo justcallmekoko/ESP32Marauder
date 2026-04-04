@@ -43,7 +43,7 @@
 #if defined(HAS_BT) && !defined(HAS_NIMBLE_2)
   #include "esp_bt.h"
 #endif
-#ifdef HAS_SCREEN
+#if defined(HAS_SCREEN) || defined(HAS_OLED)
   #include "Display.h"
 #endif
 #ifdef HAS_SD
@@ -200,7 +200,7 @@
 
 extern EvilPortal evil_portal_obj;
 
-#ifdef HAS_SCREEN
+#if defined(HAS_SCREEN) || defined(HAS_OLED)
   extern Display display_obj;
 #endif
 #ifdef HAS_SD

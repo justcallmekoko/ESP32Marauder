@@ -34,6 +34,7 @@
   //#define MARAUDER_V8
   //#define MARAUDER_MINI_V3
   //#define DUAL_MINI_C5
+  #define ESP32_OLED  // Plain ESP32 dev board + SH1106 I2C OLED (GPIO21=SDA, GPIO22=SCL)
   //// END BOARD TARGETS
 
   #define JSON_SETTING_SIZE 2048
@@ -103,6 +104,8 @@
     #define HARDWARE_NAME "Marauder Mini v3"
   #elif defined(DUAL_MINI_C5)
     #define HARDWARE_NAME "Dual Mini C5"
+  #elif defined(ESP32_OLED)
+    #define HARDWARE_NAME "ESP32 OLED"
   #else
     #define HARDWARE_NAME "ESP32"
   #endif
@@ -375,6 +378,15 @@
     //#define HAS_TEMP_SENSOR
     //#define HAS_GPS
     //#define HAS_NIMBLE_2
+  #endif
+
+  #ifdef ESP32_OLED
+    #define HAS_BT
+    #define HAS_OLED         // SH1106 128x64 I2C on GPIO21/22
+    #define OLED_SDA 21
+    #define OLED_SCL 22
+    #define HAS_IDF_3        // esp32 core 3.x / IDF 5.x — skips removed APIs
+    #define HAS_NIMBLE_2     // NimBLE 2.x API (addData, setScanCallbacks, etc.)
   #endif
 
   #ifdef MARAUDER_FLIPPER
@@ -2389,6 +2401,34 @@
   #define TFT_FARTGRAY 0x528a
 
   //// SCREEN STUFF
+  #ifdef HAS_OLED
+    // Stub TFT color constants so WiFiScan.cpp compiles
+    #define BANNER_TIME GRAPH_REFRESH
+    #define TFT_BLACK 0
+    #define TFT_WHITE 1
+    #define TFT_CYAN 0
+    #define TFT_BLUE 0
+    #define TFT_RED 0
+    #define TFT_GREEN 0
+    #define TFT_GREY 0
+    #define TFT_GRAY 0
+    #define TFT_MAGENTA 0
+    #define TFT_VIOLET 0
+    #define TFT_ORANGE 0
+    #define TFT_YELLOW 0
+    #define STANDARD_FONT_CHAR_LIMIT 40
+    #define FLASH_BUTTON -1
+    #define CHAN_PER_PAGE 7
+    #define TFT_WIDTH 128
+    #define TFT_HEIGHT 64
+    #define BUTTON_ARRAY_LEN 0
+    #define SCREEN_WIDTH 128
+    #define YMAX 64
+    #define BOT_FIXED_AREA 0
+    #define TEXT_HEIGHT 8
+    #define MEM_LOWER_LIM 10000
+  #endif
+
   #ifndef HAS_SCREEN
 
     #define BANNER_TIME GRAPH_REFRESH

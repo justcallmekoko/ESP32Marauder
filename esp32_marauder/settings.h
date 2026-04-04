@@ -11,7 +11,7 @@
 
 #define FORMAT_SPIFFS_IF_FAILED true
 
-#ifdef HAS_SCREEN
+#if defined(HAS_SCREEN) || defined(HAS_OLED)
   #include "Display.h"
 
   extern Display display_obj;

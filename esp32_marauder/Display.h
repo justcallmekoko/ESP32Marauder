@@ -5,7 +5,71 @@
 
 #include "configs.h"
 
-#ifdef HAS_SCREEN
+#ifdef HAS_OLED
+
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SH110X.h>
+#include <LinkedList.h>
+
+#define OLED_WHITE SH110X_WHITE
+#define OLED_BLACK 0
+
+// OLED fits ~5 lines of text at size 1 (8px each), leaving top 8px for banner
+#define OLED_MAX_LINES 6
+#define OLED_LINE_HEIGHT 8
+#define OLED_BANNER_H 9
+
+class Display
+{
+  private:
+    Adafruit_SH1106G oled;
+    bool run_setup = true;
+    uint8_t scroll_y = OLED_BANNER_H; // current draw y for scrolling text
+
+  public:
+    Display();
+    const String PROGMEM version_number = MARAUDER_VERSION;
+
+    bool printing = false;
+    bool headless_mode = false;
+
+    LinkedList<String>* display_buffer;
+
+    void init();
+    void RunSetup();
+    void clearScreen();
+    void showCenterText(String text, int y);
+    void updateBanner(String msg);
+    void twoPartDisplay(String center_text);
+    void displayBuffer(bool do_clear = false);
+
+    // Stubs so the rest of Marauder compiles without #ifdefs everywhere
+    void buildBanner(String msg, int xpos) {}
+    void getTouchWhileFunction(bool pressed) {}
+    void tftDrawRedOnOffButton() {}
+    void tftDrawGreenOnOffButton() {}
+    void tftDrawGraphObjects(byte x_scale) {}
+    void tftDrawEapolColorKey(bool filter = false) {}
+    void tftDrawColorKey() {}
+    void tftDrawXScaleButtons(byte x_scale) {}
+    void tftDrawYScaleButtons(byte y_scale) {}
+    void tftDrawChannelScaleButtons(int set_channel, bool lnd_an = true) {}
+    void tftDrawExitScaleButtons(bool lnd_an = true) {}
+    void tftDrawChanHopButton(bool lnd_an = true, bool en = false) {}
+    void touchToExit() {}
+    void setCalData(bool landscape = false) {}
+    int8_t menuButton(uint16_t *x, uint16_t *y, bool pressed, bool check_hold = false) { return -1; }
+    uint8_t updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold = 600) { return 0; }
+    bool isTouchHeld(uint16_t threshold = 600) { return false; }
+
+    bool loading = false;
+    bool tteBar = false;
+    bool draw_tft = false;
+    bool exit_draw = false;
+};
+
+#elif defined(HAS_SCREEN)
 
 #include <FS.h>
 #include <functional>
@@ -63,12 +127,12 @@ class Display
 {
   private:
     bool SwitchOn = false;
-    
+
     bool run_setup = true;
-    
+
     // For the byte we read from the serial port
     byte data = 0;
-    
+
     // A few test variables used during debugging
     boolean change_colour = 1;
     boolean selected = 1;

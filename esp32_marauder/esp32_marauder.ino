@@ -7,7 +7,7 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #include "configs.h"
 
-#ifndef HAS_SCREEN
+#if !defined(HAS_SCREEN) && !defined(HAS_OLED)
   #define MenuFunctions_h
   #define Display_h
 #endif
@@ -86,6 +86,9 @@ CommandLine cli_obj;
 #ifdef HAS_SCREEN
   Display display_obj;
   MenuFunctions menu_function_obj;
+#endif
+#ifdef HAS_OLED
+  Display display_obj;
 #endif
 
 #if defined(HAS_SD) && !defined(HAS_C5_SD)
@@ -313,6 +316,9 @@ void setup()
   #ifdef HAS_SCREEN
     display_obj.RunSetup();
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  #endif
+  #ifdef HAS_OLED
+    display_obj.RunSetup();
   #endif
 
   // Init PWM brightness AFTER display init (so ledcAttach overrides TFT_eSPI's pinMode)

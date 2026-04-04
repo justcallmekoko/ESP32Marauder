@@ -22,3 +22,6 @@
 [submodule "esp32_marauder/libraries/SwitchLib"]
 	path = esp32_marauder/libraries/SwitchLib
 	url = https://github.com/justcallmekoko/SwitchLib.git
+[submodule "esp32_marauder/libraries/ESP32Ping"]
+	path = esp32_marauder/libraries/ESP32Ping
+	url = https://github.com/marian-craciunescu/ESP32Ping

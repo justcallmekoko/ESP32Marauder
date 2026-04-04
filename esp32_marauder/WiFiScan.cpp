@@ -32,11 +32,21 @@ LinkedList<Flipper>* flippers;
 LinkedList<IPAddress>* ipList;
 LinkedList<ProbeReqSsid>* probe_req_ssids;
 
+#ifndef HAS_IDF_3
 extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3){
     if (arg == 31337)
       return 1;
     else
       return 0;
+}
+#endif
+
+static bool detectWslBypassSupport() {
+  #ifndef HAS_IDF_3
+    return ieee80211_raw_frame_sanity_check(31337, 0, 0) == 1;
+  #else
+    return false;
+  #endif
 }
 
 extern "C" {
@@ -1880,10 +1890,7 @@ extern "C" {
 #endif
 
 void WiFiScan::RunSetup() {
-  if (ieee80211_raw_frame_sanity_check(31337, 0, 0) == 1)
-    this->wsl_bypass_enabled = true;
-  else
-    this->wsl_bypass_enabled = false;
+  this->wsl_bypass_enabled = detectWslBypassSupport();
 
   #ifdef HAS_PSRAM
     ssids = new (ps_malloc(sizeof(LinkedList<ssid>))) LinkedList<ssid>();
@@ -4462,12 +4469,14 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color) {
       #endif
 
       // Setup up portrait analyzer buttons
+      #ifdef HAS_SCREEN
       display_obj.tft.setFreeFont(NULL);
       display_obj.tft.setTextSize(1);
       display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
       //display_obj.setupScrollArea(display_obj.TOP_FIXED_AREA_2, BOT_FIXED_AREA);
       display_obj.tftDrawChannelScaleButtons(set_channel, false);
       display_obj.tftDrawExitScaleButtons(false);
+      #endif
     }
   #else // Non touch
     #ifdef HAS_SCREEN
@@ -4796,7 +4805,11 @@ void WiFiScan::executeSourApple() {
 void WiFiScan::setBaseMacAddress(uint8_t macAddr[6]) {
   // Use ESP-IDF function to set the base MAC address
   //#ifndef HAS_DUAL_BAND
-    esp_err_t err = esp_base_mac_addr_set(macAddr);
+    #ifndef HAS_IDF_3
+      esp_err_t err = esp_base_mac_addr_set(macAddr);
+    #else
+      esp_err_t err = esp_iface_mac_addr_set(macAddr, ESP_MAC_BASE);
+    #endif
 
     // Check for success or handle errors
     //if (err == ESP_OK) {
