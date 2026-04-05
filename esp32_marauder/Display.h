@@ -23,11 +23,11 @@
 #define WHITE_KEY   ""
 
 // OLED layout: 9px banner | 47px scroll area (5 rows) | 8px bottom bar
-#define OLED_LINE_HEIGHT 8
-#define OLED_BANNER_H    9
-#define OLED_BOTTOM_BAR  56   // y where bottom bar starts
-#define OLED_SCROLL_END  (OLED_BOTTOM_BAR - 1)  // scroll area ends at y=55
-#define OLED_MAX_LINES   5    // rows in scroll area
+#define OLED_LINE_HEIGHT 10   // 8px text + 2px gap
+#define OLED_BANNER_H    11   // banner height (text + 2px padding)
+#define OLED_BOTTOM_BAR  54   // y where bottom bar starts
+#define OLED_SCROLL_END  (OLED_BOTTOM_BAR - 1)
+#define OLED_MAX_LINES   4    // rows in scroll area (43px / 10px = 4)
 
 class Display
 {

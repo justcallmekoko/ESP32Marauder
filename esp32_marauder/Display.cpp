@@ -89,11 +89,12 @@ void Display::showCenterText(String text, int y) {
 }
 
 void Display::updateBanner(String msg) {
-  oled.fillRect(0, 0, 128, OLED_BANNER_H, OLED_BLACK);
+  // Inverted banner: white fill, black text
+  oled.fillRect(0, 0, 128, OLED_BANNER_H, OLED_WHITE);
   oled.setTextSize(1);
-  oled.setTextColor(OLED_WHITE);
-  oled.setCursor(0, 0);
-  oled.print(msg.substring(0, 21)); // max ~21 chars at size 1
+  oled.setTextColor(OLED_BLACK);
+  oled.setCursor(2, 2);
+  oled.print(msg.substring(0, 21));
   oled.display();
 }
 
