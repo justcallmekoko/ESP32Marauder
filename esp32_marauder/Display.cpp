@@ -73,7 +73,7 @@ void Display::RunSetup() {
 void Display::clearScreen() {
   // Clear only the scroll area (between banner and bottom bar)
   oled.fillRect(0, OLED_BANNER_H, 128, OLED_BOTTOM_BAR - OLED_BANNER_H, OLED_BLACK);
-  scroll_y = OLED_BANNER_H;
+  scroll_y = OLED_BANNER_H + 2; // 2px gap below banner
   oled.display();
 }
 
