@@ -48,6 +48,11 @@ https://www.online-utility.org/image/convert/to/XBM
   #include "MenuFunctions.h"
 #endif
 
+#ifdef HAS_OLED
+  #include "Display.h"
+  #include "OledMenu.h"
+#endif
+
 #ifdef HAS_BUTTONS
   #include "Switches.h"
   
@@ -89,6 +94,7 @@ CommandLine cli_obj;
 #endif
 #ifdef HAS_OLED
   Display display_obj;
+  OledMenu oled_menu_obj;
 #endif
 
 #if defined(HAS_SD) && !defined(HAS_C5_SD)
@@ -410,6 +416,9 @@ void setup()
   #ifdef HAS_SCREEN
     menu_function_obj.RunSetup();
   #endif
+  #ifdef HAS_OLED
+    oled_menu_obj.RunSetup();
+  #endif
 
   /*char ssidBuf[64] = {0};  // or prefill with existing SSID
   if (keyboardInput(ssidBuf, sizeof(ssidBuf), "Enter SSID")) {
@@ -472,6 +481,9 @@ void loop()
       (mini)) {
     #ifdef HAS_SCREEN
       menu_function_obj.main(currentTime);
+    #endif
+    #ifdef HAS_OLED
+      oled_menu_obj.main(currentTime);
     #endif
   }
   #ifdef HAS_FLIPPER_LED

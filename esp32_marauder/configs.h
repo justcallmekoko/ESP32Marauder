@@ -387,6 +387,7 @@
     #define OLED_SCL 22
     #define HAS_IDF_3        // esp32 core 3.x / IDF 5.x — skips removed APIs
     #define HAS_NIMBLE_2     // NimBLE 2.x API (addData, setScanCallbacks, etc.)
+    #define HAS_BUTTONS
   #endif
 
   #ifdef MARAUDER_FLIPPER
@@ -548,6 +549,26 @@
 
   //// BUTTON DEFINITIONS
   #ifdef HAS_BUTTONS
+
+    #ifdef ESP32_OLED
+      #define U_BTN 4
+      #define D_BTN 18
+      #define C_BTN 19
+      #define L_BTN 23
+      #define R_BTN -1
+
+      #define HAS_U
+      #define HAS_D
+      #define HAS_C
+      #define HAS_L
+      //#define HAS_R
+
+      #define U_PULL true
+      #define D_PULL true
+      #define C_PULL true
+      #define L_PULL true
+      #define R_PULL true
+    #endif
 
     #ifdef MARAUDER_REV_FEATHER
       #define L_BTN -1

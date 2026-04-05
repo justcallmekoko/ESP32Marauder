@@ -394,7 +394,7 @@ extern "C" {
               airtags->add(airtag);
 
               if (wifi_scan_obj.currentScanMode != BT_SCAN_AIRTAG_MON) {
-                #ifdef HAS_SCREEN
+                #if defined(HAS_SCREEN) || defined(HAS_OLED)
                   //Serial.println("Printing airtag to display...");
                   //Serial.flush();
                   display_string.concat((String)rssi);
@@ -464,7 +464,7 @@ extern "C" {
 
               flippers->add(flipper);
 
-              #ifdef HAS_SCREEN
+              #if defined(HAS_SCREEN) || defined(HAS_OLED)
                 display_obj.display_buffer->add(String("Flipper: ") + name + ",                 ");
                 display_obj.display_buffer->add("       MAC: " + String(mac) + ",             ");
                 display_obj.display_buffer->add("      RSSI: " + String(rssi) + ",               ");
@@ -497,7 +497,7 @@ extern "C" {
                 Serial.print(advertisedDevice->getAddress().toString().c_str());
               }
       
-              #ifdef HAS_SCREEN
+              #if defined(HAS_SCREEN) || defined(HAS_OLED)
                 uint8_t temp_len = display_string.length();
                 for (uint8_t i = 0; i < 40 - temp_len; i++)
                 {
@@ -555,7 +555,7 @@ extern "C" {
                     display_string.concat(F(" | GPS: No Fix"));
                   }
           
-                  /*#ifdef HAS_SCREEN
+                  /*#if defined(HAS_SCREEN) || defined(HAS_OLED)
                     uint8_t temp_len = display_string.length();
                     for (uint8_t i = 0; i < 40 - temp_len; i++)
                     {
@@ -732,7 +732,7 @@ extern "C" {
               //Serial.println();
               //Serial.println();
 
-              #ifdef HAS_SCREEN
+              #if defined(HAS_SCREEN) || defined(HAS_OLED)
                 String display_string = "";
                 display_string.concat(CYAN_KEY);
                 display_string.concat(String(rssi));
@@ -899,7 +899,7 @@ extern "C" {
                   if (gps_obj.getFixStatus())
                     do_save = true;
 
-                  #ifdef HAS_SCREEN
+                  #if defined(HAS_SCREEN) || defined(HAS_OLED)
                     String display_string;
                     if (!do_save)
                       display_string = RED_KEY;
@@ -958,7 +958,7 @@ extern "C" {
           else if (wifi_scan_obj.currentScanMode == BT_SCAN_SKIMMERS) {
             String bad_list[bad_list_length] = {"HC-03", "HC-05", "HC-06"};
     
-            #ifdef HAS_SCREEN
+            #if defined(HAS_SCREEN) || defined(HAS_OLED)
               int buf = display_obj.display_buffer->size();
             #else
               int buf = 0;
@@ -973,7 +973,7 @@ extern "C" {
                 Serial.print(advertisedDevice->getName().c_str());
                 for(uint8_t i = 0; i < bad_list_length; i++)
                 {
-                  #ifdef HAS_SCREEN
+                  #if defined(HAS_SCREEN) || defined(HAS_OLED)
                     if(strcmp(advertisedDevice->getName().c_str(), bad_list[i].c_str()) == 0)
                     {
                       display_string.concat(text_table4[1]);
@@ -1089,7 +1089,7 @@ extern "C" {
                   Serial.println(advertisedDevice->getAddress().toString().c_str());
                 }
 
-                #ifdef HAS_SCREEN
+                #if defined(HAS_SCREEN) || defined(HAS_OLED)
                   uint8_t temp_len = display_string.length();
                   for (uint8_t i = 0; i < 40 - temp_len; i++)
                   {
@@ -1193,7 +1193,7 @@ extern "C" {
 
 
               if (wifi_scan_obj.currentScanMode != BT_SCAN_AIRTAG_MON) {
-                #ifdef HAS_SCREEN
+                #if defined(HAS_SCREEN) || defined(HAS_OLED)
                   display_string.concat((String)rssi);
                   display_string.concat(F(" MAC: "));
                   display_string.concat(mac);
@@ -1261,7 +1261,7 @@ extern "C" {
 
               flippers->add(flipper);
 
-              #ifdef HAS_SCREEN
+              #if defined(HAS_SCREEN) || defined(HAS_OLED)
                 display_obj.display_buffer->add(String("Flipper: ") + name + ",                 ");
                 display_obj.display_buffer->add("       MAC: " + String(mac) + ",             ");
                 display_obj.display_buffer->add("      RSSI: " + String(rssi) + ",               ");
@@ -1294,7 +1294,7 @@ extern "C" {
                 Serial.print(advertisedDevice->getAddress().toString().c_str());
               }
       
-              #ifdef HAS_SCREEN
+              #if defined(HAS_SCREEN) || defined(HAS_OLED)
                 uint8_t temp_len = display_string.length();
                 for (uint8_t i = 0; i < 40 - temp_len; i++)
                 {
@@ -1511,7 +1511,7 @@ extern "C" {
               //Serial.println();
               //Serial.println();
 
-              #ifdef HAS_SCREEN
+              #if defined(HAS_SCREEN) || defined(HAS_OLED)
                 String display_string = "";
                 display_string.concat(CYAN_KEY);
                 display_string.concat(String(rssi));
@@ -1678,7 +1678,7 @@ extern "C" {
                   if (gps_obj.getFixStatus())
                     do_save = true;
 
-                  #ifdef HAS_SCREEN
+                  #if defined(HAS_SCREEN) || defined(HAS_OLED)
                     String display_string;
                     if (!do_save)
                       display_string = RED_KEY;
@@ -1737,7 +1737,7 @@ extern "C" {
           else if (wifi_scan_obj.currentScanMode == BT_SCAN_SKIMMERS) {
             String bad_list[bad_list_length] = {"HC-03", "HC-05", "HC-06"};
     
-            #ifdef HAS_SCREEN
+            #if defined(HAS_SCREEN) || defined(HAS_OLED)
               int buf = display_obj.display_buffer->size();
             #else
               int buf = 0;
@@ -1752,7 +1752,7 @@ extern "C" {
                 Serial.print(advertisedDevice->getName().c_str());
                 for(uint8_t i = 0; i < bad_list_length; i++)
                 {
-                  #ifdef HAS_SCREEN
+                  #if defined(HAS_SCREEN) || defined(HAS_OLED)
                     if(strcmp(advertisedDevice->getName().c_str(), bad_list[i].c_str()) == 0)
                     {
                       display_string.concat(text_table4[1]);
@@ -1868,7 +1868,7 @@ extern "C" {
                   Serial.println(advertisedDevice->getAddress().toString().c_str());
                 }
 
-                #ifdef HAS_SCREEN
+                #if defined(HAS_SCREEN) || defined(HAS_OLED)
                   uint8_t temp_len = display_string.length();
                   for (uint8_t i = 0; i < 40 - temp_len; i++)
                   {
@@ -2779,7 +2779,7 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
     #endif
   }
 
-  #ifdef HAS_SCREEN
+  #if defined(HAS_SCREEN) || defined(HAS_OLED)
     display_obj.display_buffer->clear();
     #ifdef SCREEN_BUFFER
       display_obj.screen_buffer->clear();
@@ -4965,7 +4965,7 @@ void WiFiScan::executeWarDrive() {
 
             int temp_len = display_string.length();
 
-            #ifdef HAS_SCREEN
+            #if defined(HAS_SCREEN) || defined(HAS_OLED)
               for (int i = 0; i < 40 - temp_len; i++)
               {
                 display_string.concat(" ");
@@ -5887,7 +5887,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
     //const WifiMgmtHdr *hdr = &ipkt->hdr;
 
     // If we dont the buffer size is not 0, don't write or else we get CORRUPT_HEAP
-    #ifdef HAS_SCREEN
+    #if defined(HAS_SCREEN) || defined(HAS_OLED)
       int buf = display_obj.display_buffer->size();
     #else
       int buf = 0;
@@ -5974,7 +5974,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
   
         Serial.print(F(" "));
 
-        #ifdef HAS_SCREEN
+        #if defined(HAS_SCREEN) || defined(HAS_OLED)
           display_obj.display_buffer->add(display_string);
         #endif
         
@@ -6158,7 +6158,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
 
     int temp_len = display_string.length();
 
-    #ifdef HAS_SCREEN
+    #if defined(HAS_SCREEN) || defined(HAS_OLED)
       for (int i = 0; i < 50 - temp_len; i++)
       {
         display_string.concat(" ");
@@ -6317,7 +6317,7 @@ uint8_t WiFiScan::getSecurityType(const uint8_t* beacon, uint16_t len) {
     len -= 4;
 
     // If we dont the buffer size is not 0, don't write or else we get CORRUPT_HEAP
-    #ifdef HAS_SCREEN
+    #if defined(HAS_SCREEN) || defined(HAS_OLED)
       int buf = display_obj.display_buffer->size();
     #else
       int buf = 0;
@@ -6376,7 +6376,7 @@ uint8_t WiFiScan::getSecurityType(const uint8_t* beacon, uint16_t len) {
   
         Serial.print(F(" "));
 
-        #ifdef HAS_SCREEN
+        #if defined(HAS_SCREEN) || defined(HAS_OLED)
           display_obj.display_buffer->add(display_string);
         #endif
         
@@ -6474,7 +6474,7 @@ String WiFiScan::processPwnagotchiBeacon(const uint8_t* frame, int length) {
     Serial.print(F("Pwnd Totals: "));
     Serial.println(pwnd_tot);
 
-    #ifdef HAS_SCREEN
+    #if defined(HAS_SCREEN) || defined(HAS_OLED)
 
       display_obj.display_buffer->add(String("Pwnagotchi: ") + name + ",                 ");
       display_obj.display_buffer->add("      Pwnd: " + String(pwnd_tot) + ",             ");
@@ -6588,7 +6588,7 @@ void WiFiScan::pineScanSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t ty
     const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)snifferPacket->payload;
     const WifiMgmtHdr *hdr = &ipkt->hdr;
   
-    #ifdef HAS_SCREEN
+    #if defined(HAS_SCREEN) || defined(HAS_OLED)
       int buff = display_obj.display_buffer->size();
     #else
       int buff = 0;
@@ -6951,7 +6951,7 @@ void WiFiScan::multiSSIDSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t t
     const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)snifferPacket->payload;
     const WifiMgmtHdr *hdr = &ipkt->hdr;
   
-    #ifdef HAS_SCREEN
+    #if defined(HAS_SCREEN) || defined(HAS_OLED)
       int buff = display_obj.display_buffer->size();
     #else
       int buff = 0;
@@ -7153,7 +7153,7 @@ void WiFiScan::multiSSIDSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t t
           display_string.concat(" ");
         }
         
-        #ifdef HAS_SCREEN
+        #if defined(HAS_SCREEN) || defined(HAS_OLED)
           display_obj.display_buffer->add(display_string);
         #endif
       }
@@ -7608,7 +7608,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
             {
               display_string.concat(" ");
             }
-            #ifdef HAS_SCREEN
+            #if defined(HAS_SCREEN) || defined(HAS_OLED)
               display_obj.display_buffer->add(display_string);
             #endif
             return;
@@ -7645,7 +7645,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
 
           int temp_len = display_string.length();
 
-          #ifdef HAS_SCREEN
+          #if defined(HAS_SCREEN) || defined(HAS_OLED)
             for (int i = 0; i < 40 - temp_len; i++)
             {
               display_string.concat(" ");
@@ -7704,7 +7704,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
 
               int temp_len = display_string.length();
 
-              #ifdef HAS_SCREEN
+              #if defined(HAS_SCREEN) || defined(HAS_OLED)
                 for (int i = 0; i < 40 - temp_len; i++)
                 {
                   display_string.concat(" ");
@@ -7782,7 +7782,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
           // Print spaces because of the rotating lines of the hardware scroll.
           // The same characters print from previous lines so I just overwrite them
           // with spaces.
-          #ifdef HAS_SCREEN
+          #if defined(HAS_SCREEN) || defined(HAS_OLED)
             for (int i = 0; i < 19 - snifferPacket->payload[25]; i++)
             {
               display_string.concat(" ");
@@ -7823,7 +7823,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
 
               int temp_len = display_string.length();
 
-              #ifdef HAS_SCREEN
+              #if defined(HAS_SCREEN) || defined(HAS_OLED)
                 for (int i = 0; i < 40 - temp_len; i++)
                 {
                   display_string.concat(" ");
@@ -7942,7 +7942,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
 
             char addr[] = "00:00:00:00:00:00";
             getMAC(addr, snifferPacket->payload, 10);
-            #ifdef HAS_SCREEN
+            #if defined(HAS_SCREEN) || defined(HAS_OLED)
               display_string.concat(MAGENTA_KEY);
               display_string.concat((String)snifferPacket->rx_ctrl.rssi);
               display_string.concat(" ");
@@ -7988,7 +7988,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
 
               char addr[] = "00:00:00:00:00:00";
               getMAC(addr, snifferPacket->payload, 10);
-              #ifdef HAS_SCREEN
+              #if defined(HAS_SCREEN) || defined(HAS_OLED)
                 display_string.concat(GREEN_KEY);
                 display_string.concat((String)snifferPacket->rx_ctrl.rssi);
                 display_string.concat(" ");
@@ -8051,7 +8051,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
         uint16_t group = 0;
         size_t act_len = 0;
 
-        #ifdef HAS_SCREEN
+        #if defined(HAS_SCREEN) || defined(HAS_OLED)
           display_string.concat(WHITE_KEY);
           display_string.concat((String)snifferPacket->rx_ctrl.rssi);
           display_string.concat(" ");
@@ -8087,7 +8087,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
       if (wifi_scan_obj.getSAEACT(snifferPacket->payload, len, group, act_len)) {
         wifi_scan_obj.mgmt_frames++;
         if (wifi_scan_obj.currentScanMode != WIFI_ATTACK_SAE_COMMIT) {
-          #ifdef HAS_SCREEN
+          #if defined(HAS_SCREEN) || defined(HAS_OLED)
             display_string.concat(WHITE_KEY);
             display_string.concat((String)snifferPacket->rx_ctrl.rssi);
             display_string.concat(" ");
@@ -8135,7 +8135,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
         Serial.print(F(" -> "));
         Serial.print(macToString(dst_addr));
 
-        #ifdef HAS_SCREEN
+        #if defined(HAS_SCREEN) || defined(HAS_OLED)
           display_string.concat(snifferPacket->rx_ctrl.rssi);
 
           display_string.concat(" ");
@@ -8292,7 +8292,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
 
   int temp_len = display_string.length();
 
-  #ifdef HAS_SCREEN
+  #if defined(HAS_SCREEN) || defined(HAS_OLED)
     for (int i = 0; i < 40 - temp_len; i++)
     {
       display_string.concat(" ");
@@ -8419,7 +8419,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
     const WifiMgmtHdr *hdr = &ipkt->hdr;
 
     // If we dont the buffer size is not 0, don't write or else we get CORRUPT_HEAP
-    #ifdef HAS_SCREEN
+    #if defined(HAS_SCREEN) || defined(HAS_OLED)
       int buf = display_obj.display_buffer->size();
     #else
       int buf = 0;
@@ -8444,7 +8444,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
       display_string.concat(" ");
       display_string.concat(addr);
 
-      #ifdef HAS_SCREEN
+      #if defined(HAS_SCREEN) || defined(HAS_OLED)
         for (int i = 0; i < 19 - snifferPacket->payload[37]; i++)
         {
           display_string.concat(" ");
@@ -8482,7 +8482,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
 
 
     // If we dont the buffer size is not 0, don't write or else we get CORRUPT_HEAP
-    #ifdef HAS_SCREEN
+    #if defined(HAS_SCREEN) || defined(HAS_OLED)
       int buf = display_obj.display_buffer->size();
     #else
       int buf = 0;
@@ -8533,7 +8533,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
         // Print spaces because of the rotating lines of the hardware scroll.
         // The same characters print from previous lines so I just overwrite them
         // with spaces.
-        #ifdef HAS_SCREEN
+        #if defined(HAS_SCREEN) || defined(HAS_OLED)
           for (int i = 0; i < 19 - snifferPacket->payload[25]; i++)
           {
             display_string.concat(" ");
@@ -8575,7 +8575,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
 
             int temp_len = display_string.length();
 
-            #ifdef HAS_SCREEN
+            #if defined(HAS_SCREEN) || defined(HAS_OLED)
               for (int i = 0; i < 40 - temp_len; i++)
               {
                 display_string.concat(" ");
@@ -8622,7 +8622,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
 
 
     // If we dont the buffer size is not 0, don't write or else we get CORRUPT_HEAP
-    #ifdef HAS_SCREEN
+    #if defined(HAS_SCREEN) || defined(HAS_OLED)
       int buf = display_obj.display_buffer->size();
     #else
       int buf = 0;
@@ -8668,7 +8668,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
       // Print spaces because of the rotating lines of the hardware scroll.
       // The same characters print from previous lines so I just overwrite them
       // with spaces.
-      #ifdef HAS_SCREEN
+      #if defined(HAS_SCREEN) || defined(HAS_OLED)
         for (int i = 0; i < 19 - snifferPacket->payload[25]; i++)
           display_string.concat(" ");
   
@@ -9571,7 +9571,7 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
 
   String display_string = "";
 
-  #ifdef HAS_SCREEN
+  #if defined(HAS_SCREEN) || defined(HAS_OLED)
     int buff = display_obj.display_buffer->size();
   #else
     int buff = 0;
@@ -9633,7 +9633,7 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
 
     int temp_len = display_string.length();
 
-    #ifdef HAS_SCREEN
+    #if defined(HAS_SCREEN) || defined(HAS_OLED)
       // Fill blank space
       for (int i = 0; i < 40 - temp_len; i++)
       {
@@ -9895,7 +9895,7 @@ void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
     ap_index = wifi_scan_obj.checkMatchAP(addr2);
   }
 
-  #ifdef HAS_SCREEN
+  #if defined(HAS_SCREEN) || defined(HAS_OLED)
     int buff = display_obj.display_buffer->size();
   #else
     int buff = 0;
@@ -11088,7 +11088,7 @@ bool WiFiScan::checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout) {
             {
               display_string.concat(" ");
             }
-            #ifdef HAS_SCREEN
+            #if defined(HAS_SCREEN) || defined(HAS_OLED)
               display_obj.display_buffer->add(display_string);
             #endif
             buffer_obj.append(output_line + "\n");
@@ -11115,7 +11115,7 @@ bool WiFiScan::checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout) {
           {
             display_string.concat(" ");
           }
-          #ifdef HAS_SCREEN
+          #if defined(HAS_SCREEN) || defined(HAS_OLED)
             display_obj.display_buffer->add(display_string);
           #endif
           buffer_obj.append(output_line + "\n");
@@ -11125,7 +11125,7 @@ bool WiFiScan::checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout) {
       this->arp_count = 0;
       if (!this->scan_complete) {
         this->scan_complete = true;
-        #ifdef HAS_SCREEN
+        #if defined(HAS_SCREEN) || defined(HAS_OLED)
           display_obj.display_buffer->add("Scan complete");
         #endif
       }
@@ -11151,7 +11151,7 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
           display_string.concat(" ");
         }
         ipList->add(this->current_scan_ip);
-        #ifdef HAS_SCREEN
+        #if defined(HAS_SCREEN) || defined(HAS_OLED)
           display_obj.display_buffer->add(display_string);
         #endif
         buffer_obj.append(output_line + "\n");
@@ -11161,7 +11161,7 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
     else {
       if (!this->scan_complete) {
         this->scan_complete = true;
-        #ifdef HAS_SCREEN
+        #if defined(HAS_SCREEN) || defined(HAS_OLED)
           display_obj.display_buffer->add("Scan complete");
         #endif
       }
@@ -11198,7 +11198,7 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
     else {
       if (!this->scan_complete) {
         this->scan_complete = true;
-        #ifdef HAS_SCREEN
+        #if defined(HAS_SCREEN) || defined(HAS_OLED)
           display_obj.display_buffer->add("Scan complete");
         #endif
       }
@@ -11225,7 +11225,7 @@ void WiFiScan::portScan(uint8_t scan_mode, uint16_t targ_port) {
         {
           display_string.concat(" ");
         }
-        #ifdef HAS_SCREEN
+        #if defined(HAS_SCREEN) || defined(HAS_OLED)
           display_obj.display_buffer->add(display_string);
         #endif
         Serial.println(output_line);
@@ -11235,7 +11235,7 @@ void WiFiScan::portScan(uint8_t scan_mode, uint16_t targ_port) {
     else {
       if (!this->scan_complete) {
         this->scan_complete = true;
-        #ifdef HAS_SCREEN
+        #if defined(HAS_SCREEN) || defined(HAS_OLED)
           display_obj.display_buffer->add("Scan complete");
         #endif
       }
@@ -11251,7 +11251,7 @@ void WiFiScan::portScan(uint8_t scan_mode, uint16_t targ_port) {
       {
         display_string.concat(" ");
       }
-      #ifdef HAS_SCREEN
+      #if defined(HAS_SCREEN) || defined(HAS_OLED)
         display_obj.display_buffer->add(display_string);
       #endif
       Serial.println(output_line);

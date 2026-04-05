@@ -15,10 +15,19 @@
 #define OLED_WHITE SH110X_WHITE
 #define OLED_BLACK 0
 
-// OLED fits ~5 lines of text at size 1 (8px each), leaving top 8px for banner
-#define OLED_MAX_LINES 6
+// Color tag stubs — OLED is monochrome, tags are stripped/ignored
+#define RED_KEY     ""
+#define GREEN_KEY   ""
+#define CYAN_KEY    ""
+#define MAGENTA_KEY ""
+#define WHITE_KEY   ""
+
+// OLED layout: 9px banner | 47px scroll area (5 rows) | 8px bottom bar
 #define OLED_LINE_HEIGHT 8
-#define OLED_BANNER_H 9
+#define OLED_BANNER_H    9
+#define OLED_BOTTOM_BAR  56   // y where bottom bar starts
+#define OLED_SCROLL_END  (OLED_BOTTOM_BAR - 1)  // scroll area ends at y=55
+#define OLED_MAX_LINES   5    // rows in scroll area
 
 class Display
 {
@@ -43,6 +52,7 @@ class Display
     void updateBanner(String msg);
     void twoPartDisplay(String center_text);
     void displayBuffer(bool do_clear = false);
+    void drawBottomBar(String text);
 
     // Stubs so the rest of Marauder compiles without #ifdefs everywhere
     void buildBanner(String msg, int xpos) {}

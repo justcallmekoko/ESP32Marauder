@@ -56,11 +56,23 @@ void Display::RunSetup() {
   display_buffer = new LinkedList<String>();
   Serial.println("[OLED] display_buffer allocated");
   init();
+
+  #ifdef HAS_BUTTONS
+    pinMode(U_BTN, INPUT_PULLUP);
+    pinMode(D_BTN, INPUT_PULLUP);
+    pinMode(C_BTN, INPUT_PULLUP);
+    pinMode(L_BTN, INPUT_PULLUP);
+    Serial.println("[BTN] Pin states at boot:");
+    Serial.printf("[BTN] D%d UP:     %s\n", U_BTN, digitalRead(U_BTN)  ? "HIGH (ok)" : "LOW (stuck?)");
+    Serial.printf("[BTN] D%d DOWN:   %s\n", D_BTN, digitalRead(D_BTN)  ? "HIGH (ok)" : "LOW (stuck?)");
+    Serial.printf("[BTN] D%d SELECT: %s\n", C_BTN, digitalRead(C_BTN)  ? "HIGH (ok)" : "LOW (stuck?)");
+    Serial.printf("[BTN] D%d BACK:   %s\n", L_BTN, digitalRead(L_BTN)  ? "HIGH (ok)" : "LOW (stuck?)");
+  #endif
 }
 
 void Display::clearScreen() {
-  // Keep banner row, clear the scroll area below it
-  oled.fillRect(0, OLED_BANNER_H, 128, 64 - OLED_BANNER_H, OLED_BLACK);
+  // Clear only the scroll area (between banner and bottom bar)
+  oled.fillRect(0, OLED_BANNER_H, 128, OLED_BOTTOM_BAR - OLED_BANNER_H, OLED_BLACK);
   scroll_y = OLED_BANNER_H;
   oled.display();
 }
@@ -90,6 +102,17 @@ void Display::twoPartDisplay(String center_text) {
   showCenterText(center_text, 28);
 }
 
+void Display::drawBottomBar(String text) {
+  oled.fillRect(0, OLED_BOTTOM_BAR, 128, 8, OLED_BLACK);
+  // Draw a thin separator line
+  oled.drawFastHLine(0, OLED_BOTTOM_BAR, 128, OLED_WHITE);
+  oled.setTextSize(1);
+  oled.setTextColor(OLED_WHITE);
+  oled.setCursor(0, OLED_BOTTOM_BAR + 1);
+  oled.print(text.substring(0, 21));
+  oled.display();
+}
+
 void Display::displayBuffer(bool do_clear) {
   if (!display_buffer || display_buffer->size() == 0) return;
 
@@ -97,18 +120,15 @@ void Display::displayBuffer(bool do_clear) {
   while (display_buffer->size() > 0) {
     String line = display_buffer->shift();
 
-    // Scroll up if we've hit the bottom
-    if (scroll_y + OLED_LINE_HEIGHT > 64) {
-      // Shift framebuffer up by one line
-      for (int y = OLED_BANNER_H; y < 64 - OLED_LINE_HEIGHT; y++) {
+    // Scroll up if we've hit the bottom of the scroll area (above bottom bar)
+    if (scroll_y + OLED_LINE_HEIGHT > OLED_BOTTOM_BAR) {
+      for (int y = OLED_BANNER_H; y < OLED_BOTTOM_BAR - OLED_LINE_HEIGHT; y++) {
         for (int x = 0; x < 128; x++) {
-          // Copy pixel from row below into current row
           oled.drawPixel(x, y, oled.getPixel(x, y + OLED_LINE_HEIGHT) ? OLED_WHITE : OLED_BLACK);
         }
       }
-      // Clear the bottom line
-      oled.fillRect(0, 64 - OLED_LINE_HEIGHT, 128, OLED_LINE_HEIGHT, OLED_BLACK);
-      scroll_y = 64 - OLED_LINE_HEIGHT;
+      oled.fillRect(0, OLED_BOTTOM_BAR - OLED_LINE_HEIGHT, 128, OLED_LINE_HEIGHT, OLED_BLACK);
+      scroll_y = OLED_BOTTOM_BAR - OLED_LINE_HEIGHT;
     }
 
     oled.setTextSize(1);
