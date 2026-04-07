@@ -5,7 +5,7 @@
 #include "OledMenu.h"
 
 // ----------------------------------------------------------------
-// Leaf items: action = scan mode constant from WiFiScan.h
+// Menu tables
 // ----------------------------------------------------------------
 static const OledMenu::MenuItem WIFI_SNIFF[] = {
   { "Probe Sniff",       WIFI_SCAN_PROBE,              0, nullptr, 0 },
@@ -59,26 +59,26 @@ static const OledMenu::MenuItem WIFI_MENU[] = {
 static const uint8_t WIFI_MENU_N = sizeof(WIFI_MENU)/sizeof(WIFI_MENU[0]);
 
 static const OledMenu::MenuItem BT_SNIFF[] = {
-  { "Sniff BT",          BT_SCAN_ALL,              0, nullptr, 0 },
-  { "Detect Skimmers",   BT_SCAN_SKIMMERS,         0, nullptr, 0 },
-  { "Scan Airtag",       BT_SCAN_AIRTAG,           0, nullptr, 0 },
-  { "Monitor Airtag",    BT_SCAN_AIRTAG_MON,       0, nullptr, 0 },
-  { "Scan Flipper",      BT_SCAN_FLIPPER,          0, nullptr, 0 },
-  { "BT Analyzer",       BT_SCAN_ANALYZER,         0, nullptr, 0 },
-  { "Flock",             BT_SCAN_FLOCK,            0, nullptr, 0 },
-  { "Flock Wardrive",    BT_SCAN_FLOCK_WARDRIVE,   0, nullptr, 0 },
-  { "RayBan",            BT_SCAN_RAYBAN,           0, nullptr, 0 },
-  { "BT Wardrive",       BT_SCAN_WAR_DRIVE,        0, nullptr, 0 },
+  { "Sniff BT",        BT_SCAN_ALL,            0, nullptr, 0 },
+  { "Detect Skimmers", BT_SCAN_SKIMMERS,       0, nullptr, 0 },
+  { "Scan Airtag",     BT_SCAN_AIRTAG,         0, nullptr, 0 },
+  { "Monitor Airtag",  BT_SCAN_AIRTAG_MON,     0, nullptr, 0 },
+  { "Scan Flipper",    BT_SCAN_FLIPPER,        0, nullptr, 0 },
+  { "BT Analyzer",     BT_SCAN_ANALYZER,       0, nullptr, 0 },
+  { "Flock",           BT_SCAN_FLOCK,          0, nullptr, 0 },
+  { "Flock Wardrive",  BT_SCAN_FLOCK_WARDRIVE, 0, nullptr, 0 },
+  { "RayBan",          BT_SCAN_RAYBAN,         0, nullptr, 0 },
+  { "BT Wardrive",     BT_SCAN_WAR_DRIVE,      0, nullptr, 0 },
 };
 static const uint8_t BT_SNIFF_N = sizeof(BT_SNIFF)/sizeof(BT_SNIFF[0]);
 
 static const OledMenu::MenuItem BT_SPAM[] = {
-  { "Spam All",    BT_ATTACK_SPAM_ALL,       0, nullptr, 0 },
-  { "Apple",       BT_ATTACK_SOUR_APPLE,    0, nullptr, 0 },
-  { "SwiftPair",   BT_ATTACK_SWIFTPAIR_SPAM,0, nullptr, 0 },
-  { "Samsung",     BT_ATTACK_SAMSUNG_SPAM,  0, nullptr, 0 },
-  { "Google",      BT_ATTACK_GOOGLE_SPAM,   0, nullptr, 0 },
-  { "Flipper",     BT_ATTACK_FLIPPER_SPAM,  0, nullptr, 0 },
+  { "Spam All",  BT_ATTACK_SPAM_ALL,        0, nullptr, 0 },
+  { "Apple",     BT_ATTACK_SOUR_APPLE,      0, nullptr, 0 },
+  { "SwiftPair", BT_ATTACK_SWIFTPAIR_SPAM,  0, nullptr, 0 },
+  { "Samsung",   BT_ATTACK_SAMSUNG_SPAM,    0, nullptr, 0 },
+  { "Google",    BT_ATTACK_GOOGLE_SPAM,     0, nullptr, 0 },
+  { "Flipper",   BT_ATTACK_FLIPPER_SPAM,    0, nullptr, 0 },
 };
 static const uint8_t BT_SPAM_N = sizeof(BT_SPAM)/sizeof(BT_SPAM[0]);
 
@@ -89,8 +89,8 @@ static const OledMenu::MenuItem BT_MENU[] = {
 static const uint8_t BT_MENU_N = sizeof(BT_MENU)/sizeof(BT_MENU[0]);
 
 static const OledMenu::MenuItem DEVICE_MENU[] = {
-  { "Device Info",  OLED_ACTION_INFO,   0, nullptr, 0 },
-  { "Reboot",       OLED_ACTION_REBOOT, 0, nullptr, 0 },
+  { "Device Info", OLED_ACTION_INFO,   0, nullptr, 0 },
+  { "Reboot",      OLED_ACTION_REBOOT, 0, nullptr, 0 },
 };
 static const uint8_t DEVICE_MENU_N = sizeof(DEVICE_MENU)/sizeof(DEVICE_MENU[0]);
 
@@ -104,64 +104,14 @@ static const uint8_t MAIN_MENU_N = sizeof(MAIN_MENU)/sizeof(MAIN_MENU[0]);
 
 // ----------------------------------------------------------------
 
-OledMenu::OledMenu()
-  : depth(0), in_scan(false), needs_draw(true),
-    joy_up_last(false), joy_down_last(false),
-    joy_left_last(false), joy_sw_last(false),
-    joy_last_ms(0) {}
+OledMenu::OledMenu(InputDevice* input)
+  : input(input), depth(0), in_scan(false),
+    needs_draw(true), last_input_ms(0) {}
 
 void OledMenu::RunSetup() {
-#ifdef HAS_JOYSTICK
-  pinMode(JOY_SW_PIN, INPUT_PULLUP);
-  // VRX / VRY are analog-in only — no pinMode needed
-#endif
   pushMenu(MAIN_MENU, MAIN_MENU_N);
   // drawMenu() deferred to first main() so setup() can't overwrite it
 }
-
-// ---- joystick helpers ------------------------------------------
-
-#ifdef HAS_JOYSTICK
-
-// Returns true on the rising edge of each direction (one fire per tilt)
-bool OledMenu::joyUp() {
-  int v = analogRead(JOY_Y_PIN);
-  bool cur = (v < (2048 - JOY_THRESHOLD));
-  bool fired = cur && !joy_up_last;
-  joy_up_last = cur;
-  return fired;
-}
-
-bool OledMenu::joyDown() {
-  int v = analogRead(JOY_Y_PIN);
-  bool cur = (v > (2048 + JOY_THRESHOLD));
-  bool fired = cur && !joy_down_last;
-  joy_down_last = cur;
-  return fired;
-}
-
-bool OledMenu::joyLeft() {
-  int v = analogRead(JOY_X_PIN);
-  bool cur = (v < (2048 - JOY_THRESHOLD));
-  bool fired = cur && !joy_left_last;
-  joy_left_last = cur;
-  return fired;
-}
-
-bool OledMenu::joySel() {
-  bool cur = (digitalRead(JOY_SW_PIN) == LOW);
-  bool fired = cur && !joy_sw_last;
-  joy_sw_last = cur;
-  return fired;
-}
-
-#else
-// Fallback stubs if somehow built without joystick
-bool OledMenu::joyUp()   { return false; }
-bool OledMenu::joyDown() { return false; }
-bool OledMenu::joyLeft() { return false; }
-bool OledMenu::joySel()  { return false; }
-#endif
 
 // ---- navigation helpers ----------------------------------------
 
@@ -203,7 +153,6 @@ void OledMenu::drawMenu() {
     display_obj.display_buffer->add(line);
   }
   display_obj.displayBuffer();
-
   display_obj.drawBottomBar(depth > 1 ? "< Back" : "");
 }
 
@@ -218,25 +167,20 @@ void OledMenu::drawScanStatus(const char* label) {
 // ---- main loop -------------------------------------------------
 
 void OledMenu::main(uint32_t currentTime) {
-  // Deferred initial draw — avoids setup() overwriting us
   if (needs_draw) {
     needs_draw = false;
     drawMenu();
   }
 
-  // Rate-limit all joystick reads to avoid bouncing
-  if (currentTime - joy_last_ms < JOY_DEBOUNCE_MS) {
-    // Still poll state so edge detection stays in sync
-    joyUp(); joyDown(); joyLeft(); joySel();
-    return;
-  }
+  // Debounce: don't act on inputs faster than JOY_DEBOUNCE_MS
+  bool gated = (currentTime - last_input_ms) < JOY_DEBOUNCE_MS;
 
   if (in_scan) {
-    if (joyLeft()) {
+    if (!gated && input->back()) {
       wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
       in_scan = false;
+      last_input_ms = currentTime;
       drawMenu();
-      joy_last_ms = currentTime;
       return;
     }
     if (display_obj.display_buffer && display_obj.display_buffer->size() > 0) {
@@ -253,7 +197,7 @@ void OledMenu::main(uint32_t currentTime) {
   int8_t&  sel          = sel_stack[depth - 1];
   int8_t&  off          = off_stack[depth - 1];
 
-  if (joyUp()) {
+  if (!gated && input->up()) {
     if (sel > 0) {
       sel--;
       if (sel < off) off = sel;
@@ -262,10 +206,8 @@ void OledMenu::main(uint32_t currentTime) {
       off = (count > OLED_MAX_LINES) ? count - OLED_MAX_LINES : 0;
     }
     changed = true;
-    joy_last_ms = currentTime;
-  }
-
-  if (joyDown()) {
+    last_input_ms = currentTime;
+  } else if (!gated && input->down()) {
     if (sel < count - 1) {
       sel++;
       if (sel >= off + OLED_MAX_LINES) off = sel - OLED_MAX_LINES + 1;
@@ -274,13 +216,13 @@ void OledMenu::main(uint32_t currentTime) {
       off = 0;
     }
     changed = true;
-    joy_last_ms = currentTime;
+    last_input_ms = currentTime;
   }
 
   if (changed) { drawMenu(); return; }
 
-  if (joySel()) {
-    joy_last_ms = currentTime;
+  if (!gated && input->sel()) {
+    last_input_ms = currentTime;
     const MenuItem& item = items[sel];
     if (item.action == OLED_SUBMENU) {
       pushMenu(item.sub_items, item.sub_count);
@@ -299,12 +241,7 @@ void OledMenu::main(uint32_t currentTime) {
       display_obj.display_buffer->add("ESP32 OLED");
       display_obj.displayBuffer();
       display_obj.drawBottomBar("< Back");
-      // wait for left tilt to exit
-      while (true) {
-        int v = analogRead(JOY_X_PIN);
-        if (v < (2048 - JOY_THRESHOLD)) break;
-        delay(10);
-      }
+      input->waitBackRelease();
       drawMenu();
     } else {
       in_scan = true;
@@ -314,8 +251,8 @@ void OledMenu::main(uint32_t currentTime) {
     return;
   }
 
-  if (joyLeft()) {
-    joy_last_ms = currentTime;
+  if (!gated && input->back()) {
+    last_input_ms = currentTime;
     if (depth > 1) {
       popMenu();
       drawMenu();

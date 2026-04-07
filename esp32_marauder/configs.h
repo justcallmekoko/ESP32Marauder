@@ -387,12 +387,28 @@
     #define OLED_SCL 22
     #define HAS_IDF_3        // esp32 core 3.x / IDF 5.x — skips removed APIs
     #define HAS_NIMBLE_2     // NimBLE 2.x API (addData, setScanCallbacks, etc.)
-    #define HAS_JOYSTICK     // Analog joystick instead of discrete buttons
-    #define JOY_X_PIN  34   // VRX: left=BACK, right=unused
-    #define JOY_Y_PIN  35   // VRY: up=UP, down=DOWN
-    #define JOY_SW_PIN 32   // SW:  press=SELECT
-    #define JOY_THRESHOLD 1000  // ADC units from center (2048) to trigger
+
+    // ---- Input method: uncomment ONE of the two blocks below ----
+
+    // Option A: Analog joystick (2-axis + press button)
+    #define HAS_JOYSTICK
+    #define JOY_X_PIN       34   // VRX: left=BACK
+    #define JOY_Y_PIN       35   // VRY: up=UP, down=DOWN
+    #define JOY_SW_PIN      32   // SW press=SELECT
+    #define JOY_THRESHOLD   1000 // ADC deviation from center (2048) to register
     #define JOY_DEBOUNCE_MS 200
+
+    // Option B: 4 discrete buttons (uncomment and comment Option A)
+    //#define HAS_BUTTONS
+    //#define U_BTN 4    // UP    → GPIO4,  INPUT_PULLUP
+    //#define D_BTN 18   // DOWN  → GPIO18, INPUT_PULLUP
+    //#define C_BTN 19   // SEL   → GPIO19, INPUT_PULLUP
+    //#define L_BTN 23   // BACK  → GPIO23, INPUT_PULLUP
+    //#define R_BTN -1
+    //#define U_PULL true
+    //#define D_PULL true
+    //#define C_PULL true
+    //#define L_PULL true
   #endif
 
   #ifdef MARAUDER_FLIPPER

@@ -53,9 +53,10 @@ https://www.online-utility.org/image/convert/to/XBM
   #include "OledMenu.h"
 #endif
 
-#ifdef HAS_BUTTONS
+// Non-OLED button builds (TFT targets)
+#if defined(HAS_BUTTONS) && !defined(HAS_OLED)
   #include "Switches.h"
-  
+
   #if (U_BTN >= 0)
     Switches u_btn = Switches(U_BTN, 1000, U_PULL);
   #endif
@@ -71,7 +72,15 @@ https://www.online-utility.org/image/convert/to/XBM
   #if (C_BTN >= 0)
     Switches c_btn = Switches(C_BTN, 1000, C_PULL);
   #endif
+#endif
 
+// OLED button build — Switches externs needed by ButtonInput
+#if defined(HAS_BUTTONS) && defined(HAS_OLED)
+  #include "Switches.h"
+  Switches u_btn(U_BTN, 1000, true);
+  Switches d_btn(D_BTN, 1000, true);
+  Switches c_btn(C_BTN, 1000, true);
+  Switches l_btn(L_BTN, 1000, true);
 #endif
 
 WiFiScan wifi_scan_obj;
@@ -94,7 +103,14 @@ CommandLine cli_obj;
 #endif
 #ifdef HAS_OLED
   Display display_obj;
-  OledMenu oled_menu_obj;
+
+  #ifdef HAS_JOYSTICK
+    JoystickInput oled_input;
+  #elif defined(HAS_BUTTONS)
+    ButtonInput oled_input;
+  #endif
+
+  OledMenu oled_menu_obj(&oled_input);
 #endif
 
 #if defined(HAS_SD) && !defined(HAS_C5_SD)
@@ -325,6 +341,9 @@ void setup()
   #endif
   #ifdef HAS_OLED
     display_obj.RunSetup();
+    #ifdef HAS_JOYSTICK
+      oled_input.begin();
+    #endif
   #endif
 
   // Init PWM brightness AFTER display init (so ledcAttach overrides TFT_eSPI's pinMode)
