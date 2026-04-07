@@ -31,10 +31,21 @@
   //#define MARAUDER_CYD_3_5_INCH
   //#define MARAUDER_C5
   //#define MARAUDER_CARDPUTER
+  //#define MARAUDER_CARDPUTER_ADV
   //#define MARAUDER_V8
   //#define MARAUDER_MINI_V3
   //#define DUAL_MINI_C5
   //// END BOARD TARGETS
+
+  // Cardputer ADV inherits all standard Cardputer defines so that every
+  // existing #ifdef MARAUDER_CARDPUTER guard applies automatically.
+  // MARAUDER_CARDPUTER_ADV remains defined alongside MARAUDER_CARDPUTER so
+  // that the keyboard driver can distinguish the two variants.
+  #ifdef MARAUDER_CARDPUTER_ADV
+    #ifndef MARAUDER_CARDPUTER
+      #define MARAUDER_CARDPUTER
+    #endif
+  #endif
 
   #define JSON_SETTING_SIZE 2048
 
@@ -59,6 +70,8 @@
     #define HARDWARE_NAME "M5Stick-C Plus"
   #elif defined(MARAUDER_M5STICKCP2)
     #define HARDWARE_NAME "M5Stick-C Plus2"
+  #elif defined(MARAUDER_CARDPUTER_ADV)
+    #define HARDWARE_NAME "M5 Cardputer ADV"
   #elif defined(MARAUDER_CARDPUTER)
     #define HARDWARE_NAME "M5 Cardputer"
   #elif defined(MARAUDER_MINI)

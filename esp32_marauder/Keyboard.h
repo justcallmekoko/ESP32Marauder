@@ -39,6 +39,20 @@ struct Point2D_t
 const std::vector<int> output_list = {8, 9, 11};
 const std::vector<int> input_list = {13, 15, 3, 4, 5, 6, 7};
 
+#ifdef MARAUDER_CARDPUTER_ADV
+// TCA8418 I2C keypad controller (Cardputer ADV)
+#define TCA8418_ADDR         0x34
+#define TCA8418_REG_CFG      0x01
+#define TCA8418_REG_INT      0x02
+#define TCA8418_REG_EC       0x03
+#define TCA8418_REG_FIFO     0x04
+#define TCA8418_REG_KPGPIO1  0x1D
+#define TCA8418_REG_KPGPIO2  0x1E
+#define CARDPUTER_ADV_KB_INT_PIN 11
+#define CARDPUTER_ADV_KB_SDA      8
+#define CARDPUTER_ADV_KB_SCL      9
+#endif
+
 const Chart_t X_map_chart[7] = {{1, 0, 1}, {2, 2, 3}, {4, 4, 5}, {8, 6, 7}, {16, 8, 9}, {32, 10, 11}, {64, 12, 13}};
 
 struct KeyValue_t
@@ -152,8 +166,14 @@ private:
     bool _is_caps_locked;
     uint8_t _last_key_size;
 
+#ifdef MARAUDER_CARDPUTER_ADV
+    std::vector<Point2D_t> _adv_pressed_keys;
+    uint8_t _tca8418_read_reg(uint8_t reg);
+    void _tca8418_write_reg(uint8_t reg, uint8_t val);
+#else
     void _set_output(const std::vector<int> &pinList, uint8_t output);
     uint8_t _get_input(const std::vector<int> &pinList);
+#endif
 
 public:
     const char _ascii_list[95] = {'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p',

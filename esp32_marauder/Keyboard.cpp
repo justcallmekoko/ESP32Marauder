@@ -4,6 +4,10 @@
 #include <driver/gpio.h>
 #include <Arduino.h>
 
+#ifdef MARAUDER_CARDPUTER_ADV
+#include <Wire.h>
+#include <algorithm>
+#else
 #define digitalWrite(pin, level) gpio_set_level((gpio_num_t)pin, level)
 #define digitalRead(pin) gpio_get_level((gpio_num_t)pin)
 
@@ -31,9 +35,39 @@ uint8_t Keyboard_Class::_get_input(const std::vector<int> &pinList)
 
     return buffer;
 }
+#endif // !MARAUDER_CARDPUTER_ADV
+
+#ifdef MARAUDER_CARDPUTER_ADV
+uint8_t Keyboard_Class::_tca8418_read_reg(uint8_t reg)
+{
+    Wire.beginTransmission(TCA8418_ADDR);
+    Wire.write(reg);
+    Wire.endTransmission(false);
+    Wire.requestFrom((uint8_t)TCA8418_ADDR, (uint8_t)1);
+    return Wire.available() ? Wire.read() : 0;
+}
+
+void Keyboard_Class::_tca8418_write_reg(uint8_t reg, uint8_t val)
+{
+    Wire.beginTransmission(TCA8418_ADDR);
+    Wire.write(reg);
+    Wire.write(val);
+    Wire.endTransmission();
+}
+#endif // MARAUDER_CARDPUTER_ADV
 
 void Keyboard_Class::begin()
 {
+#ifdef MARAUDER_CARDPUTER_ADV
+    Wire.begin(CARDPUTER_ADV_KB_SDA, CARDPUTER_ADV_KB_SCL, 400000);
+    // R0-R6 = keypad rows, C0-C7 = keypad columns
+    _tca8418_write_reg(TCA8418_REG_KPGPIO1, 0x7F);
+    _tca8418_write_reg(TCA8418_REG_KPGPIO2, 0xFF);
+    // Enable keypad event interrupt and clear any pending status
+    _tca8418_write_reg(TCA8418_REG_CFG, 0x01);
+    _tca8418_write_reg(TCA8418_REG_INT, 0x01);
+    pinMode(CARDPUTER_ADV_KB_INT_PIN, INPUT_PULLUP);
+#else
     for (auto i : output_list)
     {
         gpio_reset_pin((gpio_num_t)i);
@@ -50,6 +84,7 @@ void Keyboard_Class::begin()
     }
 
     _set_output(output_list, 0);
+#endif // MARAUDER_CARDPUTER_ADV
 }
 
 uint8_t Keyboard_Class::getKey(Point2D_t keyCoor)
@@ -74,6 +109,43 @@ uint8_t Keyboard_Class::getKey(Point2D_t keyCoor)
 
 void Keyboard_Class::updateKeyList()
 {
+#ifdef MARAUDER_CARDPUTER_ADV
+    // Drain the TCA8418 FIFO and maintain a running pressed-key set
+    uint8_t ec = _tca8418_read_reg(TCA8418_REG_EC) & 0x0F;
+    for (uint8_t ev = 0; ev < ec; ev++)
+    {
+        uint8_t event   = _tca8418_read_reg(TCA8418_REG_FIFO);
+        bool    pressed = (event & 0x80) != 0;
+        uint8_t key_num = event & 0x7F;
+        if (key_num == 0) continue;
+
+        // TCA8418 key_num = row*10 + col + 1 (rows map to original input lines,
+        // cols map to original 74HC138 mux outputs)
+        uint8_t row_j = (key_num - 1) / 10;
+        uint8_t col_i = (key_num - 1) % 10;
+        if (row_j >= 7 || col_i >= 8) continue;
+
+        Point2D_t coor;
+        coor.x = (col_i > 3) ? X_map_chart[row_j].x_1 : X_map_chart[row_j].x_2;
+        coor.y = (col_i > 3) ? (7 - col_i) : (3 - col_i);
+
+        if (pressed)
+        {
+            _adv_pressed_keys.push_back(coor);
+        }
+        else
+        {
+            _adv_pressed_keys.erase(
+                std::remove_if(_adv_pressed_keys.begin(), _adv_pressed_keys.end(),
+                    [&coor](const Point2D_t &k) {
+                        return k.x == coor.x && k.y == coor.y;
+                    }),
+                _adv_pressed_keys.end());
+        }
+    }
+    _tca8418_write_reg(TCA8418_REG_INT, 0x01); // clear K_INT flag
+    _key_list_buffer = _adv_pressed_keys;
+#else
     _key_list_buffer.clear();
     Point2D_t coor;
     uint8_t input_value = 0;
@@ -106,6 +178,7 @@ void Keyboard_Class::updateKeyList()
             }
         }
     }
+#endif // MARAUDER_CARDPUTER_ADV
 }
 
 uint8_t Keyboard_Class::isPressed()
