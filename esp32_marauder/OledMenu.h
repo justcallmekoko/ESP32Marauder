@@ -8,14 +8,9 @@
 #ifdef HAS_OLED
 
 #include "Display.h"
-#include "Switches.h"
 #include "WiFiScan.h"
 
 extern Display  display_obj;
-extern Switches u_btn;
-extern Switches d_btn;
-extern Switches c_btn;
-extern Switches l_btn;
 extern WiFiScan wifi_scan_obj;
 
 // Special action values (above valid scan mode range)
@@ -38,7 +33,7 @@ class OledMenu {
     void main(uint32_t currentTime);
 
   private:
-    static const uint8_t MAX_DEPTH   = 4;
+    static const uint8_t MAX_DEPTH = 4;
 
     const MenuItem* menu_stack[MAX_DEPTH];
     uint8_t         count_stack[MAX_DEPTH];
@@ -47,6 +42,19 @@ class OledMenu {
     uint8_t         depth;
 
     bool     in_scan;
+    bool     needs_draw;  // deferred initial draw
+
+    // Joystick state for edge detection
+    bool joy_up_last;
+    bool joy_down_last;
+    bool joy_left_last;
+    bool joy_sw_last;
+    uint32_t joy_last_ms;
+
+    bool joyUp();
+    bool joyDown();
+    bool joyLeft();
+    bool joySel();
 
     void pushMenu(const MenuItem* items, uint8_t count);
     void popMenu();

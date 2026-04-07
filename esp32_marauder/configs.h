@@ -387,7 +387,12 @@
     #define OLED_SCL 22
     #define HAS_IDF_3        // esp32 core 3.x / IDF 5.x — skips removed APIs
     #define HAS_NIMBLE_2     // NimBLE 2.x API (addData, setScanCallbacks, etc.)
-    #define HAS_BUTTONS
+    #define HAS_JOYSTICK     // Analog joystick instead of discrete buttons
+    #define JOY_X_PIN  34   // VRX: left=BACK, right=unused
+    #define JOY_Y_PIN  35   // VRY: up=UP, down=DOWN
+    #define JOY_SW_PIN 32   // SW:  press=SELECT
+    #define JOY_THRESHOLD 1000  // ADC units from center (2048) to trigger
+    #define JOY_DEBOUNCE_MS 200
   #endif
 
   #ifdef MARAUDER_FLIPPER
@@ -551,15 +556,12 @@
   #ifdef HAS_BUTTONS
 
     #ifdef ESP32_OLED
-      #define U_BTN 4
-      #define D_BTN 18
-      #define C_BTN 19
-      #define L_BTN 23
+      // Joystick build — no discrete button pins needed
+      #define U_BTN -1
+      #define D_BTN -1
+      #define C_BTN -1
+      #define L_BTN -1
       #define R_BTN -1
-
-      #define HAS_U
-      #define HAS_D
-      #define HAS_C
       #define HAS_L
       //#define HAS_R
 
