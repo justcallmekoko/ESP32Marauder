@@ -309,6 +309,8 @@ void MenuFunctions::main(uint32_t currentTime)
 
     #if (C_BTN >= 0) && !defined(MARAUDER_CARDPUTER)
       bool c_btn_press = c_btn.justPressed();
+    #elif defined(MARAUDER_CARDPUTER_ADV)
+      bool c_btn_press = this->isKeyPressed(KEY_ENTER);
     #elif defined(MARAUDER_CARDPUTER)
       bool c_btn_press = this->isKeyPressed('(');
     #endif
@@ -848,6 +850,13 @@ void MenuFunctions::main(uint32_t currentTime)
       if(c_btn_press){
         current_menu->list->get(current_menu->selected).callable();
       }
+
+      #ifdef MARAUDER_CARDPUTER_ADV
+      if (this->isKeyPressed(KEY_BACKSPACE)) {
+        if (current_menu->parentMenu != NULL)
+          this->changeMenu(current_menu->parentMenu, true);
+      }
+      #endif
 
     #endif
   #endif
@@ -3098,8 +3107,13 @@ void MenuFunctions::RunSetup()
 
           #ifdef MARAUDER_CARDPUTER
             for (int i = 0; i < 95; i++) {
+              #ifdef MARAUDER_CARDPUTER_ADV
+              if ((M5CardputerKeyboard._ascii_list[i] != KEY_ENTER) &&
+                  (M5CardputerKeyboard._ascii_list[i] != '`')) {
+              #else
               if ((M5CardputerKeyboard._ascii_list[i] != '(') &&
                   (M5CardputerKeyboard._ascii_list[i] != '`')) {
+              #endif
                 if (this->isKeyPressed(M5CardputerKeyboard._ascii_list[i])) {
                   pressed = true;
                   wifi_scan_obj.current_mini_kb_ssid.concat(M5CardputerKeyboard._ascii_list[i]);
@@ -3117,7 +3131,11 @@ void MenuFunctions::RunSetup()
                 return wifi_scan_obj.current_mini_kb_ssid;
               }
 
+              #ifdef MARAUDER_CARDPUTER_ADV
+              if (this->isKeyPressed(KEY_ENTER)) {
+              #else
               if (this->isKeyPressed('(')) {
+              #endif
                 if (!do_pass) {
                   if (wifi_scan_obj.current_mini_kb_ssid != "") {
                     pressed = true;
@@ -3129,7 +3147,11 @@ void MenuFunctions::RunSetup()
               }
             }
             else {
+              #ifdef MARAUDER_CARDPUTER_ADV
+              if (this->isKeyPressed(KEY_ENTER)) {
+              #else
               if (this->isKeyPressed('(')) {
+              #endif
                 this->changeMenu(targetMenu->parentMenu, true);
                 return wifi_scan_obj.current_mini_kb_ssid;
               }
@@ -3139,7 +3161,7 @@ void MenuFunctions::RunSetup()
                 return "";
               }
             }
-            
+
           #endif
 
           // Keyboard functions for touch hardware
