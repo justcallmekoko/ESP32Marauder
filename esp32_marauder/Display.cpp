@@ -1,5 +1,7 @@
 #include "Display.h"
 #include "lang_var.h"
+#include "T9Keyboard.h"
+#include "InputDevice.h"
 
 // ============================================================
 // OLED (SH1106 I2C) implementation — ESP32_OLED target only
@@ -140,6 +142,39 @@ void Display::displayBuffer(bool do_clear) {
   }
   oled.display();
   loading = false;
+}
+
+String Display::getInput(String prompt, InputDevice* input) {
+  T9Keyboard kb(*this);
+  kb.reset();
+  kb.draw();
+
+  bool done = false;
+
+  while (!done) {
+    uint32_t now = millis();
+
+    done = kb.tick(now);
+    if (done) break;
+
+    if (input->up())         done = kb.onButton(0, true,  false);
+    if (input->down())       done = kb.onButton(2, true,  false);
+
+    bool sel_press  = input->sel();
+    bool sel_held   = input->selHeld();
+    bool back_press = input->back();
+    bool back_held  = input->backHeld();
+
+    if (sel_held)        done = kb.onButton(1, false, true);
+    else if (sel_press)  done = kb.onButton(1, true,  false);
+
+    if (back_held)       done = kb.onButton(3, false, true);
+    else if (back_press) done = kb.onButton(3, true,  false);
+
+    delay(20);
+  }
+
+  return kb.getInput();
 }
 
 #endif // HAS_OLED

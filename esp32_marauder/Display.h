@@ -7,6 +7,8 @@
 
 #ifdef HAS_OLED
 
+class InputDevice;  // forward declaration — avoid circular include
+
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SH110X.h>
@@ -31,8 +33,9 @@
 
 class Display
 {
-  private:
+  public:
     Adafruit_SH1106G oled;
+  private:
     bool run_setup = true;
     uint8_t scroll_y = OLED_BANNER_H; // current draw y for scrolling text
 
@@ -53,6 +56,7 @@ class Display
     void twoPartDisplay(String center_text);
     void displayBuffer(bool do_clear = false);
     void drawBottomBar(String text);
+    String getInput(String prompt, InputDevice* input);
 
     // Stubs so the rest of Marauder compiles without #ifdefs everywhere
     void buildBanner(String msg, int xpos) {}
@@ -229,6 +233,7 @@ class Display
     void twoPartDisplay(String center_text);
     void updateBanner(String msg);
     void setCalData(bool landscape = false);
+    String getInput(String prompt, InputDevice* input) { return ""; }
 };
 #endif
 #endif

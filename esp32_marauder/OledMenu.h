@@ -14,15 +14,19 @@
 extern Display  display_obj;
 extern WiFiScan wifi_scan_obj;
 
-#define OLED_SUBMENU       250
-#define OLED_ACTION_REBOOT 251
-#define OLED_ACTION_INFO   252
+#define OLED_SUBMENU            250
+#define OLED_ACTION_REBOOT      251
+#define OLED_ACTION_INFO        252
+#define OLED_ACTION_ADD_SSID    253
+#define OLED_ACTION_JOIN_WIFI   254
+#define OLED_ACTION_MAC_AP      255
+#define OLED_ACTION_MAC_STA     256
 
 class OledMenu {
   public:
     struct MenuItem {
       const char*        label;
-      uint8_t            action;
+      uint16_t           action;
       uint16_t           color;
       const MenuItem*    sub_items;
       uint8_t            sub_count;

@@ -3,6 +3,7 @@
 #ifdef HAS_OLED
 
 #include "OledMenu.h"
+#include "T9Keyboard.h"
 
 // ----------------------------------------------------------------
 // Menu tables
@@ -53,8 +54,10 @@ static const OledMenu::MenuItem WIFI_ATTACK[] = {
 static const uint8_t WIFI_ATTACK_N = sizeof(WIFI_ATTACK)/sizeof(WIFI_ATTACK[0]);
 
 static const OledMenu::MenuItem WIFI_MENU[] = {
-  { "Sniffers", OLED_SUBMENU, 0, WIFI_SNIFF,  WIFI_SNIFF_N  },
-  { "Attacks",  OLED_SUBMENU, 0, WIFI_ATTACK, WIFI_ATTACK_N },
+  { "Sniffers",   OLED_SUBMENU,          0, WIFI_SNIFF,  WIFI_SNIFF_N  },
+  { "Attacks",    OLED_SUBMENU,          0, WIFI_ATTACK, WIFI_ATTACK_N },
+  { "Add SSID",   OLED_ACTION_ADD_SSID,  0, nullptr,     0             },
+  { "Join WiFi",  OLED_ACTION_JOIN_WIFI, 0, nullptr,     0             },
 };
 static const uint8_t WIFI_MENU_N = sizeof(WIFI_MENU)/sizeof(WIFI_MENU[0]);
 
@@ -88,9 +91,16 @@ static const OledMenu::MenuItem BT_MENU[] = {
 };
 static const uint8_t BT_MENU_N = sizeof(BT_MENU)/sizeof(BT_MENU[0]);
 
+static const OledMenu::MenuItem MAC_MENU[] = {
+  { "Random AP MAC",  OLED_ACTION_MAC_AP,  0, nullptr, 0 },
+  { "Random STA MAC", OLED_ACTION_MAC_STA, 0, nullptr, 0 },
+};
+static const uint8_t MAC_MENU_N = sizeof(MAC_MENU)/sizeof(MAC_MENU[0]);
+
 static const OledMenu::MenuItem DEVICE_MENU[] = {
-  { "Device Info", OLED_ACTION_INFO,   0, nullptr, 0 },
-  { "Reboot",      OLED_ACTION_REBOOT, 0, nullptr, 0 },
+  { "Device Info", OLED_ACTION_INFO,   0, nullptr,  0          },
+  { "MAC Address", OLED_SUBMENU,       0, MAC_MENU, MAC_MENU_N },
+  { "Reboot",      OLED_ACTION_REBOOT, 0, nullptr,  0          },
 };
 static const uint8_t DEVICE_MENU_N = sizeof(DEVICE_MENU)/sizeof(DEVICE_MENU[0]);
 
@@ -242,6 +252,41 @@ void OledMenu::main(uint32_t currentTime) {
       display_obj.displayBuffer();
       display_obj.drawBottomBar("< Back");
       input->waitBackRelease();
+      drawMenu();
+    } else if (item.action == OLED_ACTION_MAC_AP) {
+      wifi_scan_obj.RunGenerateRandomMac(true);
+      display_obj.updateBanner("AP MAC Set");
+      display_obj.clearScreen();
+      display_obj.display_buffer->add("Random AP MAC");
+      display_obj.display_buffer->add("applied.");
+      display_obj.displayBuffer();
+      display_obj.drawBottomBar("< Back");
+      input->waitBackRelease();
+      drawMenu();
+    } else if (item.action == OLED_ACTION_MAC_STA) {
+      wifi_scan_obj.RunGenerateRandomMac(false);
+      display_obj.updateBanner("STA MAC Set");
+      display_obj.clearScreen();
+      display_obj.display_buffer->add("Random STA MAC");
+      display_obj.display_buffer->add("applied.");
+      display_obj.displayBuffer();
+      display_obj.drawBottomBar("< Back");
+      input->waitBackRelease();
+      drawMenu();
+    } else if (item.action == OLED_ACTION_ADD_SSID) {
+      String ssid = display_obj.getInput("SSID:", input);
+      ssid.trim();
+      if (ssid.length() > 0)
+        wifi_scan_obj.addSSID(ssid);
+      drawMenu();
+    } else if (item.action == OLED_ACTION_JOIN_WIFI) {
+      String ssid = display_obj.getInput("SSID:", input);
+      ssid.trim();
+      if (ssid.length() > 0) {
+        String pass = display_obj.getInput("Password:", input);
+        pass.trim();
+        wifi_scan_obj.joinWiFi(ssid, pass);
+      }
       drawMenu();
     } else {
       in_scan = true;
