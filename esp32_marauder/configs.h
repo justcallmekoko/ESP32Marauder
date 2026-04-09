@@ -391,24 +391,25 @@
     // ---- Input method: uncomment ONE of the two blocks below ----
 
     // Option A: Analog joystick (2-axis + press button)
-    #define HAS_JOYSTICK
-    #define JOY_X_PIN       34   // VRX: left=BACK
-    #define JOY_Y_PIN       35   // VRY: up=UP, down=DOWN
-    #define JOY_SW_PIN      32   // SW press=SELECT
-    #define JOY_THRESHOLD   1000 // ADC deviation from center (2048) to register
-    #define JOY_DEBOUNCE_MS 200
+    //#define HAS_JOYSTICK
+    //#define JOY_X_PIN       34
+    //#define JOY_Y_PIN       35
+    //#define JOY_SW_PIN      32
+    //#define JOY_THRESHOLD   1000
+    //#define JOY_DEBOUNCE_MS 200
 
-    // Option B: 4 discrete buttons (uncomment and comment Option A)
-    //#define HAS_BUTTONS
-    //#define U_BTN 4    // UP    → GPIO4,  INPUT_PULLUP
-    //#define D_BTN 18   // DOWN  → GPIO18, INPUT_PULLUP
-    //#define C_BTN 19   // SEL   → GPIO19, INPUT_PULLUP
-    //#define L_BTN 23   // BACK  → GPIO23, INPUT_PULLUP
-    //#define R_BTN -1
-    //#define U_PULL true
-    //#define D_PULL true
-    //#define C_PULL true
-    //#define L_PULL true
+    // Option B: 4 discrete buttons
+    #define HAS_BUTTONS
+    #define U_BTN 34   // UP     → D34, INPUT_PULLUP
+    #define D_BTN 35   // DOWN   → D35, INPUT_PULLUP
+    #define C_BTN 32   // SELECT → D32, INPUT_PULLUP
+    #define L_BTN 33   // BACK   → D33, INPUT_PULLUP
+    #define R_BTN -1
+    #define U_PULL true
+    #define D_PULL true
+    #define C_PULL true
+    #define L_PULL true
+    #define JOY_DEBOUNCE_MS 150  // input debounce interval (ms)
   #endif
 
   #ifdef MARAUDER_FLIPPER
@@ -572,20 +573,12 @@
   #ifdef HAS_BUTTONS
 
     #ifdef ESP32_OLED
-      // Joystick build — no discrete button pins needed
-      #define U_BTN -1
-      #define D_BTN -1
-      #define C_BTN -1
-      #define L_BTN -1
-      #define R_BTN -1
+      // Pins already defined above in the ESP32_OLED feature block
+      // (either HAS_JOYSTICK or HAS_BUTTONS with real pin numbers)
+      #define HAS_U
+      #define HAS_D
+      #define HAS_C
       #define HAS_L
-      //#define HAS_R
-
-      #define U_PULL true
-      #define D_PULL true
-      #define C_PULL true
-      #define L_PULL true
-      #define R_PULL true
     #endif
 
     #ifdef MARAUDER_REV_FEATHER
