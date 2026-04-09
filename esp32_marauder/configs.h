@@ -400,8 +400,8 @@
 
     // Option B: 4 discrete buttons
     #define HAS_BUTTONS
-    #define U_BTN 34   // UP     → D34, INPUT_PULLUP
-    #define D_BTN 35   // DOWN   → D35, INPUT_PULLUP
+    #define U_BTN 25   // UP     → D34, INPUT_PULLUP
+    #define D_BTN 26   // DOWN   → D35, INPUT_PULLUP
     #define C_BTN 32   // SELECT → D32, INPUT_PULLUP
     #define L_BTN 33   // BACK   → D33, INPUT_PULLUP
     #define R_BTN -1
