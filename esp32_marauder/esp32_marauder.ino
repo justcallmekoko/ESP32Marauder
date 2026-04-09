@@ -7,7 +7,7 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #include "configs.h"
 
-#ifndef HAS_SCREEN
+#if !defined(HAS_SCREEN) && !defined(HAS_OLED)
   #define MenuFunctions_h
   #define Display_h
 #endif
@@ -48,9 +48,15 @@ https://www.online-utility.org/image/convert/to/XBM
   #include "MenuFunctions.h"
 #endif
 
-#ifdef HAS_BUTTONS
+#ifdef HAS_OLED
+  #include "Display.h"
+  #include "OledMenu.h"
+#endif
+
+// Non-OLED button builds (TFT targets)
+#if defined(HAS_BUTTONS) && !defined(HAS_OLED)
   #include "Switches.h"
-  
+
   #if (U_BTN >= 0)
     Switches u_btn = Switches(U_BTN, 1000, U_PULL);
   #endif
@@ -66,7 +72,15 @@ https://www.online-utility.org/image/convert/to/XBM
   #if (C_BTN >= 0)
     Switches c_btn = Switches(C_BTN, 1000, C_PULL);
   #endif
+#endif
 
+// OLED button build — Switches externs needed by ButtonInput
+#if defined(HAS_BUTTONS) && defined(HAS_OLED)
+  #include "Switches.h"
+  Switches u_btn(U_BTN, 1000, true);
+  Switches d_btn(D_BTN, 1000, true);
+  Switches c_btn(C_BTN, 1000, true);
+  Switches l_btn(L_BTN, 1000, true);
 #endif
 
 WiFiScan wifi_scan_obj;
@@ -86,6 +100,17 @@ CommandLine cli_obj;
 #ifdef HAS_SCREEN
   Display display_obj;
   MenuFunctions menu_function_obj;
+#endif
+#ifdef HAS_OLED
+  Display display_obj;
+
+  #ifdef HAS_JOYSTICK
+    JoystickInput oled_input;
+  #elif defined(HAS_BUTTONS)
+    ButtonInput oled_input;
+  #endif
+
+  OledMenu oled_menu_obj(&oled_input);
 #endif
 
 #if defined(HAS_SD) && !defined(HAS_C5_SD)
@@ -314,6 +339,12 @@ void setup()
     display_obj.RunSetup();
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
   #endif
+  #ifdef HAS_OLED
+    display_obj.RunSetup();
+    #ifdef HAS_JOYSTICK
+      oled_input.begin();
+    #endif
+  #endif
 
   // Init PWM brightness AFTER display init (so ledcAttach overrides TFT_eSPI's pinMode)
   #ifndef HAS_MINI_SCREEN
@@ -404,6 +435,9 @@ void setup()
   #ifdef HAS_SCREEN
     menu_function_obj.RunSetup();
   #endif
+  #ifdef HAS_OLED
+    oled_menu_obj.RunSetup();
+  #endif
 
   /*char ssidBuf[64] = {0};  // or prefill with existing SSID
   if (keyboardInput(ssidBuf, sizeof(ssidBuf), "Enter SSID")) {
@@ -466,6 +500,9 @@ void loop()
       (mini)) {
     #ifdef HAS_SCREEN
       menu_function_obj.main(currentTime);
+    #endif
+    #ifdef HAS_OLED
+      oled_menu_obj.main(currentTime);
     #endif
   }
   #ifdef HAS_FLIPPER_LED

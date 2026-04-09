@@ -8,6 +8,9 @@
 #ifdef HAS_SCREEN
   #include "MenuFunctions.h"
   #include "Display.h"
+#endif
+#ifdef HAS_OLED
+  #include "Display.h"
 #endif 
 
 #include "WiFiScan.h"
@@ -22,6 +25,9 @@
 
 #ifdef HAS_SCREEN
   extern MenuFunctions menu_function_obj;
+  extern Display display_obj;
+#endif
+#ifdef HAS_OLED
   extern Display display_obj;
 #endif
 

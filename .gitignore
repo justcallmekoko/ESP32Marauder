@@ -3,3 +3,5 @@
 .vscode/c_cpp_properties.json
 .vscode/settings.json
 esp32_marauder/.vscode/settings.json
+
+.DS_Store

@@ -14,7 +14,7 @@
   #include "SPI.h"
 #endif
 #include "Buffer.h"
-#ifdef HAS_SCREEN
+#if defined(HAS_SCREEN) || defined(HAS_OLED)
   #include "Display.h"
 #endif
 #include <Update.h>
@@ -25,7 +25,7 @@
 
 extern Buffer buffer_obj;
 extern Settings settings_obj;
-#ifdef HAS_SCREEN
+#if defined(HAS_SCREEN) || defined(HAS_OLED)
   extern Display display_obj;
 #endif
 
