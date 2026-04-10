@@ -2256,8 +2256,6 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
     #endif
     RunProbeScan(scan_mode, color);
   }
-  else if (scan_mode == WIFI_SCAN_STATION_WAR_DRIVE)
-    RunProbeScan(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_EVIL_PORTAL)
     RunEvilPortal(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_EAPOL)
@@ -2554,7 +2552,6 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
   (currentScanMode == WIFI_SCAN_SAE_COMMIT) ||
   (currentScanMode == WIFI_SCAN_AP) ||
   (currentScanMode == WIFI_SCAN_WAR_DRIVE) ||
-  (currentScanMode == WIFI_SCAN_STATION_WAR_DRIVE) ||
   (currentScanMode == WIFI_SCAN_EVIL_PORTAL) ||
   (currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
   (currentScanMode == WIFI_SCAN_STATION) ||
@@ -2646,10 +2643,8 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
   }
 
   // Close POI file if wardrive was active
-  if ((currentScanMode == WIFI_SCAN_WAR_DRIVE) ||
-      (currentScanMode == WIFI_SCAN_STATION_WAR_DRIVE)) {
+  if (currentScanMode == WIFI_SCAN_WAR_DRIVE)
     this->closePoiFile();
-  }
 
 
   if ((currentScanMode == BT_SCAN_ALL) ||
@@ -5134,8 +5129,7 @@ void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color) {
     #ifdef HAS_GPS
       if (gps_obj.getGpsModuleStatus()) {
         startLog(F("wardrive"));
-        String header_line = "WigleWifi-1.4,appRelease=" + (String)MARAUDER_VERSION + ",model=ESP32 Marauder,release=" + (String)MARAUDER_VERSION + ",device=ESP32 Marauder,display=SPI TFT,board=ESP32 Marauder,brand=JustCallMeKoko\nMAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\n";
-        buffer_obj.append(header_line);
+        buffer_obj.append(this->header_line);
         this->openPoiFile();
       } else {
         return;
@@ -5320,19 +5314,6 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color) {
     startPcap(F("flock"));
   else if (scan_mode == WIFI_SCAN_DETECT_FOLLOW)
     startPcap(F("mac_track"));
-  else if (scan_mode == WIFI_SCAN_STATION_WAR_DRIVE) {
-    #ifdef HAS_GPS
-      if (gps_obj.getGpsModuleStatus()) {
-        startLog(F("station_wardrive"));
-        String header_line = "WigleWifi-1.4,appRelease=" + (String)MARAUDER_VERSION + ",model=ESP32 Marauder,release=" + (String)MARAUDER_VERSION + ",device=ESP32 Marauder,display=SPI TFT,board=ESP32 Marauder,brand=JustCallMeKoko\nMAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\n";
-        buffer_obj.append(header_line);
-      } else {
-        return;
-      }
-    #else
-      return;
-    #endif
-  }
 
   this->setLEDMode(MODE_SNIFF);
   
@@ -5344,8 +5325,6 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color) {
         display_obj.tft.drawCentreString(text_table4[40],TFT_WIDTH / 2,16,2);
       else if (scan_mode == WIFI_SCAN_DETECT_FOLLOW) 
         display_obj.tft.drawCentreString("MAC Monitor",TFT_WIDTH / 2,16,2);
-      else if (scan_mode == WIFI_SCAN_STATION_WAR_DRIVE)
-        display_obj.tft.drawCentreString("Station Wardrive",TFT_WIDTH / 2,16,2);
       else {
         display_obj.tft.drawCentreString("Flock Sniff",TFT_WIDTH / 2,16,2);
       }
@@ -5356,7 +5335,6 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color) {
     #endif
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
     if ((scan_mode != WIFI_SCAN_DETECT_FOLLOW) &&
-        (scan_mode != WIFI_SCAN_STATION_WAR_DRIVE) &&
         (scan_mode != BT_SCAN_FLOCK)) {
       display_obj.tftDrawChannelScaleButtons(set_channel, false);
       display_obj.tftDrawExitScaleButtons(false);
@@ -5472,8 +5450,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
             this->startWardriverWiFi();
             this->wifi_initialized = true;
           }
-          String header_line = "WigleWifi-1.4,appRelease=" + (String)MARAUDER_VERSION + ",model=ESP32 Marauder,release=" + (String)MARAUDER_VERSION + ",device=ESP32 Marauder,display=SPI TFT,board=ESP32 Marauder,brand=JustCallMeKoko\nMAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\n";
-          buffer_obj.append(header_line);
+          buffer_obj.append(this->header_line);
         }
       #endif
 
@@ -6199,14 +6176,14 @@ String WiFiScan::processPwnagotchiBeacon(const uint8_t* frame, int length) {
     bool deauth = doc["policy"]["deauth"];
     int uptime = doc["uptime"];
 
-    Serial.print(F("Pwnagotchi Name: "));
+    Serial.print(F("Name: "));
     Serial.println(name);
-    Serial.print(F("Pwnd Totals: "));
+    Serial.print(F("Pwnd #: "));
     Serial.println(pwnd_tot);
 
     #ifdef HAS_SCREEN
 
-      display_obj.display_buffer->add(String("Pwnagotchi: ") + name + ",                 ");
+      display_obj.display_buffer->add(String("Name: ") + name + ",                 ");
       display_obj.display_buffer->add("      Pwnd: " + String(pwnd_tot) + ",             ");
       display_obj.display_buffer->add("    Uptime: " + String(uptime) + ",               ");
       if (deauth)
@@ -6217,7 +6194,7 @@ String WiFiScan::processPwnagotchiBeacon(const uint8_t* frame, int length) {
       display_obj.display_buffer->add(String("       Ver: ") + ver + "                   ");
     #endif
 
-    return String("Pwnagotchi: ") + name + ", \nPwnd: " + String(pwnd_tot) + ", \nVer: " + ver;
+    return String("Name: ") + name + ", \nPwnd: " + String(pwnd_tot) + ", \nVer: " + ver;
   } 
   else
     return "";
@@ -7135,7 +7112,6 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
   String essid = "";
 
   if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_PROBE) ||
-      (wifi_scan_obj.currentScanMode == WIFI_SCAN_STATION_WAR_DRIVE) ||
       (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP) ||
       (wifi_scan_obj.currentScanMode == WIFI_SCAN_PWN)) {
     if (type == WIFI_PKT_MGMT) {
@@ -9982,7 +9958,6 @@ void WiFiScan::main(uint32_t currentTime)
   (currentScanMode == WIFI_SCAN_PINESCAN) ||
   (currentScanMode == WIFI_SCAN_MULTISSID) ||
   (currentScanMode == WIFI_SCAN_DEAUTH) ||
-  (currentScanMode == WIFI_SCAN_STATION_WAR_DRIVE) ||
   (currentScanMode == WIFI_SCAN_ALL))
   {
     if (currentTime - initTime >= this->channel_hop_delay * HOP_DELAY) {
