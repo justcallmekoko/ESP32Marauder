@@ -8,7 +8,10 @@ char nmeaBuffer[100];
 
 MicroNMEA nmea(nmeaBuffer, sizeof(nmeaBuffer));
 
+// ESP32-C5 Arduino core already defines Serial2 globally
+#if !CONFIG_IDF_TARGET_ESP32C5
 HardwareSerial Serial2(GPS_SERIAL_INDEX);
+#endif
 
 static const char *PCAS_SET_115200 = "$PCAS01,5*19\r\n";
 
@@ -16,8 +19,7 @@ static const uint32_t PROBE_MS = 1200;
 
 void GpsInterface::begin() {
 
-  
-  Serial2.begin(9600, SERIAL_8N1, GPS_TX, GPS_RX);
+  Serial2.begin(9600, SERIAL_8N1, GPS_RX, GPS_TX);
 
   uint32_t gps_baud = this->initGpsBaudAndForce115200();
 
@@ -60,7 +62,7 @@ bool GpsInterface::probeBaud(uint32_t baud) {
   Serial2.end();
   delay(50);
 
-  Serial2.begin(baud, SERIAL_8N1, GPS_TX, GPS_RX);
+  Serial2.begin(baud, SERIAL_8N1, GPS_RX, GPS_TX);
 
   uint32_t start = millis();
   bool sawDollar = false;

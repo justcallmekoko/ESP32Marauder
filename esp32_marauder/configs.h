@@ -34,11 +34,12 @@
   //#define MARAUDER_V8
   //#define MARAUDER_MINI_V3
   //#define DUAL_MINI_C5
+  #define MARAUDER_NM_CYD_C5
   //// END BOARD TARGETS
 
   #define JSON_SETTING_SIZE 2048
 
-  #define MARAUDER_VERSION "v1.11.0"
+  #define MARAUDER_VERSION "v1.11.1"
 
   #define GRAPH_REFRESH   100
 
@@ -103,6 +104,8 @@
     #define HARDWARE_NAME "Marauder Mini v3"
   #elif defined(DUAL_MINI_C5)
     #define HARDWARE_NAME "Dual Mini C5"
+  #elif defined(MARAUDER_NM_CYD_C5)
+    #define HARDWARE_NAME "Marauder NM-CYD-C5"
   #else
     #define HARDWARE_NAME "ESP32"
   #endif
@@ -470,6 +473,30 @@
     #define HAS_DUAL_BAND
     //#define HAS_PSRAM
     //#define HAS_TEMP_SENSOR
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3
+  #endif
+
+  #ifdef MARAUDER_NM_CYD_C5
+    #define HAS_TOUCH
+    //#define HAS_FLIPPER_LED
+    //#define FLIPPER_ZERO_HAT
+    //#define HAS_BATTERY
+    #define HAS_BT
+    //#define HAS_BUTTONS
+    #define HAS_NEOPIXEL_LED
+    //#define HAS_PWR_MGMT
+    #define HAS_SCREEN
+    #define HAS_FULL_SCREEN
+    #define HAS_GPS
+    #define HAS_C5_SD
+    #define HAS_SD
+    #define USE_SD
+    #define HAS_DUAL_BAND
+    #define HAS_PSRAM
+    //#define HAS_TEMP_SENSOR
+    // #define HAS_CYD_TOUCH
+    // #define HAS_CYD_PORTRAIT
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
   #endif
@@ -1330,11 +1357,11 @@
       #define KIT_LED_BUILTIN 13
     #endif
 
-    #if defined(MARAUDER_CYD_2USB)
+    #if defined(MARAUDER_CYD_2USB) || defined(MARAUDER_NM_CYD_C5)
       #define CHAN_PER_PAGE 7
 
       #define SCREEN_CHAR_WIDTH 40
-      #define HAS_ILI9341
+      #define HAS_ILI9341   // NM_CYD_C5 is ST7789 driver, to compatible with Maraduer project, keep
       #define HAS_ST7789
     
       #define BANNER_TEXT_SIZE 2
@@ -2062,7 +2089,7 @@
     //#define BUTTON_ARRAY_LEN 5
   #endif
 
-  #if defined(MARAUDER_CYD_2USB)
+  #if defined(MARAUDER_CYD_2USB) || defined(MARAUDER_NM_CYD_C5)
     #define BANNER_TIME 100
     
     #define COMMAND_PREFIX "!"
@@ -2354,6 +2381,10 @@
       #define SD_CS 10
     #endif
 
+    #ifdef MARAUDER_NM_CYD_C5
+      #define SD_CS 10
+    #endif
+
     #ifdef MARAUDER_V8
       #define SD_CS 10
     #endif
@@ -2461,6 +2492,8 @@
     #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_C5)
     #define MEM_LOWER_LIM 10000
+  #elif defined(MARAUDER_NM_CYD_C5)
+    #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_V8)
     #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_MINI_V3)
@@ -2484,6 +2517,8 @@
     #elif defined(MARAUDER_CYD_3_5_INCH)
       #define PIN 22
     #elif defined(MARAUDER_C5)
+      #define PIN 27
+    #elif defined(MARAUDER_NM_CYD_C5)
       #define PIN 27
     #elif defined(MARAUDER_V8)
       #define PIN 27
@@ -2582,6 +2617,10 @@
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 14
       #define GPS_RX 13
+    #elif defined(MARAUDER_NM_CYD_C5)
+      #define GPS_SERIAL_INDEX 2
+      #define GPS_TX 5
+      #define GPS_RX 4
     #elif defined(MARAUDER_V8)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 14
@@ -2665,6 +2704,11 @@
       #define I2C_SDA 5
     #endif
 
+    #ifdef MARAUDER_NM_CYD_C5
+      #define I2C_SDA 9
+      #define I2C_SCL 8
+    #endif
+
   #endif
 
   //// MARAUDER TITLE STUFF
@@ -2691,6 +2735,8 @@
   #elif defined(MARAUDER_REV_FEATHER)
     #define MARAUDER_TITLE_BYTES 13578
   #elif defined(MARAUDER_C5)
+    #define MARAUDER_TITLE_BYTES 13578
+  #elif defined(MARAUDER_NM_CYD_C5)
     #define MARAUDER_TITLE_BYTES 13578
   #elif defined(MARAUDER_V8)
     #define MARAUDER_TITLE_BYTES 13578
@@ -2749,6 +2795,15 @@
     #endif
 
     #ifdef MARAUDER_C5
+      #define SD_MISO 2
+      #define SD_MOSI 7
+      #define SD_SCK  6
+    #endif
+
+    #ifdef MARAUDER_NM_CYD_C5
+      #ifndef TOUCH_CS
+        #define TOUCH_CS 1
+      #endif
       #define SD_MISO 2
       #define SD_MOSI 7
       #define SD_SCK  6

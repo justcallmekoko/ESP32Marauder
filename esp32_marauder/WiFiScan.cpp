@@ -32,12 +32,16 @@ LinkedList<Flipper>* flippers;
 LinkedList<IPAddress>* ipList;
 LinkedList<ProbeReqSsid>* probe_req_ssids;
 
+#ifndef HAS_DUAL_BAND
 extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3){
     if (arg == 31337)
       return 1;
     else
       return 0;
 }
+#else
+extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3);
+#endif
 
 extern "C" {
   uint8_t esp_base_mac_addr[6];
@@ -1880,10 +1884,14 @@ extern "C" {
 #endif
 
 void WiFiScan::RunSetup() {
-  if (ieee80211_raw_frame_sanity_check(31337, 0, 0) == 1)
-    this->wsl_bypass_enabled = true;
-  else
+  #ifndef HAS_DUAL_BAND
+    if (ieee80211_raw_frame_sanity_check(31337, 0, 0) == 1)
+      this->wsl_bypass_enabled = true;
+    else
+      this->wsl_bypass_enabled = false;
+  #else
     this->wsl_bypass_enabled = false;
+  #endif
 
   #ifdef HAS_PSRAM
     ssids = new (ps_malloc(sizeof(LinkedList<ssid>))) LinkedList<ssid>();
@@ -2590,9 +2598,9 @@ bool WiFiScan::shutdownBLE() {
 
       //Serial.println("Deinitializing NimBLE...");
 
-      //#ifndef HAS_DUAL_BAND
+      #ifndef HAS_DUAL_BAND
         NimBLEDevice::deinit();
-      //#endif
+      #endif
 
       this->_analyzer_value = 0;
       this->bt_frames = 0;

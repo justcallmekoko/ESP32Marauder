@@ -200,7 +200,7 @@ uint32_t currentTime  = 0;
         digitalWrite(TFT_BL, LOW);
       #endif
 
-      #if defined(DUAL_MINI_C5)
+      #if defined(DUAL_MINI_C5) || defined(MARAUDER_NM_CYD_C5)
         digitalWrite(TFT_BL, HIGH);
       #endif
     
@@ -216,7 +216,7 @@ uint32_t currentTime  = 0;
         digitalWrite(TFT_BL, HIGH);
       #endif
 
-      #if defined(DUAL_MINI_C5)
+      #if defined(DUAL_MINI_C5) || defined(MARAUDER_NM_CYD_C5)
         digitalWrite(TFT_BL, LOW);
       #endif
     
