@@ -8,124 +8,136 @@
 
 
 // ================================================================
+// Banner string constants
+// ================================================================
+
+static const char kBannerResults[]    = "Results";
+static const char kBannerTargets[]    = "Targets";
+static const char kBannerAttackType[] = "Attack Type";
+static const char kBannerAttacking[]  = "Attacking";
+static const char kBannerNoTargets[]  = "No targets!";
+
+// ================================================================
 // Menu tables
 // ================================================================
 
+// Field order: label, short_label, action, color, sub_items, sub_count, icon_id
+
 static const OledMenu::MenuItem WIFI_SNIFF[] = {
-  { "Probe Sniff",       WIFI_SCAN_PROBE,              0, nullptr, 0 },
-  { "Beacon Sniff",      WIFI_SCAN_AP,                 0, nullptr, 0 },
-  { "Deauth Sniff",      WIFI_SCAN_DEAUTH,             0, nullptr, 0 },
-  { "Station Sniff",     WIFI_SCAN_STATION,            0, nullptr, 0 },
-  { "Packet Monitor",    WIFI_PACKET_MONITOR,          0, nullptr, 0 },
-  { "Packet Rate",       WIFI_SCAN_PACKET_RATE,        0, nullptr, 0 },
-  { "EAPOL/PMKID",       WIFI_SCAN_EAPOL,              0, nullptr, 0 },
-  { "Detect Pwnagotchi", WIFI_SCAN_PWN,                0, nullptr, 0 },
-  { "Detect Pineapple",  WIFI_SCAN_PINESCAN,           0, nullptr, 0 },
-  { "Detect MultiSSID",  WIFI_SCAN_MULTISSID,          0, nullptr, 0 },
-  { "Detect Espressif",  WIFI_SCAN_ESPRESSIF,          0, nullptr, 0 },
-  { "Detect Follow",     WIFI_SCAN_DETECT_FOLLOW,      0, nullptr, 0 },
-  { "SAE Commit Sniff",  WIFI_SCAN_SAE_COMMIT,         0, nullptr, 0 },
-  { "Raw Capture",       WIFI_SCAN_RAW_CAPTURE,        0, nullptr, 0 },
-  { "Signal Monitor",    WIFI_SCAN_SIG_STREN,          0, nullptr, 0 },
-  { "Chan Analyzer",     WIFI_SCAN_CHAN_ANALYZER,      0, nullptr, 0 },
-  { "Chan Activity",     WIFI_SCAN_CHAN_ACT,            0, nullptr, 0 },
-  { "Scan APs",          WIFI_SCAN_TARGET_AP,          0, nullptr, 0 },
-  { "Scan AP+Stations",  WIFI_SCAN_AP_STA,             0, nullptr, 0 },
-  { "Wardrive",          WIFI_SCAN_WAR_DRIVE,          0, nullptr, 0 },
-  { "Station Wardrive",  WIFI_SCAN_STATION_WAR_DRIVE,  0, nullptr, 0 },
+  { "Probe Sniff",       "Probe",        WIFI_SCAN_PROBE,             0, nullptr, 0, ICON_NONE },
+  { "Beacon Sniff",      "Beacon",       WIFI_SCAN_AP,                0, nullptr, 0, ICON_NONE },
+  { "Deauth Sniff",      "Deauth",       WIFI_SCAN_DEAUTH,            0, nullptr, 0, ICON_NONE },
+  { "Station Sniff",     "Station",      WIFI_SCAN_STATION,           0, nullptr, 0, ICON_NONE },
+  { "Packet Monitor",    "Pkt Monitor",  WIFI_PACKET_MONITOR,         0, nullptr, 0, ICON_NONE },
+  { "Packet Rate",       "Pkt Rate",     WIFI_SCAN_PACKET_RATE,       0, nullptr, 0, ICON_NONE },
+  { "EAPOL/PMKID",       "EAPOL",        WIFI_SCAN_EAPOL,             0, nullptr, 0, ICON_NONE },
+  { "Detect Pwnagotchi", "Pwnagotchi",   WIFI_SCAN_PWN,               0, nullptr, 0, ICON_NONE },
+  { "Detect Pineapple",  "Pineapple",    WIFI_SCAN_PINESCAN,          0, nullptr, 0, ICON_NONE },
+  { "Detect MultiSSID",  "MultiSSID",    WIFI_SCAN_MULTISSID,         0, nullptr, 0, ICON_NONE },
+  { "Detect Espressif",  "Espressif",    WIFI_SCAN_ESPRESSIF,         0, nullptr, 0, ICON_NONE },
+  { "Detect Follow",     "Follow",       WIFI_SCAN_DETECT_FOLLOW,     0, nullptr, 0, ICON_NONE },
+  { "SAE Commit Sniff",  "SAE Commit",   WIFI_SCAN_SAE_COMMIT,        0, nullptr, 0, ICON_NONE },
+  { "Raw Capture",       "Raw Capture",  WIFI_SCAN_RAW_CAPTURE,       0, nullptr, 0, ICON_NONE },
+  { "Signal Monitor",    "Signal Mon",   WIFI_SCAN_SIG_STREN,         0, nullptr, 0, ICON_NONE },
+  { "Chan Analyzer",     "Chan Analyz",  WIFI_SCAN_CHAN_ANALYZER,     0, nullptr, 0, ICON_NONE },
+  { "Chan Activity",     "Chan Act",     WIFI_SCAN_CHAN_ACT,           0, nullptr, 0, ICON_NONE },
+  { "Scan APs",          "APs",          WIFI_SCAN_TARGET_AP,         0, nullptr, 0, ICON_NONE },
+  { "Scan AP+Stations",  "AP+Stations",  WIFI_SCAN_AP_STA,            0, nullptr, 0, ICON_NONE },
+  { "Wardrive",          "Wardrive",     WIFI_SCAN_WAR_DRIVE,         0, nullptr, 0, ICON_NONE },
+  { "Station Wardrive",  "Sta Wardrive", WIFI_SCAN_STATION_WAR_DRIVE, 0, nullptr, 0, ICON_NONE },
 };
 static const uint8_t WIFI_SNIFF_N = sizeof(WIFI_SNIFF) / sizeof(WIFI_SNIFF[0]);
 
 static const OledMenu::MenuItem WIFI_ATTACK[] = {
-  { "Beacon Spam",       WIFI_ATTACK_BEACON_SPAM,        0, nullptr, 0 },
-  { "Beacon List",       WIFI_ATTACK_BEACON_LIST,        0, nullptr, 0 },
-  { "Funny Beacon",      WIFI_ATTACK_FUNNY_BEACON,       0, nullptr, 0 },
-  { "Rick Roll",         WIFI_ATTACK_RICK_ROLL,          0, nullptr, 0 },
-  { "Auth Flood",        WIFI_ATTACK_AUTH,               0, nullptr, 0 },
-  { "Deauth",            WIFI_ATTACK_DEAUTH,             0, nullptr, 0 },
-  { "Deauth Targeted",   WIFI_ATTACK_DEAUTH_TARGETED,    0, nullptr, 0 },
-  { "AP Spam",           WIFI_ATTACK_AP_SPAM,            0, nullptr, 0 },
-  { "Bad Msg",           WIFI_ATTACK_BAD_MSG,            0, nullptr, 0 },
-  { "Bad Msg Targeted",  WIFI_ATTACK_BAD_MSG_TARGETED,   0, nullptr, 0 },
-  { "Sleep",             WIFI_ATTACK_SLEEP,              0, nullptr, 0 },
-  { "Sleep Targeted",    WIFI_ATTACK_SLEEP_TARGETED,     0, nullptr, 0 },
-  { "SAE Commit",        WIFI_ATTACK_SAE_COMMIT,         0, nullptr, 0 },
-  { "CSA",               WIFI_ATTACK_CSA,                0, nullptr, 0 },
-  { "Quiet",             WIFI_ATTACK_QUIET,              0, nullptr, 0 },
-  { "Evil Portal",       WIFI_SCAN_EVIL_PORTAL,          0, nullptr, 0 },
+  { "Beacon Spam",      "Beacon Spam",  WIFI_ATTACK_BEACON_SPAM,       0, nullptr, 0, ICON_NONE },
+  { "Beacon List",      "Beacon List",  WIFI_ATTACK_BEACON_LIST,       0, nullptr, 0, ICON_NONE },
+  { "Funny Beacon",     "Funny Beacon", WIFI_ATTACK_FUNNY_BEACON,      0, nullptr, 0, ICON_NONE },
+  { "Rick Roll",        "Rick Roll",    WIFI_ATTACK_RICK_ROLL,         0, nullptr, 0, ICON_NONE },
+  { "Auth Flood",       "Auth Flood",   WIFI_ATTACK_AUTH,              0, nullptr, 0, ICON_NONE },
+  { "Deauth",           "Deauth",       WIFI_ATTACK_DEAUTH,            0, nullptr, 0, ICON_NONE },
+  { "Deauth Targeted",  "Deauth Tgt",   WIFI_ATTACK_DEAUTH_TARGETED,   0, nullptr, 0, ICON_NONE },
+  { "AP Spam",          "AP Spam",      WIFI_ATTACK_AP_SPAM,           0, nullptr, 0, ICON_NONE },
+  { "Bad Msg",          "Bad Msg",      WIFI_ATTACK_BAD_MSG,           0, nullptr, 0, ICON_NONE },
+  { "Bad Msg Targeted", "Bad Msg Tgt",  WIFI_ATTACK_BAD_MSG_TARGETED,  0, nullptr, 0, ICON_NONE },
+  { "Sleep",            "Sleep",        WIFI_ATTACK_SLEEP,             0, nullptr, 0, ICON_NONE },
+  { "Sleep Targeted",   "Sleep Tgt",    WIFI_ATTACK_SLEEP_TARGETED,    0, nullptr, 0, ICON_NONE },
+  { "SAE Commit",       "SAE Commit",   WIFI_ATTACK_SAE_COMMIT,        0, nullptr, 0, ICON_NONE },
+  { "CSA",              "CSA",          WIFI_ATTACK_CSA,               0, nullptr, 0, ICON_NONE },
+  { "Quiet",            "Quiet",        WIFI_ATTACK_QUIET,             0, nullptr, 0, ICON_NONE },
+  { "Evil Portal",      "Evil Portal",  WIFI_SCAN_EVIL_PORTAL,         0, nullptr, 0, ICON_NONE },
 };
 static const uint8_t WIFI_ATTACK_N = sizeof(WIFI_ATTACK) / sizeof(WIFI_ATTACK[0]);
 
 static const OledMenu::MenuItem WIFI_MENU[] = {
-  { "Sniffers",  OLED_SUBMENU,          0, WIFI_SNIFF,  WIFI_SNIFF_N  },
-  { "Attacks",   OLED_SUBMENU,          0, WIFI_ATTACK, WIFI_ATTACK_N },
-  { "Add SSID",  OLED_ACTION_ADD_SSID,  0, nullptr,     0             },
-  { "Join WiFi", OLED_ACTION_JOIN_WIFI, 0, nullptr,     0             },
+  { "Sniffers",  nullptr, OLED_SUBMENU,          0, WIFI_SNIFF,  WIFI_SNIFF_N,  ICON_MAGNIFIER },
+  { "Attacks",   nullptr, OLED_SUBMENU,          0, WIFI_ATTACK, WIFI_ATTACK_N, ICON_BOLT      },
+  { "Add SSID",  nullptr, OLED_ACTION_ADD_SSID,  0, nullptr,     0,             ICON_PENCIL    },
+  { "Join WiFi", nullptr, OLED_ACTION_JOIN_WIFI, 0, nullptr,     0,             ICON_WIFI_JOIN },
 };
 static const uint8_t WIFI_MENU_N = sizeof(WIFI_MENU) / sizeof(WIFI_MENU[0]);
 
 static const OledMenu::MenuItem BT_SNIFF[] = {
-  { "Sniff BT",        BT_SCAN_ALL,            0, nullptr, 0 },
-  { "Detect Skimmers", BT_SCAN_SKIMMERS,       0, nullptr, 0 },
-  { "Scan Airtag",     BT_SCAN_AIRTAG,         0, nullptr, 0 },
-  { "Monitor Airtag",  BT_SCAN_AIRTAG_MON,     0, nullptr, 0 },
-  { "Scan Flipper",    BT_SCAN_FLIPPER,         0, nullptr, 0 },
-  { "BT Analyzer",     BT_SCAN_ANALYZER,        0, nullptr, 0 },
-  { "Flock",           BT_SCAN_FLOCK,           0, nullptr, 0 },
-  { "Flock Wardrive",  BT_SCAN_FLOCK_WARDRIVE,  0, nullptr, 0 },
-  { "RayBan",          BT_SCAN_RAYBAN,          0, nullptr, 0 },
-  { "BT Wardrive",     BT_SCAN_WAR_DRIVE,       0, nullptr, 0 },
+  { "Sniff BT",        "BT",         BT_SCAN_ALL,            0, nullptr, 0, ICON_NONE },
+  { "Detect Skimmers", "Skimmers",   BT_SCAN_SKIMMERS,       0, nullptr, 0, ICON_NONE },
+  { "Scan Airtag",     "Airtag",     BT_SCAN_AIRTAG,         0, nullptr, 0, ICON_NONE },
+  { "Monitor Airtag",  "Airtag Mon", BT_SCAN_AIRTAG_MON,     0, nullptr, 0, ICON_NONE },
+  { "Scan Flipper",    "Flipper",    BT_SCAN_FLIPPER,         0, nullptr, 0, ICON_NONE },
+  { "BT Analyzer",     "Analyzer",   BT_SCAN_ANALYZER,        0, nullptr, 0, ICON_NONE },
+  { "Flock",           "Flock",      BT_SCAN_FLOCK,           0, nullptr, 0, ICON_NONE },
+  { "Flock Wardrive",  "Flock WD",   BT_SCAN_FLOCK_WARDRIVE,  0, nullptr, 0, ICON_NONE },
+  { "RayBan",          "RayBan",     BT_SCAN_RAYBAN,          0, nullptr, 0, ICON_NONE },
+  { "BT Wardrive",     "BT WD",      BT_SCAN_WAR_DRIVE,       0, nullptr, 0, ICON_NONE },
 };
 static const uint8_t BT_SNIFF_N = sizeof(BT_SNIFF) / sizeof(BT_SNIFF[0]);
 
 static const OledMenu::MenuItem BT_SPAM[] = {
-  { "Spam All",  BT_ATTACK_SPAM_ALL,        0, nullptr, 0 },
-  { "Apple",     BT_ATTACK_SOUR_APPLE,      0, nullptr, 0 },
-  { "SwiftPair", BT_ATTACK_SWIFTPAIR_SPAM,  0, nullptr, 0 },
-  { "Samsung",   BT_ATTACK_SAMSUNG_SPAM,    0, nullptr, 0 },
-  { "Google",    BT_ATTACK_GOOGLE_SPAM,     0, nullptr, 0 },
-  { "Flipper",   BT_ATTACK_FLIPPER_SPAM,    0, nullptr, 0 },
+  { "Spam All",  "Spam All",  BT_ATTACK_SPAM_ALL,        0, nullptr, 0, ICON_NONE },
+  { "Apple",     "Apple",     BT_ATTACK_SOUR_APPLE,      0, nullptr, 0, ICON_NONE },
+  { "SwiftPair", "SwiftPair", BT_ATTACK_SWIFTPAIR_SPAM,  0, nullptr, 0, ICON_NONE },
+  { "Samsung",   "Samsung",   BT_ATTACK_SAMSUNG_SPAM,    0, nullptr, 0, ICON_NONE },
+  { "Google",    "Google",    BT_ATTACK_GOOGLE_SPAM,     0, nullptr, 0, ICON_NONE },
+  { "Flipper",   "Flipper",   BT_ATTACK_FLIPPER_SPAM,    0, nullptr, 0, ICON_NONE },
 };
 static const uint8_t BT_SPAM_N = sizeof(BT_SPAM) / sizeof(BT_SPAM[0]);
 
 static const OledMenu::MenuItem BT_MENU[] = {
-  { "Sniffers", OLED_SUBMENU, 0, BT_SNIFF, BT_SNIFF_N },
-  { "Spam",     OLED_SUBMENU, 0, BT_SPAM,  BT_SPAM_N  },
+  { "Sniffers", nullptr, OLED_SUBMENU, 0, BT_SNIFF, BT_SNIFF_N, ICON_MAGNIFIER },
+  { "Spam",     nullptr, OLED_SUBMENU, 0, BT_SPAM,  BT_SPAM_N,  ICON_BOLT      },
 };
 static const uint8_t BT_MENU_N = sizeof(BT_MENU) / sizeof(BT_MENU[0]);
 
 static const OledMenu::MenuItem MAC_MENU[] = {
-  { "Random AP MAC",  OLED_ACTION_MAC_AP,  0, nullptr, 0 },
-  { "Random STA MAC", OLED_ACTION_MAC_STA, 0, nullptr, 0 },
+  { "Random AP MAC",  nullptr, OLED_ACTION_MAC_AP,  0, nullptr, 0, ICON_NONE },
+  { "Random STA MAC", nullptr, OLED_ACTION_MAC_STA, 0, nullptr, 0, ICON_NONE },
 };
 static const uint8_t MAC_MENU_N = sizeof(MAC_MENU) / sizeof(MAC_MENU[0]);
 
 static const OledMenu::MenuItem DEVICE_MENU[] = {
-  { "Device Info", OLED_ACTION_INFO,   0, nullptr,  0          },
-  { "MAC Address", OLED_SUBMENU,       0, MAC_MENU, MAC_MENU_N },
-  { "Reboot",      OLED_ACTION_REBOOT, 0, nullptr,  0          },
+  { "Device Info", nullptr, OLED_ACTION_INFO,   0, nullptr,  0,          ICON_NONE   },
+  { "MAC Address", nullptr, OLED_SUBMENU,       0, MAC_MENU, MAC_MENU_N, ICON_NONE   },
+  { "Reboot",      nullptr, OLED_ACTION_REBOOT, 0, nullptr,  0,          ICON_REBOOT },
 };
 static const uint8_t DEVICE_MENU_N = sizeof(DEVICE_MENU) / sizeof(DEVICE_MENU[0]);
 
 static const OledMenu::MenuItem MAIN_MENU[] = {
-  { "WiFi",      OLED_SUBMENU,       0, WIFI_MENU,   WIFI_MENU_N   },
-  { "Bluetooth", OLED_SUBMENU,       0, BT_MENU,     BT_MENU_N     },
-  { "Device",    OLED_SUBMENU,       0, DEVICE_MENU, DEVICE_MENU_N },
-  { "Reboot",    OLED_ACTION_REBOOT, 0, nullptr,     0             },
+  { "WiFi",      nullptr, OLED_SUBMENU,       0, WIFI_MENU,   WIFI_MENU_N,   ICON_WIFI    },
+  { "Bluetooth", nullptr, OLED_SUBMENU,       0, BT_MENU,     BT_MENU_N,     ICON_BT      },
+  { "Device",    nullptr, OLED_SUBMENU,       0, DEVICE_MENU, DEVICE_MENU_N, ICON_GEAR    },
+  { "Reboot",    nullptr, OLED_ACTION_REBOOT, 0, nullptr,     0,             ICON_REBOOT  },
 };
 static const uint8_t MAIN_MENU_N = sizeof(MAIN_MENU) / sizeof(MAIN_MENU[0]);
 
 // Attacks available after AP selection (SCAN_STOPPED → SELECT_APS → ATTACK_PICKER).
 // File-scope so renderAttackPicker() can reference it.
 static const OledMenu::MenuItem POST_SCAN_ATTACKS[] = {
-  { "Deauth",          WIFI_ATTACK_DEAUTH,           0, nullptr, 0 },
-  { "Deauth Targeted", WIFI_ATTACK_DEAUTH_TARGETED,  0, nullptr, 0 },
-  { "Bad Msg",         WIFI_ATTACK_BAD_MSG,          0, nullptr, 0 },
-  { "Bad Msg Target",  WIFI_ATTACK_BAD_MSG_TARGETED, 0, nullptr, 0 },
-  { "Sleep",           WIFI_ATTACK_SLEEP,            0, nullptr, 0 },
-  { "Sleep Targeted",  WIFI_ATTACK_SLEEP_TARGETED,   0, nullptr, 0 },
-  { "CSA",             WIFI_ATTACK_CSA,              0, nullptr, 0 },
-  { "Quiet",           WIFI_ATTACK_QUIET,            0, nullptr, 0 },
+  { "Deauth",          "Deauth",      WIFI_ATTACK_DEAUTH,           0, nullptr, 0, ICON_NONE },
+  { "Deauth Targeted", "Deauth Tgt",  WIFI_ATTACK_DEAUTH_TARGETED,  0, nullptr, 0, ICON_NONE },
+  { "Bad Msg",         "Bad Msg",     WIFI_ATTACK_BAD_MSG,          0, nullptr, 0, ICON_NONE },
+  { "Bad Msg Target",  "Bad Msg Tgt", WIFI_ATTACK_BAD_MSG_TARGETED, 0, nullptr, 0, ICON_NONE },
+  { "Sleep",           "Sleep",       WIFI_ATTACK_SLEEP,            0, nullptr, 0, ICON_NONE },
+  { "Sleep Targeted",  "Sleep Tgt",   WIFI_ATTACK_SLEEP_TARGETED,   0, nullptr, 0, ICON_NONE },
+  { "CSA",             "CSA",         WIFI_ATTACK_CSA,              0, nullptr, 0, ICON_NONE },
+  { "Quiet",           "Quiet",       WIFI_ATTACK_QUIET,            0, nullptr, 0, ICON_NONE },
 };
 static const uint8_t POST_SCAN_ATTACKS_N =
     sizeof(POST_SCAN_ATTACKS) / sizeof(POST_SCAN_ATTACKS[0]);
@@ -141,12 +153,16 @@ OledMenu::OledMenu(InputDevice* input)
     state(UiState::MENU),
     history_depth(0),
     pending_action(0),
+    pending_label(nullptr),
     ap_sel_cursor(0),
     ap_sel_offset(0),
     picker_cursor(0),
     picker_offset(0),
     last_scan_ms(0),
-    last_input_ms(0)
+    last_input_ms(0),
+    active_icon_id(ICON_NONE),
+    icon_frame(0),
+    last_icon_ms(0)
 {}
 
 void OledMenu::RunSetup() {
@@ -198,9 +214,9 @@ void OledMenu::renderMenu() {
   int8_t   sel          = sel_stack[depth - 1];
   int8_t   off          = off_stack[depth - 1];
 
-  // Banner: show parent label so user knows which submenu they're in
+  // Banner: root shows device name, submenus show their parent label
   if (depth == 1) {
-    display_obj.updateBanner("[ MARAUDER ]");
+    display_obj.updateBanner("MARAUDER");
   } else {
     const MenuItem* parent = menu_stack[depth - 2];
     int8_t          pidx   = sel_stack[depth - 2];
@@ -209,15 +225,40 @@ void OledMenu::renderMenu() {
 
   display_obj.clearScreen();
 
+  // Check if any visible item has an icon — if so, reserve space for all rows
+  bool any_icon = false;
+  for (uint8_t row = 0; row < OLED_MAX_LINES; row++) {
+    int8_t idx = off + row;
+    if (idx >= count) break;
+    if (items[idx].icon_id != ICON_NONE) { any_icon = true; break; }
+  }
+
   for (uint8_t row = 0; row < OLED_MAX_LINES; row++) {
     int8_t idx = off + row;
     if (idx >= count) break;
 
-    String line = String(idx == sel ? ">" : " ") + String(items[idx].label);
-    display_obj.display_buffer->add(line);
+    // cursor (1 char) + optional 2-char gap for icon + label
+    String prefix = String(idx == sel ? ">" : " ");
+    if (any_icon) prefix += "  ";
+    display_obj.display_buffer->add(prefix + String(items[idx].label));
   }
 
   display_obj.displayBuffer();
+
+  // Draw per-item icons into the gap reserved above (white on black)
+  if (any_icon) {
+    for (uint8_t row = 0; row < OLED_MAX_LINES; row++) {
+      int8_t idx = off + row;
+      if (idx >= count) break;
+      if (items[idx].icon_id == ICON_NONE) continue;
+      // Icon sits after the cursor char: cursor is at x=2, char width=6px → icon at x=8
+      int16_t icon_y = OLED_BANNER_H + 1 + row * OLED_LINE_HEIGHT;
+      display_obj.drawIcon(items[idx].icon_id, 8, icon_y, OLED_WHITE);
+    }
+    // Flush icons to display; drawBottomBar will do the final flush below
+    display_obj.oled.display();
+  }
+
   display_obj.drawBottomBar("", depth > 1 ? "Back" : "");
 }
 
@@ -247,7 +288,7 @@ void OledMenu::renderAttacking() {
 void OledMenu::renderScanStopped() {
   int n = access_points->size();
 
-  display_obj.updateBanner("Scan Stopped");
+  display_obj.updateBanner(kBannerResults);
   display_obj.clearScreen();
   display_obj.display_buffer->add(String(n) + " APs found.");
 
@@ -268,7 +309,7 @@ void OledMenu::renderSelectAPs() {
     if (access_points->get(i).selected) selected_count++;
   }
 
-  display_obj.updateBanner("Select APs");
+  display_obj.updateBanner(kBannerTargets);
   display_obj.clearScreen();
 
   for (uint8_t row = 0; row < OLED_MAX_LINES; row++) {
@@ -289,7 +330,7 @@ void OledMenu::renderSelectAPs() {
 }
 
 void OledMenu::renderAttackPicker() {
-  display_obj.updateBanner("Attack With?");
+  display_obj.updateBanner(kBannerAttackType);
   display_obj.clearScreen();
 
   for (uint8_t row = 0; row < OLED_MAX_LINES; row++) {
@@ -414,14 +455,20 @@ void OledMenu::handleInput(uint32_t currentTime) {
             while (access_points->size() > 0) access_points->shift();
           }
 
-          display_obj.updateBanner(String(item.label));
+          {
+            const char* lbl = item.short_label ? item.short_label : item.label;
+            display_obj.updateBannerWithIcons(String(lbl), ICON_MAGNIFIER);
+            active_icon_id = actionIsBT(item.action) ? ICON_SCAN_BT : ICON_SCAN_WIFI;
+            icon_frame    = 0;
+            last_icon_ms  = 0;  // force immediate first tick in main()
+          }
           wifi_scan_obj.StartScan(item.action, item.color);
           transition(UiState::SCANNING);
 
         } else if (actionNeedsAPSelection(item.action)) {
           if (access_points->size() == 0) {
             // No APs available — show warning and stay in MENU
-            display_obj.updateBanner("No APs");
+            display_obj.updateBanner(kBannerNoTargets);
             display_obj.clearScreen();
             display_obj.display_buffer->add("Run a sniffer");
             display_obj.display_buffer->add("first to find");
@@ -433,6 +480,7 @@ void OledMenu::handleInput(uint32_t currentTime) {
           } else {
             // Store which attack to launch after AP selection
             pending_action = item.action;
+            pending_label  = item.short_label ? item.short_label : item.label;
             ap_sel_cursor  = 0;
             ap_sel_offset  = 0;
             transition(UiState::SELECT_APS);
@@ -440,7 +488,13 @@ void OledMenu::handleInput(uint32_t currentTime) {
 
         } else {
           // Regular attack — no AP selection needed
-          display_obj.updateBanner(String(item.label));
+          {
+            const char* lbl = item.short_label ? item.short_label : item.label;
+            display_obj.updateBannerWithIcons(String(lbl), ICON_BOLT);
+            active_icon_id = ICON_BOLT_ANIM;
+            icon_frame    = 0;
+            last_icon_ms  = 0;
+          }
           wifi_scan_obj.StartScan(item.action, item.color);
           transition(UiState::ATTACKING);
         }
@@ -568,7 +622,13 @@ void OledMenu::handleInput(uint32_t currentTime) {
 
         } else {
           // Came from MENU — launch the pending attack directly
-          display_obj.updateBanner("Attacking...");
+          {
+            const char* lbl = pending_label ? pending_label : kBannerAttacking;
+            display_obj.updateBannerWithIcons(String(lbl), ICON_BOLT);
+            active_icon_id = ICON_BOLT_ANIM;
+            icon_frame    = 0;
+            last_icon_ms  = 0;
+          }
           wifi_scan_obj.StartScan(pending_action, 0);
           goBack();
           transition(UiState::ATTACKING);
@@ -611,7 +671,13 @@ void OledMenu::handleInput(uint32_t currentTime) {
       } else if (!gated && input->sel()) {
         last_input_ms = currentTime;
         const MenuItem& chosen = POST_SCAN_ATTACKS[picker_cursor];
-        display_obj.updateBanner(String(chosen.label));
+        {
+          const char* lbl = chosen.short_label ? chosen.short_label : chosen.label;
+          display_obj.updateBannerWithIcons(String(lbl), ICON_BOLT);
+          active_icon_id = ICON_BOLT_ANIM;
+          icon_frame    = 0;
+          last_icon_ms  = 0;
+        }
         wifi_scan_obj.StartScan(chosen.action, chosen.color);
         transition(UiState::ATTACKING);
 
@@ -631,6 +697,12 @@ void OledMenu::handleInput(uint32_t currentTime) {
 
 void OledMenu::main(uint32_t currentTime) {
   handleInput(currentTime);
+
+  // Tick animated banner icon during active states
+  if (state == UiState::SCANNING || state == UiState::ATTACKING) {
+    icon_frame = display_obj.tickBannerIcon(
+        active_icon_id, icon_frame, currentTime, last_icon_ms);
+  }
 
   // Drain display_buffer each frame while scanning — WiFiScan callbacks write here
   if (state == UiState::SCANNING) {
@@ -698,6 +770,30 @@ bool OledMenu::actionIsSniffer(uint16_t action) {
     case BT_SCAN_FLOCK_WARDRIVE:
     case BT_SCAN_RAYBAN:
     case BT_SCAN_WAR_DRIVE:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool OledMenu::actionIsBT(uint16_t action) {
+  switch (action) {
+    case BT_SCAN_ALL:
+    case BT_SCAN_SKIMMERS:
+    case BT_SCAN_AIRTAG:
+    case BT_SCAN_AIRTAG_MON:
+    case BT_SCAN_FLIPPER:
+    case BT_SCAN_ANALYZER:
+    case BT_SCAN_FLOCK:
+    case BT_SCAN_FLOCK_WARDRIVE:
+    case BT_SCAN_RAYBAN:
+    case BT_SCAN_WAR_DRIVE:
+    case BT_ATTACK_SPAM_ALL:
+    case BT_ATTACK_SOUR_APPLE:
+    case BT_ATTACK_SWIFTPAIR_SPAM:
+    case BT_ATTACK_SAMSUNG_SPAM:
+    case BT_ATTACK_GOOGLE_SPAM:
+    case BT_ATTACK_FLIPPER_SPAM:
       return true;
     default:
       return false;

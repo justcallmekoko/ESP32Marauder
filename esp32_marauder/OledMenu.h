@@ -28,11 +28,13 @@ class OledMenu {
   public:
 
     struct MenuItem {
-      const char*      label;
+      const char*      label;        // shown in menu list
+      const char*      short_label;  // shown in banner when active (nullptr = use label)
       uint16_t         action;
       uint16_t         color;
       const MenuItem*  sub_items;
       uint8_t          sub_count;
+      uint8_t          icon_id;      // icon drawn before label in list (ICON_NONE = no icon)
     };
 
     // UI states — each maps to exactly one screen and one button map.
@@ -78,6 +80,14 @@ class OledMenu {
     uint32_t  last_scan_ms;   // millis() when last sniffer completed (AP TTL)
     uint32_t  last_input_ms;  // millis() of last accepted input (debounce)
 
+    // ---- Banner icon animation ----
+    uint8_t   active_icon_id;  // which animated icon is ticking (ICON_NONE = none)
+    uint8_t   icon_frame;      // current animation frame index
+    uint32_t  last_icon_ms;    // millis() of last icon frame advance
+
+    // ---- Pending attack label (for SELECT_APS → ATTACKING banner) ----
+    const char* pending_label;
+
     // ---- State machine core ----
     void transition(UiState next);  // push history, set state, render
     void goBack();                  // pop history, render
@@ -100,6 +110,7 @@ class OledMenu {
 
     // ---- Action classification ----
     static bool actionIsSniffer(uint16_t action);
+    static bool actionIsBT(uint16_t action);
     static bool actionNeedsAPSelection(uint16_t action);
 };
 
