@@ -14,6 +14,8 @@ public:
   virtual bool down()     = 0;  // rising edge
   virtual bool back()     = 0;  // rising edge — call every tick to update held state
   virtual bool sel()      = 0;  // rising edge — call every tick to update held state
+  virtual bool upHeld()   = 0;  // true once held past threshold
+  virtual bool downHeld() = 0;  // true once held past threshold
   virtual bool backHeld() = 0;  // true once held past threshold (requires back() called first)
   virtual bool selHeld()  = 0;  // true once held past threshold (requires sel() called first)
 
@@ -69,6 +71,10 @@ public:
     return fired;
   }
 
+  // Joystick has no discrete up/down buttons — held not meaningful, always false
+  bool upHeld()   override { return false; }
+  bool downHeld() override { return false; }
+
   bool backHeld() override {
     uint32_t now = millis();
     bool cur = analogRead(JOY_X_PIN) < (2048 - JOY_THRESHOLD);
@@ -120,6 +126,8 @@ public:
   bool down()     override { return d_btn.justPressed(); }
   bool back()     override { return l_btn.justPressed(); }
   bool sel()      override { return c_btn.justPressed(); }
+  bool upHeld()   override { return u_btn.isHeld(); }
+  bool downHeld() override { return d_btn.isHeld(); }
   bool backHeld() override { return l_btn.isHeld(); }
   bool selHeld()  override { return c_btn.isHeld(); }
 

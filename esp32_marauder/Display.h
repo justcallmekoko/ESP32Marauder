@@ -55,7 +55,8 @@ class Display
     void updateBanner(String msg);
     void twoPartDisplay(String center_text);
     void displayBuffer(bool do_clear = false);
-    void drawBottomBar(String text);
+    void drawBottomBar(String left, String right);
+    void drawStatusLine(String text);  // overwrite fixed line 1 in scroll area (ATTACKING state)
     String getInput(String prompt, InputDevice* input);
 
     // Stubs so the rest of Marauder compiles without #ifdefs everywhere

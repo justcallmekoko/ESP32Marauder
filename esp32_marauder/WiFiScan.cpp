@@ -11330,6 +11330,9 @@ void WiFiScan::displayTransmitRate() {
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
     display_obj.showCenterText(displayString2, TFT_HEIGHT / 2);
     display_obj.showCenterText(displayString, TFT_HEIGHT / 2);
+  #elif defined(HAS_OLED)
+    // Overwrite fixed line 1 in-place — no scrolling during attacks
+    display_obj.drawStatusLine(displayString);
   #endif
 }
 
@@ -11758,6 +11761,8 @@ void WiFiScan::main(uint32_t currentTime)
       display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
       display_obj.showCenterText(displayString2, TFT_HEIGHT / 2);
       display_obj.showCenterText(displayString, TFT_HEIGHT / 2);
+    #elif defined(HAS_OLED)
+      this->attack_status = String(displayString);
     #endif
 
       packets_sent = 0;

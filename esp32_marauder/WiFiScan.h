@@ -651,6 +651,7 @@ class WiFiScan
 
     //LinkedList<ssid>* ssids;
 
+    String attack_status = "";
     volatile bool bt_cb_busy = false;
     volatile bool bt_pending_clear = false;
 

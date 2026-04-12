@@ -105,13 +105,32 @@ void Display::twoPartDisplay(String center_text) {
   showCenterText(center_text, 28);
 }
 
-void Display::drawBottomBar(String text) {
+void Display::drawBottomBar(String left, String right) {
   oled.fillRect(0, OLED_BOTTOM_BAR, 128, 8, OLED_BLACK);
-  // Draw a thin separator line
   oled.drawFastHLine(0, OLED_BOTTOM_BAR, 128, OLED_WHITE);
   oled.setTextSize(1);
   oled.setTextColor(OLED_WHITE);
+  // Left label
   oled.setCursor(0, OLED_BOTTOM_BAR + 1);
+  oled.print(left);
+  // Right label — 6px per char at textSize 1
+  int right_x = 128 - (right.length() * 6);
+  if (right_x < 0) right_x = 0;
+  oled.setCursor(right_x, OLED_BOTTOM_BAR + 1);
+  oled.print(right);
+  oled.display();
+}
+
+
+void Display::drawStatusLine(String text) {
+  // Overwrite the first line of the scroll area in-place.
+  // Used by ATTACKING state to show live packet rate without scrolling.
+  const int kStatusY = OLED_BANNER_H + 2;
+
+  oled.fillRect(0, kStatusY, 128, OLED_LINE_HEIGHT, OLED_BLACK);
+  oled.setTextSize(1);
+  oled.setTextColor(OLED_WHITE);
+  oled.setCursor(2, kStatusY);
   oled.print(text.substring(0, 21));
   oled.display();
 }
