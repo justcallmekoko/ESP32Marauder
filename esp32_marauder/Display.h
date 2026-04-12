@@ -31,6 +31,23 @@ class InputDevice;  // forward declaration — avoid circular include
 #define OLED_SCROLL_END  (OLED_BOTTOM_BAR - 1)
 #define OLED_MAX_LINES   4    // rows in scroll area (43px / 10px = 4)
 
+// ---- Icon IDs ----
+// Static icons (menu list items, drawn white-on-black in scroll area):
+#define ICON_NONE         0
+#define ICON_WIFI         1   // WiFi menu item
+#define ICON_BT           2   // Bluetooth menu item
+#define ICON_MAGNIFIER    3   // Sniffers menu item
+#define ICON_GEAR         4   // Device menu item
+#define ICON_REBOOT       5   // Reboot menu item
+#define ICON_BOLT         6   // Attacks menu item
+// Animated icons (banner only, drawn black-on-white):
+#define ICON_SCAN_WIFI    7   // 3-frame expanding arcs  — WiFi sniffer running
+#define ICON_SCAN_BT      8   // 3-frame BT glyph pulse  — BT sniffer running
+#define ICON_BOLT_ANIM    9   // 2-frame bolt flicker    — attack running
+// Action icons (static, menu list):
+#define ICON_PENCIL      10   // solid pencil            — Add SSID
+#define ICON_WIFI_JOIN   11   // WiFi arcs + down-arrow  — Join WiFi
+
 class Display
 {
   public:
@@ -53,6 +70,15 @@ class Display
     void clearScreen();
     void showCenterText(String text, int y);
     void updateBanner(String msg);
+    // Banner with left static icon + reserved space for right animated icon.
+    // Call tickBannerIcon() each frame to advance the right-side animation.
+    void updateBannerWithIcons(String msg, uint8_t left_icon);
+    // Draw one static icon at (x,y) with given color. icon_id must be a static ICON_* constant.
+    void drawIcon(uint8_t icon_id, int16_t x, int16_t y, uint16_t color);
+    // Advance animated banner icon by one frame if interval has elapsed.
+    // Returns the new frame index. last_ms is updated in-place.
+    uint8_t tickBannerIcon(uint8_t icon_id, uint8_t frame,
+                           uint32_t now, uint32_t& last_ms);
     void twoPartDisplay(String center_text);
     void displayBuffer(bool do_clear = false);
     void drawBottomBar(String left, String right);

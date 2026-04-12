@@ -6,6 +6,10 @@
 #include "T9Keyboard.h"
 #include "CommandLine.h"
 
+// Uncomment to print renderMenu() timing + heap metrics to Serial.
+// Enable before a change, capture baseline, re-enable after to compare.
+#define OLED_PERF_LOG
+
 
 // ================================================================
 // Banner string constants
@@ -209,6 +213,11 @@ void OledMenu::render() {
 // ================================================================
 
 void OledMenu::renderMenu() {
+#ifdef OLED_PERF_LOG
+  uint32_t _t0        = micros();
+  uint32_t _heap_pre  = ESP.getFreeHeap();
+#endif
+
   const MenuItem* items = menu_stack[depth - 1];
   uint8_t  count        = count_stack[depth - 1];
   int8_t   sel          = sel_stack[depth - 1];
@@ -224,42 +233,46 @@ void OledMenu::renderMenu() {
   }
 
   display_obj.clearScreen();
-
-  // Check if any visible item has an icon — if so, reserve space for all rows
-  bool any_icon = false;
-  for (uint8_t row = 0; row < OLED_MAX_LINES; row++) {
-    int8_t idx = off + row;
-    if (idx >= count) break;
-    if (items[idx].icon_id != ICON_NONE) { any_icon = true; break; }
-  }
+  display_obj.oled.setTextSize(1);
 
   for (uint8_t row = 0; row < OLED_MAX_LINES; row++) {
     int8_t idx = off + row;
     if (idx >= count) break;
 
-    // cursor (1 char) + optional 2-char gap for icon + label
-    String prefix = String(idx == sel ? ">" : " ");
-    if (any_icon) prefix += "  ";
-    display_obj.display_buffer->add(prefix + String(items[idx].label));
-  }
+    int16_t  y         = OLED_BANNER_H + 1 + row * OLED_LINE_HEIGHT;
+    bool     selected  = (idx == sel);
+    bool     has_icon  = (items[idx].icon_id != ICON_NONE);
+    int16_t  text_x    = has_icon ? 12 : 2;
+    uint8_t  max_chars = (128 - text_x) / 6;
 
-  display_obj.displayBuffer();
-
-  // Draw per-item icons into the gap reserved above (white on black)
-  if (any_icon) {
-    for (uint8_t row = 0; row < OLED_MAX_LINES; row++) {
-      int8_t idx = off + row;
-      if (idx >= count) break;
-      if (items[idx].icon_id == ICON_NONE) continue;
-      // Icon sits after the cursor char: cursor is at x=2, char width=6px → icon at x=8
-      int16_t icon_y = OLED_BANNER_H + 1 + row * OLED_LINE_HEIGHT;
-      display_obj.drawIcon(items[idx].icon_id, 8, icon_y, OLED_WHITE);
+    if (selected) {
+      display_obj.oled.fillRect(0, y, 128, OLED_LINE_HEIGHT, OLED_WHITE);
+      display_obj.oled.setTextColor(OLED_BLACK);
+    } else {
+      display_obj.oled.setTextColor(OLED_WHITE);
     }
-    // Flush icons to display; drawBottomBar will do the final flush below
-    display_obj.oled.display();
+
+    if (has_icon) {
+      uint16_t icon_color = selected ? (uint16_t)OLED_BLACK : (uint16_t)OLED_WHITE;
+      display_obj.drawIcon(items[idx].icon_id, 2, y + 1, icon_color);
+    }
+
+    display_obj.oled.setCursor(text_x, y + 1);
+    String lbl = String(items[idx].label);
+    if (lbl.length() > max_chars) lbl = lbl.substring(0, max_chars);
+    display_obj.oled.print(lbl);
   }
 
+  display_obj.oled.setTextColor(OLED_WHITE);  // reset before bottom bar
   display_obj.drawBottomBar("", depth > 1 ? "Back" : "");
+
+#ifdef OLED_PERF_LOG
+  uint32_t _dt = micros() - _t0;
+  Serial.printf("[MENU] render=%uus  heap_before=%u  heap_after=%u  delta=%d  min_heap=%u\n",
+    _dt, _heap_pre, ESP.getFreeHeap(),
+    (int32_t)(ESP.getFreeHeap() - _heap_pre),
+    ESP.getMinFreeHeap());
+#endif
 }
 
 void OledMenu::renderScanning() {
@@ -311,38 +324,59 @@ void OledMenu::renderSelectAPs() {
 
   display_obj.updateBanner(kBannerTargets);
   display_obj.clearScreen();
+  display_obj.oled.setTextSize(1);
 
   for (uint8_t row = 0; row < OLED_MAX_LINES; row++) {
     int8_t idx = ap_sel_offset + row;
     if (idx >= ap_count) break;
 
-    AccessPoint ap = access_points->get(idx);
-    // Space after checkbox so SSID doesn't butt up against it
-    String line = String(idx == ap_sel_cursor ? ">" : " ")
-                + (ap.selected ? "[*] " : "[ ] ")
-                + ap.essid;
-    display_obj.display_buffer->add(line);
+    int16_t     y        = OLED_BANNER_H + 1 + row * OLED_LINE_HEIGHT;
+    bool        selected = (idx == ap_sel_cursor);
+    AccessPoint ap       = access_points->get(idx);
+
+    if (selected) {
+      display_obj.oled.fillRect(0, y, 128, OLED_LINE_HEIGHT, OLED_WHITE);
+      display_obj.oled.setTextColor(OLED_BLACK);
+    } else {
+      display_obj.oled.setTextColor(OLED_WHITE);
+    }
+
+    display_obj.oled.setCursor(2, y + 1);
+    String ssid = ap.essid;
+    if (ssid.length() > 17) ssid = ssid.substring(0, 17);
+    display_obj.oled.print((ap.selected ? "[*] " : "[ ] ") + ssid);
   }
 
-  display_obj.displayBuffer();
-  // Left = SEL action label, Right = BACK (always)
+  display_obj.oled.setTextColor(OLED_WHITE);
   display_obj.drawBottomBar(selected_count > 0 ? "Go" : "Select", "Back");
 }
 
 void OledMenu::renderAttackPicker() {
   display_obj.updateBanner(kBannerAttackType);
   display_obj.clearScreen();
+  display_obj.oled.setTextSize(1);
 
   for (uint8_t row = 0; row < OLED_MAX_LINES; row++) {
     int8_t idx = picker_offset + row;
     if (idx >= (int8_t)POST_SCAN_ATTACKS_N) break;
 
-    String line = String(idx == picker_cursor ? ">" : " ")
-                + String(POST_SCAN_ATTACKS[idx].label);
-    display_obj.display_buffer->add(line);
+    int16_t y        = OLED_BANNER_H + 1 + row * OLED_LINE_HEIGHT;
+    bool    selected = (idx == picker_cursor);
+
+    if (selected) {
+      display_obj.oled.fillRect(0, y, 128, OLED_LINE_HEIGHT, OLED_WHITE);
+      display_obj.oled.setTextColor(OLED_BLACK);
+    } else {
+      display_obj.oled.setTextColor(OLED_WHITE);
+    }
+
+    display_obj.oled.setCursor(2, y + 1);
+    String lbl = String(POST_SCAN_ATTACKS[idx].label);
+    if (lbl.length() > 21) lbl = lbl.substring(0, 21);
+    display_obj.oled.print(lbl);
   }
 
-  display_obj.displayBuffer();
+  display_obj.oled.setTextColor(OLED_WHITE);
   display_obj.drawBottomBar("", "Back");
 }
 

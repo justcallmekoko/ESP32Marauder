@@ -5,3 +5,4 @@
 esp32_marauder/.vscode/settings.json
 
 .DS_Store
+*.bkp

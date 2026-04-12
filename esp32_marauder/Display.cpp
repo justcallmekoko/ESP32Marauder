@@ -8,6 +8,153 @@
 // ============================================================
 #ifdef HAS_OLED
 
+// ----------------------------------------------------------------
+// 8×8 PROGMEM icon bitmaps
+// Bit 7 = leftmost pixel of each row.
+// ----------------------------------------------------------------
+
+// ICON_WIFI — static, white-on-black (menu list)
+// WiFi arcs + stem
+static const uint8_t PROGMEM icon_wifi_bmp[] = {
+  0x18,  // . . . ▓ ▓ . . .
+  0x24,  // . . ▓ . . ▓ . .
+  0x42,  // . ▓ . . . . ▓ .
+  0x81,  // ▓ . . . . . . ▓
+  0x00,  // . . . . . . . .
+  0x18,  // . . . ▓ ▓ . . .
+  0x18,  // . . . ▓ ▓ . . .
+  0x00,  // . . . . . . . .
+};
+
+// ICON_BT — static, white-on-black (menu list)
+// Bluetooth rune shape
+static const uint8_t PROGMEM icon_bt_bmp[] = {
+  0x60,  // . ▓ ▓ . . . . .
+  0x50,  // . ▓ . ▓ . . . .
+  0x48,  // . ▓ . . ▓ . . .
+  0x70,  // . ▓ ▓ ▓ . . . .
+  0x48,  // . ▓ . . ▓ . . .
+  0x50,  // . ▓ . ▓ . . . .
+  0x60,  // . ▓ ▓ . . . . .
+  0x00,  // . . . . . . . .
+};
+
+// ICON_MAGNIFIER — static, white-on-black (Sniffers menu item)
+static const uint8_t PROGMEM icon_magnifier_bmp[] = {
+  0x38,  // . . ▓ ▓ ▓ . . .
+  0x44,  // . ▓ . . . ▓ . .
+  0x44,  // . ▓ . . . ▓ . .
+  0x44,  // . ▓ . . . ▓ . .
+  0x38,  // . . ▓ ▓ ▓ . . .
+  0x04,  // . . . . . ▓ . .
+  0x02,  // . . . . . . ▓ .
+  0x01,  // . . . . . . . ▓
+};
+
+// ICON_GEAR — static, white-on-black (Device menu item)
+static const uint8_t PROGMEM icon_gear_bmp[] = {
+  0x28,  // . . ▓ . ▓ . . .
+  0x7C,  // . ▓ ▓ ▓ ▓ ▓ . .
+  0x92,  // ▓ . . ▓ . . ▓ .
+  0xFE,  // ▓ ▓ ▓ ▓ ▓ ▓ ▓ .
+  0xFE,  // ▓ ▓ ▓ ▓ ▓ ▓ ▓ .
+  0x92,  // ▓ . . ▓ . . ▓ .
+  0x7C,  // . ▓ ▓ ▓ ▓ ▓ . .
+  0x28,  // . . ▓ . ▓ . . .
+};
+
+// ICON_REBOOT — static, white-on-black (Reboot menu item)
+// Circular arrow
+static const uint8_t PROGMEM icon_reboot_bmp[] = {
+  0x30,  // . . ▓ ▓ . . . .
+  0x48,  // . ▓ . . ▓ . . .
+  0x80,  // ▓ . . . . . . .
+  0x9C,  // ▓ . . ▓ ▓ ▓ . .
+  0x48,  // . ▓ . . ▓ . . .
+  0x20,  // . . ▓ . . . . .
+  0x38,  // . . ▓ ▓ ▓ . . .
+  0x00,  // . . . . . . . .
+};
+
+// ICON_PENCIL — static, white-on-black (Add SSID menu item)
+// Solid diagonal pencil: eraser top-right, tip bottom-left
+static const uint8_t PROGMEM icon_pencil_bmp[] = {
+  0x06,  // . . . . . ▓ ▓ .
+  0x0E,  // . . . . ▓ ▓ ▓ .
+  0x1C,  // . . . ▓ ▓ ▓ . .
+  0x38,  // . . ▓ ▓ ▓ . . .
+  0x70,  // . ▓ ▓ ▓ . . . .
+  0xE0,  // ▓ ▓ ▓ . . . . .
+  0xC0,  // ▓ ▓ . . . . . .
+  0x80,  // ▓ . . . . . . .
+};
+
+// ICON_WIFI_JOIN — static, white-on-black (Join WiFi menu item)
+// Outline WiFi arcs (top) + bold downward arrow (base) = joining a network
+static const uint8_t PROGMEM icon_wifi_join_bmp[] = {
+  0x3C,  // . . ▓ ▓ ▓ ▓ . .   outer arc
+  0x42,  // . ▓ . . . . ▓ .   outer arc sides
+  0x18,  // . . . ▓ ▓ . . .   inner dot
+  0x18,  // . . . ▓ ▓ . . .   arrow stem
+  0x18,  // . . . ▓ ▓ . . .   arrow stem
+  0x7E,  // . ▓ ▓ ▓ ▓ ▓ ▓ .   arrow crossbar
+  0x3C,  // . . ▓ ▓ ▓ ▓ . .   arrow body
+  0x18,  // . . . ▓ ▓ . . .   arrow tip
+};
+
+// ICON_BOLT — static, white-on-black (Attacks menu item)
+static const uint8_t PROGMEM icon_bolt_bmp[] = {
+  0x18,  // . . . ▓ ▓ . . .
+  0x30,  // . . ▓ ▓ . . . .
+  0x7C,  // . ▓ ▓ ▓ ▓ ▓ . .
+  0x18,  // . . . ▓ ▓ . . .
+  0x30,  // . . ▓ ▓ . . . .
+  0x60,  // . ▓ ▓ . . . . .
+  0x00,  // . . . . . . . .
+  0x00,  // . . . . . . . .
+};
+
+// ---- Animated banner icons (3 or 2 frames, black-on-white) ----
+
+// ICON_SCAN_WIFI — 3 frames: expanding arcs
+static const uint8_t PROGMEM icon_scan_wifi_f0[] = {
+  0x00, 0x00, 0x18, 0x24, 0x00, 0x18, 0x18, 0x00,  // inner arc + stem
+};
+static const uint8_t PROGMEM icon_scan_wifi_f1[] = {
+  0x00, 0x3C, 0x42, 0x18, 0x24, 0x18, 0x18, 0x00,  // inner + mid arc
+};
+static const uint8_t PROGMEM icon_scan_wifi_f2[] = {
+  0x7E, 0x81, 0x3C, 0x42, 0x18, 0x18, 0x18, 0x00,  // all arcs
+};
+static const uint8_t* const icon_scan_wifi_frames[] = {
+  icon_scan_wifi_f0, icon_scan_wifi_f1, icon_scan_wifi_f2,
+};
+
+// ICON_SCAN_BT — 3 frames: BT rune building up
+static const uint8_t PROGMEM icon_scan_bt_f0[] = {
+  0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x00,  // vertical bar only
+};
+static const uint8_t PROGMEM icon_scan_bt_f1[] = {
+  0x60, 0x50, 0x48, 0x60, 0x40, 0x40, 0x40, 0x00,  // bar + upper arms
+};
+static const uint8_t PROGMEM icon_scan_bt_f2[] = {
+  0x60, 0x50, 0x48, 0x70, 0x48, 0x50, 0x60, 0x00,  // full BT glyph
+};
+static const uint8_t* const icon_scan_bt_frames[] = {
+  icon_scan_bt_f0, icon_scan_bt_f1, icon_scan_bt_f2,
+};
+
+// ICON_BOLT_ANIM — 2 frames: bolt visible / blank
+static const uint8_t PROGMEM icon_bolt_anim_f0[] = {
+  0x18, 0x30, 0x7C, 0x18, 0x30, 0x60, 0x00, 0x00,  // bolt
+};
+static const uint8_t PROGMEM icon_bolt_anim_f1[] = {
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // blank
+};
+static const uint8_t* const icon_bolt_anim_frames[] = {
+  icon_bolt_anim_f0, icon_bolt_anim_f1,
+};
+
 Display::Display() : oled(128, 64, &Wire, -1) {}
 
 static bool oledAddressResponds(uint8_t address) {
@@ -20,6 +167,7 @@ void Display::init() {
   Serial.printf("[OLED] Using I2C SDA=%d SCL=%d\n", OLED_SDA, OLED_SCL);
 
   Wire.begin(OLED_SDA, OLED_SCL);
+  Wire.setClock(400000);  // fast mode — cuts oled.display() from ~40ms to ~10ms
 
   bool found_3c = oledAddressResponds(0x3C);
   bool found_3d = oledAddressResponds(0x3D);
@@ -123,16 +271,96 @@ void Display::drawBottomBar(String left, String right) {
 
 
 void Display::drawStatusLine(String text) {
-  // Overwrite the first line of the scroll area in-place.
+  // Overwrite a single line vertically centered in the scroll area.
   // Used by ATTACKING state to show live packet rate without scrolling.
-  const int kStatusY = OLED_BANNER_H + 2;
+  // Scroll area: y=OLED_BANNER_H to y=OLED_BOTTOM_BAR (43px).
+  // Text is 8px tall → center y = OLED_BANNER_H + (43 - 8) / 2 = 28.
+  const int kStatusY = OLED_BANNER_H + (OLED_BOTTOM_BAR - OLED_BANNER_H - 8) / 2;
 
-  oled.fillRect(0, kStatusY, 128, OLED_LINE_HEIGHT, OLED_BLACK);
+  oled.fillRect(0, OLED_BANNER_H, 128, OLED_BOTTOM_BAR - OLED_BANNER_H, OLED_BLACK);
   oled.setTextSize(1);
   oled.setTextColor(OLED_WHITE);
   oled.setCursor(2, kStatusY);
   oled.print(text.substring(0, 21));
   oled.display();
+}
+
+void Display::drawIcon(uint8_t icon_id, int16_t x, int16_t y, uint16_t color) {
+  // Draw a static 8×8 icon from PROGMEM at pixel (x, y).
+  const uint8_t* bmp = nullptr;
+  switch (icon_id) {
+    case ICON_WIFI:      bmp = icon_wifi_bmp;      break;
+    case ICON_BT:        bmp = icon_bt_bmp;        break;
+    case ICON_MAGNIFIER: bmp = icon_magnifier_bmp; break;
+    case ICON_GEAR:      bmp = icon_gear_bmp;      break;
+    case ICON_REBOOT:    bmp = icon_reboot_bmp;    break;
+    case ICON_BOLT:      bmp = icon_bolt_bmp;      break;
+    case ICON_PENCIL:    bmp = icon_pencil_bmp;    break;
+    case ICON_WIFI_JOIN: bmp = icon_wifi_join_bmp; break;
+    default: return;
+  }
+  oled.drawBitmap(x, y, bmp, 8, 8, color);
+}
+
+void Display::updateBannerWithIcons(String msg, uint8_t left_icon) {
+  // Inverted banner: white fill, black text + black left icon.
+  // Right 12px always reserved for the animated icon drawn by tickBannerIcon().
+  oled.fillRect(0, 0, 128, OLED_BANNER_H, OLED_WHITE);
+
+  int16_t text_x     = 2;
+  int16_t text_chars = 19;  // no left icon: ~19 chars before right icon margin
+
+  if (left_icon != ICON_NONE) {
+    drawIcon(left_icon, 1, 1, OLED_BLACK);
+    text_x     = 11;  // 1px + 8px icon + 2px gap
+    text_chars = 17;  // chars that fit between left icon and right icon space
+  }
+
+  oled.setTextSize(1);
+  oled.setTextColor(OLED_BLACK);
+  oled.setCursor(text_x, 2);
+  oled.print(msg.substring(0, text_chars));
+  oled.display();
+}
+
+uint8_t Display::tickBannerIcon(uint8_t icon_id, uint8_t frame,
+                                uint32_t now, uint32_t& last_ms) {
+  // Timing per icon type
+  uint32_t interval;
+  uint8_t  num_frames;
+  const uint8_t* const* frames;
+
+  switch (icon_id) {
+    case ICON_SCAN_WIFI:
+      interval   = 250;
+      num_frames = 3;
+      frames     = icon_scan_wifi_frames;
+      break;
+    case ICON_SCAN_BT:
+      interval   = 300;
+      num_frames = 3;
+      frames     = icon_scan_bt_frames;
+      break;
+    case ICON_BOLT_ANIM:
+      interval   = 400;
+      num_frames = 2;
+      frames     = icon_bolt_anim_frames;
+      break;
+    default:
+      return frame;
+  }
+
+  if ((now - last_ms) < interval) return frame;
+  last_ms = now;
+  frame   = (frame + 1) % num_frames;
+
+  // Erase and redraw only the right-side 8×8 icon patch in the banner.
+  // Banner is white background → erase with white, draw with black.
+  oled.fillRect(118, 1, 8, 8, OLED_WHITE);
+  oled.drawBitmap(118, 1, frames[frame], 8, 8, OLED_BLACK);
+  oled.display();
+
+  return frame;
 }
 
 void Display::displayBuffer(bool do_clear) {
