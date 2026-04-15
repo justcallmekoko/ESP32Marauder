@@ -247,9 +247,11 @@ void MenuFunctions::main(uint32_t currentTime)
         // Brief green flash
         display_obj.tft.fillRect(0, 270, 240, 50, TFT_GREEN);
         display_obj.tft.setTextSize(2);
+        #ifdef HAS_GPS
         if (gps_obj.getFixStatus())
           display_obj.tft.setTextColor(TFT_BLACK, TFT_GREEN);
         else
+        #endif
           display_obj.tft.setTextColor(TFT_BLACK, TFT_RED);
         String poiFlash = "POI (" + String(wifi_scan_obj.poiCount) + ")";
         int16_t flashWidth = poiFlash.length() * 12;
@@ -1533,7 +1535,9 @@ void MenuFunctions::RunSetup()
   evilPortalMenu.list = new LinkedList<MenuNode>();
   ssidsMenu.list = new LinkedList<MenuNode>();
 
-  gpsPOIMenu.list = new LinkedList<MenuNode>();
+  #ifdef HAS_GPS
+    gpsPOIMenu.list = new LinkedList<MenuNode>();
+  #endif
 
   // Work menu names
   mainMenu.name = text_table1[6];
@@ -1575,14 +1579,18 @@ void MenuFunctions::RunSetup()
   #endif  
   htmlMenu.name = "EP HTML List";
   miniKbMenu.name = "Mini Keyboard";
+
   #ifdef HAS_SD
     sdDeleteMenu.name = "Delete SD Files";
   #endif
+
   selectProbeSSIDsMenu.name = "Probe Requests";
   evilPortalMenu.name = "Evil Portal";
   ssidsMenu.name = "SSIDs";
 
-  gpsPOIMenu.name = "GPS POI";
+  #ifdef HAS_GPS
+    gpsPOIMenu.name = "GPS POI";
+  #endif
 
   // Build Main Menu
   mainMenu.parentMenu = NULL;
