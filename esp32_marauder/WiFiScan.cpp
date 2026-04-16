@@ -9946,6 +9946,17 @@ void WiFiScan::displayTransmitRate() {
   #endif
 }
 
+uint16_t WiFiScan::rssiToColor(int8_t rssi) {
+  if (rssi >= -25)
+    return TFT_GREEN;
+  else if (rssi < -25 && rssi >= -50)
+    return TFT_YELLOW;
+  else if (rssi < -50 && rssi > -74)
+    return TFT_ORANGE;
+  else
+    return TFT_RED;
+}
+
 // Function for updating scan status
 void WiFiScan::main(uint32_t currentTime)
 {
@@ -10130,7 +10141,14 @@ void WiFiScan::main(uint32_t currentTime)
 
         for (int y = 0; y < access_points->size(); y++) {
           if (access_points->get(y).selected) {
-            display_obj.tft.println(access_points->get(y).essid + ": " + (String)access_points->get(y).rssi);
+            uint16_t color;
+
+            int8_t rssi = access_points->get(y).rssi;
+
+            display_obj.tft.print(access_points->get(y).essid + ": ");
+            display_obj.tft.setTextColor(this->rssiToColor(rssi), TFT_BLACK);
+            display_obj.tft.println((String)rssi);
+            display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
           }
         }
       #endif
