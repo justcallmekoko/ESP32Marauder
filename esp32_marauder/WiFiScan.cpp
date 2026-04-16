@@ -5219,8 +5219,8 @@ void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color) {
         display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
         display_obj.tftDrawChannelScaleButtons(set_channel, false);
         display_obj.tftDrawExitScaleButtons(false);
-        if (scan_mode == WIFI_SCAN_RAW_CAPTURE)
-          display_obj.tftDrawChanHopButton(false, settings_obj.loadSetting<bool>("ChanHop"));
+        //if (scan_mode == WIFI_SCAN_RAW_CAPTURE)
+        display_obj.tftDrawChanHopButton(false, settings_obj.loadSetting<bool>("ChanHop"));
       }
     #endif
   #endif
@@ -9063,6 +9063,7 @@ void WiFiScan::channelHop(bool filtered, bool ranged) {
        (this->currentScanMode == WIFI_SCAN_DEAUTH) ||
        (this->currentScanMode == WIFI_SCAN_EAPOL) ||
        (this->currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
+       (this->currentScanMode == WIFI_SCAN_SIG_STREN) ||
        (this->currentScanMode == WIFI_SCAN_PACKET_RATE)))
     return;
 
@@ -10113,6 +10114,8 @@ void WiFiScan::main(uint32_t currentTime)
     #endif
     if (currentTime - initTime >= this->channel_hop_delay * 500) {
       initTime = millis();
+
+      this->channelHop(true);
 
       #ifdef HAS_SCREEN
         display_obj.tft.fillRect(0,
