@@ -262,11 +262,12 @@ extern "C" {
 
       case Airtag: {
         for (int i = 0; i < airtags->size(); i++) {
-          if (airtags->get(i).selected) {
+          AirTag airtag = airtags->get(i);
+          if (airtag.selected) {
             #ifndef HAS_NIMBLE_2
-              AdvData.addData(std::string((char*)airtags->get(i).payload.data(), airtags->get(i).payloadSize));
+              AdvData.addData(std::string((char*)airtag.payload.data(), airtag.payloadSize));
             #else
-              AdvData.addData(airtags->get(i).payload.data(), airtags->get(i).payloadSize);
+              AdvData.addData(airtag.payload.data(), airtag.payloadSize);
             #endif
 
             break;
@@ -3002,6 +3003,8 @@ uint8_t WiFiScan::build_top10_for_ui(MacEntry* out_top10, MacSortMode mode) {
         return A.frame_count > B.frame_count;
 
       return age_ms(now_ms, A.last_seen_ms) < age_ms(now_ms, B.last_seen_ms);
+    } else if (mode == MacSortMode::HIGH_RSSI) {
+        return A.rssi > B.rssi;      
     } else {
       const uint32_t ageA = age_ms(now_ms, A.last_seen_ms);
       const uint32_t ageB = age_ms(now_ms, B.last_seen_ms);
@@ -3607,10 +3610,12 @@ void WiFiScan::RunSaveSSIDList(bool save_as) {
       this->startLog(F("SSIDs"));
 
       for (int i = 0; i < ssids->size(); i++) {
+        String targ_essid = ssids->get(i).essid;
+
         if (i < ssids->size() - 1)
-          buffer_obj.append(ssids->get(i).essid + "\n");
+          buffer_obj.append(targ_essid + "\n");
         else
-          buffer_obj.append(ssids->get(i).essid);
+          buffer_obj.append(targ_essid);
       }
 
       #ifdef HAS_SCREEN
@@ -4068,20 +4073,22 @@ void WiFiScan::RunAPInfo(uint16_t index, bool do_display) {
     }
   #endif
 
-  Serial.println("   ESSID: " + (String)access_points->get(index).essid);
-  Serial.println("   BSSID: " + (String)macToString(access_points->get(index).bssid));
-  Serial.println(" Channel: " + (String)access_points->get(index).channel);
-  Serial.println("    RSSI: " + (String)access_points->get(index).rssi);
-  Serial.println("  Frames: " + (String)access_points->get(index).packets);
-  Serial.println("Stations: " + (String)access_points->get(index).stations->size());
-  Serial.println("   Brand: " + (String)access_points->get(index).man);
+  AccessPoint access_point = access_points->get(index);
+
+  Serial.println("   ESSID: " + (String)access_point.essid);
+  Serial.println("   BSSID: " + (String)macToString(access_point.bssid));
+  Serial.println(" Channel: " + (String)access_point.channel);
+  Serial.println("    RSSI: " + (String)access_point.rssi);
+  Serial.println("  Frames: " + (String)access_point.packets);
+  Serial.println("Stations: " + (String)access_point.stations->size());
+  Serial.println("   Brand: " + (String)access_point.man);
   Serial.print(F("Complete EAPOL: "));
   if (this->getCompleteEapol(index) > 0)
     Serial.println(F("TRUE"));
   else
     Serial.println(F("FALSE"));
   
-  uint8_t sec = access_points->get(index).sec;
+  uint8_t sec = access_point.sec;
   //bool wps = access_points->get(index).wps;
 
   Serial.print(F("Security: "));
@@ -4098,22 +4105,15 @@ void WiFiScan::RunAPInfo(uint16_t index, bool do_display) {
     default:                             Serial.println(F("Unknown")); break;
   }
 
-  /*Serial.print(F("     WPS: "));
-  switch (wps) {
-    case true:                           Serial.println(F("true")); break;
-    case false:                          Serial.println(F("false")); break;
-    default:                             Serial.println(F("false")); break;
-  }*/
-
   #ifdef HAS_SCREEN
     if (do_display) {
-      display_obj.tft.println("   ESSID: " + (String)access_points->get(index).essid);
-      display_obj.tft.println("   BSSID: " + (String)macToString(access_points->get(index).bssid));
-      display_obj.tft.println(" Channel: " + (String)access_points->get(index).channel);
-      display_obj.tft.println("    RSSI: " + (String)access_points->get(index).rssi);
-      display_obj.tft.println("  Frames: " + (String)access_points->get(index).packets);
-      display_obj.tft.println("Stations: " + (String)access_points->get(index).stations->size());
-      display_obj.tft.println("   Brand: " + (String)access_points->get(index).man);
+      display_obj.tft.println("   ESSID: " + (String)access_point.essid);
+      display_obj.tft.println("   BSSID: " + (String)macToString(access_point.bssid));
+      display_obj.tft.println(" Channel: " + (String)access_point.channel);
+      display_obj.tft.println("    RSSI: " + (String)access_point.rssi);
+      display_obj.tft.println("  Frames: " + (String)access_point.packets);
+      display_obj.tft.println("Stations: " + (String)access_point.stations->size());
+      display_obj.tft.println("   Brand: " + (String)access_point.man);
       display_obj.tft.print(F("Complete EAPOL: "));
       if (this->getCompleteEapol(index) > 0)
         display_obj.tft.println(F("TRUE"));
@@ -4133,17 +4133,10 @@ void WiFiScan::RunAPInfo(uint16_t index, bool do_display) {
         case WIFI_SECURITY_WAPI:             display_obj.tft.println(F("WAPI")); break;
         default:                             display_obj.tft.println(F("Unknown")); break;
       }
-
-      /*display_obj.tft.print("     WPS: ");
-      switch (wps) {
-        case true:                           display_obj.tft.println(F("true")); break;
-        case false:                          display_obj.tft.println(F("false")); break;
-        default:                             display_obj.tft.println(F("false")); break;
-      }*/
     }
   #endif
 
-  if (!access_points->get(index).selected) {
+  if (!access_point.selected) {
     Serial.println(F("Selected: false"));
     #ifdef HAS_SCREEN
       if (do_display) {
@@ -4651,8 +4644,9 @@ void WiFiScan::executeBLESpam(EBLEPayloadType type) {
     }
     else if (type == Airtag) {
       for (int i = 0; i < airtags->size(); i++) {
-        if (airtags->get(i).selected) {
-          convertMacStringToUint8(airtags->get(i).mac, macAddr);
+        AirTag airtag = airtags->get(i);
+        if (airtag.selected) {
+          convertMacStringToUint8(airtag.mac, macAddr);
 
           macAddr[5] -= 2;
 
@@ -5083,14 +5077,18 @@ void WiFiScan::displayWardriveStats() {
 
       #ifndef HAS_MINI_SCREEN
         display_obj.tft.setTextSize(3);
+        display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+        display_obj.tft.println("WiFi: " + (String)this->beacon_frames);
+        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+        display_obj.tft.println("BT: " + (String)this->bt_frames + "\n");
       #else
         display_obj.tft.setTextSize(2);
+        display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+        display_obj.tft.println("WiFi:" + (String)this->beacon_frames);
+        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+        display_obj.tft.println("BT:" + (String)this->bt_frames + "\n");
       #endif
-      display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
-      display_obj.tft.println(this->beacon_frames);
-
-      display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-      display_obj.tft.println((String)this->bt_frames + "\n");
+      
 
       #ifndef HAS_MINI_SCREEN
         display_obj.tft.setTextSize(2);
@@ -5600,17 +5598,18 @@ int WiFiScan::checkMatchAP(char addr[], bool update_ap) {
   for (int i = 0; i < access_points->size(); i++) {
     bool mac_match = true;
 
+    AccessPoint access_point = access_points->get(i);
+
     for (int x = 0; x < 6; x++) {
-      if ((uint8_t)strtol(&addr[x * 3], NULL, 16) != access_points->get(i).bssid[x]) {
+      if ((uint8_t)strtol(&addr[x * 3], NULL, 16) != access_point.bssid[x]) {
         mac_match = false;
         break;
       }
     }
 
     if ((mac_match) && (update_ap)) {
-      AccessPoint ap = access_points->get(i);
-      ap.packets += 1;
-      access_points->set(i, ap);
+      access_point.packets += 1;
+      access_points->set(i, access_point);
       return i;
     }
   }
@@ -5694,11 +5693,12 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
 
       int index = wifi_scan_obj.checkMatchAP(addr);
 
-      if ((index > 0) && (!access_points->get(index).wps)) {
-        AccessPoint new_ap = access_points->get(index);
+      AccessPoint access_point = access_points->get(index);
+
+      if ((index > 0) && (!access_point.wps)) {
         //new_ap.wps = true;
-        new_ap.man = man;
-        access_points->set(index, new_ap);
+        access_point.man = man;
+        access_points->set(index, access_point);
       }
       //}
     }
@@ -6856,15 +6856,16 @@ void WiFiScan::multiSSIDSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t t
 
 void WiFiScan::saeAttackLoop(uint32_t currentTime) {
   for (int i = 0; i < access_points->size(); i++) { // Find selected APs
-    if (access_points->get(i).selected) {
-      if (this->set_channel != access_points->get(i).channel) // Set channel to AP's channel
-        this->changeChannel(access_points->get(i).channel);
+    AccessPoint access_point = access_points->get(i);
+    if (access_point.selected) {
+      if (this->set_channel != access_point.channel) // Set channel to AP's channel
+        this->changeChannel(access_point.channel);
 
       uint8_t rand_source_mac[6];
       generateRandomMac(rand_source_mac);
 
       
-      this->sendSAECommitFrame(access_points->get(i).bssid, rand_source_mac);
+      this->sendSAECommitFrame(access_point.bssid, rand_source_mac);
     }
   }
 
@@ -7149,10 +7150,11 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
 
           // Check list of APs
           for (int i = 0; i < access_points->size(); i++) {
-            if (access_points->get(i).selected) {
+            AccessPoint access_point = access_points->get(i);
+            if (access_point.selected) {
               // Compare AP bssid to ssid of recvd packet
               for (int x = 0; x < 6; x++) {
-                if (src_addr[x] != access_points->get(i).bssid[x]) {
+                if (src_addr[x] != access_point.bssid[x]) {
                   found = false;
                   break;
                 }
@@ -7160,7 +7162,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
                   found = true;
               }
               if (found) {
-                targ_ap = access_points->get(i);
+                targ_ap = access_point;
                 targ_index = i;
                 break;
               }
@@ -7172,10 +7174,10 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
           if ((targ_ap.rssi + 5 < snifferPacket->rx_ctrl.rssi) || (snifferPacket->rx_ctrl.rssi + 5 < targ_ap.rssi)) {
             targ_ap.rssi = snifferPacket->rx_ctrl.rssi;
             access_points->set(targ_index, targ_ap);
-            Serial.println((String)access_points->get(targ_index).essid + " RSSI: " + (String)access_points->get(targ_index).rssi);
-            display_string.concat((String)access_points->get(targ_index).essid);
+            Serial.println(targ_ap.essid + " RSSI: " + (String)targ_ap.rssi);
+            display_string.concat((String)targ_ap.essid);
             display_string.concat(" RSSI: ");
-            display_string.concat((String)access_points->get(targ_index).rssi);
+            display_string.concat((String)targ_ap.rssi);
             int temp_len = display_string.length();
             for (int i = 0; i < 50 - temp_len; i++)
             {
@@ -7408,7 +7410,8 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
 
     // Check list of APs
     for (int i = 0; i < access_points->size(); i++) {
-      if (access_points->get(i).selected) {
+      AccessPoint access_point = access_points->get(i);
+      if (access_point.selected) {
         uint8_t addr[] = {snifferPacket->payload[10],
                           snifferPacket->payload[11],
                           snifferPacket->payload[12],
@@ -7417,7 +7420,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
                           snifferPacket->payload[15]};
         // Compare AP bssid to ssid of recvd packet
         for (int x = 0; x < 6; x++) {
-          if (addr[x] != access_points->get(i).bssid[x]) {
+          if (addr[x] != access_point.bssid[x]) {
             found = false;
             break;
           }
@@ -7425,7 +7428,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
             found = true;
         }
         if (found) {
-          targ_ap = access_points->get(i);
+          targ_ap = access_point;
           targ_index = i;
           break;
         }
@@ -7438,7 +7441,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
       targ_ap.rssi = snifferPacket->rx_ctrl.rssi;
       access_points->set(targ_index, targ_ap);
 
-      Serial.println((String)access_points->get(targ_index).essid + " RSSI: " + (String)access_points->get(targ_index).rssi);
+      Serial.println((String)targ_ap.essid + " RSSI: " + (String)targ_ap.rssi);
     }
     else
       return;
@@ -7974,9 +7977,11 @@ void WiFiScan::sendProbeAttack(uint32_t currentTime) {
   // Itterate through all access points in list
   for (int i = 0; i < access_points->size(); i++) {
 
+    AccessPoint access_point = access_points->get(i);
+
     // Check if active
-    if (access_points->get(i).selected) {
-      this->set_channel = access_points->get(i).channel;
+    if (access_point.selected) {
+      this->set_channel = access_point.channel;
       this->changeChannel(this->set_channel);
       delay(1);
       
@@ -7991,13 +7996,13 @@ void WiFiScan::sendProbeAttack(uint32_t currentTime) {
       prob_req_packet[15] = random(256);
 
       // Set SSID length
-      int ssidLen = access_points->get(i).essid.length();
+      int ssidLen = access_point.essid.length();
       int fullLen = ssidLen;
       prob_req_packet[25] = fullLen;
 
       // Insert ESSID
-      char buf[access_points->get(i).essid.length() + 1] = {};
-      access_points->get(i).essid.toCharArray(buf, access_points->get(i).essid.length() + 1);
+      char buf[access_point.essid.length() + 1] = {};
+      access_point.essid.toCharArray(buf, access_point.essid.length() + 1);
       
       for(int i = 0; i < ssidLen; i++)
         prob_req_packet[26 + i] = buf[i];
@@ -8323,13 +8328,15 @@ void WiFiScan::sendAssociationSleep(const char* ESSID, uint8_t bssid[6], int cha
 void WiFiScan::sendBadMsgAttack(uint32_t currentTime, bool all) {
   if (!all) {
     for (int i = 0; i < access_points->size(); i++) {
-      for (int x = 0; x < access_points->get(i).stations->size(); x++) {
-        if (stations->get(access_points->get(i).stations->get(x)).selected) {
+      AccessPoint access_point = access_points->get(i);
+
+      for (int x = 0; x < access_point.stations->size(); x++) {
+        if (stations->get(access_point.stations->get(x)).selected) {
           //for (int s = 0; s < 20; s++) {
-            this->sendEapolBagMsg1(access_points->get(i).bssid,
-                                    access_points->get(i).channel,
-                                    stations->get(access_points->get(i).stations->get(x)).mac,
-                                    access_points->get(i).sec);
+            this->sendEapolBagMsg1(access_point.bssid,
+                                    access_point.channel,
+                                    stations->get(access_point.stations->get(x)).mac,
+                                    access_point.sec);
           //}
         }
       }
@@ -8337,13 +8344,14 @@ void WiFiScan::sendBadMsgAttack(uint32_t currentTime, bool all) {
   }
   else {
     for (int i = 0; i < access_points->size(); i++) {
-      if (access_points->get(i).selected) {
-        for (int x = 0; x < access_points->get(i).stations->size(); x++) {
+      AccessPoint access_point = access_points->get(i);
+      if (access_point.selected) {
+        for (int x = 0; x < access_point.stations->size(); x++) {
           //for (int s = 0; s < 20; s++) {
-            this->sendEapolBagMsg1(access_points->get(i).bssid,
-                                    access_points->get(i).channel,
-                                    stations->get(access_points->get(i).stations->get(x)).mac,
-                                    access_points->get(i).sec);
+            this->sendEapolBagMsg1(access_point.bssid,
+                                    access_point.channel,
+                                    stations->get(access_point.stations->get(x)).mac,
+                                    access_point.sec);
           //}
         }
       }
@@ -8354,22 +8362,24 @@ void WiFiScan::sendBadMsgAttack(uint32_t currentTime, bool all) {
 void WiFiScan::sendAssocSleepAttack(uint32_t currentTime, bool all) {
   if (!all) {
     for (int i = 0; i < access_points->size(); i++) {
-      for (int x = 0; x < access_points->get(i).stations->size(); x++) {
-        if (stations->get(access_points->get(i).stations->get(x)).selected) {
-          this->sendAssociationSleep(access_points->get(i).essid.c_str(), access_points->get(i).bssid,
-                                  access_points->get(i).channel,
-                                  stations->get(access_points->get(i).stations->get(x)).mac);
+      AccessPoint access_point = access_points->get(i);
+      for (int x = 0; x < access_point.stations->size(); x++) {
+        if (stations->get(access_point.stations->get(x)).selected) {
+          this->sendAssociationSleep(access_point.essid.c_str(), access_point.bssid,
+                                  access_point.channel,
+                                  stations->get(access_point.stations->get(x)).mac);
         }
       }
     }
   }
   else {
     for (int i = 0; i < access_points->size(); i++) {
-      if (access_points->get(i).selected) {
-        for (int x = 0; x < access_points->get(i).stations->size(); x++) {
-          this->sendAssociationSleep(access_points->get(i).essid.c_str(), access_points->get(i).bssid,
-                                  access_points->get(i).channel,
-                                  stations->get(access_points->get(i).stations->get(x)).mac);
+      AccessPoint access_point = access_points->get(i);
+      if (access_point.selected) {
+        for (int x = 0; x < access_point.stations->size(); x++) {
+          this->sendAssociationSleep(access_point.essid.c_str(), access_point.bssid,
+                                  access_point.channel,
+                                  stations->get(access_point.stations->get(x)).mac);
         }
       }
     }
@@ -8519,7 +8529,8 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
 
     // Check list of APs
     for (int i = 0; i < access_points->size(); i++) {
-      if (access_points->get(i).selected) {
+      AccessPoint access_point = access_points->get(i);
+      if (access_point.selected) {
         uint8_t addr[] = {snifferPacket->payload[10],
                           snifferPacket->payload[11],
                           snifferPacket->payload[12],
@@ -8528,7 +8539,7 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
                           snifferPacket->payload[15]};
         // Compare AP bssid to ssid of recvd packet
         for (int x = 0; x < 6; x++) {
-          if (addr[x] != access_points->get(i).bssid[x]) {
+          if (addr[x] != access_point.bssid[x]) {
             found = false;
             break;
           }
@@ -8536,7 +8547,7 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
             found = true;
         }
         if (found) {
-          targ_ap = access_points->get(i);
+          targ_ap = access_point;
           targ_index = i;
           break;
         }
@@ -8555,7 +8566,8 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
 
     // Check list of Stations
     for (int i = 0; i < stations->size(); i++) {
-      if (stations->get(i).selected) {
+      Station station = stations->get(i);
+      if (station.selected) {
         uint8_t addr[] = {snifferPacket->payload[10],
                           snifferPacket->payload[11],
                           snifferPacket->payload[12],
@@ -8564,7 +8576,7 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
                           snifferPacket->payload[15]};
         // Compare AP bssid to ssid of recvd packet
         for (int x = 0; x < 6; x++) {
-          if (addr[x] != stations->get(i).mac[x]) {
+          if (addr[x] != station.mac[x]) {
             found = false;
             break;
           }
@@ -8572,7 +8584,7 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
             found = true;
         }
         if (found) {
-          targ_sta = stations->get(i);
+          targ_sta = station;
           targ_index = i;
           break;
         }
@@ -8596,17 +8608,19 @@ uint32_t WiFiScan::getCompleteEapol(int check_index) {
   uint32_t total_complete = 0;
   if (check_index < 0) {
     for (int i = 0; i < access_points->size(); i++) {
-      if ((access_points->get(i).has_msg_1) &&
-          (access_points->get(i).has_msg_2) &&
-          (access_points->get(i).has_msg_3) &&
-          (access_points->get(i).has_msg_4))
+      AccessPoint access_point = access_points->get(i);
+      if ((access_point.has_msg_1) &&
+          (access_point.has_msg_2) &&
+          (access_point.has_msg_3) &&
+          (access_point.has_msg_4))
         total_complete++;
     }
   } else {
-    if ((access_points->get(check_index).has_msg_1) &&
-        (access_points->get(check_index).has_msg_2) &&
-        (access_points->get(check_index).has_msg_3) &&
-        (access_points->get(check_index).has_msg_4))
+    AccessPoint access_point = access_points->get(check_index);
+    if ((access_point.has_msg_1) &&
+        (access_point.has_msg_2) &&
+        (access_point.has_msg_3) &&
+        (access_point.has_msg_4))
       total_complete++;
   }
 
@@ -9112,9 +9126,10 @@ void WiFiScan::channelHop(bool filtered, bool ranged) {
 
         // Check if it matches a selected AP's channel
         for (int i = 0; i < access_points->size(); i++) {
-          if (access_points->get(i).selected) {
+          AccessPoint access_point = access_points->get(i);
+          if (access_point.selected) {
             ap_selected = true;
-            if (access_points->get(i).channel == this->set_channel) {
+            if (access_point.channel == this->set_channel) {
               channel_match = true;
               break;
             }
@@ -9134,9 +9149,10 @@ void WiFiScan::channelHop(bool filtered, bool ranged) {
 
         // Check if it matches a selected AP's channel
         for (int i = 0; i < access_points->size(); i++) {
-          if (access_points->get(i).selected) {
+          AccessPoint access_point = access_points->get(i);
+          if (access_point.selected) {
             ap_selected = true;
-            if (access_points->get(i).channel == this->set_channel) {
+            if (access_point.channel == this->set_channel) {
               //Serial.println("Setting to channel " + (String)this->set_channel + " for AP " + access_points->get(i).essid);
               channel_match = true;
               break;
@@ -9495,19 +9511,21 @@ void WiFiScan::renderPacketRate() {
   #endif
 
   for (int i = 0; i < access_points->size(); i++) {
-    if (access_points->get(i).selected) {
+    AccessPoint access_point = access_points->get(i);
+    if (access_point.selected) {
       #ifdef HAS_SCREEN
-        display_obj.tft.println(access_points->get(i).essid + ": " + (String)access_points->get(i).packets);
+        display_obj.tft.println(access_point.essid + ": " + (String)access_point.packets);
       #endif
-      Serial.println(access_points->get(i).essid + ": " + (String)access_points->get(i).packets);
+      Serial.println(access_point.essid + ": " + (String)access_point.packets);
     }
   }
   for (int i = 0; i < stations->size(); i++) {
-    if (stations->get(i).selected) {
+    Station station = stations->get(i);
+    if (station.selected) {
       #ifdef HAS_SCREEN
-        display_obj.tft.println(macToString(stations->get(i).mac) + ": " + (String)stations->get(i).packets);
+        display_obj.tft.println(macToString(station.mac) + ": " + (String)station.packets);
       #endif
-      Serial.println(macToString(stations->get(i).mac) + ": " + (String)stations->get(i).packets);
+      Serial.println(macToString(station.mac) + ": " + (String)station.packets);
     }
   }
 
@@ -10113,8 +10131,9 @@ void WiFiScan::main(uint32_t currentTime)
         display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
         for (int y = 0; y < airtags->size(); y++) {
-          float last_seen_sec = (millis() - airtags->get(y).last_seen) / 1000;
-          display_obj.tft.println((String)airtags->get(y).rssi + " " + (String)last_seen_sec + "s " + airtags->get(y).mac);
+          AirTag airtag = airtags->get(y);
+          float last_seen_sec = (millis() - airtag.last_seen) / 1000;
+          display_obj.tft.println((String)airtag.rssi + " " + (String)last_seen_sec + "s " + airtag.mac);
         }
       #endif
     }
@@ -10135,17 +10154,24 @@ void WiFiScan::main(uint32_t currentTime)
                                 TFT_HEIGHT - STATUS_BAR_WIDTH + 1,
                                 TFT_BLACK);
                                 
+        #ifdef HAS_MINI_SCREEN
+          if (this->filterActive()) {
+            display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+            display_obj.showCenterText("(Filtered)", (STATUS_BAR_WIDTH * 1) + CHAR_WIDTH + EXT_BUTTON_WIDTH);
+          }
+        #endif
         display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH + EXT_BUTTON_WIDTH);
         display_obj.tft.setTextSize(1);
         display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
         for (int y = 0; y < access_points->size(); y++) {
-          if (access_points->get(y).selected) {
+          AccessPoint access_point = access_points->get(y);
+          if (access_point.selected) {
             uint16_t color;
 
-            int8_t rssi = access_points->get(y).rssi;
+            int8_t rssi = access_point.rssi;
 
-            display_obj.tft.print(access_points->get(y).essid + ": ");
+            display_obj.tft.print(access_point.essid + ": ");
             display_obj.tft.setTextColor(this->rssiToColor(rssi), TFT_BLACK);
             display_obj.tft.println((String)rssi);
             display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
@@ -10272,10 +10298,11 @@ void WiFiScan::main(uint32_t currentTime)
       initTime = millis();
       if (this->ep_deauth) {
         for (int i = 0; i < access_points->size(); i++) {
-          if (access_points->get(i).selected) {
+          AccessPoint access_point = access_points->get(i);
+          if (access_point.selected) {
             uint8_t dst_mac_bytes[6];
             convertMacStringToUint8("ff:ff:ff:ff:ff:ff", dst_mac_bytes);
-            this->sendDeauthFrame(access_points->get(i).bssid, access_points->get(i).channel, dst_mac_bytes);
+            this->sendDeauthFrame(access_point.bssid, access_point.channel, dst_mac_bytes);
           }
         }
       }
@@ -10350,9 +10377,10 @@ void WiFiScan::main(uint32_t currentTime)
     uint8_t dst_mac_bytes[6];
     convertMacStringToUint8(this->dst_mac, dst_mac_bytes);
     for (int i = 0; i < access_points->size(); i++) {
-      if (access_points->get(i).selected) {
+      AccessPoint access_point = access_points->get(i);
+      if (access_point.selected) {
         for (int i = 0; i < 55; i++) {
-          this->sendDeauthFrame(access_points->get(i).bssid, access_points->get(i).channel, dst_mac_bytes);
+          this->sendDeauthFrame(access_point.bssid, access_point.channel, dst_mac_bytes);
         }
       }
     }
@@ -10397,9 +10425,10 @@ void WiFiScan::main(uint32_t currentTime)
   else if (currentScanMode == WIFI_ATTACK_DEAUTH_TARGETED) {
     // Loop through each AP
     for (int x = 0; x < access_points->size(); x++) {
+      AccessPoint access_point = access_points->get(x);
       // Only get selected APs
-      if (access_points->get(x).selected) {
-        AccessPoint cur_ap = access_points->get(x);
+      if (access_point.selected) {
+        AccessPoint cur_ap = access_point;
         // Loop through each AP's Station
         for (int i = 0; i < cur_ap.stations->size(); i++) {
           // Only get selected Stations

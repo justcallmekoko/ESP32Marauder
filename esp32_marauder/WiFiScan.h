@@ -276,7 +276,8 @@ struct Flipper {
 
 enum class MacSortMode : uint8_t {
   MOST_RECENT,
-  MOST_FRAMES
+  MOST_FRAMES,
+  HIGH_RSSI
 };
 
 class WiFiScan

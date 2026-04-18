@@ -69,6 +69,7 @@ struct AccessPoint {
   bool has_msg_2;
   bool has_msg_3;
   bool has_msg_4;
+  uint32_t last_seen_ms;
 };
 
 class CaptiveRequestHandler : public AsyncWebHandler {

@@ -154,6 +154,7 @@ void CommandLine::filterAccessPoints(String filter) {
 
   // Loop over each access point and check if it matches any of the filters
   for (int i = 0; i < access_points->size(); i++) {
+    AccessPoint access_point = access_points->get(i);
     bool matchesFilter = false;
     for (int j = 0; j < filters.size(); j++) {
       String f = toLowerCase(filters.get(j));
@@ -163,7 +164,7 @@ void CommandLine::filterAccessPoints(String filter) {
             (ssidEquals.charAt(0) == '\'' && ssidEquals.charAt(ssidEquals.length() - 1) == '\'' && ssidEquals.length() > 1)) {
           ssidEquals = ssidEquals.substring(1, ssidEquals.length() - 1);
         }
-        if (access_points->get(i).essid.equalsIgnoreCase(ssidEquals)) {
+        if (access_point.essid.equalsIgnoreCase(ssidEquals)) {
           matchesFilter = true;
           break;
         }
@@ -173,7 +174,7 @@ void CommandLine::filterAccessPoints(String filter) {
             (ssidContains.charAt(0) == '\'' && ssidContains.charAt(ssidContains.length() - 1) == '\'' && ssidContains.length() > 1)) {
           ssidContains = ssidContains.substring(1, ssidContains.length() - 1);
         }
-        String essid = toLowerCase(access_points->get(i).essid);
+        String essid = toLowerCase(access_point.essid);
         if (essid.indexOf(ssidContains) != -1) {
           matchesFilter = true;
           break;
@@ -181,9 +182,8 @@ void CommandLine::filterAccessPoints(String filter) {
       }
     }
     // Toggles the selected state of the AP
-    AccessPoint new_ap = access_points->get(i);
-    new_ap.selected = matchesFilter;
-    access_points->set(i, new_ap);
+    access_point.selected = matchesFilter;
+    access_points->set(i, access_point);
 
     if (matchesFilter) {
       count_selected++;
@@ -1345,12 +1345,13 @@ void CommandLine::runCommand(String input) {
     // List APs
     if (ap_sw != -1) {
       for (int i = 0; i < access_points->size(); i++) {
-        if (access_points->get(i).selected) {
-          Serial.println("[" + (String)i + "][CH:" + (String)access_points->get(i).channel + "] " + access_points->get(i).essid + " " + (String)access_points->get(i).rssi + " (selected)");
+        AccessPoint access_point = access_points->get(i);
+        if (access_point.selected) {
+          Serial.println("[" + (String)i + "][CH:" + (String)access_point.channel + "] " + access_point.essid + " " + (String)access_point.rssi + " (selected)");
           count_selected += 1;
         } 
         else
-          Serial.println("[" + (String)i + "][CH:" + (String)access_points->get(i).channel + "] " + access_points->get(i).essid + " " + (String)access_points->get(i).rssi);
+          Serial.println("[" + (String)i + "][CH:" + (String)access_point.channel + "] " + access_point.essid + " " + (String)access_point.rssi);
       }
       this->showCounts(count_selected);
     }
@@ -1382,17 +1383,18 @@ void CommandLine::runCommand(String input) {
     else if (cl_sw != -1) {
       char sta_mac[] = "00:00:00:00:00:00";
       for (int x = 0; x < access_points->size(); x++) {
-        Serial.println("[" + (String)x + "] " + access_points->get(x).essid + " " + (String)access_points->get(x).rssi + ":");
-        for (int i = 0; i < access_points->get(x).stations->size(); i++) {
-          wifi_scan_obj.getMAC(sta_mac, stations->get(access_points->get(x).stations->get(i)).mac, 0);
-          if (stations->get(access_points->get(x).stations->get(i)).selected) {
-            Serial.print("  [" + (String)access_points->get(x).stations->get(i) + "] ");
+        AccessPoint access_point = access_points->get(x);
+        Serial.println("[" + (String)x + "] " + access_point.essid + " " + (String)access_point.rssi + ":");
+        for (int i = 0; i < access_point.stations->size(); i++) {
+          wifi_scan_obj.getMAC(sta_mac, stations->get(access_point.stations->get(i)).mac, 0);
+          if (stations->get(access_point.stations->get(i)).selected) {
+            Serial.print("  [" + (String)access_point.stations->get(i) + "] ");
             Serial.print(sta_mac);
             Serial.println(F(" (selected)"));
             count_selected += 1;
           }
           else {
-            Serial.print("  [" + (String)access_points->get(x).stations->get(i) + "] ");
+            Serial.print("  [" + (String)access_point.stations->get(i) + "] ");
             Serial.println(sta_mac);
           }
         }
@@ -1482,16 +1484,17 @@ void CommandLine::runCommand(String input) {
         // Select ALL APs
         if (cmd_args.get(ap_sw + 1) == "all") {
           for (int i = 0; i < access_points->size(); i++) {
-            if (access_points->get(i).selected) {
+            AccessPoint access_point = access_points->get(i);
+            if (access_point.selected) {
               // Unselect "selected" ap
-              AccessPoint new_ap = access_points->get(i);
+              AccessPoint new_ap = access_point;
               new_ap.selected = false;
               access_points->set(i, new_ap);
               count_unselected += 1;
             }
             else {
               // Select "unselected" ap
-              AccessPoint new_ap = access_points->get(i);
+              AccessPoint new_ap = access_point;
               new_ap.selected = true;
               access_points->set(i, new_ap);
               count_selected += 1;
