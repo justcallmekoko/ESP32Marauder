@@ -2437,32 +2437,34 @@ void WiFiScan::setLEDMode(int mode) {
 }
 
 void WiFiScan::displayTargetFilter() {
-  if (this->filterActive()) {
-    display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
-    #ifdef HAS_MINI_SCREEN
-      display_obj.tft.setTextSize(1);
-    #else
-      display_obj.tft.setTextSize(2);
-    #endif
+  #ifdef HAS_SCREEN
+    if (this->filterActive()) {
+      display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+      #ifdef HAS_MINI_SCREEN
+        display_obj.tft.setTextSize(1);
+      #else
+        display_obj.tft.setTextSize(2);
+      #endif
 
-    display_obj.showCenterText("Target Networks", (STATUS_BAR_WIDTH * 3) + (CHAR_WIDTH));
-    display_obj.tft.setTextSize(1);
-    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    for (int i = 0; i < access_points->size(); i++) {
-      AccessPoint access_point = access_points->get(i);
-      if (access_point.selected)
-        display_obj.showCenterText(access_point.essid, display_obj.tft.getCursorY());
+      display_obj.showCenterText("Target Networks", (STATUS_BAR_WIDTH * 3) + (CHAR_WIDTH));
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      for (int i = 0; i < access_points->size(); i++) {
+        AccessPoint access_point = access_points->get(i);
+        if (access_point.selected)
+          display_obj.showCenterText(access_point.essid, display_obj.tft.getCursorY());
+      }
+    } else {
+      display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+      #ifdef HAS_MINI_SCREEN
+        display_obj.tft.setTextSize(1);
+      #else
+        display_obj.tft.setTextSize(2);
+      #endif
+
+      display_obj.showCenterText("No Networks Selected", (STATUS_BAR_WIDTH * 3) + (CHAR_WIDTH));
     }
-  } else {
-    display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
-    #ifdef HAS_MINI_SCREEN
-      display_obj.tft.setTextSize(1);
-    #else
-      display_obj.tft.setTextSize(2);
-    #endif
-
-    display_obj.showCenterText("No Networks Selected", (STATUS_BAR_WIDTH * 3) + (CHAR_WIDTH));
-  }
+  #endif
 }
 
 void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_string) {
