@@ -263,8 +263,6 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_STATION) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_WAR_DRIVE) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_EVIL_PORTAL) ||
-          (wifi_scan_obj.currentScanMode == WIFI_SCAN_TARGET_AP) ||
-          (wifi_scan_obj.currentScanMode == WIFI_SCAN_TARGET_AP_FULL) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA) ||
           (wifi_scan_obj.currentScanMode == WIFI_PING_SCAN) ||
           (wifi_scan_obj.currentScanMode == WIFI_ARP_SCAN) ||
@@ -368,8 +366,6 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_WAR_DRIVE) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_EVIL_PORTAL) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN) ||
-            (wifi_scan_obj.currentScanMode == WIFI_SCAN_TARGET_AP) ||
-            (wifi_scan_obj.currentScanMode == WIFI_SCAN_TARGET_AP_FULL) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA) ||
             (wifi_scan_obj.currentScanMode == WIFI_PING_SCAN) ||
             (wifi_scan_obj.currentScanMode == WIFI_ARP_SCAN) ||
@@ -1758,21 +1754,11 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_MULTISSID, TFT_ORANGE);
   });
-  this->addNodes(&wifiSnifferMenu, text_table1[49], TFTMAGENTA, NULL, BEACON_SNIFF, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_TARGET_AP, TFT_MAGENTA);
-  });
   this->addNodes(&wifiSnifferMenu, "Scan AP/STA", TFTLIME, NULL, BEACON_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_AP_STA, 0x97e0);
   });
-  /*this->addNodes(&wifiSnifferMenu, text_table1[59], TFTORANGE, NULL, PACKET_MONITOR, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_STATION, TFT_WHITE);
-  });*/
   this->addNodes(&wifiSnifferMenu, "Fox Hunt", TFTCYAN, NULL, PACKET_MONITOR, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();

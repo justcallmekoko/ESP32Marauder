@@ -244,7 +244,6 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_PORT_SCAN_CMD);
     Serial.println(HELP_SIGSTREN_CMD);
     Serial.println(HELP_SCAN_ALL_CMD);
-    Serial.println(HELP_SCANAP_CMD);
     //Serial.println(HELP_SCANSTA_CMD);
     Serial.println(HELP_SNIFF_RAW_CMD);
     Serial.println(HELP_SNIFF_BEACON_CMD);
@@ -661,106 +660,36 @@ void CommandLine::runCommand(String input) {
       Serial.println(STOPSCAN_CMD);
       wifi_scan_obj.StartScan(WIFI_SCAN_AP_STA, TFT_MAGENTA);
     }
-    else if (cmd_args.get(0) == SCANAP_CMD) {
-      int full_sw = -1;
-      #ifdef HAS_SCREEN
-        display_obj.clearScreen();
-        menu_function_obj.drawStatusBar();
-      #endif
-
-      if (full_sw == -1) {
-        Serial.print(F("Starting AP scan. Stop with "));
-        Serial.println(STOPSCAN_CMD);
-        wifi_scan_obj.StartScan(WIFI_SCAN_TARGET_AP, TFT_MAGENTA);
-      }
-    }
     // Raw sniff
-    else if (cmd_args.get(0) == SNIFF_RAW_CMD) {
+    else if (cmd_args.get(0) == SNIFF_RAW_CMD)
       this->startScanFromCLI(WIFI_SCAN_RAW_CAPTURE, TFT_WHITE, "Raw sniff");
-      /*Serial.println(STOPSCAN_CMD);
-      #ifdef HAS_SCREEN
-        display_obj.clearScreen();
-        menu_function_obj.drawStatusBar();
-      #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_RAW_CAPTURE, TFT_WHITE);*/
-    }
-    // Scan stations
-    /*else if (cmd_args.get(0) == SCANSTA_CMD) {    
-      if(access_points->size() < 1)
-        Serial.print(F("The AP list is empty. Scan APs first with "));
-        Serial.println(SCANAP_CMD);  
-
-      this->startScanFromCLI(WIFI_SCAN_STATION, TFT_ORANGE, "Station scan");
-    }*/
     // Beacon sniff
     else if (cmd_args.get(0) == SNIFF_BEACON_CMD) {
       this->startScanFromCLI(WIFI_SCAN_AP, TFT_MAGENTA, "Beacon sniff");
-      /*Serial.println(STOPSCAN_CMD);
-      #ifdef HAS_SCREEN
-        display_obj.clearScreen();
-        menu_function_obj.drawStatusBar();
-      #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_AP, TFT_MAGENTA);*/
     }
     // SAE sniff
     else if (cmd_args.get(0) == SNIFF_SAE_CMD) {
       this->startScanFromCLI(WIFI_SCAN_SAE_COMMIT, TFT_MAGENTA, "Commit sniff");
-      /*Serial.println(STOPSCAN_CMD);
-      #ifdef HAS_SCREEN
-        display_obj.clearScreen();
-        menu_function_obj.drawStatusBar();
-      #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_SAE_COMMIT, TFT_MAGENTA);*/
     }
     // Probe sniff
     else if (cmd_args.get(0) == SNIFF_PROBE_CMD) {
       this->startScanFromCLI(WIFI_SCAN_PROBE, TFT_MAGENTA, "Probe sniff");
-      /*Serial.println(STOPSCAN_CMD);
-      #ifdef HAS_SCREEN
-        display_obj.clearScreen();
-        menu_function_obj.drawStatusBar();
-      #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_PROBE, TFT_MAGENTA);*/
     }
     // Deauth sniff
     else if (cmd_args.get(0) == SNIFF_DEAUTH_CMD) {
       this->startScanFromCLI(WIFI_SCAN_DEAUTH, TFT_RED, "Deauth sniff");
-      /*Serial.println(STOPSCAN_CMD);
-      #ifdef HAS_SCREEN
-        display_obj.clearScreen();
-        menu_function_obj.drawStatusBar();
-      #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_DEAUTH, TFT_RED);*/
     }
     // Pwn sniff
     else if (cmd_args.get(0) == SNIFF_PWN_CMD) {
       this->startScanFromCLI(WIFI_SCAN_PWN, TFT_MAGENTA, "Pwnagotchi sniff");
-      /*Serial.println(STOPSCAN_CMD);
-      #ifdef HAS_SCREEN
-        display_obj.clearScreen();
-        menu_function_obj.drawStatusBar();
-      #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_PWN, TFT_MAGENTA);*/
     }
     // PineScan sniff
     else if (cmd_args.get(0) == SNIFF_PINESCAN_CMD) {
       this->startScanFromCLI(WIFI_SCAN_PINESCAN, TFT_MAGENTA, "Pinescan sniff");
-      /*Serial.println(STOPSCAN_CMD);
-      #ifdef HAS_SCREEN
-        display_obj.clearScreen();
-        menu_function_obj.drawStatusBar();
-      #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_PINESCAN, TFT_MAGENTA);*/
     }
     // MultiSSID sniff
     else if (cmd_args.get(0) == SNIFF_MULTISSID_CMD) {
       this->startScanFromCLI(WIFI_SCAN_MULTISSID, TFT_MAGENTA, "MultiSSID sniff");
-      /*Serial.println(STOPSCAN_CMD);
-      #ifdef HAS_SCREEN
-        display_obj.clearScreen();
-        menu_function_obj.drawStatusBar();
-      #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_MULTISSID, TFT_MAGENTA);*/
     }
     // PMKID sniff
     else if (cmd_args.get(0) == SNIFF_PMKID_CMD) {
@@ -1386,8 +1315,9 @@ void CommandLine::runCommand(String input) {
         AccessPoint access_point = access_points->get(x);
         Serial.println("[" + (String)x + "] " + access_point.essid + " " + (String)access_point.rssi + ":");
         for (int i = 0; i < access_point.stations->size(); i++) {
-          wifi_scan_obj.getMAC(sta_mac, stations->get(access_point.stations->get(i)).mac, 0);
-          if (stations->get(access_point.stations->get(i)).selected) {
+          Station station = stations->get(access_point.stations->get(i));
+          wifi_scan_obj.getMAC(sta_mac, station.mac, 0);
+          if (station.selected) {
             Serial.print("  [" + (String)access_point.stations->get(i) + "] ");
             Serial.print(sta_mac);
             Serial.println(F(" (selected)"));
@@ -1431,10 +1361,11 @@ void CommandLine::runCommand(String input) {
     if ((ap_sw != -1) && (pw_sw != -1)) {
       int index = cmd_args.get(ap_sw + 1).toInt();
       String password = cmd_args.get(pw_sw + 1);
-      Serial.println("Using SSID: " + (String)access_points->get(index).essid + " Password: " + (String)password);
+      AccessPoint access_point = access_points->get(index);
+      Serial.println("Using SSID: " + (String)access_point.essid + " Password: " + (String)password);
       //wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
       //wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
-      wifi_scan_obj.joinWiFi(access_points->get(index).essid, password, false);
+      wifi_scan_obj.joinWiFi(access_point.essid, password, false);
       #ifdef HAS_SCREEN
         #ifdef HAS_MINI_KB
           menu_function_obj.changeMenu(menu_function_obj.current_menu);
@@ -1507,21 +1438,22 @@ void CommandLine::runCommand(String input) {
           // Mark APs as selected
           for (int i = 0; i < ap_index.size(); i++) {
             int index = ap_index.get(i).toInt();
+            AccessPoint access_point = access_points->get(index);
             if (!this->inRange(access_points->size(), index)) {
               Serial.print(F("Index not in range: "));
               Serial.println(index);
               continue;
             }
-            if (access_points->get(index).selected) {
+            if (access_point.selected) {
               // Unselect "selected" ap
-              AccessPoint new_ap = access_points->get(index);
+              AccessPoint new_ap = access_point;
               new_ap.selected = false;
               access_points->set(index, new_ap);
               count_unselected += 1;
             }
             else {
               // Select "unselected" ap
-              AccessPoint new_ap = access_points->get(index);
+              AccessPoint new_ap = access_point;
               new_ap.selected = true;
               access_points->set(index, new_ap);
               count_selected += 1;
@@ -1537,16 +1469,17 @@ void CommandLine::runCommand(String input) {
       // Select all Stations
       if (cmd_args.get(cl_sw + 1) == "all") {
         for (int i = 0; i < stations->size(); i++) {
-          if (stations->get(i).selected) {
+          Station station = stations->get(i);
+          if (station.selected) {
             // Unselect "selected" ap
-            Station new_sta = stations->get(i);
+            Station new_sta = station;
             new_sta.selected = false;
             stations->set(i, new_sta);
             count_unselected += 1;
           }
           else {
             // Select "unselected" ap
-            Station new_sta = stations->get(i);
+            Station new_sta = station;
             new_sta.selected = true;
             stations->set(i, new_sta);
             count_selected += 1;
@@ -1559,21 +1492,22 @@ void CommandLine::runCommand(String input) {
         // Mark Stations as selected
         for (int i = 0; i < sta_index.size(); i++) {
           int index = sta_index.get(i).toInt();
+          Station station = stations->get(index);
           if (!this->inRange(stations->size(), index)) {
             Serial.print(F("Index not in range: "));
             Serial.println(index);
             continue;
           }
-          if (stations->get(index).selected) {
+          if (station.selected) {
             // Unselect "selected" ap
-            Station new_sta = stations->get(index);
+            Station new_sta = station;
             new_sta.selected = false;
             stations->set(index, new_sta);
             count_unselected += 1;
           }
           else {
             // Select "unselected" ap
-            Station new_sta = stations->get(index);
+            Station new_sta = station;
             new_sta.selected = true;
             stations->set(index, new_sta);
             count_selected += 1;
@@ -1688,9 +1622,10 @@ void CommandLine::runCommand(String input) {
 
       // Duplicate check
       for (int i = 0; i < access_points->size(); i++) {
+        AccessPoint access_point = access_points->get(i);
         bool match = true;
         for (int x = 0; x < 6; x++) {
-          if (mac[x] != access_points->get(i).bssid[x]) {
+          if (mac[x] != access_point.bssid[x]) {
             match = false;
             break;
           }
@@ -1699,7 +1634,7 @@ void CommandLine::runCommand(String input) {
           Serial.print(F("AP already exists at ["));
           Serial.print(i);
           Serial.print(F("]: "));
-          Serial.println(access_points->get(i).essid);
+          Serial.println(access_point.essid);
           return;
         }
       }

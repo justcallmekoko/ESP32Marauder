@@ -575,6 +575,7 @@ class WiFiScan
       NimBLEAdvertisementData GetUniversalAdvertisementData(EBLEPayloadType type);
     #endif
 
+    void displayTargetFilter();
     void displayTransmitRate();
     void prepareScanStage(uint16_t color_1, uint16_t color_2);
     void setLEDMode(int mode);

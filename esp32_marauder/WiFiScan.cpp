@@ -2277,8 +2277,6 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
     RunRawScan(scan_mode, color);    
   else if (scan_mode == WIFI_SCAN_RAW_CAPTURE)
     RunRawScan(scan_mode, color);
-  else if (scan_mode == WIFI_SCAN_TARGET_AP)
-    RunAPScan(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_AP_STA)
     RunAPScan(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_PWN)
@@ -2438,6 +2436,35 @@ void WiFiScan::setLEDMode(int mode) {
   }
 }
 
+void WiFiScan::displayTargetFilter() {
+  if (this->filterActive()) {
+    display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+    #ifdef HAS_MINI_SCREEN
+      display_obj.tft.setTextSize(1);
+    #else
+      display_obj.tft.setTextSize(2);
+    #endif
+
+    display_obj.showCenterText("Target Networks", (STATUS_BAR_WIDTH * 3) + (CHAR_WIDTH));
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    for (int i = 0; i < access_points->size(); i++) {
+      AccessPoint access_point = access_points->get(i);
+      if (access_point.selected)
+        display_obj.showCenterText(access_point.essid, display_obj.tft.getCursorY());
+    }
+  } else {
+    display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+    #ifdef HAS_MINI_SCREEN
+      display_obj.tft.setTextSize(1);
+    #else
+      display_obj.tft.setTextSize(2);
+    #endif
+
+    display_obj.showCenterText("No Networks Selected", (STATUS_BAR_WIDTH * 3) + (CHAR_WIDTH));
+  }
+}
+
 void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_string) {
   // Common wifi attack configurations
   #ifdef HAS_SCREEN
@@ -2451,6 +2478,10 @@ void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_
     #endif
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
   #endif
+
+  if (scan_mode == WIFI_ATTACK_DEAUTH) {
+    this->displayTargetFilter();
+  }
 
   //wifi_ap_config_t ap_config;
   //ap_config.ssid_hidden = 1;
@@ -2557,8 +2588,6 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
   (currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
   (currentScanMode == WIFI_SCAN_STATION) ||
   (currentScanMode == WIFI_SCAN_SIG_STREN) ||
-  (currentScanMode == WIFI_SCAN_TARGET_AP) ||
-  (currentScanMode == WIFI_SCAN_TARGET_AP_FULL) ||
   (currentScanMode == WIFI_SCAN_AP_STA) ||
   (currentScanMode == WIFI_PING_SCAN) ||
   (currentScanMode == WIFI_ARP_SCAN) ||
@@ -9982,7 +10011,6 @@ void WiFiScan::main(uint32_t currentTime)
   if ((currentScanMode == WIFI_SCAN_PROBE) ||
   (currentScanMode == WIFI_SCAN_AP) ||
   (currentScanMode == WIFI_SCAN_STATION) ||
-  (currentScanMode == WIFI_SCAN_TARGET_AP) ||
   (currentScanMode == WIFI_SCAN_AP_STA) ||
   (currentScanMode == WIFI_SCAN_PWN) ||
   (currentScanMode == WIFI_SCAN_PINESCAN) ||
@@ -10385,7 +10413,7 @@ void WiFiScan::main(uint32_t currentTime)
       }
     }
 
-    if (currentTime - initTime >= 1000) {
+    /*if (currentTime - initTime >= 1000) {
       initTime = millis();
 
       char displayString[64];  // adjust size as needed
@@ -10406,7 +10434,7 @@ void WiFiScan::main(uint32_t currentTime)
     #endif
 
       packets_sent = 0;
-    }
+    }*/
   }
 
   else if (currentScanMode == WIFI_ATTACK_DEAUTH_MANUAL) {
