@@ -2456,7 +2456,7 @@ void WiFiScan::displayTargetFilter() {
       for (int i = 0; i < access_points->size(); i++) {
         AccessPoint access_point = access_points->get(i);
         if (access_point.selected)
-          display_obj.showCenterText(access_point.essid, display_obj.tft.getCursorY(), true);
+          display_obj.showCenterText("CH: " + (String)access_point.channel + " " + access_point.essid, display_obj.tft.getCursorY(), true);
       }
     } else {
       display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
