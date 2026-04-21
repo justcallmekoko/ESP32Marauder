@@ -2439,6 +2439,9 @@ void WiFiScan::setLEDMode(int mode) {
 void WiFiScan::displayTargetFilter() {
   #ifdef HAS_SCREEN
     if (this->filterActive()) {
+      display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+      display_obj.tft.setTextSize(1);
+      display_obj.showCenterText("Transmitting...", (STATUS_BAR_WIDTH * 3) + 1, true);
       display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
       #ifdef HAS_MINI_SCREEN
         display_obj.tft.setTextSize(1);
@@ -2446,13 +2449,14 @@ void WiFiScan::displayTargetFilter() {
         display_obj.tft.setTextSize(2);
       #endif
 
-      display_obj.showCenterText("Target Networks", (STATUS_BAR_WIDTH * 3) + (CHAR_WIDTH));
+      display_obj.showCenterText("Targeted Networks", (STATUS_BAR_WIDTH * 3) + (CHAR_WIDTH) + 1);
       display_obj.tft.setTextSize(1);
+      display_obj.tft.println();
       display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
       for (int i = 0; i < access_points->size(); i++) {
         AccessPoint access_point = access_points->get(i);
         if (access_point.selected)
-          display_obj.showCenterText(access_point.essid, display_obj.tft.getCursorY());
+          display_obj.showCenterText(access_point.essid, display_obj.tft.getCursorY(), true);
       }
     } else {
       display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
@@ -2481,7 +2485,16 @@ void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
   #endif
 
-  if (scan_mode == WIFI_ATTACK_DEAUTH) {
+  if ((scan_mode == WIFI_ATTACK_DEAUTH) ||
+      (scan_mode == WIFI_ATTACK_DEAUTH_TARGETED) ||
+      (scan_mode == WIFI_ATTACK_AUTH) ||
+      (scan_mode == WIFI_ATTACK_BAD_MSG) ||
+      (scan_mode == WIFI_ATTACK_BAD_MSG_TARGETED) ||
+      (scan_mode == WIFI_ATTACK_SLEEP) ||
+      (scan_mode == WIFI_ATTACK_SLEEP_TARGETED) ||
+      (scan_mode == WIFI_ATTACK_AP_SPAM) ||
+      (scan_mode == WIFI_ATTACK_CSA) ||
+      (scan_mode == WIFI_ATTACK_QUIET)) {
     this->displayTargetFilter();
   }
 
@@ -10374,11 +10387,11 @@ void WiFiScan::main(uint32_t currentTime)
     for (int i = 0; i < 55; i++)
       this->sendProbeAttack(currentTime);
 
-    if (currentTime - initTime >= 1000) {
+    /*if (currentTime - initTime >= 1000) {
       initTime = millis();
       this->displayTransmitRate();
       packets_sent = 0;
-    }
+    }*/
   }
   else if ((currentScanMode == WIFI_ATTACK_BAD_MSG) ||
           (currentScanMode == WIFI_ATTACK_BAD_MSG_TARGETED)) {
@@ -10387,7 +10400,7 @@ void WiFiScan::main(uint32_t currentTime)
 
     
       initTime = millis();
-      this->displayTransmitRate();
+      //this->displayTransmitRate();
     }
   }
   else if ((currentScanMode == WIFI_ATTACK_SLEEP) ||
@@ -10397,7 +10410,7 @@ void WiFiScan::main(uint32_t currentTime)
 
     
       initTime = millis();
-      this->displayTransmitRate();
+      //this->displayTransmitRate();
     }
   }
   else if (currentScanMode == WIFI_ATTACK_SAE_COMMIT) {
@@ -10414,29 +10427,6 @@ void WiFiScan::main(uint32_t currentTime)
         }
       }
     }
-
-    /*if (currentTime - initTime >= 1000) {
-      initTime = millis();
-
-      char displayString[64];  // adjust size as needed
-
-      snprintf(displayString, sizeof(displayString), "%s%u",
-              text18, static_cast<unsigned int>(packets_sent));
-
-      char displayString2[STANDARD_FONT_CHAR_LIMIT + 1];
-      for (int x = 0; x < STANDARD_FONT_CHAR_LIMIT; x++) {
-        displayString2[x] = ' ';
-      }
-      displayString2[STANDARD_FONT_CHAR_LIMIT] = '\0';
-
-    #ifdef HAS_SCREEN
-      display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
-      display_obj.showCenterText(displayString2, TFT_HEIGHT / 2);
-      display_obj.showCenterText(displayString, TFT_HEIGHT / 2);
-    #endif
-
-      packets_sent = 0;
-    }*/
   }
 
   else if (currentScanMode == WIFI_ATTACK_DEAUTH_MANUAL) {
@@ -10470,11 +10460,11 @@ void WiFiScan::main(uint32_t currentTime)
               this->sendDeauthFrame(cur_ap.bssid, cur_ap.channel, cur_sta.mac);
 
             // Display packets sent on screen
-            if (currentTime - initTime >= 1000) {
+            /*if (currentTime - initTime >= 1000) {
               initTime = millis();
               this->displayTransmitRate();
               packets_sent = 0;
-            }
+            }*/
           }
         }
       }
@@ -10515,11 +10505,11 @@ void WiFiScan::main(uint32_t currentTime)
         this->broadcastCustomBeacon(currentTime, access_points->get(i), currentScanMode);
     }
 
-    if (currentTime - initTime >= 1000) {
+    /*if (currentTime - initTime >= 1000) {
       initTime = millis();
       this->displayTransmitRate();
       packets_sent = 0;
-    }
+    }*/
   }
   else if ((currentScanMode == WIFI_ATTACK_RICK_ROLL)) {
     // Need this for loop because getTouch causes ~10ms delay
