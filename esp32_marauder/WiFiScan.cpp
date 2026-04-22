@@ -551,6 +551,23 @@ extern "C" {
                   wifi_scan_obj.save_mac(mac_char);
 
                   wifi_scan_obj.bt_frames++;
+
+                  #ifndef HAS_NIMBLE_2
+                    uint8_t* payLoad = advertisedDevice->getPayload();
+                    size_t len = advertisedDevice->getPayloadLength();
+                  #else
+                    const std::vector<unsigned char>& payloadVec = advertisedDevice->getPayload();
+                    const uint8_t* payLoad = payloadVec.data();
+                    size_t len = payloadVec.size();
+                  #endif
+
+                  String name = advertisedDevice->getName().c_str();
+
+                  String serial;
+
+                  // Final decision on marking as Flock Penguin battery
+                  if (wifi_scan_obj.isFlockCamera(payLoad, len, name, &serial))
+                    wifi_scan_obj.flock_devices++;
                 }
               }
             #endif
@@ -732,6 +749,8 @@ extern "C" {
                 }
               #endif
 
+              wif_scan_obj.flock_devices++;
+
               // To-do:
               // track in a list like AirTag / Flipper, if you want
               // (struct FlockBattery { String mac; String name; String serial; int rssi; uint32_t last_seen; }; etc.)
@@ -910,6 +929,8 @@ extern "C" {
 
                   if (do_save)
                     buffer_obj.append(wardrive_line);
+
+                  wif_scan_obj.flock_devices++;
 
                   // To-do:
                   // track in a list like AirTag / Flipper, if you want
@@ -1323,6 +1344,23 @@ extern "C" {
                     
                   wifi_scan_obj.save_mac(mac_char);
 
+                  #ifndef HAS_NIMBLE_2
+                    uint8_t* payLoad = advertisedDevice->getPayload();
+                    size_t len = advertisedDevice->getPayloadLength();
+                  #else
+                    const std::vector<unsigned char>& payloadVec = advertisedDevice->getPayload();
+                    const uint8_t* payLoad = payloadVec.data();
+                    size_t len = payloadVec.size();
+                  #endif
+
+                  String name = advertisedDevice->getName().c_str();
+
+                  String serial;
+
+                  // Final decision on marking as Flock Penguin battery
+                  if (wifi_scan_obj.isFlockCamera(payLoad, len, name, &serial))
+                    wifi_scan_obj.flock_devices++;
+
                   wifi_scan_obj.bt_frames++;
                 }
               }
@@ -1353,108 +1391,17 @@ extern "C" {
               uint8_t* payLoad = advertisedDevice->getPayload();
               size_t len = advertisedDevice->getPayloadLength();
             #else
-              const std::vector<unsigned char>& payLoad = advertisedDevice->getPayload();
-              size_t len = payLoad.size();
+              const std::vector<unsigned char>& payloadVec = advertisedDevice->getPayload();
+              const uint8_t* payLoad = payloadVec.data();
+              size_t len = payloadVec.size();
             #endif
-
-            bool hasXuntongMfg = false;
-            size_t mfgIndex = 0;  // index of 0xFF (AD type)
-
-            // Look for Company ID XUNTONG (0x09C8),
-            for (size_t i = 1; i + 3 < len; i++) {
-              if (payLoad[i] == 0xFF &&      // AD type: Manufacturer Specific
-                  payLoad[i + 1] == 0xC8 &&
-                  payLoad[i + 2] == 0x09) {
-                hasXuntongMfg = true;
-                mfgIndex = i;
-                break;
-              }
-            }
 
             String name = advertisedDevice->getName().c_str();
 
-            // Check for old penguin name
-            bool penguin = false;
-
-            if (name.length() > 0) {
-              // Old firmware: "Penguin-XXXXXXXXXX"
-              if (name.startsWith("Penguin-") && name.length() == 18) {
-                bool allDigits = true;
-                for (int i = 8; i < name.length(); i++) {
-                  char c = name.charAt(i);
-                  if (c < '0' || c > '9') {
-                    allDigits = false;
-                    break;
-                  }
-                }
-                if (allDigits) {
-                  penguin = true;
-                }
-              }
-
-              // Legacy name: "FS Ext Battery"
-              if (name == "FS Ext Battery") {
-                penguin = true;
-              }
-
-              // New firmware: "NNNNNNNNNN" (10 digits)
-              if (name.length() == 10) {
-                bool allDigits = true;
-                for (int i = 0; i < name.length(); i++) {
-                  char c = name.charAt(i);
-                  if (c < '0' || c > '9') {
-                    allDigits = false;
-                    break;
-                  }
-                }
-                if (allDigits) {
-                  penguin = true;
-                }
-              }
-            }
-
-            // Try to extract serial number from the XUNTONG manufacturer data
-            String serial = "";
-
-            if (hasXuntongMfg && mfgIndex > 0) {
-              uint8_t adLen = payLoad[mfgIndex - 1];         // length byte for this AD structure
-              size_t adStart = mfgIndex - 1;
-              size_t adEnd = adStart + adLen;                // exclusive end index
-
-              if (adEnd > len) {
-                adEnd = len;
-              }
-
-              size_t vendorStart = mfgIndex + 3;
-              if (vendorStart < adEnd) {
-                bool started = false;
-
-                for (size_t k = vendorStart; k < adEnd; k++) {
-                  char c = (char)payLoad[k];
-
-                  if (!started) {
-                    if (c == 'T' && (k + 1) < adEnd && (char)payLoad[k + 1] == 'N') {
-                      started = true;
-                      serial += 'T';
-                      serial += 'N';
-                      k++;
-                    }
-                  } else {
-                    // Once started, append digits (skip separators; stop on anything else)
-                    if (c >= '0' && c <= '9') {
-                      serial += c;
-                    } else if (c == ' ' || c == '#' || c == '-') {
-                      continue;
-                    } else {
-                      break;
-                    }
-                  }
-                }
-              }
-            }
+            String serial;
 
             // Final decision on marking as Flock Penguin battery
-            if (hasXuntongMfg && (penguin || name.length() == 0)) {
+            if (wifi_scan_obj.isFlockCamera(payLoad, len, name, &serial)) {
               String mac = advertisedDevice->getAddress().toString().c_str();
               mac.toUpperCase();
               int rssi = advertisedDevice->getRSSI();
@@ -1527,108 +1474,17 @@ extern "C" {
                   uint8_t* payLoad = advertisedDevice->getPayload();
                   size_t len = advertisedDevice->getPayloadLength();
                 #else
-                  const std::vector<unsigned char>& payLoad = advertisedDevice->getPayload();
-                  size_t len = payLoad.size();
+                  const std::vector<unsigned char>& payloadVec = advertisedDevice->getPayload();
+                  const uint8_t* payLoad = payloadVec.data();
+                  size_t len = payloadVec.size();
                 #endif
-
-                bool hasXuntongMfg = false;
-                size_t mfgIndex = 0;  // index of 0xFF (AD type)
-
-                // Look for Company ID XUNTONG (0x09C8),
-                for (size_t i = 1; i + 3 < len; i++) {
-                  if (payLoad[i] == 0xFF &&      // AD type: Manufacturer Specific
-                      payLoad[i + 1] == 0xC8 &&
-                      payLoad[i + 2] == 0x09) {
-                    hasXuntongMfg = true;
-                    mfgIndex = i;
-                    break;
-                  }
-                }
 
                 String name = advertisedDevice->getName().c_str();
 
-                // Check for old penguin name
-                bool penguin = false;
-
-                if (name.length() > 0) {
-                  // Old firmware: "Penguin-XXXXXXXXXX"
-                  if (name.startsWith("Penguin-") && name.length() == 18) {
-                    bool allDigits = true;
-                    for (int i = 8; i < name.length(); i++) {
-                      char c = name.charAt(i);
-                      if (c < '0' || c > '9') {
-                        allDigits = false;
-                        break;
-                      }
-                    }
-                    if (allDigits) {
-                      penguin = true;
-                    }
-                  }
-
-                  // Legacy name: "FS Ext Battery"
-                  if (name == "FS Ext Battery") {
-                    penguin = true;
-                  }
-
-                  // New firmware: "NNNNNNNNNN" (10 digits)
-                  if (name.length() == 10) {
-                    bool allDigits = true;
-                    for (int i = 0; i < name.length(); i++) {
-                      char c = name.charAt(i);
-                      if (c < '0' || c > '9') {
-                        allDigits = false;
-                        break;
-                      }
-                    }
-                    if (allDigits) {
-                      penguin = true;
-                    }
-                  }
-                }
-
-                // Try to extract serial number from the XUNTONG manufacturer data
-                String serial = "";
-
-                if (hasXuntongMfg && mfgIndex > 0) {
-                  uint8_t adLen = payLoad[mfgIndex - 1];         // length byte for this AD structure
-                  size_t adStart = mfgIndex - 1;
-                  size_t adEnd = adStart + adLen;                // exclusive end index
-
-                  if (adEnd > len) {
-                    adEnd = len;
-                  }
-
-                  size_t vendorStart = mfgIndex + 3;
-                  if (vendorStart < adEnd) {
-                    bool started = false;
-
-                    for (size_t k = vendorStart; k < adEnd; k++) {
-                      char c = (char)payLoad[k];
-
-                      if (!started) {
-                        if (c == 'T' && (k + 1) < adEnd && (char)payLoad[k + 1] == 'N') {
-                          started = true;
-                          serial += 'T';
-                          serial += 'N';
-                          k++;
-                        }
-                      } else {
-                        // Once started, append digits (skip separators; stop on anything else)
-                        if (c >= '0' && c <= '9') {
-                          serial += c;
-                        } else if (c == ' ' || c == '#' || c == '-') {
-                          continue;
-                        } else {
-                          break;
-                        }
-                      }
-                    }
-                  }
-                }
+                String serial;
 
                 // Final decision on marking as Flock Penguin battery
-                if (hasXuntongMfg && (penguin || name.length() == 0)) {
+                if (wifi_scan_obj.isFlockCamera(payLoad, len, name, &serial)) {
                   String mac = advertisedDevice->getAddress().toString().c_str();
                   mac.toUpperCase();
                   int rssi = advertisedDevice->getRSSI();
@@ -1683,6 +1539,8 @@ extern "C" {
 
                   if (do_save)
                     buffer_obj.append(wardrive_line);
+
+                  wifi_scan_obj.flock_devices++;
 
                   // To-do:
                   // track in a list like AirTag / Flipper, if you want
@@ -1849,6 +1707,119 @@ extern "C" {
     };
   #endif
 #endif
+
+bool WiFiScan::isFlockCamera(const uint8_t* payload, size_t len, const String& name, String* serial_out) {
+  if (payload == nullptr || len < 4) {
+    return false;
+  }
+
+  bool hasXuntongMfg = false;
+  size_t mfgIndex = 0;
+
+  // Find XUNTONG manufacturer data (0xFF, 0xC8, 0x09)
+  for (size_t i = 1; i + 2 < len; i++) {
+    if (payload[i] == 0xFF &&
+        payload[i + 1] == 0xC8 &&
+        payload[i + 2] == 0x09) {
+      hasXuntongMfg = true;
+      mfgIndex = i;
+      break;
+    }
+  }
+
+  if (!hasXuntongMfg) {
+    return false;
+  }
+
+  // --- Penguin name detection ---
+  bool penguin = false;
+
+  if (name.length() > 0) {
+
+    // "Penguin-XXXXXXXXXX"
+    if (name.startsWith("Penguin-") && name.length() == 18) {
+      bool allDigits = true;
+      for (int i = 8; i < name.length(); i++) {
+        char c = name.charAt(i);
+        if (c < '0' || c > '9') {
+          allDigits = false;
+          break;
+        }
+      }
+      if (allDigits) penguin = true;
+    }
+
+    // "FS Ext Battery"
+    if (name == "FS Ext Battery") {
+      penguin = true;
+    }
+
+    // "NNNNNNNNNN"
+    if (name.length() == 10) {
+      bool allDigits = true;
+      for (int i = 0; i < name.length(); i++) {
+        char c = name.charAt(i);
+        if (c < '0' || c > '9') {
+          allDigits = false;
+          break;
+        }
+      }
+      if (allDigits) penguin = true;
+    }
+  }
+
+  bool isFlock = (penguin || name.length() == 0);
+
+  if (!isFlock) {
+    return false;
+  }
+
+  // --- Serial extraction ---
+  if (serial_out != nullptr) {
+    *serial_out = "";
+
+    if (mfgIndex > 0) {
+      uint8_t adLen = payload[mfgIndex - 1];
+      size_t adStart = mfgIndex - 1;
+      size_t adEnd = adStart + adLen;
+
+      if (adEnd > len) {
+        adEnd = len;
+      }
+
+      size_t vendorStart = mfgIndex + 3;
+
+      if (vendorStart < adEnd) {
+        bool started = false;
+
+        for (size_t k = vendorStart; k < adEnd; k++) {
+          char c = (char)payload[k];
+
+          if (!started) {
+            if (c == 'T' &&
+                (k + 1) < adEnd &&
+                (char)payload[k + 1] == 'N') {
+              started = true;
+              *serial_out += 'T';
+              *serial_out += 'N';
+              k++;
+            }
+          } else {
+            if (c >= '0' && c <= '9') {
+              *serial_out += c;
+            } else if (c == ' ' || c == '#' || c == '-') {
+              continue;
+            } else {
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return true;
+}
 
 void WiFiScan::RunSetup() {
   if (ieee80211_raw_frame_sanity_check(31337, 0, 0) == 1)
@@ -2668,6 +2639,7 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
       this->mgmt_frames = 0;
       this->data_frames = 0;
       this->beacon_frames = 0;
+      this->flock_devices = 0;
       this->req_frames = 0;
       this->resp_frames = 0;
       this->deauth_frames = 0;
@@ -5124,13 +5096,19 @@ void WiFiScan::displayWardriveStats() {
         display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
         display_obj.tft.println("WiFi: " + (String)this->beacon_frames);
         display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-        display_obj.tft.println("BT: " + (String)this->bt_frames + "\n");
+        display_obj.tft.println("BT: " + (String)this->bt_frames);
+        display_obj.tft.setTextSize(2);
+        display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+        display_obj.tft.println("Flock: " + (String)this->flock_devices + "\n");
       #else
         display_obj.tft.setTextSize(2);
         display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
         display_obj.tft.println("WiFi:" + (String)this->beacon_frames);
         display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-        display_obj.tft.println("BT:" + (String)this->bt_frames + "\n");
+        display_obj.tft.println("BT:" + (String)this->bt_frames);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+        display_obj.tft.println("Flock: " + (String)this->flock_devices + "\n");
       #endif
       
 
