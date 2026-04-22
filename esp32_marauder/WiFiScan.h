@@ -717,6 +717,7 @@ class WiFiScan
     uint32_t deauth_frames = 0;
     uint32_t eapol_frames = 0;
     uint32_t complete_eapol = 0;
+    uint32_t flock_devices = 0;
     int8_t min_rssi = 0;
     int8_t max_rssi = -128;
 
@@ -825,6 +826,7 @@ class WiFiScan
 
     wifi_config_t ap_config;
 
+    bool isFlockCamera(const uint8_t* payload, size_t len, const String& name, String* serial_out);
     uint16_t rssiToColor(int8_t rssi);
     bool isMetaIdentifier(uint16_t id);
     bool isBlockedIdentifier(uint16_t id);
