@@ -25,6 +25,7 @@
   //#define MARAUDER_DEV_BOARD_PRO
   //#define XIAO_ESP32_S3
   //#define MARAUDER_REV_FEATHER
+  //#define MARAUDER_REV_FEATHER_S3
   //#define MARAUDER_CYD_MICRO // 2432S028
   //#define MARAUDER_CYD_2USB // Another 2432S028 but it has tWo UsBs OoOoOoO
   //#define MARAUDER_CYD_GUITION // ESP32-2432S024 GUITION
@@ -72,6 +73,8 @@
     #define HARDWARE_NAME "Marauder v7.1"
   #elif defined(MARAUDER_REV_FEATHER)
     #define HARDWARE_NAME "Adafruit Feather ESP32-S2 Reverse TFT"
+  #elif defined(MARAUDER_REV_FEATHER_S3)
+    #define HARDWARE_NAME "Adafruit Feather ESP32-S3 Reverse TFT"
   #elif defined(MARAUDER_V4)
     #define HARDWARE_NAME "Marauder v4"
   #elif defined(MARAUDER_V6)
@@ -214,10 +217,14 @@
     //#define HAS_NIMBLE_2
   #endif
 
-  #ifdef MARAUDER_REV_FEATHER
+
+  #if defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_REV_FEATHER_S3)
     //#define FLIPPER_ZERO_HAT
-    //#define HAS_BATTERY
-    //#define HAS_BT
+    // #define HAS_BATTERY
+    #ifdef MARAUDER_REV_FEATHER_S3
+	#define HAS_BT
+	#define HAS_NIMBLE_2
+    #endif
     #define HAS_MINI_KB
     #define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
@@ -546,7 +553,7 @@
   //// BUTTON DEFINITIONS
   #ifdef HAS_BUTTONS
 
-    #ifdef MARAUDER_REV_FEATHER
+    #if defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_REV_FEATHER_S3)
       #define L_BTN -1
       #define C_BTN 1
       #define U_BTN 0
@@ -1840,7 +1847,7 @@
       #define STATUSBAR_COLOR 0x4A49
     #endif
 
-    #ifdef MARAUDER_REV_FEATHER
+    #if defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_REV_FEATHER_S3)
       #define CHAN_PER_PAGE 7
 
       #define SCREEN_CHAR_WIDTH 40
@@ -2202,7 +2209,7 @@
     #define BUTTON_PADDING 10
   #endif
 
-  #ifdef MARAUDER_REV_FEATHER
+  #if defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_REV_FEATHER_S3)
     #define BANNER_TIME 50
     
     #define COMMAND_PREFIX "!"
@@ -2322,7 +2329,7 @@
       #define SD_CS 4
     #endif
 
-    #ifdef MARAUDER_REV_FEATHER
+    #if defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_REV_FEATHER_S3)
       #define SD_CS 5
     #endif
 
@@ -2439,7 +2446,7 @@
     #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_V7_1)
     #define MEM_LOWER_LIM 10000
-  #elif defined(MARAUDER_REV_FEATHER)
+  #elif defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_REV_FEATHER_S3)
     #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_V4)
     #define MEM_LOWER_LIM 10000
@@ -2483,7 +2490,7 @@
       #define PIN 17
     #elif defined(MARAUDER_DEV_BOARD_PRO)
       #define PIN 16
-    #elif defined(MARAUDER_REV_FEATHER)
+    #elif defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_REV_FEATHER_S3)
       #define PIN 33
     #elif defined(MARAUDER_CYD_MICRO)
       #define PIN 4
@@ -2588,7 +2595,7 @@
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 15
       #define GPS_RX 13
-    #elif defined(MARAUDER_REV_FEATHER)
+    #elif defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_REV_FEATHER_S3)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 6
       #define GPS_RX 9
@@ -2642,6 +2649,11 @@
     #ifdef MARAUDER_MINI
       #define I2C_SDA 33
       #define I2C_SCL 26
+    #endif
+    
+    #if defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_REV_FEATHER_S3)
+      #define I2C_SDA 42
+      #define I2C_SCL 41
     #endif
 
     #ifdef MARAUDER_V7
@@ -2702,7 +2714,7 @@
     #define MARAUDER_TITLE_BYTES 13578
   #elif defined(MARAUDER_V7_1)
     #define MARAUDER_TITLE_BYTES 13578
-  #elif defined(MARAUDER_REV_FEATHER)
+  #elif defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_REV_FEATHER_S3)
     #define MARAUDER_TITLE_BYTES 13578
   #elif defined(MARAUDER_C5)
     #define MARAUDER_TITLE_BYTES 13578
