@@ -553,14 +553,7 @@ void CommandLine::runCommand(String input) {
       #ifdef HAS_GPS
         if (gps_obj.getGpsModuleStatus()) {
           //int sta_sw = this->argSearch(&cmd_args, "-s");
-          int flk_sw = this->argSearch(&cmd_args, "-f");
-
-          if (flk_sw != -1) {
-            this->startScanFromCLI(BT_SCAN_FLOCK_WARDRIVE, TFT_GREEN, "Flock Wardrive");
-          }
-          else {
-            this->startScanFromCLI(WIFI_SCAN_WAR_DRIVE, TFT_GREEN, "Wardrive");
-          }
+          this->startScanFromCLI(WIFI_SCAN_WAR_DRIVE, TFT_GREEN, "Wardrive");
         }
         else
           Serial.println(F("GPS Module not detected"));
