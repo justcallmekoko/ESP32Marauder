@@ -749,7 +749,7 @@ extern "C" {
                 }
               #endif
 
-              wif_scan_obj.flock_devices++;
+              wifi_scan_obj.flock_devices++;
 
               // To-do:
               // track in a list like AirTag / Flipper, if you want
