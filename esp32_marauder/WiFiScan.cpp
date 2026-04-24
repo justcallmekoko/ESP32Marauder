@@ -3996,6 +3996,9 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color) {
     led_obj.setMode(MODE_SNIFF);
   #endif*/
 
+  if (scan_mode == WIFI_SCAN_PACKET_RATE)
+    startPcap(F("packet_rate"));
+
   if (scan_mode == WIFI_PACKET_MONITOR)
     startPcap(F("packet_monitor"));
 
@@ -8248,7 +8251,10 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
         targ_ap.packets = targ_ap.packets + 1;
         access_points->set(targ_index, targ_ap);
       }
-      //Serial.println((String)access_points->get(targ_index).essid + " Packets: " + (String)access_points->get(targ_index).packets);
+
+      // Add frame to PCAP
+      buffer_obj.append(snifferPacket, len);
+      
       return;
     }
 
