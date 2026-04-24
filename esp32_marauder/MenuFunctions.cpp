@@ -20,9 +20,9 @@ void MenuFunctions::drawMiniMenuButton(int b, int x, bool selected) {
   display_obj.tft.setFreeFont(NULL);
   display_obj.tft.setTextSize(1);
   display_obj.tft.setTextWrap(false);
-  display_obj.tft.fillRect(button_x, button_y, KEY_W, KEY_H, background);
+  display_obj.tft.fillRect(button_x, button_y - 4, KEY_W, KEY_H, background);
   display_obj.tft.setTextColor(text_color, background);
-  display_obj.tft.setCursor(button_x + BUTTON_PADDING, button_y + (KEY_H / 2) - 4);
+  display_obj.tft.setCursor(button_x + BUTTON_PADDING, button_y + (KEY_H / 2) - 8);
   display_obj.tft.print(current_menu->list->get(x).name);
 }
 #endif
