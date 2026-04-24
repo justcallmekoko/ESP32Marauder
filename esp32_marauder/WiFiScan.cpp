@@ -8084,6 +8084,11 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
   wifi_promiscuous_pkt_t *snifferPacket = (wifi_promiscuous_pkt_t*)buf;
   int len = snifferPacket->rx_ctrl.sig_len;
 
+  char src_addr[] = "00:00:00:00:00:00";
+  char dst_addr[] = "00:00:00:00:00:00";
+  getMAC(src_addr, snifferPacket->payload, 10);
+  getMAC(dst_addr, snifferPacket->payload, 4);
+
   String display_string = "";
 
   #ifdef HAS_SCREEN
@@ -8137,10 +8142,6 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
       #endif
     }
 
-    char src_addr[] = "00:00:00:00:00:00";
-    char dst_addr[] = "00:00:00:00:00:00";
-    getMAC(src_addr, snifferPacket->payload, 10);
-    getMAC(dst_addr, snifferPacket->payload, 4);
     display_string.concat(src_addr);
     display_string.concat(" -> ");
     display_string.concat(dst_addr);
@@ -8210,6 +8211,9 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
     #endif
   }
   else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_PACKET_RATE) {
+    if (type == WIFI_PKT_MGMT)
+        len -= 4;
+
     bool found = false;
     // Get the source addr
     char addr[] = "00:00:00:00:00:00";
@@ -8222,21 +8226,31 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
     for (int i = 0; i < access_points->size(); i++) {
       AccessPoint access_point = access_points->get(i);
       if (access_point.selected) {
-        uint8_t addr[] = {snifferPacket->payload[10],
-                          snifferPacket->payload[11],
-                          snifferPacket->payload[12],
-                          snifferPacket->payload[13],
-                          snifferPacket->payload[14],
-                          snifferPacket->payload[15]};
-        // Compare AP bssid to ssid of recvd packet
+
+        uint8_t src_addr_bytes[6];
+        uint8_t dst_addr_bytes[6];
+        wifi_scan_obj.getMAC(src_addr_bytes, snifferPacket->payload, 10);
+        wifi_scan_obj.getMAC(dst_addr_bytes, snifferPacket->payload, 4);
+
+        // Compare AP to source
         for (int x = 0; x < 6; x++) {
-          if (addr[x] != access_point.bssid[x]) {
+          if (src_addr_bytes[x] != access_point.bssid[x]) {
             found = false;
             break;
           }
           else
             found = true;
         }
+        // Compare AP to destination
+        for (int x = 0; x < 6; x++) {
+          if (dst_addr_bytes[x] != access_point.bssid[x]) {
+            found = false;
+            break;
+          }
+          else
+            found = true;
+        }
+
         if (found) {
           targ_ap = access_point;
           targ_index = i;
@@ -8262,21 +8276,30 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
     for (int i = 0; i < stations->size(); i++) {
       Station station = stations->get(i);
       if (station.selected) {
-        uint8_t addr[] = {snifferPacket->payload[10],
-                          snifferPacket->payload[11],
-                          snifferPacket->payload[12],
-                          snifferPacket->payload[13],
-                          snifferPacket->payload[14],
-                          snifferPacket->payload[15]};
+        uint8_t src_addr_bytes[6];
+        uint8_t dst_addr_bytes[6];
+        wifi_scan_obj.getMAC(src_addr_bytes, snifferPacket->payload, 10);
+        wifi_scan_obj.getMAC(dst_addr_bytes, snifferPacket->payload, 4);
+
         // Compare AP bssid to ssid of recvd packet
         for (int x = 0; x < 6; x++) {
-          if (addr[x] != station.mac[x]) {
+          if (src_addr_bytes[x] != station.mac[x]) {
             found = false;
             break;
           }
           else
             found = true;
         }
+
+        for (int x = 0; x < 6; x++) {
+          if (dst_addr_bytes[x] != station.mac[x]) {
+            found = false;
+            break;
+          }
+          else
+            found = true;
+        }
+
         if (found) {
           targ_sta = station;
           targ_index = i;
@@ -8291,8 +8314,7 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
         targ_sta.packets = targ_sta.packets + 1;
         stations->set(targ_index, targ_sta);
       }
-      //Serial.print(addr);
-      //Serial.println(" Packets: " + (String)stations->get(targ_index).packets);
+      buffer_obj.append(snifferPacket, len);
       return;
     }
   }
