@@ -8242,13 +8242,15 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
             found = true;
         }
         // Compare AP to destination
-        for (int x = 0; x < 6; x++) {
-          if (dst_addr_bytes[x] != access_point.bssid[x]) {
-            found = false;
-            break;
+        if (!found) {
+          for (int x = 0; x < 6; x++) {
+            if (dst_addr_bytes[x] != access_point.bssid[x]) {
+              found = false;
+              break;
+            }
+            else
+              found = true;
           }
-          else
-            found = true;
         }
 
         if (found) {
@@ -8291,13 +8293,15 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
             found = true;
         }
 
-        for (int x = 0; x < 6; x++) {
-          if (dst_addr_bytes[x] != station.mac[x]) {
-            found = false;
-            break;
+        if (!found) {
+          for (int x = 0; x < 6; x++) {
+            if (dst_addr_bytes[x] != station.mac[x]) {
+              found = false;
+              break;
+            }
+            else
+              found = true;
           }
-          else
-            found = true;
         }
 
         if (found) {
