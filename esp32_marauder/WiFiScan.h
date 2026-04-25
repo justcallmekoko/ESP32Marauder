@@ -331,7 +331,9 @@ class WiFiScan
     void initWiFi(uint8_t scan_mode);
     uint8_t bluetoothScanTime = 5;
     int packets_sent = 0;
-    const wifi_promiscuous_filter_t filt = {.filter_mask=WIFI_PROMIS_FILTER_MASK_MGMT | WIFI_PROMIS_FILTER_MASK_DATA};
+    const wifi_promiscuous_filter_t filt = {
+      .filter_mask=WIFI_PROMIS_FILTER_MASK_MGMT | WIFI_PROMIS_FILTER_MASK_DATA | WIFI_PROMIS_FILTER_MASK_CTRL
+      };
     #ifdef HAS_BT
       NimBLEScan* pBLEScan;
     #endif
