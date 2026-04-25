@@ -2392,7 +2392,7 @@ void MenuFunctions::RunSetup()
       }
     });
 
-    /*this->addNodes(&wifiGeneralMenu, "Start AP", TFTGREEN, NULL, KEYBOARD_ICO, [this](){
+    this->addNodes(&wifiGeneralMenu, "Start AP", TFTGREEN, NULL, KEYBOARD_ICO, [this](){
       ssidsMenu.parentMenu = &wifiGeneralMenu;
 
       // Add the back button
@@ -2431,7 +2431,7 @@ void MenuFunctions::RunSetup()
         });
       }
       this->changeMenu(&ssidsMenu, true);
-    });*/
+    });
 
     wifiStationMenu.parentMenu = &ssidsMenu;
     this->addNodes(&wifiStationMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
