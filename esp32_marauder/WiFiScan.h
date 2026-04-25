@@ -317,6 +317,8 @@ class WiFiScan
 
     bool scan_complete = false;
 
+    uint8_t wardrive_channel_index = 0;
+
     //int num_beacon = 0; // GREEN
     //int num_probe = 0; // BLUE
     //int num_deauth = 0; // RED
@@ -826,6 +828,7 @@ class WiFiScan
 
     wifi_config_t ap_config;
 
+    bool startWiFi(String ssid, String password, bool gui = true);
     bool isFlockCamera(const uint8_t* payload, size_t len, const String& name, String* serial_out);
     uint16_t rssiToColor(int8_t rssi);
     bool isMetaIdentifier(uint16_t id);
