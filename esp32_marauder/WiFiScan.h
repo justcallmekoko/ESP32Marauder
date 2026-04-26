@@ -779,8 +779,13 @@ class WiFiScan
     byte src_mac[6] = {};
 
     #ifdef HAS_SCREEN
-      int16_t _analyzer_values[TFT_WIDTH];
-      int16_t _temp_analyzer_values[TFT_WIDTH];
+      #if !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
+        int16_t _analyzer_values[TFT_WIDTH];
+        int16_t _temp_analyzer_values[TFT_WIDTH];
+      #else
+        int16_t _analyzer_values[SCREEN_WIDTH];
+        int16_t _temp_analyzer_values[SCREEN_WIDTH];
+      #endif
     #endif
 
     String current_mini_kb_ssid = "";

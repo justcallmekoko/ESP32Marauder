@@ -3426,11 +3426,11 @@ float MenuFunctions::calculateGraphScale(int16_t value) {
   return (0.75 * GRAPH_VERT_LIM) / value;
 }
 
-float MenuFunctions::graphScaleCheck(const int16_t array[TFT_WIDTH]) {
+float MenuFunctions::graphScaleCheck(const int16_t array[SCREEN_WIDTH]) {
   int16_t maxValue = 0;
 
   // Iterate through the array to find the highest value
-  for (int16_t i = 0; i < TFT_WIDTH; i++) {
+  for (int16_t i = 0; i < SCREEN_WIDTH; i++) {
     if (array[i] > maxValue) {
       maxValue = array[i];
     }
@@ -3527,22 +3527,41 @@ void MenuFunctions::drawGraphSmall(uint8_t *values) {
 }
 
 void MenuFunctions::drawGraph(int16_t *values) {
+  #if !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
+    int width = TFT_WIDTH;
+  #else
+    int width = SCREEN_WIDTH;
+  #endif
+
   int16_t maxValue = 0;
   int total = 0;
-  for (int i = TFT_WIDTH - 1; i >= 0; i--) {
+  for (int i = width - 1; i >= 0; i--) {
     if (values[i] >= 0) {
       total = total + values[i];
       if (values[i] > maxValue) {
         maxValue = values[i];
       }
-      display_obj.tft.drawLine(i, TFT_HEIGHT, i, TFT_HEIGHT - GRAPH_VERT_LIM, TFT_BLACK);
-      display_obj.tft.drawLine(i, TFT_HEIGHT, i, TFT_HEIGHT - (values[i] * this->_graph_scale), TFT_CYAN);
+      #if !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
+        display_obj.tft.drawLine(i, TFT_HEIGHT, i, TFT_HEIGHT - GRAPH_VERT_LIM, TFT_BLACK);
+        display_obj.tft.drawLine(i, TFT_HEIGHT, i, TFT_HEIGHT - (values[i] * this->_graph_scale), TFT_CYAN);
+      #else
+        display_obj.tft.drawLine(i, TFT_WIDTH, i, TFT_WIDTH - GRAPH_VERT_LIM, TFT_BLACK);
+        display_obj.tft.drawLine(i, TFT_WIDTH, i, TFT_WIDTH - (values[i] * this->_graph_scale), TFT_CYAN);
+        display_obj.tft.setCursor(0, 0);
+        display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      #endif
     }
     else {
       int16_t ch_val = values[i] * -1;
-      display_obj.tft.drawLine(i, TFT_HEIGHT, i, TFT_HEIGHT - GRAPH_VERT_LIM, TFT_BLACK);
-      display_obj.tft.drawLine(i, TFT_HEIGHT, i, TFT_HEIGHT - GRAPH_VERT_LIM, TFT_RED);
-      display_obj.tft.setCursor(i, TFT_HEIGHT - GRAPH_VERT_LIM);
+      #if !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
+        display_obj.tft.drawLine(i, TFT_HEIGHT, i, TFT_HEIGHT - GRAPH_VERT_LIM, TFT_BLACK);
+        display_obj.tft.drawLine(i, TFT_HEIGHT, i, TFT_HEIGHT - GRAPH_VERT_LIM, TFT_RED);
+        display_obj.tft.setCursor(i, TFT_HEIGHT - GRAPH_VERT_LIM);
+      #else
+        display_obj.tft.drawLine(i, TFT_WIDTH, i, TFT_WIDTH - GRAPH_VERT_LIM, TFT_BLACK);
+        display_obj.tft.drawLine(i, TFT_WIDTH, i, TFT_WIDTH - GRAPH_VERT_LIM, TFT_RED);
+        display_obj.tft.setCursor(i, TFT_WIDTH - GRAPH_VERT_LIM);
+      #endif
       display_obj.tft.setTextColor(TFT_BLACK, TFT_RED);
       display_obj.tft.setTextSize(1);
       display_obj.tft.println((String)ch_val);
