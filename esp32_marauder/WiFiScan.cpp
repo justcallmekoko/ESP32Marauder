@@ -4905,6 +4905,58 @@ void WiFiScan::tagPOI(const char* label) {
   #endif
 }
 
+void WiFiScan::displayAPStats() {
+  #ifdef HAS_SCREEN
+    display_obj.tft.fillRect(0,
+                            (STATUS_BAR_WIDTH * 2) + 1 + EXT_BUTTON_WIDTH,
+                            TFT_WIDTH,
+                            TFT_HEIGHT - STATUS_BAR_WIDTH + 1,
+                            TFT_BLACK);
+
+  #ifndef HAS_MINI_SCREEN
+    display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH);
+    display_obj.tft.setTextSize(2);
+  #else
+    display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH);
+    display_obj.tft.setTextSize(1);
+  #endif
+
+    display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+    display_obj.tft.println("Access Point");
+
+    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    display_obj.tft.println("");
+
+    display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    display_obj.tft.println("SSID:");
+    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    display_obj.tft.println(WiFi.softAPSSID());
+
+    display_obj.tft.println("");
+
+    display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    display_obj.tft.println("Gateway:");
+    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    display_obj.tft.println(WiFi.softAPIP().toString());
+
+    display_obj.tft.println("");
+
+    display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    display_obj.tft.print("Clients: ");
+    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    display_obj.tft.println((String)WiFi.softAPgetStationNum());
+
+    uint8_t primaryChannel;
+    wifi_second_chan_t secondChannel;
+    esp_err_t err = esp_wifi_get_channel(&primaryChannel, &secondChannel);
+
+    display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    display_obj.tft.print("Channel: ");
+    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    display_obj.tft.println((String)primaryChannel);
+  #endif
+}
+
 void WiFiScan::displayWardriveStats() {
   #ifdef HAS_SCREEN
     #ifdef HAS_GPS
@@ -10126,6 +10178,12 @@ void WiFiScan::main(uint32_t currentTime)
         this->executeBLESpam(Airtag);
 
     #endif
+  }
+  else if (currentScanMode == WIFI_SCAN_DISPLAY_AP_INFO) {
+    if (currentTime - this->last_ui_update >= 1000) {
+      this->last_ui_update = millis();
+      this->displayAPStats();
+    }
   }
   else if (currentScanMode == WIFI_SCAN_WAR_DRIVE) {
     if (currentTime - initTime >= this->channel_hop_delay * HOP_DELAY)
