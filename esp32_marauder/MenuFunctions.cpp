@@ -5,6 +5,28 @@
 
 extern const unsigned char menu_icons[][66];
 
+#ifdef HAS_MINI_SCREEN
+void MenuFunctions::drawMiniMenuButton(int b, int x, bool selected) {
+  if (!current_menu || !current_menu->list || x < 0 || x >= current_menu->list->size())
+    return;
+
+  uint16_t color = this->getColor(current_menu->list->get(x).color);
+  int16_t button_x = KEY_X - (KEY_W / 2);
+  int16_t button_y = (KEY_Y + (b * (KEY_H + KEY_SPACING_Y))) - (KEY_H / 2);
+
+  uint16_t background = selected ? color : TFT_BLACK;
+  uint16_t text_color = selected ? TFT_BLACK : color;
+
+  display_obj.tft.setFreeFont(NULL);
+  display_obj.tft.setTextSize(1);
+  display_obj.tft.setTextWrap(false);
+  display_obj.tft.fillRect(button_x, button_y - 4, KEY_W, KEY_H, background);
+  display_obj.tft.setTextColor(text_color, background);
+  display_obj.tft.setCursor(button_x + BUTTON_PADDING, button_y + (KEY_H / 2) - 8);
+  display_obj.tft.print(current_menu->list->get(x).name);
+}
+#endif
+
 void MenuFunctions::buttonNotSelected(int b, int x) {
   if (x == -1)
     x = b;
@@ -13,8 +35,7 @@ void MenuFunctions::buttonNotSelected(int b, int x) {
   b = (x - menu_start_index) % BUTTON_SCREEN_LIMIT;
 
   #ifdef HAS_MINI_SCREEN
-    display_obj.tft.setFreeFont(NULL);
-    display_obj.key[b].drawButton(false, current_menu->list->get(x).name);
+    this->drawMiniMenuButton(b, x, false);
   #endif
 
   uint16_t color = this->getColor(current_menu->list->get(x).color);
@@ -44,8 +65,7 @@ void MenuFunctions::buttonSelected(int b, int x) {
   uint16_t color = this->getColor(current_menu->list->get(x).color);
 
   #ifdef HAS_MINI_SCREEN
-    display_obj.tft.setFreeFont(NULL);
-    display_obj.key[b].drawButton(true, current_menu->list->get(x).name);
+    this->drawMiniMenuButton(b, x, true);
   #endif
 
   #ifdef HAS_FULL_SCREEN
@@ -227,9 +247,11 @@ void MenuFunctions::main(uint32_t currentTime)
         // Brief green flash
         display_obj.tft.fillRect(0, 270, 240, 50, TFT_GREEN);
         display_obj.tft.setTextSize(2);
+        #ifdef HAS_GPS
         if (gps_obj.getFixStatus())
           display_obj.tft.setTextColor(TFT_BLACK, TFT_GREEN);
         else
+        #endif
           display_obj.tft.setTextColor(TFT_BLACK, TFT_RED);
         String poiFlash = "POI (" + String(wifi_scan_obj.poiCount) + ")";
         int16_t flashWidth = poiFlash.length() * 12;
@@ -262,6 +284,7 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_STATION_WAR_DRIVE) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_STATION) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_WAR_DRIVE) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_DISPLAY_AP_INFO) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_EVIL_PORTAL) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA) ||
           (wifi_scan_obj.currentScanMode == WIFI_PING_SCAN) ||
@@ -302,7 +325,6 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == BT_SCAN_AIRTAG_MON) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_FLIPPER) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_FLOCK) ||
-          (wifi_scan_obj.currentScanMode == BT_SCAN_FLOCK_WARDRIVE) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_SIMPLE) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_SIMPLE_TWO) ||
           (wifi_scan_obj.currentScanMode == BT_ATTACK_SOUR_APPLE) ||
@@ -364,6 +386,7 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_STATION) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_WAR_DRIVE) ||
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_DISPLAY_AP_INFO) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_EVIL_PORTAL) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA) ||
@@ -406,7 +429,6 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == BT_SCAN_AIRTAG_MON) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_FLIPPER) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_FLOCK) ||
-            (wifi_scan_obj.currentScanMode == BT_SCAN_FLOCK_WARDRIVE) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_SIMPLE) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_SIMPLE_TWO) ||
             (wifi_scan_obj.currentScanMode == BT_ATTACK_SOUR_APPLE) ||
@@ -1515,7 +1537,9 @@ void MenuFunctions::RunSetup()
   evilPortalMenu.list = new LinkedList<MenuNode>();
   ssidsMenu.list = new LinkedList<MenuNode>();
 
-  gpsPOIMenu.list = new LinkedList<MenuNode>();
+  #ifdef HAS_GPS
+    gpsPOIMenu.list = new LinkedList<MenuNode>();
+  #endif
 
   // Work menu names
   mainMenu.name = text_table1[6];
@@ -1557,14 +1581,18 @@ void MenuFunctions::RunSetup()
   #endif  
   htmlMenu.name = "EP HTML List";
   miniKbMenu.name = "Mini Keyboard";
+
   #ifdef HAS_SD
     sdDeleteMenu.name = "Delete SD Files";
   #endif
+
   selectProbeSSIDsMenu.name = "Probe Requests";
   evilPortalMenu.name = "Evil Portal";
   ssidsMenu.name = "SSIDs";
 
-  gpsPOIMenu.name = "GPS POI";
+  #ifdef HAS_GPS
+    gpsPOIMenu.name = "GPS POI";
+  #endif
 
   // Build Main Menu
   mainMenu.parentMenu = NULL;
@@ -2366,7 +2394,7 @@ void MenuFunctions::RunSetup()
       }
     });
 
-    /*this->addNodes(&wifiGeneralMenu, "Start AP", TFTGREEN, NULL, KEYBOARD_ICO, [this](){
+    this->addNodes(&wifiGeneralMenu, "Start AP", TFTGREEN, NULL, KEYBOARD_ICO, [this](){
       ssidsMenu.parentMenu = &wifiGeneralMenu;
 
       // Add the back button
@@ -2405,7 +2433,13 @@ void MenuFunctions::RunSetup()
         });
       }
       this->changeMenu(&ssidsMenu, true);
-    });*/
+    });
+
+    this->addNodes(&wifiGeneralMenu, "View AP Stats", TFTGREEN, NULL, BEACON_SNIFF, [this]() {
+      display_obj.clearScreen();
+      this->drawStatusBar();
+      wifi_scan_obj.StartScan(WIFI_SCAN_DISPLAY_AP_INFO, TFT_GREEN);
+    });
 
     wifiStationMenu.parentMenu = &ssidsMenu;
     this->addNodes(&wifiStationMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
@@ -2559,11 +2593,6 @@ void MenuFunctions::RunSetup()
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_SCAN_FLOCK, TFT_ORANGE);
-  });
-  this->addNodes(&bluetoothSnifferMenu, "Flock Wardrive", TFTCYAN, NULL, FLOCK, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(BT_SCAN_FLOCK_WARDRIVE, TFT_CYAN);
   });
   this->addNodes(&bluetoothSnifferMenu, "Meta Detect", TFTWHITE, NULL, BLUETOOTH_SNIFF, [this]() {
     display_obj.clearScreen();
@@ -3405,11 +3434,11 @@ float MenuFunctions::calculateGraphScale(int16_t value) {
   return (0.75 * GRAPH_VERT_LIM) / value;
 }
 
-float MenuFunctions::graphScaleCheck(const int16_t array[TFT_WIDTH]) {
+float MenuFunctions::graphScaleCheck(const int16_t array[SCREEN_WIDTH]) {
   int16_t maxValue = 0;
 
   // Iterate through the array to find the highest value
-  for (int16_t i = 0; i < TFT_WIDTH; i++) {
+  for (int16_t i = 0; i < SCREEN_WIDTH; i++) {
     if (array[i] > maxValue) {
       maxValue = array[i];
     }
@@ -3506,22 +3535,41 @@ void MenuFunctions::drawGraphSmall(uint8_t *values) {
 }
 
 void MenuFunctions::drawGraph(int16_t *values) {
+  #if !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
+    int width = TFT_WIDTH;
+  #else
+    int width = SCREEN_WIDTH;
+  #endif
+
   int16_t maxValue = 0;
   int total = 0;
-  for (int i = TFT_WIDTH - 1; i >= 0; i--) {
+  for (int i = width - 1; i >= 0; i--) {
     if (values[i] >= 0) {
       total = total + values[i];
       if (values[i] > maxValue) {
         maxValue = values[i];
       }
-      display_obj.tft.drawLine(i, TFT_HEIGHT, i, TFT_HEIGHT - GRAPH_VERT_LIM, TFT_BLACK);
-      display_obj.tft.drawLine(i, TFT_HEIGHT, i, TFT_HEIGHT - (values[i] * this->_graph_scale), TFT_CYAN);
+      #if !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
+        display_obj.tft.drawLine(i, TFT_HEIGHT, i, TFT_HEIGHT - GRAPH_VERT_LIM, TFT_BLACK);
+        display_obj.tft.drawLine(i, TFT_HEIGHT, i, TFT_HEIGHT - (values[i] * this->_graph_scale), TFT_CYAN);
+      #else
+        display_obj.tft.drawLine(i, TFT_WIDTH, i, TFT_WIDTH - GRAPH_VERT_LIM, TFT_BLACK);
+        display_obj.tft.drawLine(i, TFT_WIDTH, i, TFT_WIDTH - (values[i] * this->_graph_scale), TFT_CYAN);
+        display_obj.tft.setCursor(0, 0);
+        display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      #endif
     }
     else {
       int16_t ch_val = values[i] * -1;
-      display_obj.tft.drawLine(i, TFT_HEIGHT, i, TFT_HEIGHT - GRAPH_VERT_LIM, TFT_BLACK);
-      display_obj.tft.drawLine(i, TFT_HEIGHT, i, TFT_HEIGHT - GRAPH_VERT_LIM, TFT_RED);
-      display_obj.tft.setCursor(i, TFT_HEIGHT - GRAPH_VERT_LIM);
+      #if !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
+        display_obj.tft.drawLine(i, TFT_HEIGHT, i, TFT_HEIGHT - GRAPH_VERT_LIM, TFT_BLACK);
+        display_obj.tft.drawLine(i, TFT_HEIGHT, i, TFT_HEIGHT - GRAPH_VERT_LIM, TFT_RED);
+        display_obj.tft.setCursor(i, TFT_HEIGHT - GRAPH_VERT_LIM);
+      #else
+        display_obj.tft.drawLine(i, TFT_WIDTH, i, TFT_WIDTH - GRAPH_VERT_LIM, TFT_BLACK);
+        display_obj.tft.drawLine(i, TFT_WIDTH, i, TFT_WIDTH - GRAPH_VERT_LIM, TFT_RED);
+        display_obj.tft.setCursor(i, TFT_WIDTH - GRAPH_VERT_LIM);
+      #endif
       display_obj.tft.setTextColor(TFT_BLACK, TFT_RED);
       display_obj.tft.setTextSize(1);
       display_obj.tft.println((String)ch_val);
@@ -3580,14 +3628,8 @@ void MenuFunctions::changeMenu(Menu* menu, bool simple_change) {
     display_obj.init();
 
     #ifdef HAS_ILI9341
-      extern uint8_t getBrightnessLevel();
-      #if ESP_ARDUINO_VERSION_MAJOR >= 3
-        #define BL_PREVIEW(duty) ledcWrite(TFT_BL, (duty))
-      #else
-        #define BL_PREVIEW(duty) ledcWrite(0, (duty))
-      #endif
-
-      BL_PREVIEW(getBrightnessLevel());
+      extern void backlightOn();
+	  backlightOn();
     #endif
   }
   current_menu = menu;
@@ -3714,9 +3756,9 @@ void MenuFunctions::displayCurrentMenu(int start_index)
 
       #ifdef HAS_MINI_SCREEN
         if ((current_menu->selected == i) || (current_menu->list->get(i).selected))
-          display_obj.key[i - start_index].drawButton(true, current_menu->list->get(i).name);
+          this->drawMiniMenuButton(i - start_index, i, true);
         else 
-          display_obj.key[i - start_index].drawButton(false, current_menu->list->get(i).name);
+          this->drawMiniMenuButton(i - start_index, i, false);
       #endif
     }
     display_obj.tft.setFreeFont(NULL);

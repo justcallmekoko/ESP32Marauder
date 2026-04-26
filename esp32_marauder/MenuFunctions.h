@@ -225,6 +225,9 @@ class MenuFunctions
     void displaySetting(String key, Menu* menu, int index);
     void buttonSelected(int b, int x = -1);
     void buttonNotSelected(int b, int x = -1);
+    #ifdef HAS_MINI_SCREEN
+      void drawMiniMenuButton(int b, int x, bool selected);
+    #endif
     //#if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
     #ifdef HAS_MINI_KB
       String miniKeyboard(Menu * targetMenu, bool do_pass = false);
