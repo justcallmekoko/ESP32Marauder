@@ -156,6 +156,7 @@
 #define WIFI_ATTACK_QUIET 80
 #define BT_SCAN_RAYBAN 81
 #define BT_ATTACK_APPLE_JUICE 82
+#define WIFI_SCAN_DISPLAY_AP_INFO 83
 
 #define WIFI_ATTACK_FUNNY_BEACON 99 
 
@@ -668,6 +669,7 @@ class WiFiScan
     void writeHeader(bool poi = false);
     void writeFooter(bool poi = false);
     void displayWardriveStats();
+    void displayAPStats();
 
 
   public:
