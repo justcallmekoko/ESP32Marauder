@@ -584,9 +584,12 @@ void Display::displayBuffer(bool do_clear)
   }
 }
 
-void Display::showCenterText(String text, int y)
+void Display::showCenterText(String text, int y, bool small_pp)
 {
-  tft.setCursor((SCREEN_WIDTH - (text.length() * (6 * BANNER_TEXT_SIZE))) / 2, y);
+  if (!small_pp)
+    tft.setCursor((SCREEN_WIDTH - (text.length() * (6 * BANNER_TEXT_SIZE))) / 2, y);
+  else
+    tft.setCursor((SCREEN_WIDTH - (text.length() * (6))) / 2, y);
   tft.println(text);
 }
 
