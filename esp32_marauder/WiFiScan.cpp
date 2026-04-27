@@ -4896,6 +4896,16 @@ void WiFiScan::displayAPStats() {
       this->connected_devices = num_clients;
     }
 
+    uint8_t num_clients = WiFi.softAPgetStationNum();
+
+    if (num_clients != this->connected_devices) {
+      // New device connected
+      if (num_clients > this->connected_devices) {
+
+      }
+      this->connected_devices = num_clients;
+    }
+
     display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
     display_obj.tft.print("Clients: ");
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
