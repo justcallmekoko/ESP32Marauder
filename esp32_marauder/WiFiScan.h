@@ -683,6 +683,7 @@ class WiFiScan
     bool send_deauth = false;
 
     bool channel_hop = false;
+    uint8_t connected_devices = 0;
 
 
     static MacEntry mac_entries[mac_history_len_half];
@@ -904,6 +905,11 @@ class WiFiScan
     void startGPX(String file_name);
     //String macToString(const Station& station);
 
+    static WiFiEventId_t eventId;
+    static String lastClientMAC;
+    static String lastClientIP;
+
+    static void onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info);
     static bool initMbedtls();
     static int mbedtls_entropy_source(void *data, unsigned char *output, size_t len);
     static bool getSAEACT(const uint8_t *frame, size_t frame_len, uint16_t &group_out, size_t &act_len_out);
