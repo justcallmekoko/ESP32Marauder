@@ -11,6 +11,9 @@ uint8_t *current_act = nullptr;
 
 MacEntry WiFiScan::mac_entries[mac_history_len_half];
 uint8_t WiFiScan::mac_entry_state[mac_history_len_half];
+WiFiEventId_t WiFiScan::eventId;
+String WiFiScan::lastClientMAC = "N/A";
+String WiFiScan::lastClientIP  = "N/A";
 
 int num_beacon = 0;
 int num_deauth = 0;
@@ -1882,6 +1885,8 @@ bool WiFiScan::startWiFi(String ssid, String password, bool gui) {
 
 
   this->setMac();
+
+  eventId = WiFi.onEvent(WiFiScan::onWiFiEvent);
     
   if (password != "")
     WiFi.softAP(ssid.c_str(), password.c_str());
@@ -2371,6 +2376,9 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
       this->max_rssi = -128;
       this->send_deauth = false;
       this->complete_eapol = 0;
+      this->connected_devices = 0;
+
+      WiFi.removeEvent(eventId);
 
       evil_portal_obj.cleanup();
     #endif
@@ -4905,12 +4913,82 @@ void WiFiScan::tagPOI(const char* label) {
   #endif
 }
 
+void WiFiScan::onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
+  extern WiFiScan wifi_scan_obj;
+
+  switch (event) {
+    case ARDUINO_EVENT_WIFI_AP_STACONNECTED: {
+      char macStr[18];
+
+      snprintf(macStr,
+               sizeof(macStr),
+               "%02X:%02X:%02X:%02X:%02X:%02X",
+               info.wifi_ap_staconnected.mac[0],
+               info.wifi_ap_staconnected.mac[1],
+               info.wifi_ap_staconnected.mac[2],
+               info.wifi_ap_staconnected.mac[3],
+               info.wifi_ap_staconnected.mac[4],
+               info.wifi_ap_staconnected.mac[5]);
+
+      lastClientMAC = String(macStr);
+      break;
+    }
+
+    case ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED: {
+      IPAddress ip(info.wifi_ap_staipassigned.ip.addr);
+      lastClientIP = ip.toString();
+
+      Serial.println("Client IP assigned");
+      Serial.println("IP: " + lastClientIP);
+
+      display_obj.tft.setTextSize(1);
+      if (wifi_scan_obj.currentScanMode == WIFI_SCAN_DISPLAY_AP_INFO) {
+        display_obj.tft.fillRect(0,
+                            ((SCREEN_HEIGHT / 3) * 2),
+                            TFT_WIDTH,
+                            SCREEN_HEIGHT,
+                            TFT_BLACK);
+        display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+        display_obj.tft.setCursor(0, ((SCREEN_HEIGHT / 3) * 2));
+        display_obj.tft.println(lastClientMAC + "\n" + lastClientIP + "\nconnected");
+      }
+      break;
+    }
+    case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED: {
+      char macStr[18];
+
+      snprintf(macStr,
+               sizeof(macStr),
+               "%02X:%02X:%02X:%02X:%02X:%02X",
+               info.wifi_ap_staconnected.mac[0],
+               info.wifi_ap_staconnected.mac[1],
+               info.wifi_ap_staconnected.mac[2],
+               info.wifi_ap_staconnected.mac[3],
+               info.wifi_ap_staconnected.mac[4],
+               info.wifi_ap_staconnected.mac[5]);
+
+      display_obj.tft.fillRect(0,
+                            ((SCREEN_HEIGHT / 3) * 2),
+                            TFT_WIDTH,
+                            SCREEN_HEIGHT,
+                            TFT_BLACK);
+      display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+      display_obj.tft.setCursor(0, ((SCREEN_HEIGHT / 3) * 2));
+      display_obj.tft.println(String(macStr) + "\nClient disconnected");
+      break;
+    }
+
+    default:
+      break;
+  }
+}
+
 void WiFiScan::displayAPStats() {
   #ifdef HAS_SCREEN
     display_obj.tft.fillRect(0,
-                            (STATUS_BAR_WIDTH * 2) + 1 + EXT_BUTTON_WIDTH,
+                            (STATUS_BAR_WIDTH * 2),
                             TFT_WIDTH,
-                            TFT_HEIGHT - STATUS_BAR_WIDTH + 1,
+                            ((SCREEN_HEIGHT / 3) * 2) - 1 - (STATUS_BAR_WIDTH * 2),
                             TFT_BLACK);
 
   #ifndef HAS_MINI_SCREEN
@@ -4920,12 +4998,6 @@ void WiFiScan::displayAPStats() {
     display_obj.tft.setCursor(0, (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH);
     display_obj.tft.setTextSize(1);
   #endif
-
-    display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
-    display_obj.tft.println("Access Point");
-
-    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    display_obj.tft.println("");
 
     display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
     display_obj.tft.println("SSID:");
@@ -4941,10 +5013,20 @@ void WiFiScan::displayAPStats() {
 
     display_obj.tft.println("");
 
+    uint8_t num_clients = WiFi.softAPgetStationNum();
+
+    if (num_clients != this->connected_devices) {
+      // New device connected
+      if (num_clients > this->connected_devices) {
+
+      }
+      this->connected_devices = num_clients;
+    }
+
     display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
     display_obj.tft.print("Clients: ");
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    display_obj.tft.println((String)WiFi.softAPgetStationNum());
+    display_obj.tft.println((String)num_clients);
 
     uint8_t primaryChannel;
     wifi_second_chan_t secondChannel;
