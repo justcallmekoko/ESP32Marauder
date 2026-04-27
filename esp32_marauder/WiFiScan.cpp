@@ -35,12 +35,23 @@ LinkedList<Flipper>* flippers;
 LinkedList<IPAddress>* ipList;
 LinkedList<ProbeReqSsid>* probe_req_ssids;
 
-extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3){
-    if (arg == 31337)
-      return 1;
-    else
-      return 0;
-}
+extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3) ;
+
+/*
+ * Replacing the ieee80211_raw_frame_sanity_check() system function with this one no longer
+ * works in new versions of Arduino Core 3.0.0+. We'll instead patch the system library
+ * libnet80211.a so that the original function always returns OK.
+ *
+ extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3){
+
+    Serial.printf("TX_ATTEMPT\n\r"); // Let's add this to see if this function is
+                                     // called by the driver.
+     if (arg == 31337)
+       return 1;
+     else
+       return 0;
+ }
+*/
 
 extern "C" {
   uint8_t esp_base_mac_addr[6];
@@ -1550,10 +1561,11 @@ bool WiFiScan::isFlockCamera(const uint8_t* payload, size_t len, const String& n
 }
 
 void WiFiScan::RunSetup() {
-  if (ieee80211_raw_frame_sanity_check(31337, 0, 0) == 1)
-    this->wsl_bypass_enabled = true;
+
+  if (ieee80211_raw_frame_sanity_check(31337, 0, 0) == 0)
+     this->wsl_bypass_enabled = true;
   else
-    this->wsl_bypass_enabled = false;
+     this->wsl_bypass_enabled = false;
 
   #ifdef HAS_PSRAM
     ssids = new (ps_malloc(sizeof(LinkedList<ssid>))) LinkedList<ssid>();
