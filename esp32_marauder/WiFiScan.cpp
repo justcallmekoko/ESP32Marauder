@@ -4556,9 +4556,9 @@ void WiFiScan::setBaseMacAddress(uint8_t macAddr[6]) {
         WiFi.scanNetworks(true, true, false, 80);
     }
   #endif
-}
+}*/
 
-/*void WiFiScan::executeWarDrive() {
+void WiFiScan::executeWarDrive() {
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
       bool do_save;
@@ -4721,7 +4721,7 @@ void WiFiScan::setBaseMacAddress(uint8_t macAddr[6]) {
       }
     }
   #endif
-}*/
+}
 
 void WiFiScan::openPoiFile() {
   #if defined(HAS_GPS) && defined(HAS_SD)
