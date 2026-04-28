@@ -1134,27 +1134,18 @@ extern "C" {
                     return;
                   }
 
-                  Serial.print(F("Device: "));
                   if(advertisedDevice->getName().length() != 0)
                   {
-                    display_string.concat(advertisedDevice->getName().c_str());
                     Serial.print(advertisedDevice->getName().c_str());
                     
                   }
                   else
                   {
-                    display_string.concat(advertisedDevice->getAddress().toString().c_str());
                     Serial.print(advertisedDevice->getAddress().toString().c_str());
                   }
 
-                  if (gps_obj.getFixStatus()) {
+                  if (gps_obj.getFixStatus())
                     do_save = true;
-                    display_string.concat(" | Lt: " + gps_obj.getLat());
-                    display_string.concat(" | Ln: " + gps_obj.getLon());
-                  }
-                  else {
-                    display_string.concat(F(" | GPS: No Fix"));
-                  }
 
                   String wardrive_line = (String)advertisedDevice->getAddress().toString().c_str() + ",,[BLE]," + gps_obj.getDatetime() + ",0," + (String)advertisedDevice->getRSSI() + "," + gps_obj.getLat() + "," + gps_obj.getLon() + "," + gps_obj.getAlt() + "," + gps_obj.getAccuracy() + ",BLE\n";
                   Serial.print(wardrive_line);
@@ -4538,7 +4529,7 @@ void WiFiScan::setBaseMacAddress(uint8_t macAddr[6]) {
   //#endif
 }
 
-void WiFiScan::executeWarDrive() {
+/*void WiFiScan::executeWarDrive() {
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
       bool do_save;
@@ -4598,11 +4589,20 @@ void WiFiScan::executeWarDrive() {
           this->beacon_frames++;
         }
 
-        //Serial.println("APs: " + (String)this->beacon_frames);
-        //Serial.println("BLE: " + (String)this->bt_frames);
-
         // Free up that memory, you sexy devil
         WiFi.scanDelete();
+
+        // Detect some probes for a little bit
+        this->wifi_initialized = true;
+        this->shutdownWiFi();
+        esp_wifi_init(&cfg2);
+        #ifdef HAS_IDF_3
+          esp_wifi_set_country(&country);
+          esp_event_loop_create_default();
+        #endif
+        this->setWiFiMode(WIFI_MODE_AP, beaconSnifferCallback);
+        this->changeChannel(1);
+        broadcastSetSSID(millis(), "Flock", 1);
 
         // WiFi has completed scan.
         // Start a BLE scan
@@ -4624,12 +4624,15 @@ void WiFiScan::executeWarDrive() {
       }
 
       if (!this->ble_scanning)
+        this->wifi_initialized = true;
+        this->shutdownWiFi();
+        this->startWardriverWiFi();
         WiFi.scanNetworks(true, true, false, 80);
     }
   #endif
-}
+}*/
 
-/*void WiFiScan::executeWarDrive() {
+void WiFiScan::executeWarDrive() {
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
       bool do_save;
@@ -4737,6 +4740,20 @@ void WiFiScan::executeWarDrive() {
 
         WiFi.scanDelete();
 
+        // Detect some probes for a little bit
+        if ((this->wardrive_channel_index + 1) % 4 == 0) {
+          this->wifi_initialized = true;
+          this->shutdownWiFi();
+          esp_wifi_init(&cfg2);
+          #ifdef HAS_IDF_3
+            esp_wifi_set_country(&country);
+            esp_event_loop_create_default();
+          #endif
+          this->setWiFiMode(WIFI_MODE_AP, beaconSnifferCallback);
+          this->changeChannel(1);
+          broadcastSetSSID(millis(), "Flock", 1);
+        }
+
         // Only run BLE after the entire weighted WiFi channel list has completed.
         if (currentScanMode == WIFI_SCAN_WAR_DRIVE && this->wardrive_channel_index >= wardrive_channel_count) {
           #ifdef HAS_BT
@@ -4772,7 +4789,7 @@ void WiFiScan::executeWarDrive() {
       }
     }
   #endif
-}*/
+}
 
 void WiFiScan::openPoiFile() {
   #if defined(HAS_GPS) && defined(HAS_SD)
@@ -4878,8 +4895,7 @@ void WiFiScan::onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
         IPAddress ip(info.wifi_ap_staipassigned.ip.addr);
         lastClientIP = ip.toString();
 
-        Serial.println("Client IP assigned");
-        Serial.println("IP: " + lastClientIP);
+        Serial.println("Client IP assigned" + lastClientIP);
 
         display_obj.tft.setTextSize(1);
         if (wifi_scan_obj.currentScanMode == WIFI_SCAN_DISPLAY_AP_INFO) {
@@ -4944,13 +4960,6 @@ void WiFiScan::displayAPStats() {
     display_obj.tft.println("SSID:");
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
     display_obj.tft.println(WiFi.softAPSSID());
-
-    display_obj.tft.println("");
-
-    display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-    display_obj.tft.println("Gateway:");
-    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    display_obj.tft.println(WiFi.softAPIP().toString());
 
     display_obj.tft.println("");
 
@@ -5100,9 +5109,6 @@ void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color) {
     #endif
     this->setWiFiMode(WIFI_MODE_NULL, beaconSnifferCallback);
     this->changeChannel(this->set_channel);
-  }
-  else {
-    this->startWardriverWiFi();
   }
   this->wifi_initialized = true;
   initTime = millis();
@@ -7243,6 +7249,10 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
   }
   else if (wifi_scan_obj.currentScanMode == BT_SCAN_FLOCK) {
     if (type == WIFI_PKT_MGMT) {
+
+      char addr[] = "00:00:00:00:00:00";
+      getMAC(addr, snifferPacket->payload, 10);
+
       len -= 4;
       if (snifferPacket->payload[0] == 0x40) {
         String probe_req_essid;
@@ -7250,14 +7260,9 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
         for (int i = 0; i < snifferPacket->payload[25]; i++)
           probe_req_essid.concat((char)snifferPacket->payload[26 + i]);
 
-        Serial.println(probe_req_essid);
-
-
         for (int i = 0; i < sizeof(flock_ssid)/sizeof(wifi_scan_obj.flock_ssid[0]); i++) {
           if (strcasestr(probe_req_essid.c_str(), wifi_scan_obj.flock_ssid[i])) {
 
-            char addr[] = "00:00:00:00:00:00";
-            getMAC(addr, snifferPacket->payload, 10);
             #ifdef HAS_SCREEN
               display_string.concat(MAGENTA_KEY);
               display_string.concat((String)snifferPacket->rx_ctrl.rssi);
@@ -7298,8 +7303,6 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
           for (int i = 0; i < sizeof(flock_ssid)/sizeof(wifi_scan_obj.flock_ssid[0]); i++) {
             if (strcasestr(essid.c_str(), wifi_scan_obj.flock_ssid[i])) {
 
-              char addr[] = "00:00:00:00:00:00";
-              getMAC(addr, snifferPacket->payload, 10);
               #ifdef HAS_SCREEN
                 display_string.concat(GREEN_KEY);
                 display_string.concat((String)snifferPacket->rx_ctrl.rssi);
@@ -7327,6 +7330,26 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
               buffer_obj.append(snifferPacket, len);
               break;
             }
+          }
+        }
+      }
+    }
+  }
+  else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_WAR_DRIVE) {
+    if (type == WIFI_PKT_MGMT) {
+      len -= 4;
+      if (snifferPacket->payload[0] == 0x40) {
+        String probe_req_essid;
+
+        for (int i = 0; i < snifferPacket->payload[25]; i++)
+          probe_req_essid.concat((char)snifferPacket->payload[26 + i]);
+
+        if (probe_req_essid != "")
+          Serial.println(probe_req_essid);
+
+        for (int i = 0; i < sizeof(flock_ssid)/sizeof(wifi_scan_obj.flock_ssid[0]); i++) {
+          if (strcasestr(probe_req_essid.c_str(), wifi_scan_obj.flock_ssid[i])) {
+            wifi_scan_obj.flock_devices++;
           }
         }
       }
