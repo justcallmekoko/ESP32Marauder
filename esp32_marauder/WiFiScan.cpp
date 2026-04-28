@@ -7349,7 +7349,10 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
 
         for (int i = 0; i < sizeof(flock_ssid)/sizeof(wifi_scan_obj.flock_ssid[0]); i++) {
           if (strcasestr(probe_req_essid.c_str(), wifi_scan_obj.flock_ssid[i])) {
-            wifi_scan_obj.flock_devices++;
+            if (!wifi_scan_obj.seen_mac(src_addr)) {
+              wifi_scan_obj.save_mac(src_addr);
+              wifi_scan_obj.flock_devices++;
+            }
           }
         }
       }
