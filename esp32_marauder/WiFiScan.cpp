@@ -7287,24 +7287,26 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
           if (strcasestr(probe_req_essid.c_str(), wifi_scan_obj.flock_ssid[i])) {
             if (!wifi_scan_obj.seen_mac(src_addr)) {
               wifi_scan_obj.save_mac(src_addr);
-              wifi_scan_obj.flock_devices++;
-              String wardrive_line =
-                macToString(src_addr) + "," +
-                "Flock," +
-                wifi_scan_obj.security_int_to_string(WIFI_AUTH_WPA2_PSK) + "," +
-                gps_obj.getDatetime() + "," +
-                (String)wifi_scan_obj.set_channel + "," +
-                (String)snifferPacket->rx_ctrl.rssi + "," +
-                gps_obj.getLat() + "," +
-                gps_obj.getLon() + "," +
-                gps_obj.getAlt() + "," +
-                gps_obj.getAccuracy() + ",WIFI\n";
+              #ifdef HAS_GPS
+                wifi_scan_obj.flock_devices++;
+                String wardrive_line =
+                  macToString(src_addr) + "," +
+                  "Flock," +
+                  wifi_scan_obj.security_int_to_string(WIFI_AUTH_WPA2_PSK) + "," +
+                  gps_obj.getDatetime() + "," +
+                  (String)wifi_scan_obj.set_channel + "," +
+                  (String)snifferPacket->rx_ctrl.rssi + "," +
+                  gps_obj.getLat() + "," +
+                  gps_obj.getLon() + "," +
+                  gps_obj.getAlt() + "," +
+                  gps_obj.getAccuracy() + ",WIFI\n";
 
-              Serial.print((String)wifi_scan_obj.mac_history_cursor + " | " + wardrive_line);
+                Serial.print((String)wifi_scan_obj.mac_history_cursor + " | " + wardrive_line);
 
-              if (gps_obj.getFixStatus()) {
-                buffer_obj.append(wardrive_line);
-              }
+                if (gps_obj.getFixStatus()) {
+                  buffer_obj.append(wardrive_line);
+                }
+              #endif
             }
           }
         }
