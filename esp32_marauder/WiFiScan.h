@@ -644,7 +644,7 @@ class WiFiScan
     void broadcastRandomSSID(uint32_t currentTime);
     void broadcastCustomBeacon(uint32_t current_time, ssid custom_ssid);
     void broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_ssid, int scan_mode);
-    void broadcastSetSSID(uint32_t current_time, const char* ESSID, uint8_t chan = 0);
+    void broadcastSetSSID(uint32_t current_time, const char* ESSID, uint8_t chan = 0, bool legit = false);
     void RunAPScan(uint8_t scan_mode, uint16_t color);
     void RunGPSNmea();
     void RunPwnScan(uint8_t scan_mode, uint16_t color);

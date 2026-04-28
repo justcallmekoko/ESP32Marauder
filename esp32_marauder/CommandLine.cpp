@@ -555,8 +555,6 @@ void CommandLine::runCommand(String input) {
           //int sta_sw = this->argSearch(&cmd_args, "-s");
           this->startScanFromCLI(WIFI_SCAN_WAR_DRIVE, TFT_GREEN, "Wardrive");
         }
-        else
-          Serial.println(F("GPS Module not detected"));
       #else
         Serial.println(F("GPS not supported"));
       #endif
@@ -566,14 +564,12 @@ void CommandLine::runCommand(String input) {
       int pr_sw = this->argSearch(&cmd_args, "-p");
 
       if (pr_sw == -1) {
-        Serial.println(F("You did not provide a target index"));
         return;
       }
 
       int pr_index = cmd_args.get(pr_sw + 1).toInt();
 
       if ((pr_index < 0) || (pr_index > probe_req_ssids->size() - 1)) {
-        Serial.println(F("The provided index was not in range"));
         return;
       }
 
@@ -754,14 +750,12 @@ void CommandLine::runCommand(String input) {
       int ap_sw = this->argSearch(&cmd_args, "-a"); // APs
       
       if (ap_sw == -1) {
-        Serial.println(F("You did not provide a target index"));
         return;
       }
 
       int ap_index = cmd_args.get(ap_sw + 1).toInt();
 
       if ((ap_index < 0) || (ap_index > access_points->size() - 1)) {
-        Serial.println(F("The provided index was not in range"));
         return;
       }
       
@@ -785,7 +779,6 @@ void CommandLine::runCommand(String input) {
       int sta_index = cmd_args.get(cl_sw + 1).toInt();
 
       if ((sta_index < 0) || (sta_index > stations->size() - 1)) {
-        Serial.println(F("The provided index was not in range"));
         return;
       }
 
@@ -1025,8 +1018,6 @@ void CommandLine::runCommand(String input) {
             this->startScanFromCLI(BT_SPOOF_AIRTAG, TFT_WHITE, "Spoofing Airtag");
           }
           else {
-            Serial.print(F("Provided index is out of range: "));
-            Serial.println(target_mac);
             return;
           }
         #endif
@@ -1222,7 +1213,6 @@ void CommandLine::runCommand(String input) {
           }
         }
         else {
-          Serial.println(F("The IP index specified is out of range"));
           return;
         }
       }
