@@ -1459,7 +1459,7 @@
       #define CHAN_PER_PAGE 7
 
       #define SCREEN_CHAR_WIDTH 40
-      // #define HAS_ILI9341
+      #define HAS_ILI9341
       #define HAS_ST7789
 
       #define TFT_BL 27
