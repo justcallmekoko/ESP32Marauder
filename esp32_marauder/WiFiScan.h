@@ -644,7 +644,7 @@ class WiFiScan
     void broadcastRandomSSID(uint32_t currentTime);
     void broadcastCustomBeacon(uint32_t current_time, ssid custom_ssid);
     void broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_ssid, int scan_mode);
-    void broadcastSetSSID(uint32_t current_time, const char* ESSID);
+    void broadcastSetSSID(uint32_t current_time, const char* ESSID, uint8_t chan = 0, bool legit = false);
     void RunAPScan(uint8_t scan_mode, uint16_t color);
     void RunGPSNmea();
     void RunPwnScan(uint8_t scan_mode, uint16_t color);
@@ -683,6 +683,7 @@ class WiFiScan
     bool send_deauth = false;
 
     bool channel_hop = false;
+    uint8_t connected_devices = 0;
 
 
     static MacEntry mac_entries[mac_history_len_half];
@@ -733,11 +734,12 @@ class WiFiScan
     bool ep_deauth = false;
     bool ble_scanning = false;
 
-    char* flock_ssid[4] = {
+    char* flock_ssid[5] = {
       "flock",
       "penguin",
       "pigvision",
-      "fs ext battery"
+      "fs ext battery",
+      "Flock"
     };
 
     #ifdef HAS_DUAL_BAND
@@ -904,6 +906,11 @@ class WiFiScan
     void startGPX(String file_name);
     //String macToString(const Station& station);
 
+    static WiFiEventId_t eventId;
+    static String lastClientMAC;
+    static String lastClientIP;
+
+    static void onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info);
     static bool initMbedtls();
     static int mbedtls_entropy_source(void *data, unsigned char *output, size_t len);
     static bool getSAEACT(const uint8_t *frame, size_t frame_len, uint16_t &group_out, size_t &act_len_out);
