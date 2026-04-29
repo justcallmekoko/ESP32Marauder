@@ -694,7 +694,7 @@ class WiFiScan
 
     uint8_t dual_band_channels[DUAL_BAND_CHANNELS] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 72, 76, 80, 84, 88, 92, 96, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, 169, 173, 177};
 
-    uint8_t oui_list[26][3] = {
+    uint8_t oui_list[27][3] = {
     {0x58, 0x8E, 0x81},
     {0xCC, 0xCC, 0xCC},
     {0xEC, 0x1B, 0xBD},
@@ -720,7 +720,8 @@ class WiFiScan
     {0xE0, 0x0A, 0xF6},
     {0x00, 0xF4, 0x8D},
     {0xD0, 0x39, 0x57},
-    {0xE8, 0xD0, 0xFC}
+    {0xE8, 0xD0, 0xFC},
+    {0xB4, 0x1E, 0x52}
     };
 
     uint8_t dual_band_channel_index = 0;
