@@ -4664,7 +4664,8 @@ void WiFiScan::executeWarDrive() {
         }
 
         // Only run BLE after the entire weighted WiFi channel list has completed.
-        if (currentScanMode == WIFI_SCAN_WAR_DRIVE && this->wardrive_channel_index >= wardrive_channel_count) {
+        //if (currentScanMode == WIFI_SCAN_WAR_DRIVE && this->wardrive_channel_index >= wardrive_channel_count) {
+        if (currentScanMode == WIFI_SCAN_WAR_DRIVE && this->wardrive_channel_index % 4 == 0) {
           #ifdef HAS_BT
             this->bt_pending_clear = true;
 
