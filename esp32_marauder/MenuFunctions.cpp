@@ -2435,7 +2435,7 @@ void MenuFunctions::RunSetup()
       this->changeMenu(&ssidsMenu, true);
     });
 
-    this->addNodes(&wifiGeneralMenu, "View AP Stats", TFTGREEN, NULL, BEACON_SNIFF, [this]() {
+    this->addNodes(&wifiGeneralMenu, "Host AP Info", TFTGREEN, NULL, BEACON_SNIFF, [this]() {
       display_obj.clearScreen();
       this->drawStatusBar();
       wifi_scan_obj.StartScan(WIFI_SCAN_DISPLAY_AP_INFO, TFT_GREEN);
