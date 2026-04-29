@@ -20,6 +20,10 @@
   #include <XPT2046_Touchscreen.h>
 #endif
 
+#ifdef HAS_CST820
+  #include <CST820.h>
+#endif
+
 // WiFi stuff
 #define OTA_UPDATE 100
 #define SHOW_INFO 101
@@ -85,6 +89,11 @@ class Display
     TFT_eSPI tft = TFT_eSPI();
     TFT_eSPI_Button key[BUTTON_ARRAY_LEN + 4];
     const String PROGMEM version_number = MARAUDER_VERSION;
+
+    CST820 CST820_touch;
+    #ifdef HAS_CTD820
+    //  CST820 CST820_touch;
+    #endif
 
     #ifdef HAS_CYD_TOUCH
       SPIClass touchscreenSPI;
