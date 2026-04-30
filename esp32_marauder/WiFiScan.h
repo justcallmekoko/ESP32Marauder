@@ -578,6 +578,7 @@ class WiFiScan
       NimBLEAdvertisementData GetUniversalAdvertisementData(EBLEPayloadType type);
     #endif
 
+    void throwThatShitInACircle();
     void displayTargetFilter();
     void displayTransmitRate();
     void prepareScanStage(uint16_t color_1, uint16_t color_2);
@@ -692,6 +693,36 @@ class WiFiScan
     String header_line = "WigleWifi-1.4,appRelease=" + (String)MARAUDER_VERSION + ",model=ESP32 Marauder,release=" + (String)MARAUDER_VERSION + ",device=ESP32 Marauder,display=SPI TFT,board=ESP32 Marauder,brand=JustCallMeKoko\nMAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\n";
 
     uint8_t dual_band_channels[DUAL_BAND_CHANNELS] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 72, 76, 80, 84, 88, 92, 96, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, 169, 173, 177};
+
+    uint8_t oui_list[27][3] = {
+    {0x58, 0x8E, 0x81},
+    {0xCC, 0xCC, 0xCC},
+    {0xEC, 0x1B, 0xBD},
+    {0x90, 0x35, 0xEA},
+    {0x04, 0x0D, 0x84},
+    {0xF0, 0x82, 0xC0},
+    {0x1C, 0x34, 0xF1},
+    {0x38, 0x5B, 0x44},
+    {0x94, 0x34, 0x69},
+    {0xB4, 0xE3, 0xF9},
+    {0x70, 0xC9, 0x4E},
+    {0x3C, 0x91, 0x80},
+    {0xD8, 0xF3, 0xBC},
+    {0x80, 0x30, 0x49},
+    {0x14, 0x5A, 0xFC},
+    {0x74, 0x4C, 0xA1},
+    {0x08, 0x3A, 0x88},
+    {0x9C, 0x2F, 0x9D},
+    {0x94, 0x08, 0x53},
+    {0xE4, 0xAA, 0xEA},
+    {0xF4, 0x6A, 0xDD},
+    {0xF8, 0xA2, 0xD6},
+    {0xE0, 0x0A, 0xF6},
+    {0x00, 0xF4, 0x8D},
+    {0xD0, 0x39, 0x57},
+    {0xE8, 0xD0, 0xFC},
+    {0xB4, 0x1E, 0x52}
+    };
 
     uint8_t dual_band_channel_index = 0;
 
@@ -837,6 +868,7 @@ class WiFiScan
 
     wifi_config_t ap_config;
 
+    bool checkFlockOUI(const uint8_t mac[6]);
     bool startWiFi(String ssid, String password, bool gui = true);
     bool isFlockCamera(const uint8_t* payload, size_t len, const String& name, String* serial_out);
     uint16_t rssiToColor(int8_t rssi);
