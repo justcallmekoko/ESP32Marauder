@@ -329,7 +329,7 @@
     #define HAS_SD
     #define USE_SD
     // #define HAS_TEMP_SENSOR
-    // #define HAS_GPS
+    #define HAS_GPS
     #define HAS_CST820
     #define HAS_CYD_PORTRAIT
     #define HAS_NIMBLE_2
@@ -2684,6 +2684,10 @@
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 22 // Whoever thought it would be a good idea to use UART0 for GPS...
       #define GPS_RX 27 // Now maybe we will be able to use CLI
+    #elif defined(MARAUDER_JC2432W328C)
+      #define GPS_SERIAL_INDEX 2
+      #define GPS_TX 16
+      #define GPS_RX 17
     #elif defined(MARAUDER_CYD_3_5_INCH)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 21
