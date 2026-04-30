@@ -2681,8 +2681,8 @@
       #define GPS_RX 27 // Now maybe we will be able to use CLI
     #elif defined(MARAUDER_CYD_24)
       #define GPS_SERIAL_INDEX 2
-      #define GPS_TX 35 // Whoever thought it would be a good idea to use UART0 for GPS...
-      #define GPS_RX 34 // Now maybe we will be able to use CLI
+      #define GPS_TX 22
+      #define GPS_RX 27
     #elif defined(MARAUDER_CYD_3_5_INCH)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 21
