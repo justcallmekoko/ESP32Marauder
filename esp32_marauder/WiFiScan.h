@@ -465,11 +465,18 @@ class WiFiScan
                     /*16*/  0x01, 0x02, 0x03, 0x04, 0x05, 0x06, //BSSID - overwritten to the same as the source address
                     /*22*/  0xc0, 0x6c, //Seq-ctl
                     /*24*/  0x83, 0x51, 0xf7, 0x8f, 0x0f, 0x00, 0x00, 0x00, //timestamp - the number of microseconds the AP has been active
-                    /*32*/  0xe8, 0x03, //Beacon interval
+                    /*32*/  0x64, 0x00, //Beacon interval
                     /*34*/  0x31, 0x00, //Capability info
                     /* SSID */
                     /*36*/  0x00
                     };
+
+    uint8_t post_base[39] = {
+      0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x24, 0x30, 0x48, 0x6c,
+      0x03, 0x01, 0x04, 0x30, 0x18, 0x01, 0x00, 0x00, 0x0f, 0xac, 
+      0x02, 0x02, 0x00, 0x00, 0x0f, 0xac, 0x04, 0x00, 0x0f, 0xac, 
+      0x04, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x02, 0x00, 0x00
+    };
 
     uint8_t prob_req_packet[128] = {0x40, 0x00, 0x00, 0x00, 
                                   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // Destination
@@ -643,7 +650,7 @@ class WiFiScan
     void sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6], uint8_t sec = WIFI_SECURITY_WPA2);
     void sendAssociationSleep(const char* ESSID, uint8_t bssid[6], int channel, uint8_t mac[6]);
     void broadcastRandomSSID(uint32_t currentTime);
-    void broadcastCustomBeacon(uint32_t current_time, ssid custom_ssid);
+    void broadcastCustomBeacon(uint32_t current_time, ssid custom_ssid, bool for_camera = false);
     void broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_ssid, int scan_mode);
     void broadcastSetSSID(uint32_t current_time, const char* ESSID, uint8_t chan = 0, bool legit = false);
     void RunAPScan(uint8_t scan_mode, uint16_t color);

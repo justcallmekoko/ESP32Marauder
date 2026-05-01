@@ -461,7 +461,7 @@ extern "C" {
               flippers->add(flipper);
 
               #ifdef HAS_SCREEN
-                display_obj.display_buffer->add(String("Flipper: ") + name + ",                 ");
+                display_obj.display_buffer->add("Flipper: " + name + ",                 ");
                 display_obj.display_buffer->add("       MAC: " + String(mac) + ",             ");
                 display_obj.display_buffer->add("      RSSI: " + String(rssi) + ",               ");
                 display_obj.display_buffer->add("     Color: " + String(color) + "                ");
@@ -916,10 +916,15 @@ extern "C" {
           extern WiFiScan wifi_scan_obj;
 
           String name = advertisedDevice->getName().c_str();
+          int name_length = advertisedDevice->getName().length();
           int rssi = advertisedDevice->getRSSI();
           String mac = advertisedDevice->getAddress().toString().c_str();
           unsigned char mac_char[6];
           wifi_scan_obj.copyNimbleMac(advertisedDevice->getAddress(), mac_char);
+          #ifdef HAS_NIMBLE_2
+            const std::vector<unsigned char>& payLoad = advertisedDevice->getPayload();
+            size_t len = payLoad.size();
+          #endif
 
           if (wifi_scan_obj.bt_pending_clear)
             return;
@@ -939,9 +944,6 @@ extern "C" {
                 wifi_scan_obj.bt_cb_busy = false;
                 return;
               }
-            #else
-              const std::vector<unsigned char>& payLoad = advertisedDevice->getPayload();
-              size_t len = payLoad.size();
             #endif
 
             bool match = false;
@@ -1012,9 +1014,6 @@ extern "C" {
             #ifndef HAS_NIMBLE_2
               uint8_t* payLoad = advertisedDevice->getPayload();
               size_t len = advertisedDevice->getPayloadLength();
-            #else
-              const std::vector<unsigned char>& payLoad = advertisedDevice->getPayload();
-              size_t len = payLoad.size();
             #endif
 
             bool match = false;
@@ -1056,7 +1055,7 @@ extern "C" {
               flippers->add(flipper);
 
               #ifdef HAS_SCREEN
-                display_obj.display_buffer->add(String("Flipper: ") + name + ",                 ");
+                display_obj.display_buffer->add("Flipper: " + name + ",                 ");
                 display_obj.display_buffer->add("       MAC: " + String(mac) + ",             ");
                 display_obj.display_buffer->add("      RSSI: " + String(rssi) + ",               ");
                 display_obj.display_buffer->add("     Color: " + String(color) + "                ");
@@ -1076,7 +1075,7 @@ extern "C" {
               Serial.print(F(" "));
               
               Serial.print(F("Device: "));
-              if(advertisedDevice->getName().length() != 0)
+              if(name_length != 0)
               {
                 display_string.concat(name);
                 Serial.print(name);
@@ -1117,7 +1116,7 @@ extern "C" {
                     return;
                   }
 
-                  if(advertisedDevice->getName().length() != 0)
+                  if(name_length != 0)
                   {
                     Serial.print(name);
                     
@@ -1169,7 +1168,7 @@ extern "C" {
               display_string.concat((String)rssi);
               display_string.concat(" ");
 
-              if(advertisedDevice->getName().length() != 0)
+              if(name_length != 0)
                 display_string.concat(name);
               else
                 display_string.concat(mac);
@@ -1246,7 +1245,7 @@ extern "C" {
             if (buf >= 0)
             {
               String display_string = "";
-              if(advertisedDevice->getName().length() != 0)
+              if(name_length != 0)
               {
                 Serial.print(name);
                 for(uint8_t i = 0; i < bad_list_length; i++)
@@ -1351,7 +1350,7 @@ extern "C" {
                 display_string.concat(F(" "));
                 Serial.print(display_string);
                 Serial.print(F(" "));
-                if(advertisedDevice->getName().length() != 0)
+                if(name_length != 0)
                 {
                   display_string.concat(name);
                   Serial.println(name);
@@ -1533,7 +1532,7 @@ void WiFiScan::RunSetup() {
     mac_entry_state[i] = 0;
 
   #ifdef HAS_BT
-    watch_models = new WatchModel[20] {
+    watch_models = new WatchModel[17] {
       {0x1A, "Fallback Watch"},
       {0x02, "Black Watch4 Classic 40m"},
       {0x03, "White Watch4 Classic 40m"},
@@ -1546,13 +1545,10 @@ void WiFiScan::RunSetup() {
       {0x11, "Black Watch5 44mm"},
       {0x12, "Sapphire Watch5 44mm"},
       {0x14, "Gold Watch5 40mm"},
-      {0x15, "Black Watch5 Pro 45mm"},
       {0x16, "Gray Watch5 Pro 45mm"},
       {0x17, "White Watch5 44mm"},
-      {0x1B, "Black Watch6 Pink 40mm"},
       {0x1C, "Gold Watch6 Gold 40mm"},
       {0x1D, "Silver Watch6 Cyan 44mm"},
-      {0x1E, "Black Watch6 Classic 43m"},
       {0x20, "Green Watch6 Classic 43m"},
     };
     
@@ -4659,7 +4655,7 @@ void WiFiScan::executeWarDrive() {
           uint8_t ap_mac[6];
           esp_read_mac(ap_mac, ESP_MAC_WIFI_SOFTAP);
           for (int i = 0; i < 3; i++)
-            broadcastCustomBeacon(millis(), {"Flock", 1, {ap_mac[0], ap_mac[1], ap_mac[2], ap_mac[3], ap_mac[4], ap_mac[5]}, false});
+            broadcastCustomBeacon(millis(), {"Flock", 1, {ap_mac[0], ap_mac[1], ap_mac[2], ap_mac[3], ap_mac[4], ap_mac[5]}, false}, true);
           //broadcastSetSSID(millis(), "Flock", 1, true);
         }
 
@@ -7442,12 +7438,7 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_s
   const uint8_t* post = nullptr;
   int post_len = 0;
 
-  static const uint8_t post_base[] = {
-    0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x24, 0x30, 0x48, 0x6c,
-    0x03, 0x01, 0x04, 0x30, 0x18, 0x01, 0x00, 0x00, 0x0f, 0xac, 
-    0x02, 0x02, 0x00, 0x00, 0x0f, 0xac, 0x04, 0x00, 0x0f, 0xac, 
-    0x04, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x02, 0x00, 0x00
-  };
+
 
   static const uint8_t post_csa[] = {
     0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x24, 0x30, 0x48, 0x6c,
@@ -7565,19 +7556,35 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_s
   packets_sent = packets_sent + 2;
 }
 
-void WiFiScan::broadcastCustomBeacon(uint32_t current_time, ssid custom_ssid) {
+void WiFiScan::broadcastCustomBeacon(uint32_t current_time, ssid custom_ssid, bool for_camera) {
   set_channel = custom_ssid.channel;
 
   const uint8_t* post = nullptr;
 
-  static const uint8_t post_base[] = {
-    0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x24, 0x30, 0x48, 0x6c,
-    0x03, 0x01, 0x04, 0x30, 0x18, 0x01, 0x00, 0x00, 0x0f, 0xac, 
-    0x02, 0x02, 0x00, 0x00, 0x0f, 0xac, 0x04, 0x00, 0x0f, 0xac, 
-    0x04, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x02, 0x00, 0x00
+
+
+  static const uint8_t post_base_for_camera[] = {
+    0x01, 0x08, 0x8b, 0x96, 0x82, 0x84, 0x0c, 0x18, 0x30, 0x60,
+    0x03, 0x01, 0x01, 0x05, 0x06, 0x00, 0x01, 0x00, 0x00, 0x00,
+    0x00, 0x2a, 0x01, 0x00, 0x32, 0x04, 0x6c, 0x12, 0x24, 0x48,
+    0x30, 0x1a, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x04, 0x01, 0x00,
+    0x00, 0x0f, 0xac, 0x04, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x02,
+    0x80, 0x00, 0x00, 0x00, 0x00, 0x0f, 0xac, 0x06, 0x2d, 0x1a,
+    0x6e, 0x11, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3d, 0x16, 0x01, 0x05,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x7f, 0x0c, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0xdd, 0x18, 0x00, 0x50, 0xf2, 0x02,
+    0x01, 0x01, 0x04, 0x00, 0x03, 0xa4, 0x00, 0x00, 0x27, 0xa4,
+    0x00, 0x00, 0x42, 0x43, 0x5e, 0x00, 0x62, 0x32, 0x2f, 0x00
   };
 
   int post_len = sizeof(post_base);
+
+  if (for_camera)
+    post_len = sizeof(post_base_for_camera);
 
   char ESSID[custom_ssid.essid.length() + 1] = {};
   custom_ssid.essid.toCharArray(ESSID, custom_ssid.essid.length() + 1);
@@ -7609,12 +7616,19 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, ssid custom_ssid) {
   
   temp_frame[50 + fullLen] = set_channel;
 
-  memcpy(temp_frame + (38 + fullLen), post_base, post_len);
+  if (!for_camera)
+    memcpy(temp_frame + (38 + fullLen), post_base, post_len);
+  else
+    memcpy(temp_frame + (38 + fullLen), post_base_for_camera, post_len);
   
-  for (int i = 0; i < 2; i++)
+  for (int i = 0; i < 2; i++) {
+    uint16_t seq = (packets_sent & 0x0FFF) << 4;  // 12-bit sequence number
+    temp_frame[22] = seq & 0xFF;        // low byte
+    temp_frame[23] = (seq >> 8) & 0xFF;
     esp_wifi_80211_tx(WIFI_IF_AP, temp_frame, sizeof(temp_frame), false);
+    packets_sent++;
+  }
 
-  packets_sent = packets_sent + 2;
 }
 
 // Function to send beacons with random ESSID length
@@ -7687,12 +7701,7 @@ void WiFiScan::broadcastSetSSID(uint32_t current_time, const char* ESSID, uint8_
 
 // Function for sending crafted beacon frames
 void WiFiScan::broadcastRandomSSID(uint32_t currentTime) {
-  static const uint8_t post_base[] = {
-    0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x24, 0x30, 0x48, 0x6c,
-    0x03, 0x01, 0x04, 0x30, 0x18, 0x01, 0x00, 0x00, 0x0f, 0xac, 
-    0x02, 0x02, 0x00, 0x00, 0x0f, 0xac, 0x04, 0x00, 0x0f, 0xac, 
-    0x04, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x02, 0x00, 0x00
-  };
+  
 
   int ssidLen = random(1, 33);
   int fullLen = ssidLen;
@@ -9860,7 +9869,7 @@ void WiFiScan::main(uint32_t currentTime)
         this->changeChannel(1);
         uint8_t ap_mac[6];
         esp_read_mac(ap_mac, ESP_MAC_WIFI_STA);
-        broadcastCustomBeacon(currentTime, {"Flock", this->set_channel, {ap_mac[0], ap_mac[1], ap_mac[2], ap_mac[3], ap_mac[4], ap_mac[5]}, false});
+        broadcastCustomBeacon(currentTime, {"Flock", this->set_channel, {ap_mac[0], ap_mac[1], ap_mac[2], ap_mac[3], ap_mac[4], ap_mac[5]}, false}, true);
         //broadcastSetSSID(currentTime, "Flock", 1, true);
       }
     }
