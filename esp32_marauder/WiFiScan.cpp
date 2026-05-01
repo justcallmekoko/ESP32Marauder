@@ -5188,12 +5188,12 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color) {
       }
     #endif
     #ifdef HAS_ILI9341
-      if (scan_mode != WIFI_SCAN_PROBE)
+      if ((scan_mode != WIFI_SCAN_PROBE) &&
+          (scan_mode != BT_SCAN_FLOCK))
         display_obj.touchToExit();
     #endif
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
-    if ((scan_mode != WIFI_SCAN_DETECT_FOLLOW) &&
-        (scan_mode != BT_SCAN_FLOCK)) {
+    if (scan_mode != WIFI_SCAN_DETECT_FOLLOW) {
       display_obj.tftDrawChannelScaleButtons(set_channel, false);
       display_obj.tftDrawExitScaleButtons(false);
       display_obj.tftDrawChanHopButton(false, settings_obj.loadSetting<bool>("ChanHop"));
@@ -5326,7 +5326,8 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
           else if (scan_mode == BT_SCAN_RAYBAN)
             display_obj.tft.drawCentreString("Meta Detect",TFT_WIDTH / 2, 16, 2);
           #ifdef HAS_ILI9341
-            display_obj.touchToExit();
+            if (scan_mode != BT_SCAN_FLOCK)
+              display_obj.touchToExit();
           #endif
         #endif
         display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
@@ -5381,7 +5382,8 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
           display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
           display_obj.tft.drawCentreString("Bluetooth Analyzer", TFT_WIDTH / 2, 16, 2);
           #ifdef HAS_ILI9341
-            display_obj.touchToExit();
+            if (scan_mode != BT_SCAN_FLOCK)
+              display_obj.touchToExit();
           #endif
         #endif
         display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
@@ -8884,7 +8886,8 @@ void WiFiScan::channelHop(bool filtered, bool ranged) {
        (this->currentScanMode == WIFI_SCAN_EAPOL) ||
        (this->currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
        (this->currentScanMode == WIFI_SCAN_SIG_STREN) ||
-       (this->currentScanMode == WIFI_SCAN_PACKET_RATE)))
+       (this->currentScanMode == WIFI_SCAN_PACKET_RATE) ||
+       (this->currentScanMode == BT_SCAN_FLOCK)))
     return;
 
   if (!filtered) {
@@ -9866,12 +9869,18 @@ void WiFiScan::main(uint32_t currentTime)
         }
       #endif
       if (currentScanMode == BT_SCAN_FLOCK) {
-        this->changeChannel(1);
+        this->channelHop();
         uint8_t ap_mac[6];
         esp_read_mac(ap_mac, ESP_MAC_WIFI_STA);
         broadcastCustomBeacon(currentTime, {"Flock", this->set_channel, {ap_mac[0], ap_mac[1], ap_mac[2], ap_mac[3], ap_mac[4], ap_mac[5]}, false}, true);
         //broadcastSetSSID(currentTime, "Flock", 1, true);
       }
+    }
+
+    if (currentScanMode == BT_SCAN_FLOCK) {
+      #ifdef HAS_ILI9341
+        this->signalAnalyzerLoop(currentTime);
+      #endif
     }
   }
   else if (currentScanMode == WIFI_PING_SCAN) {
