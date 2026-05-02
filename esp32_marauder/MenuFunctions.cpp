@@ -3012,7 +3012,7 @@ void MenuFunctions::RunSetup()
                   this->mini_kb_index = 0;
 
                 targetMenu->list->set(0, MenuNode{String(char_array[this->mini_kb_index]).c_str(), false, TFTCYAN, 0, true, NULL});
-                this->buildButtons(targetMenu, 0, String(char_array[this->mini_kb_index]).c_str());
+                this->buildButtons(targetMenu, 0, &char_array[this->mini_kb_index]);
                 
                 while (!r_btn.justReleased()) {
                   r_btn.justPressed();
@@ -3068,7 +3068,7 @@ void MenuFunctions::RunSetup()
                     this->mini_kb_index = 0;
 
                   targetMenu->list->set(0, MenuNode{String(char_array[this->mini_kb_index]).c_str(), false, TFTCYAN, 0, true, NULL});
-                  this->buildButtons(targetMenu, 0, String(char_array[this->mini_kb_index]).c_str());
+                  this->buildButtons(targetMenu, 0, &char_array[this->mini_kb_index]);
                 }
               }
             #endif
@@ -3203,7 +3203,7 @@ void MenuFunctions::RunSetup()
                 this->mini_kb_index = 0;
 
               targetMenu->list->set(0, MenuNode{String(char_array[this->mini_kb_index]).c_str(), false, TFTCYAN, 0, true, NULL});
-              this->buildButtons(targetMenu, 0, String(char_array[this->mini_kb_index]).c_str());
+              this->buildButtons(targetMenu, 0, &char_array[this->mini_kb_index]);
               while (display_obj.updateTouch(&t_x, &t_y) > 0)
                 delay(1);
               display_obj.menuButton(&t_x, &t_y, display_obj.updateTouch(&t_x, &t_y));
@@ -3250,7 +3250,7 @@ void MenuFunctions::RunSetup()
                     this->mini_kb_index = 0;
 
                   targetMenu->list->set(0, MenuNode{String(char_array[this->mini_kb_index]).c_str(), false, TFTCYAN, 0, true, NULL});
-                  this->buildButtons(targetMenu, 0, String(char_array[this->mini_kb_index]).c_str());
+                  this->buildButtons(targetMenu, 0, &char_array[this->mini_kb_index]);
                 }
               }
             #endif
@@ -3654,11 +3654,10 @@ void MenuFunctions::changeMenu(Menu* menu, bool simple_change) {
   //#endif
 }
 
-void MenuFunctions::buildButtons(Menu *menu, int starting_index, String button_name) {
+void MenuFunctions::buildButtons(Menu *menu, int starting_index, const char* button_name) {
   if (menu->list == NULL || menu->list->size() == 0)
       return;
 
-  // Ensure starting index is within bounds
   if (starting_index >= menu->list->size())
     starting_index = menu->list->size() - BUTTON_SCREEN_LIMIT;
   if (starting_index < 0)
@@ -3666,31 +3665,29 @@ void MenuFunctions::buildButtons(Menu *menu, int starting_index, String button_n
 
   this->menu_start_index = starting_index;
 
-  // Determine the number of buttons to display (limited to screen capacity)
   uint8_t visible_buttons = min(BUTTON_SCREEN_LIMIT, menu->list->size() - starting_index);
 
-  // Loop through and create only the visible buttons
   for (uint8_t i = 0; i < visible_buttons; i++) {
-    uint16_t color = this->getColor(menu->list->get(starting_index + i).color);
-    
-    char buf[menu->list->get(starting_index + i).name.length() + 1] = {};
-    if (button_name != "")
-      menu->list->get(starting_index + i).name.toCharArray(buf, menu->list->get(starting_index + i).name.length() + 1);
-    else
-      button_name.toCharArray(buf, button_name.length() + 1);
+    MenuNode node = menu->list->get(starting_index + i);
+    uint16_t color = this->getColor(node.color);
 
-    if (i >= BUTTON_SCREEN_LIMIT) {
-      break;
+    char buf[64];
+
+    if (button_name != nullptr && button_name[0] != '\0') {
+      strncpy(buf, button_name, sizeof(buf));
+      buf[sizeof(buf) - 1] = '\0';
+    } else {
+      node.name.toCharArray(buf, sizeof(buf));
     }
 
     display_obj.key[i].initButton(&display_obj.tft,
-                                  KEY_X + 0 * (KEY_W + KEY_SPACING_X),
-                                  KEY_Y + i * (KEY_H + KEY_SPACING_Y), // Positioning buttons vertically
+                                  KEY_X,
+                                  KEY_Y + i * (KEY_H + KEY_SPACING_Y),
                                   KEY_W,
                                   KEY_H,
-                                  TFT_BLACK, // Outline
-                                  TFT_BLACK, // Fill
-                                  color, // Text color
+                                  TFT_BLACK,
+                                  TFT_BLACK,
+                                  color,
                                   buf,
                                   KEY_TEXTSIZE);
 
@@ -3709,12 +3706,12 @@ void MenuFunctions::buildButtons(Menu *menu, int starting_index, String button_n
 
     display_obj.key[i].initButton(&display_obj.tft,
                                   x,
-                                  y, // Positioning buttons vertically
+                                  y,
                                   w,
                                   h,
-                                  TFT_LIGHTGREY, // Outline
-                                  TFT_BLACK, // Fill
-                                  TFT_BLACK, // Text color
+                                  TFT_LIGHTGREY,
+                                  TFT_BLACK,
+                                  TFT_BLACK,
                                   "Chicken",
                                   1);
   }
