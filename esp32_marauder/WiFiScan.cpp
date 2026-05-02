@@ -6944,6 +6944,13 @@ bool WiFiScan::checkFlockOUI(const uint8_t mac[6]) {
   return false;
 }
 
+String WiFiScan::checkEmptyProbe(String essid) {
+  if (essid == "")
+    return "<hidden>";
+  else
+    return essid;
+}
+
 void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) {
   extern WiFiScan wifi_scan_obj;
 
@@ -7071,6 +7078,8 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
             probe_req_essid.concat((char)snifferPacket->payload[26 + i]);
           }
 
+          probe_req_essid = wifi_scan_obj.checkEmptyProbe(probe_req_essid);
+
           display_string.concat(probe_req_essid);
 
           if (probe_req_essid.length() > 0) {
@@ -7197,14 +7206,13 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
         for (int i = 0; i < snifferPacket->payload[25]; i++)
           probe_req_essid.concat((char)snifferPacket->payload[26 + i]);
 
-        if (probe_req_essid != "")
-          Serial.println(probe_req_essid);
-
         // Check name in probe req
         for (int i = 0; i < sizeof(flock_ssid)/sizeof(wifi_scan_obj.flock_ssid[0]); i++) {
           if (strcasestr(probe_req_essid.c_str(), wifi_scan_obj.flock_ssid[i]))
             do_write = true;
         }
+
+        probe_req_essid = wifi_scan_obj.checkEmptyProbe(probe_req_essid);
 
         // Check OUIs
         if ((wifi_scan_obj.checkFlockOUI(src_addr)) && (!do_write))

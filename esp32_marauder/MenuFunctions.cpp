@@ -2896,6 +2896,7 @@ void MenuFunctions::RunSetup()
     changeMenu(settingsMenu.parentMenu, true);
   });
   for (int i = 0; i < settings_obj.getNumberSettings(); i++) {
+    settings_obj.setting_index_to_name(i);
     if (this->callSetting(settings_obj.setting_index_to_name(i)) == "bool")
       this->addNodes(&settingsMenu, settings_obj.setting_index_to_name(i), TFTLIGHTGREY, NULL, SETTINGS, [this, i]() {
         settings_obj.toggleSetting(settings_obj.setting_index_to_name(i));
@@ -2909,6 +2910,8 @@ void MenuFunctions::RunSetup()
         wifi_scan_obj.channel_hop = settings_obj.loadSetting<bool>("ChanHop");
     }, settings_obj.loadSetting<bool>(settings_obj.setting_index_to_name(i)));
   }
+
+  Serial.println("Finished settings nodes");
 
   // Specific setting menu
   specSettingMenu.parentMenu = &settingsMenu;
@@ -2932,6 +2935,8 @@ void MenuFunctions::RunSetup()
     wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
     this->changeMenu(infoMenu.parentMenu, true);
   });
+
+  Serial.println("Changing to main menu...");
 
   // Set the current menu to the mainMenu
   this->changeMenu(&mainMenu, true);
@@ -3404,10 +3409,10 @@ void MenuFunctions::buildSDFileMenu(bool update) {
 
 
 // Function to add MenuNodes to a menu
-void MenuFunctions::addNodes(Menu * menu, String name, uint8_t color, Menu * child, int place, std::function<void()> callable, bool selected, String command)
+void MenuFunctions::addNodes(Menu * menu, String name, uint8_t color, Menu * child, int place, std::function<void()> callable, bool selected)
 {
-  TFT_eSPI_Button new_button;
-  menu->list->add(MenuNode{name, false, color, place, &new_button, selected, callable});
+  //Serial.println("Building node: " + name);
+  menu->list->add(MenuNode{name, false, color, place, selected, callable});
 }
 
 void MenuFunctions::setGraphScale(float scale) {
