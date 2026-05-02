@@ -3081,7 +3081,7 @@ void MenuFunctions::RunSetup()
                   else
                     this->mini_kb_index = str_len - 2;
 
-                  targetMenu->list->set(0, MenuNode{String(char_array[this->mini_kb_index]).c_str(), false, TFTCYAN, 0, NULL, true, NULL});
+                  targetMenu->list->set(0, MenuNode{String(char_array[this->mini_kb_index]).c_str(), false, TFTCYAN, 0, true, NULL});
                   this->buildButtons(targetMenu);
                 }
               }
@@ -3174,7 +3174,7 @@ void MenuFunctions::RunSetup()
               else
                 this->mini_kb_index = str_len - 2;
 
-              targetMenu->list->set(0, MenuNode{String(char_array[this->mini_kb_index]).c_str(), false, TFTCYAN, 0, NULL, true, NULL});
+              targetMenu->list->set(0, MenuNode{String(char_array[this->mini_kb_index]).c_str(), false, TFTCYAN, 0, true, NULL});
               this->buildButtons(targetMenu);
               while (display_obj.updateTouch(&t_x, &t_y) > 0)
                 delay(1);
@@ -3189,7 +3189,7 @@ void MenuFunctions::RunSetup()
               else
                 this->mini_kb_index = 0;
 
-              targetMenu->list->set(0, MenuNode{String(char_array[this->mini_kb_index]).c_str(), false, TFTCYAN, 0, NULL, true, NULL});
+              targetMenu->list->set(0, MenuNode{String(char_array[this->mini_kb_index]).c_str(), false, TFTCYAN, 0, true, NULL});
               this->buildButtons(targetMenu, 0, String(char_array[this->mini_kb_index]).c_str());
               while (display_obj.updateTouch(&t_x, &t_y) > 0)
                 delay(1);
@@ -3236,7 +3236,7 @@ void MenuFunctions::RunSetup()
                   else
                     this->mini_kb_index = 0;
 
-                  targetMenu->list->set(0, MenuNode{String(char_array[this->mini_kb_index]).c_str(), false, TFTCYAN, 0, NULL, true, NULL});
+                  targetMenu->list->set(0, MenuNode{String(char_array[this->mini_kb_index]).c_str(), false, TFTCYAN, 0, true, NULL});
                   this->buildButtons(targetMenu, 0, String(char_array[this->mini_kb_index]).c_str());
                 }
               }
@@ -3263,7 +3263,7 @@ void MenuFunctions::RunSetup()
                   else
                     this->mini_kb_index = str_len - 2;
 
-                  targetMenu->list->set(0, MenuNode{String(char_array[this->mini_kb_index]).c_str(), false, TFTCYAN, 0, NULL, true, NULL});
+                  targetMenu->list->set(0, MenuNode{String(char_array[this->mini_kb_index]).c_str(), false, TFTCYAN, 0, true, NULL});
                   this->buildButtons(targetMenu);
                 }
               }
