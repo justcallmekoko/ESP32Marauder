@@ -1403,14 +1403,16 @@ void MenuFunctions::orientDisplay() {
   changeMenu(current_menu, true);
 }
 
-String MenuFunctions::callSetting(String key) {
+const char* MenuFunctions::callSetting(const char* key) {
   specSettingMenu.name = key;
-  
-  String setting_type = settings_obj.getSettingType(key);
 
-  if (setting_type == "bool") {
+  const char* setting_type = settings_obj.getSettingType(key);
+
+  if (setting_type && strcmp(setting_type, "bool") == 0) {
     return "bool";
   }
+
+  return "";
 }
 
 void MenuFunctions::displaySetting(String key, Menu* menu, int index) {
@@ -2896,19 +2898,21 @@ void MenuFunctions::RunSetup()
     changeMenu(settingsMenu.parentMenu, true);
   });
   for (int i = 0; i < settings_obj.getNumberSettings(); i++) {
-    settings_obj.setting_index_to_name(i);
-    if (this->callSetting(settings_obj.setting_index_to_name(i)) == "bool")
-      this->addNodes(&settingsMenu, settings_obj.setting_index_to_name(i), TFTLIGHTGREY, NULL, SETTINGS, [this, i]() {
-        settings_obj.toggleSetting(settings_obj.setting_index_to_name(i));
-        this->callSetting(settings_obj.setting_index_to_name(i));
-        this->changeMenu(&specSettingMenu, true);
-        this->displaySetting(settings_obj.setting_index_to_name(i), &settingsMenu, i + 1);
-        wifi_scan_obj.force_pmkid = settings_obj.loadSetting<bool>(text_table4[5]);
-        wifi_scan_obj.force_probe = settings_obj.loadSetting<bool>(text_table4[6]);
-        wifi_scan_obj.save_pcap = settings_obj.loadSetting<bool>(text_table4[7]);
-        wifi_scan_obj.ep_deauth = settings_obj.loadSetting<bool>("EPDeauth");
-        wifi_scan_obj.channel_hop = settings_obj.loadSetting<bool>("ChanHop");
-    }, settings_obj.loadSetting<bool>(settings_obj.setting_index_to_name(i)));
+    String settingName = settings_obj.setting_index_to_name(i);
+    const char* type = this->callSetting(settingName.c_str());
+    if (type && strcmp(type, "bool") == 0) {
+      this->addNodes(&settingsMenu, settingName, TFTLIGHTGREY, NULL, SETTINGS, [this, i, settingName]() {
+          settings_obj.toggleSetting(settingName);
+          this->callSetting(settingName.c_str());
+          this->changeMenu(&specSettingMenu, true);
+          this->displaySetting(settingName, &settingsMenu, i + 1);
+          wifi_scan_obj.force_pmkid = settings_obj.loadSetting<bool>(text_table4[5]);
+          wifi_scan_obj.force_probe = settings_obj.loadSetting<bool>(text_table4[6]);
+          wifi_scan_obj.save_pcap = settings_obj.loadSetting<bool>(text_table4[7]);
+          wifi_scan_obj.ep_deauth = settings_obj.loadSetting<bool>("EPDeauth");
+          wifi_scan_obj.channel_hop = settings_obj.loadSetting<bool>("ChanHop");
+      }, settings_obj.loadSetting<bool>(settingName));
+    }
   }
 
   Serial.println("Finished settings nodes");

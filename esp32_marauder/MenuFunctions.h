@@ -219,7 +219,7 @@ class MenuFunctions
     void addNodes(Menu* menu, String name, uint8_t color, Menu* child, int place, std::function<void()> callable, bool selected = false);
     void battery(bool initial = false);
     void battery2(bool initial = false);
-    String callSetting(String key);
+    const char* callSetting(const char* key);
     void displaySetting(String key, Menu* menu, int index);
     void buttonSelected(int b, int x = -1);
     void buttonNotSelected(int b, int x = -1);
