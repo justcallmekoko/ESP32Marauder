@@ -1029,9 +1029,14 @@ void CommandLine::runCommand(String input) {
         String bt_type = cmd_args.get(bt_type_sw + 1);
 
         #ifdef HAS_BT
-          if (bt_type == "apple") {
+          if (bt_type == "sourapple") {
             #ifdef HAS_BT
               this->startScanFromCLI(BT_ATTACK_SOUR_APPLE, TFT_GREEN, "Sour Apple attack");
+            #endif
+          }
+          else if (bt_type == "applejuice") {
+            #ifdef HAS_BT
+              this->startScanFromCLI(BT_ATTACK_APPLE_JUICE, TFT_GREEN, "Apple Juice attack");
             #endif
           }
           else if (bt_type == "windows") {
