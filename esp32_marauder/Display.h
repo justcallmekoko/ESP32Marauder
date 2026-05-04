@@ -90,9 +90,8 @@ class Display
     TFT_eSPI_Button key[BUTTON_ARRAY_LEN + 4];
     const String PROGMEM version_number = MARAUDER_VERSION;
 
-    CST820 CST820_touch;
-    #ifdef HAS_CTD820
-    //  CST820 CST820_touch;
+    #ifdef HAS_CST820
+       CST820 CST820_touch;
     #endif
 
     #ifdef HAS_CYD_TOUCH
