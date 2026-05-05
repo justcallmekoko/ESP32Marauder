@@ -308,14 +308,24 @@ int Settings::getNumberSettings() {
   return json["Settings"].size();
 }
 
-String Settings::getSettingType(String key) {
-  DynamicJsonDocument json(JSON_SETTING_SIZE);
+const char* Settings::getSettingType(const char* key) {
+  static char type_buf[16];  // persistent buffer (adjust size if needed)
 
+  DynamicJsonDocument json(JSON_SETTING_SIZE);
   deserializeJson(json, this->json_settings_string);
 
   for (int i = 0; i < (int)json["Settings"].size(); i++) {
-    if (json["Settings"][i]["name"].as<String>() == key)
-      return json["Settings"][i]["type"];
+    const char* name = json["Settings"][i]["name"];
+    
+    if (name && strcmp(name, key) == 0) {
+      const char* type = json["Settings"][i]["type"];
+      
+      if (type) {
+        strncpy(type_buf, type, sizeof(type_buf));
+        type_buf[sizeof(type_buf) - 1] = '\0';
+        return type_buf;
+      }
+    }
   }
 
   return "";
