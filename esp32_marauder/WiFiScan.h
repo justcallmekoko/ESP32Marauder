@@ -53,6 +53,11 @@
 #ifdef HAS_BATTERY
   #include "BatteryInterface.h"
 #endif
+
+#ifdef CYD_SOUND
+  #include "Sound_CYD.h"
+#endif
+
 #ifdef HAS_GPS
   #include "GpsInterface.h"
 #endif
@@ -66,6 +71,10 @@
   #include "stickcLED.h"
 #elif defined(HAS_NEOPIXEL_LED)
   #include "LedInterface.h"
+#endif
+
+#ifdef CYD_SOUND
+  extern Sound_CYD sound_obj;
 #endif
 
 #define bad_list_length 3

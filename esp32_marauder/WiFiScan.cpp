@@ -509,6 +509,9 @@ extern "C" {
                 }
               #endif
             }
+	    #ifdef CYD_SOUND
+	      sound_obj.geigerClick();  // differnt click for stations
+	    #endif
           }
           else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_WAR_DRIVE) {
             #ifdef HAS_GPS
@@ -905,6 +908,9 @@ extern "C" {
             }
           }
           wifi_scan_obj.bt_cb_busy = false;
+	  #ifdef CYD_SOUND
+	    sound_obj.geigerClick();
+	  #endif
           return;
         }
     };
@@ -1375,6 +1381,9 @@ extern "C" {
           }
 
           wifi_scan_obj.bt_cb_busy = false;
+	  #ifdef CYD_SOUND
+	    sound_obj.geigerClick();
+	  #endif
 
           return;
         }
@@ -5668,6 +5677,10 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
 
         Serial.println();
 
+        #ifdef CYD_SOUND
+          sound_obj.geigerClick();   // click for AP
+        #endif
+
         buffer_obj.append(snifferPacket, len);
 
         return;
@@ -5788,6 +5801,10 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
       Serial.print(F(" -> ap: "));
       Serial.println(ap_addr);
     }
+
+    #ifdef CYD_SOUND
+      sound_obj.geigerClick(1);  // differnt click for stations
+    #endif
 
     //display_string.concat(replaceOUIWithManufacturer(sta_addr));
     display_string.concat(sta_addr);
@@ -7059,6 +7076,10 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
 
           Serial.println();
 
+	  #ifdef CYD_SOUND
+	    sound_obj.geigerClick();
+	  #endif
+
           buffer_obj.append(snifferPacket, len);
         }    
       }
@@ -7245,6 +7266,10 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
           #endif
 
           Serial.println(display_string);
+
+	  #ifdef CYD_SOUND
+	    sound_obj.geigerClick();
+	  #endif
 
           buffer_obj.append(snifferPacket, len);
           return;

@@ -31,6 +31,10 @@ void Settings::_buildCache() {
       _cache.ClientSSID = json["Settings"][i]["value"].as<String>();
     else if (name == "ClientPW")
       _cache.ClientPW = json["Settings"][i]["value"].as<String>();
+#ifdef CYD_SOUND
+    else if (name == "EnableSND")
+      _cache.EnableSND = json["Settings"][i]["value"].as<bool>();
+#endif
   }
 }
 
@@ -135,6 +139,10 @@ template <> bool Settings::loadSetting<bool>(String key) {
     return _cache.EPDeauth;
   if (key == "ChanHop")
     return _cache.ChanHop;
+#ifdef CYD_SOUND
+  if (key == "EnableSND")
+    return _cache.EnableSND;
+#endif
 
   // Unknown bool key: fall back to JSON so the setting can be auto-created.
   DynamicJsonDocument json(JSON_SETTING_SIZE);
@@ -167,6 +175,10 @@ template <> uint8_t Settings::loadSetting<uint8_t>(String key) {
     return (uint8_t)_cache.EPDeauth;
   if (key == "ChanHop")
     return (uint8_t)_cache.ChanHop;
+#ifdef CYD_SOUND
+  if (key == "EnableSND")
+    return (uint8_t)_cache.EnableSND;
+#endif
 
   DynamicJsonDocument json(JSON_SETTING_SIZE);
   deserializeJson(json, this->json_settings_string);
@@ -220,6 +232,10 @@ template <> bool Settings::saveSetting<bool>(String key, bool value) {
         _cache.EPDeauth = value;
       else if (key == "ChanHop")
         _cache.ChanHop = value;
+#ifdef CYD_SOUND
+      else if (key == "EnableSND")
+        _cache.EnableSND = value;
+#endif
 
       this->printJsonSettings(settings_string);
 
@@ -407,6 +423,14 @@ bool Settings::createDefaultSettings(fs::FS &fs, bool spec, uint8_t index, Strin
     jsonBuffer["Settings"][7]["value"] = "";
     jsonBuffer["Settings"][7]["range"]["min"] = "";
     jsonBuffer["Settings"][7]["range"]["max"] = "";
+
+#ifdef CYD_SOUND
+    jsonBuffer["Settings"][8]["name"] = "EnableSND";
+    jsonBuffer["Settings"][8]["type"] = "bool";
+    jsonBuffer["Settings"][8]["value"] = true;
+    jsonBuffer["Settings"][8]["range"]["min"] = false;
+    jsonBuffer["Settings"][8]["range"]["max"] = true;
+#endif
 
     //jsonBuffer.printTo(settingsFile);
     if (serializeJson(jsonBuffer, settingsFile) == 0) {
