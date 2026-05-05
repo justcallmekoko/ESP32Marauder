@@ -50,7 +50,7 @@ class Settings {
     T saveSetting(String key, String value);
 
     bool toggleSetting(String key);
-    String getSettingType(String key);
+    const char* getSettingType(const char* key);
     String setting_index_to_name(int i);
     int getNumberSettings();
 

@@ -219,7 +219,7 @@ class MenuFunctions
     void addNodes(Menu* menu, String name, uint8_t color, Menu* child, int place, std::function<void()> callable, bool selected = false);
     void battery(bool initial = false);
     void battery2(bool initial = false);
-    String callSetting(String key);
+    const char* callSetting(const char* key);
     void displaySetting(String key, Menu* menu, int index);
     void buttonSelected(int b, int x = -1);
     void buttonNotSelected(int b, int x = -1);
@@ -271,7 +271,7 @@ class MenuFunctions
 
     void setGraphScale(float scale);
     void updateStatusBar();
-    void buildButtons(Menu* menu, int starting_index = 0, String button_name = "");
+    void buildButtons(Menu* menu, int starting_index = 0, const char* button_name = nullptr);
     void changeMenu(Menu* menu, bool simple_change = false);
     void drawStatusBar();
     void displayCurrentMenu(int start_index = 0);
