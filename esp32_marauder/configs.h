@@ -220,11 +220,11 @@
 
   #if defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_REV_FEATHER_S3)
     //#define FLIPPER_ZERO_HAT
-    // #define HAS_BATTERY
     #ifdef MARAUDER_REV_FEATHER_S3
-	#define HAS_BT
-	#define HAS_NIMBLE_2
+      #define HAS_BT
+      #define HAS_NIMBLE_2
     #endif
+    #define HAS_BATTERY
     #define HAS_MINI_KB
     #define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
@@ -235,6 +235,7 @@
     #define USE_SD
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
+    #define HAS_IDF_3
   #endif
 
   #ifdef MARAUDER_V4
@@ -2690,6 +2691,12 @@
       #define I2C_SCL 4
       #define I2C_SDA 5
     #endif
+
+    #if defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_REV_FEATHER_S3)
+      #define I2C_SCL 4
+      #define I2C_SDA 3
+    #endif
+      
 
   #endif
 
