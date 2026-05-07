@@ -19,7 +19,7 @@ void Sound_CYD::RunSetup() {
   duty_cycle = DUTY;
 
 #if ESP_ARDUINO_VERSION_MAJOR >= 3
-  ledcAttach(SOUND_PIN, 0, LEDC_RESOLUTION);
+  ledcAttach(SOUND_PIN, 1, LEDC_RESOLUTION);
 #else
   ledcAttachPin(SOUND_PIN, LEDC_CHANNEL);
   ledcSetup(LEDC_CHANNEL, 1, LEDC_RESOLUTION);
