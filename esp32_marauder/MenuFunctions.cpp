@@ -1484,7 +1484,9 @@ void MenuFunctions::RunSetup()
 
   // Main menu stuff
   wifiMenu.list = new LinkedList<MenuNode>(); // Get list in second menu ready
+#ifdef HAS_BT
   bluetoothMenu.list = new LinkedList<MenuNode>(); // Get list in third menu ready
+#endif
   deviceMenu.list = new LinkedList<MenuNode>();
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
@@ -1605,9 +1607,11 @@ void MenuFunctions::RunSetup()
   this->addNodes(&mainMenu, text_table1[7], TFTGREEN, NULL, WIFI, [this]() {
     this->changeMenu(&wifiMenu, true);
   });
-  this->addNodes(&mainMenu, text_table1[19], TFTCYAN, NULL, BLUETOOTH, [this]() {
-    this->changeMenu(&bluetoothMenu, true);
-  });
+  #ifdef HAS_BT
+    this->addNodes(&mainMenu, text_table1[19], TFTCYAN, NULL, BLUETOOTH, [this]() {
+      this->changeMenu(&bluetoothMenu, true);
+    });
+  #endif
   #ifdef HAS_GPS
 	if (gps_obj.getGpsModuleStatus()) {
     	this->addNodes(&mainMenu, text1_66, TFTRED, NULL, GPS_MENU, [this]() {
@@ -2547,6 +2551,7 @@ void MenuFunctions::RunSetup()
     this->changeMenu(clearAPsMenu.parentMenu, true);
   });
 
+#ifdef HAS_BT
   // Build Bluetooth Menu
   bluetoothMenu.parentMenu = &mainMenu; // Second Menu is third menu parent
   this->addNodes(&bluetoothMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
@@ -2646,6 +2651,7 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_ATTACK_SPAM_ALL, TFT_MAGENTA);
   });
+#endif
 
   //#ifndef HAS_ILI9341
     #ifdef HAS_BT
