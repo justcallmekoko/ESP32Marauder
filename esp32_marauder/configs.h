@@ -2088,7 +2088,6 @@
       #define TFT_RST 41
       #define TFT_BL 45
       //#define TOUCH_CS 21
-      #define SD_CS 4
 
       #define SCREEN_BUFFER
 
@@ -2606,7 +2605,10 @@
     #endif
 
     #ifdef MARAUDER_REV_FEATHER
-      #define SD_CS 5
+      #define SD_MISO TFT_MISO
+      #define SD_MOSI TFT_MOSI
+      #define SD_SCK  TFT_SCLK
+      #define SD_CS 10
     #endif
 
     #ifdef MARAUDER_M5STICKC
