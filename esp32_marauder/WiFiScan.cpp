@@ -5560,6 +5560,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
     // We got an AP. Check if in list and add if not
     if ((snifferPacket->payload[0] == 0x80) && (buf == 0))
     {
+      if (len < 38) return; // too short to contain SSID tag
       // Get security info
       uint8_t security_type = wifi_scan_obj.getSecurityType(snifferPacket->payload, len);
       
@@ -6115,7 +6116,9 @@ int WiFiScan::extractPineScanChannel(const uint8_t* payload, int len) {
 
 // Function to count tagged parameters in beacon frames
 bool countPineScanTaggedParameters(const uint8_t* payload, int len) {
-  int ssid_len = payload[37];
+  if (len < 38) return false;
+  uint8_t ssid_len = payload[37];
+  if (ssid_len > 32) return false; // SSID max per 802.11 spec
   int pos = 36 + ssid_len + 2;
   
   // Check if next tag is the DS Parameter (channel info) - tag number 3
@@ -6150,7 +6153,8 @@ void WiFiScan::pineScanSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t ty
     
     if ((snifferPacket->payload[0] == 0x80) && (buff == 0)) {
       buffer_obj.append(snifferPacket, len); // Capture all beacons
-      
+      if (len < 38) return; // too short to contain SSID tag
+
       // Extract MAC address for Pineapple detection
       uint8_t mac_addr[6];
       for (int i = 0; i < 6; i++) {
@@ -6506,7 +6510,8 @@ void WiFiScan::multiSSIDSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t t
     
     if ((snifferPacket->payload[0] == 0x80) && (buff == 0)) {
       buffer_obj.append(snifferPacket, len); // Capture all beacons
-      
+      if (len < 38) return; // too short to contain SSID tag
+
       // Extract MAC address
       uint8_t mac_addr[6];
       for (int i = 0; i < 6; i++) {
@@ -6997,6 +7002,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
 
       // It is a beacon
       if (snifferPacket->payload[0] == 0x80) {
+        if (len < 38) return; // too short to contain SSID tag
         bool mac_match = true;
         for (int i = 0; i < 6; i++) {
           if (src_addr[i] != target_mac[i]) {
@@ -8018,11 +8024,13 @@ void WiFiScan::sendAssociationSleep(const char* ESSID, uint8_t bssid[6], int cha
   association_packet[22] = sequence_number & 0xFF;        // Sequence Number LSB
 
   /* SSID tag */
-  association_packet[29] = (uint8_t)strlen((char *)ESSID); // SSID Length
-  memcpy(&association_packet[30], ESSID, strlen((char *)ESSID)); // SSID
+  uint8_t essid_len = (uint8_t)strnlen(ESSID, 33);
+  if (essid_len > 32) essid_len = 32; // clamp to 802.11 max
+  association_packet[29] = essid_len; // SSID Length
+  memcpy(&association_packet[30], ESSID, essid_len); // SSID
 
   /* Supported Rates tag */
-  uint16_t offset = 30 + strlen((char *)ESSID); // Offset after SSID);
+  uint16_t offset = 30 + essid_len; // Offset after SSID);
   association_packet[offset++] = 0x01; // Supported Rates tag
   association_packet[offset++] = 0x04; // Length
   association_packet[offset++] = 0x82;  // 1 Mbps
@@ -8273,6 +8281,7 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
       if (type == WIFI_PKT_MGMT) { // It's management
         len -= 4;
         if ((snifferPacket->payload[0] == 0x80) && (buff == 0)) { // It's a beacon
+          if (len < 38) return; // too short to contain SSID tag
           // Get source addr
           char addr[] = "00:00:00:00:00:00";
           getMAC(addr, snifferPacket->payload, 10);

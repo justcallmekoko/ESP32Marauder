@@ -208,6 +208,7 @@ void Buffer::saveSerial() {
   // Additional buffer and memcpy's so that a single Serial.write() is called
   // This is necessary so that other console output isn't mixed into buffer stream
   uint8_t* buf = (uint8_t*)malloc(mark_begin_len + bufSizeA + bufSizeB + mark_close_len);
+  if (!buf) return;
   uint8_t* it = buf;
   memcpy(it, mark_begin, mark_begin_len);
   it += mark_begin_len;
