@@ -34,13 +34,13 @@
   //#define MARAUDER_CARDPUTER_ADV
   //#define MARAUDER_V8
   //#define MARAUDER_MINI_V3
-  #define MARAUDER_M5_NANO_C6
+  //#define MARAUDER_M5_NANO_C6
   //#define DUAL_MINI_C5
   //// END BOARD TARGETS
 
   #define JSON_SETTING_SIZE 2048
 
-  #define MARAUDER_VERSION "v1.12.1"
+  #define MARAUDER_VERSION "v1.12.2"
 
   #define GRAPH_REFRESH   100
 
