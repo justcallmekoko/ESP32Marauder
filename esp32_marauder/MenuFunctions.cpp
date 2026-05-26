@@ -1053,7 +1053,7 @@ void MenuFunctions::updateStatusBar()
     #endif
 
     #ifdef HAS_MINI_SCREEN
-      display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.old_channel, TFT_WIDTH/4, 0, 1);
+      display_obj.tft.drawString("CH:" + (String)wifi_scan_obj.old_channel, TFT_WIDTH/4, 0, 1);
     #endif
   }
 
@@ -1233,7 +1233,7 @@ void MenuFunctions::drawStatusBar()
   #endif
 
   #ifdef HAS_MINI_SCREEN
-    display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.old_channel, TFT_WIDTH/4, 0, 1);
+    display_obj.tft.drawString("CH:" + (String)wifi_scan_obj.old_channel, TFT_WIDTH/4, 0, 1);
   #endif
 
   // RAM Stuff
