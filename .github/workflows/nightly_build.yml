@@ -70,7 +70,7 @@ jobs:
             core.setOutput('default_branch', defaultBranch);
             core.setOutput('head_sha', headSha);
             core.setOutput('short_sha', shortSha);
-            
+
   compile_sketch:
     name: build ${{ matrix.board.name }}
     runs-on: ubuntu-latest
@@ -96,16 +96,17 @@ jobs:
           - { name: "Marauder CYD 2432S028",         flag: "MARAUDER_CYD_MICRO",       fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "cyd_2432S028",            tft: true,  tft_file: "User_Setup_cyd_micro.h",             build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
           - { name: "Marauder CYD 2432S024 GUITION", flag: "MARAUDER_CYD_GUITION",     fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "cyd_2432S024_guition",    tft: true,  tft_file: "User_Setup_cyd_guition.h",           build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
           - { name: "Marauder CYD 2432S028 2 USB",   flag: "MARAUDER_CYD_2USB",        fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "cyd_2432S028_2usb",       tft: true,  tft_file: "User_Setup_cyd_2usb.h",              build_dir: "d32",                        addr: "0x1000",   idf_ver: "3.3.4",    nimble_ver: "2.3.8",   esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
-          - { name: "Marauder CYD 3.5inch",          flag: "MARAUDER_CYD_3_5_INCH",    fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "cyd_3_5_inch",            tft: true,  tft_file: "User_Setup_cyd_3_5_inch.h",          build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Marauder CYD 3.5inch",          flag: "MARAUDER_CYD_3_5_INCH",    fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "cyd_3_5_inch",            tft: true,  tft_file: "User_Setup_cyd_3_5_and_4_inch.h",    build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "Marauder CYD 4.0inch",          flag: "MARAUDER_CYD_4_INCH",      fbqn: "esp32:esp32:d32:PartitionScheme=min_spiffs",                                                    file_name: "cyd_4_inch",              tft: true,  tft_file: "User_Setup_cyd_3_5_and_4_inch.h",    build_dir: "d32",                        addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
           - { name: "M5Cardputer",                   flag: "MARAUDER_CARDPUTER",       fbqn: "esp32:esp32:esp32s3:PartitionScheme=min_spiffs,FlashSize=8M,PSRAM=disabled",                    file_name: "m5cardputer",             tft: true,  tft_file: "User_Setup_marauder_m5cardputer.h",  build_dir: "esp32s3",                    addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
           - { name: "M5Cardputer ADV",               flag: "MARAUDER_CARDPUTER_ADV",   fbqn: "esp32:esp32:esp32s3:PartitionScheme=min_spiffs,FlashSize=8M,PSRAM=disabled",                    file_name: "m5cardputer_adv",         tft: true,  tft_file: "User_Setup_marauder_m5cardputer_adv.h",  build_dir: "esp32s3",                addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
           - { name: "ESP32-C5-DevKitC-1",            flag: "MARAUDER_C5",              fbqn: "esp32:esp32:esp32c5:FlashSize=8M,PartitionScheme=min_spiffs,PSRAM=enabled",                     file_name: "esp32c5devkitc1",         tft: false, tft_file: "",                                   build_dir: "esp32c5",                    addr: "0x2000",   idf_ver: "3.3.4",    nimble_ver: "2.3.8",   esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
           - { name: "M5NanoC6",                      flag: "MARAUDER_M5_NANO_C6",      fbqn: "esp32:esp32:esp32c6:CDCOnBoot=cdc,PartitionScheme=min_spiffs",                                  file_name: "m5nanoc6",                tft: false, tft_file: "",                                   build_dir: "esp32c6",                    addr: "0x2000",   idf_ver: "3.3.4",    nimble_ver: "2.3.8",   esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
-          
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
-          
+
       - name: Install Arduino CLI
         run: |
           curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
@@ -126,46 +127,46 @@ jobs:
 
       - name: Verify Installed Cores Again
         run: arduino-cli core list
-          
+
       - name: Show Arduino dir structure
         run: |
           find /home/runner/.arduino15/packages/esp32/hardware/
-          
+
       - name: Install ESP32Ping
         uses: actions/checkout@v2
         with:
           repository: marian-craciunescu/ESP32Ping
           ref: 1.6
           path: CustomESP32Ping
-          
+
       - name: Install AsyncTCP
         uses: actions/checkout@v2
         with:
           repository: ESP32Async/AsyncTCP
           ref: v3.4.8
           path: CustomAsyncTCP
-          
+
       - name: Install MicroNMEA
         uses: actions/checkout@v2
         with:
           repository: stevemarple/MicroNMEA
           ref: v2.0.6
           path: CustomMicroNMEA
-          
+
       - name: Install ESPAsyncWebServer
         uses: actions/checkout@v2
         with:
           repository: ESP32Async/ESPAsyncWebServer
           ref: v3.8.1
           path: CustomESPAsyncWebServer
-          
+
       - name: Install TFT_eSPI
         uses: actions/checkout@v2
         with:
           repository: Bodmer/TFT_eSPI
           ref: V2.5.34
           path: CustomTFT_eSPI
-          
+
       - name: Install XPT2046_Touchscreen
         uses: actions/checkout@v2
         with:
@@ -207,28 +208,28 @@ jobs:
           repository: bblanchon/ArduinoJson
           ref: v6.18.2
           path: CustomArduinoJson
-          
+
       - name: Install LinkedList
         uses: actions/checkout@v2
         with:
           repository: ivanseidel/LinkedList
           ref: v1.3.3
           path: CustomLinkedList
-          
+
       - name: Install EspSoftwareSerial
         uses: actions/checkout@v2
         with:
           repository: plerup/espsoftwareserial
           ref: 8.1.0
           path: CustomEspSoftwareSerial
-          
+
       - name: Install Adafruit_BusIO
         uses: actions/checkout@v2
         with:
           repository: adafruit/Adafruit_BusIO
           ref: 1.15.0
           path: CustomAdafruit_BusIO
-          
+
       - name: Install Adafruit_MAX1704X
         uses: actions/checkout@v2
         with:
@@ -242,7 +243,7 @@ jobs:
       - name: Show Libraries
         run: |
           find /home/runner/ -name "Custom*"
-          
+
       - name: Configure TFT_eSPI
         run: |
           rm -f CustomTFT_eSPI/User_Setup_Select.h
@@ -269,13 +270,13 @@ jobs:
               cat "$i" | grep compiler.c.elf.libs.esp32
             done
           fi
-          
+
           if [[ ${{ matrix.board.idf_ver }} == "3.3.4" ]]; then
             for i in $(find /home/runner/.arduino15/packages/esp32/hardware/esp32/ -name "platform.txt"); do
               sed -i 's/compiler.c.elf.extra_flags=/compiler.c.elf.extra_flags=-Wl,-zmuldefs /' "$i"
             done
           fi
-          
+
       - name: Configure TFT_eSPI (if needed)
         run: |
           pwd
@@ -292,7 +293,7 @@ jobs:
           extra-arduino-cli-args: "--warnings none --build-property compiler.cpp.extra_flags='-D${{ matrix.board.flag }}'"
           arduino-platform: esp32:esp32@${{ matrix.board.idf_ver }}
           platform-url: https://github.com/espressif/arduino-esp32/releases/download/${{ matrix.board.idf_ver }}/package_esp32_dev_index.json
-      
+
       - name: Rename and Upload ${{ matrix.board.name }} Artifact
         run: |
           VERSION=$(grep '#define MARAUDER_VERSION' ./esp32_marauder/configs.h | sed -E 's/.*"v([^"]+)"/v\1/' | tr '.' '_')
@@ -300,7 +301,7 @@ jobs:
 
           BUILD_DIR=./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}
           INPUT_BIN=$BUILD_DIR/esp32_marauder.ino.bin
-          
+
           OUTPUT_BIN=esp32_marauder_${VERSION}_beta_${DATE}_${{ matrix.board.file_name }}.bin
 
           mv "$INPUT_BIN" "$BUILD_DIR/$OUTPUT_BIN"
@@ -308,7 +309,7 @@ jobs:
           echo "artifact_name=$OUTPUT_BIN" >> $GITHUB_ENV
           echo "artifact_path=$BUILD_DIR/$OUTPUT_BIN" >> $GITHUB_ENV
           echo "wild_card=esp32_marauder_${VERSION}_beta_${DATE}_*.bin" >> $GITHUB_ENV
-          
+
       - name: Upload ${{ matrix.board.name }} Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -328,7 +329,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           merge-multiple: true
-          
+
       - name: Compute release title/tag
         id: meta
         shell: bash
@@ -346,11 +347,11 @@ jobs:
             echo "tag=manual-$(date -u +'%Y%m%d')-${SHORT_SHA}" >> $GITHUB_OUTPUT
             echo "prerelease=false" >> $GITHUB_OUTPUT
           fi
-          
+
           echo "wild_card=esp32_marauder_${VERSION}_beta_${DATE}_*.bin" >> $GITHUB_ENV
-          
+
           echo ${{ env.wild_card }}
-          
+
       - name: Delete old assets on nightly release (if any)
         uses: actions/github-script@v7
         with:
@@ -401,7 +402,7 @@ jobs:
             **[My Discord](https://discord.com/servers/willstunforfood-776211399918878760)**
 
             **Note:** Nightly pre-releases are for testing and evaluation. Use them at your own risk.
-            
+
             | Hardware | Binary Version |
             | -------- | -------------- |
             | v4 (OG) | `_old_hardware.bin` |
@@ -419,10 +420,11 @@ jobs:
             | CYD 2432S028(R) | `_cyd_2432S028.bin` |
             | RL Phantom | `_cyd_2432S024_guition.bin` |
             | CYD 2432S028 2 USB | `_cyd_2432S028_2usb.bin` |
+            | CYD 3.5 inch | `_cyd_3_5_inch.bin` |
+            | CYD 4.0 inch | `_cyd_4_inch.bin` |
             | M5 Cardputer | `_m5cardputer.bin` (Available on M5 Burner) |
             | M5 Cardputer ADV | `_m5cardputer_adv.bin` |
             | ESP32-C5 DevKit | [`_esp32c5_devkit.bin`](https://github.com/justcallmekoko/ESP32Marauder/wiki/ESP32%E2%80%90C5%E2%80%90DevKitC%E2%80%901) |
             | AWOK V2/V3 screen (white usb) | `_v6_1.bin` |
             | AWOK V2 flipper (orange usb) | `_flipper.bin` |
             | AWOK V3 flipper (orange usb) | `_marauder_dev_board_pro.bin` |
-

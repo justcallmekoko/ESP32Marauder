@@ -124,6 +124,8 @@ void Display::setCalData(bool landscape) {
         uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield
       #elif defined(MARAUDER_CYD_3_5_INCH)
         uint16_t calData[5] = { 239, 3560, 262, 3643, 4 };
+      #elif defined(MARAUDER_CYD_4_INCH)
+        uint16_t calData[5] = { 202, 3623, 265, 3673, 4 };
       #elif defined(MARAUDER_V8)
         //uint16_t calData[5] = { 351, 3279, 214, 3394, 2 };
         uint16_t calData[5] = { 312, 3431, 191, 3456, 2 };
@@ -139,9 +141,11 @@ void Display::setCalData(bool landscape) {
         uint16_t calData[5] = { 391, 3491, 266, 3505, 7 }; // Landscape TFT Shield
       #elif defined(MARAUDER_CYD_3_5_INCH)
         uint16_t calData[5] = { 272, 3648, 234, 3565, 7 };
+      #elif defined(MARAUDER_CYD_4_INCH)
+        uint16_t calData[5] = { 261, 3682, 207, 3626, 7 };
       #elif defined(MARAUDER_V8)
         uint16_t calData[5] = { 213, 3396, 350, 3275, 1 };
-      #else if defined(TFT_DIY)
+      #elif defined(TFT_DIY)
         uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
       #endif
       #ifdef HAS_ILI9341
@@ -167,7 +171,7 @@ void Display::RunSetup() {
     this->touchscreen.begin(touchscreenSPI);
     this->touchscreen.setRotation(0);
   #endif
-  
+
   tft.init();
 
   tft.setRotation(SCREEN_ORIENTATION);
@@ -214,7 +218,7 @@ void Display::tftDrawEapolColorKey(bool filter)
 {
   //Display color key
   tft.setTextSize(1); tft.setTextColor(TFT_WHITE);
-  tft.fillRect(14, 0, 15, 8, TFT_CYAN); tft.setCursor(30, 0); tft.println(" - EAPOL"); 
+  tft.fillRect(14, 0, 15, 8, TFT_CYAN); tft.setCursor(30, 0); tft.println(" - EAPOL");
   if (filter) {
     uint16_t y = tft.getCursorY();
     tft.setCursor(14, y);
@@ -226,7 +230,7 @@ void Display::tftDrawColorKey()
 {
   //Display color key
   tft.setTextSize(1); tft.setTextColor(TFT_WHITE);
-  tft.fillRect(14, 0, 15, 8, TFT_GREEN); tft.setCursor(30, 0); tft.print(" - Beacons"); 
+  tft.fillRect(14, 0, 15, 8, TFT_GREEN); tft.setCursor(30, 0); tft.print(" - Beacons");
   tft.fillRect(14, 8, 15, 8, TFT_RED); tft.setCursor(30, 8); tft.print(" - Deauths");
   tft.fillRect(14, 16, 15, 8, TFT_BLUE); tft.setCursor(30, 16); tft.print(" - Probes");
 }

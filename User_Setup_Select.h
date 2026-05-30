@@ -36,7 +36,7 @@
 //#include <User_Setup_cyd_2usb.h>
 //#include <User_Setup_marauder_m5cardputer.h>
 //#include <User_Setup_marauder_m5cardputer_adv.h>
-//#include <User_Setup_cyd_3_5_inch.h>
+#include <User_Setup_cyd_3_5_and_4_inch.h>
 
 //#include <User_Setups/Setup1_ILI9341.h>  // Setup file configured for my ILI9341
 //#include <User_Setups/Setup2_ST7735.h>   // Setup file configured for my ST7735
@@ -120,7 +120,7 @@
 #endif
 
 // Legacy setup support, RPI_ILI9486_DRIVER form is deprecated
-// Instead define RPI_DISPLAY_TYPE and also define driver (e.g. ILI9486_DRIVER) 
+// Instead define RPI_DISPLAY_TYPE and also define driver (e.g. ILI9486_DRIVER)
 #if defined (RPI_ILI9486_DRIVER)
   #if !defined (ILI9486_DRIVER)
     #define ILI9486_DRIVER
