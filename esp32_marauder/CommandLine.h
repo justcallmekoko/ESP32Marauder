@@ -152,7 +152,7 @@ const char PROGMEM HELP_SNIFF_MULTISSID_CMD[] = "sniffmultissid";
 const char PROGMEM HELP_SNIFF_DEAUTH_CMD[] = "sniffdeauth";
 const char PROGMEM HELP_SNIFF_PMKID_CMD[] = "sniffpmkid [-c <channel>][-d][-l]";
 const char PROGMEM HELP_STOPSCAN_CMD[] = "stopscan [-f]";
-const char PROGMEM HELP_WARDRIVE_CMD[] = "wardrive [-f]";
+const char PROGMEM HELP_WARDRIVE_CMD[] = "wardrive";
 const char PROGMEM HELP_PING_CMD[] = "pingscan";
 const char PROGMEM HELP_PORT_SCAN_CMD[] = "portscan [-a -t <ip index>]/[-s <ssh/telnet/dns/http/smtp/https/rdp>]";
 const char PROGMEM HELP_ARP_SCAN_CMD[] = "arpscan [-f]";
@@ -185,7 +185,7 @@ const char PROGMEM HELP_ADD_CMD_B[] = "add -c -b <mac> -ap <ap_index>";
 
 // Bluetooth sniff/scan
 const char PROGMEM HELP_BT_SNIFF_CMD[] = "sniffbt [-t] <airtag/flipper/flock/meta>";
-const char PROGMEM HELP_BT_SPAM_CMD[] = "blespam -t <apple/google/samsung/windows/flipper/all>";
+const char PROGMEM HELP_BT_SPAM_CMD[] = "blespam -t <sourapple/applejuice/google/samsung/windows/flipper/all>";
 const char PROGMEM HELP_BT_SPOOFAT_CMD[] = "spoofat -t <index>";
 //const char PROGMEM HELP_BT_SOUR_APPLE_CMD[] = "sourapple";
 //const char PROGMEM HELP_BT_SWIFTPAIR_SPAM_CMD[] = "swiftpair";
