@@ -2359,7 +2359,7 @@
     #endif
 
     #ifdef MARAUDER_C5
-      #define SD_CS 10
+      #define SD_CS 27
     #endif
 
     #ifdef MARAUDER_V8
@@ -2764,8 +2764,8 @@
 
     #ifdef MARAUDER_C5
       #define SD_MISO 2
-      #define SD_MOSI 7
-      #define SD_SCK  6
+      #define SD_MOSI 10
+      #define SD_SCK  9
     #endif
 
     #ifdef MARAUDER_V8
