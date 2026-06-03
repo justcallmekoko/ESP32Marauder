@@ -2,9 +2,9 @@ name: Build and (Nightly) Pre-release
 
 on:
   workflow_dispatch:
-  schedule:
+  # schedule:
     # daily at 03:00 UTC (adjust to your preferred time)
-    - cron: '0 3 * * *'
+    # - cron: '0 3 * * *'
 
 jobs:
   decide:
