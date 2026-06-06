@@ -1889,9 +1889,18 @@ bool WiFiScan::scanning() {
 // Function to prepare to run a specific scan
 void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {  
   this->initWiFi(scan_mode);
-  if (scan_mode == WIFI_SCAN_OFF)
+  if (scan_mode == WIFI_SCAN_OFF) {
+    #ifdef HAS_ACT_LED
+      digitalWrite(ACT_LED_PIN, LOW);
+    #endif
     StopScan(scan_mode);
-  else if (scan_mode == WIFI_SCAN_PROBE)
+  } else {
+    #ifdef HAS_ACT_LED
+      digitalWrite(ACT_LED_PIN, HIGH);
+    #endif
+  }
+
+  if (scan_mode == WIFI_SCAN_PROBE)
     RunProbeScan(scan_mode, color);
   else if ((scan_mode == WIFI_SCAN_SAE_COMMIT) || (scan_mode == WIFI_ATTACK_SAE_COMMIT))
     RunSAEScan(scan_mode, color);
@@ -2041,6 +2050,11 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
     RunPortScanAll(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_RDP)
     RunPortScanAll(scan_mode, color);
+  else {
+    #ifdef HAS_ACT_LED
+      digitalWrite(ACT_LED_PIN, LOW);
+    #endif
+  }
 
   this->currentScanMode = scan_mode;
 }
