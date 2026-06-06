@@ -506,6 +506,7 @@
     //#define HAS_TEMP_SENSOR
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
+    #define HAS_ACT_LED
   #endif
 
   #ifdef MARAUDER_MINI_V3
@@ -2892,4 +2893,14 @@
   #else
     #define HOP_DELAY 250
   #endif
+
+  //// ACT LED STUFF
+  #ifdef HAS_ACT_LED
+
+    #ifdef MARAUDER_V8
+      #define ACT_LED_PIN 28
+    #endif
+
+  #endif
+
 #endif
