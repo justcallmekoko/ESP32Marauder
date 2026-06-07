@@ -2128,13 +2128,13 @@ void WiFiScan::displayTargetFilter() {
   #endif
 }
 
-void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_string) {
+void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, const char* title_string) {
   // Common wifi attack configurations
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_BLACK, color);
     #ifdef HAS_FULL_SCREEN
       display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
-      display_obj.tft.drawCentreString((String)title_string,TFT_WIDTH / 2,16,2);
+      display_obj.tft.drawCentreString(String(title_string),TFT_WIDTH / 2,16,2);
     #endif
     #ifdef HAS_ILI9341
       display_obj.touchToExit();
@@ -6035,7 +6035,7 @@ uint8_t WiFiScan::getSecurityType(const uint8_t* beacon, uint16_t len) {
     return WIFI_SECURITY_OPEN;
 }
 
-String WiFiScan::processPwnagotchiBeacon(const uint8_t* frame, int length) {
+void WiFiScan::processPwnagotchiBeacon(const uint8_t* frame, int length) {
   int jsonStartIndex = 36;
   int jsonEndIndex = length;
 
@@ -6043,20 +6043,20 @@ String WiFiScan::processPwnagotchiBeacon(const uint8_t* frame, int length) {
   while (jsonEndIndex > jsonStartIndex && frame[jsonEndIndex - 1] != '}') jsonEndIndex--;
 
   if (jsonStartIndex >= jsonEndIndex)
-    return "";
+    return;
 
   String jsonString = String((char*)frame + jsonStartIndex, jsonEndIndex - jsonStartIndex);
 
   size_t jsonCapacity = jsonString.length() * 1.5;
 
   if (jsonCapacity > ESP.getFreeHeap())
-    return "";
+    return;
 
   StaticJsonDocument<2048> doc;
   DeserializationError error = deserializeJson(doc, jsonString);
 
   if (error)
-    return "";
+    return;
 
   if (doc.containsKey("name") && doc.containsKey("pwnd_tot")) {
     const char* name = doc["name"];
@@ -6082,11 +6082,7 @@ String WiFiScan::processPwnagotchiBeacon(const uint8_t* frame, int length) {
 
       display_obj.display_buffer->add(String("       Ver: ") + ver + "                   ");
     #endif
-
-    return String("Name: ") + name + ", \nPwnd: " + String(pwnd_tot) + ", \nVer: " + ver;
   } 
-  else
-    return "";
 }
 
 // PINEAPPLE LOGIC
