@@ -2913,7 +2913,7 @@ void MenuFunctions::RunSetup()
     const char* type = this->callSetting(settingName.c_str());
     if (type && strcmp(type, "bool") == 0) {
       this->addNodes(&settingsMenu, settingName, TFTLIGHTGREY, NULL, SETTINGS, [this, i, settingName]() {
-          settings_obj.toggleSetting(settingName);
+          settings_obj.toggleSetting(settingName.c_str());
           this->callSetting(settingName.c_str());
           this->changeMenu(&specSettingMenu, true);
           this->displaySetting(settingName.c_str(), &settingsMenu, i + 1);
