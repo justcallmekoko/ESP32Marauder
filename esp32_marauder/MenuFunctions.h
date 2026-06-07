@@ -220,7 +220,7 @@ class MenuFunctions
     void battery(bool initial = false);
     void battery2(bool initial = false);
     const char* callSetting(const char* key);
-    void displaySetting(String key, Menu* menu, int index);
+    void displaySetting(const char* key, Menu* menu, int index);
     void buttonSelected(int b, int x = -1);
     void buttonNotSelected(int b, int x = -1);
     #ifdef HAS_MINI_SCREEN

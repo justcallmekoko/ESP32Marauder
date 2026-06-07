@@ -84,96 +84,127 @@ bool Settings::begin() {
 // loadSetting<T> — O(1), zero heap, reads straight from the cache struct.
 // ---------------------------------------------------------------------------
 
-template <typename T> T Settings::loadSetting(String key) {}
+template <typename T> T Settings::loadSetting(const char* key) {}
 
 // Get type int settings
-template <> int Settings::loadSetting<int>(String key) {
+template <> int Settings::loadSetting<int>(const char* key) {
   // No int settings are defined currently; fall back to parsing if ever added.
   DynamicJsonDocument json(JSON_SETTING_SIZE);
   deserializeJson(json, this->json_settings_string);
+
   for (int i = 0; i < (int)json["Settings"].size(); i++) {
-    if (json["Settings"][i]["name"].as<String>() == key)
+    const char* setting_name = json["Settings"][i]["name"] | "";
+
+    if (strcmp(setting_name, key) == 0)
       return json["Settings"][i]["value"];
   }
+
   return 0;
 }
 
 // Get type String settings — read from cache, no JSON parse
-template <> String Settings::loadSetting<String>(String key) {
-  if (key == "ClientSSID")
+template <> String Settings::loadSetting<String>(const char* key) {
+  if (strcmp(key, "ClientSSID") == 0)
     return _cache.ClientSSID;
-  if (key == "ClientPW")
+
+  if (strcmp(key, "ClientPW") == 0)
     return _cache.ClientPW;
 
   // Unknown String key: fall back to JSON so the setting can be auto-created.
   DynamicJsonDocument json(JSON_SETTING_SIZE);
   deserializeJson(json, this->json_settings_string);
+
   for (int i = 0; i < (int)json["Settings"].size(); i++) {
-    if (json["Settings"][i]["name"].as<String>() == key)
+    const char* setting_name = json["Settings"][i]["name"] | "";
+
+    if (strcmp(setting_name, key) == 0)
       return json["Settings"][i]["value"].as<String>();
   }
 
-  //Serial.println("Did not find setting named " + (String)key + ". Creating...");
-  if (this->createDefaultSettings(SPIFFS, true, json["Settings"].size(),
-                                  "String", key))
+  // Serial.print("Did not find setting named ");
+  // Serial.print(key);
+  // Serial.println(". Creating...");
+
+  if (this->createDefaultSettings(
+          SPIFFS,
+          true,
+          json["Settings"].size(),
+          "String",
+          String(key)))
     return "";
 
   return "";
 }
 
 // Get type bool settings — read from cache, no JSON parse
-template <> bool Settings::loadSetting<bool>(String key) {
-  if (key == "ForcePMKID")
+template <>
+bool Settings::loadSetting<bool>(const char* key) {
+  if (strcmp(key, "ForcePMKID") == 0)
     return _cache.ForcePMKID;
-  if (key == "ForceProbe")
+  if (strcmp(key, "ForceProbe") == 0)
     return _cache.ForceProbe;
-  if (key == "SavePCAP")
+  if (strcmp(key, "SavePCAP") == 0)
     return _cache.SavePCAP;
-  if (key == "EnableLED")
+  if (strcmp(key, "EnableLED") == 0)
     return _cache.EnableLED;
-  if (key == "EPDeauth")
+  if (strcmp(key, "EPDeauth") == 0)
     return _cache.EPDeauth;
-  if (key == "ChanHop")
+  if (strcmp(key, "ChanHop") == 0)
     return _cache.ChanHop;
 
   // Unknown bool key: fall back to JSON so the setting can be auto-created.
   DynamicJsonDocument json(JSON_SETTING_SIZE);
   deserializeJson(json, this->json_settings_string);
+
   for (int i = 0; i < (int)json["Settings"].size(); i++) {
-    if (json["Settings"][i]["name"].as<String>() == key)
+    const char* setting_name = json["Settings"][i]["name"] | "";
+
+    if (strcmp(setting_name, key) == 0) {
       return json["Settings"][i]["value"].as<bool>();
+    }
   }
 
-  //Serial.println("Did not find setting named " + (String)key + ". Creating...");
-  if (this->createDefaultSettings(SPIFFS, true, json["Settings"].size(), "bool",
-                                  key))
+  // Serial.print("Did not find setting named ");
+  // Serial.print(key);
+  // Serial.println(". Creating...");
+
+  if (this->createDefaultSettings(SPIFFS, true, json["Settings"].size(), "bool", String(key)))
     return true;
 
   return false;
 }
 
 // Get type uint8_t settings — read from cache, no JSON parse
-template <> uint8_t Settings::loadSetting<uint8_t>(String key) {
+template <> uint8_t Settings::loadSetting<uint8_t>(const char* key) {
   // uint8_t settings reuse bool cache fields where applicable.
-  if (key == "ForcePMKID")
+  if (strcmp(key, "ForcePMKID") == 0)
     return (uint8_t)_cache.ForcePMKID;
-  if (key == "ForceProbe")
+
+  if (strcmp(key, "ForceProbe") == 0)
     return (uint8_t)_cache.ForceProbe;
-  if (key == "SavePCAP")
+
+  if (strcmp(key, "SavePCAP") == 0)
     return (uint8_t)_cache.SavePCAP;
-  if (key == "EnableLED")
+
+  if (strcmp(key, "EnableLED") == 0)
     return (uint8_t)_cache.EnableLED;
-  if (key == "EPDeauth")
+
+  if (strcmp(key, "EPDeauth") == 0)
     return (uint8_t)_cache.EPDeauth;
-  if (key == "ChanHop")
+
+  if (strcmp(key, "ChanHop") == 0)
     return (uint8_t)_cache.ChanHop;
 
   DynamicJsonDocument json(JSON_SETTING_SIZE);
   deserializeJson(json, this->json_settings_string);
+
   for (int i = 0; i < (int)json["Settings"].size(); i++) {
-    if (json["Settings"][i]["name"].as<String>() == key)
+    const char* setting_name = json["Settings"][i]["name"] | "";
+
+    if (strcmp(setting_name, key) == 0)
       return json["Settings"][i]["value"].as<uint8_t>();
   }
+
   return 0;
 }
 
@@ -276,7 +307,7 @@ template <> bool Settings::saveSetting<bool>(String key, String value) {
 // ---------------------------------------------------------------------------
 bool Settings::toggleSetting(String key) {
   // Use the cached value to decide direction — avoids an extra JSON parse.
-  bool current = this->loadSetting<bool>(key);
+  bool current = this->loadSetting<bool>(key.c_str());
   if (current) {
     saveSetting<bool>(key, false);
     //Serial.println("Setting value to false");
