@@ -175,7 +175,7 @@
 //#define TFT_BL   32
 */
 
-// ESP32 Marauder 
+// ESP32 Marauder
 #define TFT_MISO 12
 #define TFT_MOSI 13
 #define TFT_SCLK 14
