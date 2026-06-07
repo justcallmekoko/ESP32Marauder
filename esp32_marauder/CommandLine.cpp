@@ -511,9 +511,9 @@ void CommandLine::runCommand(String input) {
       bool result = false;
       String setting_name = cmd_args.get(ss_sw + 1);
       if (en_sw != -1)
-        result = settings_obj.saveSetting<bool>(setting_name, true);
+        result = settings_obj.saveSetting<bool>(setting_name.c_str(), true);
       else if (da_sw != -1)
-        result = settings_obj.saveSetting<bool>(setting_name, false);
+        result = settings_obj.saveSetting<bool>(setting_name.c_str(), false);
       else
         return;
 
