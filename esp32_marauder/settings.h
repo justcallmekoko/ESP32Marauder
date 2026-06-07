@@ -41,7 +41,7 @@ class Settings {
     bool begin();
 
     template <typename T>
-    T loadSetting(String name);
+    T loadSetting(const char* key);
 
     template <typename T>
     T saveSetting(String key, bool value);

@@ -1398,7 +1398,7 @@ const char* MenuFunctions::callSetting(const char* key) {
   return "";
 }
 
-void MenuFunctions::displaySetting(String key, Menu* menu, int index) {
+/*void MenuFunctions::displaySetting(String key, Menu* menu, int index) {
   specSettingMenu.name = key;
 
   bool setting_value = settings_obj.loadSetting<bool>(key);
@@ -1426,6 +1426,34 @@ void MenuFunctions::displaySetting(String key, Menu* menu, int index) {
   // Put local copy back into menu
   menu->list->set(index, node);
     
+}*/
+
+void MenuFunctions::displaySetting(const char* key, Menu* menu, int index) {
+  specSettingMenu.name = String(key);
+
+  bool setting_value = settings_obj.loadSetting<bool>(key);
+
+  // Make a local copy of menu node
+  MenuNode node = menu->list->get(index);
+
+  display_obj.tft.setTextWrap(false);
+  display_obj.tft.setFreeFont(NULL);
+  display_obj.tft.setCursor(0, 100);
+  display_obj.tft.setTextSize(1);
+
+  // Set local copy value
+  if (!setting_value) {
+    display_obj.tft.setTextColor(TFT_RED);
+    display_obj.tft.println(F(text_table1[4]));
+    node.selected = false;
+  } else {
+    display_obj.tft.setTextColor(TFT_GREEN);
+    display_obj.tft.println(F(text_table1[5]));
+    node.selected = true;
+  }
+
+  // Put local copy back into menu
+  menu->list->set(index, node);
 }
 
 #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
@@ -2888,13 +2916,13 @@ void MenuFunctions::RunSetup()
           settings_obj.toggleSetting(settingName);
           this->callSetting(settingName.c_str());
           this->changeMenu(&specSettingMenu, true);
-          this->displaySetting(settingName, &settingsMenu, i + 1);
+          this->displaySetting(settingName.c_str(), &settingsMenu, i + 1);
           wifi_scan_obj.force_pmkid = settings_obj.loadSetting<bool>(text_table4[5]);
           wifi_scan_obj.force_probe = settings_obj.loadSetting<bool>(text_table4[6]);
           wifi_scan_obj.save_pcap = settings_obj.loadSetting<bool>(text_table4[7]);
           wifi_scan_obj.ep_deauth = settings_obj.loadSetting<bool>("EPDeauth");
           wifi_scan_obj.channel_hop = settings_obj.loadSetting<bool>("ChanHop");
-      }, settings_obj.loadSetting<bool>(settingName));
+      }, settings_obj.loadSetting<bool>(settingName.c_str()));
     }
   }
 
