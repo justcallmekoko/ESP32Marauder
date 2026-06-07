@@ -3368,18 +3368,31 @@ void MenuFunctions::buildSDFileMenu(bool update) {
   });
 
   if (!update) {
+    this->addNodes(&sdDeleteMenu, "Delete Selected", TFTORANGE, NULL, 0, [this]() {
+      for (int x = 0; x < sd_obj.sd_files->size(); x++) {
+        if (current_menu->list->get(x + 2).selected) {
+          if (sd_obj.removeFile("/" + sd_obj.sd_files->get(x))) {
+            Serial.println("Deleted /" + sd_obj.sd_files->get(x));
+            display_obj.clearScreen();
+            display_obj.tft.setTextWrap(false);
+            display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+            display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+            display_obj.tft.println("Deleting /" + sd_obj.sd_files->get(x) + "...");
+          }
+        }
+      }
+      this->buildSDFileMenu();
+      this->changeMenu(&sdDeleteMenu, true);
+    });
+  }
+
+  if (!update) {
     for (int x = 0; x < sd_obj.sd_files->size(); x++) {
       this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x), TFTCYAN, NULL, SD_UPDATE, [this, x]() {
-        if (sd_obj.removeFile("/" + sd_obj.sd_files->get(x))) {
-          Serial.println("Deleted /" + sd_obj.sd_files->get(x));
-          display_obj.clearScreen();
-          display_obj.tft.setTextWrap(false);
-          display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-          display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-          display_obj.tft.println("Deleting /" + sd_obj.sd_files->get(x) + "...");
-          this->buildSDFileMenu();
-          this->changeMenu(&sdDeleteMenu, true);
-        }
+        // Change selection status of menu node
+        MenuNode new_node = current_menu->list->get(x + 2);
+        new_node.selected = !current_menu->list->get(x + 2).selected;
+        current_menu->list->set(x + 2, new_node);
       });
     }
   }
