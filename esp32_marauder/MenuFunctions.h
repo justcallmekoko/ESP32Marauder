@@ -221,11 +221,11 @@ class MenuFunctions
     void drawGraph(int16_t *values);
     void drawGraphSmall(uint8_t *values);
     void renderGraphUI(uint8_t scan_mode = 0);
-    void addNodes(Menu* menu, String name, uint8_t color, Menu* child, int place, std::function<void()> callable, bool selected = false);
+    void addNodes(Menu* menu, const char* name, uint8_t color, Menu* child, int place, std::function<void()> callable, bool selected = false);
     void battery(bool initial = false);
     void battery2(bool initial = false);
     const char* callSetting(const char* key);
-    void displaySetting(String key, Menu* menu, int index);
+    void displaySetting(const char* key, Menu* menu, int index);
     void buttonSelected(int b, int x = -1);
     void buttonNotSelected(int b, int x = -1);
     #ifdef HAS_MINI_SCREEN

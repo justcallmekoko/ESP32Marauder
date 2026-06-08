@@ -77,9 +77,12 @@ LinkedList<String> CommandLine::parseCommand(String input, char* delim) {
   return cmd_args;
 }
 
-int CommandLine::argSearch(LinkedList<String>* cmd_args_list, String key) {
+int CommandLine::argSearch(LinkedList<String>* cmd_args_list, const char* key) {
+  if (!cmd_args_list || !key)
+    return -1;
+
   for (int i = 0; i < cmd_args_list->size(); i++) {
-    if (cmd_args_list->get(i) == key)
+    if (strcmp(cmd_args_list->get(i).c_str(), key) == 0)
       return i;
   }
 
@@ -195,7 +198,7 @@ void CommandLine::filterAccessPoints(String filter) {
   this->showCounts(count_selected, count_unselected);
 }
 
-void CommandLine::startScanFromCLI(int scan_mode, uint16_t color, String scan_name) {
+void CommandLine::startScanFromCLI(int scan_mode, uint16_t color, const char* scan_name) {
   Serial.print(F("Starting"));
   Serial.print(scan_name);
   Serial.print(F(". Stop with "));
@@ -511,9 +514,9 @@ void CommandLine::runCommand(String input) {
       bool result = false;
       String setting_name = cmd_args.get(ss_sw + 1);
       if (en_sw != -1)
-        result = settings_obj.saveSetting<bool>(setting_name, true);
+        result = settings_obj.saveSetting<bool>(setting_name.c_str(), true);
       else if (da_sw != -1)
-        result = settings_obj.saveSetting<bool>(setting_name, false);
+        result = settings_obj.saveSetting<bool>(setting_name.c_str(), false);
       else
         return;
 
@@ -1214,7 +1217,8 @@ void CommandLine::runCommand(String input) {
           // Full port scan
           if (all_sw != -1) {
             wifi_scan_obj.current_scan_ip = ipList->get(ip_index);
-            this->startScanFromCLI(WIFI_PORT_SCAN_ALL, TFT_BLUE, "Selected: " + ipList->get(ip_index).toString());
+            String msg = "Selected: " + ipList->get(ip_index).toString();
+            this->startScanFromCLI(WIFI_PORT_SCAN_ALL, TFT_BLUE, msg.c_str());
           }
         }
         else {

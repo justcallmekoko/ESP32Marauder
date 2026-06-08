@@ -243,6 +243,12 @@ void setup()
 
   Serial.begin(115200);
 
+  #ifdef HAS_ACT_LED
+    pinMode(ACT_LED_PIN, OUTPUT);
+    delay(100);
+    digitalWrite(ACT_LED_PIN, LOW);
+  #endif
+
   while(!Serial)
     delay(10);
 

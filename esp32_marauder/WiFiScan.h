@@ -630,9 +630,9 @@ class WiFiScan
     void executeBLESpam(EBLEPayloadType type);
     void startWardriverWiFi();
     void saeAttackLoop(uint32_t currentTime);
-    String processPwnagotchiBeacon(const uint8_t* frame, int length);
+    void processPwnagotchiBeacon(const uint8_t* frame, int length);
 
-    void startWiFiAttacks(uint8_t scan_mode, uint16_t color, String title_string);
+    void startWiFiAttacks(uint8_t scan_mode, uint16_t color, const char* title_string);
 
     void signalAnalyzerLoop(uint32_t tick);
     void channelActivityLoop(uint32_t tick);
@@ -931,9 +931,9 @@ class WiFiScan
     void tagPOI(const char* label = nullptr);
 
     bool save_serial = false;
-    void startPcap(String file_name);
-    void startLog(String file_name);
-    void startGPX(String file_name);
+    void startPcap(const char* file_name);
+    void startLog(const char* file_name);
+    void startGPX(const char* file_name);
 
     static WiFiEventId_t eventId;
     static String lastClientMAC;

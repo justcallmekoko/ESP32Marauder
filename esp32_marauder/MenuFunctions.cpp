@@ -1075,7 +1075,7 @@ void MenuFunctions::updateStatusBar()
     #endif
 
     #ifdef HAS_MINI_SCREEN
-      display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.old_channel, TFT_WIDTH/4, 0, 1);
+      display_obj.tft.drawString("CH:" + (String)wifi_scan_obj.old_channel, TFT_WIDTH/4, 0, 1);
     #endif
   }
 
@@ -1094,11 +1094,7 @@ void MenuFunctions::updateStatusBar()
   #endif
 
   #ifdef HAS_MINI_SCREEN
-    #ifndef HAS_PSRAM
-      display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
-    #else
-      display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%" + " P:" + String(getPSRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
-    #endif
+    display_obj.tft.drawString(String(getDRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
   #endif
   }
 
@@ -1259,7 +1255,7 @@ void MenuFunctions::drawStatusBar()
   #endif
 
   #ifdef HAS_MINI_SCREEN
-    display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.old_channel, TFT_WIDTH/4, 0, 1);
+    display_obj.tft.drawString("CH:" + (String)wifi_scan_obj.old_channel, TFT_WIDTH/4, 0, 1);
   #endif
 
   // RAM Stuff
@@ -1267,29 +1263,16 @@ void MenuFunctions::drawStatusBar()
   wifi_scan_obj.old_free_ram = wifi_scan_obj.free_ram;
   display_obj.tft.fillRect(100, 0, 60, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
   #ifdef HAS_FULL_SCREEN
-    //display_obj.tft.setCursor(100, 0);
-    //display_obj.tft.setFreeFont(2);
-    //display_obj.tft.print("D:" + String(getDRAMUsagePercent()) + "%");
     #ifndef HAS_PSRAM
       display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", 100, 0, 2);
     #else
-      //display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%" + " P:" + String(getPSRAMUsagePercent()) + "%", 100, 0, 1);
       display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", 100, 0, 1);
       display_obj.tft.drawString("P:" + String(getPSRAMUsagePercent()) + "%", 100, 8, 1);
     #endif
-    //display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", 100, 0, 2);
   #endif
 
   #ifdef HAS_MINI_SCREEN
-    //display_obj.tft.setCursor(TFT_WIDTH/1.75, 0);
-    //display_obj.tft.setFreeFont(1);
-    //display_obj.tft.print("D:" + String(getDRAMUsagePercent()) + "%");
-    #ifndef HAS_PSRAM
-      display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
-    #else
-      display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%" + " P:" + String(getPSRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
-    #endif
-    //display_obj.tft.drawString((String)wifi_scan_obj.free_ram + "B", TFT_WIDTH/1.75, 0, 1);
+    display_obj.tft.drawString(String(getDRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
   #endif
 
 
@@ -1424,7 +1407,7 @@ const char* MenuFunctions::callSetting(const char* key) {
   return "";
 }
 
-void MenuFunctions::displaySetting(String key, Menu* menu, int index) {
+/*void MenuFunctions::displaySetting(String key, Menu* menu, int index) {
   specSettingMenu.name = key;
 
   bool setting_value = settings_obj.loadSetting<bool>(key);
@@ -1452,6 +1435,34 @@ void MenuFunctions::displaySetting(String key, Menu* menu, int index) {
   // Put local copy back into menu
   menu->list->set(index, node);
     
+}*/
+
+void MenuFunctions::displaySetting(const char* key, Menu* menu, int index) {
+  specSettingMenu.name = String(key);
+
+  bool setting_value = settings_obj.loadSetting<bool>(key);
+
+  // Make a local copy of menu node
+  MenuNode node = menu->list->get(index);
+
+  display_obj.tft.setTextWrap(false);
+  display_obj.tft.setFreeFont(NULL);
+  display_obj.tft.setCursor(0, 100);
+  display_obj.tft.setTextSize(1);
+
+  // Set local copy value
+  if (!setting_value) {
+    display_obj.tft.setTextColor(TFT_RED);
+    display_obj.tft.println(F(text_table1[4]));
+    node.selected = false;
+  } else {
+    display_obj.tft.setTextColor(TFT_GREEN);
+    display_obj.tft.println(F(text_table1[5]));
+    node.selected = true;
+  }
+
+  // Put local copy back into menu
+  menu->list->set(index, node);
 }
 
 #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
@@ -1681,7 +1692,7 @@ void MenuFunctions::RunSetup()
     // Populate the menu with buttons
     for (int i = 0; i < ipList->size(); i++) {
       // This is the menu node
-      this->addNodes(&wifiIPMenu, ipList->get(i).toString(), TFTBLUE, NULL, 255, [this, i](){
+      this->addNodes(&wifiIPMenu, ipList->get(i).toString().c_str(), TFTBLUE, NULL, 255, [this, i](){
         Serial.println("Selected: " + ipList->get(i).toString());
         wifi_scan_obj.current_scan_ip = ipList->get(i);
         display_obj.clearScreen();
@@ -1903,7 +1914,7 @@ void MenuFunctions::RunSetup()
     // Get AP list ready
     for (int i = 0; i < access_points->size(); i++) {
       // This is the menu node
-      this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
+      this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, NULL, 255, [this, i](){
         if (evil_portal_obj.setAP(access_points->get(i).essid)) {
           AccessPoint new_ap = access_points->get(i);
           new_ap.selected = true;
@@ -1923,7 +1934,7 @@ void MenuFunctions::RunSetup()
 
     for (int i = 0; i < ssids->size(); i++) {
       // This is the menu node
-      this->addNodes(&ssidsMenu, ssids->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
+      this->addNodes(&ssidsMenu, ssids->get(i).essid.c_str(), TFTCYAN, NULL, 255, [this, i](){
         if (evil_portal_obj.setAP(ssids->get(i).essid)) {
           display_obj.clearScreen();
           this->drawStatusBar();
@@ -1962,7 +1973,7 @@ void MenuFunctions::RunSetup()
     // Populate the menu with buttons
     for (int i = 0; i < probe_req_ssids->size(); i++) {
       // This is the menu node
-      this->addNodes(&selectProbeSSIDsMenu, probe_req_ssids->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
+      this->addNodes(&selectProbeSSIDsMenu, probe_req_ssids->get(i).essid.c_str(), TFTCYAN, NULL, 255, [this, i](){
         if (evil_portal_obj.setAP(probe_req_ssids->get(i).essid)) {
           display_obj.clearScreen();
           this->drawStatusBar();
@@ -2071,9 +2082,10 @@ void MenuFunctions::RunSetup()
     for (int i = 0; i < probe_req_ssids->size(); i++) {
       ProbeReqSsid cur_ssid = probe_req_ssids->get(i);
       // This is the menu node
+      String button_name = "[" + String(cur_ssid.requests) + "]" + cur_ssid.essid;
       this->addNodes(
         &selectProbeSSIDsMenu,
-        "[" + String(cur_ssid.requests) + "]" + cur_ssid.essid,
+        button_name.c_str(),
         TFTCYAN,
         NULL,
         255,
@@ -2145,7 +2157,7 @@ void MenuFunctions::RunSetup()
       // Populate the menu with buttons
       for (int i = 0; i < evil_portal_obj.html_files->size(); i++) {
         // This is the menu node
-        this->addNodes(&htmlMenu, evil_portal_obj.html_files->get(i), TFTCYAN, NULL, 255, [this, i](){
+        this->addNodes(&htmlMenu, evil_portal_obj.html_files->get(i).c_str(), TFTCYAN, NULL, 255, [this, i](){
           evil_portal_obj.selected_html_index = i;
           evil_portal_obj.target_html_name = evil_portal_obj.html_files->get(evil_portal_obj.selected_html_index);
           Serial.println("Set Evil Portal HTML as " + evil_portal_obj.target_html_name);
@@ -2199,7 +2211,7 @@ void MenuFunctions::RunSetup()
       // Populate the menu with buttons
       for (int i = 0; i < access_points->size(); i++) {
         // This is the menu node
-        this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
+        this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, NULL, 255, [this, i](){
         AccessPoint new_ap = access_points->get(i);
         new_ap.selected = !access_points->get(i).selected;
 
@@ -2226,7 +2238,7 @@ void MenuFunctions::RunSetup()
       // Populate the menu with buttons
       for (int i = 0; i < access_points->size(); i++) {
         // This is the menu node
-        this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
+        this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, NULL, 255, [this, i](){
           this->changeMenu(&apInfoMenu, true);
           wifi_scan_obj.RunAPInfo(i);
         });
@@ -2264,7 +2276,7 @@ void MenuFunctions::RunSetup()
 
       for (int i = 0; i < menu_limit; i++) {
         wifiStationMenu.list->clear();
-        this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
+        this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, NULL, 255, [this, i](){
 
           wifiStationMenu.list->clear();
 
@@ -2298,7 +2310,7 @@ void MenuFunctions::RunSetup()
           for (int x = 0; x < access_points->get(i).stations->size(); x++) {
             int cur_ap_sta = access_points->get(i).stations->get(x);
 
-            this->addNodes(&wifiStationMenu, macToString(stations->get(cur_ap_sta)), TFTCYAN, NULL, 255, [this, i, cur_ap_sta, x](){
+            this->addNodes(&wifiStationMenu, macToString(stations->get(cur_ap_sta)).c_str(), TFTCYAN, NULL, 255, [this, i, cur_ap_sta, x](){
             Station new_sta = stations->get(cur_ap_sta);
             new_sta.selected = !stations->get(cur_ap_sta).selected;
 
@@ -2332,7 +2344,7 @@ void MenuFunctions::RunSetup()
       // Populate the menu with buttons
       for (int i = 0; i < access_points->size(); i++) {
         // This is the menu node
-        this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
+        this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, NULL, 255, [this, i](){
           // Join WiFi using mini keyboard
           #ifdef HAS_MINI_KB
             this->changeMenu(&miniKbMenu, true);
@@ -2380,7 +2392,7 @@ void MenuFunctions::RunSetup()
         // Populate the menu with buttons
         for (int i = 0; i < access_points->size(); i++) {
           // This is the menu node
-          this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
+          this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, NULL, 255, [this, i](){
             // Join WiFi using mini keyboard
             #ifdef HAS_MINI_KB
               this->changeMenu(&miniKbMenu, true);
@@ -2421,7 +2433,7 @@ void MenuFunctions::RunSetup()
       // Populate the menu with buttons
       for (int i = 0; i < ssids->size(); i++) {
         // This is the menu node
-        this->addNodes(&ssidsMenu, ssids->get(i).essid, TFTCYAN, NULL, 255, [this, i](){
+        this->addNodes(&ssidsMenu, ssids->get(i).essid.c_str(), TFTCYAN, NULL, 255, [this, i](){
           // Join WiFi using mini keyboard
           #ifdef HAS_MINI_KB
             this->changeMenu(&miniKbMenu, true);
@@ -2505,7 +2517,7 @@ void MenuFunctions::RunSetup()
       // Populate the menu with buttons
       for (int i = 0; i < access_points->size(); i++) {
         // This is the menu node
-        this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTLIME, NULL, 255, [this, i](){
+        this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTLIME, NULL, 255, [this, i](){
           this->changeMenu(&genAPMacMenu, true);
           wifi_scan_obj.RunSetMac(access_points->get(i).bssid, true);
         });
@@ -2525,7 +2537,7 @@ void MenuFunctions::RunSetup()
       // Populate the menu with buttons
       for (int i = 0; i < stations->size(); i++) {
         // This is the menu node
-        this->addNodes(&wifiAPMenu, macToString(stations->get(i).mac), TFTMAGENTA, NULL, 255, [this, i](){
+        this->addNodes(&wifiAPMenu, macToString(stations->get(i).mac).c_str(), TFTMAGENTA, NULL, 255, [this, i](){
           this->changeMenu(&genAPMacMenu, true);
           wifi_scan_obj.RunSetMac(stations->get(i).mac, false);
         });
@@ -2678,7 +2690,7 @@ void MenuFunctions::RunSetup()
 
         // Create the menu nodes for all of the list items
         for (int i = 0; i < menu_limit; i++) {
-          this->addNodes(&wifiAPMenu, airtags->get(i).mac, TFTWHITE, NULL, BLUETOOTH, [this, i](){
+          this->addNodes(&wifiAPMenu, airtags->get(i).mac.c_str(), TFTWHITE, NULL, BLUETOOTH, [this, i](){
             AirTag new_at = airtags->get(i);
             new_at.selected = true;
 
@@ -2910,17 +2922,17 @@ void MenuFunctions::RunSetup()
     String settingName = settings_obj.setting_index_to_name(i);
     const char* type = this->callSetting(settingName.c_str());
     if (type && strcmp(type, "bool") == 0) {
-      this->addNodes(&settingsMenu, settingName, TFTLIGHTGREY, NULL, SETTINGS, [this, i, settingName]() {
-          settings_obj.toggleSetting(settingName);
+      this->addNodes(&settingsMenu, settingName.c_str(), TFTLIGHTGREY, NULL, SETTINGS, [this, i, settingName]() {
+          settings_obj.toggleSetting(settingName.c_str());
           this->callSetting(settingName.c_str());
           this->changeMenu(&specSettingMenu, true);
-          this->displaySetting(settingName, &settingsMenu, i + 1);
+          this->displaySetting(settingName.c_str(), &settingsMenu, i + 1);
           wifi_scan_obj.force_pmkid = settings_obj.loadSetting<bool>(text_table4[5]);
           wifi_scan_obj.force_probe = settings_obj.loadSetting<bool>(text_table4[6]);
           wifi_scan_obj.save_pcap = settings_obj.loadSetting<bool>(text_table4[7]);
           wifi_scan_obj.ep_deauth = settings_obj.loadSetting<bool>("EPDeauth");
           wifi_scan_obj.channel_hop = settings_obj.loadSetting<bool>("ChanHop");
-      }, settings_obj.loadSetting<bool>(settingName));
+      }, settings_obj.loadSetting<bool>(settingName.c_str()));
     }
   }
 
@@ -3394,24 +3406,37 @@ void MenuFunctions::buildSDFileMenu(bool update) {
   });
 
   if (!update) {
-    for (int x = 0; x < sd_obj.sd_files->size(); x++) {
-      this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x), TFTCYAN, NULL, SD_UPDATE, [this, x]() {
-        if (sd_obj.removeFile("/" + sd_obj.sd_files->get(x))) {
-          Serial.println("Deleted /" + sd_obj.sd_files->get(x));
-          display_obj.clearScreen();
-          display_obj.tft.setTextWrap(false);
-          display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-          display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-          display_obj.tft.println("Deleting /" + sd_obj.sd_files->get(x) + "...");
-          this->buildSDFileMenu();
-          this->changeMenu(&sdDeleteMenu, true);
+    this->addNodes(&sdDeleteMenu, "Delete Selected", TFTORANGE, NULL, 0, [this]() {
+      for (int x = 0; x < sd_obj.sd_files->size(); x++) {
+        if (current_menu->list->get(x + 2).selected) {
+          if (sd_obj.removeFile("/" + sd_obj.sd_files->get(x))) {
+            Serial.println("Deleted /" + sd_obj.sd_files->get(x));
+            display_obj.clearScreen();
+            display_obj.tft.setTextWrap(false);
+            display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+            display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+            display_obj.tft.println("Deleting /" + sd_obj.sd_files->get(x) + "...");
+          }
         }
+      }
+      this->buildSDFileMenu();
+      this->changeMenu(&sdDeleteMenu, true);
+    });
+  }
+
+  if (!update) {
+    for (int x = 0; x < sd_obj.sd_files->size(); x++) {
+      this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x).c_str(), TFTCYAN, NULL, SD_UPDATE, [this, x]() {
+        // Change selection status of menu node
+        MenuNode new_node = current_menu->list->get(x + 2);
+        new_node.selected = !current_menu->list->get(x + 2).selected;
+        current_menu->list->set(x + 2, new_node);
       });
     }
   }
   else {
     for (int x = 0; x < sd_obj.sd_files->size(); x++) {
-      this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x), TFTCYAN, NULL, SD_UPDATE, [this, x]() {
+      this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x).c_str(), TFTCYAN, NULL, SD_UPDATE, [this, x]() {
         wifi_scan_obj.currentScanMode = OTA_UPDATE;
         this->changeMenu(&failedUpdateMenu, true);
         sd_obj.runUpdate("/" + sd_obj.sd_files->get(x));
@@ -3422,10 +3447,10 @@ void MenuFunctions::buildSDFileMenu(bool update) {
 
 
 // Function to add MenuNodes to a menu
-void MenuFunctions::addNodes(Menu * menu, String name, uint8_t color, Menu * child, int place, std::function<void()> callable, bool selected)
+void MenuFunctions::addNodes(Menu * menu, const char* name, uint8_t color, Menu * child, int place, std::function<void()> callable, bool selected)
 {
   //Serial.println("Building node: " + name);
-  menu->list->add(MenuNode{name, false, color, place, selected, callable});
+  menu->list->add(MenuNode{String(name), false, color, place, selected, callable});
 }
 
 void MenuFunctions::setGraphScale(float scale) {
@@ -3545,7 +3570,7 @@ void MenuFunctions::drawGraphSmall(uint8_t *values) {
       }
 
       if (values[targ_val] * this->_graph_scale <= GRAPH_VERT_LIM) {
-        display_obj.tft.fillRect(x_coord, SCREEN_HEIGHT / 2 + 1, bar_width, SCREEN_HEIGHT / 2 + 1, TFT_BLACK);
+        display_obj.tft.fillRect(x_coord, SCREEN_HEIGHT / 2 + 1, bar_width + 3, SCREEN_HEIGHT / 2 + 1, TFT_BLACK);
         display_obj.tft.fillRect(x_coord, SCREEN_HEIGHT - (values[targ_val] * this->_graph_scale), bar_width, values[targ_val] * this->_graph_scale, TFT_CYAN);
       }
 

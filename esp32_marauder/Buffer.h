@@ -19,17 +19,17 @@ extern Settings settings_obj;
 class Buffer {
   public:
     Buffer();
-    void pcapOpen(String file_name, fs::FS* fs, bool serial);
-    void logOpen(String file_name, fs::FS* fs, bool serial);
-    void gpxOpen(String file_name, fs::FS* fs, bool serial);
+    void pcapOpen(const char* file_name, fs::FS* fs, bool serial);
+    void logOpen(const char* file_name, fs::FS* fs, bool serial);
+    void gpxOpen(const char* file_name, fs::FS* fs, bool serial);
     void append(wifi_promiscuous_pkt_t *packet, int len);
     void append(String log);
     void save();
     String getFileName();
   private:
-    void createFile(String name, bool is_pcap, bool is_gpx = false);
+    void createFile(const char* name, bool is_pcap, bool is_gpx = false);
     void open(bool is_pcap);
-    void openFile(String file_name, fs::FS* fs, bool serial, bool is_pcap, bool is_gpx = false);
+    void openFile(const char* file_name, fs::FS* fs, bool serial, bool is_pcap, bool is_gpx = false);
     void add(const uint8_t* buf, uint32_t len, bool is_pcap);
     void write(int32_t n);
     void write(uint32_t n);
