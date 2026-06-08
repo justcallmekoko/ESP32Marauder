@@ -88,6 +88,11 @@ CommandLine cli_obj;
   MenuFunctions menu_function_obj;
 #endif
 
+#ifdef CYD_SOUND
+    #include "Sound_CYD.h"
+    Sound_CYD sound_obj;
+#endif
+
 #if defined(HAS_SD) && !defined(HAS_C5_SD)
   SDInterface sd_obj;
 #endif
@@ -291,6 +296,10 @@ void setup()
   //while(!Serial)
   //  delay(10);
 
+  #ifdef CYD_SOUND
+      sound_obj.RunSetup();
+  #endif
+
   Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
 
   #ifdef HAS_PSRAM
@@ -347,7 +356,7 @@ void setup()
 
   settings_obj.begin();
 
-  const char* type = settings_obj.getSettingType("ChanHop");
+  const char* type = settings_obj.getSettingType("EnableSND");
 
   if (type == nullptr || type[0] == '\0') {
     Serial.println(F("Current settings format not supported. Installing new default settings..."));

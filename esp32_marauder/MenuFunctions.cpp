@@ -582,6 +582,9 @@ void MenuFunctions::main(uint32_t currentTime)
             #endif
             wifi_scan_obj.drawChannelLine();
           }
+          #ifdef CYD_SOUND
+            sound_obj.click();
+          #endif
         }
         if (menu_button == DOWN_BUTTON) {
           if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
@@ -651,9 +654,15 @@ void MenuFunctions::main(uint32_t currentTime)
             #endif
             wifi_scan_obj.drawChannelLine();
           }
+          #ifdef CYD_SOUND
+            sound_obj.click();
+          #endif
         }
         if(menu_button == SELECT_BUTTON) {
           current_menu->list->get(current_menu->selected).callable();
+          #ifdef CYD_SOUND
+            sound_obj.click();
+          #endif
         }
         else {
           if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
