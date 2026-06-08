@@ -922,9 +922,9 @@ class WiFiScan
     void tagPOI(const char* label = nullptr);
 
     bool save_serial = false;
-    void startPcap(String file_name);
-    void startLog(String file_name);
-    void startGPX(String file_name);
+    void startPcap(const char* file_name);
+    void startLog(const char* file_name);
+    void startGPX(const char* file_name);
 
     static WiFiEventId_t eventId;
     static String lastClientMAC;
