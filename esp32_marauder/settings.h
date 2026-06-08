@@ -41,21 +41,22 @@ class Settings {
     bool begin();
 
     template <typename T>
-    T loadSetting(String name);
+    T loadSetting(const char* key);
 
     template <typename T>
-    T saveSetting(String key, bool value);
+    T saveSetting(const char* key, bool value);
 
     template <typename T>
-    T saveSetting(String key, String value);
+    T saveSetting(const char* key, String value);
 
-    bool toggleSetting(String key);
+    bool toggleSetting(const char* key);
     const char* getSettingType(const char* key);
     String setting_index_to_name(int i);
     int getNumberSettings();
 
     String getSettingsString();
-    bool createDefaultSettings(fs::FS &fs, bool spec = false, uint8_t index = 0, String typeStr = "bool", String name = "");
+    //bool createDefaultSettings(fs::FS &fs, bool spec = false, uint8_t index = 0, String typeStr = "bool", String name = "");
+    bool createDefaultSettings(fs::FS &fs, bool spec = false, uint8_t index = 0, const char* typeStr = "bool", const char* name = "");
     void printJsonSettings(String json_string);
 };
 
