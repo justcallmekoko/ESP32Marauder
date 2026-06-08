@@ -33,7 +33,7 @@ void Settings::_buildCache() {
     else if (strcmp(name, "ClientPW") == 0)
       _cache.ClientPW = json["Settings"][i]["value"].as<String>();
 #ifdef CYD_SOUND
-    else if (name == "EnableSND")
+    else if (strcmp(name, "EnableSND") == 0)
       _cache.EnableSND = json["Settings"][i]["value"].as<bool>();
 #endif
   }
@@ -156,7 +156,7 @@ template <> bool Settings::loadSetting<bool>(const char* key) {
   if (strcmp(key, "ChanHop") == 0)
     return _cache.ChanHop;
 #ifdef CYD_SOUND
-  if (key == "EnableSND")
+  if (strcmp(key, "EnableSND") == 0)
     return _cache.EnableSND;
 #endif
 
@@ -202,8 +202,9 @@ template <> uint8_t Settings::loadSetting<uint8_t>(const char* key) {
 
   if (strcmp(key, "ChanHop") == 0)
     return (uint8_t)_cache.ChanHop;
+
 #ifdef CYD_SOUND
-  if (key == "EnableSND")
+  if (strcmp(key, "EnableSND") == 0)
     return (uint8_t)_cache.EnableSND;
 #endif
 
@@ -269,7 +270,7 @@ template <> bool Settings::saveSetting<bool>(const char* key, bool value) {
       else if (strcmp(key, "ChanHop") == 0)
         _cache.ChanHop = value;
 #ifdef CYD_SOUND
-      else if (key == "EnableSND")
+      else if (strcmp(key, "EnableSND") == 0)
         _cache.EnableSND = value;
 #endif
 
