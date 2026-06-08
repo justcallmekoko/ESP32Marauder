@@ -7,29 +7,30 @@
 // ---------------------------------------------------------------------------
 void Settings::_buildCache() {
   DynamicJsonDocument json(JSON_SETTING_SIZE);
+
   if (deserializeJson(json, this->json_settings_string)) {
     Serial.println(F("_buildCache: could not parse json"));
     return;
   }
 
   for (int i = 0; i < (int)json["Settings"].size(); i++) {
-    String name = json["Settings"][i]["name"].as<String>();
+    const char* name = json["Settings"][i]["name"] | "";
 
-    if (name == "ForcePMKID")
+    if (strcmp(name, "ForcePMKID") == 0)
       _cache.ForcePMKID = json["Settings"][i]["value"].as<bool>();
-    else if (name == "ForceProbe")
+    else if (strcmp(name, "ForceProbe") == 0)
       _cache.ForceProbe = json["Settings"][i]["value"].as<bool>();
-    else if (name == "SavePCAP")
+    else if (strcmp(name, "SavePCAP") == 0)
       _cache.SavePCAP = json["Settings"][i]["value"].as<bool>();
-    else if (name == "EnableLED")
+    else if (strcmp(name, "EnableLED") == 0)
       _cache.EnableLED = json["Settings"][i]["value"].as<bool>();
-    else if (name == "EPDeauth")
+    else if (strcmp(name, "EPDeauth") == 0)
       _cache.EPDeauth = json["Settings"][i]["value"].as<bool>();
-    else if (name == "ChanHop")
+    else if (strcmp(name, "ChanHop") == 0)
       _cache.ChanHop = json["Settings"][i]["value"].as<bool>();
-    else if (name == "ClientSSID")
+    else if (strcmp(name, "ClientSSID") == 0)
       _cache.ClientSSID = json["Settings"][i]["value"].as<String>();
-    else if (name == "ClientPW")
+    else if (strcmp(name, "ClientPW") == 0)
       _cache.ClientPW = json["Settings"][i]["value"].as<String>();
   }
 }

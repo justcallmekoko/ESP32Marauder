@@ -213,8 +213,8 @@ class CommandLine {
     //bool apSelected();
     bool hasSSIDs();
     void showCounts(int selected, int unselected = -1);
-    int argSearch(LinkedList<String>* cmd_args, String key);
-    void startScanFromCLI(int scan_mode, uint16_t color, String scan_name);
+    int argSearch(LinkedList<String>* cmd_args, const char* key);
+    void startScanFromCLI(int scan_mode, uint16_t color, const char* scan_name);
 
     const char* ascii_art =
     "\r\n"

@@ -195,7 +195,7 @@ void CommandLine::filterAccessPoints(String filter) {
   this->showCounts(count_selected, count_unselected);
 }
 
-void CommandLine::startScanFromCLI(int scan_mode, uint16_t color, String scan_name) {
+void CommandLine::startScanFromCLI(int scan_mode, uint16_t color, const char* scan_name) {
   Serial.print(F("Starting"));
   Serial.print(scan_name);
   Serial.print(F(". Stop with "));
@@ -1214,7 +1214,8 @@ void CommandLine::runCommand(String input) {
           // Full port scan
           if (all_sw != -1) {
             wifi_scan_obj.current_scan_ip = ipList->get(ip_index);
-            this->startScanFromCLI(WIFI_PORT_SCAN_ALL, TFT_BLUE, "Selected: " + ipList->get(ip_index).toString());
+            String msg = "Selected: " + ipList->get(ip_index).toString();
+            this->startScanFromCLI(WIFI_PORT_SCAN_ALL, TFT_BLUE, msg.c_str());
           }
         }
         else {
