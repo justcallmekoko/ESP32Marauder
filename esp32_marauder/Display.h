@@ -20,6 +20,12 @@
   #include <XPT2046_Touchscreen.h>
 #endif
 
+
+#ifdef HAS_CST820
+   #include "CST820.h"
+  extern CST820 CST820_touch;
+#endif
+
 // WiFi stuff
 #define OTA_UPDATE 100
 #define SHOW_INFO 101

@@ -50,7 +50,7 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #ifdef HAS_BUTTONS
   #include "Switches.h"
-  
+
   #if (U_BTN >= 0)
     Switches u_btn = Switches(U_BTN, 1000, U_PULL);
   #endif
@@ -67,6 +67,11 @@ https://www.online-utility.org/image/convert/to/XBM
     Switches c_btn = Switches(C_BTN, 1000, C_PULL);
   #endif
 
+#endif
+
+#ifdef HAS_CST820
+  #include <CST820.h>
+  CST820 CST820_touch;
 #endif
 
 WiFiScan wifi_scan_obj;
@@ -199,7 +204,7 @@ uint32_t currentTime  = 0;
       #if defined(MARAUDER_MINI) || defined(MARAUDER_MINI_V3)
         digitalWrite(TFT_BL, LOW);
       #endif
-    
+
       #if !defined(MARAUDER_MINI) && !defined(MARAUDER_MINI_V3)
         digitalWrite(TFT_BL, HIGH);
       #endif
@@ -211,7 +216,7 @@ uint32_t currentTime  = 0;
       #if defined(MARAUDER_MINI) || defined(MARAUDER_MINI_V3)
         digitalWrite(TFT_BL, HIGH);
       #endif
-    
+
       #if !defined(MARAUDER_MINI) && !defined(MARAUDER_MINI_V3)
         digitalWrite(TFT_BL, LOW);
       #endif
@@ -227,16 +232,17 @@ uint32_t currentTime  = 0;
 void setup()
 {
   randomSeed(esp_random());
-  
+
   #ifndef DEVELOPER
     esp_log_level_set("*", ESP_LOG_NONE);
   #endif
-  
+
   #ifndef HAS_IDF_3
     esp_spiram_init();
   #endif
 
-  Serial.begin(115200);
+  Serial.begin(460800);  // 115200);
+
 
   #ifdef HAS_ACT_LED
     pinMode(ACT_LED_PIN, OUTPUT);
@@ -260,27 +266,27 @@ void setup()
     pinMode(POWER_HOLD_PIN, OUTPUT);
     digitalWrite(POWER_HOLD_PIN, HIGH);
   #endif
-  
+
   #ifdef HAS_SCREEN
     pinMode(TFT_BL, OUTPUT);
   #endif
-  
+
   backlightOff();
   #if BATTERY_ANALOG_ON == 1
     pinMode(BATTERY_PIN, OUTPUT);
     pinMode(CHARGING_PIN, INPUT);
   #endif
-  
+
   // Preset SPI CS pins to avoid bus conflicts
   #ifdef HAS_SCREEN
     digitalWrite(TFT_CS, HIGH);
   #endif
-  
+
   #if defined(HAS_SD) && !defined(HAS_C5_SD)
     pinMode(SD_CS, OUTPUT);
 
     delay(10);
-  
+
     digitalWrite(SD_CS, HIGH);
 
     delay(10);
@@ -306,6 +312,13 @@ void setup()
         Serial.println(F("SD Card NOT Supported"));
 
     #endif
+  #endif
+
+  #if defined(HAS_CST820)
+      // github.com/evilpete/CST820
+      Serial.println(F("CST820_touch.begin()")); Serial.flush();
+      CST820_touch.begin(CST820_SDA, CST820_SCL, CST820_RST, CST820_INT);
+      // delay(500);
   #endif
 
   #ifdef HAS_SCREEN
@@ -365,6 +378,7 @@ void setup()
     #endif
   #endif
 
+  Serial.println("wifi_scan_obj.RunSetup");
   wifi_scan_obj.RunSetup();
 
   #ifdef HAS_SCREEN
@@ -397,7 +411,7 @@ void setup()
     gps_obj.begin();
   #endif
 
-  #ifdef HAS_SCREEN  
+  #ifdef HAS_SCREEN
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
   #endif
 
@@ -419,7 +433,7 @@ void setup()
   menu_function_obj.changeMenu(menu_function_obj.current_menu);*/
 
   wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
-  
+
   cli_obj.RunSetup();
 }
 
