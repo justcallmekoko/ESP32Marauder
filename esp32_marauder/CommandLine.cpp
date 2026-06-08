@@ -77,9 +77,12 @@ LinkedList<String> CommandLine::parseCommand(String input, char* delim) {
   return cmd_args;
 }
 
-int CommandLine::argSearch(LinkedList<String>* cmd_args_list, String key) {
+int CommandLine::argSearch(LinkedList<String>* cmd_args_list, const char* key) {
+  if (!cmd_args_list || !key)
+    return -1;
+
   for (int i = 0; i < cmd_args_list->size(); i++) {
-    if (cmd_args_list->get(i) == key)
+    if (strcmp(cmd_args_list->get(i).c_str(), key) == 0)
       return i;
   }
 
