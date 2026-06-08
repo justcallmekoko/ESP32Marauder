@@ -43,6 +43,11 @@ https://www.online-utility.org/image/convert/to/XBM
   #include "BatteryInterface.h"
 #endif
 
+#ifdef HAS_AW9364
+  #include <AW9364LedDriver.hpp>
+  AW9364LedDriver ledDriver;
+#endif
+
 #ifdef HAS_SCREEN
   #include "Display.h"
   #include "MenuFunctions.h"
@@ -128,7 +133,7 @@ uint32_t currentTime  = 0;
 
 // Helper macros for LEDC API compatibility (2.x vs 3.x board package)
 #ifdef HAS_SCREEN
-  #ifndef HAS_MINI_SCREEN
+  #if !defined(HAS_MINI_SCREEN) && !defined(HAS_AW9364)
     #if ESP_ARDUINO_VERSION_MAJOR >= 3
       #define BL_SETUP()       ledcAttach(TFT_BL, BL_FREQ, BL_RESOLUTION)
       #define BL_SET(duty)     ledcWrite(TFT_BL, (duty))
@@ -139,7 +144,57 @@ uint32_t currentTime  = 0;
   #endif
 #endif
 
-#ifndef HAS_MINI_SCREEN
+#if defined(HAS_AW9364) && defined(HAS_SCREEN)
+  void brightnessInit() {
+    Serial.println("HAS_AW9364 brightnessInit TFT_BL= " + (String) TFT_BL);
+    ledDriver.begin(TFT_BL);
+    bl_prefs.begin("backlight", false);
+    bl_level_idx = bl_prefs.getUChar("level", 9);
+    if (bl_level_idx > MAX_BRIGHTNESS_STEPS) bl_level_idx = MAX_BRIGHTNESS_STEPS;
+    ledDriver.setBrightness(MAX_BRIGHTNESS_STEPS);
+    bl_level_idx = MAX_BRIGHTNESS_STEPS;
+  }
+
+  void brightnessCycle() {
+      bl_level_idx = (bl_level_idx + 1) % MAX_BRIGHTNESS_STEPS;
+      ledDriver.setBrightness(bl_level_idx);
+      bl_prefs.putUChar("level", bl_level_idx);
+      Serial.print(F("[Brightness] Level "));
+      Serial.print(bl_level_idx + 1);
+      Serial.print(F("/"));
+      // Serial.print(MAX_BRIGHTNESS_STEPS);
+      // Serial.print(F(" ("));
+      // Serial.print(BL_LEVELS[bl_level_idx] * 100 / 255);
+      Serial.println(F("%)"));
+  }
+
+  uint8_t getBrightnessLevel() {
+    return ledDriver.getBrightness();
+  }
+  void brightnessSave(uint8_t level) {
+      if (level > MAX_BRIGHTNESS_STEPS) level = MAX_BRIGHTNESS_STEPS;
+      bl_level_idx = level;
+      ledDriver.setBrightness(bl_level_idx);
+      bl_prefs.putUChar("level", bl_level_idx);
+  }
+
+  void backlightOn() {
+    Serial.println("HAS_AW9364 backlightOn: " + (String) bl_level_idx);
+      if(bl_level_idx < 3) bl_level_idx = 3;
+      ledDriver.setBrightness(bl_level_idx);
+  }
+
+  void backlightOff() {
+    Serial.println("HAS_AW9364 backlightOff: " + (String) bl_level_idx);
+    ledDriver.setBrightness(3);
+  }
+
+
+  // Init PWM brightness AFTER display init (so ledcAttach overrides TFT_eSPI's pinMode)
+  // #ifndef HAS_MINI_SCREEN
+
+
+#elif !defined(HAS_MINI_SCREEN) && !defined(MARAUDER_CYD_HMI)
   void brightnessInit() {
     #ifdef HAS_SCREEN
       BL_SETUP();
@@ -226,6 +281,12 @@ uint32_t currentTime  = 0;
 
 void setup()
 {
+  // https://github.com/Xinyuan-LilyGO/T-HMI/issues/34
+  #ifdef MARAUDER_CYD_HMI
+    pinMode(PWR_ON_PIN, OUTPUT);
+    digitalWrite(PWR_ON_PIN, HIGH);
+  #endif
+
   randomSeed(esp_random());
   
   #ifndef DEVELOPER
@@ -238,14 +299,32 @@ void setup()
 
   Serial.begin(115200);
 
+  #ifdef MARAUDER_CYD_HMI
+    pinMode(PWR_EN_PIN, OUTPUT);
+    digitalWrite(PWR_EN_PIN, HIGH);
+    // backlightOff();
+  #endif
+
   #ifdef HAS_ACT_LED
     pinMode(ACT_LED_PIN, OUTPUT);
     delay(100);
     digitalWrite(ACT_LED_PIN, LOW);
   #endif
 
-  while(!Serial)
-    delay(10);
+    pinMode(TFT_BL, OUTPUT);
+    //brightnessInit();
+  int8_t xx = 0;
+  while(!Serial && millis() < 2000) {
+    if (xx % 1) {
+     // backlightOff();
+      digitalWrite(TFT_BL, LOW);
+    } else {
+      digitalWrite(TFT_BL, HIGH);
+      // backlightOn();
+      }
+    delay(500);
+    xx++;
+    }
 
   #ifdef HAS_C5_SD
     sharedSPI.begin(SD_SCK, SD_MISO, SD_MOSI);
@@ -313,8 +392,8 @@ void setup()
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
   #endif
 
-  // Init PWM brightness AFTER display init (so ledcAttach overrides TFT_eSPI's pinMode)
-  #ifndef HAS_MINI_SCREEN
+
+  #if !defined(HAS_MINI_SCREEN)
     brightnessInit();
     backlightOff();
   #endif

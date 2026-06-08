@@ -33,18 +33,24 @@ bool SDInterface::initSD() {
       */
       #if defined(MARAUDER_M5STICKC)
         enum { SPI_SCK = 0, SPI_MISO = 36, SPI_MOSI = 26 };
-      #elif defined(HAS_CYD_TOUCH) || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_SEPARATE_SD)
+      #elif defined(HAS_CYD_TOUCH) || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_SEPARATE_SD) || defined(MARAUDER_CYD_HMI)
         enum { SPI_SCK = SD_SCK, SPI_MISO = SD_MISO, SPI_MOSI = SD_MOSI };
       #else
         enum { SPI_SCK = 0, SPI_MISO = 36, SPI_MOSI = 26 };
       #endif
       #if !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
         this->spiExt = new SPIClass();
+      #elif  defined(MARAUDER_CYD_HMI)
+        this->spiExt = new SPIClass(SPI3);
+        Serial.println(F("Using SPIClass(SPI3);"));
       #else
         this->spiExt = new SPIClass(FSPI);
       #endif
       Serial.println(F("Using external SPI configuration..."));
+      Serial.printf("SPI_SCK=%d SPI_MISO=%d SPI_MOSI=%d SD_CS=%d\n", SPI_SCK, SPI_MISO, SPI_MOSI, SD_CS);
       this->spiExt->begin(SPI_SCK, SPI_MISO, SPI_MOSI, SD_CS);
+      delay(10);
+
       if (!SD.begin(SD_CS, *(this->spiExt))) {
     #elif defined(HAS_C5_SD)
       if (!SD.begin(SD_CS, *_spi)) {

@@ -2963,6 +2963,7 @@ void MenuFunctions::RunSetup()
 //#if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
 #ifdef HAS_MINI_KB
   String MenuFunctions::miniKeyboard(Menu * targetMenu, bool do_pass) {
+    Serial.println("MenuFunctions::miniKeyboard");
     // Prepare a char array and reset temp SSID string
     extern LinkedList<ssid>* ssids;
 
@@ -3191,6 +3192,8 @@ void MenuFunctions::RunSetup()
 
           // Keyboard functions for touch hardware
           #ifdef HAS_TOUCH
+            menuButton
+            Serial.println("Keyboard functions for touch hardware");
             bool touched = display_obj.updateTouch(&t_x, &t_y);
 
             uint8_t menu_button = display_obj.menuButton(&t_x, &t_y, touched);
@@ -3315,6 +3318,7 @@ void MenuFunctions::RunSetup()
               pressed = false;
 
           #endif
+            Serial.println("endif   Keyboard functions for touch hardware");
 
           // Display info on screen
           if (pressed) {
