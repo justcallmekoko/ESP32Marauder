@@ -2644,6 +2644,7 @@
          || defined(MARAUDER_M5STICKC) || defined(MARAUDER_KIT)
       #define I2C_SDA 33
       #define I2C_SCL 22
+      #define HAS_IP5306
 
     #elif defined(MARAUDER_MINI)
       #define I2C_SDA 33
@@ -2686,16 +2687,24 @@
       #undef HAS_IP5306
     #endif
 
+    //  If we know what we have, we can delete what we're not using
     #ifdef BATTERY_ADC_PIN
       #undef HAS_AXP2101
       #undef HAS_IP5306
       #undef HAS_MAX1704X
-    #endif
 
-    #ifdef HAS_AXP2101
-      #undef BATTERY_ADC_PIN
+    #elif defined(HAS_AXP2101)
       #undef HAS_IP5306
       #undef HAS_MAX1704X
+
+    #elif defined(HAS_MAX1704X)
+      #undef HAS_IP5306
+      #undef HAS_AXP2101
+
+    #else       // punt
+       #define HAS_AXP2101
+       #define HAS_IP5306
+       #define HAS_MAX1704X
     #endif
 
   #endif  // HAS_BATTERY
