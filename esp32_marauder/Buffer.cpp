@@ -6,23 +6,23 @@ Buffer::Buffer(){
   bufB = (uint8_t*)malloc(BUF_SIZE);
 }
 
-void Buffer::createFile(String name, bool is_pcap, bool is_gpx){
+void Buffer::createFile(const char* name, bool is_pcap, bool is_gpx){
   int i=0;
   if (is_pcap) {
     do{
-      fileName = "/"+name+"_"+(String)i+".pcap";
+      fileName = "/"+String(name)+"_"+(String)i+".pcap";
       i++;
     } while(fs->exists(fileName));
   }
   else if ((!is_pcap) && (!is_gpx)) {
     do{
-      fileName = "/"+name+"_"+(String)i+".log";
+      fileName = "/"+String(name)+"_"+(String)i+".log";
       i++;
     } while(fs->exists(fileName));
   }
   else {
     do{
-      fileName = "/"+name+"_"+(String)i+".gpx";
+      fileName = "/"+String(name)+"_"+(String)i+".gpx";
       i++;
     } while(fs->exists(fileName));
   }
@@ -56,7 +56,7 @@ String Buffer::getFileName() {
   return this->fileName;
 }
 
-void Buffer::openFile(String file_name, fs::FS* fs, bool serial, bool is_pcap, bool is_gpx) {
+void Buffer::openFile(const char* file_name, fs::FS* fs, bool serial, bool is_pcap, bool is_gpx) {
   bool save_pcap = settings_obj.loadSetting<bool>("SavePCAP");
   if (!save_pcap) {
     this->fs = NULL;
@@ -76,15 +76,15 @@ void Buffer::openFile(String file_name, fs::FS* fs, bool serial, bool is_pcap, b
   }
 }
 
-void Buffer::pcapOpen(String file_name, fs::FS* fs, bool serial) {
+void Buffer::pcapOpen(const char* file_name, fs::FS* fs, bool serial) {
   openFile(file_name, fs, serial, true);
 }
 
-void Buffer::logOpen(String file_name, fs::FS* fs, bool serial) {
+void Buffer::logOpen(const char* file_name, fs::FS* fs, bool serial) {
   openFile(file_name, fs, serial, false);
 }
 
-void Buffer::gpxOpen(String file_name, fs::FS* fs, bool serial) {
+void Buffer::gpxOpen(const char* file_name, fs::FS* fs, bool serial) {
   openFile(file_name, fs, serial, false, true);
 }
 
