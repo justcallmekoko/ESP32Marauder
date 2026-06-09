@@ -2640,8 +2640,16 @@
   //// BATTERY STUFF
   #ifdef HAS_BATTERY
 
-    #if defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1) \
-         || defined(MARAUDER_M5STICKC) || defined(MARAUDER_KIT)
+    #ifdef __AXP192_H__
+      #define HAS_AXP2101
+    #endif
+
+    #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2) 
+      #define I2C_SDA 33
+      #define I2C_SCL 22
+      #define HAS_AXP2101
+
+    #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_KIT)
       #define I2C_SDA 33
       #define I2C_SCL 22
       #define HAS_IP5306
@@ -2683,7 +2691,6 @@
       #define I2C_SCL 4
       #define I2C_SDA 3
       #define HAS_MAX1704X
-      #undef BATTERY_ADC_PIN
       #undef HAS_AXP2101
       #undef HAS_IP5306
     #endif
@@ -2700,7 +2707,6 @@
 
     #elif defined(HAS_MAX1704X)
       #undef HAS_IP5306
-      #undef HAS_AXP2101
 
     #else       // punt
        // #define HAS_AXP2101

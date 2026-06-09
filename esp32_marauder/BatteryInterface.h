@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef HAS_BATTERY
+// #ifdef HAS_BATTERY
 
 #ifndef BatteryInterface_h
 #define BatteryInterface_h
@@ -56,5 +56,5 @@ class BatteryInterface {
 
 #endif  // ifndef BatteryInterface_h
 
-#endif // HAS_BATTERY
+// #endif // HAS_BATTERY
 
