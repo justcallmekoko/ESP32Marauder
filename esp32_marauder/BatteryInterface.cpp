@@ -1,5 +1,5 @@
 
-#ifdef HAS_BATTERY
+// #ifdef HAS_BATTERY
 
 #include "BatteryInterface.h"
 #include "lang_var.h"
@@ -133,4 +133,4 @@ int8_t BatteryInterface::getBatteryLevel() {
   return -1;
 }
 
-#endif // HAS_BATTERY
+// #endif // HAS_BATTERY
