@@ -2644,6 +2644,7 @@
          || defined(MARAUDER_M5STICKC) || defined(MARAUDER_KIT)
       #define I2C_SDA 33
       #define I2C_SCL 22
+      #define HAS_IP5306
 
     #elif defined(MARAUDER_MINI)
       #define I2C_SDA 33
@@ -2652,6 +2653,7 @@
     #elif defined(MARAUDER_V7)
       #define I2C_SDA 33
       #define I2C_SCL 16
+      #define HAS_IP5306
 
     #elif defined(MARAUDER_V7_1)
       #define I2C_SDA 33
@@ -2701,7 +2703,7 @@
       #undef HAS_AXP2101
 
     #else       // punt
-       #define HAS_AXP2101
+       // #define HAS_AXP2101
        #define HAS_IP5306
        #define HAS_MAX1704X
     #endif
