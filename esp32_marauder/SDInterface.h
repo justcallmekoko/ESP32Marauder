@@ -10,6 +10,10 @@
   #include "FS.h"
 #endif
 #include "SD.h"
+#ifdef HAS_ONX_SD_MMC
+  #include "SD_MMC.h"
+  #include <Wire.h>
+#endif
 #ifdef HAS_C5_SD
   #include "SPI.h"
 #endif

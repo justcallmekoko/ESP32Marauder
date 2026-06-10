@@ -2799,7 +2799,7 @@ String WiFiScan::security_int_to_string(int security_type) {
       authtype = "[WPA3_PSK]";
       break;
 
-    #ifdef HAS_IDF_3
+    #if ESP_ARDUINO_VERSION_MAJOR >= 3
     case WIFI_AUTH_WPA3_ENTERPRISE:
       authtype = "[WPA3]";
       break;
@@ -2823,7 +2823,12 @@ void WiFiScan::startPcap(String file_name) {
   buffer_obj.pcapOpen(
     file_name,
     #if defined(HAS_SD)
-      sd_obj.supported ? &SD :
+      sd_obj.supported ?
+        #if defined(HAS_ONX_SD_MMC)
+          &SD_MMC :
+        #else
+          &SD :
+        #endif
     #endif
     NULL,
     save_serial // Set with commandline options
@@ -2834,7 +2839,12 @@ void WiFiScan::startLog(String file_name) {
   buffer_obj.logOpen(
     file_name,
     #if defined(HAS_SD)
-      sd_obj.supported ? &SD :
+      sd_obj.supported ?
+        #if defined(HAS_ONX_SD_MMC)
+          &SD_MMC :
+        #else
+          &SD :
+        #endif
     #endif
     NULL,
     save_serial // Set with commandline options
@@ -2845,7 +2855,12 @@ void WiFiScan::startGPX(String file_name) {
   buffer_obj.gpxOpen(
     file_name,
     #if defined(HAS_SD)
-      sd_obj.supported ? &SD :
+      sd_obj.supported ?
+        #if defined(HAS_ONX_SD_MMC)
+          &SD_MMC :
+        #else
+          &SD :
+        #endif
     #endif
     NULL,
     save_serial // Set with commandline options

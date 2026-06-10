@@ -1,6 +1,12 @@
 #include "SDInterface.h"
 #include "lang_var.h"
 
+#ifdef HAS_ONX_SD_MMC
+  #define SD_FS SD_MMC
+#else
+  #define SD_FS SD
+#endif
+
 #ifdef HAS_C5_SD
   SDInterface::SDInterface(SPIClass* spi, int cs)
     : _spi(spi), _cs(cs) {}
@@ -18,10 +24,24 @@ bool SDInterface::initSD() {
       }
     #endif
 
-    pinMode(SD_CS, OUTPUT);
+    #ifndef HAS_ONX_SD_MMC
+      pinMode(SD_CS, OUTPUT);
+    #endif
 
     delay(10);
-    #if (defined(MARAUDER_M5STICKC)) || (defined(HAS_CYD_TOUCH)) || (defined(MARAUDER_CARDPUTER)) || (defined(MARAUDER_CARDPUTER_ADV))
+    #if defined(HAS_ONX_SD_MMC)
+      // ONX2432G028 uses 1-bit SDMMC on GPIO11/10/9. Its SDCS line is routed
+      // through PCF8574 EXIO7 and must stay high before mounting the card.
+      Wire.begin(ONX2432G028_I2C_SDA, ONX2432G028_I2C_SCL);
+      Wire.setClock(100000);
+      Wire.beginTransmission(ONX2432G028_PCF8574_ADDR);
+      Wire.write(0xFF);
+      Wire.endTransmission();
+      pinMode(ONX2432G028_SD_CMD, INPUT_PULLUP);
+      pinMode(ONX2432G028_SD_D0, INPUT_PULLUP);
+      SD_MMC.setPins(ONX2432G028_SD_CLK, ONX2432G028_SD_CMD, ONX2432G028_SD_D0);
+      if (!SD_MMC.begin("/sdcard", true, false, SDMMC_FREQ_DEFAULT)) {
+    #elif (defined(MARAUDER_M5STICKC)) || (defined(HAS_CYD_TOUCH)) || (defined(MARAUDER_CARDPUTER)) || (defined(MARAUDER_CARDPUTER_ADV))
       /* Set up SPI SD Card using external pin header
       StickCPlus Header - SPI SD Card Reader
                   3v3   -   3v3
@@ -57,9 +77,9 @@ bool SDInterface::initSD() {
     }
     else {
       this->supported = true;
-      this->cardType = SD.cardType();
+      this->cardType = SD_FS.cardType();
 
-      this->cardSizeMB = SD.cardSize() / (1024 * 1024);
+      this->cardSizeMB = SD_FS.cardSize() / (1024 * 1024);
     
       if (this->supported) {
         const int NUM_DIGITS = log10(this->cardSizeMB) + 1;
@@ -76,9 +96,9 @@ bool SDInterface::initSD() {
         this->card_sz = sz;
       }
 
-      if (!SD.exists("/SCRIPTS")) {
+      if (!SD_FS.exists("/SCRIPTS")) {
 
-        SD.mkdir("/SCRIPTS");
+        SD_FS.mkdir("/SCRIPTS");
       }
 
       this->sd_files = new LinkedList<String>();
@@ -93,7 +113,7 @@ bool SDInterface::initSD() {
 
 File SDInterface::getFile(String path) {
   if (this->supported) {
-    File file = SD.open(path, FILE_READ);
+    File file = SD_FS.open(path, FILE_READ);
 
     //if (file)
     return file;
@@ -101,7 +121,7 @@ File SDInterface::getFile(String path) {
 }
 
 bool SDInterface::removeFile(String file_path) {
-  if (SD.remove(file_path))
+  if (SD_FS.remove(file_path))
     return true;
   else
     return false;
@@ -109,7 +129,7 @@ bool SDInterface::removeFile(String file_path) {
 
 void SDInterface::listDirToLinkedList(LinkedList<String>* file_names, String str_dir, String ext) {
   if (this->supported) {
-    File dir = SD.open(str_dir);
+    File dir = SD_FS.open(str_dir);
     while (true)
     {
       File entry = dir.openNextFile();
@@ -135,7 +155,7 @@ void SDInterface::listDirToLinkedList(LinkedList<String>* file_names, String str
 
 void SDInterface::listDir(String str_dir){
   if (this->supported) {
-    File dir = SD.open(str_dir);
+    File dir = SD_FS.open(str_dir);
     while (true)
     {
       File entry = dir.openNextFile();
@@ -169,7 +189,7 @@ void SDInterface::runUpdate(String file_name) {
     display_obj.tft.println("Opening " + file_name + "...");
   #endif
 
-  File updateBin = SD.open(file_name);
+  File updateBin = SD_FS.open(file_name);
 
   if (updateBin) {
     if(updateBin.isDirectory()){
