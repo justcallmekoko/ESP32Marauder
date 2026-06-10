@@ -10,12 +10,14 @@ void MenuFunctions::drawMiniMenuButton(int b, int x, bool selected) {
   if (!current_menu || !current_menu->list || x < 0 || x >= current_menu->list->size())
     return;
 
-  uint16_t color = this->getColor(current_menu->list->get(x).color);
+  MenuNode mini_node = current_menu->list->get(x);
+  bool is_setting_node = (mini_node.icon == SETTINGS && mini_node.color == TFTLIGHTGREY);
+  uint16_t color = is_setting_node ? (mini_node.selected ? TFT_GREEN : TFT_RED) : this->getColor(mini_node.color);
   int16_t button_x = KEY_X - (KEY_W / 2);
   int16_t button_y = (KEY_Y + (b * (KEY_H + KEY_SPACING_Y))) - (KEY_H / 2);
 
-  uint16_t background = selected ? color : TFT_BLACK;
-  uint16_t text_color = selected ? TFT_BLACK : color;
+  uint16_t background = selected ? (is_setting_node ? TFT_LIGHTGREY : color) : TFT_BLACK;
+  uint16_t text_color = (selected && !is_setting_node) ? TFT_BLACK : color;
 
   display_obj.tft.setFreeFont(NULL);
   display_obj.tft.setTextSize(1);
@@ -38,10 +40,12 @@ void MenuFunctions::buttonNotSelected(int b, int x) {
     this->drawMiniMenuButton(b, x, false);
   #endif
 
-  uint16_t color = this->getColor(current_menu->list->get(x).color);
+  uint16_t color = (current_menu->list->get(x).icon == SETTINGS && current_menu->list->get(x).color == TFTLIGHTGREY) ? (current_menu->list->get(x).selected ? TFT_GREEN : TFT_RED) : this->getColor(current_menu->list->get(x).color);
+  uint16_t icon_color = (current_menu->list->get(x).icon == SETTINGS && current_menu->list->get(x).color == TFTLIGHTGREY) ? TFT_LIGHTGREY : color;
 
   #ifdef HAS_FULL_SCREEN
     display_obj.tft.setFreeFont(MENU_FONT);
+    display_obj.key[b].initButton(&display_obj.tft, KEY_X, KEY_Y + b * (KEY_H + KEY_SPACING_Y), KEY_W, KEY_H, TFT_BLACK, TFT_BLACK, color, (char*)"", KEY_TEXTSIZE);
     display_obj.key[b].drawButton(false, current_menu->list->get(x).name);
     if ((current_menu->list->get(x).name != text09) && (current_menu->list->get(x).icon != 255))
           display_obj.tft.drawXBitmap(0,
@@ -50,7 +54,7 @@ void MenuFunctions::buttonNotSelected(int b, int x) {
                                       ICON_W,
                                       ICON_H,
                                       TFT_BLACK,
-                                      color);
+                                      icon_color);
     display_obj.tft.setFreeFont(NULL);
   #endif
 }
@@ -70,15 +74,28 @@ void MenuFunctions::buttonSelected(int b, int x) {
 
   #ifdef HAS_FULL_SCREEN
     display_obj.tft.setFreeFont(MENU_FONT);
-    display_obj.key[b].drawButton(true, current_menu->list->get(x).name);
-    if ((current_menu->list->get(x).name != text09) && (current_menu->list->get(x).icon != 255))
-          display_obj.tft.drawXBitmap(0,
+    if (current_menu->list->get(x).icon == SETTINGS && current_menu->list->get(x).color == TFTLIGHTGREY) {
+      uint16_t setting_color = current_menu->list->get(x).selected ? TFT_GREEN : TFT_RED;
+      display_obj.key[b].initButton(&display_obj.tft, KEY_X, KEY_Y + b * (KEY_H + KEY_SPACING_Y), KEY_W, KEY_H, TFT_BLACK, TFT_LIGHTGREY, setting_color, (char*)"", KEY_TEXTSIZE);
+      display_obj.key[b].drawButton(false, current_menu->list->get(x).name);
+      display_obj.tft.drawXBitmap(0,
                                       KEY_Y + (b * (KEY_H + KEY_SPACING_Y)) - (ICON_H / 2),
                                       menu_icons[current_menu->list->get(x).icon],
                                       ICON_W,
                                       ICON_H,
                                       TFT_BLACK,
-                                      color);
+                                      TFT_LIGHTGREY);
+    } else {
+      display_obj.key[b].drawButton(true, current_menu->list->get(x).name);
+      if ((current_menu->list->get(x).name != text09) && (current_menu->list->get(x).icon != 255))
+            display_obj.tft.drawXBitmap(0,
+                                        KEY_Y + (b * (KEY_H + KEY_SPACING_Y)) - (ICON_H / 2),
+                                        menu_icons[current_menu->list->get(x).icon],
+                                        ICON_W,
+                                        ICON_H,
+                                        TFT_BLACK,
+                                        color);
+    }
     display_obj.tft.setFreeFont(NULL);
   #endif
 }
@@ -531,7 +548,7 @@ void MenuFunctions::main(uint32_t currentTime)
                 this->displayCurrentMenu(current_menu->selected);
               }
               this->buttonSelected(current_menu->selected - this->menu_start_index, current_menu->selected);
-              if (!current_menu->list->get(current_menu->selected + 1).selected)
+              if (!current_menu->list->get(current_menu->selected + 1).selected || (current_menu->list->get(current_menu->selected + 1).icon == SETTINGS && current_menu->list->get(current_menu->selected + 1).color == TFTLIGHTGREY))
                 this->buttonNotSelected(current_menu->selected + 1 - this->menu_start_index, current_menu->selected + 1);
             }
             // Loop to end
@@ -542,7 +559,7 @@ void MenuFunctions::main(uint32_t currentTime)
                 this->displayCurrentMenu(current_menu->selected + 1 - BUTTON_SCREEN_LIMIT);
               }
               this->buttonSelected(current_menu->selected, current_menu->selected);
-              if (!current_menu->list->get(0).selected)
+              if (!current_menu->list->get(0).selected || (current_menu->list->get(0).icon == SETTINGS && current_menu->list->get(0).color == TFTLIGHTGREY))
                 this->buttonNotSelected(0, this->menu_start_index);
             }
           }
@@ -596,7 +613,7 @@ void MenuFunctions::main(uint32_t currentTime)
               }
               else
                 this->buttonSelected(current_menu->selected - this->menu_start_index, current_menu->selected);
-              if (!current_menu->list->get(current_menu->selected - 1).selected)
+              if (!current_menu->list->get(current_menu->selected - 1).selected || (current_menu->list->get(current_menu->selected - 1).icon == SETTINGS && current_menu->list->get(current_menu->selected - 1).color == TFTLIGHTGREY))
                 this->buttonNotSelected(current_menu->selected - 1 - this->menu_start_index, current_menu->selected - 1);
             }
             // Loop to beginning
@@ -610,7 +627,7 @@ void MenuFunctions::main(uint32_t currentTime)
               else {
                 current_menu->selected = 0;
                 this->buttonSelected(current_menu->selected);
-                if (!current_menu->list->get(current_menu->list->size() - 1).selected)
+                if (!current_menu->list->get(current_menu->list->size() - 1).selected || (current_menu->list->get(current_menu->list->size() - 1).icon == SETTINGS && current_menu->list->get(current_menu->list->size() - 1).color == TFTLIGHTGREY))
                   this->buttonNotSelected(current_menu->list->size() - 1);
               }
             }
@@ -688,7 +705,7 @@ void MenuFunctions::main(uint32_t currentTime)
                     this->displayCurrentMenu(current_menu->selected);
                   }
                   this->buttonSelected(current_menu->selected - this->menu_start_index, current_menu->selected);
-                  if (!current_menu->list->get(current_menu->selected + 1).selected)
+                  if (!current_menu->list->get(current_menu->selected + 1).selected || (current_menu->list->get(current_menu->selected + 1).icon == SETTINGS && current_menu->list->get(current_menu->selected + 1).color == TFTLIGHTGREY))
                     this->buttonNotSelected(current_menu->selected + 1 - this->menu_start_index, current_menu->selected + 1);
                 }
                 // Loop to end
@@ -699,7 +716,7 @@ void MenuFunctions::main(uint32_t currentTime)
                     this->displayCurrentMenu(current_menu->selected + 1 - BUTTON_SCREEN_LIMIT);
                   }
                   this->buttonSelected(current_menu->selected, current_menu->selected);
-                  if (!current_menu->list->get(0).selected)
+                  if (!current_menu->list->get(0).selected || (current_menu->list->get(0).icon == SETTINGS && current_menu->list->get(0).color == TFTLIGHTGREY))
                     this->buttonNotSelected(0, this->menu_start_index);
                 }
               }
@@ -761,7 +778,7 @@ void MenuFunctions::main(uint32_t currentTime)
             }
             else
               this->buttonSelected(current_menu->selected - this->menu_start_index, current_menu->selected);
-            if (!current_menu->list->get(current_menu->selected - 1).selected)
+            if (!current_menu->list->get(current_menu->selected - 1).selected || (current_menu->list->get(current_menu->selected - 1).icon == SETTINGS && current_menu->list->get(current_menu->selected - 1).color == TFTLIGHTGREY))
               this->buttonNotSelected(current_menu->selected - 1 - this->menu_start_index, current_menu->selected - 1);
           }
           // Loop to beginning
@@ -775,7 +792,7 @@ void MenuFunctions::main(uint32_t currentTime)
             else {
               current_menu->selected = 0;
               this->buttonSelected(current_menu->selected);
-              if (!current_menu->list->get(current_menu->list->size() - 1).selected)
+              if (!current_menu->list->get(current_menu->list->size() - 1).selected || (current_menu->list->get(current_menu->list->size() - 1).icon == SETTINGS && current_menu->list->get(current_menu->list->size() - 1).color == TFTLIGHTGREY))
                 this->buttonNotSelected(current_menu->list->size() - 1);
             }
           }
@@ -3698,7 +3715,7 @@ void MenuFunctions::buildButtons(Menu *menu, int starting_index, const char* but
 
   for (uint8_t i = 0; i < visible_buttons; i++) {
     MenuNode node = menu->list->get(starting_index + i);
-    uint16_t color = this->getColor(node.color);
+    uint16_t color = (node.icon == SETTINGS && node.color == TFTLIGHTGREY) ? (node.selected ? TFT_GREEN : TFT_RED) : this->getColor(node.color);
 
     char buf[64];
 
@@ -3771,26 +3788,44 @@ void MenuFunctions::displayCurrentMenu(int start_index)
         continue;
       uint16_t color = this->getColor(current_menu->list->get(i).color);
       #ifdef HAS_FULL_SCREEN
-        if ((current_menu->list->get(i).selected) || (current_menu->selected == i)) {
-          display_obj.key[i - start_index].drawButton(true, current_menu->list->get(i).name);
-        }
-        else {
-          display_obj.key[i - start_index].drawButton(false, current_menu->list->get(i).name);          
-        }
-        
-        if ((current_menu->list->get(i).name != text09) && (current_menu->list->get(i).icon != 255))
+        bool is_setting_node = (current_menu->list->get(i).icon == SETTINGS && current_menu->list->get(i).color == TFTLIGHTGREY);
+        if (is_setting_node && current_menu->selected == i) {
+          uint16_t setting_color = current_menu->list->get(i).selected ? TFT_GREEN : TFT_RED;
+          display_obj.key[i - start_index].initButton(&display_obj.tft, KEY_X, KEY_Y + (i - start_index) * (KEY_H + KEY_SPACING_Y), KEY_W, KEY_H, TFT_BLACK, TFT_LIGHTGREY, setting_color, (char*)"", KEY_TEXTSIZE);
+          display_obj.key[i - start_index].drawButton(false, current_menu->list->get(i).name);
           display_obj.tft.drawXBitmap(0,
                                       KEY_Y + (i - start_index) * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
                                       menu_icons[current_menu->list->get(i).icon],
                                       ICON_W,
                                       ICON_H,
                                       TFT_BLACK,
-                                      color);
+                                      TFT_LIGHTGREY);
+        } else if ((!is_setting_node && current_menu->list->get(i).selected) || (current_menu->selected == i)) {
+          display_obj.key[i - start_index].drawButton(true, current_menu->list->get(i).name);
+          if ((current_menu->list->get(i).name != text09) && (current_menu->list->get(i).icon != 255))
+            display_obj.tft.drawXBitmap(0,
+                                        KEY_Y + (i - start_index) * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
+                                        menu_icons[current_menu->list->get(i).icon],
+                                        ICON_W,
+                                        ICON_H,
+                                        TFT_BLACK,
+                                        color);
+        } else {
+          display_obj.key[i - start_index].drawButton(false, current_menu->list->get(i).name);
+          if ((current_menu->list->get(i).name != text09) && (current_menu->list->get(i).icon != 255))
+            display_obj.tft.drawXBitmap(0,
+                                        KEY_Y + (i - start_index) * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
+                                        menu_icons[current_menu->list->get(i).icon],
+                                        ICON_W,
+                                        ICON_H,
+                                        TFT_BLACK,
+                                        is_setting_node ? TFT_LIGHTGREY : color);
+        }
 
       #endif
 
       #ifdef HAS_MINI_SCREEN
-        if ((current_menu->selected == i) || (current_menu->list->get(i).selected))
+        if ((current_menu->selected == i) || ((current_menu->list->get(i).icon != SETTINGS || current_menu->list->get(i).color != TFTLIGHTGREY) && current_menu->list->get(i).selected))
           this->drawMiniMenuButton(i - start_index, i, true);
         else 
           this->drawMiniMenuButton(i - start_index, i, false);
