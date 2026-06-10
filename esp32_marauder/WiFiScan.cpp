@@ -1502,8 +1502,7 @@ void WiFiScan::RunSetup() {
     this->wsl_bypass_enabled = false;
 
   #ifdef HAS_PSRAM
-    ssids = new (ps_malloc(sizeof(LinkedList<ssid>))) LinkedList<ssid>();
-    new (ssids) LinkedList<ssid>();
+    ssids = new(ps_malloc(sizeof(LinkedList<ssid>))) LinkedList<ssid>();
   #else
     ssids = new LinkedList<ssid>();
   #endif
@@ -2813,7 +2812,7 @@ String WiFiScan::security_int_to_string(int security_type) {
       authtype = "[WPA3_PSK]";
       break;
 
-    #ifdef HAS_IDF_3
+    #if ESP_ARDUINO_VERSION_MAJOR >= 3
     case WIFI_AUTH_WPA3_ENTERPRISE:
       authtype = "[WPA3]";
       break;
@@ -2836,7 +2835,9 @@ String WiFiScan::security_int_to_string(int security_type) {
 void WiFiScan::startPcap(const char* file_name) {
   buffer_obj.pcapOpen(
     file_name,
-    #if defined(HAS_SD)
+    #if defined(HAS_ONX_SD_MMC)
+      sd_obj.supported ? &SD_MMC :
+    #elif defined(HAS_SD)
       sd_obj.supported ? &SD :
     #endif
     NULL,
@@ -2847,7 +2848,9 @@ void WiFiScan::startPcap(const char* file_name) {
 void WiFiScan::startLog(const char* file_name) {
   buffer_obj.logOpen(
     file_name,
-    #if defined(HAS_SD)
+    #if defined(HAS_ONX_SD_MMC)
+      sd_obj.supported ? &SD_MMC :
+    #elif defined(HAS_SD)
       sd_obj.supported ? &SD :
     #endif
     NULL,
@@ -2858,7 +2861,9 @@ void WiFiScan::startLog(const char* file_name) {
 void WiFiScan::startGPX(const char* file_name) {
   buffer_obj.gpxOpen(
     file_name,
-    #if defined(HAS_SD)
+    #if defined(HAS_ONX_SD_MMC)
+      sd_obj.supported ? &SD_MMC :
+    #elif defined(HAS_SD)
       sd_obj.supported ? &SD :
     #endif
     NULL,

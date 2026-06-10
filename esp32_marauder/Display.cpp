@@ -11,6 +11,94 @@ Display::Display()
 {
 }
 
+#ifdef HAS_ONX_CST826_TOUCH
+void Display::onxI2CBegin() {
+  static bool i2cStarted = false;
+
+  if (!i2cStarted) {
+    Wire.begin(ONX3248G035_I2C_SDA, ONX3248G035_I2C_SCL);
+    Wire.setClock(100000);
+    i2cStarted = true;
+  }
+}
+
+bool Display::onxPcf8574WritePin(uint8_t pin, bool level) {
+  if (pin == 0 || pin > 8) {
+    return false;
+  }
+
+  const uint8_t bitMask = 1 << (pin - 1);
+  if (level) {
+    onxPcf8574State |= bitMask;
+  }
+  else {
+    onxPcf8574State &= ~bitMask;
+  }
+
+  Wire.beginTransmission(ONX3248G035_PCF8574_ADDR);
+  Wire.write(onxPcf8574State);
+  return Wire.endTransmission() == 0;
+}
+
+void Display::onxResetDisplay() {
+  this->onxI2CBegin();
+
+  // ONX3248G035 routes LCD reset through PCF8574 EXIO6, so TFT_eSPI cannot pulse it directly.
+  this->onxPcf8574WritePin(ONX3248G035_PCF8574_LCD_RST_PIN, false);
+  delay(200);
+  this->onxPcf8574WritePin(ONX3248G035_PCF8574_LCD_RST_PIN, true);
+  delay(200);
+}
+
+bool Display::onxReadTouch(uint16_t *x, uint16_t *y) {
+  uint8_t data[5] = {0};
+
+  this->onxI2CBegin();
+  Wire.beginTransmission(ONX3248G035_CST826_ADDR);
+  Wire.write(ONX3248G035_CST826_DATA_REG);
+  if (Wire.endTransmission(false) != 0) {
+    return false;
+  }
+
+  const uint8_t bytesRead = Wire.requestFrom((uint8_t)ONX3248G035_CST826_ADDR, (uint8_t)sizeof(data));
+  if (bytesRead != sizeof(data)) {
+    return false;
+  }
+
+  for (uint8_t i = 0; i < sizeof(data); i++) {
+    data[i] = Wire.read();
+  }
+
+  if ((data[0] & 0x0F) == 0) {
+    return false;
+  }
+
+  uint16_t rawX = ((data[1] & 0x0F) << 8) | data[2];
+  uint16_t rawY = ((data[3] & 0x0F) << 8) | data[4];
+
+  switch (this->tft.getRotation()) {
+    case 1:
+      *x = rawY;
+      *y = TFT_WIDTH - 1 - rawX;
+      break;
+    case 2:
+      *x = TFT_WIDTH - 1 - rawX;
+      *y = TFT_HEIGHT - 1 - rawY;
+      break;
+    case 3:
+      *x = TFT_HEIGHT - 1 - rawY;
+      *y = rawX;
+      break;
+    default:
+      *x = rawX;
+      *y = rawY;
+      break;
+  }
+
+  return true;
+}
+#endif
+
 int8_t Display::menuButton(uint16_t *x, uint16_t *y, bool pressed, bool check_hold) {
   #ifdef HAS_ILI9341
     for (uint8_t b = BUTTON_ARRAY_LEN; b < BUTTON_ARRAY_LEN + 3; b++) {
@@ -42,7 +130,9 @@ int8_t Display::menuButton(uint16_t *x, uint16_t *y, bool pressed, bool check_ho
 uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
   #ifdef HAS_ILI9341
     if (!this->headless_mode)
-      #ifndef HAS_CYD_TOUCH
+      #ifdef HAS_ONX_CST826_TOUCH
+        return this->onxReadTouch(x, y);
+      #elif !defined(HAS_CYD_TOUCH)
         return this->tft.getTouch(x, y, threshold);
       #else
         if (this->touchscreen.tirqTouched() && this->touchscreen.touched()) {
@@ -110,6 +200,10 @@ bool Display::isTouchHeld(uint16_t threshold) {
 }
 
 void Display::init() {
+  #ifdef HAS_ONX_CST826_TOUCH
+    this->onxResetDisplay();
+  #endif
+
   tft.init();
 
   #if defined(HAS_DUAL_BAND) && !defined(MARAUDER_MINI_V3)
@@ -118,7 +212,7 @@ void Display::init() {
 }
 
 void Display::setCalData(bool landscape) {
-  #ifndef HAS_CYD_TOUCH
+  #if !defined(HAS_CYD_TOUCH) && !defined(HAS_ONX_CST826_TOUCH)
     if (!landscape) {
       #ifdef TFT_SHIELD
         uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield
@@ -167,6 +261,10 @@ void Display::RunSetup() {
     this->touchscreen.begin(touchscreenSPI);
     this->touchscreen.setRotation(0);
   #endif
+
+  #ifdef HAS_ONX_CST826_TOUCH
+    this->onxResetDisplay();
+  #endif
   
   tft.init();
 
@@ -176,7 +274,7 @@ void Display::RunSetup() {
 
   #ifdef HAS_ILI9341
 
-    #ifndef HAS_CYD_TOUCH
+    #if !defined(HAS_CYD_TOUCH) && !defined(HAS_ONX_CST826_TOUCH)
       this->setCalData();
     #endif
 
