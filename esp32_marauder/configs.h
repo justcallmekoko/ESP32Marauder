@@ -2705,8 +2705,6 @@
       #undef HAS_IP5306
       #undef HAS_MAX1704X
 
-    #elif defined(HAS_MAX1704X)
-      #undef HAS_IP5306
 
     #else       // punt
        // #define HAS_AXP2101
