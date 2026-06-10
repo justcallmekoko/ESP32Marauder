@@ -270,7 +270,7 @@ void setup()
     digitalWrite(TFT_CS, HIGH);
   #endif
   
-  #if defined(HAS_SD) && !defined(HAS_C5_SD)
+  #if defined(HAS_SD) && !defined(HAS_C5_SD) && !defined(HAS_ONX_SD_MMC)
     pinMode(SD_CS, OUTPUT);
 
     delay(10);

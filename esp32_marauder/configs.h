@@ -565,12 +565,13 @@
     //#define HAS_PWR_MGMT
     #define HAS_SCREEN
     #define HAS_FULL_SCREEN
-    //#define HAS_SD
-    //#define USE_SD
+    #define HAS_SD
+    #define USE_SD
     //#define HAS_TEMP_SENSOR
     //#define HAS_GPS
     #define HAS_PSRAM
     #define HAS_ONX_CST826_TOUCH
+    #define HAS_ONX_SD_MMC
     #define HAS_IDF_3
   #endif
   //// END BOARD FEATURES
@@ -1664,6 +1665,10 @@
       #define ONX3248G035_CST826_DATA_REG 0x02
       #define ONX3248G035_PCF8574_ADDR 0x38
       #define ONX3248G035_PCF8574_LCD_RST_PIN 6
+      #define ONX3248G035_PCF8574_SD_CS_PIN 7
+      #define ONX3248G035_SD_CLK 11
+      #define ONX3248G035_SD_CMD 10
+      #define ONX3248G035_SD_D0 9
     #endif
 
     #ifdef MARAUDER_V7

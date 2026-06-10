@@ -2821,7 +2821,9 @@ String WiFiScan::security_int_to_string(int security_type) {
 void WiFiScan::startPcap(String file_name) {
   buffer_obj.pcapOpen(
     file_name,
-    #if defined(HAS_SD)
+    #if defined(HAS_ONX_SD_MMC)
+      sd_obj.supported ? &SD_MMC :
+    #elif defined(HAS_SD)
       sd_obj.supported ? &SD :
     #endif
     NULL,
@@ -2832,7 +2834,9 @@ void WiFiScan::startPcap(String file_name) {
 void WiFiScan::startLog(String file_name) {
   buffer_obj.logOpen(
     file_name,
-    #if defined(HAS_SD)
+    #if defined(HAS_ONX_SD_MMC)
+      sd_obj.supported ? &SD_MMC :
+    #elif defined(HAS_SD)
       sd_obj.supported ? &SD :
     #endif
     NULL,
@@ -2843,7 +2847,9 @@ void WiFiScan::startLog(String file_name) {
 void WiFiScan::startGPX(String file_name) {
   buffer_obj.gpxOpen(
     file_name,
-    #if defined(HAS_SD)
+    #if defined(HAS_ONX_SD_MMC)
+      sd_obj.supported ? &SD_MMC :
+    #elif defined(HAS_SD)
       sd_obj.supported ? &SD :
     #endif
     NULL,
