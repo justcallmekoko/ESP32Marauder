@@ -237,6 +237,9 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_NMEA_CMD);
     Serial.println(HELP_GPS_POI_CMD);
     Serial.println(HELP_GPS_TRACKER_CMD);
+    #if defined(DEEPSLEEP) || defined(PWR_ON_PIN)
+      Serial.println(HELP_SHUTDOWN_CMD);
+    #endif
     
     // WiFi sniff/scan
     Serial.println(HELP_EVIL_PORTAL_CMD);
@@ -530,6 +533,10 @@ void CommandLine::runCommand(String input) {
 
   else if (cmd_args.get(0) == REBOOT_CMD)
     ESP.restart();
+  #if defined(DEEPSLEEP) || defined(PWR_ON_PIN)
+  else if (cmd_args.get(0) == SHUTDOWN_CMD)
+    shutdown();
+  #endif
 
   //// WiFi/Bluetooth Scan/Attack commands
   if (!wifi_scan_obj.scanning()) {

@@ -46,6 +46,11 @@ extern SDInterface sd_obj;
 extern BatteryInterface battery_obj;
 extern Settings settings_obj;
 
+#if defined(DEEPSLEEP) || defined(PWR_ON_PIN)
+  void shutdown();
+  void DeepSleep(int8_t wakeup_but = -1);
+#endif
+
 #define FLASH_BUTTON 0
 
 #if BATTERY_ANALOG_ON == 1
@@ -282,9 +287,6 @@ class MenuFunctions
     void RunSetup();
     void orientDisplay();
 
-    #ifdef DEEPSLEEP
-      void DeepSleep(int8_t wakeup_but = -1);
-    #endif
 };
 
 

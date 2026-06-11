@@ -119,6 +119,42 @@ const String PROGMEM version_number = MARAUDER_VERSION;
 
 uint32_t currentTime  = 0;
 
+#if defined(DEEPSLEEP) || defined(PWR_ON_PIN)
+  void shutdown() {
+    #ifdef PWR_ON_PIN
+        // T-HMI
+        //  if on battery, can be turn off with the PWR_ON_PIN, if on battery
+        Serial.println("Set PWR_ON_PIN:  LOW");
+        Serial.flush();
+        digitalWrite(PWR_ON_PIN, LOW);
+
+        //  if plugged in we use DEEPSLEEP instead
+        delay(500);
+        Serial.println("DeepSleep");
+        DeepSleep();
+    #else
+        DeepSleep(0);
+    #endif
+  }
+
+  void DeepSleep(int8_t wakeup_but) {
+
+    if (wakeup_but >= 0) {
+      pinMode(wakeup_but, INPUT_PULLUP);
+
+      // Configure the wake-up source: wake up when GPIO 0 goes LOW (button press)
+      esp_sleep_enable_ext0_wakeup(wakeup_but, 0); // 0 means LOW
+    }
+
+    Serial.println("Going to sleep now...");
+    Serial.flush();
+    delay(100); // Give serial monitor time to flush
+
+    // Enter deep sleep
+    esp_deep_sleep_start();
+  }
+#endif  // SHUTDOWN
+
 // PWM Brightness Control
 #ifdef HAS_SCREEN
   #include <Preferences.h>

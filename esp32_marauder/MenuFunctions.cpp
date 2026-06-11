@@ -1633,22 +1633,12 @@ void MenuFunctions::RunSetup()
     ESP.restart();
   });
   #ifdef PWR_ON_PIN
-    this->addNodes(&mainMenu, "Power Off", TFTLIGHTGREY, NULL, SHUTDOWN, [this]() {
-
-        Serial.println("PWR_ON_PIN:  LOW");
-        Serial.flush();
-        digitalWrite(PWR_ON_PIN, LOW);
-
-        // if` plugged in
-        #ifdef DEEPSLEEP
-          delay(500);
-          Serial.println("DeepSleep");
-          this->DeepSleep();
-        #endif
+    this->addNodes(&mainMenu, "Power Off", TFTLIGHTGREY, NULL, SHUTDOWN, []() {
+        shutdown();
     });
   #elif defined(DEEPSLEEP)
-    this->addNodes(&mainMenu, "Deep Sleep", TFTLIGHTGREY, NULL, SHUTDOWN, [this]() {
-        this->DeepSleep(0);
+    this->addNodes(&mainMenu, "Deep Sleep", TFTLIGHTGREY, NULL, SHUTDOWN, []() {
+        DeepSleep(0);
       });
   #endif
 
@@ -3939,28 +3929,9 @@ void MenuFunctions::displayCurrentMenu(int start_index)
     #undef BL_PREVIEW
     this->changeMenu(current_menu, true);
   }
-#endif
+#endif // HAS_MINI_SCREEN
 
-#ifdef DEEPSLEEP
-  void MenuFunctions::DeepSleep(int8_t wakeup_but) {
-
-    if (wakeup_but >= 0) {
-      pinMode(wakeup_but, INPUT_PULLUP);
-
-      // Configure the wake-up source: wake up when GPIO 0 goes LOW (button press)
-      esp_sleep_enable_ext0_wakeup(wakeup_but, 0); // 0 means LOW
-    }
-
-    Serial.println("Going to sleep now...");
-    Serial.flush();
-    delay(100); // Give serial monitor time to flush
-
-    // Enter deep sleep
-    esp_deep_sleep_start();
-  }
-#endif
-
-#endif
+#endif // HAS_SCREEN
 
 
 
