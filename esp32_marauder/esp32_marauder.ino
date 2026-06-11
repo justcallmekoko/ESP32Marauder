@@ -162,19 +162,21 @@ uint32_t currentTime  = 0;
       Serial.print(F("[Brightness] Level "));
       Serial.print(bl_level_idx + 1);
       Serial.print(F("/"));
-      // Serial.print(MAX_BRIGHTNESS_STEPS);
-      // Serial.print(F(" ("));
-      // Serial.print(BL_LEVELS[bl_level_idx] * 100 / 255);
+      Serial.print((float) (bl_level_idx / MAX_BRIGHTNESS_STEPS) * 100);
       Serial.println(F("%)"));
   }
 
   uint8_t getBrightnessLevel() {
     return ledDriver.getBrightness();
   }
-  void brightnessSave(uint8_t level) {
+  void brightnessSet(uint8_t level) {
       if (level > MAX_BRIGHTNESS_STEPS) level = MAX_BRIGHTNESS_STEPS;
       bl_level_idx = level;
       ledDriver.setBrightness(bl_level_idx);
+      // bl_prefs.putUChar("level", bl_level_idx);
+  }
+  void brightnessSave(uint8_t level) {
+      brightnessSet(level);
       bl_prefs.putUChar("level", bl_level_idx);
   }
 
@@ -282,7 +284,7 @@ uint32_t currentTime  = 0;
 void setup()
 {
   // https://github.com/Xinyuan-LilyGO/T-HMI/issues/34
-  #ifdef MARAUDER_CYD_HMI
+  #ifdef PWR_ON_PIN  // MARAUDER_CYD_HMI
     pinMode(PWR_ON_PIN, OUTPUT);
     digitalWrite(PWR_ON_PIN, HIGH);
   #endif
@@ -299,7 +301,7 @@ void setup()
 
   Serial.begin(115200);
 
-  #ifdef MARAUDER_CYD_HMI
+  #ifdef PWR_EN_PIN  // MARAUDER_CYD_HMI
     pinMode(PWR_EN_PIN, OUTPUT);
     digitalWrite(PWR_EN_PIN, HIGH);
     // backlightOff();

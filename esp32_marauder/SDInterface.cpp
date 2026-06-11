@@ -18,10 +18,20 @@ bool SDInterface::initSD() {
       }
     #endif
 
-    pinMode(SD_CS, OUTPUT);
+    #ifdef SD_CS
+      pinMode(SD_CS, OUTPUT);
+    #endif
 
     delay(10);
-    #if (defined(MARAUDER_M5STICKC)) || (defined(HAS_CYD_TOUCH)) || (defined(MARAUDER_CARDPUTER)) || (defined(MARAUDER_CARDPUTER_ADV))
+    #if defined(HAS_SDMMC)
+      // NOTE SD is namespace alias for SD_MMC
+      // SD_MMC call here to avoid confusion
+      // place before HAS_CYD_TOUCH ifdef 
+      Serial.printf("SD_MMC using pins: SD_SCLK=%d SD_MOSI=%d SD_MISO=%d\n",
+                     SD_SCK, SD_MOSI, SD_MISO);
+      SD_MMC.setPins(SD_SCK, SD_MOSI, SD_MISO);
+      if (!SD_MMC.begin("/sdcard", true)) {
+    #elif && (defined(MARAUDER_M5STICKC)) || (defined(HAS_CYD_TOUCH)) || (defined(MARAUDER_CARDPUTER)) || (defined(MARAUDER_CARDPUTER_ADV))
       /* Set up SPI SD Card using external pin header
       StickCPlus Header - SPI SD Card Reader
                   3v3   -   3v3
@@ -33,16 +43,13 @@ bool SDInterface::initSD() {
       */
       #if defined(MARAUDER_M5STICKC)
         enum { SPI_SCK = 0, SPI_MISO = 36, SPI_MOSI = 26 };
-      #elif defined(HAS_CYD_TOUCH) || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_SEPARATE_SD) || defined(MARAUDER_CYD_HMI)
+      #elif defined(HAS_CYD_TOUCH) || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_SEPARATE_SD) 
         enum { SPI_SCK = SD_SCK, SPI_MISO = SD_MISO, SPI_MOSI = SD_MOSI };
       #else
         enum { SPI_SCK = 0, SPI_MISO = 36, SPI_MOSI = 26 };
       #endif
       #if !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
         this->spiExt = new SPIClass();
-      #elif  defined(MARAUDER_CYD_HMI)
-        this->spiExt = new SPIClass(SPI3);
-        Serial.println(F("Using SPIClass(SPI3);"));
       #else
         this->spiExt = new SPIClass(FSPI);
       #endif

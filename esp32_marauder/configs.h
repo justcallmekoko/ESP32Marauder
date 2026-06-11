@@ -478,6 +478,7 @@
     #define HAS_BUTTONS
     #define HAS_SCREEN
     #define HAS_FULL_SCREEN
+    #define HAS_SDMMC
     #define HAS_SD
     #define USE_SD
     #define HAS_CYD_TOUCH
@@ -485,9 +486,9 @@
     // #define HAS_GPS
     // #define HAS_NEOPIXEL_LED
     #define HAS_CYD_PORTRAIT
-     #define HAS_NIMBLE_2
-     #define HAS_IDF_3
-     // #define CYD_SOUND
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3
+    // #define CYD_SOUND
       #define SD_MISO 13
       #define SD_MOSI 11
       #define SD_SCK  12
@@ -2425,6 +2426,8 @@
   #endif
   //// END MENU DEFINITIONS
 
+
+
   //// SD DEFINITIONS
   #if defined(USE_SD)
 
@@ -2508,10 +2511,6 @@
       #define SD_CS 3
     #endif
 
-    #ifdef MARAUDER_CYD_HMI
-      #define SD_CS 17  // unused
-    #endif
-
     #ifdef MARAUDER_C5
       #define SD_CS 10
     #endif
@@ -2525,6 +2524,12 @@
     #endif
 
   #endif
+
+  #if defined(HAS_SDMMC)
+    #define USE_SD
+    #define HAS_SD
+  #endif
+
   //// END SD DEFINITIONS
 
   //// SPACE SAVING COLORS
@@ -2945,7 +2950,6 @@
     #endif
 
     #ifdef MARAUDER_V8
-      #define SD_MISO TFT_MISO
       #define SD_MOSI TFT_MOSI
       #define SD_SCK  TFT_SCLK
     #endif

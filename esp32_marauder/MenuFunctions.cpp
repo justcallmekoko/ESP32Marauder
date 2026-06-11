@@ -1632,6 +1632,25 @@ void MenuFunctions::RunSetup()
   this->addNodes(&mainMenu, text_table1[30], TFTLIGHTGREY, NULL, REBOOT, []() {
     ESP.restart();
   });
+  #ifdef PWR_ON_PIN
+    this->addNodes(&mainMenu, "Power Off", TFTLIGHTGREY, NULL, SHUTDOWN, [this]() {
+
+        Serial.println("PWR_ON_PIN:  LOW");
+        Serial.flush();
+        digitalWrite(PWR_ON_PIN, LOW);
+
+        // if plugged in
+        #ifdef DEEPSLEEP
+          delay(500);
+          Serial.println("DeepSleep");
+          this->DeepSleep();
+        #endif
+    });
+  #elif defined(DEEPSLEEP)
+    this->addNodes(&mainMenu, "Deep Sleep", TFTLIGHTGREY, NULL, SHUTDOWN, [this]() {
+        this->DeepSleep();
+      });
+  #endif
 
   // Build WiFi Menu
   wifiMenu.parentMenu = &mainMenu; // Main Menu is second menu parent
@@ -2809,6 +2828,16 @@ void MenuFunctions::RunSetup()
     wifi_scan_obj.RunLoadATList();
   });
 
+
+#ifdef HAS_SD
+  if(!sd_obj.supported) {
+      this->addNodes(&saveFileMenu, "Rescan SD", TFTWHITE, NULL, SD_UPDATE, [this]() {
+        this->changeMenu(&loadAPsMenu, true);
+        sd_obj.initSD();
+      });
+  }
+#endif
+
   saveSSIDsMenu.parentMenu = &saveFileMenu;
   this->addNodes(&saveSSIDsMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
     this->changeMenu(saveSSIDsMenu.parentMenu, true);
@@ -3814,18 +3843,24 @@ void MenuFunctions::displayCurrentMenu(int start_index)
 #ifndef HAS_MINI_SCREEN
   void MenuFunctions::brightnessMode() {
     extern void brightnessSave(uint8_t level);
+    extern void brightnessSet(uint8_t level);
     extern uint8_t getBrightnessLevel();
 
-    const uint8_t levels[] = {26, 51, 77, 102, 128, 153, 179, 204, 230, 255};
-    const uint8_t numLevels = 10;
-    uint8_t level = getBrightnessLevel();
-
-    // LEDC write compatibility (2.x vs 3.x board package)
-    #if ESP_ARDUINO_VERSION_MAJOR >= 3
-      #define BL_PREVIEW(duty) ledcWrite(TFT_BL, (duty))
+    #ifdef HAS_AW9364
+      const uint8_t numLevels = 16;
     #else
-      #define BL_PREVIEW(duty) ledcWrite(0, (duty))
+      const uint8_t levels[] = {26, 51, 77, 102, 128, 153, 179, 204, 230, 255};
+      const uint8_t numLevels = 10;
+
+      // LEDC write compatibility (2.x vs 3.x board package)
+      #if ESP_ARDUINO_VERSION_MAJOR >= 3
+        #define BL_PREVIEW(duty) ledcWrite(TFT_BL, (duty))
+      #else
+        #define BL_PREVIEW(duty) ledcWrite(0, (duty))
+      #endif
+
     #endif
+    uint8_t level = getBrightnessLevel();
 
     display_obj.tft.fillScreen(TFT_BLACK);
     display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
@@ -3845,7 +3880,11 @@ void MenuFunctions::displayCurrentMenu(int start_index)
       display_obj.tft.fillRect(barX + 2, barY + 2, fillW, barH - 4, TFT_CYAN);
       display_obj.tft.fillRect(0, barY + barH + 5, TFT_WIDTH, 20, TFT_BLACK);
       display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-      String pct = String(levels[level] * 100 / 255) + "%";
+      #ifdef HAS_AW9364
+        String pct = String((level / (float) numLevels) * 100) + "%";
+      #else
+        String pct = String(levels[level] * 100 / 255) + "%";
+      #endif
       display_obj.tft.drawCentreString(pct, TFT_WIDTH/2, barY + barH + 8, 2);
     };
     drawBar();
@@ -3870,13 +3909,21 @@ void MenuFunctions::displayCurrentMenu(int start_index)
         if (ty < zoneUp) {
           if (level < numLevels - 1) {
             level++;
-            BL_PREVIEW(levels[level]);
+            #ifdef HAS_AW9364
+              brightnessSet(level);
+            #else
+              BL_PREVIEW(levels[level]);
+            #endif
             drawBar();
           }
         } else if (ty >= zoneDown) {
           if (level > 0) {
             level--;
-            BL_PREVIEW(levels[level]);
+            #ifdef HAS_AW9364
+              brightnessSet(level);
+            #else
+              BL_PREVIEW(levels[level]);
+            #endif
             drawBar();
           }
         } else {
@@ -3891,6 +3938,23 @@ void MenuFunctions::displayCurrentMenu(int start_index)
 
     #undef BL_PREVIEW
     this->changeMenu(current_menu, true);
+  }
+#endif
+
+#ifdef DEEPSLEEP
+  void MenuFunctions::DeepSleep() {
+
+    // pinMode(GPIO_NUM_0, INPUT_PULLUP);
+
+    // Configure the wake-up source: wake up when GPIO 0 goes LOW (button press)
+    // esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, 0); // 0 means LOW
+
+    Serial.println("Going to sleep now...");
+    Serial.flush();
+    delay(100); // Give serial monitor time to flush
+
+    // Enter deep sleep
+    esp_deep_sleep_start();
   }
 #endif
 

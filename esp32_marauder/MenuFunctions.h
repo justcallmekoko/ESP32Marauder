@@ -281,6 +281,10 @@ class MenuFunctions
     void main(uint32_t currentTime);
     void RunSetup();
     void orientDisplay();
+
+    #ifdef DEEPSLEEP
+      void DeepSleep();
+    #endif
 };
 
 
