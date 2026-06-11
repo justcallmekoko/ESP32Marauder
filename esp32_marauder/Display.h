@@ -11,6 +11,7 @@
 #include <functional>
 #include <LinkedList.h>
 #include <SPI.h>
+#include <Wire.h>
 #include "SPIFFS.h"
 #include "Assets.h"
 
@@ -74,6 +75,15 @@ class Display
     boolean selected = 1;
 
     void drawFrame();
+
+    #ifdef HAS_ONX_CST826_TOUCH
+      uint8_t onxPcf8574State = 0xFF;
+
+      void onxI2CBegin();
+      bool onxPcf8574WritePin(uint8_t pin, bool level);
+      void onxResetDisplay();
+      bool onxReadTouch(uint16_t *x, uint16_t *y);
+    #endif
 
     #ifdef SCREEN_BUFFER
       void scrollScreenBuffer(bool down = false);
