@@ -1639,7 +1639,7 @@ void MenuFunctions::RunSetup()
         Serial.flush();
         digitalWrite(PWR_ON_PIN, LOW);
 
-        // if plugged in
+        // if` plugged in
         #ifdef DEEPSLEEP
           delay(500);
           Serial.println("DeepSleep");
@@ -1648,7 +1648,7 @@ void MenuFunctions::RunSetup()
     });
   #elif defined(DEEPSLEEP)
     this->addNodes(&mainMenu, "Deep Sleep", TFTLIGHTGREY, NULL, SHUTDOWN, [this]() {
-        this->DeepSleep();
+        this->DeepSleep(0);
       });
   #endif
 
@@ -3942,12 +3942,14 @@ void MenuFunctions::displayCurrentMenu(int start_index)
 #endif
 
 #ifdef DEEPSLEEP
-  void MenuFunctions::DeepSleep() {
+  void MenuFunctions::DeepSleep(int8_t wakeup_but) {
 
-    // pinMode(GPIO_NUM_0, INPUT_PULLUP);
+    if (wakeup_but >= 0) {
+      pinMode(wakeup_but, INPUT_PULLUP);
 
-    // Configure the wake-up source: wake up when GPIO 0 goes LOW (button press)
-    // esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, 0); // 0 means LOW
+      // Configure the wake-up source: wake up when GPIO 0 goes LOW (button press)
+      esp_sleep_enable_ext0_wakeup(wakeup_but, 0); // 0 means LOW
+    }
 
     Serial.println("Going to sleep now...");
     Serial.flush();

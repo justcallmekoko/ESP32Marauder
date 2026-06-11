@@ -283,7 +283,7 @@ class MenuFunctions
     void orientDisplay();
 
     #ifdef DEEPSLEEP
-      void DeepSleep();
+      void DeepSleep(int8_t wakeup_but = -1);
     #endif
 };
 
