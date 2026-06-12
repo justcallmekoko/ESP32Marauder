@@ -14,10 +14,135 @@ static const char *PCAS_SET_115200 = "$PCAS01,5*19\r\n";
 
 static const uint32_t PROBE_MS = 1200;
 
+// New helpers
+namespace {
+  String stripChecksum(const String& value) {
+    int star = value.indexOf('*');
+    if (star >= 0) {
+      return value.substring(0, star);
+    }
+    return value;
+  }
+
+  int parseNmeaInt(const String& value) {
+    String cleaned = stripChecksum(value);
+    cleaned.trim();
+    if (!cleaned.length()) {
+      return -1;
+    }
+    return cleaned.toInt();
+  }
+}
+
+// New methods for gsvstats
+void GpsInterface::resetGsvStats() {
+  this->gsv_sample_count = 0;
+  this->gsv_strong_signals = 0;
+  this->gsv_sentence_total = 0;
+  this->gsv_sentence_index = 0;
+  this->gsv_avg_snr = 0.0f;
+  this->gsv_max_snr = 0.0f;
+  this->gsv_valid = false;
+
+  for (uint8_t i = 0; i < GPS_GSV_MAX_SAMPLES; i++) {
+    this->gsv_snr_values[i] = 0;
+  }
+}
+
+void GpsInterface::recalculateGsvStats() {
+  if (!this->gsv_sample_count) {
+    this->gsv_avg_snr = 0.0f;
+    this->gsv_max_snr = 0.0f;
+    this->gsv_strong_signals = 0;
+    this->gsv_valid = false;
+    return;
+  }
+
+  uint16_t sum = 0;
+  uint8_t max_value = 0;
+  uint8_t strong = 0;
+
+  for (uint8_t i = 0; i < this->gsv_sample_count; i++) {
+    uint8_t snr = this->gsv_snr_values[i];
+    sum += snr;
+    if (snr > max_value) {
+      max_value = snr;
+    }
+    if (snr >= GPS_GSV_STRONG_SNR_THRESHOLD) {
+      strong++;
+    }
+  }
+
+  this->gsv_avg_snr = (float)sum / (float)this->gsv_sample_count;
+  this->gsv_max_snr = (float)max_value;
+  this->gsv_strong_signals = strong;
+  this->gsv_valid = true;
+}
+
+void GpsInterface::parseGsvSentence(const String& sentence) {
+  if (!sentence.length()) {
+    return;
+  }
+
+  const uint8_t maxFields = 24;
+  String fields[maxFields];
+  uint8_t fieldCount = 0;
+  int start = 0;
+
+  while (start <= sentence.length() && fieldCount < maxFields) {
+    int comma = sentence.indexOf(',', start);
+    if (comma < 0) {
+      fields[fieldCount++] = sentence.substring(start);
+      break;
+    }
+
+    fields[fieldCount++] = sentence.substring(start, comma);
+    start = comma + 1;
+  }
+
+  if (fieldCount < 4) {
+    return;
+  }
+
+  if (!fields[0].endsWith("GSV")) {
+    return;
+  }
+
+  int sentenceTotal = parseNmeaInt(fields[1]);
+  int sentenceIndex = parseNmeaInt(fields[2]);
+  int reportedSatellites = parseNmeaInt(fields[3]);
+
+  if (sentenceIndex == 1) {
+    this->resetGsvStats();
+  }
+
+  if (sentenceTotal > 0) {
+    this->gsv_sentence_total = (uint8_t)sentenceTotal;
+  }
+
+  if (sentenceIndex > 0) {
+    this->gsv_sentence_index = (uint8_t)sentenceIndex;
+  }
+
+  if (reportedSatellites > 0) {
+    this->num_sats = (uint8_t)reportedSatellites;
+  }
+
+  for (uint8_t i = 4; i + 3 < fieldCount; i += 4) {
+    int snr = parseNmeaInt(fields[i + 3]);
+    if (snr >= 0 && this->gsv_sample_count < GPS_GSV_MAX_SAMPLES) {
+      this->gsv_snr_values[this->gsv_sample_count++] = (uint8_t)snr;
+    }
+  }
+
+  this->recalculateGsvStats();
+}
+
 void GpsInterface::begin() {
 
   
   Serial2.begin(9600, SERIAL_8N1, GPS_TX, GPS_RX);
+  this->resetGsvStats();
 
   uint32_t gps_baud = this->initGpsBaudAndForce115200();
 
@@ -137,7 +262,11 @@ void GpsInterface::enqueue(MicroNMEA& nmea){
 
     if(length>0&&length<256){
       if(system){
-        if(msg_id=="TXT"){
+        if(msg_id=="GSV"){
+          this->parseGsvSentence(String(nmea_sentence.c_str()));
+          unparsed = 0;
+        }
+        else if(msg_id=="TXT"){
           if(length>8){
             std::string content=nmea_sentence.substr(7,std::string::npos);
 
@@ -740,6 +869,34 @@ String GpsInterface::getNmea() {
 
 String GpsInterface::getNmeaNotimp() {
   return this->notimp_nmea_sentence;
+}
+
+float GpsInterface::getAvgSnr() {
+  return this->gsv_avg_snr;
+}
+
+float GpsInterface::getMaxSnr() {
+  return this->gsv_max_snr;
+}
+
+uint8_t GpsInterface::getGsvSampleCount() {
+  return this->gsv_sample_count;
+}
+
+uint8_t GpsInterface::getStrongSignals() {
+  return this->gsv_strong_signals;
+}
+
+uint8_t GpsInterface::getGsvSentenceTotal() {
+  return this->gsv_sentence_total;
+}
+
+uint8_t GpsInterface::getGsvSentenceIndex() {
+  return this->gsv_sentence_index;
+}
+
+bool GpsInterface::getGsvValid() {
+  return this->gsv_valid;
 }
 
 String GpsInterface::getNmeaNotparsed() {
