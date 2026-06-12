@@ -54,6 +54,10 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
 
           uint8_t rot = this->tft.getRotation();
 
+          #if defined(MARAUDER_CYD_HMI)
+            p.x = 4095 - p.x;   //  Temp Hack
+          #endif
+
           //#ifdef HAS_CYD_PORTRAIT
           //  rot = 0;
           //#endif
@@ -76,6 +80,7 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
               *y = map(p.x, 200, 3700, 1, TFT_HEIGHT);
               break;
           }
+          Serial.printf("rot = %d, X = %d %d  Y = %d %d\n", rot, p.x, *x, p.y, *y);
           return 1;
         }
         else

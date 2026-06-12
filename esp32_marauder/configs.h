@@ -29,7 +29,7 @@
   //#define MARAUDER_CYD_2USB // Another 2432S028 but it has tWo UsBs OoOoOoO
   //#define MARAUDER_CYD_GUITION // ESP32-2432S024 GUITION
   //#define MARAUDER_CYD_3_5_INCH
-  //#define MARAUDER_CYD_HMI  // LILYGO<C2><AE> T-HMI ESP32-S3 Touch Display 2.8 inch
+  //#define MARAUDER_CYD_HMI  // LILYGO T-HMI ESP32-S3 Touch Display 2.8 inch
   //#define MARAUDER_C5
   //#define MARAUDER_CARDPUTER
   //#define MARAUDER_CARDPUTER_ADV
@@ -484,17 +484,15 @@
     #define HAS_CYD_TOUCH
     #define HAS_AW9364
     // #define HAS_GPS
-    // #define HAS_NEOPIXEL_LED
     #define HAS_CYD_PORTRAIT
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
-    // #define CYD_SOUND
-      #define SD_MISO 13
-      #define SD_MOSI 11
-      #define SD_SCK  12
-      #define SD_CS 17
-      #define PWR_EN_PIN  10
-      #define PWR_ON_PIN  14
+    #define SD_MISO 13
+    #define SD_MOSI 11
+    #define SD_SCK  12
+    #define SD_CS 17
+    #define PWR_EN_PIN  10
+    #define PWR_ON_PIN  14
    #endif
     
   #ifdef MARAUDER_C5
