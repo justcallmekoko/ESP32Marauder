@@ -21,7 +21,7 @@ void GpsInterface::begin() {
 
   uint32_t gps_baud = this->initGpsBaudAndForce115200();
 
-  if ((gps_baud != 9600) && (gps_baud != 115200))
+  if ((gps_baud != 9600) && (gps_baud != 38400) && (gps_baud != 115200))
     Serial.println(F("Could not detect GPS baudrate"));
 
   delay(1000);
@@ -111,6 +111,10 @@ uint32_t GpsInterface::initGpsBaudAndForce115200() {
 
     probeBaud(9600);
     return 9600;
+  }
+
+  if (probeBaud(38400)) {
+    return 38400;
   }
 
   probeBaud(9600);
