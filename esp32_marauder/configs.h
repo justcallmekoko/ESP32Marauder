@@ -2704,7 +2704,6 @@
       #undef HAS_MAX1704X
       #undef HAS_AXP192
 
-p
     // No driver for this LiPo charger
     #elif HAS_TP4057
       #undef HAS_AXP2101
