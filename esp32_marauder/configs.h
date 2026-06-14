@@ -2,6 +2,9 @@
 
 #ifndef configs_h
 
+#include "esp_arduino_version.h"
+
+
   #define configs_h
 
   #define POLISH_POTATO
@@ -489,7 +492,9 @@
     // #define HAS_GPS
     #define HAS_CYD_PORTRAIT
     #define HAS_NIMBLE_2
-    #define HAS_IDF_3
+    #if ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0)
+      #define HAS_IDF_3
+    #endif
     #define HAS_PWR_MGMT
       #define PWR_EN_PIN  10
       #define PWR_ON_PIN  14

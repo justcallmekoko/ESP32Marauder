@@ -166,6 +166,10 @@ uint32_t currentTime  = 0;
 #endif  // SHUTDOWN
 
 
+#ifdef HAS_C5_SD
+  SPIClass sharedSPI(SPI);
+  SDInterface sd_obj = SDInterface(&sharedSPI, SD_CS);
+#endif
 
 void setup()
 {
@@ -218,11 +222,6 @@ void setup()
     delay(500);
   }
 
-  #ifdef HAS_C5_SD
-    sharedSPI.begin(SD_SCK, SD_MISO, SD_MOSI);
-    delay(100);
-  #endif
-
   #ifdef defined(MARAUDER_M5STICKC) && !defined(MARAUDER_M5STICKCP2)
     axp192_obj.begin();
   #endif
@@ -256,6 +255,16 @@ void setup()
   //  delay(10);
 
   Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
+  #ifdef ESP_ARDUINO_VERSION_STR
+    Serial.print("Arduino ESP32 Core Version: ");
+    Serial.println(ESP_ARDUINO_VERSION_STR);
+  #elif defined(ESP_ARDUINO_VERSION)
+    Serial.printf("Arduino Core Major: %d, Minor: %d, Patch: %d\n", 
+	    ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
+  #endif
+
+
+
 
   #ifdef HAS_PSRAM
     if (!psramInit()) {
