@@ -1991,6 +1991,9 @@
       //#define TOUCH_CS 21
       #define SD_CS 4
 
+      #define I2C_SDA 3
+      #define I2C_SCL 4
+
       #define SCREEN_BUFFER
 
       #define MAX_SCREEN_BUFFER 9
