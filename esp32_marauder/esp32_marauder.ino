@@ -142,11 +142,28 @@ uint32_t currentTime  = 0;
 
   void DeepSleep(int8_t wakeup_but) {
 
-    // 1. Disconnect from the network gracefully
+    good_Night_msg = F("Going to sleep now...");
+
+    Serial.println(good_Night_msg
+    Serial.flush();
+
+    #ifdef HAS_SCREEN
+      tft.fillScreen(TFT_Black);
+      #if !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
+	display_obj.tft.drawCentreString(good_Night_msg, TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+      #else
+	display_obj.tft.drawCentreString(good_Night_msg, TFT_HEIGHT/2, TFT_WIDTH * 0.33, 4);
+      #endif
+    #endif
+
+    // Disconnect from the network gracefully
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
+    
+    // This handles stopping and deinitializing BT gracefully
+    btStop(); 
 
-    // 2. Explicitly stop the WiFi driver to save power
+    // Explicitly stop the WiFi driver to save power
     esp_wifi_stop();
 
     if (wakeup_but >= 0) {
@@ -156,9 +173,8 @@ uint32_t currentTime  = 0;
       esp_sleep_enable_ext0_wakeup((gpio_num_t) wakeup_but, 0); // 0 means LOW
     }
 
-    Serial.println("Going to sleep now...");
-    Serial.flush();
-    delay(100); // Give serial monitor time to flush
+
+    delay(700); // Give serial monitor time to flush
 
     // Enter deep sleep
     esp_deep_sleep_start();
