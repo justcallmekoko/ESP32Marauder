@@ -142,13 +142,13 @@ uint32_t currentTime  = 0;
 
   void DeepSleep(int8_t wakeup_but) {
 
-    good_Night_msg = F("Going to sleep now...");
+    const char good_Night_msg[] = "Going to sleep now...";
 
-    Serial.println(good_Night_msg
+    Serial.println(good_Night_msg);
     Serial.flush();
 
     #ifdef HAS_SCREEN
-      tft.fillScreen(TFT_Black);
+      display_obj.tft.fillScreen(TFT_BLACK);
       #if !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
 	display_obj.tft.drawCentreString(good_Night_msg, TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
       #else
@@ -173,8 +173,7 @@ uint32_t currentTime  = 0;
       esp_sleep_enable_ext0_wakeup((gpio_num_t) wakeup_but, 0); // 0 means LOW
     }
 
-
-    delay(700); // Give serial monitor time to flush
+    delay(1100); // Give serial monitor time to flush
 
     // Enter deep sleep
     esp_deep_sleep_start();
