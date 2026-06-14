@@ -230,7 +230,10 @@ void setup()
     pinMode(TFT_BL, OUTPUT);
   #endif
   
-  backlightOff();
+  #ifdef HAS_SCREEN
+    backlightOff();
+  #endif
+
   #if BATTERY_ANALOG_ON == 1
     pinMode(BATTERY_PIN, OUTPUT);
     pinMode(CHARGING_PIN, INPUT);
@@ -286,8 +289,7 @@ void setup()
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
   #endif
 
-
-  #if !defined(HAS_MINI_SCREEN)
+  #if defined(HAS_SCREEN) && !defined(HAS_MINI_SCREEN)
     brightnessInit();
     backlightOff();
   #endif
@@ -305,7 +307,9 @@ void setup()
   #endif
 
 
-  backlightOn(); // Need this
+  #ifdef HAS_SCREEN
+    backlightOn(); // Need this
+  #endif
 
   #ifdef HAS_SCREEN
     // Do some stealth mode stuff
