@@ -9,7 +9,14 @@
 #ifdef HAS_C5_SD
   #include "FS.h"
 #endif
-#include "SD.h"
+
+#ifdef HAS_SDMMC
+  #include <SD_MMC.h>
+  extern fs::SDMMCFS& SD = SD_MMC;
+#else
+  #include "SD.h"
+#endif
+
 #ifdef HAS_C5_SD
   #include "SPI.h"
 #endif

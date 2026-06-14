@@ -46,6 +46,9 @@ extern SDInterface sd_obj;
 extern BatteryInterface battery_obj;
 extern Settings settings_obj;
 
+extern void shutdown();
+extern void DeepSleep(int8_t wakeup_but = -1);
+
 #define FLASH_BUTTON 0
 
 #if BATTERY_ANALOG_ON == 1
@@ -281,6 +284,7 @@ class MenuFunctions
     void main(uint32_t currentTime);
     void RunSetup();
     void orientDisplay();
+
 };
 
 

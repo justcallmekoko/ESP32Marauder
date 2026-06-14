@@ -16,7 +16,7 @@
 
 #include <TFT_eSPI.h>
 
-#ifdef HAS_CYD_TOUCH
+#if defined( HAS_CYD_TOUCH) || defined(MARAUDER_CYD_HMI)
   #include <XPT2046_Touchscreen.h>
 #endif
 
@@ -86,7 +86,7 @@ class Display
     TFT_eSPI_Button key[BUTTON_ARRAY_LEN + 4];
     const String PROGMEM version_number = MARAUDER_VERSION;
 
-    #ifdef HAS_CYD_TOUCH
+    #if defined( HAS_CYD_TOUCH) || defined(MARAUDER_CYD_HMI)
       SPIClass touchscreenSPI;
       XPT2046_Touchscreen touchscreen;
     #endif

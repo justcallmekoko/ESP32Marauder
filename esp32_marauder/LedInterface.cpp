@@ -6,7 +6,7 @@ LedInterface::LedInterface() {
 }
 
 void LedInterface::RunSetup() {
-  //Serial.println("Setting neopixel to black...");
+  Serial.println("Setting neopixel to black...");
   #ifdef HAS_NEOPIXEL_LED
     #ifdef MARAUDER_M5_NANO_C6
       pinMode(19, OUTPUT);
@@ -21,6 +21,34 @@ void LedInterface::RunSetup() {
     strip.setBrightness(50);
     strip.setPixelColor(0, strip.Color(0, 0, 0));
     strip.show();
+
+  setColor(0, 0, 0);
+  delay(750);
+
+  setColor(255, 0, 0);
+  delay(750);
+
+  setColor(255, 255, 0);
+  delay(750);
+
+  setColor(0, 255, 0);
+  delay(750);
+
+  setColor(0, 255, 255);
+  delay(750);
+
+  setColor(0, 0, 255);
+  delay(750);
+
+  setColor(255, 0, 255);
+  delay(750);
+
+
+  setColor(255, 255, 255);
+  delay(750);
+
+  setColor(0, 0, 0);
+  delay(750);
   #endif
 
   this->initTime = millis();
@@ -66,19 +94,24 @@ void LedInterface::setColor(int r, int g, int b) {
 }
 
 void LedInterface::sniffLed() {
+
+  Serial.println("Setting neopixel sniffLed...");
   this->setColor(0, 0, 255);
 }
 
 void LedInterface::attackLed() {
+  Serial.println("Setting neopixel attackLed...");
   this->setColor(255, 0, 0);
 }
 
 void LedInterface::ledOff() {
+  Serial.println("Setting neopixel ledOff...");
   this->setColor(0, 0, 0);
 }
 
 void LedInterface::rainbow() {
   #ifdef HAS_NEOPIXEL_LED
+  Serial.println("Setting neopixel rainbow...");
     strip.setPixelColor(0, this->Wheel((0 * 256 / 100 + this->wheel_pos) % 256));
     strip.show();
 
@@ -92,6 +125,7 @@ void LedInterface::rainbow() {
 
 uint32_t LedInterface::Wheel(byte WheelPos) {
   #ifdef HAS_NEOPIXEL_LED
+  Serial.println("Setting neopixel Wheel..." + (String)WheelPos);
     WheelPos = 255 - WheelPos;
     if(WheelPos < 85) {
       return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
