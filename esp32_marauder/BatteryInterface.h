@@ -19,6 +19,7 @@
 #endif
 
 #ifdef HAS_AXP192
+  #include "AXP192.h"
   AXP192 axp192_obj;
 #endif
 
