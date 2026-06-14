@@ -18,6 +18,9 @@
   #include "XPowersLib.h"
 #endif
 
+#ifdef HAS_AXP192
+  AXP192 axp192_obj;
+#endif
 
 #ifndef BATTERY_ADC_PIN  // not 12c
   #include <Wire.h>

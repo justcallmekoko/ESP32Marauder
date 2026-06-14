@@ -62,6 +62,11 @@ void BatteryInterface::RunSetup() {
           }
         #endif
 
+        #ifdef HAS_AXP192
+            axp192_obj.begin();
+        #endif
+
+
         #ifdef HAS_MAX1704X
           Wire.beginTransmission(MAX17048_ADDR);
           error = Wire.endTransmission();

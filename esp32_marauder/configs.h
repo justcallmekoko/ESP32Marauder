@@ -124,6 +124,11 @@
     //#define FLIPPER_ZERO_HAT
     #define HAS_MINI_KB
     #define HAS_BATTERY
+      #if defined(MARAUDER_M5STICKC)
+        #define HAS_AXP192
+      #else
+        #define HAS_TP4057
+      #endif
     #define HAS_BT
     #define HAS_BUTTONS
     //#define HAS_NEOPIXEL_LED
@@ -237,6 +242,7 @@
     #define HAS_TOUCH
     //#define FLIPPER_ZERO_HAT
     #define HAS_BATTERY
+      #define HAS_IP5306
     #define HAS_BT
     //#define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
@@ -256,6 +262,7 @@
     #define HAS_TOUCH
     //#define FLIPPER_ZERO_HAT
     #define HAS_BATTERY
+      #define HAS_IP5306
     #define HAS_BT
     #define HAS_BT_REMOTE
     #define HAS_BUTTONS
@@ -554,7 +561,7 @@
 
   //// POWER MANAGEMENT
   #ifdef HAS_PWR_MGMT
-    #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
+    #if defined(HAS_AXP192)
       #include "AXP192.h"
     #endif
 
@@ -2640,14 +2647,9 @@
   //// BATTERY STUFF
   #ifdef HAS_BATTERY
 
-    #ifdef __AXP192_H__
-      #define HAS_AXP2101
-    #endif
-
     #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2) 
       #define I2C_SDA 33
       #define I2C_SCL 22
-      #define HAS_AXP2101
 
     #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_KIT)
       #define I2C_SDA 33
@@ -2700,6 +2702,20 @@
       #undef HAS_AXP2101
       #undef HAS_IP5306
       #undef HAS_MAX1704X
+      #undef HAS_AXP192
+
+p
+    // No driver for this LiPo charger
+    #elif HAS_TP4057
+      #undef HAS_AXP2101
+      #undef HAS_IP5306
+      #undef HAS_MAX1704X
+      #undef HAS_AXP192
+
+    #elif defined(HAS_AXP192)
+      #undef HAS_AXP2101
+      #undef HAS_IP5306
+      #undef HAS_MAX1704X
 
     #elif defined(HAS_AXP2101)
       #undef HAS_IP5306
@@ -2710,6 +2726,7 @@
        // #define HAS_AXP2101
        #define HAS_IP5306
        #define HAS_MAX1704X
+       #define HAS_AXP192
     #endif
 
   #endif  // HAS_BATTERY
