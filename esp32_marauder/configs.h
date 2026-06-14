@@ -101,7 +101,7 @@
   #elif defined(XIAO_ESP32_S3)
     #define HARDWARE_NAME "XIAO ESP32 S3"
   #elif defined(MARAUDER_CYD_HMI)
-    #define HARDWARE_NAME "LILYGO<C2><AE> T-HMI ESP32-S32.8 inch"
+    #define HARDWARE_NAME "LILYGO T-HMI ESP32-S3 2.8 inch"
   #elif defined(MARAUDER_C5)
     #define HARDWARE_NAME "ESP32-C5 DevKit"
   #elif defined(MARAUDER_V8)
@@ -474,27 +474,27 @@
     #define HAS_TOUCH
     #define HAS_BT
     #define HAS_BATTERY
-    #define BATTERY_ADC_PIN 5
+      #define BATTERY_ADC_PIN 5
     #define HAS_BUTTONS
     #define HAS_SCREEN
     #define HAS_FULL_SCREEN
     #define HAS_SDMMC
-    #define HAS_SD
-    #define USE_SD
+      #define HAS_SD
+      #define USE_SD
     #define HAS_CYD_TOUCH
     #define HAS_AW9364
+      #define BK_LIGHT_PIN 38
+      #define TFT_BL 38
+
     // #define HAS_GPS
     #define HAS_CYD_PORTRAIT
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
-    #define SD_MISO 13
-    #define SD_MOSI 11
-    #define SD_SCK  12
-    #define SD_CS 17
-    #define PWR_EN_PIN  10
-    #define PWR_ON_PIN  14
+    #define HAS_PWR_MGMT
+      #define PWR_EN_PIN  10
+      #define PWR_ON_PIN  14
    #endif
-    
+
   #ifdef MARAUDER_C5
     //#define HAS_FLIPPER_LED
     //#define FLIPPER_ZERO_HAT
@@ -588,9 +588,16 @@
     #endif
 
     #ifdef MARAUDER_M5STICKCP2 
-        // Prevent StickCP2 from turning off when disconnect USB cable
-        #define POWER_HOLD_PIN 4
+      // Prevent StickCP2 from turning off when disconnect USB cable
+      #define POWER_HOLD_PIN 4
     #endif
+
+    #ifdef MARAUDER_CYD_HMI
+      #define PWR_EN_PIN  10    // power to peripherals
+      #define PWR_ON_PIN  14    // Batt power to board
+      #define POWER_HOLD_PIN PWR_ON_PIN
+    #endif
+
   #endif
   //// END POWER MANAGEMENT
 
@@ -2427,7 +2434,21 @@
 
 
   //// SD DEFINITIONS
-  #if defined(USE_SD)
+  #if defined(HAS_SDMMC)
+    #define USE_SD
+    #define HAS_SD
+
+    #ifdef MARAUDER_CYD_HMI
+      #define SD_MOSI      11
+      #define SD_SCK       12
+      #define SD_MISO      13
+      #define SD_DATA1     -1
+      #define SD_DATA2     -1
+      #define SD_DATA3     -1
+      #define SD_MODE1BIT  true
+    #endif
+
+  #elif defined(USE_SD)
 
     #ifdef MARAUDER_V4
       #define SD_CS 12
@@ -2521,11 +2542,6 @@
       #define SD_CS 10
     #endif
 
-  #endif
-
-  #if defined(HAS_SDMMC)
-    #define USE_SD
-    #define HAS_SD
   #endif
 
   //// END SD DEFINITIONS
@@ -2844,6 +2860,10 @@
       #define I2C_SDA 5
     #endif
 
+    #ifdef MARAUDER_CYD_HMI
+      #define BATTERY_ADC_PIN 5
+    #endif
+
   #endif
 
   //// MARAUDER TITLE STUFF
@@ -2918,9 +2938,6 @@
       #define XPT2046_CLK  1
       #define XPT2046_CS   2
 
-      #define SD_MISO      13
-      #define SD_MOSI      11
-      #define SD_SCK       12
     #endif
 
     #ifdef MARAUDER_CYD_2USB

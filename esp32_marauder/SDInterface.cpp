@@ -27,10 +27,9 @@ bool SDInterface::initSD() {
       // NOTE SD is namespace alias for SD_MMC
       // SD_MMC call here to avoid confusion
       // place before HAS_CYD_TOUCH ifdef 
-      Serial.printf("SD_MMC using pins: SD_SCLK=%d SD_MOSI=%d SD_MISO=%d\n",
-                     SD_SCK, SD_MOSI, SD_MISO);
-      SD_MMC.setPins(SD_SCK, SD_MOSI, SD_MISO);
-      if (!SD_MMC.begin("/sdcard", true)) {
+      log_d("SD_MMC using pins: SD_SCLK=%d SD_MOSI=%d SD_MISO=%d\n", SD_SCK, SD_MOSI, SD_MISO);
+      SD_MMC.setPins(SD_SCK, SD_MOSI, SD_MISO, SD_DATA1, SD_DATA2, SD_DATA3);
+      if (!SD_MMC.begin("/sdcard", SD_MODE1BIT)) {
     #elif && (defined(MARAUDER_M5STICKC)) || (defined(HAS_CYD_TOUCH)) || (defined(MARAUDER_CARDPUTER)) || (defined(MARAUDER_CARDPUTER_ADV))
       /* Set up SPI SD Card using external pin header
       StickCPlus Header - SPI SD Card Reader

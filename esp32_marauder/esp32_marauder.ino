@@ -43,10 +43,6 @@ https://www.online-utility.org/image/convert/to/XBM
   #include "BatteryInterface.h"
 #endif
 
-#ifdef HAS_AW9364
-  #include <AW9364LedDriver.hpp>
-  AW9364LedDriver ledDriver;
-#endif
 
 #ifdef HAS_SCREEN
   #include "Display.h"
@@ -74,11 +70,18 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #endif
 
+
 WiFiScan wifi_scan_obj;
 EvilPortal evil_portal_obj;
 Buffer buffer_obj;
 Settings settings_obj;
 CommandLine cli_obj;
+
+#ifdef HAS_SCREEN
+  extern void brightnessInit();
+  extern void backlightOff();
+  extern void backlightOn();
+#endif
 
 #ifdef HAS_GPS
   GpsInterface gps_obj;
@@ -119,14 +122,14 @@ const String PROGMEM version_number = MARAUDER_VERSION;
 
 uint32_t currentTime  = 0;
 
-#if defined(DEEPSLEEP) || defined(PWR_ON_PIN)
+#if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
   void shutdown() {
-    #ifdef PWR_ON_PIN
+    #ifdef POWER_HOLD_PIN
         // T-HMI
-        //  if on battery, can be turn off with the PWR_ON_PIN, if on battery
-        Serial.println("Set PWR_ON_PIN:  LOW");
+        //  if on battery, can be turn off with the PWR_ON_PIN/POWER_HOLD_PIN if on battery
+        Serial.println("Set POWER_HOLD_PIN:  LOW");
         Serial.flush();
-        digitalWrite(PWR_ON_PIN, LOW);
+        digitalWrite(POWER_HOLD_PIN, LOW);
 
         //  if plugged in we use DEEPSLEEP instead
         delay(500);
@@ -138,6 +141,13 @@ uint32_t currentTime  = 0;
   }
 
   void DeepSleep(int8_t wakeup_but) {
+
+    // 1. Disconnect from the network gracefully
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+
+    // 2. Explicitly stop the WiFi driver to save power
+    esp_wifi_stop();
 
     if (wakeup_but >= 0) {
       pinMode(wakeup_but, INPUT_PULLUP);
@@ -155,174 +165,22 @@ uint32_t currentTime  = 0;
   }
 #endif  // SHUTDOWN
 
-// PWM Brightness Control
-#ifdef HAS_SCREEN
-  #include <Preferences.h>
-  #define BL_CHANNEL 0
-  #define BL_FREQ 5000
-  #define BL_RESOLUTION 8
-  const uint8_t BL_LEVELS[] = {26, 51, 77, 102, 128, 153, 179, 204, 230, 255};
-  const uint8_t BL_NUM_LEVELS = 10;
-  uint8_t bl_level_idx = 9; // default full brightness
-  Preferences bl_prefs;
-#endif
 
-// Helper macros for LEDC API compatibility (2.x vs 3.x board package)
-#ifdef HAS_SCREEN
-  #if !defined(HAS_MINI_SCREEN) && !defined(HAS_AW9364)
-    #if ESP_ARDUINO_VERSION_MAJOR >= 3
-      #define BL_SETUP()       ledcAttach(TFT_BL, BL_FREQ, BL_RESOLUTION)
-      #define BL_SET(duty)     ledcWrite(TFT_BL, (duty))
-    #else
-      #define BL_SETUP()       do { ledcSetup(BL_CHANNEL, BL_FREQ, BL_RESOLUTION); ledcAttachPin(TFT_BL, BL_CHANNEL); } while(0)
-      #define BL_SET(duty)     ledcWrite(BL_CHANNEL, (duty))
-    #endif
-  #endif
-#endif
-
-#if defined(HAS_AW9364) && defined(HAS_SCREEN)
-  void brightnessInit() {
-    Serial.println("HAS_AW9364 brightnessInit TFT_BL= " + (String) TFT_BL);
-    ledDriver.begin(TFT_BL);
-    bl_prefs.begin("backlight", false);
-    bl_level_idx = bl_prefs.getUChar("level", 9);
-    if (bl_level_idx > MAX_BRIGHTNESS_STEPS) bl_level_idx = MAX_BRIGHTNESS_STEPS;
-    ledDriver.setBrightness(MAX_BRIGHTNESS_STEPS);
-    bl_level_idx = MAX_BRIGHTNESS_STEPS;
-  }
-
-  void brightnessCycle() {
-      bl_level_idx = (bl_level_idx + 1) % MAX_BRIGHTNESS_STEPS;
-      ledDriver.setBrightness(bl_level_idx);
-      bl_prefs.putUChar("level", bl_level_idx);
-      Serial.print(F("[Brightness] Level "));
-      Serial.print(bl_level_idx + 1);
-      Serial.print(F("/"));
-      Serial.print((float) (bl_level_idx / MAX_BRIGHTNESS_STEPS) * 100);
-      Serial.println(F("%)"));
-  }
-
-  uint8_t getBrightnessLevel() {
-    return ledDriver.getBrightness();
-  }
-  void brightnessSet(uint8_t level) {
-      if (level > MAX_BRIGHTNESS_STEPS) level = MAX_BRIGHTNESS_STEPS;
-      bl_level_idx = level;
-      ledDriver.setBrightness(bl_level_idx);
-      // bl_prefs.putUChar("level", bl_level_idx);
-  }
-  void brightnessSave(uint8_t level) {
-      brightnessSet(level);
-      bl_prefs.putUChar("level", bl_level_idx);
-  }
-
-  void backlightOn() {
-    Serial.println("HAS_AW9364 backlightOn: " + (String) bl_level_idx);
-      if(bl_level_idx < 3) bl_level_idx = 3;
-      ledDriver.setBrightness(bl_level_idx);
-  }
-
-  void backlightOff() {
-    Serial.println("HAS_AW9364 backlightOff: " + (String) bl_level_idx);
-    ledDriver.setBrightness(3);
-  }
-
-
-  // Init PWM brightness AFTER display init (so ledcAttach overrides TFT_eSPI's pinMode)
-  // #ifndef HAS_MINI_SCREEN
-
-
-#elif !defined(HAS_MINI_SCREEN) && !defined(MARAUDER_CYD_HMI)
-  void brightnessInit() {
-    #ifdef HAS_SCREEN
-      BL_SETUP();
-      bl_prefs.begin("backlight", false);
-      bl_level_idx = bl_prefs.getUChar("level", 9);
-      if (bl_level_idx >= BL_NUM_LEVELS) bl_level_idx = 9;
-      BL_SET(BL_LEVELS[bl_level_idx]);
-    #endif
-  }
-
-  void brightnessCycle() {
-    #ifdef HAS_SCREEN
-      bl_level_idx = (bl_level_idx + 1) % BL_NUM_LEVELS;
-      BL_SET(BL_LEVELS[bl_level_idx]);
-      bl_prefs.putUChar("level", bl_level_idx);
-      Serial.print(F("[Brightness] Level "));
-      Serial.print(bl_level_idx + 1);
-      Serial.print(F("/"));
-      Serial.print(BL_NUM_LEVELS);
-      Serial.print(F(" ("));
-      Serial.print(BL_LEVELS[bl_level_idx] * 100 / 255);
-      Serial.println(F("%)"));
-    #endif
-  }
-
-  uint8_t getBrightnessLevel() {
-    #ifdef HAS_SCREEN
-      return bl_level_idx;
-    #else
-      return 0;
-    #endif
-  }
-
-  void brightnessSave(uint8_t level) {
-    #ifdef HAS_SCREEN
-      if (level >= BL_NUM_LEVELS) level = BL_NUM_LEVELS - 1;
-      bl_level_idx = level;
-      BL_SET(BL_LEVELS[bl_level_idx]);
-      bl_prefs.putUChar("level", bl_level_idx);
-    #endif
-  }
-
-  void backlightOn() {
-    #ifdef HAS_SCREEN
-      BL_SET(BL_LEVELS[bl_level_idx]);
-    #endif
-  }
-
-  void backlightOff() {
-    #ifdef HAS_SCREEN
-      BL_SET(0);
-    #endif
-  }
-#else
-  void backlightOn() {
-    #ifdef HAS_SCREEN
-      #if defined(MARAUDER_MINI) || defined(MARAUDER_MINI_V3)
-        digitalWrite(TFT_BL, LOW);
-      #endif
-    
-      #if !defined(MARAUDER_MINI) && !defined(MARAUDER_MINI_V3)
-        digitalWrite(TFT_BL, HIGH);
-      #endif
-    #endif
-  }
-
-  void backlightOff() {
-    #ifdef HAS_SCREEN
-      #if defined(MARAUDER_MINI) || defined(MARAUDER_MINI_V3)
-        digitalWrite(TFT_BL, HIGH);
-      #endif
-    
-      #if !defined(MARAUDER_MINI) && !defined(MARAUDER_MINI_V3)
-        digitalWrite(TFT_BL, LOW);
-      #endif
-    #endif
-  }
-#endif
-
-#ifdef HAS_C5_SD
-  SPIClass sharedSPI(SPI);
-  SDInterface sd_obj = SDInterface(&sharedSPI, SD_CS);
-#endif
 
 void setup()
 {
+
   // https://github.com/Xinyuan-LilyGO/T-HMI/issues/34
-  #ifdef PWR_ON_PIN  // MARAUDER_CYD_HMI
-    pinMode(PWR_ON_PIN, OUTPUT);
-    digitalWrite(PWR_ON_PIN, HIGH);
+  // T-HMI : latch power on if on battery
+  // Prevent StickCP2 from turning off when disconnect USB cable
+  #ifdef POWER_HOLD_PIN  
+    pinMode(POWER_HOLD_PIN, OUTPUT);
+    digitalWrite(POWER_HOLD_PIN, HIGH);
+  #endif
+
+  #ifdef PWR_EN_PIN  // Enable power to peripherals
+    pinMode(PWR_EN_PIN, OUTPUT);
+    digitalWrite(PWR_EN_PIN, HIGH);
   #endif
 
   randomSeed(esp_random());
@@ -337,32 +195,22 @@ void setup()
 
   Serial.begin(115200);
 
-  #ifdef PWR_EN_PIN  // MARAUDER_CYD_HMI
-    pinMode(PWR_EN_PIN, OUTPUT);
-    digitalWrite(PWR_EN_PIN, HIGH);
-    // backlightOff();
-  #endif
-
   #ifdef HAS_ACT_LED
     pinMode(ACT_LED_PIN, OUTPUT);
     delay(100);
     digitalWrite(ACT_LED_PIN, LOW);
   #endif
 
+  #if defined(TFT_BL)
     pinMode(TFT_BL, OUTPUT);
+    digitalWrite(TFT_BL, HIGH); // ???
+  #endif
+
     //brightnessInit();
-  int8_t xx = 0;
+
   while(!Serial && millis() < 2000) {
-    if (xx % 1) {
-     // backlightOff();
-      digitalWrite(TFT_BL, LOW);
-    } else {
-      digitalWrite(TFT_BL, HIGH);
-      // backlightOn();
-      }
     delay(500);
-    xx++;
-    }
+  }
 
   #ifdef HAS_C5_SD
     sharedSPI.begin(SD_SCK, SD_MISO, SD_MOSI);
@@ -373,12 +221,7 @@ void setup()
     axp192_obj.begin();
   #endif
 
-  #if defined(MARAUDER_M5STICKCP2) // Prevent StickCP2 from turning off when disconnect USB cable
-    pinMode(POWER_HOLD_PIN, OUTPUT);
-    digitalWrite(POWER_HOLD_PIN, HIGH);
-  #endif
-  
-  #ifdef HAS_SCREEN
+  #if defined(HAS_SCREEN) && defined(TFT_BL)
     pinMode(TFT_BL, OUTPUT);
   #endif
   
@@ -389,17 +232,15 @@ void setup()
   #endif
   
   // Preset SPI CS pins to avoid bus conflicts
-  #ifdef HAS_SCREEN
+  #if defined(HAS_SCREEN) && defined(TFT_CS)
     digitalWrite(TFT_CS, HIGH);
   #endif
   
-  #if defined(HAS_SD) && !defined(HAS_C5_SD)
+  #if defined(HAS_SD) && defined(SD_CS) && !defined(HAS_C5_SD)
     pinMode(SD_CS, OUTPUT);
-
     delay(10);
   
     digitalWrite(SD_CS, HIGH);
-
     delay(10);
   #endif
 

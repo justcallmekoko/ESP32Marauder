@@ -4,6 +4,7 @@
 #ifndef HAS_MINI_SCREEN
   extern void brightnessCycle();
   extern uint8_t getBrightnessLevel();
+  extern const uint8_t BL_NUM_LEVELS;
 #endif
 
 void CommandLine::RunSetup() {
@@ -237,7 +238,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_NMEA_CMD);
     Serial.println(HELP_GPS_POI_CMD);
     Serial.println(HELP_GPS_TRACKER_CMD);
-    #if defined(DEEPSLEEP) || defined(PWR_ON_PIN)
+    #if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
       Serial.println(HELP_SHUTDOWN_CMD);
     #endif
     
@@ -533,7 +534,7 @@ void CommandLine::runCommand(String input) {
 
   else if (cmd_args.get(0) == REBOOT_CMD)
     ESP.restart();
-  #if defined(DEEPSLEEP) || defined(PWR_ON_PIN)
+  #if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
   else if (cmd_args.get(0) == SHUTDOWN_CMD)
     shutdown();
   #endif
@@ -1103,7 +1104,8 @@ void CommandLine::runCommand(String input) {
             Serial.print(F("[Brightness] Set to level "));
             Serial.println(lvl);
           } else {
-            Serial.println(F("Level must be 0-9"));
+            Serial.print(F("Level must be 0-"));
+            Serial.println(BL_NUM_LEVELS);
           }
         } else {
           Serial.print(F("[Brightness] Current level: "));

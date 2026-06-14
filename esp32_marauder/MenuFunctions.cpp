@@ -1632,7 +1632,7 @@ void MenuFunctions::RunSetup()
   this->addNodes(&mainMenu, text_table1[30], TFTLIGHTGREY, NULL, REBOOT, []() {
     ESP.restart();
   });
-  #ifdef PWR_ON_PIN
+  #ifdef POWER_HOLD_PIN
     this->addNodes(&mainMenu, "Power Off", TFTLIGHTGREY, NULL, SHUTDOWN, []() {
         shutdown();
     });
@@ -3832,25 +3832,20 @@ void MenuFunctions::displayCurrentMenu(int start_index)
 // ============================================================
 #ifndef HAS_MINI_SCREEN
   void MenuFunctions::brightnessMode() {
+
+    // From BackLight.cpp
     extern void brightnessSave(uint8_t level);
     extern void brightnessSet(uint8_t level);
     extern uint8_t getBrightnessLevel();
+    extern const uint8_t BL_NUM_LEVELS;
 
-    #ifdef HAS_AW9364
-      const uint8_t numLevels = 16;
-    #else
-      const uint8_t levels[] = {26, 51, 77, 102, 128, 153, 179, 204, 230, 255};
-      const uint8_t numLevels = 10;
-
-      // LEDC write compatibility (2.x vs 3.x board package)
-      #if ESP_ARDUINO_VERSION_MAJOR >= 3
-        #define BL_PREVIEW(duty) ledcWrite(TFT_BL, (duty))
-      #else
-        #define BL_PREVIEW(duty) ledcWrite(0, (duty))
-      #endif
-
-    #endif
     uint8_t level = getBrightnessLevel();
+
+    // Dont start with a Black screen
+    if (level == 0) {
+      level = 1;
+      brightnessSet(1);
+    }
 
     display_obj.tft.fillScreen(TFT_BLACK);
     display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
@@ -3865,16 +3860,17 @@ void MenuFunctions::displayCurrentMenu(int start_index)
     auto drawBar = [&]() {
       uint16_t barX = 30, barY = TFT_HEIGHT/2 - 25, barW = TFT_WIDTH - 60, barH = 30;
       display_obj.tft.drawRect(barX, barY, barW, barH, TFT_WHITE);
-      uint16_t fillW = (barW - 4) * (level + 1) / numLevels;
+      uint16_t fillW = (barW - 4) * (level + 1) / BL_NUM_LEVELS;
       display_obj.tft.fillRect(barX + 2, barY + 2, barW - 4, barH - 4, TFT_BLACK);
       display_obj.tft.fillRect(barX + 2, barY + 2, fillW, barH - 4, TFT_CYAN);
       display_obj.tft.fillRect(0, barY + barH + 5, TFT_WIDTH, 20, TFT_BLACK);
       display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-      #ifdef HAS_AW9364
-        String pct = String((level / (float) numLevels) * 100) + "%";
-      #else
-        String pct = String(levels[level] * 100 / 255) + "%";
-      #endif
+      // #ifdef HAS_AW9364
+        Serial.printf("%d / %d = %f\n", level, BL_NUM_LEVELS, ((level / (float) BL_NUM_LEVELS) * 100));
+        String pct = String((level / (float) BL_NUM_LEVELS) * 100) + "%";
+      // #else
+      //   String pct = String(levels[level] * 100 / 255) + "%";
+      // #endif
       display_obj.tft.drawCentreString(pct, TFT_WIDTH/2, barY + barH + 8, 2);
     };
     drawBar();
@@ -3897,23 +3893,15 @@ void MenuFunctions::displayCurrentMenu(int start_index)
         while (display_obj.updateTouch(&tx, &ty)) delay(10);
 
         if (ty < zoneUp) {
-          if (level < numLevels - 1) {
+          if (level < BL_NUM_LEVELS) {
             level++;
-            #ifdef HAS_AW9364
-              brightnessSet(level);
-            #else
-              BL_PREVIEW(levels[level]);
-            #endif
+            brightnessSet(level);
             drawBar();
           }
         } else if (ty >= zoneDown) {
           if (level > 0) {
             level--;
-            #ifdef HAS_AW9364
-              brightnessSet(level);
-            #else
-              BL_PREVIEW(levels[level]);
-            #endif
+            brightnessSet(level);
             drawBar();
           }
         } else {
@@ -3926,7 +3914,7 @@ void MenuFunctions::displayCurrentMenu(int start_index)
       delay(30);
     }
 
-    #undef BL_PREVIEW
+    // #undef BL_PREVIEW
     this->changeMenu(current_menu, true);
   }
 #endif // HAS_MINI_SCREEN
