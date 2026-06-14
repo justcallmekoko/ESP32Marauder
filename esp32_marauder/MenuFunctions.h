@@ -46,10 +46,8 @@ extern SDInterface sd_obj;
 extern BatteryInterface battery_obj;
 extern Settings settings_obj;
 
-#if defined(DEEPSLEEP) || defined(PWR_ON_PIN)
-  void shutdown();
-  void DeepSleep(int8_t wakeup_but = -1);
-#endif
+extern void shutdown();
+extern void DeepSleep(int8_t wakeup_but = -1);
 
 #define FLASH_BUTTON 0
 

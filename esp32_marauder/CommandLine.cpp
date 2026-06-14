@@ -1,6 +1,6 @@
 #include "CommandLine.h"
 
-// Brightness functions defined in esp32_marauder.ino
+// Brightness functions defined in BackLight.cpp
 #ifndef HAS_MINI_SCREEN
   extern void brightnessCycle();
   extern uint8_t getBrightnessLevel();

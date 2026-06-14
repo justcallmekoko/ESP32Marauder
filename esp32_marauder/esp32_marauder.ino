@@ -153,7 +153,7 @@ uint32_t currentTime  = 0;
       pinMode(wakeup_but, INPUT_PULLUP);
 
       // Configure the wake-up source: wake up when GPIO 0 goes LOW (button press)
-      esp_sleep_enable_ext0_wakeup(wakeup_but, 0); // 0 means LOW
+      esp_sleep_enable_ext0_wakeup((gpio_num_t) wakeup_but, 0); // 0 means LOW
     }
 
     Serial.println("Going to sleep now...");
@@ -187,6 +187,12 @@ void setup()
   
   #ifndef DEVELOPER
     esp_log_level_set("*", ESP_LOG_NONE);
+  #endif
+  #ifdef ARDUINO_USB_MODE
+    Serial.println("ARDUINO_USB_MODE = " + (String)ARDUINO_USB_MODE);
+  #endif
+  #ifdef ARDUINO_USB_CDC_ON_BOOT
+    Serial.println("ARDUINO_USB_CDC_ON_BOOT = " + (String)ARDUINO_USB_CDC_ON_BOOT);
   #endif
   
   #ifndef HAS_IDF_3
@@ -379,6 +385,8 @@ void setup()
   wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
   
   cli_obj.RunSetup();
+
+
 }
 
 

@@ -44,8 +44,8 @@ extern const String PROGMEM version_number;
 extern const String PROGMEM board_target;
 
 #if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
-  void shutdown();
-  void DeepSleep(int8_t wakeup_but = -1);
+  extern void shutdown();
+  extern void DeepSleep(int8_t wakeup_but);
 #endif
 
 //// Commands

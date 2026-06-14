@@ -13,14 +13,10 @@
   #warning "HAS_SCREEN is defined and TFT_BL is undefined"
 #endif
 
+extern const uint8_t BL_NUM_LEVELS;
+
 #if defined(HAS_SCREEN) && defined(TFT_BL)
 
-#ifdef HAS_AW9364
-  #include <AW9364LedDriver.hpp>
-  AW9364LedDriver ledDriver;
-#endif
-
-extern const uint8_t BL_NUM_LEVELS;
 
 Preferences bl_prefs;
 uint8_t bl_level_idx = 9; // default brightness
@@ -29,39 +25,71 @@ uint8_t bl_level_idx = 9; // default brightness
 // AW9364: 4-Channel 1-wire Dimming LED Driver
 #if defined(HAS_AW9364)
 
-  const uint8_t BL_NUM_LEVELS = MAX_BRIGHTNESS_STEPS;
+  const uint8_t BL_NUM_LEVELS = 16;
+
+  void _setBrightness(uint8_t value)
+  {
+      static uint8_t _brightness = 0;
+
+      if (_brightness == value) {
+          return;
+      }
+
+      if (value > 16) {
+          value = 16;
+      }
+      if (value == 0) {
+          digitalWrite(TFT_BL, 0);
+          delay(3);
+          _brightness = 0;
+          return;
+      }
+      if (_brightness == 0) {
+          digitalWrite(TFT_BL, 1);
+          _brightness = BL_NUM_LEVELS;
+          delayMicroseconds(30);
+      }
+      int from = BL_NUM_LEVELS - _brightness;
+      int to = BL_NUM_LEVELS - value;
+      int num = (BL_NUM_LEVELS + to - from) % BL_NUM_LEVELS;
+      for (int i = 0; i < num; i++) {
+          digitalWrite(TFT_BL, 0);
+          digitalWrite(TFT_BL, 1);
+      }
+      _brightness = value;
+  }
 
   void brightnessInit() {
     log_d("HAS_AW9364 brightnessInit TFT_BL = %d", TFT_BL);
-    ledDriver.begin(TFT_BL);
+    // ledDriver.begin(TFT_BL);
     bl_prefs.begin("backlight", false);
-    bl_level_idx = bl_prefs.getUChar("level", MAX_BRIGHTNESS_STEPS);
-    if (bl_level_idx > MAX_BRIGHTNESS_STEPS) bl_level_idx = MAX_BRIGHTNESS_STEPS;
+    bl_level_idx = bl_prefs.getUChar("level", BL_NUM_LEVELS);
+    if (bl_level_idx > BL_NUM_LEVELS) bl_level_idx = BL_NUM_LEVELS;
     log_d("HAS_AW9364 brightnessInit level = %d ", bl_level_idx);
-    ledDriver.setBrightness(bl_level_idx);
-    // bl_level_idx = MAX_BRIGHTNESS_STEPS;
+    // ledDriver.setBrightness(bl_level_idx);
+    // bl_level_idx = BL_NUM_LEVELS;
   }
 
   void brightnessCycle() {
-      bl_level_idx = (bl_level_idx + 1) % MAX_BRIGHTNESS_STEPS;
-      ledDriver.setBrightness(bl_level_idx);
+      bl_level_idx = (bl_level_idx + 1) % BL_NUM_LEVELS;
+      _setBrightness(bl_level_idx);
       bl_prefs.putUChar("level", bl_level_idx);
-      log_d("[Brightness] Level %d / %d %%", (bl_level_idx + 1), ((float) (bl_level_idx / MAX_BRIGHTNESS_STEPS) * 100));
+      log_d("[Brightness] Level %d / %d %%", (bl_level_idx + 1), ((float) (bl_level_idx / BL_NUM_LEVELS) * 100));
   }
 
   uint8_t getBrightnessLevel() {
-    uint8_t level = ledDriver.getBrightness();
-    log_d("HAS_AW9364 getBrightnessLevel level = %d : %d ", level, bl_level_idx);
-    return level;
+    log_d("HAS_AW9364 getBrightnessLevel level =  %d ", bl_level_idx);
+    return bl_level_idx;
   }
 
   void brightnessSet(uint8_t level) {
       log_d("HAS_AW9364 brightnessSet level = %d ", level);
-      if (level > MAX_BRIGHTNESS_STEPS) level = MAX_BRIGHTNESS_STEPS;
+      if (level > BL_NUM_LEVELS) level = BL_NUM_LEVELS;
       bl_level_idx = level;
-      ledDriver.setBrightness(bl_level_idx);
+      _setBrightness(bl_level_idx);
       // bl_prefs.putUChar("level", bl_level_idx);
   }
+
   void brightnessSave(uint8_t level) {
       log_d("HAS_AW9364 brightnessSave level = %d ", level);
       bl_level_idx = level;
@@ -71,13 +99,15 @@ uint8_t bl_level_idx = 9; // default brightness
 
   void backlightOn() {
     log_d("HAS_AW9364 backlightOn: %d", bl_level_idx);
+    digitalWrite(TFT_BL, 1);
     if(bl_level_idx < 3) bl_level_idx = 3;
-    ledDriver.setBrightness(bl_level_idx);
+    _setBrightness(bl_level_idx);
   }
 
   void backlightOff() {
     log_d("HAS_AW9364 backlightOff: %d", bl_level_idx);
-    ledDriver.setBrightness(0);
+    digitalWrite(TFT_BL, 0);
+    // _setBrightness(0);
   }
 
 
@@ -154,20 +184,15 @@ uint8_t bl_level_idx = 9; // default brightness
   }
 #else   // HAS_MINI_SCREEN
 
+  const uint8_t BL_NUM_LEVELS = 1;
   // dummyFunctions
   void brightnessInit() { }
   void brightnessCycle() { }
 
-  uint8_t getBrightnessLevel() {
-      return 9;
-  }
+  uint8_t getBrightnessLevel() { return 9; }
 
-  void brightnessSet(uint8_t level) {
-    (void) level;
-  }
-  void brightnessSave(uint8_t level) {
-    (void) level;
-  }
+  void brightnessSet(uint8_t level) { (void) level; }
+  void brightnessSave(uint8_t level) { (void) level; }
 
   void backlightOn() {
     // ???
@@ -194,13 +219,14 @@ uint8_t bl_level_idx = 9; // default brightness
 
 #else // HAS_SCREEN
 
+  const uint8_t BL_NUM_LEVELS = 1;
   // Dummy Functions, should never be called but are here just in case
   void brightnessInit() { }
   void brightnessCycle() { }
   uint8_t getBrightnessLevel() { return 9; }
   void brightnessSet(uint8_t level) { }
   void brightnessSave(uint8_t level) { }
-  void brightnessOn() { }
-  void brightnessOff() { }
+  void backlightOn() { }
+  void backlightOff() { }
 
 #endif // HAS_SCREEN

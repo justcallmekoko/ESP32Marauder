@@ -483,9 +483,9 @@
       #define USE_SD
     #define HAS_CYD_TOUCH
     #define HAS_AW9364
+    #define HAS_PSRAM
       #define BK_LIGHT_PIN 38
       #define TFT_BL 38
-
     // #define HAS_GPS
     #define HAS_CYD_PORTRAIT
     #define HAS_NIMBLE_2
