@@ -142,19 +142,21 @@ uint32_t currentTime  = 0;
 
   void DeepSleep(int8_t wakeup_but) {
 
-    good_Night_msg = F("Going to sleep now...");
+    const char good_Night_msg[] = "Going to sleep now...";
 
-    Serial.println(good_Night_msg
+    Serial.println(good_Night_msg);
     Serial.flush();
 
     #ifdef HAS_SCREEN
-      tft.fillScreen(TFT_Black);
+      display_obj.tft.fillScreen(TFT_BLACK);
       #if !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
 	display_obj.tft.drawCentreString(good_Night_msg, TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
       #else
 	display_obj.tft.drawCentreString(good_Night_msg, TFT_HEIGHT/2, TFT_WIDTH * 0.33, 4);
       #endif
     #endif
+
+    delay(1100); // Give serial monitor time to flush
 
     // Disconnect from the network gracefully
     WiFi.disconnect(true);
@@ -166,6 +168,27 @@ uint32_t currentTime  = 0;
     // Explicitly stop the WiFi driver to save power
     esp_wifi_stop();
 
+   #ifdef HAS_FLIPPER_LED
+      flipper_led.offLED();
+    #elif defined(XIAO_ESP32_S3)
+      xiao_led.offLED();
+    #elif defined(MARAUDER_M5STICKC)
+      stickc_led.offLED();
+    #elif defined(HAS_NEOPIXEL_LED)
+      led_obj.setMode(MODE_OFF);
+    #endif
+
+    #ifdef HAS_SCREEN
+      backlightOff();
+    #endif
+
+    // Should we I saw pins with external pull-up resistor?
+    // to minimize current consumption.
+    // rtc_gpio_isolate(I2C_SDA);
+    // rtc_gpio_isolate(I2C_SCL);
+
+
+
     if (wakeup_but >= 0) {
       pinMode(wakeup_but, INPUT_PULLUP);
 
@@ -173,8 +196,6 @@ uint32_t currentTime  = 0;
       esp_sleep_enable_ext0_wakeup((gpio_num_t) wakeup_but, 0); // 0 means LOW
     }
 
-
-    delay(700); // Give serial monitor time to flush
 
     // Enter deep sleep
     esp_deep_sleep_start();
