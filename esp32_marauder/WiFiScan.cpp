@@ -4072,6 +4072,10 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color) {
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
   esp_wifi_set_promiscuous_rx_cb(&wifiSnifferCallback);*/
+  #ifdef HAS_DUAL_BAND
+    dual_band_channel_index = 0;
+    set_channel = dual_band_channels[0];
+  #endif
   this->changeChannel(this->set_channel);
   //esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   this->wifi_initialized = true;
@@ -8832,8 +8836,14 @@ bool WiFiScan::filterActive() {
   
           // Channel - button pressed
           else if (b == CHAN_MINUS_INDEX) {
+            #ifndef HAS_DUAL_BAND
             if (set_channel > 1) {
               set_channel--;
+            #else
+            if (dual_band_channel_index > 0) {
+              dual_band_channel_index--;
+              set_channel = dual_band_channels[dual_band_channel_index];
+            #endif
               delay(70);
               display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
               display_obj.tftDrawXScaleButtons(x_scale);
@@ -8847,8 +8857,14 @@ bool WiFiScan::filterActive() {
   
           // Channel + button pressed
           else if (b == CHAN_PLUS_INDEX) {
+            #ifndef HAS_DUAL_BAND
             if (set_channel < MAX_CHANNEL) {
               set_channel++;
+            #else
+            if (dual_band_channel_index < (DUAL_BAND_CHANNELS - 1)) {
+              dual_band_channel_index++;
+              set_channel = dual_band_channels[dual_band_channel_index];
+            #endif
               delay(70);
               display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
               display_obj.tftDrawXScaleButtons(x_scale);
