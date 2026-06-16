@@ -3945,7 +3945,7 @@ void WiFiScan::RunInfo() {
       #endif
       Serial.println(text_table4[34]);
     }
-  #endif
+  #endif  // HAS_BATTERY
   
   if (this->wifi_connected)
       showNetworkInfo();
