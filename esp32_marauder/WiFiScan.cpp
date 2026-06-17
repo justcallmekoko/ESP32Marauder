@@ -3037,6 +3037,37 @@ void WiFiScan::RunPortScanAll(uint8_t scan_mode, uint16_t color) {
   initTime = millis();
 }
 
+static int APcompare(AccessPoint &a, AccessPoint &b) {
+    return memcmp(a.bssid, b.bssid, 6);
+}
+
+// Sort APList by BSSID
+void WiFiScan::RunSortAPList() {
+
+    access_points->sort(APcompare);
+
+    for (int i = 0; i < access_points->size(); i++) {
+      const AccessPoint& acp = access_points->get(i);  // alias to existing list element
+      for (int j = 0; j < acp.stations->size(); j++) {
+        (*stations)[acp.stations->get(j)].ap = i;
+      }
+    }
+
+    //  data debug Validation
+    /*
+    for (int i = 0; i < access_points->size(); i++) {
+      const AccessPoint& acp = access_points->get(i);
+      Serial.printf("%d, %2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx\n", i, acp.bssid[0], acp.bssid[1], acp.bssid[2], acp.bssid[3], acp.bssid[4], acp.bssid[5]);
+      for (int j = 0; j < acp.stations->size(); j++) {
+        const Station& sn = (*stations)[acp.stations->get(j)];
+        Serial.printf("\t%hu: %hu %2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx\n", i, sn.ap,
+          sn.mac[0], sn.mac[1], sn.mac[2], sn.mac[3], sn.mac[4], sn.mac[5]);
+      }
+    }*/
+
+}
+
+
 void WiFiScan::RunLoadATList() {
   #ifdef HAS_SD
     // Prepare to access the file
