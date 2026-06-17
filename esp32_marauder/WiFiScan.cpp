@@ -2112,8 +2112,10 @@ void WiFiScan::displayTargetFilter() {
       display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
       for (int i = 0; i < access_points->size(); i++) {
         AccessPoint access_point = access_points->get(i);
-        if (access_point.selected)
-          display_obj.showCenterText("CH: " + (String)access_point.channel + " " + access_point.essid, display_obj.tft.getCursorY(), true);
+        if (access_point.selected) {
+          String msg_str = "CH: " + (String)access_point.channel + " " + access_point.essid;
+          display_obj.showCenterText(msg_str.c_str(), display_obj.tft.getCursorY(), true);
+        }
       }
     } else {
       display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
@@ -9849,8 +9851,8 @@ void WiFiScan::displayTransmitRate() {
     displayString2.concat(" ");
   #ifdef HAS_SCREEN
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
-    display_obj.showCenterText(displayString2, TFT_HEIGHT / 2);
-    display_obj.showCenterText(displayString, TFT_HEIGHT / 2);
+    display_obj.showCenterText(displayString2.c_str(), TFT_HEIGHT / 2);
+    display_obj.showCenterText(displayString.c_str(), TFT_HEIGHT / 2);
   #endif
 }
 
@@ -10121,8 +10123,8 @@ void WiFiScan::main(uint32_t currentTime)
           displayString2.concat(" ");
         #ifdef HAS_SCREEN
           display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
-          display_obj.showCenterText(displayString2, TFT_HEIGHT / 2);
-          display_obj.showCenterText(displayString, TFT_HEIGHT / 2);
+          display_obj.showCenterText(displayString2.c_str(), TFT_HEIGHT / 2);
+          display_obj.showCenterText(displayString.c_str(), TFT_HEIGHT / 2);
         #endif
       }
 
