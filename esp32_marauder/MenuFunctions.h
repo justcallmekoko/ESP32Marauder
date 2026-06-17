@@ -46,6 +46,9 @@ extern SDInterface sd_obj;
 extern BatteryInterface battery_obj;
 extern Settings settings_obj;
 
+extern void shutdown();
+extern void DeepSleep(int8_t wakeup_but);
+
 #define FLASH_BUTTON 0
 
 #if BATTERY_ANALOG_ON == 1

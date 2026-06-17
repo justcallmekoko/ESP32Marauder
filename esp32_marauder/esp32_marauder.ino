@@ -112,6 +112,52 @@ const String PROGMEM version_number = MARAUDER_VERSION;
   Adafruit_NeoPixel strip = Adafruit_NeoPixel(Pixels, PIN, NEO_GRB + NEO_KHZ800);
 #endif
 
+  void shutdown() {
+    #ifdef POWER_HOLD_PIN
+        // T-HMI / M5Stick-C Plus
+        //  if on battery, can be turn off with the PWR_ON_PIN/POWER_HOLD_PIN if on battery
+        Serial.println("Set POWER_HOLD_PIN:  LOW");
+        Serial.flush();
+        digitalWrite(POWER_HOLD_PIN, LOW);
+
+        //  if plugged in we use DEEPSLEEP instead
+        delay(500);
+        Serial.println("DeepSleep");
+        DeepSleep(0);
+    #else
+        DeepSleep(0);
+    #endif
+  }
+
+  void DeepSleep(int8_t wakeup_but) {
+
+    // 1. Disconnect from the network gracefully
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+
+    // 2. Explicitly stop the WiFi driver to save power
+    esp_wifi_stop();
+
+    // isolate pins to avoid current leak
+    esp_sleep_config_gpio_isolate();
+    
+    if (wakeup_but >= 0) {
+      // undo-isolate wakeup_but button (is selected)
+      gpio_hold_dis((gpio_num_t) wakeup_but);
+      pinMode(wakeup_but, INPUT_PULLUP);
+
+      // Configure the wake-up source: wake up when GPIO 0 goes LOW (button press)
+      esp_sleep_enable_ext0_wakeup((gpio_num_t)wakeup_but, 0); // 0 means LOW
+    }
+
+    Serial.println("Going to sleep now...");
+    Serial.flush();
+    delay(100); // Give serial monitor time to flush
+
+    // Enter deep sleep
+    esp_deep_sleep_start();
+  }
+
 uint32_t currentTime  = 0;
 
 // PWM Brightness Control
