@@ -22,6 +22,11 @@
 #include "SDInterface.h"
 #include "settings.h"
 
+#ifdef CYD_SOUND
+  #include "Sound_CYD.h"
+  extern Sound_CYD sound_obj;
+#endif
+
 #ifdef HAS_BUTTONS
   #include "Switches.h"
   #if (U_BTN >= 0)

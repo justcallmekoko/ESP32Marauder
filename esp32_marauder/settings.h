@@ -31,6 +31,9 @@ class Settings {
       bool  EnableLED   = true;
       bool  EPDeauth    = false;
       bool  ChanHop     = false;
+  #ifdef CYD_SOUND
+      bool  EnableSND   = true;
+  #endif
       String ClientSSID = "";
       String ClientPW   = "";
     } _cache;
