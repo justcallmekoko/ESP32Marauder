@@ -1,6 +1,6 @@
 /* FLASH SETTINGS
 Board: LOLIN D32
-Flash Frequency: 80MHz
+ Frequency: 80MHz
 Partition Scheme: Minimal SPIFFS
 https://www.online-utility.org/image/convert/to/XBM
 */
@@ -98,10 +98,6 @@ CommandLine cli_obj;
 
 #if defined(HAS_SD) && !defined(HAS_C5_SD)
   SDInterface sd_obj;
-#endif
-
-#ifdef MARAUDER_M5STICKC
-  AXP192 axp192_obj;
 #endif
 
 #ifdef HAS_FLIPPER_LED
@@ -264,17 +260,27 @@ void setup()
     digitalWrite(TFT_BL, HIGH); // ???
   #endif
 
-    //brightnessInit();
 
+#if defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT == 1
   while(!Serial && millis() < 2000) {
     delay(500);
   }
 
-  #ifdef defined(MARAUDER_M5STICKC) && !defined(MARAUDER_M5STICKCP2)
-    axp192_obj.begin();
+#else
+  while(!Serial)
+      delay(10);
+
+  #ifdef HAS_C5_SD
+    sharedSPI.begin(SD_SCK, SD_MISO, SD_MOSI);
+    delay(100);
   #endif
 
-  #if defined(HAS_SCREEN) && defined(TFT_BL)
+  #if defined(MARAUDER_M5STICKCP2) // Prevent StickCP2 from turning off when disconnect USB cable
+    pinMode(POWER_HOLD_PIN, OUTPUT);
+    digitalWrite(POWER_HOLD_PIN, HIGH);
+  #endif
+  
+  #ifdef HAS_SCREEN
     pinMode(TFT_BL, OUTPUT);
   #endif
   

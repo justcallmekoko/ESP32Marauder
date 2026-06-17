@@ -43,7 +43,9 @@
 
 extern WiFiScan wifi_scan_obj;
 extern SDInterface sd_obj;
+// #ifdef HAS_BATTERY
 extern BatteryInterface battery_obj;
+// #endif
 extern Settings settings_obj;
 
 extern void shutdown();

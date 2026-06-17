@@ -597,12 +597,18 @@ void Display::displayBuffer(bool do_clear)
   }
 }
 
-void Display::showCenterText(String text, int y, bool small_pp)
+void Display::showCenterText(const char* text, int y, bool small_pp)
 {
+  if (!text)
+    text = "";
+
+  size_t len = strlen(text);
+
   if (!small_pp)
-    tft.setCursor((SCREEN_WIDTH - (text.length() * (6 * BANNER_TEXT_SIZE))) / 2, y);
+    tft.setCursor((SCREEN_WIDTH - (len * (6 * BANNER_TEXT_SIZE))) / 2, y);
   else
-    tft.setCursor((SCREEN_WIDTH - (text.length() * (6))) / 2, y);
+    tft.setCursor((SCREEN_WIDTH - (len * 6)) / 2, y);
+
   tft.println(text);
 }
 
@@ -626,7 +632,7 @@ void Display::buildBanner(String msg, int xpos)
   this->tft.setFreeFont(NULL);           // Font 4 selected
   this->tft.setTextSize(BANNER_TEXT_SIZE);           // Font size scaling is x1
   this->tft.setTextColor(TFT_WHITE, TFT_BLACK);  // Black text, no background colour
-  this->showCenterText(msg, banner_y);
+  this->showCenterText(msg.c_str(), banner_y);
 }
 
 #endif
