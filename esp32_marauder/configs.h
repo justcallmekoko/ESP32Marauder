@@ -124,6 +124,11 @@
     //#define FLIPPER_ZERO_HAT
     #define HAS_MINI_KB
     #define HAS_BATTERY
+      #if defined(MARAUDER_M5STICKC)
+        #define HAS_AXP192
+      #else
+        #define HAS_TP4057
+      #endif
     #define HAS_BT
     #define HAS_BUTTONS
     //#define HAS_NEOPIXEL_LED
@@ -237,6 +242,7 @@
     #define HAS_TOUCH
     //#define FLIPPER_ZERO_HAT
     #define HAS_BATTERY
+      #define HAS_IP5306
     #define HAS_BT
     //#define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
@@ -256,6 +262,7 @@
     #define HAS_TOUCH
     //#define FLIPPER_ZERO_HAT
     #define HAS_BATTERY
+      #define HAS_IP5306
     #define HAS_BT
     #define HAS_BT_REMOTE
     #define HAS_BUTTONS
@@ -558,7 +565,7 @@
 
   //// POWER MANAGEMENT
   #ifdef HAS_PWR_MGMT
-    #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
+    #if defined(HAS_AXP192)
       #include "AXP192.h"
     #endif
 
@@ -2644,72 +2651,88 @@
   //// BATTERY STUFF
   #ifdef HAS_BATTERY
 
-    #ifdef MARAUDER_V4
+    #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2) 
       #define I2C_SDA 33
       #define I2C_SCL 22
-    #endif
 
-    #ifdef MARAUDER_V6
+    #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_KIT)
       #define I2C_SDA 33
       #define I2C_SCL 22
-    #endif
+      #define HAS_IP5306
 
-    #ifdef MARAUDER_V6_1
-      #define I2C_SDA 33
-      #define I2C_SCL 22
-    #endif
-
-    #ifdef MARAUDER_M5STICKC
-      #define I2C_SDA 33
-      #define I2C_SCL 22
-    #endif
-
-    #ifdef MARAUDER_KIT
-      #define I2C_SDA 33
-      #define I2C_SCL 22
-    #endif
-
-    #ifdef MARAUDER_MINI
+    #elif defined(MARAUDER_MINI)
       #define I2C_SDA 33
       #define I2C_SCL 26
-    #endif
 
-    #ifdef MARAUDER_V7
+    #elif defined(MARAUDER_V7)
       #define I2C_SDA 33
       #define I2C_SCL 16
-    #endif
+      #define HAS_IP5306
 
-    #ifdef MARAUDER_V7_1
+    #elif defined(MARAUDER_V7_1)
       #define I2C_SDA 33
       #define I2C_SCL 27
-    #endif
 
-    #ifdef MARAUDER_CYD_MICRO
+    #elif defined(MARAUDER_CYD_MICRO)
       #define I2C_SDA 22
       #define I2C_SCL 27
-    #endif
 
-    #ifdef MARAUDER_CYD_2USB
+    #elif defined(MARAUDER_CYD_2USB)
       #define I2C_SDA 22
       #define I2C_SCL 27
-    #endif
 
-    #ifdef MARAUDER_CYD_3_5_INCH
+    #elif defined(MARAUDER_CYD_3_5_INCH)
       #define I2C_SDA 32
       #define I2C_SCL 25
-    #endif
 
-    #ifdef MARAUDER_CYD_GUITION
+    #elif defined(MARAUDER_CYD_GUITION)
       #define I2C_SDA 22
       #define I2C_SCL 21
-    #endif
 
-    #ifdef MARAUDER_V8
+    #elif defined(MARAUDER_V8)
       #define I2C_SCL 4
       #define I2C_SDA 5
+
+    #elif defined(MARAUDER_REV_FEATHER)
+      #define I2C_SCL 4
+      #define I2C_SDA 3
+      #define HAS_MAX1704X
+      #undef HAS_AXP2101
+      #undef HAS_IP5306
     #endif
 
-  #endif
+    //  If we know what we have, we can delete what we're not using
+    #ifdef BATTERY_ADC_PIN
+      #undef HAS_AXP2101
+      #undef HAS_IP5306
+      #undef HAS_MAX1704X
+      #undef HAS_AXP192
+
+    // No driver for this LiPo charger
+    #elif defined(HAS_TP4057)
+      #undef HAS_AXP2101
+      #undef HAS_IP5306
+      #undef HAS_MAX1704X
+      #undef HAS_AXP192
+
+    #elif defined(HAS_AXP192)
+      #undef HAS_AXP2101
+      #undef HAS_IP5306
+      #undef HAS_MAX1704X
+
+    #elif defined(HAS_AXP2101)
+      #undef HAS_IP5306
+      #undef HAS_MAX1704X
+
+
+    #else       // punt
+       // #define HAS_AXP2101
+       #define HAS_IP5306
+       #define HAS_MAX1704X
+       #define HAS_AXP192
+    #endif
+
+  #endif  // HAS_BATTERY
 
   //// MARAUDER TITLE STUFF
   #ifdef MARAUDER_V4
