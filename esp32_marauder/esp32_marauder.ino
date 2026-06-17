@@ -270,6 +270,8 @@ void setup()
   while(!Serial)
       delay(10);
 
+#endif
+
   #ifdef HAS_C5_SD
     sharedSPI.begin(SD_SCK, SD_MISO, SD_MOSI);
     delay(100);

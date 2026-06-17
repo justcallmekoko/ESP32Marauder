@@ -2896,7 +2896,6 @@
     #endif
 
   #endif  // HAS_BATTERY
->>>>>>> master
 
   //// MARAUDER TITLE STUFF
   #ifdef MARAUDER_V4
