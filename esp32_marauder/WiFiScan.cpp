@@ -5527,9 +5527,11 @@ int WiFiScan::checkMatchAP(char addr[], bool update_ap) {
       }
     }
 
-    if ((mac_match) && (update_ap)) {
-      access_point.packets += 1;
-      access_points->set(i, access_point);
+    if (mac_match) {
+      if (update_ap) {
+        access_point.packets += 1;
+        access_points->set(i, access_point);
+      }
       return i;
     }
   }
