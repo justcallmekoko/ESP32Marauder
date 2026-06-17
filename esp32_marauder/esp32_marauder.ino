@@ -206,6 +206,7 @@ uint32_t currentTime  = 0;
       esp_sleep_config_gpio_isolate();
     }
 
+    delay(1100); // Give serial monitor time to flush
 
     // Enter deep sleep
     esp_deep_sleep_start();
