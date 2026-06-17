@@ -2,8 +2,6 @@
 
 #ifdef HAS_NEOPIXEL_LED
 
-#warning message HAS_LED LedInterface.cpp
-
 LedInterface::LedInterface() {
   // Adafruit_NeoPixel strip = Adafruit_NeoPixel(Pixels, PIN, NEO_GRB + NEO_KHZ800);
 }
