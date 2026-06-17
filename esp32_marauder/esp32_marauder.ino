@@ -182,10 +182,17 @@ uint32_t currentTime  = 0;
       backlightOff();
     #endif
 
-    // Should we I saw pins with external pull-up resistor?
+    // Should we isolate  pins with external pull-up resistors
     // to minimize current consumption.
     // rtc_gpio_isolate(I2C_SDA);
     // rtc_gpio_isolate(I2C_SCL);
+
+    // Code specific to the classic ESP32 (e.g., WROOM-32) goes here
+    // #ifdef CONFIG_IDF_TARGET_ESP32
+    //   rtc_gpio_isolate(GPIO_NUM_12);
+    // #endif
+
+
 
 
 
@@ -194,6 +201,9 @@ uint32_t currentTime  = 0;
 
       // Configure the wake-up source: wake up when GPIO 0 goes LOW (button press)
       esp_sleep_enable_ext0_wakeup((gpio_num_t) wakeup_but, 0); // 0 means LOW
+    } else {
+      // If we don't have a wake up pin, we should just isolate them all..
+      esp_sleep_config_gpio_isolate();
     }
 
 
