@@ -4,21 +4,24 @@
 #define LedInterface_h
 
 #include "configs.h"
+
+#ifdef HAS_NEOPIXEL_LED
+
 #include "settings.h"
 #include <Arduino.h>
-#ifdef HAS_NEOPIXEL_LED
-  #include <Adafruit_NeoPixel.h>
-#endif
+
+#include <Adafruit_NeoPixel.h>
 
 #define Pixels 1
 
 extern Settings settings_obj;
 
-#ifdef HAS_NEOPIXEL_LED
-  extern Adafruit_NeoPixel strip;
-#endif
+// #ifdef HAS_NEOPIXEL_LED
+//   extern Adafruit_NeoPixel strip;
+// #endif
 
 class LedInterface {
+
 
   private:
     uint32_t initTime = 0;
@@ -32,21 +35,25 @@ class LedInterface {
     uint8_t current_mode = MODE_OFF;
 
     void rainbow();
-    void ledOff();
-    void attackLed();
-    void sniffLed();
+
+    Adafruit_NeoPixel strip = Adafruit_NeoPixel(Pixels, PIN, NEO_GRB + NEO_KHZ800);
   
   public:
     LedInterface();
 
     void RunSetup();
     void main(uint32_t currentTime);
+    void attackLED();
+    void sniffLED();
+    void offLED();
+
+
 
     void setMode(uint8_t);
     void setColor(int r, int g, int b);
     uint8_t getMode();
     
-  
 };
 
+#endif    // HAS_NEOPIXEL_LED
 #endif

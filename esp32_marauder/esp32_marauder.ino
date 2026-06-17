@@ -27,12 +27,16 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #ifdef HAS_FLIPPER_LED
   #include "flipperLED.h"
-#elif defined(XIAO_ESP32_S3)
+  flipperLED led_obj;
+#elif defined(HAS_XIAO_LED) || defined(XIAO_ESP32_S3)
   #include "xiaoLED.h"
-#elif defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
+  xiaoLED led_obj;
+#elif defined(HAS_STICKC_LED) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
   #include "stickcLED.h"
+  stickcLED led_obj;
 #elif defined(HAS_NEOPIXEL_LED)
   #include "LedInterface.h"
+  LedInterface led_obj;
 #endif
 
 #include "settings.h"
@@ -92,21 +96,13 @@ CommandLine cli_obj;
   SDInterface sd_obj;
 #endif
 
-#ifdef HAS_FLIPPER_LED
-  flipperLED flipper_led;
-#elif defined(XIAO_ESP32_S3)
-  xiaoLED xiao_led;
-#elif defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
-  stickcLED stickc_led;
-#elif defined(HAS_NEOPIXEL_LED)
-  LedInterface led_obj;
-#endif
 
 const String PROGMEM version_number = MARAUDER_VERSION;
 
-#ifdef HAS_NEOPIXEL_LED
-  Adafruit_NeoPixel strip = Adafruit_NeoPixel(Pixels, PIN, NEO_GRB + NEO_KHZ800);
-#endif
+
+// #ifdef HAS_NEOPIXEL_LED
+//   Adafruit_NeoPixel strip = Adafruit_NeoPixel(Pixels, PIN, NEO_GRB + NEO_KHZ800);
+// #endif
 
 uint32_t currentTime  = 0;
 
@@ -375,15 +371,7 @@ void setup()
   #endif
 
   // Do some LED stuff
-  #ifdef HAS_FLIPPER_LED
-    flipper_led.RunSetup();
-  #elif defined(XIAO_ESP32_S3)
-    xiao_led.RunSetup();
-  #elif defined(MARAUDER_M5STICKC)
-    stickc_led.RunSetup();
-  #elif defined(HAS_NEOPIXEL_LED)
-    led_obj.RunSetup();
-  #endif
+  led_obj.RunSetup();
 
   #ifdef HAS_GPS
     gps_obj.begin();
@@ -463,15 +451,12 @@ void loop()
       menu_function_obj.main(currentTime);
     #endif
   }
-  #ifdef HAS_FLIPPER_LED
-    flipper_led.main();
-  #elif defined(XIAO_ESP32_S3)
-    xiao_led.main();
-  #elif defined(MARAUDER_M5STICKC)
-    stickc_led.main();
-  #elif defined(HAS_NEOPIXEL_LED)
+
+  /*
+  #ifdef HAS_LED
     led_obj.main(currentTime);
   #endif
+  */
 
   #ifdef HAS_SCREEN
     delay(1);

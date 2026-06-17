@@ -2059,40 +2059,6 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
   this->currentScanMode = scan_mode;
 }
 
-void WiFiScan::setLEDMode(int mode) {
-  if (mode == MODE_ATTACK) {
-    #ifdef HAS_FLIPPER_LED
-      flipper_led.attackLED();
-    #elif defined(XIAO_ESP32_S3)
-      xiao_led.attackLED();
-    #elif defined(MARAUDER_M5STICKC)
-      stickc_led.attackLED();
-    #elif defined(HAS_NEOPIXEL_LED)
-      led_obj.setMode(MODE_ATTACK);
-    #endif
-  } else if (mode == MODE_SNIFF) {
-    #ifdef HAS_FLIPPER_LED
-      flipper_led.sniffLED();
-    #elif defined(XIAO_ESP32_S3)
-      xiao_led.sniffLED();
-    #elif defined(MARAUDER_M5STICKC)
-      stickc_led.sniffLED();
-    #elif defined(HAS_NEOPIXEL_LED)
-      led_obj.setMode(MODE_SNIFF);
-    #endif
-  } else if (mode == MODE_OFF) {
-    #ifdef HAS_FLIPPER_LED
-      flipper_led.offLED();
-    #elif defined(XIAO_ESP32_S3)
-      xiao_led.offLED();
-    #elif defined(MARAUDER_M5STICKC)
-      stickc_led.offLED();
-    #elif defined(HAS_NEOPIXEL_LED)
-      led_obj.setMode(MODE_OFF);
-    #endif
-  }
-}
-
 void WiFiScan::displayTargetFilter() {
   #ifdef HAS_SCREEN
     if (this->filterActive()) {
@@ -2187,7 +2153,7 @@ void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, const char* t
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_max_tx_power(82);
   this->wifi_initialized = true;
-  this->setLEDMode(MODE_ATTACK);
+  led_obj.attackLED();
   initTime = millis();
 }
 
@@ -2207,7 +2173,7 @@ bool WiFiScan::shutdownWiFi() {
       esp_netif_deinit(); 
     }
 
-    this->setLEDMode(MODE_OFF);
+    led_obj.offLED();
 
     this->_analyzer_value = 0;
   
@@ -2245,7 +2211,7 @@ bool WiFiScan::shutdownBLE() {
       return false;
     }
 
-    this->setLEDMode(MODE_OFF);
+    led_obj.attackLED();
 
   #endif
 
@@ -2925,16 +2891,7 @@ void WiFiScan::RunPingScan(uint8_t scan_mode, uint16_t color) {
   else if (scan_mode == WIFI_ARP_SCAN)
     startLog("arpscan");
 
-  this->setLEDMode(MODE_SNIFF);
-  /*#ifdef HAS_FLIPPER_LED
-    flipper_led.sniffLED();
-  #elif defined(XIAO_ESP32_S3)
-    xiao_led.sniffLED();
-  #elif defined(MARAUDER_M5STICKC)
-    stickc_led.sniffLED();
-  #else
-    led_obj.setMode(MODE_SNIFF);
-  #endif*/
+  led_obj.sniffLED();
   
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_BLACK, color);
@@ -2984,17 +2941,8 @@ void WiFiScan::RunPortScanAll(uint8_t scan_mode, uint16_t color) {
   else
     startLog("portscan");
 
-  this->setLEDMode(MODE_SNIFF);
-  /*#ifdef HAS_FLIPPER_LED
-    flipper_led.sniffLED();
-  #elif defined(XIAO_ESP32_S3)
-    xiao_led.sniffLED();
-  #elif defined(MARAUDER_M5STICKC)
-    stickc_led.sniffLED();
-  #else
-    led_obj.setMode(MODE_SNIFF);
-  #endif*/
-  
+  led_obj.sniffLED();
+
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_BLACK, color);
     #ifdef HAS_FULL_SCREEN
@@ -3365,7 +3313,7 @@ void WiFiScan::RunSaveSSIDList(bool save_as) {
 void WiFiScan::RunEvilPortal(uint8_t scan_mode, uint16_t color) {
   startLog("evil_portal");
 
-  this->setLEDMode(MODE_SNIFF);
+  led_obj.sniffLED();
 
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_WHITE, color);
@@ -3392,7 +3340,8 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color) {
   else
     startPcap("ap_sta");
 
-  this->setLEDMode(MODE_SNIFF);
+  led_obj.sniffLED();
+
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_BLACK, color);
     if (scan_mode != WIFI_SCAN_AP_STA)
@@ -3958,16 +3907,7 @@ void WiFiScan::RunInfo() {
 }
 
 void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color) {
-  this->setLEDMode(MODE_SNIFF);
-  /*#ifdef HAS_FLIPPER_LED
-    flipper_led.sniffLED();
-  #elif defined(XIAO_ESP32_S3)
-    xiao_led.sniffLED();
-  #elif defined(MARAUDER_M5STICKC)
-    stickc_led.sniffLED();
-  #else
-    led_obj.setMode(MODE_SNIFF);
-  #endif*/
+  led_obj.attackLED();
 
   if (scan_mode == WIFI_SCAN_PACKET_RATE)
     startPcap("packet_rate");
@@ -4085,16 +4025,7 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color) {
 }
 
 void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color) {
-  this->setLEDMode(MODE_SNIFF);
-  /*#ifdef HAS_FLIPPER_LED
-    flipper_led.sniffLED();
-  #elif defined(XIAO_ESP32_S3)
-    xiao_led.sniffLED();
-  #elif defined(MARAUDER_M5STICKC)
-    stickc_led.sniffLED();
-  #else
-    led_obj.setMode(MODE_SNIFF);
-  #endif*/
+  led_obj.sniffLED();
 
   this->send_deauth = settings_obj.loadSetting<bool>(text_table4[5]);
   
@@ -4170,17 +4101,8 @@ void WiFiScan::RunPineScan(uint8_t scan_mode, uint16_t color) {
 
   startPcap("pinescan");
 
-  this->setLEDMode(MODE_SNIFF);
-  /*#ifdef HAS_FLIPPER_LED
-    flipper_led.sniffLED();
-  #elif defined(XIAO_ESP32_S3)
-    xiao_led.sniffLED();
-  #elif defined(MARAUDER_M5STICKC)
-    stickc_led.sniffLED();
-  #else
-    led_obj.setMode(MODE_SNIFF);
-  #endif*/
-  
+  led_obj.sniffLED();
+
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_BLACK, color);
     #ifdef HAS_FULL_SCREEN
@@ -4189,7 +4111,7 @@ void WiFiScan::RunPineScan(uint8_t scan_mode, uint16_t color) {
     #endif
     this->prepareScanStage(TFT_RED, TFT_BLACK);
   #endif
-  
+
   esp_wifi_init(&cfg2);
   #ifdef HAS_IDF_3
     esp_wifi_set_country(&country);
@@ -4215,7 +4137,7 @@ void WiFiScan::RunMultiSSIDScan(uint8_t scan_mode, uint16_t color) {
 
   startPcap("multissid");
 
-  this->setLEDMode(MODE_SNIFF);
+  led_obj.sniffLED();
   
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_BLACK, color);
@@ -4240,7 +4162,7 @@ void WiFiScan::RunMultiSSIDScan(uint8_t scan_mode, uint16_t color) {
 void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color) {
   startPcap("pwnagotchi");
 
-  this->setLEDMode(MODE_SNIFF);
+  led_obj.sniffLED();
 
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_WHITE, color);
@@ -5034,7 +4956,7 @@ void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color) {
     #endif
   }
 
-  this->setLEDMode(MODE_SNIFF);
+  led_obj.sniffLED();
   
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_WHITE, color);
@@ -5085,7 +5007,7 @@ void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color) {
   if (scan_mode != WIFI_SCAN_SIG_STREN)
     startPcap("raw");
 
-  this->setLEDMode(MODE_SNIFF);
+  led_obj.sniffLED();
   
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_WHITE, color);
@@ -5131,7 +5053,7 @@ void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color) {
 void WiFiScan::RunDeauthScan(uint8_t scan_mode, uint16_t color) {
   startPcap("deauth");
 
-  this->setLEDMode(MODE_SNIFF);
+  led_obj.sniffLED();
   
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_BLACK, color);
@@ -5164,7 +5086,7 @@ void WiFiScan::RunSAEScan(uint8_t scan_mode, uint16_t color) {
   else if (scan_mode != WIFI_ATTACK_SAE_COMMIT)
     return;
 
-  this->setLEDMode(MODE_SNIFF);
+  led_obj.sniffLED();
   
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_BLACK, color);
@@ -5237,7 +5159,7 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color) {
   else if (scan_mode == WIFI_SCAN_DETECT_FOLLOW)
     startPcap("mac_track");
 
-  this->setLEDMode(MODE_SNIFF);
+  led_obj.sniffLED();
   
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_BLACK, color);
@@ -5306,7 +5228,7 @@ void WiFiScan::RunSourApple(uint8_t scan_mode, uint16_t color) {
       display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
     #endif
 
-    this->setLEDMode(MODE_SNIFF);
+    led_obj.sniffLED();
 
   #endif
 }
@@ -5336,7 +5258,7 @@ void WiFiScan::RunSwiftpairSpam(uint8_t scan_mode, uint16_t color) {
       display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
     #endif
 
-    this->setLEDMode(MODE_ATTACK);
+    led_obj.attackLED();
   #endif
 }
 
@@ -5489,7 +5411,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
     }
     this->ble_initialized = true;
 
-    this->setLEDMode(MODE_SNIFF);
+    led_obj.sniffLED();
 
     initTime = millis();
   #endif

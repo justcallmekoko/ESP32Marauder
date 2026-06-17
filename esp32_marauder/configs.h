@@ -160,6 +160,7 @@
       #define HAS_BATTERY
       #define BATTERY_ADC_PIN 10
       #define HAS_NEOPIXEL_LED
+    #define HAS_LED
     #endif
   #endif
 
@@ -170,6 +171,7 @@
     #define HAS_BT
     #define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
+    #define HAS_LED
     //#define HAS_PWR_MGMT
     #define HAS_SCREEN
     #define HAS_MINI_SCREEN
@@ -211,6 +213,7 @@
     #define HAS_BT_REMOTE
     #define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
+    #define HAS_LED
     //#define HAS_PWR_MGMT
     #define HAS_SCREEN
     #define HAS_FULL_SCREEN
@@ -229,6 +232,7 @@
     #define HAS_MINI_KB
     #define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
+    #define HAS_LED
     //#define HAS_PWR_MGMT
     #define HAS_SCREEN
     #define HAS_MINI_SCREEN
@@ -246,6 +250,7 @@
     #define HAS_BT
     //#define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
+    #define HAS_LED
     //#define HAS_PWR_MGMT
     #define HAS_SCREEN
     #define HAS_FULL_SCREEN
@@ -267,6 +272,7 @@
     #define HAS_BT_REMOTE
     #define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
+    #define HAS_LED
     //#define HAS_PWR_MGMT
     #define HAS_SCREEN
     #define HAS_FULL_SCREEN
@@ -282,6 +288,7 @@
   #ifdef MARAUDER_CYD_MICRO
     #define HAS_TOUCH
     #define HAS_FLIPPER_LED
+    #define HAS_LED
     //#define FLIPPER_ZERO_HAT
     //#define HAS_BATTERY
     #define HAS_BT
@@ -302,6 +309,7 @@
   #ifdef MARAUDER_CYD_2USB
     #define HAS_TOUCH
     #define HAS_FLIPPER_LED
+    #define HAS_LED
     //#define FLIPPER_ZERO_HAT
     //#define HAS_BATTERY
     #define HAS_BT
@@ -324,6 +332,7 @@
   #ifdef MARAUDER_CYD_3_5_INCH
     #define HAS_TOUCH
     #define HAS_FLIPPER_LED
+    #define HAS_LED
     //#define FLIPPER_ZERO_HAT
     //#define HAS_BATTERY
     #define HAS_BT
@@ -346,6 +355,7 @@
   #ifdef MARAUDER_CYD_GUITION
     #define HAS_TOUCH
     #define HAS_FLIPPER_LED
+    #define HAS_LED
     //#define FLIPPER_ZERO_HAT
     //#define HAS_BATTERY
     #define HAS_BT
@@ -370,6 +380,7 @@
     #define HAS_BT
     //#define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
+    #define HAS_LED
     //#define HAS_PWR_MGMT
     #define HAS_SCREEN
     #define HAS_FULL_SCREEN
@@ -398,6 +409,7 @@
 
   #ifdef MARAUDER_FLIPPER
     #define HAS_FLIPPER_LED
+    #define HAS_LED
     //#define FLIPPER_ZERO_HAT
     //#define HAS_BATTERY
     //#define HAS_BT
@@ -414,6 +426,7 @@
 
   #ifdef MARAUDER_MULTIBOARD_S3
     #define HAS_FLIPPER_LED
+    #define HAS_LED
     //#define FLIPPER_ZERO_HAT
     //#define HAS_BATTERY
     #define HAS_BT
@@ -434,6 +447,7 @@
     #define HAS_BT
     //#define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
+    #define HAS_LED
     //#define HAS_PWR_MGMT
     //#define HAS_SCREEN
     #define HAS_SD
@@ -450,6 +464,7 @@
     #define HAS_BT
     //#define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
+    #define HAS_LED
     //#define HAS_PWR_MGMT
     //#define HAS_SCREEN
     #define HAS_SD
@@ -464,6 +479,9 @@
     #define FLIPPER_ZERO_HAT
     //#define HAS_BATTERY
     #define HAS_BT
+    #define HAS_XIAO_LED
+    #define HAS_LED
+
     //#define HAS_BUTTONS
     //#define HAS_NEOPIXEL_LED
     //#define HAS_PWR_MGMT
@@ -480,6 +498,7 @@
     #define HAS_BT
     //#define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
+    #define HAS_LED
     //#define HAS_PWR_MGMT
     //#define HAS_SCREEN
     #define HAS_GPS
@@ -547,6 +566,7 @@
     #define HAS_BT
     //#define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
+    #define HAS_LED
     //#define HAS_PWR_MGMT
     //#define HAS_SCREEN
     //#define HAS_MINI_SCREEN
@@ -934,6 +954,8 @@
   #if defined(MARAUDER_M5STICKCP2)
       #define CHAN_PER_PAGE 7
 
+
+      #define HAS_LED
       #define MARAUDER_M5STICKC // From now on, everything is the same, except for one check in esp32_marauder.ino amd stickc_led.cpp/h
 
       #define SCREEN_CHAR_WIDTH 40
@@ -2253,6 +2275,7 @@
     #define BANNER_TIME 50
     
     #define COMMAND_PREFIX "!"
+    #define HAS_LED
     
     // Keypad start position, key sizes and spacing
     #define KEY_X (TFT_WIDTH/2) // Centre of key
@@ -2507,8 +2530,11 @@
   #endif
   //// END MEMORY LOWER LIMIT STUFF
 
+  // HAS_FLIPPER_LED XIAO_ESP32_S3 HAS_XIAO_LED HAS_STICKC_LED HAS_NEOPIXEL_LED
   //// NEOPIXEL STUFF  
   #ifdef HAS_NEOPIXEL_LED
+
+    #define HAS_LED
     
     #if defined(ESP32_LDDB)
       #define PIN 17
@@ -2870,6 +2896,9 @@
   //// FUNNY FLIPPER LED STUFF
 
   #ifdef HAS_FLIPPER_LED
+
+    #define HAS_LED
+
     #ifdef MARAUDER_FLIPPER
       #define B_PIN 4
       #define G_PIN 5
@@ -2927,3 +2956,4 @@
   #endif
 
 #endif
+
