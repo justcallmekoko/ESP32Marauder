@@ -120,9 +120,9 @@ uint32_t currentTime  = 0;
   #define BL_CHANNEL 0
   #define BL_FREQ 5000
   #define BL_RESOLUTION 8
-  const uint8_t BL_LEVELS[] = {26, 51, 77, 102, 128, 153, 179, 204, 230, 255};
-  const uint8_t BL_NUM_LEVELS = 10;
-  uint8_t bl_level_idx = 9; // default full brightness
+  const uint8_t BL_LEVELS[] = {3, 8, 15, 26, 51, 77, 102, 128, 153, 179, 204, 230, 255};
+  const uint8_t BL_NUM_LEVELS = 13;
+  uint8_t bl_level_idx = 12; // default full brightness
   Preferences bl_prefs;
 #endif
 
@@ -144,8 +144,8 @@ uint32_t currentTime  = 0;
     #ifdef HAS_SCREEN
       BL_SETUP();
       bl_prefs.begin("backlight", false);
-      bl_level_idx = bl_prefs.getUChar("level", 9);
-      if (bl_level_idx >= BL_NUM_LEVELS) bl_level_idx = 9;
+      bl_level_idx = bl_prefs.getUChar("level", 12);
+      if (bl_level_idx >= BL_NUM_LEVELS) bl_level_idx = 12;
       BL_SET(BL_LEVELS[bl_level_idx]);
     #endif
   }

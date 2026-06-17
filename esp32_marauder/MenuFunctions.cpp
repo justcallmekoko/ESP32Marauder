@@ -210,27 +210,91 @@ void MenuFunctions::main(uint32_t currentTime)
   #endif
 
 
-  // Brightness gesture: hold top or bottom zone 1.5s to enter brightness mode
+  // Brightness gesture: hold top or bottom zone 2.5s with dimming effect → enter brightness mode
   #ifdef HAS_ILI9341
     if (pressed && (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF ||
                     wifi_scan_obj.currentScanMode == WIFI_CONNECTED)) {
-      uint16_t zoneUp = TFT_HEIGHT * 25 / 100;
-      uint16_t zoneDown = TFT_HEIGHT * 75 / 100;
-      if (t_y < zoneUp || t_y >= zoneDown) {
+      uint16_t zoneMid = TFT_HEIGHT * 25 / 100;
+      uint16_t zoneMidEnd = TFT_HEIGHT * 75 / 100;
+      if (t_y < zoneMid || t_y >= zoneMidEnd) {
         uint32_t hold_start = millis();
         uint16_t hx, hy;
         bool held = false;
+        extern uint8_t getBrightnessLevel();
+        const uint8_t bl_lut[] = {3, 8, 15, 26, 51, 77, 102, 128, 153, 179, 204, 230, 255};
+        uint8_t cur_duty = bl_lut[getBrightnessLevel()];
+        uint8_t dim_stage = 0;
         while (display_obj.updateTouch(&hx, &hy)) {
-          if (millis() - hold_start >= 1500) {
+          uint32_t held_ms = millis() - hold_start;
+          // Progressive dim: 3 stages over 2.5s
+          if (held_ms >= 800 && dim_stage == 0) {
+            dim_stage = 1;
+            #if ESP_ARDUINO_VERSION_MAJOR >= 3
+              ledcWrite(TFT_BL, cur_duty * 2 / 3);
+            #else
+              ledcWrite(0, cur_duty * 2 / 3);
+            #endif
+          }
+          if (held_ms >= 1600 && dim_stage == 1) {
+            dim_stage = 2;
+            #if ESP_ARDUINO_VERSION_MAJOR >= 3
+              ledcWrite(TFT_BL, cur_duty / 3);
+            #else
+              ledcWrite(0, cur_duty / 3);
+            #endif
+          }
+          if (held_ms >= 2500) {
             held = true;
             break;
           }
           delay(10);
         }
         if (held) {
-          // Wait for release before entering brightness mode
-          while (display_obj.updateTouch(&hx, &hy)) delay(10);
+          // Enter brightness mode immediately — don't wait for release
           this->brightnessMode();
+          return;
+        }
+        // Released early — restore brightness
+        #if ESP_ARDUINO_VERSION_MAJOR >= 3
+          ledcWrite(TFT_BL, cur_duty);
+        #else
+          ledcWrite(0, cur_duty);
+        #endif
+      }
+    }
+  #endif
+
+  // Screen blackout: wake on any tap → restore last saved brightness
+  #ifdef HAS_ILI9341
+    if (pressed && this->screen_blacked_out) {
+      while (display_obj.updateTouch(&t_x, &t_y)) delay(10);
+      extern uint8_t getBrightnessLevel();
+      extern void brightnessSave(uint8_t level);
+      brightnessSave(getBrightnessLevel());  // restores backlight to saved level
+      this->screen_blacked_out = false;
+      return;
+    }
+
+    // Quick blackout during scans: hold top zone 3s
+    if (pressed && wifi_scan_obj.currentScanMode != WIFI_SCAN_OFF &&
+        wifi_scan_obj.currentScanMode != WIFI_CONNECTED) {
+      uint16_t zoneUp = TFT_HEIGHT * 25 / 100;
+      if (t_y < zoneUp) {
+        uint32_t hold_start = millis();
+        uint16_t hx, hy;
+        bool held = false;
+        while (display_obj.updateTouch(&hx, &hy)) {
+          if (millis() - hold_start >= 3000) {
+            held = true;
+            break;
+          }
+          delay(10);
+        }
+        if (held) {
+          while (display_obj.updateTouch(&hx, &hy)) delay(10);
+          extern void backlightOff();
+          backlightOff();
+          this->screen_blacked_out = true;
           return;
         }
       }
@@ -3804,16 +3868,17 @@ void MenuFunctions::displayCurrentMenu(int start_index)
 
 // ============================================================
 // BRIGHTNESS ADJUSTMENT MODE
-// Hold top/bottom zone 1.5s to enter. TAP TOP = brighter, TAP BOTTOM = dimmer.
-// TAP MIDDLE or wait 3s = save & exit.
+// Hold top/bottom 3s to enter. TAP TOP = brighter, TAP BOTTOM = dimmer.
+// Hold anywhere 3s = darkening countdown → blackout.
+// Auto-save after 4s idle.
 // ============================================================
 #ifndef HAS_MINI_SCREEN
   void MenuFunctions::brightnessMode() {
     extern void brightnessSave(uint8_t level);
     extern uint8_t getBrightnessLevel();
 
-    const uint8_t levels[] = {26, 51, 77, 102, 128, 153, 179, 204, 230, 255};
-    const uint8_t numLevels = 10;
+    const uint8_t levels[] = {3, 8, 15, 26, 51, 77, 102, 128, 153, 179, 204, 230, 255};
+    const uint8_t numLevels = 13;
     uint8_t level = getBrightnessLevel();
 
     // LEDC write compatibility (2.x vs 3.x board package)
@@ -3823,15 +3888,18 @@ void MenuFunctions::displayCurrentMenu(int start_index)
       #define BL_PREVIEW(duty) ledcWrite(0, (duty))
     #endif
 
+    // Restore backlight to saved level (entry gesture leaves it dimmed)
+    BL_PREVIEW(levels[level]);
+
     display_obj.tft.fillScreen(TFT_BLACK);
     display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
     display_obj.tft.drawCentreString("BRIGHTNESS", TFT_WIDTH/2, 30, 2);
 
-    display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
+    display_obj.tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
     display_obj.tft.drawCentreString("TAP TOP = BRIGHTER", TFT_WIDTH/2, 10, 1);
-    display_obj.tft.drawCentreString("TAP BOTTOM = DIMMER", TFT_WIDTH/2, TFT_HEIGHT - 20, 1);
+    display_obj.tft.drawCentreString("TAP BOTTOM = DIMMER", TFT_WIDTH/2, TFT_HEIGHT - 30, 1);
     display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
-    display_obj.tft.drawCentreString("TAP MIDDLE or WAIT 3s = SAVE", TFT_WIDTH/2, TFT_HEIGHT/2 + 50, 1);
+    display_obj.tft.drawCentreString("HOLD = BLACKOUT", TFT_WIDTH/2, TFT_HEIGHT - 15, 1);
 
     auto drawBar = [&]() {
       uint16_t barX = 30, barY = TFT_HEIGHT/2 - 25, barW = TFT_WIDTH - 60, barH = 30;
@@ -3846,13 +3914,14 @@ void MenuFunctions::displayCurrentMenu(int start_index)
     };
     drawBar();
 
-    uint16_t zoneUp = TFT_HEIGHT * 25 / 100;
-    uint16_t zoneDown = TFT_HEIGHT * 75 / 100;
+    uint16_t zoneSplit = TFT_HEIGHT / 2;
+    // Drain any ongoing touch from entry gesture before starting loop
+    { uint16_t dx, dy; while (display_obj.updateTouch(&dx, &dy)) delay(10); }
     uint32_t lastTouch = millis();
 
     while (true) {
-      // Auto-save after 3s of no touch
-      if (millis() - lastTouch >= 3000) {
+      // Auto-save after 4s of no touch
+      if (millis() - lastTouch >= 4000) {
         brightnessSave(level);
         break;
       }
@@ -3860,26 +3929,61 @@ void MenuFunctions::displayCurrentMenu(int start_index)
       uint16_t tx, ty;
       if (display_obj.updateTouch(&tx, &ty)) {
         lastTouch = millis();
-        // Wait for release
-        while (display_obj.updateTouch(&tx, &ty)) delay(10);
+        uint32_t hold_start = millis();
+        uint8_t darken_stage = 0;
+        uint8_t saved_duty = levels[level];
+        bool blacked_out = false;
 
-        if (ty < zoneUp) {
+        // Track hold duration while finger is down
+        while (display_obj.updateTouch(&tx, &ty)) {
+          uint32_t held_ms = millis() - hold_start;
+
+          // Darkening countdown: dim backlight each second toward blackout
+          if (held_ms >= 1000 && darken_stage == 0) {
+            darken_stage = 1;
+            BL_PREVIEW(saved_duty * 2 / 3);
+          }
+          if (held_ms >= 2000 && darken_stage == 1) {
+            darken_stage = 2;
+            BL_PREVIEW(saved_duty / 3);
+          }
+          if (held_ms >= 3000 && darken_stage == 2) {
+            // Save current level then blackout
+            brightnessSave(level);
+            extern void backlightOff();
+            backlightOff();
+            this->screen_blacked_out = true;
+            blacked_out = true;
+            break;
+          }
+          delay(10);
+        }
+
+        if (blacked_out) {
+          // Wait for release then exit
+          while (display_obj.updateTouch(&tx, &ty)) delay(10);
+          break;
+        }
+
+        // Released before 3s — restore brightness and handle as tap
+        BL_PREVIEW(saved_duty);
+
+        if (ty < zoneSplit) {
+          // Top half = brighter
           if (level < numLevels - 1) {
             level++;
             BL_PREVIEW(levels[level]);
             drawBar();
           }
-        } else if (ty >= zoneDown) {
+        } else {
+          // Bottom half = dimmer
           if (level > 0) {
             level--;
             BL_PREVIEW(levels[level]);
             drawBar();
           }
-        } else {
-          // Middle = save now
-          brightnessSave(level);
-          break;
         }
+        lastTouch = millis();
         delay(150);
       }
       delay(30);
