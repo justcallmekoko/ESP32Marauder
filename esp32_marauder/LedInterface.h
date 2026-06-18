@@ -34,7 +34,6 @@ class LedInterface {
 
     uint8_t current_mode = MODE_OFF;
 
-    void rainbow();
 
     Adafruit_NeoPixel strip = Adafruit_NeoPixel(Pixels, PIN, NEO_GRB + NEO_KHZ800);
   
@@ -46,6 +45,7 @@ class LedInterface {
     void attackLED();
     void sniffLED();
     void offLED();
+    void rainbow();
 
 
 
