@@ -2153,7 +2153,7 @@ void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, const char* t
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_max_tx_power(82);
   this->wifi_initialized = true;
-  #if HAS_LED
+  #ifdef HAS_LED
     led_obj.attackLED();
   #endif
   initTime = millis();
