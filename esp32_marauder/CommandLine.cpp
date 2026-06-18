@@ -231,6 +231,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_REBOOT_CMD);
     Serial.println(HELP_UPDATE_CMD_A);
     Serial.println(HELP_LS_CMD);
+    Serial.println(HELP_RESCAN_SD);
     Serial.println(HELP_LED_CMD);
     Serial.println(HELP_GPS_DATA_CMD);
     Serial.println(HELP_GPS_CMD);
@@ -453,6 +454,11 @@ void CommandLine::runCommand(String input) {
     #ifdef HAS_SD
       if (cmd_args.size() > 1)
         sd_obj.listDir(cmd_args.get(1));
+    #endif
+  }
+  else if (cmd_args.get(0) == RESCAN_SD) {
+    #ifdef HAS_SD
+        sd_obj.initSD();
     #endif
   }
 
