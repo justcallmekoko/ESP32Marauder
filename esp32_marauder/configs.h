@@ -2530,7 +2530,6 @@
   #endif
   //// END MEMORY LOWER LIMIT STUFF
 
-  // HAS_FLIPPER_LED XIAO_ESP32_S3 HAS_XIAO_LED HAS_STICKC_LED HAS_NEOPIXEL_LED
   //// NEOPIXEL STUFF  
   #ifdef HAS_NEOPIXEL_LED
 
@@ -2899,44 +2898,49 @@
 
     #define HAS_LED
 
-    #ifdef MARAUDER_FLIPPER
+    #ifdef defined(MARAUDER_FLIPPER)
       #define B_PIN 4
       #define G_PIN 5
       #define R_PIN 6
-    #endif
 
-    #ifdef MARAUDER_MULTIBOARD_S3
+    #elif defined(MARAUDER_MULTIBOARD_S3)
       #define B_PIN 4
       #define G_PIN 5
       #define R_PIN 6
-    #endif
 
-    #ifdef MARAUDER_CYD_MICRO
+    #elif defined(MARAUDER_CYD_MICRO)
       #define B_PIN 17
       #define G_PIN 16
       #define R_PIN 4
-    #endif
 
-    #ifdef MARAUDER_CYD_2USB
+    #elif defined(MARAUDER_CYD_2USB)
       #define B_PIN 17
       #define G_PIN 16
       #define R_PIN 4
-    #endif
 
-    #ifdef MARAUDER_CYD_3_5_INCH
+    #elif defined(MARAUDER_CYD_3_5_INCH)
       #define B_PIN 17
       #define G_PIN 16
       #define R_PIN 22
-    #endif
 
-    #ifdef MARAUDER_CYD_GUITION
+    #elif defined(MARAUDER_CYD_GUITION)
       #define B_PIN 17
       #define G_PIN 16
       #define R_PIN 4
+
+    #elif !defined(B_PIN) || !defined(G_PIN) || !defined(R_PIN) 
+      #undef HAS_FLIPPER_LED
     #endif
+
   #endif
 
   //// END FUNNY FLIPPER LED STUFF
+
+
+  #if !defined(HAS_FLIPPER_LED) || !defined(HAS_XIAO_LED) || !defined(HAS_STICKC_LED) || !defined(HAS_NEOPIXEL_LED)
+    #undef HAS_LED
+  #endif
+
 
   //// WIFI STUFF
 
