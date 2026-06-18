@@ -2153,7 +2153,9 @@ void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, const char* t
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_max_tx_power(82);
   this->wifi_initialized = true;
-  led_obj.attackLED();
+  #if HAS_LED
+    led_obj.attackLED();
+  #endif
   initTime = millis();
 }
 
@@ -2173,7 +2175,9 @@ bool WiFiScan::shutdownWiFi() {
       esp_netif_deinit(); 
     }
 
-    led_obj.offLED();
+    #ifdef HAS_LED
+      led_obj.offLED();
+    #endif
 
     this->_analyzer_value = 0;
   
@@ -2211,7 +2215,9 @@ bool WiFiScan::shutdownBLE() {
       return false;
     }
 
-    led_obj.attackLED();
+    #ifdef HAS_LED
+      led_obj.attackLED();
+    #endif
 
   #endif
 
@@ -2891,7 +2897,9 @@ void WiFiScan::RunPingScan(uint8_t scan_mode, uint16_t color) {
   else if (scan_mode == WIFI_ARP_SCAN)
     startLog("arpscan");
 
-  led_obj.sniffLED();
+  #ifdef HAS_LED
+    led_obj.sniffLED();
+  #endif
   
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_BLACK, color);
@@ -2941,7 +2949,9 @@ void WiFiScan::RunPortScanAll(uint8_t scan_mode, uint16_t color) {
   else
     startLog("portscan");
 
-  led_obj.sniffLED();
+  #ifdef HAS_LED
+    led_obj.sniffLED();
+  #endif
 
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_BLACK, color);
@@ -3313,7 +3323,9 @@ void WiFiScan::RunSaveSSIDList(bool save_as) {
 void WiFiScan::RunEvilPortal(uint8_t scan_mode, uint16_t color) {
   startLog("evil_portal");
 
-  led_obj.sniffLED();
+  #ifdef HAS_LED
+    led_obj.sniffLED();
+  #endif
 
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_WHITE, color);
@@ -3340,7 +3352,9 @@ void WiFiScan::RunAPScan(uint8_t scan_mode, uint16_t color) {
   else
     startPcap("ap_sta");
 
-  led_obj.sniffLED();
+  #ifdef HAS_LED
+    led_obj.sniffLED();
+  #endif
 
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_BLACK, color);
@@ -3907,7 +3921,9 @@ void WiFiScan::RunInfo() {
 }
 
 void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color) {
-  led_obj.attackLED();
+  #ifdef HAS_LED
+    led_obj.attackLED();
+  #endif
 
   if (scan_mode == WIFI_SCAN_PACKET_RATE)
     startPcap("packet_rate");
@@ -4025,7 +4041,9 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color) {
 }
 
 void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color) {
-  led_obj.sniffLED();
+  #ifdef HAS_LED
+    led_obj.sniffLED();
+  #endif
 
   this->send_deauth = settings_obj.loadSetting<bool>(text_table4[5]);
   
@@ -4101,7 +4119,9 @@ void WiFiScan::RunPineScan(uint8_t scan_mode, uint16_t color) {
 
   startPcap("pinescan");
 
-  led_obj.sniffLED();
+  #ifdef HAS_LED
+    led_obj.sniffLED();
+  #endif
 
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_BLACK, color);
@@ -4137,7 +4157,9 @@ void WiFiScan::RunMultiSSIDScan(uint8_t scan_mode, uint16_t color) {
 
   startPcap("multissid");
 
-  led_obj.sniffLED();
+  #ifdef HAS_LED
+    led_obj.sniffLED();
+  #endif
   
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_BLACK, color);
@@ -4162,7 +4184,9 @@ void WiFiScan::RunMultiSSIDScan(uint8_t scan_mode, uint16_t color) {
 void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color) {
   startPcap("pwnagotchi");
 
-  led_obj.sniffLED();
+  #ifdef HAS_LED
+    led_obj.sniffLED();
+  #endif
 
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_WHITE, color);
@@ -4956,7 +4980,9 @@ void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color) {
     #endif
   }
 
-  led_obj.sniffLED();
+  #ifdef HAS_LED
+    led_obj.sniffLED();
+  #endif
   
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_WHITE, color);
@@ -5007,7 +5033,9 @@ void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color) {
   if (scan_mode != WIFI_SCAN_SIG_STREN)
     startPcap("raw");
 
-  led_obj.sniffLED();
+  #ifdef HAS_LED
+    led_obj.sniffLED();
+  #endif
   
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_WHITE, color);
@@ -5053,7 +5081,9 @@ void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color) {
 void WiFiScan::RunDeauthScan(uint8_t scan_mode, uint16_t color) {
   startPcap("deauth");
 
-  led_obj.sniffLED();
+  #ifdef HAS_LED
+    led_obj.sniffLED();
+  #endif
   
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_BLACK, color);
@@ -5086,7 +5116,9 @@ void WiFiScan::RunSAEScan(uint8_t scan_mode, uint16_t color) {
   else if (scan_mode != WIFI_ATTACK_SAE_COMMIT)
     return;
 
-  led_obj.sniffLED();
+  #ifdef HAS_LED
+    led_obj.sniffLED();
+  #endif
   
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_BLACK, color);
@@ -5159,7 +5191,9 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color) {
   else if (scan_mode == WIFI_SCAN_DETECT_FOLLOW)
     startPcap("mac_track");
 
-  led_obj.sniffLED();
+  #ifdef HAS_LED
+    led_obj.sniffLED();
+  #endif
   
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_BLACK, color);
@@ -5228,7 +5262,9 @@ void WiFiScan::RunSourApple(uint8_t scan_mode, uint16_t color) {
       display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
     #endif
 
-    led_obj.sniffLED();
+    #ifdef HAS_LED
+      led_obj.sniffLED();
+    #endif
 
   #endif
 }
@@ -5258,7 +5294,9 @@ void WiFiScan::RunSwiftpairSpam(uint8_t scan_mode, uint16_t color) {
       display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
     #endif
 
+    #ifdef HAS_LED
     led_obj.attackLED();
+    #endif
   #endif
 }
 
@@ -5411,7 +5449,9 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
     }
     this->ble_initialized = true;
 
-    led_obj.sniffLED();
+    #ifdef HAS_LED
+      led_obj.sniffLED();
+    #endif
 
     initTime = millis();
   #endif

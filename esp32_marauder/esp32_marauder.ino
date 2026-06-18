@@ -371,7 +371,9 @@ void setup()
   #endif
 
   // Do some LED stuff
-  led_obj.RunSetup();
+  #ifdef HAS_LED
+    led_obj.RunSetup();
+  #endif
 
   #ifdef HAS_GPS
     gps_obj.begin();
