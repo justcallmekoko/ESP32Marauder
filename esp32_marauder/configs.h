@@ -2711,6 +2711,11 @@
       #undef HAS_MAX1704X
       #undef HAS_AXP192
 
+    #elif defined(HAS_IP5306)
+      #undef HAS_AXP2101
+      #undef HAS_MAX1704X
+      #undef HAS_AXP192
+
     #elif defined(HAS_AXP192)
       #undef HAS_AXP2101
       #undef HAS_IP5306
