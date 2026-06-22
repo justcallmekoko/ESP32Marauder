@@ -1,14 +1,19 @@
 #include "xiaoLED.h"
 
-void xiaoLED::RunSetup() {
-    pinMode(XIAO_LED_PIN, OUTPUT);
+#if  defined(HAS_XIAO_LED) || defined(XIAO_ESP32_S3)
 
-if (!settings_obj.loadSetting<bool>("EnableLED")) {
+#ifndef stickcLED_H
+#define stickcLED_H
+
+void xiaoLED::RunSetup() {
+  pinMode(XIAO_LED_PIN, OUTPUT);
+
+  if (!settings_obj.loadSetting<bool>("EnableLED")) {
     digitalWrite(XIAO_LED_PIN, HIGH);
     return;
-}
+  }
 
-delay(50);
+  delay(50);
 
   digitalWrite(XIAO_LED_PIN, LOW);
   delay(500);
@@ -42,12 +47,16 @@ void xiaoLED::sniffLED() {
 }
 
 void xiaoLED::offLED() {
-  if (!settings_obj.loadSetting<bool>("EnableLED"))
-    return;
+  // if (!settings_obj.loadSetting<bool>("EnableLED"))
+  //   return;
     
   digitalWrite(XIAO_LED_PIN, HIGH);
 }
 
-void xiaoLED::main() {
+void xiaoLED::main(uint32_t currentTime) {
   // do nothing
 }
+
+#endif   //  stickcLED_H
+
+#endif  // HAS_XIAO_LED

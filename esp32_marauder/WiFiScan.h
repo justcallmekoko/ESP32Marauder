@@ -58,15 +58,10 @@
 #endif
 #include "settings.h"
 #include "Assets.h"
-#ifdef HAS_FLIPPER_LED
-  #include "flipperLED.h"
-#elif defined(XIAO_ESP32_S3)
-  #include "xiaoLED.h"
-#elif defined(MARAUDER_M5STICKC)
-  #include "stickcLED.h"
-#elif defined(HAS_NEOPIXEL_LED)
-  #include "LedInterface.h"
-#endif
+
+//#ifdef HAS_LED
+  #include "LED.h"
+//#endif
 
 //#include <WiFiClientSecure.h>
 //#include "mbedtls/sha256.h"
@@ -228,15 +223,6 @@ extern Buffer buffer_obj;
   extern BatteryInterface battery_obj;
 #endif
 extern Settings settings_obj;
-#ifdef HAS_FLIPPER_LED
-  extern flipperLED flipper_led;
-#elif defined(XIAO_ESP32_S3)
-  extern xiaoLED xiao_led;
-#elif defined(MARAUDER_M5STICKC)
-  extern stickcLED stickc_led;
-#elif defined(HAS_NEOPIXEL_LED)
-  extern LedInterface led_obj;
-#endif
 
 esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx, const void *buffer, int len, bool en_sys_seq);
 
@@ -597,7 +583,6 @@ class WiFiScan
     void displayTargetFilter();
     void displayTransmitRate();
     void prepareScanStage(uint16_t color_1, uint16_t color_2);
-    void setLEDMode(int mode);
     void setWiFiMode(wifi_mode_t mode, wifi_promiscuous_cb_t cb);
     void writeNetworkInfo();
     void setupScanDisplayArea(uint16_t background, uint16_t color);
