@@ -9867,6 +9867,282 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
     return TFT_RED;
 }
 
+// Upload one log file to WDG Wars.
+// Mirrors backendUpload() but uses X-API-Key auth and wdgwars.pl endpoint.
+/*bool WiFiScan::wdgwarsUpload(String filePath) {
+  //display.clearScreen();
+  //display.drawCenteredText("WDG Upload...", true);
+  delay(100);
+
+  if (!SD.exists(filePath)) {
+    //display.drawCenteredText(filePath + " not found", true);
+    Serial.println("[WDG] File not found: " + filePath);
+    return false;
+  }
+
+  String apiKey = settings_obj.loadSetting<String>(WDG_KEY_NAME);
+  if (apiKey.isEmpty()) {
+    //display.clearScreen();
+    //display.drawCenteredText("No WDG API key", true);
+    Serial.println("[WDG] No WDG Wars API key configured");
+    return false;
+  }
+
+  File fileToUpload = SD.open(filePath);
+  if (!fileToUpload) {
+    //display.clearScreen();
+    //display.drawCenteredText("Could not open file", true);
+    Serial.println("[WDG] Could not open: " + filePath);
+    return false;
+  }
+
+  // Build multipart body
+  String boundary   = "----ESP32BOUNDARY";
+  String part1      = "--" + boundary + "\r\n";
+  part1 += "Content-Disposition: form-data; name=\"file\"; filename=\"" +
+           filePath + "\"\r\n";
+  part1 += "Content-Type: application/octet-stream\r\n\r\n";
+  String part2      = "\r\n--" + boundary + "--\r\n";
+  int totalLength   = part1.length() + fileToUpload.size() + part2.length();
+
+  Serial.println("[WDG] File size: " + String(fileToUpload.size()));
+  Serial.println("[WDG] Total length: " + String(totalLength));
+
+  client->setInsecure();
+  if (!client->connect("wdgwars.pl", 443)) {
+    fileToUpload.close();
+    client->stop();
+    //display.clearScreen();
+    //display.drawCenteredText("WDG connect fail", true);
+    Serial.println("[WDG] Failed to connect to wdgwars.pl");
+    return false;
+  }
+
+  // HTTP request
+  client->println("POST /api/v2/upload-csv HTTP/1.1");
+  client->println("Host: wdgwars.pl");
+  client->println("User-Agent: ESP32Uploader/1.0");
+  client->println("Accept: application/json");
+  client->println("X-API-Key: " + apiKey);
+  client->println("Content-Type: multipart/form-data; boundary=" + boundary);
+  client->print("Content-Length: ");
+  client->println(totalLength);
+  client->println();
+
+  // Send body
+  client->print(part1);
+
+  const size_t CHUNK = 4096;
+  uint8_t buf[CHUNK];
+  size_t totalSent = 0;
+  uint8_t pct = 0;
+  String pctStr;
+
+  while (fileToUpload.available()) {
+    size_t n = fileToUpload.read(buf, CHUNK);
+    totalSent += n;
+    client->write(buf, n);
+    pct = (totalSent * 100) / fileToUpload.size();
+    //display.tft->drawRect(0, (TFT_HEIGHT / 3) * 2, TFT_WIDTH, TFT_HEIGHT - (TFT_HEIGHT / 3) * 2, ST77XX_BLACK);
+    //display.tft->setCursor(0, (TFT_HEIGHT / 3) * 2);
+    pctStr = String(pct) + "%";
+    //display.drawCenteredText(pctStr, false);
+  }
+
+  client->print(part2);
+  fileToUpload.close();
+
+  Serial.println("[WDG] Bytes sent: " + String(totalSent));
+
+  // Read response
+  String response;
+  unsigned long t = millis();
+  while (millis() - t < 5000) {
+    while (client->available()) {
+      char c = client->read();
+      response += c;
+    }
+    if (!client->connected() && !client->available())
+      break;
+  }
+  client->stop();
+
+  // Capture first 200 chars of response for log viewer
+  String respTrunc = response.length() > 200 ? response.substring(0, 200) : response;
+  Serial.println("[WDG] Response: " + respTrunc);
+
+  // WDG Wars returns 200 on success
+  bool ok = response.indexOf("202 Accepted") >= 0 ||
+  response.indexOf("\"ok\":true") >= 0;
+
+  //display.clearScreen();
+  //display.drawCenteredText(ok ? "WDG OK" : "WDG Failed", true);
+  delay(1000);
+
+  return ok;
+}*/
+
+// Upload one log file to Wigle
+/*bool WiFiScan::wigleUpload(String filePath) {
+  //server.begin();
+
+  //display.clearScreen();
+  //display.drawCenteredText("Wigle Upload...", true);
+
+  delay(100);
+
+  if (!SD.exists(filePath)) {
+    //display.clearScreen();
+    //display.drawCenteredText(filePath + " not found", true);
+    Serial.println("File does not exist: " + filePath);
+    return false;
+  }
+
+  File fileToUpload = SD.open(filePath);
+  if (!fileToUpload) {
+    //display.clearScreen();
+    //display.drawCenteredText("Could not open file", true);
+    Serial.println("Could not open file: " + filePath);
+    return false;
+  }
+
+  // Load credentials
+  String username = settings_obj.loadSetting<String>("wu");
+  String token = settings_obj.loadSetting<String>("wt");
+  if (username.isEmpty() || token.isEmpty()) {
+    fileToUpload.close();
+    //display.clearScreen();
+    //display.drawCenteredText("No wigle creds", true);
+    Serial.println("Missing wigle credentials");
+    return false;
+  }
+
+  Serial.println("Username: " + username);
+  Serial.println("Token: " + token);
+
+  String boundary = "----ESP32BOUNDARY";
+  String contentType = "multipart/form-data; boundary=" + boundary;
+
+  // Build parts
+  String part1 = "--" + boundary + "\r\n";
+  part1 += "Content-Disposition: form-data; name=\"file\"; filename=\"" + filePath + "\"\r\n";
+  part1 += "Content-Type: application/octet-stream\r\n\r\n";
+
+  String part2 = "\r\n--" + boundary + "\r\n";
+  part2 += "Content-Disposition: form-data; name=\"donate\"\r\n\r\non\r\n";
+
+  String part3 = "--" + boundary + "--\r\n";
+
+  int totalLength = part1.length() + fileToUpload.size() + part2.length() + part3.length();
+
+  Serial.println("part1.length(): " + String(part1.length()));
+  Serial.println("fileToUpload.size(): " + String(fileToUpload.size()));
+  Serial.println("part2.length(): " + String(part2.length()));
+  Serial.println("part3.length(): " + String(part3.length()));
+  Serial.println("Total Content-Length: " + String(totalLength));
+
+  Serial.print("File size: ");
+  Serial.println(fileToUpload.size());
+
+  // Connect manually via WiFiClientSecure
+  //WiFiClientSecure *client = new WiFiClientSecure();
+  //client.stop();
+  client->setInsecure();
+
+  if (!client->connect("api.wigle.net", 443)) {
+    fileToUpload.close();
+    //delete client;
+    client->stop();
+    //display.clearScreen();
+    //display.drawCenteredText("Could not connect", true);
+    Serial.println("Failed to connected to api.wigle.net");
+    return false;
+  }
+
+  Serial.println("Connected");
+
+  // Compose headers
+  String auth = base64Encode(username + ":" + token);
+
+  Serial.println("Finished encoding");
+
+  client->println("POST /api/v2/file/upload HTTP/1.1");
+  client->println("Host: api.wigle.net");
+  client->println("User-Agent: ESP32Uploader/1.0");
+  client->println("Accept: application/json");
+  client->println("Authorization: Basic " + auth);
+  client->println("Content-Type: " + contentType);
+  client->print("Content-Length: ");
+  client->println(totalLength);
+  client->println();
+  delay(100);
+
+  Serial.println("Finished sending header");
+
+  // Send body
+  client->print(part1);
+  const size_t BUFFER_SIZE = 4096; // 1KB at a time
+  uint8_t buffer[BUFFER_SIZE];
+
+  Serial.println("Finished sending part1");
+
+  uint8_t percent_sent = 0;
+
+  String display_percent = "";
+
+  size_t totalBytesSent = 0;
+  while (fileToUpload.available()) {
+    size_t bytesRead = fileToUpload.read(buffer, BUFFER_SIZE);
+    totalBytesSent += bytesRead;
+    Serial.print("Writing ");
+    Serial.print(totalBytesSent);
+    Serial.println(" bytes...");
+    percent_sent = (totalBytesSent * 100) / fileToUpload.size();
+    //display.tft->drawRect(0, (TFT_HEIGHT / 3) * 2, TFT_WIDTH, TFT_HEIGHT, ST77XX_BLACK);
+    //display.tft->setCursor(0, (TFT_HEIGHT / 3) * 2);
+    display_percent = (String)percent_sent + "%";
+    //display.drawCenteredText(display_percent, false);
+    client->write(buffer, bytesRead);
+  }
+
+  Serial.println("Uploaded file bytes: " + String(totalBytesSent));
+
+  client->print(part2);
+  client->print(part3);
+
+  Serial.println("Finished sending part2 and part3");
+
+  fileToUpload.close();
+
+
+  // Read response
+  String response;
+  unsigned long timeout = millis();
+  while (millis() - timeout < 5000) {
+    while (client->available()) {
+      char c = client->read();
+      response += c;
+    }
+  }
+
+  if (millis() - timeout > 5000)
+    Serial.println("Timeout reached");
+  if (!client->connected())
+    Serial.println("Client disconnected");
+      
+  client->stop();
+
+  String respTrunc = response.length() > 200 ? response.substring(0, 200) : response;
+  Serial.println("[WIGLE] Response: " + respTrunc);
+
+  bool ok = response.indexOf("200 OK") >= 0;
+
+  //display.clearScreen();
+  //display.drawCenteredText(ok ? "WIGLE OK" : "WIGLE Failed", true);
+
+  return ok;
+}*/
+
 // Function for updating scan status
 void WiFiScan::main(uint32_t currentTime)
 {
