@@ -218,6 +218,7 @@ uint32_t currentTime  = 0;
 void setup()
 {
 
+
   // https://github.com/Xinyuan-LilyGO/T-HMI/issues/34
   // T-HMI : latch power on if on battery
   // Prevent StickCP2 from turning off when disconnect USB cable
@@ -265,12 +266,22 @@ void setup()
   while(!Serial && millis() < 2000) {
     delay(500);
   }
-
 #else
   while(!Serial)
       delay(10);
-
 #endif
+
+  #ifdef ENABLE_PM
+    log_d("Setting up power saving");
+    // 1. Define the power management settings
+    esp_pm_config_t pm_config = {
+      .max_freq_mhz = 240,        // Max CPU frequency in MHz (e.g., 240, 160, 80)
+      .min_freq_mhz = 160,         // Min CPU frequency in MHz (XTAL frequency)
+      .light_sleep_enable = true  // true to automatically enter Light-sleep on idle
+    };
+    // 2. Apply the configuration
+    ESP_ERROR_CHECK(esp_pm_configure(&pm_config));
+  #endif
 
   #ifdef HAS_C5_SD
     sharedSPI.begin(SD_SCK, SD_MISO, SD_MOSI);
