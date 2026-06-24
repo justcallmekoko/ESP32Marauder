@@ -1653,7 +1653,7 @@ void MenuFunctions::RunSetup()
   this->addNodes(&mainMenu, text_table1[30], TFTLIGHTGREY, REBOOT, []() {
     ESP.restart();
   });
-  this->addNodes(&mainMenu, "Power Off", TFTLIGHTGREY, NULL, SHUTDOWN, []() {
+  this->addNodes(&mainMenu, "Power Off", TFTLIGHTGREY, SHUTDOWN, []() {
       shutdown();
   });
 
@@ -1669,7 +1669,7 @@ void MenuFunctions::RunSetup()
     this->changeMenu(&wifiScannerMenu, true);
   });
   /*#ifdef HAS_GPS
-    this->addNodes(&wifiMenu, "Wardriving", TFTGREEN, NULL, BEACON_SNIFF, [this]() {
+    this->addNodes(&wifiMenu, "Wardriving", TFTGREEN, BEACON_SNIFF, [this]() {
       this->changeMenu(&wardrivingMenu, true);
     });
   #endif*/
@@ -1860,7 +1860,7 @@ void MenuFunctions::RunSetup()
   // Build Wardriving menu
   #ifdef HAS_GPS
     /*wardrivingMenu.parentMenu = &wifiMenu; // Main Menu is second menu parent
-    this->addNodes(&wardrivingMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+    this->addNodes(&wardrivingMenu, text09, TFTLIGHTGREY, 0, [this]() {
       this->changeMenu(wardrivingMenu.parentMenu, true);
     });*/
     if (gps_obj.getGpsModuleStatus()) {
@@ -1873,7 +1873,7 @@ void MenuFunctions::RunSetup()
   #endif
   /*#ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
-      this->addNodes(&wardrivingMenu, "Station Wardrive", TFTORANGE, NULL, PROBE_SNIFF, [this]() {
+      this->addNodes(&wardrivingMenu, "Station Wardrive", TFTORANGE, PROBE_SNIFF, [this]() {
         display_obj.clearScreen();
         this->drawStatusBar();
         wifi_scan_obj.StartScan(WIFI_SCAN_STATION_WAR_DRIVE, TFT_ORANGE);
