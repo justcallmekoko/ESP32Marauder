@@ -43,6 +43,9 @@ extern LinkedList<ProbeReqSsid>* probe_req_ssids;
 extern const String PROGMEM version_number;
 extern const String PROGMEM board_target;
 
+extern void shutdown();
+extern void DeepSleep(int8_t wakeup_but);
+
 //// Commands
 
 // Admin
@@ -59,6 +62,7 @@ const char PROGMEM GPS_CMD[] = "gps";
 const char PROGMEM NMEA_CMD[] = "nmea";
 const char PROGMEM GPS_POI_CMD[] = "gpspoi";
 const char PROGMEM GPS_TRACKER_CMD[] = "gpstracker";
+const char PROGMEM SHUTDOWN_CMD[] = "shutdown";
 
 // WiFi sniff/scan
 const char PROGMEM EVIL_PORTAL_CMD[] = "evilportal";
@@ -135,6 +139,7 @@ const char PROGMEM HELP_GPS_CMD[] = "gps [-t] [-g] <fix/sat/lon/lat/alt/date/acc
 const char PROGMEM HELP_GPS_POI_CMD[] = "gpspoi -s/-m/-e";
 const char PROGMEM HELP_GPS_TRACKER_CMD[] = "gpstracker -c <start/stop>";
 const char PROGMEM HELP_NMEA_CMD[] = "nmea";
+const char PROGMEM HELP_SHUTDOWN_CMD[] = "shutdown";
 
 // WiFi sniff/scan
 const char PROGMEM HELP_EVIL_PORTAL_CMD[] = "evilportal [-c start [-w html.html]/sethtml <html.html>]";
