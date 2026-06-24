@@ -49,7 +49,7 @@ extern BatteryInterface battery_obj;
 extern Settings settings_obj;
 
 extern void shutdown();
-extern void DeepSleep(int8_t wakeup_but = -1);
+extern void DeepSleep(int8_t);
 
 #define FLASH_BUTTON 0
 

@@ -119,6 +119,60 @@ const String PROGMEM version_number = MARAUDER_VERSION;
 uint32_t currentTime  = 0;
 
 #if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
+
+  void DeepSleep(int8_t wakeup_but = -1) {
+
+    // 1. Disconnect from the network gracefully
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    esp_wifi_stop();
+
+    #ifdef HAS_BT
+      // This handles stopping and deinitializing BT gracefully
+      // esp_bluedroid_disable();
+      esp_bt_controller_disable();
+      esp_bt_controller_deinit();
+    #endif
+
+    // Should we isolate  pins with external pull-up resistors
+    // to minimize current consumption.
+    // #ifdef I2C_SDA
+    //   rtc_gpio_isolate(I2C_SDA);
+    //   rtc_gpio_isolate(I2C_SCL);
+    // #endif
+
+    // Code specific to the classic ESP32 (e.g., WROOM-32) goes here
+    // #ifdef CONFIG_IDF_TARGET_ESP32
+    // rtc_gpio_isolate(GPIO_NUM_12);
+    // 18 19 5 23 10 33 32 16 17 20 
+    esp_sleep_config_gpio_isolate();
+    
+    if (wakeup_but >= 0) {
+      gpio_hold_dis((gpio_num_t) wakeup_but);
+      pinMode(wakeup_but, INPUT_PULLUP);
+
+    // Configure the wake-up source: wake up when GPIO 0 goes LOW (button press)
+    #if SOC_PM_SUPPORT_EXT_WAKEUP
+	// For classic ESP32 which supports EXT0 (e.g., ESP32)
+        esp_sleep_enable_ext0_wakeup((gpio_num_t)wakeup_but, 0); // 0 means LOW
+    #elif SOC_PM_SUPPORT_GPIO_WAKEUP
+       // For newer chips that use generic GPIO wakeup (e.g., ESP32-C3, ESP32-S3)
+      esp_deep_sleep_enable_gpio_wakeup((1ULL << wakeup_but), ESP_GPIO_WAKEUP_GPIO_LOW);
+    #else
+      #warning "Unsupported sleep/wakeup architecture on this chip"
+    #endif
+
+
+    }
+
+    Serial.println("Going to sleep now...");
+    Serial.flush();
+    delay(100); // Give serial monitor time to flush
+
+    // Enter deep sleep
+    esp_deep_sleep_start();
+  }
+
   void shutdown() {
     #ifdef POWER_HOLD_PIN
         // T-HMI
@@ -135,78 +189,8 @@ uint32_t currentTime  = 0;
         DeepSleep(0);
     #endif
   }
+// #endif  // SHUTDOWN
 
-  void DeepSleep(int8_t wakeup_but) {
-
-    const char good_Night_msg[] = "Going to sleep now...";
-
-    Serial.println(good_Night_msg);
-    Serial.flush();
-
-    #ifdef HAS_SCREEN
-      display_obj.tft.fillScreen(TFT_BLACK);
-      #if !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
-	display_obj.tft.drawCentreString(good_Night_msg, TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
-      #else
-	display_obj.tft.drawCentreString(good_Night_msg, TFT_HEIGHT/2, TFT_WIDTH * 0.33, 4);
-      #endif
-    #endif
-
-    delay(1100); // Give serial monitor time to flush
-
-    // Disconnect from the network gracefully
-    WiFi.disconnect(true);
-    WiFi.mode(WIFI_OFF);
-    
-    // This handles stopping and deinitializing BT gracefully
-    btStop(); 
-
-    // Explicitly stop the WiFi driver to save power
-    esp_wifi_stop();
-
-   #ifdef HAS_FLIPPER_LED
-      flipper_led.offLED();
-    #elif defined(XIAO_ESP32_S3)
-      xiao_led.offLED();
-    #elif defined(MARAUDER_M5STICKC)
-      stickc_led.offLED();
-    #elif defined(HAS_NEOPIXEL_LED)
-      led_obj.setMode(MODE_OFF);
-    #endif
-
-    #ifdef HAS_SCREEN
-      backlightOff();
-    #endif
-
-    // Should we isolate  pins with external pull-up resistors
-    // to minimize current consumption.
-    // rtc_gpio_isolate(I2C_SDA);
-    // rtc_gpio_isolate(I2C_SCL);
-
-    // Code specific to the classic ESP32 (e.g., WROOM-32) goes here
-    // #ifdef CONFIG_IDF_TARGET_ESP32
-    //   rtc_gpio_isolate(GPIO_NUM_12);
-    // #endif
-
-
-
-
-
-    if (wakeup_but >= 0) {
-      pinMode(wakeup_but, INPUT_PULLUP);
-
-      // Configure the wake-up source: wake up when GPIO 0 goes LOW (button press)
-      esp_sleep_enable_ext0_wakeup((gpio_num_t) wakeup_but, 0); // 0 means LOW
-    } else {
-      // If we don't have a wake up pin, we should just isolate them all..
-      esp_sleep_config_gpio_isolate();
-    }
-
-    delay(1100); // Give serial monitor time to flush
-
-    // Enter deep sleep
-    esp_deep_sleep_start();
-  }
 #endif  // SHUTDOWN
 
 
