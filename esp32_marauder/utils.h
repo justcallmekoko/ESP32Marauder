@@ -9,6 +9,7 @@
 #include "configs.h"
 
 #include "esp_heap_caps.h"
+#include "mbedtls/base64.h"
 
 struct mac_addr {
    unsigned char bytes[6];
@@ -254,6 +255,14 @@ inline IPAddress getPrevIP(IPAddress currentIP, IPAddress subnetMask, uint16_t s
 
 inline uint16_t getNextPort(uint16_t port) {
   return port + 1;
+}
+
+String base64Encode(const String& input) {
+  size_t outputLen;
+  unsigned char output[256];
+  mbedtls_base64_encode(output, sizeof(output), &outputLen,
+                        (const unsigned char*)input.c_str(), input.length());
+  return String((char*)output).substring(0, outputLen);
 }
 
 #endif

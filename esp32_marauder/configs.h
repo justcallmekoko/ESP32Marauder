@@ -44,7 +44,7 @@
 
   #define JSON_SETTING_SIZE 2048
 
-  #define MARAUDER_VERSION "v1.12.2"
+  #define MARAUDER_VERSION "v1.12.3"
 
   #define GRAPH_REFRESH   100
 
@@ -2875,6 +2875,11 @@
     #elif defined(HAS_TP4057)
       #undef HAS_AXP2101
       #undef HAS_IP5306
+      #undef HAS_MAX1704X
+      #undef HAS_AXP192
+
+    #elif defined(HAS_IP5306)
+      #undef HAS_AXP2101
       #undef HAS_MAX1704X
       #undef HAS_AXP192
 
