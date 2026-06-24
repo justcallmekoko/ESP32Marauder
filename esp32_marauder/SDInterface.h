@@ -12,7 +12,8 @@
 
 #ifdef HAS_SDMMC
   #include <SD_MMC.h>
-  extern fs::SDMMCFS& SD = SD_MMC;
+//  extern fs::SDMMCFS& SD = SD_MMC;
+  #define SD SD_MMC    // preprocessor substitution, not a variable definition
 #else
   #include "SD.h"
 #endif
