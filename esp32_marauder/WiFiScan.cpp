@@ -9985,7 +9985,7 @@ String WiFiScan::loadWdgKeyFromSD(bool saveSetting) {
   return "";
 }
 
-bool WiFiScan::wdgwarsUpload(String filePath) {
+bool WiFiScan::wdgwarsUpload(String filePath, String* resultMessage) {
   #ifdef HAS_SCREEN
     display_obj.clearScreen();
     display_obj.showCenterText("WDG Upload...", TFT_HEIGHT / 2);
@@ -9998,6 +9998,8 @@ bool WiFiScan::wdgwarsUpload(String filePath) {
       display_obj.showCenterText("Join WiFi First", TFT_HEIGHT / 2);
     #endif
     Serial.println("[WDG] WiFi is not connected as station. Status: " + String(WiFi.status()) + " Mode: " + String(WiFi.getMode()) + " IP: " + WiFi.localIP().toString() + " AP IP: " + WiFi.softAPIP().toString());
+    if (resultMessage != nullptr)
+      *resultMessage = "Join WiFi First";
     delay(1500);
     return false;
   }
@@ -10008,6 +10010,8 @@ bool WiFiScan::wdgwarsUpload(String filePath) {
       display_obj.showCenterText("File Not Found", TFT_HEIGHT / 2);
     #endif
     Serial.println("[WDG] File not found: " + filePath);
+    if (resultMessage != nullptr)
+      *resultMessage = "File Not Found";
     delay(1500);
     return false;
   }
@@ -10023,6 +10027,8 @@ bool WiFiScan::wdgwarsUpload(String filePath) {
       display_obj.showCenterText("No WDG API Key", TFT_HEIGHT / 2);
     #endif
     Serial.println("[WDG] No WDG Wars API key configured");
+    if (resultMessage != nullptr)
+      *resultMessage = "No WDG API Key";
     delay(1500);
     return false;
   }
@@ -10034,6 +10040,8 @@ bool WiFiScan::wdgwarsUpload(String filePath) {
       display_obj.showCenterText("File Open Failed", TFT_HEIGHT / 2);
     #endif
     Serial.println("[WDG] Could not open: " + filePath);
+    if (resultMessage != nullptr)
+      *resultMessage = "File Open Failed";
     delay(1500);
     return false;
   }
@@ -10063,6 +10071,8 @@ bool WiFiScan::wdgwarsUpload(String filePath) {
       display_obj.showCenterText("WDG Connect Fail", TFT_HEIGHT / 2);
     #endif
     Serial.println("[WDG] Failed to connect to wdgwars.pl");
+    if (resultMessage != nullptr)
+      *resultMessage = "WDG Connect Fail";
     delay(1500);
     return false;
   }
@@ -10111,6 +10121,8 @@ bool WiFiScan::wdgwarsUpload(String filePath) {
         display_obj.showCenterText("WDG Send Failed", TFT_HEIGHT / 2);
       #endif
       Serial.println("[WDG] Short write while uploading");
+      if (resultMessage != nullptr)
+        *resultMessage = "WDG Send Failed";
       delay(1500);
       return false;
     }
@@ -10135,13 +10147,15 @@ bool WiFiScan::wdgwarsUpload(String filePath) {
   Serial.println("[WDG] Response: " + respTrunc);
 
   bool ok = wdgUploadResponseOK(response);
-  String resultMessage = ok ? "WDG Upload OK" : wdgUploadFailureMessage(response);
+  String resultMessageText = ok ? "WDG Upload OK" : wdgUploadFailureMessage(response);
+  if (resultMessage != nullptr)
+    *resultMessage = resultMessageText;
 
   #ifdef HAS_SCREEN
     display_obj.clearScreen();
-    display_obj.showCenterText(resultMessage.c_str(), TFT_HEIGHT / 2);
+    display_obj.showCenterText(resultMessageText.c_str(), TFT_HEIGHT / 2);
   #endif
-  Serial.println(ok ? "[WDG] Upload OK" : "[WDG] Upload failed: " + resultMessage);
+  Serial.println(ok ? "[WDG] Upload OK" : "[WDG] Upload failed: " + resultMessageText);
   delay(2000);
 
   return ok;

@@ -1551,6 +1551,7 @@ void MenuFunctions::RunSetup()
   miniKbMenu.list = new LinkedList<MenuNode>();
   #ifdef HAS_SD
     sdDeleteMenu.list = new LinkedList<MenuNode>();
+    wdgResultMenu.list = new LinkedList<MenuNode>();
   #endif
 
   // Bluetooth menu stuff
@@ -1620,6 +1621,7 @@ void MenuFunctions::RunSetup()
 
   #ifdef HAS_SD
     sdDeleteMenu.name = "Delete SD Files";
+    wdgResultMenu.name = "WDG Result";
   #endif
 
   selectProbeSSIDsMenu.name = "Probe Requests";
@@ -3465,7 +3467,7 @@ void MenuFunctions::setupSDFileList(bool update, bool wdg_upload) {
     for (int x = (int)sd_obj.sd_files->size() - 1; x >= 0; x--) {
       String file_name = sd_obj.sd_files->get(x);
       file_name.toLowerCase();
-      if (!file_name.endsWith(".csv") && !file_name.endsWith(".log"))
+      if (!file_name.endsWith(".log") || (file_name.indexOf("wardrive_") < 0))
         sd_obj.sd_files->remove(x);
     }
   }
@@ -3520,9 +3522,10 @@ void MenuFunctions::buildSDFileMenu(bool update, bool wdg_upload) {
     for (int x = 0; x < sd_obj.sd_files->size(); x++) {
       this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x).c_str(), TFTGREEN, SD_UPDATE, [this, x]() {
         String upload_path = "/" + sd_obj.sd_files->get(x);
-        wifi_scan_obj.wdgwarsUpload(upload_path);
-        this->buildSDFileMenu(false, true);
-        this->changeMenu(&sdDeleteMenu, true);
+        String uploadResult = "WDG Upload Failed";
+        wifi_scan_obj.wdgwarsUpload(upload_path, &uploadResult);
+        this->buildWDGResultMenu(uploadResult);
+        this->changeMenu(&wdgResultMenu, true);
       });
     }
   }
@@ -3545,6 +3548,20 @@ void MenuFunctions::buildSDFileMenu(bool update, bool wdg_upload) {
       });
     }
   }
+}
+
+void MenuFunctions::buildWDGResultMenu(String resultMessage) {
+  wdgResultMenu.parentMenu = &sdDeleteMenu;
+  wdgResultMenu.list->clear();
+  delete wdgResultMenu.list;
+  wdgResultMenu.list = new LinkedList<MenuNode>();
+
+  this->addNodes(&wdgResultMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(wdgResultMenu.parentMenu, true);
+  });
+
+  uint8_t resultColor = resultMessage.indexOf("OK") >= 0 ? TFTGREEN : TFTRED;
+  this->addNodes(&wdgResultMenu, resultMessage.c_str(), resultColor, SD_UPDATE, []() {});
 }
 
 

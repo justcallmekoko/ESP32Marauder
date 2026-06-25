@@ -870,7 +870,7 @@ class WiFiScan
     bool startWiFi(String ssid, String password, bool gui = true);
     #ifdef HAS_SD
       String loadWdgKeyFromSD(bool saveSetting = true);
-      bool wdgwarsUpload(String filePath);
+      bool wdgwarsUpload(String filePath, String* resultMessage = nullptr);
     #endif
     bool isFlockCamera(const uint8_t* payload, size_t len, const String& name, String* serial_out);
     uint16_t rssiToColor(int8_t rssi);
