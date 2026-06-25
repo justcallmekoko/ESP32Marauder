@@ -1795,6 +1795,7 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui) {
   this->showNetworkInfo();
 
   this->wifi_initialized = true;
+  this->wifi_connected = true;
   #ifndef HAS_TOUCH
     this->currentScanMode = WIFI_CONNECTED;
     #ifdef HAS_SCREEN
@@ -1854,6 +1855,7 @@ bool WiFiScan::startWiFi(String ssid, String password, bool gui) {
   this->showNetworkInfo();
 
   this->wifi_initialized = true;
+  this->wifi_connected = true;
   this->currentScanMode = WIFI_CONNECTED;
   #ifdef HAS_SCREEN
     display_obj.tft.setTextWrap(false, false);
@@ -9878,9 +9880,9 @@ bool WiFiScan::wdgwarsUpload(String filePath) {
   if (WiFi.status() != WL_CONNECTED) {
     #ifdef HAS_SCREEN
       display_obj.clearScreen();
-      display_obj.showCenterText("WiFi Not Connected", TFT_HEIGHT / 2);
+      display_obj.showCenterText("Join WiFi First", TFT_HEIGHT / 2);
     #endif
-    Serial.println("[WDG] WiFi is not connected");
+    Serial.println("[WDG] WiFi is not connected as station. Status: " + String(WiFi.status()) + " Mode: " + String(WiFi.getMode()) + " IP: " + WiFi.localIP().toString() + " AP IP: " + WiFi.softAPIP().toString());
     delay(1500);
     return false;
   }

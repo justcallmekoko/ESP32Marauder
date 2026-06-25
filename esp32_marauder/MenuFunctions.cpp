@@ -2779,6 +2779,39 @@ void MenuFunctions::RunSetup()
 
       this->changeMenu(&sdDeleteMenu, true);
     });
+
+    this->addNodes(&deviceMenu, "WDG API Key", TFTGREEN, KEYBOARD_ICO, [this]() {
+      settings_obj.loadSetting<String>(WDG_KEY_NAME);
+
+      #ifdef HAS_TOUCH
+        char apiKeyBuf[192] = {0};
+        String apiKey = settings_obj.loadSetting<String>(WDG_KEY_NAME);
+        apiKey.toCharArray(apiKeyBuf, sizeof(apiKeyBuf));
+
+        if (keyboardInput(apiKeyBuf, sizeof(apiKeyBuf), "WDG API Key")) {
+          settings_obj.saveSetting<bool>(WDG_KEY_NAME, String(apiKeyBuf));
+          display_obj.clearScreen();
+          display_obj.showCenterText("WDG Key Saved", TFT_HEIGHT / 2);
+          delay(1500);
+        }
+      #elif defined(HAS_MINI_KB)
+        miniKbMenu.parentMenu = &deviceMenu;
+        this->changeMenu(&miniKbMenu, true);
+        String apiKey = this->miniKeyboard(&miniKbMenu, true);
+        if (apiKey != "") {
+          settings_obj.saveSetting<bool>(WDG_KEY_NAME, apiKey);
+          display_obj.clearScreen();
+          display_obj.showCenterText("WDG Key Saved", TFT_HEIGHT / 2);
+          delay(1500);
+        }
+      #else
+        display_obj.clearScreen();
+        display_obj.showCenterText("No Keyboard", TFT_HEIGHT / 2);
+        delay(1500);
+      #endif
+
+      this->changeMenu(&deviceMenu, true);
+    });
   #endif
 
   this->addNodes(&deviceMenu, "Save/Load Files", TFTCYAN, SD_UPDATE, [this]() {
