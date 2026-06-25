@@ -9888,7 +9888,7 @@ bool WiFiScan::wdgwarsUpload(String filePath) {
   if (!SD.exists(filePath)) {
     #ifdef HAS_SCREEN
       display_obj.clearScreen();
-      display_obj.showCenterText("CSV Not Found", TFT_HEIGHT / 2);
+      display_obj.showCenterText("File Not Found", TFT_HEIGHT / 2);
     #endif
     Serial.println("[WDG] File not found: " + filePath);
     delay(1500);
@@ -9910,7 +9910,7 @@ bool WiFiScan::wdgwarsUpload(String filePath) {
   if (!fileToUpload) {
     #ifdef HAS_SCREEN
       display_obj.clearScreen();
-      display_obj.showCenterText("CSV Open Failed", TFT_HEIGHT / 2);
+      display_obj.showCenterText("File Open Failed", TFT_HEIGHT / 2);
     #endif
     Serial.println("[WDG] Could not open: " + filePath);
     delay(1500);

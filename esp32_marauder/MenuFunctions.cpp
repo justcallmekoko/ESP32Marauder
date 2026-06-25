@@ -3408,8 +3408,15 @@ void MenuFunctions::setupSDFileList(bool update, bool wdg_upload) {
 
   sd_obj.sd_files = new LinkedList<String>();
 
-  if (wdg_upload)
-    sd_obj.listDirToLinkedList(sd_obj.sd_files, "/", ".csv");
+  if (wdg_upload) {
+    sd_obj.listDirToLinkedList(sd_obj.sd_files);
+    for (int x = (int)sd_obj.sd_files->size() - 1; x >= 0; x--) {
+      String file_name = sd_obj.sd_files->get(x);
+      file_name.toLowerCase();
+      if (!file_name.endsWith(".csv") && !file_name.endsWith(".log"))
+        sd_obj.sd_files->remove(x);
+    }
+  }
   else if (!update)
     sd_obj.listDirToLinkedList(sd_obj.sd_files);
   else
@@ -3424,7 +3431,7 @@ void MenuFunctions::buildSDFileMenu(bool update, bool wdg_upload) {
   sdDeleteMenu.list = new LinkedList<MenuNode>();
 
   if (wdg_upload)
-    sdDeleteMenu.name = "WDG CSV Files";
+    sdDeleteMenu.name = "WDG Files";
   else if (!update)
     sdDeleteMenu.name = "SD Files";
   else
@@ -3455,7 +3462,7 @@ void MenuFunctions::buildSDFileMenu(bool update, bool wdg_upload) {
 
   if (wdg_upload) {
     if (sd_obj.sd_files->size() == 0) {
-      this->addNodes(&sdDeleteMenu, "No CSV Files", TFTLIGHTGREY, 0, []() {});
+      this->addNodes(&sdDeleteMenu, "No WDG Files", TFTLIGHTGREY, 0, []() {});
     }
 
     for (int x = 0; x < sd_obj.sd_files->size(); x++) {
