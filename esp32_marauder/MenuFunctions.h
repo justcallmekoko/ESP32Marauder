@@ -159,7 +159,9 @@ class MenuFunctions
     Menu specSettingMenu;
     //Menu languageMenu;
     Menu sdDeleteMenu;
-    Menu wdgResultMenu;
+    #if defined(HAS_SD) && defined(HAS_WDG_UPLOAD)
+      Menu wdgResultMenu;
+    #endif
 
     // WiFi menu stuff
     Menu wifiSnifferMenu;
@@ -203,7 +205,9 @@ class MenuFunctions
 
     void setupSDFileList(bool update = false, bool wdg_upload = false);
     void buildSDFileMenu(bool update = false, bool wdg_upload = false);
-    void buildWDGResultMenu(String resultMessage);
+    #if defined(HAS_SD) && defined(HAS_WDG_UPLOAD)
+      void buildWDGResultMenu(String resultMessage);
+    #endif
     void displayMenuButtons();
     uint16_t getColor(uint16_t color);
     void drawAvgLine(int16_t value);

@@ -1551,7 +1551,9 @@ void MenuFunctions::RunSetup()
   miniKbMenu.list = new LinkedList<MenuNode>();
   #ifdef HAS_SD
     sdDeleteMenu.list = new LinkedList<MenuNode>();
-    wdgResultMenu.list = new LinkedList<MenuNode>();
+    #if defined(HAS_SD) && defined(HAS_WDG_UPLOAD)
+      wdgResultMenu.list = new LinkedList<MenuNode>();
+    #endif
   #endif
 
   // Bluetooth menu stuff
@@ -1621,7 +1623,9 @@ void MenuFunctions::RunSetup()
 
   #ifdef HAS_SD
     sdDeleteMenu.name = "Delete SD Files";
-    wdgResultMenu.name = "WDG Result";
+    #if defined(HAS_SD) && defined(HAS_WDG_UPLOAD)
+      wdgResultMenu.name = "WDG Result";
+    #endif
   #endif
 
   selectProbeSSIDsMenu.name = "Probe Requests";
@@ -2765,66 +2769,68 @@ void MenuFunctions::RunSetup()
       });
     }
 
-    this->addNodes(&deviceMenu, "WDG Upload", TFTGREEN, SD_UPDATE, [this]() {
-      display_obj.clearScreen();
-      display_obj.tft.setTextWrap(false);
-      display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-      display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-      display_obj.tft.println("Loading WDG files...");
-
-      if (!sd_obj.supported && !sd_obj.initSD()) {
+    #if defined(HAS_SD) && defined(HAS_WDG_UPLOAD)
+      this->addNodes(&deviceMenu, "WDG Upload", TFTGREEN, SD_UPDATE, [this]() {
         display_obj.clearScreen();
-        display_obj.showCenterText("SD Not Found", TFT_HEIGHT / 2);
-        delay(1500);
-        return;
-      }
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+        display_obj.tft.println("Loading WDG files...");
 
-      this->buildSDFileMenu(false, true);
+        if (!sd_obj.supported && !sd_obj.initSD()) {
+          display_obj.clearScreen();
+          display_obj.showCenterText("SD Not Found", TFT_HEIGHT / 2);
+          delay(1500);
+          return;
+        }
 
-      this->changeMenu(&sdDeleteMenu, true);
-    });
+        this->buildSDFileMenu(false, true);
 
-    this->addNodes(&deviceMenu, "WDG API Key", TFTGREEN, KEYBOARD_ICO, [this]() {
-      settings_obj.loadSetting<String>(WDG_KEY_NAME);
-      String sdApiKey = wifi_scan_obj.loadWdgKeyFromSD();
+        this->changeMenu(&sdDeleteMenu, true);
+      });
 
-      if (sdApiKey != "") {
-        display_obj.clearScreen();
-        display_obj.showCenterText("WDG Key Loaded", TFT_HEIGHT / 2);
-        delay(1500);
+      this->addNodes(&deviceMenu, "WDG API Key", TFTGREEN, KEYBOARD_ICO, [this]() {
+        settings_obj.loadSetting<String>(WDG_KEY_NAME);
+        String sdApiKey = wifi_scan_obj.loadWdgKeyFromSD();
+
+        if (sdApiKey != "") {
+          display_obj.clearScreen();
+          display_obj.showCenterText("WDG Key Loaded", TFT_HEIGHT / 2);
+          delay(1500);
+          this->changeMenu(&deviceMenu, true);
+          return;
+        }
+
+        #ifdef HAS_TOUCH
+          char apiKeyBuf[192] = {0};
+          String apiKey = settings_obj.loadSetting<String>(WDG_KEY_NAME);
+          apiKey.toCharArray(apiKeyBuf, sizeof(apiKeyBuf));
+
+          if (keyboardInput(apiKeyBuf, sizeof(apiKeyBuf), "WDG API Key")) {
+            settings_obj.saveSetting<bool>(WDG_KEY_NAME, String(apiKeyBuf));
+            display_obj.clearScreen();
+            display_obj.showCenterText("WDG Key Saved", TFT_HEIGHT / 2);
+            delay(1500);
+          }
+        #elif defined(HAS_MINI_KB)
+          miniKbMenu.parentMenu = &deviceMenu;
+          this->changeMenu(&miniKbMenu, true);
+          String apiKey = this->miniKeyboard(&miniKbMenu, true);
+          if (apiKey != "") {
+            settings_obj.saveSetting<bool>(WDG_KEY_NAME, apiKey);
+            display_obj.clearScreen();
+            display_obj.showCenterText("WDG Key Saved", TFT_HEIGHT / 2);
+            delay(1500);
+          }
+        #else
+          display_obj.clearScreen();
+          display_obj.showCenterText("No Keyboard", TFT_HEIGHT / 2);
+          delay(1500);
+        #endif
+
         this->changeMenu(&deviceMenu, true);
-        return;
-      }
-
-      #ifdef HAS_TOUCH
-        char apiKeyBuf[192] = {0};
-        String apiKey = settings_obj.loadSetting<String>(WDG_KEY_NAME);
-        apiKey.toCharArray(apiKeyBuf, sizeof(apiKeyBuf));
-
-        if (keyboardInput(apiKeyBuf, sizeof(apiKeyBuf), "WDG API Key")) {
-          settings_obj.saveSetting<bool>(WDG_KEY_NAME, String(apiKeyBuf));
-          display_obj.clearScreen();
-          display_obj.showCenterText("WDG Key Saved", TFT_HEIGHT / 2);
-          delay(1500);
-        }
-      #elif defined(HAS_MINI_KB)
-        miniKbMenu.parentMenu = &deviceMenu;
-        this->changeMenu(&miniKbMenu, true);
-        String apiKey = this->miniKeyboard(&miniKbMenu, true);
-        if (apiKey != "") {
-          settings_obj.saveSetting<bool>(WDG_KEY_NAME, apiKey);
-          display_obj.clearScreen();
-          display_obj.showCenterText("WDG Key Saved", TFT_HEIGHT / 2);
-          delay(1500);
-        }
-      #else
-        display_obj.clearScreen();
-        display_obj.showCenterText("No Keyboard", TFT_HEIGHT / 2);
-        delay(1500);
-      #endif
-
-      this->changeMenu(&deviceMenu, true);
-    });
+      });
+    #endif
   #endif
 
   this->addNodes(&deviceMenu, "Save/Load Files", TFTCYAN, SD_UPDATE, [this]() {
@@ -3462,16 +3468,19 @@ void MenuFunctions::setupSDFileList(bool update, bool wdg_upload) {
 
   sd_obj.sd_files = new LinkedList<String>();
 
-  if (wdg_upload) {
-    sd_obj.listDirToLinkedList(sd_obj.sd_files);
-    for (int x = (int)sd_obj.sd_files->size() - 1; x >= 0; x--) {
-      String file_name = sd_obj.sd_files->get(x);
-      file_name.toLowerCase();
-      if (!file_name.endsWith(".log") || (file_name.indexOf("wardrive_") < 0))
-        sd_obj.sd_files->remove(x);
+  #if defined(HAS_SD) && defined(HAS_WDG_UPLOAD)
+    if (wdg_upload) {
+      sd_obj.listDirToLinkedList(sd_obj.sd_files);
+      for (int x = (int)sd_obj.sd_files->size() - 1; x >= 0; x--) {
+        String file_name = sd_obj.sd_files->get(x);
+        file_name.toLowerCase();
+        if (!file_name.endsWith(".log") || (file_name.indexOf("wardrive_") < 0))
+          sd_obj.sd_files->remove(x);
+      }
     }
-  }
-  else if (!update)
+    else
+  #endif
+  if (!update)
     sd_obj.listDirToLinkedList(sd_obj.sd_files);
   else
     sd_obj.listDirToLinkedList(sd_obj.sd_files, "/", ".bin");
@@ -3484,9 +3493,12 @@ void MenuFunctions::buildSDFileMenu(bool update, bool wdg_upload) {
   delete sdDeleteMenu.list;
   sdDeleteMenu.list = new LinkedList<MenuNode>();
 
-  if (wdg_upload)
-    sdDeleteMenu.name = "WDG Files";
-  else if (!update)
+  #if defined(HAS_SD) && defined(HAS_WDG_UPLOAD)
+    if (wdg_upload)
+      sdDeleteMenu.name = "WDG Files";
+    else
+  #endif
+  if (!update)
     sdDeleteMenu.name = "SD Files";
   else
     sdDeleteMenu.name = "Bin Files";
@@ -3514,22 +3526,25 @@ void MenuFunctions::buildSDFileMenu(bool update, bool wdg_upload) {
     });
   }
 
-  if (wdg_upload) {
-    if (sd_obj.sd_files->size() == 0) {
-      this->addNodes(&sdDeleteMenu, "No WDG Files", TFTLIGHTGREY, 0, []() {});
-    }
+  #if defined(HAS_SD) && defined(HAS_WDG_UPLOAD)
+    if (wdg_upload) {
+      if (sd_obj.sd_files->size() == 0) {
+        this->addNodes(&sdDeleteMenu, "No WDG Files", TFTLIGHTGREY, 0, []() {});
+      }
 
-    for (int x = 0; x < sd_obj.sd_files->size(); x++) {
-      this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x).c_str(), TFTGREEN, SD_UPDATE, [this, x]() {
-        String upload_path = "/" + sd_obj.sd_files->get(x);
-        String uploadResult = "WDG Upload Failed";
-        wifi_scan_obj.wdgwarsUpload(upload_path, &uploadResult);
-        this->buildWDGResultMenu(uploadResult);
-        this->changeMenu(&wdgResultMenu, true);
-      });
+      for (int x = 0; x < sd_obj.sd_files->size(); x++) {
+        this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x).c_str(), TFTGREEN, SD_UPDATE, [this, x]() {
+          String upload_path = "/" + sd_obj.sd_files->get(x);
+          String uploadResult = "WDG Upload Failed";
+          wifi_scan_obj.wdgwarsUpload(upload_path, &uploadResult);
+          this->buildWDGResultMenu(uploadResult);
+          this->changeMenu(&wdgResultMenu, true);
+        });
+      }
     }
-  }
-  else if (!update) {
+    else
+  #endif
+  if (!update) {
     for (int x = 0; x < sd_obj.sd_files->size(); x++) {
       this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x).c_str(), TFTCYAN, SD_UPDATE, [this, x]() {
         // Change selection status of menu node
@@ -3550,19 +3565,21 @@ void MenuFunctions::buildSDFileMenu(bool update, bool wdg_upload) {
   }
 }
 
-void MenuFunctions::buildWDGResultMenu(String resultMessage) {
-  wdgResultMenu.parentMenu = &sdDeleteMenu;
-  wdgResultMenu.list->clear();
-  delete wdgResultMenu.list;
-  wdgResultMenu.list = new LinkedList<MenuNode>();
+#if defined(HAS_SD) && defined(HAS_WDG_UPLOAD)
+  void MenuFunctions::buildWDGResultMenu(String resultMessage) {
+    wdgResultMenu.parentMenu = &sdDeleteMenu;
+    wdgResultMenu.list->clear();
+    delete wdgResultMenu.list;
+    wdgResultMenu.list = new LinkedList<MenuNode>();
 
-  this->addNodes(&wdgResultMenu, text09, TFTLIGHTGREY, 0, [this]() {
-    this->changeMenu(wdgResultMenu.parentMenu, true);
-  });
+    this->addNodes(&wdgResultMenu, text09, TFTLIGHTGREY, 0, [this]() {
+      this->changeMenu(wdgResultMenu.parentMenu, true);
+    });
 
-  uint8_t resultColor = resultMessage.indexOf("OK") >= 0 ? TFTGREEN : TFTRED;
-  this->addNodes(&wdgResultMenu, resultMessage.c_str(), resultColor, SD_UPDATE, []() {});
-}
+    uint8_t resultColor = resultMessage.indexOf("OK") >= 0 ? TFTGREEN : TFTRED;
+    this->addNodes(&wdgResultMenu, resultMessage.c_str(), resultColor, SD_UPDATE, []() {});
+  }
+#endif
 
 
 // Function to add MenuNodes to a menu

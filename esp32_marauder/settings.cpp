@@ -451,11 +451,13 @@ bool Settings::createDefaultSettings(fs::FS &fs, bool spec, uint8_t index, const
     jsonBuffer["Settings"][7]["range"]["min"] = "";
     jsonBuffer["Settings"][7]["range"]["max"] = "";
 
-    jsonBuffer["Settings"][8]["name"] = WDG_KEY_NAME;
-    jsonBuffer["Settings"][8]["type"] = "String";
-    jsonBuffer["Settings"][8]["value"] = "";
-    jsonBuffer["Settings"][8]["range"]["min"] = "";
-    jsonBuffer["Settings"][8]["range"]["max"] = "";
+    #ifdef HAS_WDG_UPLOAD
+      jsonBuffer["Settings"][8]["name"] = WDG_KEY_NAME;
+      jsonBuffer["Settings"][8]["type"] = "String";
+      jsonBuffer["Settings"][8]["value"] = "";
+      jsonBuffer["Settings"][8]["range"]["min"] = "";
+      jsonBuffer["Settings"][8]["range"]["max"] = "";
+    #endif
 
     serializeJson(jsonBuffer, settingsFile);
     serializeJson(jsonBuffer, settings_string);

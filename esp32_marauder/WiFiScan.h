@@ -868,7 +868,7 @@ class WiFiScan
     String checkEmptyProbe(String essid);
     bool checkFlockOUI(const uint8_t mac[6]);
     bool startWiFi(String ssid, String password, bool gui = true);
-    #ifdef HAS_SD
+    #if defined(HAS_SD) && defined(HAS_WDG_UPLOAD)
       String loadWdgKeyFromSD(bool saveSetting = true);
       bool wdgwarsUpload(String filePath, String* resultMessage = nullptr);
     #endif

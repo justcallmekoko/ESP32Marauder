@@ -9869,7 +9869,7 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
     return TFT_RED;
 }
 
-#ifdef HAS_SD
+#if defined(HAS_SD) && defined(HAS_WDG_UPLOAD)
 static int wdgHttpStatusCode(String response) {
   int lineEnd = response.indexOf('\n');
   String statusLine = lineEnd >= 0 ? response.substring(0, lineEnd) : response;
