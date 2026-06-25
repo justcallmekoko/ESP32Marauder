@@ -2759,19 +2759,26 @@ void MenuFunctions::RunSetup()
 
         this->changeMenu(&sdDeleteMenu, true);
       });
-
-      this->addNodes(&deviceMenu, "WDG Upload", TFTGREEN, SD_UPDATE, [this]() {
-        display_obj.clearScreen();
-        display_obj.tft.setTextWrap(false);
-        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-        display_obj.tft.println("Loading CSV files...");
-
-        this->buildSDFileMenu(false, true);
-
-        this->changeMenu(&sdDeleteMenu, true);
-      });
     }
+
+    this->addNodes(&deviceMenu, "WDG Upload", TFTGREEN, SD_UPDATE, [this]() {
+      display_obj.clearScreen();
+      display_obj.tft.setTextWrap(false);
+      display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+      display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+      display_obj.tft.println("Loading WDG files...");
+
+      if (!sd_obj.supported && !sd_obj.initSD()) {
+        display_obj.clearScreen();
+        display_obj.showCenterText("SD Not Found", TFT_HEIGHT / 2);
+        delay(1500);
+        return;
+      }
+
+      this->buildSDFileMenu(false, true);
+
+      this->changeMenu(&sdDeleteMenu, true);
+    });
   #endif
 
   this->addNodes(&deviceMenu, "Save/Load Files", TFTCYAN, SD_UPDATE, [this]() {
@@ -3402,9 +3409,10 @@ void MenuFunctions::RunSetup()
 #endif
 
 void MenuFunctions::setupSDFileList(bool update, bool wdg_upload) {
-  sd_obj.sd_files->clear();
-
-  delete sd_obj.sd_files;
+  if (sd_obj.sd_files != NULL) {
+    sd_obj.sd_files->clear();
+    delete sd_obj.sd_files;
+  }
 
   sd_obj.sd_files = new LinkedList<String>();
 
