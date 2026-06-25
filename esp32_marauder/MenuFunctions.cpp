@@ -2388,7 +2388,9 @@ void MenuFunctions::RunSetup()
       String pw = settings_obj.loadSetting<String>("ClientPW");
 
       if ((ssid != "") && (pw != "")) {
-        wifi_scan_obj.joinWiFi(ssid, pw, false);
+        bool joinedSavedWiFi = wifi_scan_obj.joinWiFi(ssid, pw, true);
+        if (joinedSavedWiFi)
+          delay(1500);
         this->changeMenu(&wifiGeneralMenu, true);
       }
       else {

@@ -9870,6 +9870,50 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
 }
 
 #ifdef HAS_SD
+static int wdgHttpStatusCode(String response) {
+  int lineEnd = response.indexOf('\n');
+  String statusLine = lineEnd >= 0 ? response.substring(0, lineEnd) : response;
+  statusLine.trim();
+
+  if (!statusLine.startsWith("HTTP/"))
+    return 0;
+
+  int firstSpace = statusLine.indexOf(' ');
+  if (firstSpace < 0)
+    return 0;
+
+  int secondSpace = statusLine.indexOf(' ', firstSpace + 1);
+  String statusCode = secondSpace >= 0 ? statusLine.substring(firstSpace + 1, secondSpace) : statusLine.substring(firstSpace + 1);
+  statusCode.trim();
+
+  return statusCode.toInt();
+}
+
+static bool wdgUploadResponseOK(String response) {
+  int statusCode = wdgHttpStatusCode(response);
+
+  return ((statusCode >= 200) && (statusCode < 300)) ||
+         response.indexOf("\"ok\":true") >= 0 ||
+         response.indexOf("\"success\":true") >= 0;
+}
+
+static String wdgUploadFailureMessage(String response) {
+  int statusCode = wdgHttpStatusCode(response);
+
+  if (response.length() == 0)
+    return "WDG No Response";
+  else if ((statusCode == 401) || (statusCode == 403))
+    return "WDG Bad API Key";
+  else if ((statusCode == 400) || (statusCode == 422))
+    return "WDG Bad File";
+  else if ((statusCode >= 500) && (statusCode < 600))
+    return "WDG Server Error";
+  else if (statusCode > 0)
+    return "WDG HTTP " + String(statusCode);
+
+  return "WDG Bad Response";
+}
+
 String WiFiScan::loadWdgKeyFromSD(bool saveSetting) {
   if (!sd_obj.supported && !sd_obj.initSD()) {
     Serial.println("[WDG] SD not available for WDG config");
@@ -10090,17 +10134,14 @@ bool WiFiScan::wdgwarsUpload(String filePath) {
   String respTrunc = response.length() > 200 ? response.substring(0, 200) : response;
   Serial.println("[WDG] Response: " + respTrunc);
 
-  bool ok = response.indexOf("200 OK") >= 0 ||
-            response.indexOf("201 Created") >= 0 ||
-            response.indexOf("202 Accepted") >= 0 ||
-            response.indexOf("\"ok\":true") >= 0 ||
-            response.indexOf("\"success\":true") >= 0;
+  bool ok = wdgUploadResponseOK(response);
+  String resultMessage = ok ? "WDG Upload OK" : wdgUploadFailureMessage(response);
 
   #ifdef HAS_SCREEN
     display_obj.clearScreen();
-    display_obj.showCenterText(ok ? "WDG Upload OK" : "WDG Upload Failed", TFT_HEIGHT / 2);
+    display_obj.showCenterText(resultMessage.c_str(), TFT_HEIGHT / 2);
   #endif
-  Serial.println(ok ? "[WDG] Upload OK" : "[WDG] Upload failed");
+  Serial.println(ok ? "[WDG] Upload OK" : "[WDG] Upload failed: " + resultMessage);
   delay(2000);
 
   return ok;
