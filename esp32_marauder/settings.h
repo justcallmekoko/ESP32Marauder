@@ -11,13 +11,13 @@
 
 #define FORMAT_SPIFFS_IF_FAILED true
 
-#define WDG_KEY_NAME       "wdg_key"
-
 #ifdef HAS_SCREEN
   #include "Display.h"
 
   extern Display display_obj;
 #endif
+
+#define WDG_KEY_NAME       "wdg_key"   // WDG Wars API key (String)
 
 class Settings {
 

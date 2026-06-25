@@ -4602,25 +4602,25 @@ void WiFiScan::executeWarDrive() {
       bool do_save;
       String display_string;
 
+      // Reversed
       // Weighted US-focused wardriving channel schedule.
       // 2.4 GHz: 1, 6, 11 prioritized.
       // 5 GHz: common non-DFS lower/upper UNII channels prioritized.
       static const uint8_t wardrive_channels[] = {
-        1, 6, 11,
-        36, 40, 44, 48,
-        149, 153, 157, 161,
-        1, 6, 11,
-        36, 40, 44, 48,
-        149, 153, 157, 161,
+        161, 157, 153, 149,
+        48, 44, 40, 36,
+        11, 6, 1,
+        161, 157, 153, 149,
+        48, 44, 40, 36,
+        11, 6, 1,
 
-        // Full 2.4 GHz pass
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+        177, 173, 169, 165, 161, 157, 153, 149,
+        144, 140, 136, 132, 128, 124, 120, 116, 112, 100,
+        64, 60, 56, 52,
+        48, 44, 40, 36,
 
-        // Full 5 GHz pass
-        36, 40, 44, 48,
-        52, 56, 60, 64,
-        100, 112, 116, 120, 124, 128, 132, 136, 140, 144,
-        149, 153, 157, 161, 165, 169, 173, 177
+        // Full 2.4 GHz pass (reversed)
+        14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1
       };
 
       //static uint8_t wardrive_channel_index = 0;

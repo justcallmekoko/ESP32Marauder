@@ -69,6 +69,9 @@
   #include "LedInterface.h"
 #endif
 
+//#include <WiFiClientSecure.h>
+//#include "mbedtls/sha256.h"
+
 #define bad_list_length 3
 
 #define OTA_UPDATE 100
@@ -301,6 +304,8 @@ class WiFiScan
     // Settings
     uint mac_history_cursor = 0;
     uint8_t channel_hop_delay = 1;
+
+    //WiFiClientSecure *client = new WiFiClientSecure();
   
     int x_pos; //position along the graph x axis
     float y_pos_x; //current graph y axis position of X value
@@ -585,6 +590,8 @@ class WiFiScan
       static void scanCompleteCB(BLEScanResults scanResults);
       NimBLEAdvertisementData GetUniversalAdvertisementData(EBLEPayloadType type);
     #endif
+
+    bool wigleUpload(String filePath);
 
     void throwThatShitInACircle();
     void displayTargetFilter();
