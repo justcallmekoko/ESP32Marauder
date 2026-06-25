@@ -2782,6 +2782,15 @@ void MenuFunctions::RunSetup()
 
     this->addNodes(&deviceMenu, "WDG API Key", TFTGREEN, KEYBOARD_ICO, [this]() {
       settings_obj.loadSetting<String>(WDG_KEY_NAME);
+      String sdApiKey = wifi_scan_obj.loadWdgKeyFromSD();
+
+      if (sdApiKey != "") {
+        display_obj.clearScreen();
+        display_obj.showCenterText("WDG Key Loaded", TFT_HEIGHT / 2);
+        delay(1500);
+        this->changeMenu(&deviceMenu, true);
+        return;
+      }
 
       #ifdef HAS_TOUCH
         char apiKeyBuf[192] = {0};

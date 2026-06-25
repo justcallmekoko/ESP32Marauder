@@ -869,6 +869,7 @@ class WiFiScan
     bool checkFlockOUI(const uint8_t mac[6]);
     bool startWiFi(String ssid, String password, bool gui = true);
     #ifdef HAS_SD
+      String loadWdgKeyFromSD(bool saveSetting = true);
       bool wdgwarsUpload(String filePath);
     #endif
     bool isFlockCamera(const uint8_t* payload, size_t len, const String& name, String* serial_out);

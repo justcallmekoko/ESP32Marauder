@@ -9870,6 +9870,77 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
 }
 
 #ifdef HAS_SD
+String WiFiScan::loadWdgKeyFromSD(bool saveSetting) {
+  if (!sd_obj.supported && !sd_obj.initSD()) {
+    Serial.println("[WDG] SD not available for WDG config");
+    return "";
+  }
+
+  const char* configFiles[] = {"/wdg_config.txt", "/wdg_key.txt"};
+
+  for (uint8_t i = 0; i < sizeof(configFiles) / sizeof(configFiles[0]); i++) {
+    if (!SD.exists(configFiles[i]))
+      continue;
+
+    File configFile = SD.open(configFiles[i], FILE_READ);
+    if (!configFile) {
+      Serial.println("[WDG] Could not open WDG config: " + String(configFiles[i]));
+      continue;
+    }
+
+    while (configFile.available()) {
+      String line = configFile.readStringUntil('\n');
+      line.trim();
+
+      if (line == "" || line.startsWith("#"))
+        continue;
+
+      int commentIndex = line.indexOf('#');
+      if (commentIndex >= 0) {
+        line = line.substring(0, commentIndex);
+        line.trim();
+      }
+
+      String lowerLine = line;
+      lowerLine.toLowerCase();
+
+      String apiKey = "";
+      if (lowerLine.startsWith("wdg_key=") || lowerLine.startsWith("api_key=")) {
+        apiKey = line.substring(line.indexOf('=') + 1);
+      }
+      else if (lowerLine.startsWith("wdg_key:") || lowerLine.startsWith("api_key:")) {
+        apiKey = line.substring(line.indexOf(':') + 1);
+      }
+      else {
+        apiKey = line;
+      }
+
+      apiKey.trim();
+
+      if ((apiKey.startsWith("\"") && apiKey.endsWith("\"")) ||
+          (apiKey.startsWith("'") && apiKey.endsWith("'"))) {
+        apiKey = apiKey.substring(1, apiKey.length() - 1);
+        apiKey.trim();
+      }
+
+      if (apiKey != "") {
+        configFile.close();
+
+        if (saveSetting)
+          settings_obj.saveSetting<bool>(WDG_KEY_NAME, apiKey);
+
+        Serial.println("[WDG] Loaded WDG API key from " + String(configFiles[i]));
+        return apiKey;
+      }
+    }
+
+    configFile.close();
+  }
+
+  Serial.println("[WDG] No WDG API key config found on SD");
+  return "";
+}
+
 bool WiFiScan::wdgwarsUpload(String filePath) {
   #ifdef HAS_SCREEN
     display_obj.clearScreen();
@@ -9898,6 +9969,10 @@ bool WiFiScan::wdgwarsUpload(String filePath) {
   }
 
   String apiKey = settings_obj.loadSetting<String>(WDG_KEY_NAME);
+  String sdApiKey = this->loadWdgKeyFromSD();
+  if (sdApiKey != "")
+    apiKey = sdApiKey;
+
   if (apiKey.isEmpty()) {
     #ifdef HAS_SCREEN
       display_obj.clearScreen();
