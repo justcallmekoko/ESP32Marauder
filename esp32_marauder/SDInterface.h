@@ -59,7 +59,7 @@ class SDInterface {
   
     bool initSD();
 
-    LinkedList<String>* sd_files;
+    LinkedList<String>* sd_files = NULL;
 
     void listDir(String str_dir);
     void listDirToLinkedList(LinkedList<String>* file_names, String str_dir = "/", String ext = "");
