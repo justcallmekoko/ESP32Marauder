@@ -200,8 +200,8 @@ class MenuFunctions
 
     // Menu icons
 
-    void setupSDFileList(bool update = false);
-    void buildSDFileMenu(bool update = false);
+    void setupSDFileList(bool update = false, bool wdg_upload = false);
+    void buildSDFileMenu(bool update = false, bool wdg_upload = false);
     void displayMenuButtons();
     uint16_t getColor(uint16_t color);
     void drawAvgLine(int16_t value);

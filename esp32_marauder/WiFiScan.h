@@ -48,6 +48,7 @@
 #endif
 #ifdef HAS_SD
   #include "SDInterface.h"
+  #include <WiFiClientSecure.h>
 #endif
 #include "Buffer.h"
 #ifdef HAS_BATTERY
@@ -860,6 +861,9 @@ class WiFiScan
     String checkEmptyProbe(String essid);
     bool checkFlockOUI(const uint8_t mac[6]);
     bool startWiFi(String ssid, String password, bool gui = true);
+    #ifdef HAS_SD
+      bool wdgwarsUpload(String filePath);
+    #endif
     bool isFlockCamera(const uint8_t* payload, size_t len, const String& name, String* serial_out);
     uint16_t rssiToColor(int8_t rssi);
     bool isMetaIdentifier(uint16_t id);

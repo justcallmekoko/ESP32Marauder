@@ -2760,6 +2760,18 @@ void MenuFunctions::RunSetup()
 
         this->changeMenu(&sdDeleteMenu, true);
       });
+
+      this->addNodes(&deviceMenu, "WDG Upload", TFTGREEN, NULL, SD_UPDATE, [this]() {
+        display_obj.clearScreen();
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+        display_obj.tft.println("Loading CSV files...");
+
+        this->buildSDFileMenu(false, true);
+
+        this->changeMenu(&sdDeleteMenu, true);
+      });
     }
   #endif
 
@@ -3390,27 +3402,31 @@ void MenuFunctions::RunSetup()
   }
 #endif
 
-void MenuFunctions::setupSDFileList(bool update) {
+void MenuFunctions::setupSDFileList(bool update, bool wdg_upload) {
   sd_obj.sd_files->clear();
 
   delete sd_obj.sd_files;
 
   sd_obj.sd_files = new LinkedList<String>();
 
-  if (!update)
+  if (wdg_upload)
+    sd_obj.listDirToLinkedList(sd_obj.sd_files, "/", ".csv");
+  else if (!update)
     sd_obj.listDirToLinkedList(sd_obj.sd_files);
   else
     sd_obj.listDirToLinkedList(sd_obj.sd_files, "/", ".bin");
 }
 
-void MenuFunctions::buildSDFileMenu(bool update) {
-  this->setupSDFileList(update);
+void MenuFunctions::buildSDFileMenu(bool update, bool wdg_upload) {
+  this->setupSDFileList(update, wdg_upload);
 
   sdDeleteMenu.list->clear();
   delete sdDeleteMenu.list;
   sdDeleteMenu.list = new LinkedList<MenuNode>();
 
-  if (!update)
+  if (wdg_upload)
+    sdDeleteMenu.name = "WDG CSV Files";
+  else if (!update)
     sdDeleteMenu.name = "SD Files";
   else
     sdDeleteMenu.name = "Bin Files";
@@ -3419,7 +3435,7 @@ void MenuFunctions::buildSDFileMenu(bool update) {
     this->changeMenu(sdDeleteMenu.parentMenu, true);
   });
 
-  if (!update) {
+  if (!update && !wdg_upload) {
     this->addNodes(&sdDeleteMenu, "Delete Selected", TFTORANGE, NULL, 0, [this]() {
       for (int x = 0; x < sd_obj.sd_files->size(); x++) {
         if (current_menu->list->get(x + 2).selected) {
@@ -3438,7 +3454,21 @@ void MenuFunctions::buildSDFileMenu(bool update) {
     });
   }
 
-  if (!update) {
+  if (wdg_upload) {
+    if (sd_obj.sd_files->size() == 0) {
+      this->addNodes(&sdDeleteMenu, "No CSV Files", TFTLIGHTGREY, NULL, 0, []() {});
+    }
+
+    for (int x = 0; x < sd_obj.sd_files->size(); x++) {
+      this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x).c_str(), TFTGREEN, NULL, SD_UPDATE, [this, x]() {
+        String upload_path = "/" + sd_obj.sd_files->get(x);
+        wifi_scan_obj.wdgwarsUpload(upload_path);
+        this->buildSDFileMenu(false, true);
+        this->changeMenu(&sdDeleteMenu, true);
+      });
+    }
+  }
+  else if (!update) {
     for (int x = 0; x < sd_obj.sd_files->size(); x++) {
       this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x).c_str(), TFTCYAN, NULL, SD_UPDATE, [this, x]() {
         // Change selection status of menu node

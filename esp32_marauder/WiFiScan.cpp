@@ -9867,6 +9867,169 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
     return TFT_RED;
 }
 
+#ifdef HAS_SD
+bool WiFiScan::wdgwarsUpload(String filePath) {
+  #ifdef HAS_SCREEN
+    display_obj.clearScreen();
+    display_obj.showCenterText("WDG Upload...", TFT_HEIGHT / 2);
+  #endif
+  Serial.println("[WDG] Upload requested: " + filePath);
+
+  if (WiFi.status() != WL_CONNECTED) {
+    #ifdef HAS_SCREEN
+      display_obj.clearScreen();
+      display_obj.showCenterText("WiFi Not Connected", TFT_HEIGHT / 2);
+    #endif
+    Serial.println("[WDG] WiFi is not connected");
+    delay(1500);
+    return false;
+  }
+
+  if (!SD.exists(filePath)) {
+    #ifdef HAS_SCREEN
+      display_obj.clearScreen();
+      display_obj.showCenterText("CSV Not Found", TFT_HEIGHT / 2);
+    #endif
+    Serial.println("[WDG] File not found: " + filePath);
+    delay(1500);
+    return false;
+  }
+
+  String apiKey = settings_obj.loadSetting<String>(WDG_KEY_NAME);
+  if (apiKey.isEmpty()) {
+    #ifdef HAS_SCREEN
+      display_obj.clearScreen();
+      display_obj.showCenterText("No WDG API Key", TFT_HEIGHT / 2);
+    #endif
+    Serial.println("[WDG] No WDG Wars API key configured");
+    delay(1500);
+    return false;
+  }
+
+  File fileToUpload = SD.open(filePath);
+  if (!fileToUpload) {
+    #ifdef HAS_SCREEN
+      display_obj.clearScreen();
+      display_obj.showCenterText("CSV Open Failed", TFT_HEIGHT / 2);
+    #endif
+    Serial.println("[WDG] Could not open: " + filePath);
+    delay(1500);
+    return false;
+  }
+
+  String fileName = filePath;
+  int slashIndex = fileName.lastIndexOf('/');
+  if (slashIndex >= 0)
+    fileName = fileName.substring(slashIndex + 1);
+
+  const String boundary = "----ESP32MarauderWDG";
+  String part1 = "--" + boundary + "\r\n";
+  part1 += "Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"\r\n";
+  part1 += "Content-Type: text/csv\r\n\r\n";
+  String part2 = "\r\n--" + boundary + "--\r\n";
+  const size_t fileSize = fileToUpload.size();
+  const size_t totalLength = part1.length() + fileSize + part2.length();
+
+  WiFiClientSecure client;
+  client.setInsecure();
+  client.setTimeout(15000);
+
+  if (!client.connect("wdgwars.pl", 443)) {
+    fileToUpload.close();
+    client.stop();
+    #ifdef HAS_SCREEN
+      display_obj.clearScreen();
+      display_obj.showCenterText("WDG Connect Fail", TFT_HEIGHT / 2);
+    #endif
+    Serial.println("[WDG] Failed to connect to wdgwars.pl");
+    delay(1500);
+    return false;
+  }
+
+  client.println("POST /api/v2/upload-csv HTTP/1.1");
+  client.println("Host: wdgwars.pl");
+  client.println("User-Agent: ESP32Marauder/WDGUpload");
+  client.println("Accept: application/json");
+  client.println("X-API-Key: " + apiKey);
+  client.println("Content-Type: multipart/form-data; boundary=" + boundary);
+  client.print("Content-Length: ");
+  client.println(totalLength);
+  client.println("Connection: close");
+  client.println();
+  client.print(part1);
+
+  const size_t chunkSize = 1024;
+  uint8_t buffer[chunkSize];
+  size_t totalSent = 0;
+  uint8_t lastPercent = 255;
+
+  while (fileToUpload.available()) {
+    size_t bytesRead = fileToUpload.read(buffer, chunkSize);
+    if (bytesRead == 0)
+      break;
+
+    size_t bytesWritten = client.write(buffer, bytesRead);
+    totalSent += bytesWritten;
+
+    uint8_t percent = fileSize > 0 ? (totalSent * 100) / fileSize : 100;
+    if ((percent != lastPercent) && ((percent % 10 == 0) || (percent == 100))) {
+      lastPercent = percent;
+      #ifdef HAS_SCREEN
+        String progress = "WDG Upload " + String(percent) + "%";
+        display_obj.clearScreen();
+        display_obj.showCenterText(progress.c_str(), TFT_HEIGHT / 2);
+      #endif
+      Serial.println("[WDG] Upload " + String(percent) + "%");
+    }
+
+    if (bytesWritten != bytesRead) {
+      fileToUpload.close();
+      client.stop();
+      #ifdef HAS_SCREEN
+        display_obj.clearScreen();
+        display_obj.showCenterText("WDG Send Failed", TFT_HEIGHT / 2);
+      #endif
+      Serial.println("[WDG] Short write while uploading");
+      delay(1500);
+      return false;
+    }
+  }
+
+  client.print(part2);
+  fileToUpload.close();
+
+  String response;
+  unsigned long start = millis();
+  while (millis() - start < 10000) {
+    while (client.available()) {
+      response += (char)client.read();
+    }
+    if (!client.connected() && !client.available())
+      break;
+    delay(10);
+  }
+  client.stop();
+
+  String respTrunc = response.length() > 200 ? response.substring(0, 200) : response;
+  Serial.println("[WDG] Response: " + respTrunc);
+
+  bool ok = response.indexOf("200 OK") >= 0 ||
+            response.indexOf("201 Created") >= 0 ||
+            response.indexOf("202 Accepted") >= 0 ||
+            response.indexOf("\"ok\":true") >= 0 ||
+            response.indexOf("\"success\":true") >= 0;
+
+  #ifdef HAS_SCREEN
+    display_obj.clearScreen();
+    display_obj.showCenterText(ok ? "WDG Upload OK" : "WDG Upload Failed", TFT_HEIGHT / 2);
+  #endif
+  Serial.println(ok ? "[WDG] Upload OK" : "[WDG] Upload failed");
+  delay(2000);
+
+  return ok;
+}
+#endif
+
 // Function for updating scan status
 void WiFiScan::main(uint32_t currentTime)
 {
