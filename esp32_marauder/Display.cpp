@@ -40,10 +40,24 @@ int8_t Display::menuButton(uint16_t *x, uint16_t *y, bool pressed, bool check_ho
 }
 
 uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
-  #ifdef HAS_ILI9341
-    if (!this->headless_mode)
-      #ifndef HAS_CYD_TOUCH
+
+    #ifdef HAS_CST820
+     if (CST820_touch.available()) {
+       if (CST820_touch.data.event == 0) {  // Down event
+         *x = CST820_touch.data.x;
+         *y = CST820_touch.data.y;
+
+         return 1;
+       }
+     }
+     return 0;
+
+  #elif  defined(HAS_ILI9341)
+    if (!this->headless_mode) {
+
+      #if !defined(HAS_CYD_TOUCH)
         return this->tft.getTouch(x, y, threshold);
+
       #else
         if (this->touchscreen.tirqTouched() && this->touchscreen.touched()) {
           TS_Point p = this->touchscreen.getPoint();
@@ -80,7 +94,7 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
         else
           return 0;
       #endif
-    else
+    } else
       return !this->headless_mode;
   #endif
 
@@ -118,10 +132,12 @@ void Display::init() {
 }
 
 void Display::setCalData(bool landscape) {
-  #ifndef HAS_CYD_TOUCH
+  #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CST820)
     if (!landscape) {
       #ifdef TFT_SHIELD
         uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield
+      #elif defined(MARAUDER_CYD_24)
+        uint16_t calData[5] = { 296, 3401, 321, 3519, 3 };
       #elif defined(MARAUDER_CYD_3_5_INCH)
         uint16_t calData[5] = { 239, 3560, 262, 3643, 4 };
       #elif defined(MARAUDER_V8)
@@ -137,6 +153,8 @@ void Display::setCalData(bool landscape) {
     else {
       #ifdef TFT_SHIELD
         uint16_t calData[5] = { 391, 3491, 266, 3505, 7 }; // Landscape TFT Shield
+      #elif defined(MARAUDER_CYD_24)
+	    uint16_t calData[5] = { 453, 3279, 525, 3057, 0 };
       #elif defined(MARAUDER_CYD_3_5_INCH)
         uint16_t calData[5] = { 272, 3648, 234, 3565, 7 };
       #elif defined(MARAUDER_V8)
@@ -162,7 +180,8 @@ void Display::RunSetup() {
     screen_buffer = new LinkedList<String>();
   #endif
 
-  #ifdef HAS_CYD_TOUCH
+
+  #if defined(HAS_CYD_TOUCH)
     this->touchscreenSPI.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
     this->touchscreen.begin(touchscreenSPI);
     this->touchscreen.setRotation(0);
@@ -174,7 +193,7 @@ void Display::RunSetup() {
 
   tft.setCursor(0, 0);
 
-  #ifdef HAS_ILI9341
+  #if defined(HAS_ILI9341) && !defined(HAS_CST820)
 
     #ifndef HAS_CYD_TOUCH
       this->setCalData();
@@ -189,7 +208,7 @@ void Display::RunSetup() {
   #endif
 
   #ifdef MARAUDER_REV_FEATHER
-    pinMode(7, OUTPUT);
+    pinMode(7, OUTPUT);     // TFT_CS
 
     delay(10);
 
