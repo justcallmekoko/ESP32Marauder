@@ -33,7 +33,7 @@ void BatteryInterface::RunSetup() {
         analogReadResolution(12);
         pinMode(BATTERY_ADC_PIN, INPUT);
         this->has_adc_battery = true;
-        // this->i2c_supported = true;
+        this->supported = true;
         Serial.println(F("Battery: ADC mode"));
 
     #elif defined(HAS_AXP2101) && defined(I2C_SDA)
@@ -44,7 +44,7 @@ void BatteryInterface::RunSetup() {
 
         Serial.println(F("Detected AXP2101"));
 
-        this->i2c_supported = true;
+        this->supported = true;
         this->has_axp2101 = true;
 
     #elif defined(I2C_SDA)  // other i2c (shared)
@@ -58,7 +58,7 @@ void BatteryInterface::RunSetup() {
           if (error == 0) {
             Serial.println(F("Detected IP5306"));
             this->has_ip5306 = true;
-            this->i2c_supported = true;
+            this->supported = true;
           }
         #endif
 
@@ -75,7 +75,7 @@ void BatteryInterface::RunSetup() {
             if (maxlipo.begin()) {
               Serial.println(F("Detected MAX17048"));
               this->has_max17048 = true;
-              this->i2c_supported = true;
+              this->supported = true;
             }
           }
         #endif
@@ -105,7 +105,7 @@ int8_t BatteryInterface::getBatteryLevel() {
         Wire.write(0x78);
         if (Wire.endTransmission(false) == 0 &&
             Wire.requestFrom(IP5306_ADDR, 1)) {
-          this->i2c_supported = true;
+          this->supported = true;
           switch (Wire.read() & 0xF0) {
             case 0xE0: return 25;
             case 0xC0: return 50;
@@ -114,7 +114,7 @@ int8_t BatteryInterface::getBatteryLevel() {
             default: return 0;
           }
         }
-        this->i2c_supported = false;
+        this->supported = false;
         return -1;
       }
     #endif
