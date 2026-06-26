@@ -3880,14 +3880,18 @@ void WiFiScan::RunInfo() {
     display_obj.tft.setTextColor(TFT_CYAN);
     display_obj.tft.println(text_table4[20]);
     display_obj.tft.println(text_table4[21] + display_obj.version_number);
+    display_obj.tft.println("Build Date: " + String(__DATE__ " " __TIME__));
     display_obj.tft.println("Hardware: " + (String)HARDWARE_NAME);
     display_obj.tft.println(text_table4[22] + (String)esp_get_idf_version());
+    display_obj.tft.println("ESP Arduino:" + String(ESP_ARDUINO_VERSION_MAJOR) + "." + String(ESP_ARDUINO_VERSION_MINOR) + "." + String(ESP_ARDUINO_VERSION_PATCH));
   #endif
 
   Serial.println(text_table4[20]);
   Serial.println(text_table4[21] + (String)MARAUDER_VERSION);
+  Serial.println("Build Date: " + String(__DATE__ " " __TIME__));
   Serial.println("Hardware: " + (String)HARDWARE_NAME);
   Serial.println(text_table4[22] + (String)esp_get_idf_version());
+  Serial.println("ESP Arduino:" + String(ESP_ARDUINO_VERSION_MAJOR) + "." + String(ESP_ARDUINO_VERSION_MINOR) + "." + String(ESP_ARDUINO_VERSION_PATCH));
 
   if (this->wsl_bypass_enabled) {
     #ifdef HAS_SCREEN
@@ -3986,7 +3990,7 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color) {
       #endif
     
       #ifdef HAS_SCREEN
-        #ifndef HAS_CYD_TOUCH
+        #if !defined(HAS_CYD_TOUCH) && !defined(HAS_ST7789)
           display_obj.setCalData(true);
         #else
           //display_obj.touchscreen.setRotation(1);
