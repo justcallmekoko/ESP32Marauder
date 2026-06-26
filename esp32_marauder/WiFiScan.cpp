@@ -3104,9 +3104,45 @@ void WiFiScan::RunLoadATList() {
   #endif
 }
 
+void WiFiScan::RunSaveAll() {
+  #if defined(MSC_SHARE)
+    bool msc_active = false;
+    if (MSC_Share_obj.msc_active) {
+      msc_active = true;
+      MSC_Share_obj.msc_pause();
+    }
+  #endif
+
+    RunSaveATList();
+
+    RunSaveAPList();
+
+    RunSaveSSIDList();
+
+  #if defined(MSC_SHARE)
+    if (msc_active) 
+      MSC_Share_obj.msc_start();
+  #endif
+}
+
+void WiFiScan::RunLoadAll() {
+    RunSaveATList();
+    RunSaveAPList();
+    RunSaveSSIDList();
+}
+
 void WiFiScan::RunSaveATList(bool save_as) {
   #ifdef HAS_SD
     if (save_as) {
+
+      #if defined(MSC_SHARE)
+        bool msc_active = false;
+        if (MSC_Share_obj.msc_active) {
+          msc_active = true;
+          MSC_Share_obj.msc_pause();
+        }
+      #endif
+
       sd_obj.removeFile(F("/Airtags_0.log"));
 
       this->startLog("Airtags");
@@ -3140,6 +3176,11 @@ void WiFiScan::RunSaveATList(bool save_as) {
       #endif
       Serial.print(F("Saved Airtags:"));
       Serial.println((String)airtags->size());
+
+      #if defined(MSC_SHARE)
+        if (msc_active) 
+          MSC_Share_obj.msc_start();
+      #endif
     }
   #endif
 }
@@ -3152,7 +3193,7 @@ void WiFiScan::RunLoadAPList() {
       #ifdef HAS_SCREEN
         display_obj.tft.setTextWrap(false);
         display_obj.tft.setFreeFont(NULL);
-        display_obj.tft.setCursor(0, 100);
+        display_obj.tft.setCursor(0, 110);
         display_obj.tft.setTextSize(1);
         display_obj.tft.setTextColor(TFT_CYAN);
         display_obj.tft.println(F("Could not open /APs_0.log"));
@@ -3168,7 +3209,7 @@ void WiFiScan::RunLoadAPList() {
       #ifdef HAS_SCREEN
         display_obj.tft.setTextWrap(false);
         display_obj.tft.setFreeFont(NULL);
-        display_obj.tft.setCursor(0, 100);
+        display_obj.tft.setCursor(0, 110);
         display_obj.tft.setTextSize(1);
         display_obj.tft.setTextColor(TFT_CYAN);
         display_obj.tft.println(error.c_str());
@@ -3226,7 +3267,7 @@ void WiFiScan::RunLoadAPList() {
     #ifdef HAS_SCREEN
       display_obj.tft.setTextWrap(false);
       display_obj.tft.setFreeFont(NULL);
-      display_obj.tft.setCursor(0, 100);
+      display_obj.tft.setCursor(0, 110);
       display_obj.tft.setTextSize(1);
       display_obj.tft.setTextColor(TFT_CYAN);
       display_obj.tft.print(F("Loaded APs: "));
@@ -3240,6 +3281,15 @@ void WiFiScan::RunLoadAPList() {
 void WiFiScan::RunSaveAPList(bool save_as) {
   #ifdef HAS_SD
     if (save_as) {
+
+      #if defined(MSC_SHARE)
+        bool msc_active = false;
+        if (MSC_Share_obj.msc_active) {
+          msc_active = true;
+          MSC_Share_obj.msc_pause();
+        }
+      #endif
+
       sd_obj.removeFile(F("/APs_0.log"));
 
       this->startLog("APs");
@@ -3278,7 +3328,7 @@ void WiFiScan::RunSaveAPList(bool save_as) {
       #ifdef HAS_SCREEN
         display_obj.tft.setTextWrap(false);
         display_obj.tft.setFreeFont(NULL);
-        display_obj.tft.setCursor(0, 100);
+        display_obj.tft.setCursor(0, 110);
         display_obj.tft.setTextSize(1);
         display_obj.tft.setTextColor(TFT_CYAN);
       
@@ -3287,6 +3337,10 @@ void WiFiScan::RunSaveAPList(bool save_as) {
       #endif
       Serial.print(F("Saved APs:"));
       Serial.println((String)access_points->size());
+      #if defined(MSC_SHARE)
+        if (msc_active) 
+          MSC_Share_obj.msc_start();
+      #endif
     }
   #endif
 }
@@ -3299,7 +3353,7 @@ void WiFiScan::RunLoadSSIDList() {
       #ifdef HAS_SCREEN
         display_obj.tft.setTextWrap(false);
         display_obj.tft.setFreeFont(NULL);
-        display_obj.tft.setCursor(0, 100);
+        display_obj.tft.setCursor(0, 120);
         display_obj.tft.setTextSize(1);
         display_obj.tft.setTextColor(TFT_CYAN);
       
@@ -3315,7 +3369,7 @@ void WiFiScan::RunLoadSSIDList() {
     #ifdef HAS_SCREEN
       display_obj.tft.setTextWrap(false);
       display_obj.tft.setFreeFont(NULL);
-      display_obj.tft.setCursor(0, 100);
+      display_obj.tft.setCursor(0, 120);
       display_obj.tft.setTextSize(1);
       display_obj.tft.setTextColor(TFT_CYAN);
     
@@ -3333,6 +3387,15 @@ void WiFiScan::RunLoadSSIDList() {
 void WiFiScan::RunSaveSSIDList(bool save_as) {
   #ifdef HAS_SD
     if (save_as) {
+
+      #if defined(MSC_SHARE)
+        bool msc_active = false;
+        if (MSC_Share_obj.msc_active) {
+          msc_active = true;
+          MSC_Share_obj.msc_pause();
+        }
+      #endif
+
       sd_obj.removeFile(F("/SSIDs_0.log"));
 
       this->startLog("SSIDs");
@@ -3349,7 +3412,7 @@ void WiFiScan::RunSaveSSIDList(bool save_as) {
       #ifdef HAS_SCREEN
         display_obj.tft.setTextWrap(false);
         display_obj.tft.setFreeFont(NULL);
-        display_obj.tft.setCursor(0, 100);
+        display_obj.tft.setCursor(0, 120);
         display_obj.tft.setTextSize(1);
         display_obj.tft.setTextColor(TFT_CYAN);
       
@@ -3358,6 +3421,10 @@ void WiFiScan::RunSaveSSIDList(bool save_as) {
       #endif
       Serial.print(F("Saved SSIDs: "));
       Serial.println((String)ssids->size());
+      #if defined(MSC_SHARE)
+        if (msc_active) 
+          MSC_Share_obj.msc_start();
+      #endif
     }
   #endif
 }
@@ -3868,26 +3935,39 @@ void WiFiScan::RunAPInfo(uint16_t index, bool do_display) {
 void WiFiScan::RunInfo() {
   uint8_t sta_mac[6];
   uint8_t ap_mac[6];
+  size_t psramtat = 0;
 
   this->getMAC(true, sta_mac);
   this->getMAC(false, ap_mac);
+  #ifdef HAS_PSRAM
+       psramtat = ESP.getPsramSize();
+  #endif
+  uint32_t flashSize = ESP.getFlashChipSize();
+
 
   #ifdef HAS_SCREEN
     display_obj.tft.setTextWrap(false);
     display_obj.tft.setFreeFont(NULL);
-    display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+    display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3.5);
     display_obj.tft.setTextSize(1);
     display_obj.tft.setTextColor(TFT_CYAN);
     display_obj.tft.println(text_table4[20]);
     display_obj.tft.println(text_table4[21] + display_obj.version_number);
     display_obj.tft.println("Hardware: " + (String)HARDWARE_NAME);
     display_obj.tft.println(text_table4[22] + (String)esp_get_idf_version());
+    display_obj.tft.println("Flash Size: " + (String)flashSize);
+    display_obj.tft.println("PSRAM Size: " + (String) psramtat);
+    display_obj.tft.println("CpuFrequency = " + (String)getCpuFrequencyMhz() + " Mhz");
+
   #endif
 
   Serial.println(text_table4[20]);
   Serial.println(text_table4[21] + (String)MARAUDER_VERSION);
   Serial.println("Hardware: " + (String)HARDWARE_NAME);
   Serial.println(text_table4[22] + (String)esp_get_idf_version());
+  Serial.println("Flash Sise: " + (String)flashSize);
+  Serial.println("PSRAM Sise: " + (String) psramtat);
+  Serial.println("CpuFrequency = " + (String)getCpuFrequencyMhz() + " Mhz");
 
   if (this->wsl_bypass_enabled) {
     #ifdef HAS_SCREEN
@@ -3933,7 +4013,7 @@ void WiFiScan::RunInfo() {
 
   #ifdef HAS_BATTERY
     battery_obj.battery_level = battery_obj.getBatteryLevel();
-    if (battery_obj.i2c_supported) {
+    if (battery_obj.supported) {
       #ifdef HAS_SCREEN
         display_obj.tft.println(text_table4[32]);
         display_obj.tft.println(text_table4[33] + (String)battery_obj.battery_level + "%");
@@ -5528,7 +5608,7 @@ int WiFiScan::checkMatchAP(char addr[], bool update_ap) {
     }
 
     if ((mac_match) && (update_ap)) {
-      access_point.packets += 1;
+      // access_point.packets += 1;
       access_points->set(i, access_point);
       return i;
     }
@@ -5875,10 +5955,12 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
     #endif
 
     if (mem_check) {
-      AccessPoint ap = access_points->get(ap_index);
-      ap.stations->add(stations->size() - 1);
+      // AccessPoint ap = access_points->get(ap_index);
+      // ap.stations->add(stations->size() - 1);
+      // access_points->set(ap_index, ap);
 
-      access_points->set(ap_index, ap);
+      // Don't copy, don't set - just add the station index directly
+      access_points->get(ap_index).stations->add(stations->size() - 1);
     }
 
     buffer_obj.append(snifferPacket, len);

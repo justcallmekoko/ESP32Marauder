@@ -4,7 +4,7 @@
 #ifdef HAS_SCREEN
 
 Display::Display()
-#ifdef HAS_CYD_TOUCH
+#if defined( HAS_CYD_TOUCH) || defined(MARAUDER_CYD_HMI)
   : touchscreenSPI(VSPI),
     touchscreen(XPT2046_CS, XPT2046_IRQ)
 #endif
@@ -39,8 +39,9 @@ int8_t Display::menuButton(uint16_t *x, uint16_t *y, bool pressed, bool check_ho
   return -1;
 }
 
+
 uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
-  #ifdef HAS_ILI9341
+  #if defined(HAS_ILI9341)  || defined(MARAUDER_CYD_HMI)
     if (!this->headless_mode)
       #ifndef HAS_CYD_TOUCH
         return this->tft.getTouch(x, y, threshold);
@@ -53,6 +54,10 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
 
           uint8_t rot = this->tft.getRotation();
 
+          // Is this the right place and way to fix inverted X?
+          #if defined(MARAUDER_CYD_HMI)
+            p.x = 4095 - p.x;   //  Temp Hack
+          #endif
           //#ifdef HAS_CYD_PORTRAIT
           //  rot = 0;
           //#endif
@@ -162,7 +167,7 @@ void Display::RunSetup() {
     screen_buffer = new LinkedList<String>();
   #endif
 
-  #ifdef HAS_CYD_TOUCH
+  #if defined( HAS_CYD_TOUCH) || defined(MARAUDER_CYD_HMI)
     this->touchscreenSPI.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
     this->touchscreen.begin(touchscreenSPI);
     this->touchscreen.setRotation(0);

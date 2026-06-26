@@ -257,6 +257,7 @@ inline uint16_t getNextPort(uint16_t port) {
   return port + 1;
 }
 
+
 String base64Encode(const String& input) {
   size_t outputLen;
   unsigned char output[256];
