@@ -2831,6 +2831,15 @@ void MenuFunctions::RunSetup()
     wifi_scan_obj.RunLoadATList();
   });
 
+#ifdef HAS_SD
+  if(!sd_obj.supported) {
+      this->addNodes(&saveFileMenu, "Rescan SD", TFTWHITE, NULL, SD_UPDATE, [this]() {
+        this->changeMenu(&loadAPsMenu, true);
+        sd_obj.initSD();
+      });
+  }
+#endif
+
   saveSSIDsMenu.parentMenu = &saveFileMenu;
   this->addNodes(&saveSSIDsMenu, text09, TFTLIGHTGREY, 0, [this]() {
     this->changeMenu(saveSSIDsMenu.parentMenu, true);
