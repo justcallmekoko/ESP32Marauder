@@ -14,7 +14,11 @@ void CommandLine::RunSetup() {
   Serial.println("            " + version_number + "\n");
   Serial.println(F("       By: justcallmekoko\n"));
   Serial.println(F("--------------------------------\n\n"));
-  
+
+  #ifndef HAS_SCREEN
+    Serial.println(F("[Serial USB Mode] No display - type 'help' for commands\n"));
+  #endif
+
   Serial.print("> ");
 }
 

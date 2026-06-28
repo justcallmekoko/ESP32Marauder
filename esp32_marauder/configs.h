@@ -29,6 +29,7 @@
   //#define MARAUDER_CYD_2USB // Another 2432S028 but it has tWo UsBs OoOoOoO
   //#define MARAUDER_CYD_GUITION // ESP32-2432S024 GUITION
   //#define MARAUDER_CYD_3_5_INCH
+  #define MARAUDER_CYD_3_5_INCH_NO_SCREEN // CYD 3.5" ST7796 - serial USB only (no display)
   //#define MARAUDER_C5
   //#define MARAUDER_CARDPUTER
   //#define MARAUDER_CARDPUTER_ADV
@@ -83,6 +84,8 @@
     #define HARDWARE_NAME "CYD 2432S028"
   #elif defined(MARAUDER_CYD_2USB)
     #define HARDWARE_NAME "CYD 2432S028 2USB"
+  #elif defined(MARAUDER_CYD_3_5_INCH_NO_SCREEN)
+    #define HARDWARE_NAME "CYD 3.5inch No Screen"
   #elif defined(MARAUDER_CYD_3_5_INCH)
     #define HARDWARE_NAME "CYD 3.5inch"
   #elif defined(MARAUDER_CYD_GUITION)
@@ -341,6 +344,21 @@
     #define HAS_SEPARATE_SD
     #define HAS_CYD_PORTRAIT
     //#define HAS_NIMBLE_2
+  #endif
+
+  // Serial-only variant: same hardware as CYD 3.5" but no screen/touch.
+  // Defines MARAUDER_CYD_3_5_INCH here so all subsequent pin blocks inherit.
+  #ifdef MARAUDER_CYD_3_5_INCH_NO_SCREEN
+    #define HAS_FLIPPER_LED
+    #define HAS_BT
+    #define HAS_BT_REMOTE
+    #define HAS_BUTTONS
+    #define HAS_SD
+    #define USE_SD
+    #define HAS_TEMP_SENSOR
+    #define HAS_GPS
+    #define HAS_SEPARATE_SD
+    #define MARAUDER_CYD_3_5_INCH
   #endif
 
   #ifdef MARAUDER_CYD_GUITION
