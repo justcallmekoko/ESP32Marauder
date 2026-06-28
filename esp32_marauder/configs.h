@@ -29,7 +29,7 @@
   //#define MARAUDER_CYD_2USB // Another 2432S028 but it has tWo UsBs OoOoOoO
   //#define MARAUDER_CYD_GUITION // ESP32-2432S024 GUITION
   //#define MARAUDER_CYD_3_5_INCH
-  #define MARAUDER_CYD_3_5_INCH_NO_SCREEN // CYD 3.5" ST7796 - serial USB only (no display)
+  //#define MARAUDER_CYD_3_5_INCH_NO_SCREEN // CYD 3.5" ST7796 - serial USB only (no display)
   //#define MARAUDER_C5
   //#define MARAUDER_CARDPUTER
   //#define MARAUDER_CARDPUTER_ADV
