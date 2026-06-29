@@ -34,6 +34,7 @@ LinkedList<AirTag>* airtags;
 LinkedList<Flipper>* flippers;
 LinkedList<IPAddress>* ipList;
 LinkedList<ProbeReqSsid>* probe_req_ssids;
+LinkedList<BleDevice>* ble_devices;
 
 extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3){
     if (arg == 31337)
@@ -1062,9 +1063,36 @@ extern "C" {
               #endif
             }
           }
-          else if (wifi_scan_obj.currentScanMode == BT_SCAN_ALL) {
+          else if ((wifi_scan_obj.currentScanMode == BT_SCAN_ALL) ||
+                   (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT)) {
             if (buf >= 0)
             {
+              BleDevice ble_device;
+              if (name_length > 0)
+                ble_device.name = name;
+              else
+                ble_device.name = mac;
+
+              ble_device.rssi = rssi;
+
+              memcpy(ble_device.mac, mac_char, sizeof(mac_char));
+
+              int device_match_check = wifi_scan_obj.seenBLEDevice(ble_device);
+
+              if (device_match_check >= 0) {
+                ble_device.selected = ble_devices->get(device_match_check).selected;
+                ble_device.name = ble_devices->get(device_match_check).name;
+                memcpy(ble_device.mac, ble_devices->get(device_match_check).mac, sizeof(mac_char));
+                ble_devices->set(device_match_check, ble_device);
+                //Serial.println(ble_devices->get(device_match_check).name + " RSSI updated: " + String(ble_devices->get(device_match_check).rssi));
+                return;
+              }
+
+              if (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT)
+                return;
+
+              ble_devices->add(ble_device);
+
               #ifndef HAS_MINI_SCREEN
                 display_string.concat(text_table4[0]);
               #endif
@@ -1102,6 +1130,64 @@ extern "C" {
                   display_obj.loading = false;
                 }
               #endif
+
+              /*Serial.println("\n========== BLE Advertisement ==========");
+
+              Serial.printf("Address:       %s\n", advertisedDevice->getAddress().toString().c_str());
+              Serial.printf("Address Type:  %u\n", advertisedDevice->getAddressType());
+              Serial.printf("RSSI:          %d dBm\n", advertisedDevice->getRSSI());
+              Serial.printf("Adv Type:      %u\n", advertisedDevice->getAdvType());
+              Serial.printf("Adv Length:    %u\n", advertisedDevice->getAdvLength());
+
+              Serial.printf("Connectable:   %s\n", advertisedDevice->isConnectable() ? "yes" : "no");
+              Serial.printf("Scannable:     %s\n", advertisedDevice->isScannable() ? "yes" : "no");
+              Serial.printf("Legacy Adv:    %s\n", advertisedDevice->isLegacyAdvertisement() ? "yes" : "no");
+
+              if (advertisedDevice->haveName()) {
+                Serial.printf("Name:          %s\n", advertisedDevice->getName().c_str());
+              }
+
+              if (advertisedDevice->haveTXPower()) {
+                Serial.printf("TX Power:      %d dBm\n", advertisedDevice->getTXPower());
+              }
+
+              if (advertisedDevice->haveAppearance()) {
+                Serial.printf("Appearance:    0x%04X\n", advertisedDevice->getAppearance());
+              }
+
+              if (advertisedDevice->haveAdvInterval()) {
+                Serial.printf("Adv Interval:  %u units\n", advertisedDevice->getAdvInterval());
+              }
+
+              if (advertisedDevice->haveURI()) {
+                Serial.printf("URI:           %s\n", advertisedDevice->getURI().c_str());
+              }
+
+              uint8_t svcCount = advertisedDevice->getServiceUUIDCount();
+              Serial.printf("Service UUIDs: %u\n", svcCount);
+              for (uint8_t i = 0; i < svcCount; i++) {
+                Serial.printf("  [%u] %s\n", i, advertisedDevice->getServiceUUID(i).toString().c_str());
+              }
+
+              uint8_t svcDataCount = advertisedDevice->getServiceDataCount();
+              Serial.printf("Service Data:  %u\n", svcDataCount);
+              for (uint8_t i = 0; i < svcDataCount; i++) {
+                Serial.printf("  UUID [%u]: %s\n", i, advertisedDevice->getServiceDataUUID(i).toString().c_str());
+                printStringData("  Data", advertisedDevice->getServiceData(i));
+              }
+
+              uint8_t mfgCount = advertisedDevice->getManufacturerDataCount();
+              Serial.printf("Mfg Data Sets: %u\n", mfgCount);
+              for (uint8_t i = 0; i < mfgCount; i++) {
+                printStringData("  Mfg", advertisedDevice->getManufacturerData(i));
+              }
+
+              const std::vector<uint8_t> &payload = advertisedDevice->getPayload();
+              Serial.printf("Raw Payload [%u]: ", (unsigned)payload.size());
+              printHex(payload.data(), payload.size());
+              Serial.println();
+
+              Serial.println("=======================================");*/
             }
           }
           else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_WAR_DRIVE) {
@@ -1382,6 +1468,24 @@ extern "C" {
   #endif
 #endif
 
+int WiFiScan::seenBLEDevice(BleDevice ble_device) {
+  for (int i = 0; i < ble_devices->size(); i++) {
+    //Serial.println("Comparing names " + ble_devices->get(i).name + " | " + ble_device.name);
+    if ((ble_devices->get(i).name == ble_device.name) || (ble_device.name == "")) {
+      //Serial.print("Comparing MACs ");
+      //Serial.print(macToString(ble_devices->get(i).mac));
+      //Serial.print(" | ");
+      //Serial.println(macToString(ble_device.mac));
+      //for (int x = 0; x < 6; x++) {
+      //  if (ble_devices->get(i).mac[x] != ble_device.mac[x])
+      //    return -1;
+      //}
+      return i;
+    }
+  }
+  return -1;
+}
+
 bool WiFiScan::isFlockCamera(const uint8_t* payload, size_t len, const String& name, String* serial_out) {
   if (payload == nullptr || len < 4) {
     return false;
@@ -1511,6 +1615,7 @@ void WiFiScan::RunSetup() {
   stations = new LinkedList<Station>();
   airtags = new LinkedList<AirTag>();
   flippers = new LinkedList<Flipper>();
+  ble_devices = new LinkedList<BleDevice>();
   ipList = new LinkedList<IPAddress>();
   probe_req_ssids = new LinkedList<ProbeReqSsid>;
   // for Pinescan
@@ -1629,6 +1734,12 @@ int WiFiScan::clearList(uint8_t list_type) {
     num_cleared = airtags->size();
     while (airtags->size() > 0)
       airtags->remove(0);
+    return num_cleared;
+  }
+  else if (list_type == CLEAR_BLE) {
+    num_cleared = ble_devices->size();
+    while (ble_devices->size() > 0)
+      ble_devices->remove(0);
     return num_cleared;
   }
   else if (list_type == CLEAR_FLIP) {
@@ -1983,6 +2094,7 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
   else if (scan_mode == WIFI_ATTACK_AP_SPAM)
     this->startWiFiAttacks(scan_mode, color, " AP Beacon Spam ");
   else if ((scan_mode == BT_SCAN_ALL) ||
+          (scan_mode == BT_SCAN_FOX_HUNT) ||
           (scan_mode == BT_SCAN_RAYBAN) ||
           (scan_mode == BT_SCAN_AIRTAG) ||
           (scan_mode == BT_SCAN_AIRTAG_MON) ||
@@ -2355,6 +2467,7 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
 
 
   if ((currentScanMode == BT_SCAN_ALL) ||
+  (currentScanMode == BT_SCAN_FOX_HUNT) ||
   (currentScanMode == BT_SCAN_RAYBAN) ||
   (currentScanMode == BT_SCAN_AIRTAG) ||
   (currentScanMode == BT_SCAN_AIRTAG_MON) ||
@@ -2383,6 +2496,14 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
         this->analyzer_name_string = "";
         this->analyzer_name_update = true;
       #endif
+
+      for (int i = 0; i < ble_devices->size(); i++) {
+        if (ble_devices->get(i).selected) {
+          BleDevice ble_device = ble_devices->get(i);
+          ble_device.selected = false;
+          ble_devices->set(i, ble_device);
+        }
+      }
 
       this->shutdownBLE();
       this->ble_scanning = false;
@@ -5365,6 +5486,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
     NimBLEDevice::init("");
     pBLEScan = NimBLEDevice::getScan(); //create new scan
     if ((scan_mode == BT_SCAN_ALL) ||
+        (scan_mode == BT_SCAN_FOX_HUNT) ||
         (scan_mode == BT_SCAN_RAYBAN) ||
         (scan_mode == BT_SCAN_AIRTAG) ||
         (scan_mode == BT_SCAN_AIRTAG_MON) ||
@@ -5380,6 +5502,8 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
           display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
           if (scan_mode == BT_SCAN_ALL)
             display_obj.tft.drawCentreString(text_table4[41],TFT_WIDTH / 2,16,2);
+          else if (scan_mode == BT_SCAN_FOX_HUNT)
+            display_obj.tft.drawCentreString("Fox Hunt",TFT_WIDTH / 2,16,2);
           else if (scan_mode == BT_SCAN_AIRTAG)
             display_obj.tft.drawCentreString("Airtag Sniff",TFT_WIDTH / 2,16,2);
           else if (scan_mode == BT_SCAN_AIRTAG_MON)
@@ -5401,12 +5525,21 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
         #endif
         display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
       #endif
-      if (scan_mode == BT_SCAN_ALL)
+      if (scan_mode == BT_SCAN_ALL) {
+        this->clearList(CLEAR_BLE);
         #ifndef HAS_NIMBLE_2
-          pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), false);
+          pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), true);
         #else
-          pBLEScan->setScanCallbacks(new bluetoothScanAllCallback(), false);
+          pBLEScan->setScanCallbacks(new bluetoothScanAllCallback(), true);
         #endif
+      }
+      else if (scan_mode == BT_SCAN_FOX_HUNT) {
+        #ifndef HAS_NIMBLE_2
+          pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), true);
+        #else
+          pBLEScan->setScanCallbacks(new bluetoothScanAllCallback(), true);
+        #endif
+      }
       else if ((scan_mode == BT_SCAN_FLIPPER) ||
                 (scan_mode == BT_SCAN_RAYBAN) ||
                 (scan_mode == BT_SCAN_FLOCK) ||
@@ -9867,281 +10000,333 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
     return TFT_RED;
 }
 
-// Upload one log file to WDG Wars.
-// Mirrors backendUpload() but uses X-API-Key auth and wdgwars.pl endpoint.
-/*bool WiFiScan::wdgwarsUpload(String filePath) {
-  //display.clearScreen();
-  //display.drawCenteredText("WDG Upload...", true);
-  delay(100);
-
-  if (!SD.exists(filePath)) {
-    //display.drawCenteredText(filePath + " not found", true);
-    Serial.println("[WDG] File not found: " + filePath);
-    return false;
-  }
-
-  String apiKey = settings_obj.loadSetting<String>(WDG_KEY_NAME);
-  if (apiKey.isEmpty()) {
+#ifdef HAS_DIRECT_UPLOAD
+  // Upload one log file to WDG Wars.
+  // Mirrors backendUpload() but uses X-API-Key auth and wdgwars.pl endpoint.
+  bool WiFiScan::wdgwarsUpload(String filePath) {
     //display.clearScreen();
-    //display.drawCenteredText("No WDG API key", true);
-    Serial.println("[WDG] No WDG Wars API key configured");
-    return false;
-  }
+    //display.drawCenteredText("WDG Upload...", true);
+    delay(100);
 
-  File fileToUpload = SD.open(filePath);
-  if (!fileToUpload) {
-    //display.clearScreen();
-    //display.drawCenteredText("Could not open file", true);
-    Serial.println("[WDG] Could not open: " + filePath);
-    return false;
-  }
-
-  // Build multipart body
-  String boundary   = "----ESP32BOUNDARY";
-  String part1      = "--" + boundary + "\r\n";
-  part1 += "Content-Disposition: form-data; name=\"file\"; filename=\"" +
-           filePath + "\"\r\n";
-  part1 += "Content-Type: application/octet-stream\r\n\r\n";
-  String part2      = "\r\n--" + boundary + "--\r\n";
-  int totalLength   = part1.length() + fileToUpload.size() + part2.length();
-
-  Serial.println("[WDG] File size: " + String(fileToUpload.size()));
-  Serial.println("[WDG] Total length: " + String(totalLength));
-
-  client->setInsecure();
-  if (!client->connect("wdgwars.pl", 443)) {
-    fileToUpload.close();
-    client->stop();
-    //display.clearScreen();
-    //display.drawCenteredText("WDG connect fail", true);
-    Serial.println("[WDG] Failed to connect to wdgwars.pl");
-    return false;
-  }
-
-  // HTTP request
-  client->println("POST /api/v2/upload-csv HTTP/1.1");
-  client->println("Host: wdgwars.pl");
-  client->println("User-Agent: ESP32Uploader/1.0");
-  client->println("Accept: application/json");
-  client->println("X-API-Key: " + apiKey);
-  client->println("Content-Type: multipart/form-data; boundary=" + boundary);
-  client->print("Content-Length: ");
-  client->println(totalLength);
-  client->println();
-
-  // Send body
-  client->print(part1);
-
-  const size_t CHUNK = 4096;
-  uint8_t buf[CHUNK];
-  size_t totalSent = 0;
-  uint8_t pct = 0;
-  String pctStr;
-
-  while (fileToUpload.available()) {
-    size_t n = fileToUpload.read(buf, CHUNK);
-    totalSent += n;
-    client->write(buf, n);
-    pct = (totalSent * 100) / fileToUpload.size();
-    //display.tft->drawRect(0, (TFT_HEIGHT / 3) * 2, TFT_WIDTH, TFT_HEIGHT - (TFT_HEIGHT / 3) * 2, ST77XX_BLACK);
-    //display.tft->setCursor(0, (TFT_HEIGHT / 3) * 2);
-    pctStr = String(pct) + "%";
-    //display.drawCenteredText(pctStr, false);
-  }
-
-  client->print(part2);
-  fileToUpload.close();
-
-  Serial.println("[WDG] Bytes sent: " + String(totalSent));
-
-  // Read response
-  String response;
-  unsigned long t = millis();
-  while (millis() - t < 5000) {
-    while (client->available()) {
-      char c = client->read();
-      response += c;
+    if (!SD.exists(filePath)) {
+      //display.drawCenteredText(filePath + " not found", true);
+      Serial.println("[WDG] File not found: " + filePath);
+      return false;
     }
-    if (!client->connected() && !client->available())
-      break;
-  }
-  client->stop();
 
-  // Capture first 200 chars of response for log viewer
-  String respTrunc = response.length() > 200 ? response.substring(0, 200) : response;
-  Serial.println("[WDG] Response: " + respTrunc);
-
-  // WDG Wars returns 200 on success
-  bool ok = response.indexOf("202 Accepted") >= 0 ||
-  response.indexOf("\"ok\":true") >= 0;
-
-  //display.clearScreen();
-  //display.drawCenteredText(ok ? "WDG OK" : "WDG Failed", true);
-  delay(1000);
-
-  return ok;
-}*/
-
-// Upload one log file to Wigle
-/*bool WiFiScan::wigleUpload(String filePath) {
-  //server.begin();
-
-  //display.clearScreen();
-  //display.drawCenteredText("Wigle Upload...", true);
-
-  delay(100);
-
-  if (!SD.exists(filePath)) {
-    //display.clearScreen();
-    //display.drawCenteredText(filePath + " not found", true);
-    Serial.println("File does not exist: " + filePath);
-    return false;
-  }
-
-  File fileToUpload = SD.open(filePath);
-  if (!fileToUpload) {
-    //display.clearScreen();
-    //display.drawCenteredText("Could not open file", true);
-    Serial.println("Could not open file: " + filePath);
-    return false;
-  }
-
-  // Load credentials
-  String username = settings_obj.loadSetting<String>("wu");
-  String token = settings_obj.loadSetting<String>("wt");
-  if (username.isEmpty() || token.isEmpty()) {
-    fileToUpload.close();
-    //display.clearScreen();
-    //display.drawCenteredText("No wigle creds", true);
-    Serial.println("Missing wigle credentials");
-    return false;
-  }
-
-  Serial.println("Username: " + username);
-  Serial.println("Token: " + token);
-
-  String boundary = "----ESP32BOUNDARY";
-  String contentType = "multipart/form-data; boundary=" + boundary;
-
-  // Build parts
-  String part1 = "--" + boundary + "\r\n";
-  part1 += "Content-Disposition: form-data; name=\"file\"; filename=\"" + filePath + "\"\r\n";
-  part1 += "Content-Type: application/octet-stream\r\n\r\n";
-
-  String part2 = "\r\n--" + boundary + "\r\n";
-  part2 += "Content-Disposition: form-data; name=\"donate\"\r\n\r\non\r\n";
-
-  String part3 = "--" + boundary + "--\r\n";
-
-  int totalLength = part1.length() + fileToUpload.size() + part2.length() + part3.length();
-
-  Serial.println("part1.length(): " + String(part1.length()));
-  Serial.println("fileToUpload.size(): " + String(fileToUpload.size()));
-  Serial.println("part2.length(): " + String(part2.length()));
-  Serial.println("part3.length(): " + String(part3.length()));
-  Serial.println("Total Content-Length: " + String(totalLength));
-
-  Serial.print("File size: ");
-  Serial.println(fileToUpload.size());
-
-  // Connect manually via WiFiClientSecure
-  //WiFiClientSecure *client = new WiFiClientSecure();
-  //client.stop();
-  client->setInsecure();
-
-  if (!client->connect("api.wigle.net", 443)) {
-    fileToUpload.close();
-    //delete client;
-    client->stop();
-    //display.clearScreen();
-    //display.drawCenteredText("Could not connect", true);
-    Serial.println("Failed to connected to api.wigle.net");
-    return false;
-  }
-
-  Serial.println("Connected");
-
-  // Compose headers
-  String auth = base64Encode(username + ":" + token);
-
-  Serial.println("Finished encoding");
-
-  client->println("POST /api/v2/file/upload HTTP/1.1");
-  client->println("Host: api.wigle.net");
-  client->println("User-Agent: ESP32Uploader/1.0");
-  client->println("Accept: application/json");
-  client->println("Authorization: Basic " + auth);
-  client->println("Content-Type: " + contentType);
-  client->print("Content-Length: ");
-  client->println(totalLength);
-  client->println();
-  delay(100);
-
-  Serial.println("Finished sending header");
-
-  // Send body
-  client->print(part1);
-  const size_t BUFFER_SIZE = 4096; // 1KB at a time
-  uint8_t buffer[BUFFER_SIZE];
-
-  Serial.println("Finished sending part1");
-
-  uint8_t percent_sent = 0;
-
-  String display_percent = "";
-
-  size_t totalBytesSent = 0;
-  while (fileToUpload.available()) {
-    size_t bytesRead = fileToUpload.read(buffer, BUFFER_SIZE);
-    totalBytesSent += bytesRead;
-    Serial.print("Writing ");
-    Serial.print(totalBytesSent);
-    Serial.println(" bytes...");
-    percent_sent = (totalBytesSent * 100) / fileToUpload.size();
-    //display.tft->drawRect(0, (TFT_HEIGHT / 3) * 2, TFT_WIDTH, TFT_HEIGHT, ST77XX_BLACK);
-    //display.tft->setCursor(0, (TFT_HEIGHT / 3) * 2);
-    display_percent = (String)percent_sent + "%";
-    //display.drawCenteredText(display_percent, false);
-    client->write(buffer, bytesRead);
-  }
-
-  Serial.println("Uploaded file bytes: " + String(totalBytesSent));
-
-  client->print(part2);
-  client->print(part3);
-
-  Serial.println("Finished sending part2 and part3");
-
-  fileToUpload.close();
-
-
-  // Read response
-  String response;
-  unsigned long timeout = millis();
-  while (millis() - timeout < 5000) {
-    while (client->available()) {
-      char c = client->read();
-      response += c;
+    String apiKey = settings_obj.loadSetting<String>(WDG_KEY_NAME);
+    if (apiKey.isEmpty()) {
+      //display.clearScreen();
+      //display.drawCenteredText("No WDG API key", true);
+      Serial.println("[WDG] No WDG Wars API key configured");
+      return false;
     }
+
+    File fileToUpload = SD.open(filePath);
+    if (!fileToUpload) {
+      //display.clearScreen();
+      //display.drawCenteredText("Could not open file", true);
+      Serial.println("[WDG] Could not open: " + filePath);
+      return false;
+    }
+
+    // Build multipart body
+    String boundary   = "----ESP32BOUNDARY";
+    String part1      = "--" + boundary + "\r\n";
+    part1 += "Content-Disposition: form-data; name=\"file\"; filename=\"" +
+            filePath + "\"\r\n";
+    part1 += "Content-Type: application/octet-stream\r\n\r\n";
+    String part2      = "\r\n--" + boundary + "--\r\n";
+    int totalLength   = part1.length() + fileToUpload.size() + part2.length();
+
+    Serial.println("[WDG] File size: " + String(fileToUpload.size()));
+    Serial.println("[WDG] Total length: " + String(totalLength));
+
+    client->setInsecure();
+    if (!client->connect("wdgwars.pl", 443)) {
+      fileToUpload.close();
+      client->stop();
+      //display.clearScreen();
+      //display.drawCenteredText("WDG connect fail", true);
+      Serial.println("[WDG] Failed to connect to wdgwars.pl");
+      return false;
+    }
+
+    // HTTP request
+    client->println("POST /api/v2/upload-csv HTTP/1.1");
+    client->println("Host: wdgwars.pl");
+    client->println("User-Agent: ESP32Uploader/1.0");
+    client->println("Accept: application/json");
+    client->println("X-API-Key: " + apiKey);
+    client->println("Content-Type: multipart/form-data; boundary=" + boundary);
+    client->print("Content-Length: ");
+    client->println(totalLength);
+    client->println();
+
+    // Send body
+    client->print(part1);
+
+    const size_t CHUNK = 4096;
+    uint8_t buf[CHUNK];
+    size_t totalSent = 0;
+    uint8_t pct = 0;
+    String pctStr;
+
+    while (fileToUpload.available()) {
+      size_t n = fileToUpload.read(buf, CHUNK);
+      totalSent += n;
+      client->write(buf, n);
+      pct = (totalSent * 100) / fileToUpload.size();
+      //display.tft->drawRect(0, (TFT_HEIGHT / 3) * 2, TFT_WIDTH, TFT_HEIGHT - (TFT_HEIGHT / 3) * 2, ST77XX_BLACK);
+      //display.tft->setCursor(0, (TFT_HEIGHT / 3) * 2);
+      pctStr = String(pct) + "%";
+      //display.drawCenteredText(pctStr, false);
+    }
+
+    client->print(part2);
+    fileToUpload.close();
+
+    Serial.println("[WDG] Bytes sent: " + String(totalSent));
+
+    // Read response
+    String response;
+    unsigned long t = millis();
+    while (millis() - t < 5000) {
+      while (client->available()) {
+        char c = client->read();
+        response += c;
+      }
+      if (!client->connected() && !client->available())
+        break;
+    }
+    client->stop();
+
+    // Capture first 200 chars of response for log viewer
+    String respTrunc = response.length() > 200 ? response.substring(0, 200) : response;
+    Serial.println("[WDG] Response: " + respTrunc);
+
+    // WDG Wars returns 200 on success
+    bool ok = response.indexOf("202 Accepted") >= 0 ||
+    response.indexOf("\"ok\":true") >= 0;
+
+    //display.clearScreen();
+    //display.drawCenteredText(ok ? "WDG OK" : "WDG Failed", true);
+    delay(1000);
+
+    return ok;
   }
 
-  if (millis() - timeout > 5000)
-    Serial.println("Timeout reached");
-  if (!client->connected())
-    Serial.println("Client disconnected");
-      
-  client->stop();
+  // Upload one log file to Wigle
+  bool WiFiScan::wigleUpload(String filePath) {
+    //server.begin();
 
-  String respTrunc = response.length() > 200 ? response.substring(0, 200) : response;
-  Serial.println("[WIGLE] Response: " + respTrunc);
+    //display.clearScreen();
+    //display.drawCenteredText("Wigle Upload...", true);
 
-  bool ok = response.indexOf("200 OK") >= 0;
+    delay(100);
 
-  //display.clearScreen();
-  //display.drawCenteredText(ok ? "WIGLE OK" : "WIGLE Failed", true);
+    if (!SD.exists(filePath)) {
+      //display.clearScreen();
+      //display.drawCenteredText(filePath + " not found", true);
+      Serial.println("File does not exist: " + filePath);
+      return false;
+    }
 
-  return ok;
-}*/
+    File fileToUpload = SD.open(filePath);
+    if (!fileToUpload) {
+      //display.clearScreen();
+      //display.drawCenteredText("Could not open file", true);
+      Serial.println("Could not open file: " + filePath);
+      return false;
+    }
+
+    // Load credentials
+    String username = settings_obj.loadSetting<String>("wu");
+    String token = settings_obj.loadSetting<String>("wt");
+    if (username.isEmpty() || token.isEmpty()) {
+      fileToUpload.close();
+      //display.clearScreen();
+      //display.drawCenteredText("No wigle creds", true);
+      Serial.println("Missing wigle credentials");
+      return false;
+    }
+
+    Serial.println("Username: " + username);
+    Serial.println("Token: " + token);
+
+    String boundary = "----ESP32BOUNDARY";
+    String contentType = "multipart/form-data; boundary=" + boundary;
+
+    // Build parts
+    String part1 = "--" + boundary + "\r\n";
+    part1 += "Content-Disposition: form-data; name=\"file\"; filename=\"" + filePath + "\"\r\n";
+    part1 += "Content-Type: application/octet-stream\r\n\r\n";
+
+    String part2 = "\r\n--" + boundary + "\r\n";
+    part2 += "Content-Disposition: form-data; name=\"donate\"\r\n\r\non\r\n";
+
+    String part3 = "--" + boundary + "--\r\n";
+
+    int totalLength = part1.length() + fileToUpload.size() + part2.length() + part3.length();
+
+    Serial.println("part1.length(): " + String(part1.length()));
+    Serial.println("fileToUpload.size(): " + String(fileToUpload.size()));
+    Serial.println("part2.length(): " + String(part2.length()));
+    Serial.println("part3.length(): " + String(part3.length()));
+    Serial.println("Total Content-Length: " + String(totalLength));
+
+    Serial.print("File size: ");
+    Serial.println(fileToUpload.size());
+
+    // Connect manually via WiFiClientSecure
+    //WiFiClientSecure *client = new WiFiClientSecure();
+    //client.stop();
+    client->setInsecure();
+
+    if (!client->connect("api.wigle.net", 443)) {
+      fileToUpload.close();
+      //delete client;
+      client->stop();
+      //display.clearScreen();
+      //display.drawCenteredText("Could not connect", true);
+      Serial.println("Failed to connected to api.wigle.net");
+      return false;
+    }
+
+    Serial.println("Connected");
+
+    // Compose headers
+    String auth = base64Encode(username + ":" + token);
+
+    Serial.println("Finished encoding");
+
+    client->println("POST /api/v2/file/upload HTTP/1.1");
+    client->println("Host: api.wigle.net");
+    client->println("User-Agent: ESP32Uploader/1.0");
+    client->println("Accept: application/json");
+    client->println("Authorization: Basic " + auth);
+    client->println("Content-Type: " + contentType);
+    client->print("Content-Length: ");
+    client->println(totalLength);
+    client->println();
+    delay(100);
+
+    Serial.println("Finished sending header");
+
+    // Send body
+    client->print(part1);
+    const size_t BUFFER_SIZE = 4096; // 1KB at a time
+    uint8_t buffer[BUFFER_SIZE];
+
+    Serial.println("Finished sending part1");
+
+    uint8_t percent_sent = 0;
+
+    String display_percent = "";
+
+    size_t totalBytesSent = 0;
+    while (fileToUpload.available()) {
+      size_t bytesRead = fileToUpload.read(buffer, BUFFER_SIZE);
+      totalBytesSent += bytesRead;
+      Serial.print("Writing ");
+      Serial.print(totalBytesSent);
+      Serial.println(" bytes...");
+      percent_sent = (totalBytesSent * 100) / fileToUpload.size();
+      //display.tft->drawRect(0, (TFT_HEIGHT / 3) * 2, TFT_WIDTH, TFT_HEIGHT, ST77XX_BLACK);
+      //display.tft->setCursor(0, (TFT_HEIGHT / 3) * 2);
+      display_percent = (String)percent_sent + "%";
+      //display.drawCenteredText(display_percent, false);
+      client->write(buffer, bytesRead);
+    }
+
+    Serial.println("Uploaded file bytes: " + String(totalBytesSent));
+
+    client->print(part2);
+    client->print(part3);
+
+    Serial.println("Finished sending part2 and part3");
+
+    fileToUpload.close();
+
+
+    // Read response
+    String response;
+    unsigned long timeout = millis();
+    while (millis() - timeout < 5000) {
+      while (client->available()) {
+        char c = client->read();
+        response += c;
+      }
+    }
+
+    if (millis() - timeout > 5000)
+      Serial.println("Timeout reached");
+    if (!client->connected())
+      Serial.println("Client disconnected");
+        
+    client->stop();
+
+    String respTrunc = response.length() > 200 ? response.substring(0, 200) : response;
+    Serial.println("[WIGLE] Response: " + respTrunc);
+
+    bool ok = response.indexOf("200 OK") >= 0;
+
+    //display.clearScreen();
+    //display.drawCenteredText(ok ? "WIGLE OK" : "WIGLE Failed", true);
+
+    return ok;
+  }
+#endif
+
+void WiFiScan::runFoxHunt(uint32_t currentTime) {
+  if (currentTime - this->last_ui_update >= 100)
+    this->last_ui_update = millis();
+  else
+    return;
+
+  display_obj.tft.fillRect(0, (TFT_HEIGHT / 3), TFT_WIDTH, TFT_HEIGHT / 3, TFT_BLACK);
+
+  #ifdef HAS_BT
+    if (currentScanMode == BT_SCAN_FOX_HUNT) {
+      for (int i = 0; i < ble_devices->size(); i++) {
+        if (ble_devices->get(i).selected) {
+          int targ_rssi = ble_devices->get(i).rssi;
+
+          #ifdef HAS_MINI_SCREEN
+            display_obj.tft.setTextSize(1);
+          #else
+            display_obj.tft.setTextSize(2);
+          #endif
+
+          display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+
+          #ifdef HAS_MINI_SCREEN
+            display_obj.showCenterText(ble_devices->get(i).name.c_str(), (TFT_HEIGHT / 4), true);
+          #else
+            display_obj.showCenterText(ble_devices->get(i).name.c_str(), (TFT_HEIGHT / 4), false, 2);
+          #endif
+
+          #ifdef HAS_MINI_SCREEN
+            display_obj.tft.setTextSize(2);
+          #else
+            display_obj.tft.setTextSize(3);
+          #endif
+
+          display_obj.tft.setTextColor(rssiToColorScaled(targ_rssi), TFT_BLACK);
+
+          #ifdef HAS_MINI_SCREEN
+            display_obj.showCenterText(String(targ_rssi).c_str(), (TFT_HEIGHT / 3), false, 2);
+          #else
+            display_obj.showCenterText(String(targ_rssi).c_str(), (TFT_HEIGHT / 3), false, 3);
+          #endif
+
+          display_obj.tft.fillRect(0, (TFT_HEIGHT / 4) * 3, rssiToBarWidth(targ_rssi), 20, rssiToColorScaled(targ_rssi));
+          display_obj.tft.fillRect(rssiToBarWidth(targ_rssi), (TFT_HEIGHT / 4) * 3, TFT_WIDTH, 20, TFT_BLACK);
+        }
+      }
+    }
+  #endif
+}
 
 // Function for updating scan status
 void WiFiScan::main(uint32_t currentTime)
@@ -10174,6 +10359,9 @@ void WiFiScan::main(uint32_t currentTime)
       initTime = millis();
       this->channelHop(true);
     }
+  }
+  else if (currentScanMode == BT_SCAN_FOX_HUNT) {
+    this->runFoxHunt(currentTime);
   }
   else if (currentScanMode == WIFI_SCAN_DETECT_FOLLOW) {
     if (currentTime - initTime >= this->channel_hop_delay * HOP_DELAY) {

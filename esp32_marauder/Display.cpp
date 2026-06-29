@@ -590,7 +590,7 @@ void Display::displayBuffer(bool do_clear)
   }
 }
 
-void Display::showCenterText(const char* text, int y, bool small_pp)
+void Display::showCenterText(const char* text, int y, bool small_pp, uint8_t text_size)
 {
   if (!text)
     text = "";
@@ -598,7 +598,7 @@ void Display::showCenterText(const char* text, int y, bool small_pp)
   size_t len = strlen(text);
 
   if (!small_pp)
-    tft.setCursor((SCREEN_WIDTH - (len * (6 * BANNER_TEXT_SIZE))) / 2, y);
+    tft.setCursor((SCREEN_WIDTH - (len * (6 * text_size))) / 2, y);
   else
     tft.setCursor((SCREEN_WIDTH - (len * 6)) / 2, y);
 
