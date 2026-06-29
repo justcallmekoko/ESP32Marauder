@@ -538,6 +538,7 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     //#define HAS_SIMPLEX_DISPLAY
+    //#define HAS_DIRECT_UPLOAD
   #endif
 
   #if defined(MARAUDER_M5_NANO_C6)
@@ -2429,6 +2430,9 @@
   #ifndef HAS_SCREEN
 
     #define BANNER_TIME GRAPH_REFRESH
+
+    #define TFT_WIDTH 0
+    #define TFT_HEIGHT 0
 
     #define TFT_BLACK 0
     #define TFT_WHITE 0
