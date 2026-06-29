@@ -10279,52 +10279,54 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
 #endif
 
 void WiFiScan::runFoxHunt(uint32_t currentTime) {
-  if (currentTime - this->last_ui_update >= 100)
-    this->last_ui_update = millis();
-  else
-    return;
+  #ifdef HAS_SCREEN
+    if (currentTime - this->last_ui_update >= 100)
+      this->last_ui_update = millis();
+    else
+      return;
 
-  display_obj.tft.fillRect(0, (TFT_HEIGHT / 3), TFT_WIDTH, TFT_HEIGHT / 3, TFT_BLACK);
+    display_obj.tft.fillRect(0, (TFT_HEIGHT / 3), TFT_WIDTH, TFT_HEIGHT / 3, TFT_BLACK);
 
-  #ifdef HAS_BT
-    if (currentScanMode == BT_SCAN_FOX_HUNT) {
-      for (int i = 0; i < ble_devices->size(); i++) {
-        if (ble_devices->get(i).selected) {
-          int targ_rssi = ble_devices->get(i).rssi;
+    #ifdef HAS_BT
+      if (currentScanMode == BT_SCAN_FOX_HUNT) {
+        for (int i = 0; i < ble_devices->size(); i++) {
+          if (ble_devices->get(i).selected) {
+            int targ_rssi = ble_devices->get(i).rssi;
 
-          #ifdef HAS_MINI_SCREEN
-            display_obj.tft.setTextSize(1);
-          #else
-            display_obj.tft.setTextSize(2);
-          #endif
+            #ifdef HAS_MINI_SCREEN
+              display_obj.tft.setTextSize(1);
+            #else
+              display_obj.tft.setTextSize(2);
+            #endif
 
-          display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+            display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
 
-          #ifdef HAS_MINI_SCREEN
-            display_obj.showCenterText(ble_devices->get(i).name.c_str(), (TFT_HEIGHT / 4), true);
-          #else
-            display_obj.showCenterText(ble_devices->get(i).name.c_str(), (TFT_HEIGHT / 4), false, 2);
-          #endif
+            #ifdef HAS_MINI_SCREEN
+              display_obj.showCenterText(ble_devices->get(i).name.c_str(), (TFT_HEIGHT / 4), true);
+            #else
+              display_obj.showCenterText(ble_devices->get(i).name.c_str(), (TFT_HEIGHT / 4), false, 2);
+            #endif
 
-          #ifdef HAS_MINI_SCREEN
-            display_obj.tft.setTextSize(2);
-          #else
-            display_obj.tft.setTextSize(3);
-          #endif
+            #ifdef HAS_MINI_SCREEN
+              display_obj.tft.setTextSize(2);
+            #else
+              display_obj.tft.setTextSize(3);
+            #endif
 
-          display_obj.tft.setTextColor(rssiToColorScaled(targ_rssi), TFT_BLACK);
+            display_obj.tft.setTextColor(rssiToColorScaled(targ_rssi), TFT_BLACK);
 
-          #ifdef HAS_MINI_SCREEN
-            display_obj.showCenterText(String(targ_rssi).c_str(), (TFT_HEIGHT / 3), false, 2);
-          #else
-            display_obj.showCenterText(String(targ_rssi).c_str(), (TFT_HEIGHT / 3), false, 3);
-          #endif
+            #ifdef HAS_MINI_SCREEN
+              display_obj.showCenterText(String(targ_rssi).c_str(), (TFT_HEIGHT / 3), false, 2);
+            #else
+              display_obj.showCenterText(String(targ_rssi).c_str(), (TFT_HEIGHT / 3), false, 3);
+            #endif
 
-          display_obj.tft.fillRect(0, (TFT_HEIGHT / 4) * 3, rssiToBarWidth(targ_rssi), 20, rssiToColorScaled(targ_rssi));
-          display_obj.tft.fillRect(rssiToBarWidth(targ_rssi), (TFT_HEIGHT / 4) * 3, TFT_WIDTH, 20, TFT_BLACK);
+            display_obj.tft.fillRect(0, (TFT_HEIGHT / 4) * 3, rssiToBarWidth(targ_rssi), 20, rssiToColorScaled(targ_rssi));
+            display_obj.tft.fillRect(rssiToBarWidth(targ_rssi), (TFT_HEIGHT / 4) * 3, TFT_WIDTH, 20, TFT_BLACK);
+          }
         }
       }
-    }
+    #endif
   #endif
 }
 
