@@ -223,20 +223,26 @@ jobs:
       #  run: |
       #    mv ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.${{ matrix.board.file_name }}.bin
       
-      - name: Rename and Upload ${{ matrix.board.name }} Artifact
+      - name: Merge and Rename ${{ matrix.board.name }} Artifact
         run: |
           VERSION=$(grep '#define MARAUDER_VERSION' ./esp32_marauder/configs.h | sed -E 's/.*"v([^"]+)"/v\1/' | tr '.' '_')
           DATE=$(date +%Y%m%d)
 
           BUILD_DIR=./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}
-          INPUT_BIN=$BUILD_DIR/esp32_marauder.ino.bin
-          OUTPUT_BIN=esp32_marauder_${VERSION}_${DATE}_${{ matrix.board.file_name }}.bin
-          VERSION_DOT=${VERSION_DOT}
+          OUTPUT_BIN=esp32_marauder_${VERSION}_${DATE}_${{ matrix.board.file_name }}_merged.bin
 
-          mv "$INPUT_BIN" "$BUILD_DIR/$OUTPUT_BIN"
+          # Merge bootloader + partition table + app into a single binary flashed at 0x0000
+          esptool.py --chip esp32 merge_bin \
+            --flash_mode dio --flash_freq 80m --flash_size 4MB \
+            -o "$BUILD_DIR/$OUTPUT_BIN" \
+            ${{ matrix.board.addr }} "$BUILD_DIR/esp32_marauder.ino.bootloader.bin" \
+            0x8000        "$BUILD_DIR/esp32_marauder.ino.partitions.bin" \
+            0xe000        /home/runner/.arduino15/packages/esp32/hardware/esp32/${{ matrix.board.idf_ver }}/tools/partitions/boot_app0.bin \
+            0x10000       "$BUILD_DIR/esp32_marauder.ino.bin"
 
           echo "artifact_name=$OUTPUT_BIN" >> $GITHUB_ENV
           echo "artifact_path=$BUILD_DIR/$OUTPUT_BIN" >> $GITHUB_ENV
+
       - name: Upload ${{ matrix.board.name }} Artifact
         uses: actions/upload-artifact@v4
         with:

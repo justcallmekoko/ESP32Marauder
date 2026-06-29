@@ -358,7 +358,6 @@
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
     #define HAS_SEPARATE_SD
-    #define HAS_IDF_3       // skip esp_spiram_init() — ESP32-D module has no PSRAM
     #define MARAUDER_CYD_3_5_INCH
   #endif
 

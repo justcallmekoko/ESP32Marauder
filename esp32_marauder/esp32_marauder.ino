@@ -222,17 +222,17 @@ uint32_t currentTime  = 0;
 
 void setup()
 {
+  Serial.begin(115200);
+
   randomSeed(esp_random());
-  
+
   #ifndef DEVELOPER
     esp_log_level_set("*", ESP_LOG_NONE);
   #endif
-  
+
   #ifndef HAS_IDF_3
     esp_spiram_init();
   #endif
-
-  Serial.begin(115200);
 
   #ifdef HAS_ACT_LED
     pinMode(ACT_LED_PIN, OUTPUT);
