@@ -1845,10 +1845,36 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_AP_STA, 0x97e0);
   });
-  this->addNodes(&wifiSnifferMenu, "Fox Hunt", TFTCYAN, PACKET_MONITOR, [this]() {
+  /*this->addNodes(&wifiSnifferMenu, "Fox Hunt", TFTCYAN, PACKET_MONITOR, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_CYAN);
+  });*/
+  this->addNodes(&wifiSnifferMenu, "Fox Hunt", TFTCYAN, SCANNERS, [this]() {
+    foxHuntMenu.list->clear();
+
+    // Bluetooth Fox Hunt Menu
+    foxHuntMenu.parentMenu = &wifiSnifferMenu; // Second Menu is third menu parent
+    this->addNodes(&foxHuntMenu, text09, TFTLIGHTGREY, 0, [this]() {
+      this->changeMenu(foxHuntMenu.parentMenu, true);
+    });
+    
+    for (int i = 0; i < access_points->size(); i++) {
+      AccessPoint access_point = access_points->get(i);
+      access_point.selected = false;
+      access_points->set(i, access_point);
+      uint8_t node_color = rssiToMenuColor(access_points->get(i).rssi);
+      String node_name = String(access_points->get(i).rssi) + " " + access_points->get(i).essid;
+      this->addNodes(&foxHuntMenu, node_name.c_str(), node_color, 255, [this, i](){
+        AccessPoint access_point = access_points->get(i);
+        access_point.selected = true;
+        access_points->set(i, access_point);
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_CYAN);
+      });
+    }
+    this->changeMenu(&foxHuntMenu, true);
   });
   this->addNodes(&wifiSnifferMenu, "MAC Monitor", TFTMAGENTA, SCANNERS, [this]() {
     display_obj.clearScreen();
