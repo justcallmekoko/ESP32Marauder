@@ -4102,7 +4102,11 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color) {
         (scan_mode != WIFI_SCAN_CHAN_ACT)) {
       #ifdef HAS_SCREEN
         display_obj.init();
-        display_obj.tft.setRotation(1);
+        #ifdef HAS_CAP_TOUCH
+          display_obj.tft.setRotation(3); // Pancake: landscape-3
+        #else
+          display_obj.tft.setRotation(1);
+        #endif
         display_obj.tft.fillScreen(TFT_BLACK);
       #endif
     
@@ -4116,7 +4120,7 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color) {
         //display_obj.tft.setFreeFont(1);
         display_obj.tft.setFreeFont(NULL);
         display_obj.tft.setTextSize(1);
-        display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK); // Buttons
+        display_obj.tft.fillRect(127, 0, WIDTH_1 - 127, 28, TFT_BLACK); // Buttons
         display_obj.tft.fillRect(12, 0, 90, 32, TFT_BLACK); // color key
       
         delay(10);
@@ -5125,12 +5129,12 @@ void WiFiScan::displayWardriveStats() {
       #endif
 
       // POI button — full width bottom bar
-      display_obj.tft.drawRect(0, 270, 240, 50, TFT_MAGENTA);
+      display_obj.tft.drawRect(0, SCREEN_HEIGHT - 50, SCREEN_WIDTH, 50, TFT_MAGENTA);
       display_obj.tft.setTextSize(2);
       display_obj.tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
       String poiText = "POI (" + String(this->poiCount) + ")";
       int16_t poiTextWidth = poiText.length() * 12; // 12px per char at size 2
-      display_obj.tft.setCursor((240 - poiTextWidth) / 2, 287);
+      display_obj.tft.setCursor((SCREEN_WIDTH - poiTextWidth) / 2, SCREEN_HEIGHT - 33);
       display_obj.tft.print(poiText);
 
     #endif
@@ -8901,7 +8905,7 @@ bool WiFiScan::filterActive() {
   void WiFiScan::packetMonitorMain(uint32_t currentTime) {
     
     
-    for (x_pos = (11 + x_scale); x_pos <= 320; x_pos = x_pos)
+    for (x_pos = (11 + x_scale); x_pos <= WIDTH_1; x_pos = x_pos)
     {
       currentTime = millis();
       do_break = false;
@@ -9038,19 +9042,19 @@ bool WiFiScan::filterActive() {
         display_obj.tft.drawLine(x_pos - x_scale, y_pos_y_old, x_pos, y_pos_y, TFT_RED);
         
         //Draw preceding black 'boxes' to erase old plot lines, !!!WEIRD CODE TO COMPENSATE FOR BUTTONS AND COLOR KEY SO 'ERASER' DOESN'T ERASE BUTTONS AND COLOR KEY!!!
-        if ((x_pos <= 90) || ((x_pos >= 117) && (x_pos <= 320))) //above x axis
-          display_obj.tft.fillRect(x_pos+1, 28, 10, 93, TFT_BLACK); //compensate for buttons!
+        if ((x_pos <= 90) || ((x_pos >= 117) && (x_pos <= WIDTH_1))) //above x axis
+          display_obj.tft.fillRect(x_pos+1, 28, 10, PKT_HALF - 27, TFT_BLACK); //compensate for buttons!
         else
-          display_obj.tft.fillRect(x_pos+1, 0, 10, 121, TFT_BLACK); //don't compensate for buttons!
+          display_obj.tft.fillRect(x_pos+1, 0, 10, PKT_HALF + 1, TFT_BLACK); //don't compensate for buttons!
 
         if (x_pos < 0) // below x axis
-          display_obj.tft.fillRect(x_pos+1, 121, 10, 88, TFT_CYAN);
+          display_obj.tft.fillRect(x_pos+1, PKT_HALF + 1, 10, PKT_HALF - 32, TFT_CYAN);
         else
-          display_obj.tft.fillRect(x_pos+1, 121, 10, 118, TFT_BLACK);
+          display_obj.tft.fillRect(x_pos+1, PKT_HALF + 1, 10, PKT_HALF - 2, TFT_BLACK);
         
         
-        if ( (y_pos_x == 120) || (y_pos_y == 120) || (y_pos_z == 120) )
-          display_obj.tft.drawFastHLine(10, 120, 310, TFT_WHITE); // x axis
+        if ( (y_pos_x == PKT_HALF) || (y_pos_y == PKT_HALF) || (y_pos_z == PKT_HALF) )
+          display_obj.tft.drawFastHLine(10, PKT_HALF, PKT_AXIS_W, TFT_WHITE); // x axis
          
         y_pos_x_old = y_pos_x; //set old y pos values to current y pos values 
         y_pos_y_old = y_pos_y;
@@ -9061,7 +9065,7 @@ bool WiFiScan::filterActive() {
      
     }
     
-    display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK); //erase XY buttons and any lines behind them
+    display_obj.tft.fillRect(127, 0, WIDTH_1 - 127, 28, TFT_BLACK); //erase XY buttons and any lines behind them
     display_obj.tft.fillRect(12, 0, 90, 32, TFT_BLACK); // key
     
     display_obj.tftDrawXScaleButtons(x_scale); //re-draw stuff
