@@ -21,6 +21,7 @@
   //#define GENERIC_ESP32
   //#define MARAUDER_FLIPPER
   //#define MARAUDER_MULTIBOARD_S3
+  //#define MARAUDER_S3_SUPERMINI
   //#define ESP32_LDDB
   //#define MARAUDER_DEV_BOARD_PRO
   //#define XIAO_ESP32_S3
@@ -93,6 +94,8 @@
     #define HARDWARE_NAME "Flipper Zero Dev Board"
   #elif defined(MARAUDER_MULTIBOARD_S3)
     #define HARDWARE_NAME "Flipper Zero Multi Board S3"
+  #elif defined(MARAUDER_S3_SUPERMINI)
+    #define HARDWARE_NAME "ESP32-S3 SuperMini"
   #elif defined(ESP32_LDDB)
     #define HARDWARE_NAME "ESP32 LDDB"
   #elif defined(MARAUDER_DEV_BOARD_PRO)
@@ -461,6 +464,19 @@
   #endif
 
   #ifdef XIAO_ESP32_S3
+    #define FLIPPER_ZERO_HAT
+    //#define HAS_BATTERY
+    #define HAS_BT
+    //#define HAS_BUTTONS
+    //#define HAS_NEOPIXEL_LED
+    //#define HAS_PWR_MGMT
+    //#define HAS_SCREEN
+    //#define HAS_SD
+    //#define HAS_TEMP_SENSOR
+    //#define HAS_GPS
+  #endif
+
+  #ifdef MARAUDER_S3_SUPERMINI
     #define FLIPPER_ZERO_HAT
     //#define HAS_BATTERY
     #define HAS_BT
@@ -2489,6 +2505,8 @@
   #elif defined(MARAUDER_FLIPPER)
     #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_MULTIBOARD_S3)
+    #define MEM_LOWER_LIM 10000
+  #elif defined(MARAUDER_S3_SUPERMINI)
     #define MEM_LOWER_LIM 10000
   #elif defined(ESP32_LDDB)
     #define MEM_LOWER_LIM 10000
