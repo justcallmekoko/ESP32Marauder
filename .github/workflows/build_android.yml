@@ -1,0 +1,49 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - 'android_app/**'
+  pull_request:
+    paths:
+      - 'android_app/**'
+
+jobs:
+  build:
+    name: Assemble debug APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x android_app/gradlew
+
+      - name: Build debug APK
+        working-directory: android_app
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Rename APK
+        run: |
+          VERSION=$(grep versionName android_app/app/build.gradle | sed -E 's/.*"(.+)"/\1/')
+          DATE=$(date +%Y%m%d)
+          cp android_app/app/build/outputs/apk/debug/app-debug.apk \
+             marauder_controller_v${VERSION}_${DATE}.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: marauder-controller-apk
+          path: marauder_controller_*.apk
+          retention-days: 30
