@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- CH340: VID 0x1A86=6790, PID 0x7523=29987 -->
+    <usb-device vendor-id="6790" product-id="29987" />
+    <!-- CH9102 variant: VID 0x1A86=6790, PID 0x55D4=21972 -->
+    <usb-device vendor-id="6790" product-id="21972" />
+</resources>

@@ -1,0 +1,15 @@
+[project]
+name = "marauder-mcp"
+version = "0.2.0"
+description = "ESP32 Marauder MCP server + Venice AI terminal client"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.0.0",
+    "mcp-use>=0.1.0",
+    "pyserial>=3.5",
+    "langchain-openai>=0.2.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
