@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/connectionFragment">
+
+    <fragment
+        android:id="@+id/connectionFragment"
+        android:name="com.marauder.controller.ui.connection.ConnectionFragment"
+        android:label="Connecting">
+        <action
+            android:id="@+id/action_connection_to_terminal"
+            app:destination="@id/terminalFragment"
+            app:popUpTo="@id/connectionFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/terminalFragment"
+        android:name="com.marauder.controller.ui.terminal.TerminalFragment"
+        android:label="Marauder Terminal">
+        <action
+            android:id="@+id/action_terminal_to_connection"
+            app:destination="@id/connectionFragment"
+            app:popUpTo="@id/terminalFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+</navigation>

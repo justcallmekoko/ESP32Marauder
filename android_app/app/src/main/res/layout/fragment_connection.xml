@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="#000000"
+    android:padding="32dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="ESP32 Marauder"
+        android:textColor="#00FF41"
+        android:textSize="24sp"
+        android:fontFamily="monospace"
+        android:layout_marginBottom="32dp" />
+
+    <ProgressBar
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginBottom="24dp"
+        android:indeterminateTint="#00FF41" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Waiting for USB device…"
+        android:textColor="#AAAAAA"
+        android:textSize="14sp"
+        android:fontFamily="monospace"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Plug in ESP32 via OTG cable"
+        android:textColor="#666666"
+        android:textSize="12sp"
+        android:fontFamily="monospace" />
+
+</LinearLayout>
