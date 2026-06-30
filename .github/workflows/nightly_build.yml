@@ -176,13 +176,6 @@ jobs:
           ref: v1.4
           path: CustomXPT2046_Touchscreen
 
-      - name: Install CST820
-        uses: actions/checkout@v2
-        with:
-          repository: evilpete/CST820
-          ref: v0.1.1
-          path: CustomCST820
-
       - name: Install lv_arduino
         uses: actions/checkout@v2
         with:

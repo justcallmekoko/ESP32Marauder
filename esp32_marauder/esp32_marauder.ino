@@ -311,8 +311,6 @@ void setup()
   #endif
 
   #if defined(HAS_CST820)
-      // github.com/evilpete/CST820
-      Serial.println(F("CST820_touch.begin()")); Serial.flush();
       CST820_touch.begin(CST820_SDA, CST820_SCL, CST820_RST, CST820_INT);
       // delay(500);
   #endif
