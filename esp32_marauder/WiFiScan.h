@@ -48,6 +48,7 @@
 #endif
 #ifdef HAS_SD
   #include "SDInterface.h"
+  #include <WiFiClientSecure.h>
 #endif
 #include "Buffer.h"
 #ifdef HAS_BATTERY
@@ -604,7 +605,6 @@ class WiFiScan
     #endif
 
     bool wigleUpload(String filePath);
-    bool wdgwarsUpload(String filePath);
 
     void runFoxHunt(uint32_t currentTime);
     void throwThatShitInACircle();
@@ -882,6 +882,10 @@ class WiFiScan
     String checkEmptyProbe(String essid);
     bool checkFlockOUI(const uint8_t mac[6]);
     bool startWiFi(String ssid, String password, bool gui = true);
+    #if defined(HAS_SD) && defined(HAS_WDG_UPLOAD)
+      String loadWdgKeyFromSD(bool saveSetting = true);
+      bool wdgwarsUpload(String filePath, String* resultMessage = nullptr);
+    #endif
     bool isFlockCamera(const uint8_t* payload, size_t len, const String& name, String* serial_out);
     int seenBLEDevice(BleDevice ble_device);
     uint16_t rssiToColor(int8_t rssi);

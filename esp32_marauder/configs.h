@@ -43,6 +43,10 @@
 
   #define MARAUDER_VERSION "v1.13.0"
 
+  #if defined(MARAUDER_V6_1)
+    #define HAS_WDG_UPLOAD
+  #endif
+
   #define GRAPH_REFRESH   100
 
   #define TRACK_EVICT_SEC 90 // Seconds before marking tracked MAC as tombstone

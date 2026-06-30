@@ -17,7 +17,9 @@
   extern Display display_obj;
 #endif
 
-#define WDG_KEY_NAME       "wdg_key"   // WDG Wars API key (String)
+#ifdef HAS_WDG_UPLOAD
+  #define WDG_KEY_NAME       "wdg_key"   // WDG Wars API key (String)
+#endif
 
 class Settings {
 
