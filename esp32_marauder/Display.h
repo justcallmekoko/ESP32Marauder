@@ -147,7 +147,7 @@ class Display
     void getTouchWhileFunction(bool pressed);
     void init();
     void RunSetup();
-    void showCenterText(const char* text, int y, bool small_pp = false);
+    void showCenterText(const char* text, int y, bool small_pp = false, uint8_t text_size = BANNER_TEXT_SIZE);
     void touchToExit();
     void twoPartDisplay(String center_text);
     void updateBanner(String msg);
