@@ -45,7 +45,7 @@
 
   #define JSON_SETTING_SIZE 2048
 
-  #define MARAUDER_VERSION "v1.12.3"
+  #define MARAUDER_VERSION "v1.13.0"
 
   #define GRAPH_REFRESH   100
 
@@ -573,6 +573,7 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     //#define HAS_SIMPLEX_DISPLAY
+    //#define HAS_DIRECT_UPLOAD
   #endif
 
   #if defined(MARAUDER_M5_NANO_C6)
@@ -2589,6 +2590,9 @@
   #ifndef HAS_SCREEN
 
     #define BANNER_TIME GRAPH_REFRESH
+
+    #define TFT_WIDTH 0
+    #define TFT_HEIGHT 0
 
     #define TFT_BLACK 0
     #define TFT_WHITE 0

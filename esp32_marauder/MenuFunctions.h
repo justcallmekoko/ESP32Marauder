@@ -199,6 +199,8 @@ class MenuFunctions
 
     Menu evilPortalMenu;
 
+    Menu foxHuntMenu;
+
     //static void lv_tick_handler();
 
     // Menu icons
