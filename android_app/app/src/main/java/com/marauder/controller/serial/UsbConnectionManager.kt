@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
+import androidx.core.content.ContextCompat
 import com.hoho.android.usbserial.driver.UsbSerialProber
 
 class UsbConnectionManager(
@@ -43,7 +44,8 @@ class UsbConnectionManager(
             addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
             addAction(ACTION_USB_PERMISSION)
         }
-        context.registerReceiver(receiver, filter)
+        // RECEIVER_NOT_EXPORTED required on Android 13+ for receivers with custom actions
+        ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
 
         // Connect to already-attached device (e.g. app started while device was plugged in)
         if (!repository.isConnected.value) {
