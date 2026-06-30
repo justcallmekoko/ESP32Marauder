@@ -259,10 +259,10 @@ void MenuFunctions::main(uint32_t currentTime)
     if (pressed &&
         (wifi_scan_obj.currentScanMode == WIFI_SCAN_WAR_DRIVE ||
          wifi_scan_obj.currentScanMode == WIFI_SCAN_STATION_WAR_DRIVE)) {
-      if (t_y >= 270) {
+      if (t_y >= (SCREEN_HEIGHT - 50)) {
         wifi_scan_obj.tagPOI(nullptr);
         // Brief green flash
-        display_obj.tft.fillRect(0, 270, 240, 50, TFT_GREEN);
+        display_obj.tft.fillRect(0, SCREEN_HEIGHT - 50, SCREEN_WIDTH, 50, TFT_GREEN);
         display_obj.tft.setTextSize(2);
         #ifdef HAS_GPS
         if (gps_obj.getFixStatus())
@@ -272,7 +272,7 @@ void MenuFunctions::main(uint32_t currentTime)
           display_obj.tft.setTextColor(TFT_BLACK, TFT_RED);
         String poiFlash = "POI (" + String(wifi_scan_obj.poiCount) + ")";
         int16_t flashWidth = poiFlash.length() * 12;
-        display_obj.tft.setCursor((240 - flashWidth) / 2, 287);
+        display_obj.tft.setCursor((SCREEN_WIDTH - flashWidth) / 2, SCREEN_HEIGHT - 33);
         display_obj.tft.print(poiFlash);
         delay(200);
         x = -1;
@@ -337,6 +337,8 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_RICK_ROLL) ||
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_BEACON_LIST) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_ALL) ||
+          (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_RAYBAN) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_AIRTAG) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_AIRTAG_MON) ||
@@ -440,6 +442,7 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_RICK_ROLL) ||
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_BEACON_LIST) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_ALL) ||
+            (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_RAYBAN) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_AIRTAG) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_AIRTAG_MON) ||
@@ -959,15 +962,15 @@ void MenuFunctions::battery2(bool initial)
   else the_color = TFT_GREEN;
 
   display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR);
-  display_obj.tft.fillRect(186, 0, 50, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
-  display_obj.tft.drawXBitmap(186,
+  display_obj.tft.fillRect(SB_TOUCH_X, 0, 50, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+  display_obj.tft.drawXBitmap(SB_TOUCH_X,
                               0,
                               menu_icons[STATUS_BAT],
                               16,
                               16,
                               STATUSBAR_COLOR,
                               the_color);
-  display_obj.tft.drawString((String) battery_analog + "%", 204, 0, 2);
+  display_obj.tft.drawString((String) battery_analog + "%", SB_BAT_X, 0, 2);
 }
 #else
 void MenuFunctions::battery(bool initial)
@@ -989,7 +992,7 @@ void MenuFunctions::battery(bool initial)
 
       display_obj.tft.setCursor(0, 1);
       /*if (!this->disable_touch) {
-        display_obj.tft.drawXBitmap(186,
+        display_obj.tft.drawXBitmap(SB_TOUCH_X,
                                     0,
                                     menu_icons[STATUS_BAT],
                                     16,
@@ -998,9 +1001,9 @@ void MenuFunctions::battery(bool initial)
                                     the_color);
       }*/
       #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
-        display_obj.tft.drawString((String)battery_obj.battery_level + "%", 204, 0, 1);
+        display_obj.tft.drawString((String)battery_obj.battery_level + "%", SB_BAT_X, 0, 1);
       #else
-        display_obj.tft.drawString((String)battery_obj.battery_level + "%", 204, 0, 2);
+        display_obj.tft.drawString((String)battery_obj.battery_level + "%", SB_BAT_X, 0, 2);
       #endif
     }
   #endif
@@ -1091,13 +1094,13 @@ void MenuFunctions::updateStatusBar()
   wifi_scan_obj.free_ram = String(esp_get_free_heap_size());
   if ((wifi_scan_obj.free_ram != wifi_scan_obj.old_free_ram) || (status_changed)) {
     wifi_scan_obj.old_free_ram = wifi_scan_obj.free_ram;
-    //display_obj.tft.fillRect(100, 0, 60, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+    //display_obj.tft.fillRect(SB_MEM_X, 0, 60, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
     #ifdef HAS_FULL_SCREEN
     #ifndef HAS_PSRAM
-      display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", 100, 0, 2);
+      display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", SB_MEM_X, 0, 2);
     #else
-      display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", 100, 0, 1);
-      display_obj.tft.drawString("P:" + String(getPSRAMUsagePercent()) + "%", 100, 8, 1);
+      display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", SB_MEM_X, 0, 1);
+      display_obj.tft.drawString("P:" + String(getPSRAMUsagePercent()) + "%", SB_MEM_X, 8, 1);
     #endif
   #endif
 
@@ -1108,14 +1111,14 @@ void MenuFunctions::updateStatusBar()
 
   // Draw battery info
   MenuFunctions::battery(false);
-  display_obj.tft.fillRect(186, 0, 16, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+  display_obj.tft.fillRect(SB_TOUCH_X, 0, 16, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
 
   // Disable touch stuff
   #ifdef HAS_ILI9341
     #ifdef HAS_BUTTONS
       if (this->disable_touch) {
         display_obj.tft.setCursor(0, 1);
-        display_obj.tft.drawXBitmap(186,
+        display_obj.tft.drawXBitmap(SB_TOUCH_X,
                                     0,
                                     menu_icons[DISABLE_TOUCH],
                                     16,
@@ -1125,7 +1128,7 @@ void MenuFunctions::updateStatusBar()
       }
       else {
         display_obj.tft.setCursor(0, 1);
-        display_obj.tft.drawXBitmap(186,
+        display_obj.tft.drawXBitmap(SB_TOUCH_X,
                                     0,
                                     menu_icons[DISABLE_TOUCH],
                                     16,
@@ -1144,7 +1147,7 @@ void MenuFunctions::updateStatusBar()
       the_color = TFT_RED;
 
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.drawXBitmap(170,
+      display_obj.tft.drawXBitmap(SB_SD_X,
                                   0,
                                   menu_icons[STATUS_SD],
                                   16,
@@ -1162,7 +1165,7 @@ void MenuFunctions::updateStatusBar()
   // WiFi connection status stuff
   if (wifi_scan_obj.wifi_connected) {
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.drawXBitmap(170 - 16,
+      display_obj.tft.drawXBitmap(SB_WIFI_X,
                                   0,
                                   menu_icons[JOINED],
                                   16,
@@ -1172,7 +1175,7 @@ void MenuFunctions::updateStatusBar()
     #endif
   } else {
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.drawXBitmap(170 - 16,
+      display_obj.tft.drawXBitmap(SB_WIFI_X,
                                   0,
                                   menu_icons[JOINED],
                                   16,
@@ -1185,7 +1188,7 @@ void MenuFunctions::updateStatusBar()
   // Force PMKID stuff
   if ((wifi_scan_obj.force_pmkid) || (wifi_scan_obj.ep_deauth)) {
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.drawXBitmap(170 - (16 * 2),
+      display_obj.tft.drawXBitmap(SB_FORCE_X,
                                   0,
                                   menu_icons[FORCE],
                                   16,
@@ -1195,7 +1198,7 @@ void MenuFunctions::updateStatusBar()
     #endif
   } else {
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.drawXBitmap(170 - (16 * 2),
+      display_obj.tft.drawXBitmap(SB_FORCE_X,
                                   0,
                                   menu_icons[FORCE],
                                   16,
@@ -1269,13 +1272,13 @@ void MenuFunctions::drawStatusBar()
   // RAM Stuff
   wifi_scan_obj.free_ram = String(esp_get_free_heap_size());
   wifi_scan_obj.old_free_ram = wifi_scan_obj.free_ram;
-  display_obj.tft.fillRect(100, 0, 60, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+  display_obj.tft.fillRect(SB_MEM_X, 0, 60, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
   #ifdef HAS_FULL_SCREEN
     #ifndef HAS_PSRAM
-      display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", 100, 0, 2);
+      display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", SB_MEM_X, 0, 2);
     #else
-      display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", 100, 0, 1);
-      display_obj.tft.drawString("P:" + String(getPSRAMUsagePercent()) + "%", 100, 8, 1);
+      display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", SB_MEM_X, 0, 1);
+      display_obj.tft.drawString("P:" + String(getPSRAMUsagePercent()) + "%", SB_MEM_X, 8, 1);
     #endif
   #endif
 
@@ -1285,7 +1288,7 @@ void MenuFunctions::drawStatusBar()
 
 
   MenuFunctions::battery(true);
-  display_obj.tft.fillRect(186, 0, 16, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+  display_obj.tft.fillRect(SB_TOUCH_X, 0, 16, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
 
 
   // Disable touch stuff
@@ -1293,7 +1296,7 @@ void MenuFunctions::drawStatusBar()
     #ifdef HAS_BUTTONS
       if (this->disable_touch) {
         display_obj.tft.setCursor(0, 1);
-        display_obj.tft.drawXBitmap(186,
+        display_obj.tft.drawXBitmap(SB_TOUCH_X,
                                     0,
                                     menu_icons[DISABLE_TOUCH],
                                     16,
@@ -1303,7 +1306,7 @@ void MenuFunctions::drawStatusBar()
       }
       else {
         display_obj.tft.setCursor(0, 1);
-        display_obj.tft.drawXBitmap(186,
+        display_obj.tft.drawXBitmap(SB_TOUCH_X,
                                     0,
                                     menu_icons[DISABLE_TOUCH],
                                     16,
@@ -1323,7 +1326,7 @@ void MenuFunctions::drawStatusBar()
   
 
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.drawXBitmap(170,
+      display_obj.tft.drawXBitmap(SB_SD_X,
                                   0,
                                   menu_icons[STATUS_SD],
                                   16,
@@ -1341,7 +1344,7 @@ void MenuFunctions::drawStatusBar()
   // WiFi connection status stuff
   if (wifi_scan_obj.wifi_connected) {
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.drawXBitmap(170 - 16,
+      display_obj.tft.drawXBitmap(SB_WIFI_X,
                                   0,
                                   menu_icons[JOINED],
                                   16,
@@ -1351,7 +1354,7 @@ void MenuFunctions::drawStatusBar()
     #endif
   } else {
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.drawXBitmap(170 - 16,
+      display_obj.tft.drawXBitmap(SB_WIFI_X,
                                   0,
                                   menu_icons[JOINED],
                                   16,
@@ -1364,7 +1367,7 @@ void MenuFunctions::drawStatusBar()
   // Force PMKID stuff
   if ((wifi_scan_obj.force_pmkid) || (wifi_scan_obj.ep_deauth)) {
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.drawXBitmap(170 - (16 * 2),
+      display_obj.tft.drawXBitmap(SB_FORCE_X,
                                   0,
                                   menu_icons[FORCE],
                                   16,
@@ -1374,7 +1377,7 @@ void MenuFunctions::drawStatusBar()
     #endif
   } else {
     #ifdef HAS_FULL_SCREEN
-      display_obj.tft.drawXBitmap(170 - (16 * 2),
+      display_obj.tft.drawXBitmap(SB_FORCE_X,
                                   0,
                                   menu_icons[FORCE],
                                   16,
@@ -1500,6 +1503,7 @@ void MenuFunctions::RunSetup()
   extern LinkedList<IPAddress>* ipList;
   extern LinkedList<ProbeReqSsid>* probe_req_ssids;
   extern LinkedList<ssid>* ssids;
+  extern LinkedList<BleDevice>* ble_devices;
 
   this->disable_touch = false;
 
@@ -1580,6 +1584,8 @@ void MenuFunctions::RunSetup()
     gpsPOIMenu.list = new LinkedList<MenuNode>();
   #endif
 
+  foxHuntMenu.list = new LinkedList<MenuNode>();
+
   // Work menu names
   mainMenu.name = text_table1[6];
   wifiMenu.name = text_table1[7];
@@ -1635,6 +1641,8 @@ void MenuFunctions::RunSetup()
   #ifdef HAS_GPS
     gpsPOIMenu.name = "GPS POI";
   #endif
+
+  foxHuntMenu.name = "Fox Hunt";
 
   // Build Main Menu
   mainMenu.parentMenu = NULL;
@@ -1844,10 +1852,36 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_AP_STA, 0x97e0);
   });
-  this->addNodes(&wifiSnifferMenu, "Fox Hunt", TFTCYAN, PACKET_MONITOR, [this]() {
+  /*this->addNodes(&wifiSnifferMenu, "Fox Hunt", TFTCYAN, PACKET_MONITOR, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_CYAN);
+  });*/
+  this->addNodes(&wifiSnifferMenu, "Fox Hunt", TFTCYAN, SCANNERS, [this]() {
+    foxHuntMenu.list->clear();
+
+    // Bluetooth Fox Hunt Menu
+    foxHuntMenu.parentMenu = &wifiSnifferMenu; // Second Menu is third menu parent
+    this->addNodes(&foxHuntMenu, text09, TFTLIGHTGREY, 0, [this]() {
+      this->changeMenu(foxHuntMenu.parentMenu, true);
+    });
+    
+    for (int i = 0; i < access_points->size(); i++) {
+      AccessPoint access_point = access_points->get(i);
+      access_point.selected = false;
+      access_points->set(i, access_point);
+      uint8_t node_color = rssiToMenuColor(access_points->get(i).rssi);
+      String node_name = String(access_points->get(i).rssi) + " " + access_points->get(i).essid;
+      this->addNodes(&foxHuntMenu, node_name.c_str(), node_color, 255, [this, i](){
+        AccessPoint access_point = access_points->get(i);
+        access_point.selected = true;
+        access_points->set(i, access_point);
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_CYAN);
+      });
+    }
+    this->changeMenu(&foxHuntMenu, true);
   });
   this->addNodes(&wifiSnifferMenu, "MAC Monitor", TFTMAGENTA, SCANNERS, [this]() {
     display_obj.clearScreen();
@@ -2646,6 +2680,32 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_SCAN_RAYBAN, TFT_CYAN);
   });
+  this->addNodes(&bluetoothSnifferMenu, "Fox Hunt", TFTCYAN, SCANNERS, [this]() {
+    foxHuntMenu.list->clear();
+
+    // Bluetooth Fox Hunt Menu
+    foxHuntMenu.parentMenu = &bluetoothSnifferMenu; // Second Menu is third menu parent
+    this->addNodes(&foxHuntMenu, text09, TFTLIGHTGREY, 0, [this]() {
+      this->changeMenu(foxHuntMenu.parentMenu, true);
+    });
+    
+    for (int i = 0; i < ble_devices->size(); i++) {
+      BleDevice ble_device = ble_devices->get(i);
+      ble_device.selected = false;
+      ble_devices->set(i, ble_device);
+      uint8_t node_color = rssiToMenuColor(ble_devices->get(i).rssi);
+      String node_name = String(ble_devices->get(i).rssi) + " " + ble_devices->get(i).name;
+      this->addNodes(&foxHuntMenu, node_name.c_str(), node_color, 255, [this, i](){
+        BleDevice ble_device = ble_devices->get(i);
+        ble_device.selected = true;
+        ble_devices->set(i, ble_device);
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(BT_SCAN_FOX_HUNT, TFT_CYAN);
+      });
+    }
+    this->changeMenu(&foxHuntMenu, true);
+  });
 
   // Bluetooth Attack menu
   bluetoothAttackMenu.parentMenu = &bluetoothMenu; // Second Menu is third menu parent
@@ -2687,6 +2747,7 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_ATTACK_SPAM_ALL, TFT_MAGENTA);
   });
+
 #endif
 
   //#ifndef HAS_ILI9341
