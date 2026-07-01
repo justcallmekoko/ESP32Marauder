@@ -287,6 +287,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_MAC_CMD_D);
     Serial.println(HELP_ADD_CMD_A);
     Serial.println(HELP_ADD_CMD_B);
+    Serial.println(HELP_SHUTDOWN_CMD);
 
     // Bluetooth sniff/scan
     #ifdef HAS_BT
@@ -530,6 +531,8 @@ void CommandLine::runCommand(String input) {
 
   else if (cmd_args.get(0) == REBOOT_CMD)
     ESP.restart();
+  else if (cmd_args.get(0) == SHUTDOWN_CMD)
+    shutdown();
 
   //// WiFi/Bluetooth Scan/Attack commands
   if (!wifi_scan_obj.scanning()) {
