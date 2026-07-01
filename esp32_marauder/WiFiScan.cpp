@@ -5244,10 +5244,11 @@ void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color) {
         display_obj.tft.setFreeFont(NULL);
         display_obj.tft.setTextSize(1);
         display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
-        //display_obj.tftDrawChannelScaleButtons(set_channel, false);
-        //display_obj.tftDrawExitScaleButtons(false);
-        //if (scan_mode == WIFI_SCAN_RAW_CAPTURE)
-        //display_obj.tftDrawChanHopButton(false, settings_obj.loadSetting<bool>("ChanHop"));
+        if (scan_mode == WIFI_SCAN_RAW_CAPTURE) {
+          display_obj.tftDrawChannelScaleButtons(set_channel, false);
+          display_obj.tftDrawExitScaleButtons(false);
+          display_obj.tftDrawChanHopButton(false, settings_obj.loadSetting<bool>("ChanHop"));
+        }
       }
     #endif
   #endif
