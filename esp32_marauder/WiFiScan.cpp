@@ -1,6 +1,7 @@
 #include "esp_random.h"
 #include "WiFiScan.h"
 #include "lang_var.h"
+#include "JsonSerial.h"
 
 #ifdef HAS_PSRAM
   struct mac_addr* mac_history = nullptr;
@@ -9070,24 +9071,35 @@ void WiFiScan::addAnalyzerValue(int16_t value, int rssi_avg, int16_t target_arra
 }
 
 void WiFiScan::signalAnalyzerLoop(uint32_t tick) {
-  #ifdef HAS_SCREEN
-    if ((this->currentScanMode == BT_SCAN_ANALYZER) || 
-        (this->currentScanMode == WIFI_SCAN_CHAN_ANALYZER)) {
-      if (tick - this->initTime >= BANNER_TIME) {
-        this->initTime = millis();
+  // Headless-capable: compute the sample and stream it over serial on every
+  // refresh, independent of the screen. Only the on-device chart drawing stays
+  // screen-gated, so a serial host receives analyzer data with no display
+  // attached (or on a screen board that never opened the analyzer menu).
+  if ((this->currentScanMode == BT_SCAN_ANALYZER) ||
+      (this->currentScanMode == WIFI_SCAN_CHAN_ANALYZER)) {
+    if (tick - this->initTime >= BANNER_TIME) {
+      this->initTime = millis();
+      int16_t analyzer_sample = this->_analyzer_value * BASE_MULTIPLIER;
+      // set_channel is only meaningful for the WiFi channel analyzer; for the
+      // BT analyzer it is a stale WiFi channel, so report -1 (not applicable).
+      int sample_ch = (this->currentScanMode == BT_SCAN_ANALYZER) ? -1 : this->set_channel;
+      JsonSerial::emitAnalyzerSample(this->currentScanMode, sample_ch, analyzer_sample);
+      #ifdef HAS_SCREEN
         #if !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
-          this->addAnalyzerValue(this->_analyzer_value * BASE_MULTIPLIER, -72, this->_analyzer_values, TFT_WIDTH);
+          this->addAnalyzerValue(analyzer_sample, -72, this->_analyzer_values, TFT_WIDTH);
         #else
-          this->addAnalyzerValue(this->_analyzer_value * BASE_MULTIPLIER, -72, this->_analyzer_values, SCREEN_WIDTH);
+          this->addAnalyzerValue(analyzer_sample, -72, this->_analyzer_values, SCREEN_WIDTH);
         #endif
-        this->_analyzer_value = 0;
         if (this->analyzer_name_update) {
           this->displayAnalyzerString(this->analyzer_name_string);
           this->analyzer_name_update = false;
         }
-      }
+      #endif
+      this->_analyzer_value = 0;
     }
-    
+  }
+
+  #ifdef HAS_SCREEN
     #ifdef HAS_ILI9341
       int8_t b = this->checkAnalyzerButtons(millis());
 
@@ -9183,20 +9195,42 @@ void WiFiScan::drawChannelLine() {
 }
 
 void WiFiScan::channelActivityLoop(uint32_t tick) {
-  #ifdef HAS_SCREEN
-    if (tick - this->initTime >= BANNER_TIME * 50) {
-      initTime = millis();
+  // Headless-capable: count + stream per-channel activity independent of the
+  // screen. Only the on-device buttons/drawing below stay screen-gated.
+  if (tick - this->initTime >= BANNER_TIME * 50) {
+    initTime = millis();
+    // Human "Channel Summary" text stays screen-board-only (original behaviour);
+    // the JSON feed below is the @J channel stream (gated on JSON mode).
+    #ifdef HAS_SCREEN
       Serial.println(F("--------------"));
-      for (int i = (activity_page * CHAN_PER_PAGE) - CHAN_PER_PAGE; i < activity_page * CHAN_PER_PAGE; i++) {
-        #ifndef HAS_DUAL_BAND
-          Serial.println((String)(i+1) + ": " + (String)channel_activity[i]);
-        #else
-          Serial.println((String)this->dual_band_channels[i] + ": " + (String)channel_activity[i]);
-        #endif
-        channel_activity[i] = 0;
+    #endif
+    // Stream the currently displayed page over serial, using the real channel
+    // numbers. This matches exactly the channels the device measures and resets
+    // here, so a host never sees stale/wrapped off-page counters and needs no
+    // out-of-band channel mapping.
+    int page_ch[CHAN_PER_PAGE];
+    uint8_t page_val[CHAN_PER_PAGE];
+    int page_n = 0;
+    for (int i = (activity_page * CHAN_PER_PAGE) - CHAN_PER_PAGE; i < activity_page * CHAN_PER_PAGE; i++) {
+      #ifndef HAS_DUAL_BAND
+        int ch_num = i + 1;
+      #else
+        int ch_num = this->dual_band_channels[i];
+      #endif
+      #ifdef HAS_SCREEN
+        Serial.println((String)ch_num + ": " + (String)channel_activity[i]);
+      #endif
+      if (page_n < CHAN_PER_PAGE) {
+        page_ch[page_n] = ch_num;
+        page_val[page_n] = channel_activity[i];
+        page_n++;
       }
+      channel_activity[i] = 0;
     }
+    JsonSerial::emitChannelActivity(page_ch, page_val, page_n, this->activity_page);
+  }
 
+  #ifdef HAS_SCREEN
     #ifdef HAS_ILI9341
       int8_t b = this->checkAnalyzerButtons(millis());
 
