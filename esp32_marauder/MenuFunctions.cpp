@@ -2523,7 +2523,8 @@ void MenuFunctions::RunSetup()
   });
 
   this->addNodes(&wifiGeneralMenu, "Shutdown WiFi", TFTRED, 0, [this]() {
-    WiFi.disconnect(true);
+    WiFi.softAPdisconnect(true); // Also shut down the SoftAP if it is running
+	WiFi.disconnect(true);
     delay(100);
     wifi_scan_obj.StartScan(WIFI_SCAN_OFF, TFT_RED);
     this->changeMenu(current_menu, true);
