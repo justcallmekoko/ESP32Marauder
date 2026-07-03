@@ -20,6 +20,10 @@
   #include <XPT2046_Touchscreen.h>
 #endif
 
+#ifdef HAS_CAP_TOUCH
+  #include "ft6336.h"
+#endif
+
 // WiFi stuff
 #define OTA_UPDATE 100
 #define SHOW_INFO 101
