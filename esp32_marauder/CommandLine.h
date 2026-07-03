@@ -70,6 +70,7 @@ const char PROGMEM SCAN_ALL_CMD[] = "scanall";
 const char PROGMEM SNIFF_RAW_CMD[] = "sniffraw";
 const char PROGMEM SNIFF_BEACON_CMD[] = "sniffbeacon";
 const char PROGMEM SNIFF_PROBE_CMD[] = "sniffprobe";
+const char PROGMEM SNIFF_FLOCK_CMD[] = "sniffflock";
 const char PROGMEM SNIFF_PWN_CMD[] = "sniffpwn";
 const char PROGMEM SNIFF_PINESCAN_CMD[] = "sniffpinescan";
 const char PROGMEM SNIFF_MULTISSID_CMD[] = "sniffmultissid";
@@ -146,6 +147,7 @@ const char PROGMEM HELP_SCAN_ALL_CMD[] = "scanall";
 const char PROGMEM HELP_SNIFF_RAW_CMD[] = "sniffraw";
 const char PROGMEM HELP_SNIFF_BEACON_CMD[] = "sniffbeacon";
 const char PROGMEM HELP_SNIFF_PROBE_CMD[] = "sniffprobe";
+const char PROGMEM HELP_SNIFF_FLOCK_CMD[] = "sniffflock  (passive WiFi probe IE fingerprint)";
 const char PROGMEM HELP_SNIFF_PWN_CMD[] = "sniffpwn";
 const char PROGMEM HELP_SNIFF_PINESCAN_CMD[] = "sniffpinescan";
 const char PROGMEM HELP_SNIFF_MULTISSID_CMD[] = "sniffmultissid";
@@ -184,7 +186,7 @@ const char PROGMEM HELP_ADD_CMD_A[] = "add -a -b <mac> [-ch <channel>] [-e <ssid
 const char PROGMEM HELP_ADD_CMD_B[] = "add -c -b <mac> -ap <ap_index>";
 
 // Bluetooth sniff/scan
-const char PROGMEM HELP_BT_SNIFF_CMD[] = "sniffbt [-t] <airtag/flipper/flock/meta>";
+const char PROGMEM HELP_BT_SNIFF_CMD[] = "sniffbt [-t] <airtag/flipper/meta>";
 const char PROGMEM HELP_BT_SPAM_CMD[] = "blespam -t <sourapple/applejuice/google/samsung/windows/flipper/all>";
 const char PROGMEM HELP_BT_SPOOFAT_CMD[] = "spoofat -t <index>";
 //const char PROGMEM HELP_BT_SOUR_APPLE_CMD[] = "sourapple";

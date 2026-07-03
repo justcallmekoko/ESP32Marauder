@@ -447,7 +447,7 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == BT_SCAN_AIRTAG) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_AIRTAG_MON) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_FLIPPER) ||
-            (wifi_scan_obj.currentScanMode == BT_SCAN_FLOCK) ||
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_FLOCK) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_SIMPLE) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_SIMPLE_TWO) ||
             (wifi_scan_obj.currentScanMode == BT_ATTACK_SOUR_APPLE) ||
@@ -519,7 +519,7 @@ void MenuFunctions::main(uint32_t currentTime)
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_CHAN_ACT) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_SIG_STREN) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_AP) &&
-        (wifi_scan_obj.currentScanMode != BT_SCAN_FLOCK) &&
+        (wifi_scan_obj.currentScanMode != WIFI_SCAN_FLOCK) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_PROBE) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_DEAUTH) &&
 		    (wifi_scan_obj.currentScanMode != WIFI_ATTACK_FUNNY_BEACON) &&
@@ -572,7 +572,7 @@ void MenuFunctions::main(uint32_t currentTime)
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_PACKET_RATE) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP) ||
-                  (wifi_scan_obj.currentScanMode == BT_SCAN_FLOCK) ||
+                  (wifi_scan_obj.currentScanMode == WIFI_SCAN_FLOCK) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_PROBE) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_DEAUTH) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN)) {
@@ -641,7 +641,7 @@ void MenuFunctions::main(uint32_t currentTime)
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_PACKET_RATE) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP) ||
-                  (wifi_scan_obj.currentScanMode == BT_SCAN_FLOCK) ||
+                  (wifi_scan_obj.currentScanMode == WIFI_SCAN_FLOCK) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_PROBE) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_DEAUTH) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN)) {
@@ -729,7 +729,7 @@ void MenuFunctions::main(uint32_t currentTime)
                       (wifi_scan_obj.currentScanMode == WIFI_SCAN_PACKET_RATE) ||
                       (wifi_scan_obj.currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
                       (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP) ||
-                      (wifi_scan_obj.currentScanMode == BT_SCAN_FLOCK) ||
+                      (wifi_scan_obj.currentScanMode == WIFI_SCAN_FLOCK) ||
                       (wifi_scan_obj.currentScanMode == WIFI_SCAN_PROBE) ||
                       (wifi_scan_obj.currentScanMode == WIFI_SCAN_DEAUTH) ||
                       (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN)) {
@@ -806,7 +806,7 @@ void MenuFunctions::main(uint32_t currentTime)
                 (wifi_scan_obj.currentScanMode == WIFI_SCAN_PACKET_RATE) ||
                 (wifi_scan_obj.currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
                 (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP) ||
-                (wifi_scan_obj.currentScanMode == BT_SCAN_FLOCK) ||
+                (wifi_scan_obj.currentScanMode == WIFI_SCAN_FLOCK) ||
                 (wifi_scan_obj.currentScanMode == WIFI_SCAN_PROBE) ||
                 (wifi_scan_obj.currentScanMode == WIFI_SCAN_DEAUTH) ||
                 (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN)) {
@@ -1768,6 +1768,11 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_PROBE, TFT_CYAN);
   });
+  this->addNodes(&wifiSnifferMenu, "Flock Sniff", TFTORANGE, FLOCK, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_SCAN_FLOCK, TFT_ORANGE);
+  });
   this->addNodes(&wifiSnifferMenu, text_table1[43], TFTMAGENTA, BEACON_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
@@ -2661,11 +2666,6 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     this->renderGraphUI(BT_SCAN_ANALYZER);
     wifi_scan_obj.StartScan(BT_SCAN_ANALYZER, TFT_CYAN);
-  });
-  this->addNodes(&bluetoothSnifferMenu, "Flock Sniff", TFTORANGE, FLOCK, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(BT_SCAN_FLOCK, TFT_ORANGE);
   });
   this->addNodes(&bluetoothSnifferMenu, "Meta Detect", TFTWHITE, BLUETOOTH_SNIFF, [this]() {
     display_obj.clearScreen();
