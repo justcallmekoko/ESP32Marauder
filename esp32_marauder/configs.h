@@ -38,6 +38,7 @@
   //#define MARAUDER_CARDPUTER
   //#define MARAUDER_CARDPUTER_ADV
   //#define MARAUDER_V8
+  //#define MARAUDER_PANCAKE
   //#define MARAUDER_MINI_V3
   //#define MARAUDER_M5_NANO_C6
   //#define DUAL_MINI_C5
@@ -113,6 +114,8 @@
     #define HARDWARE_NAME "ESP32-C5 DevKit"
   #elif defined(MARAUDER_V8)
     #define HARDWARE_NAME "Marauder v8"
+  #elif defined(MARAUDER_PANCAKE)
+    #define HARDWARE_NAME "Pancake Marauder V8"
   #elif defined(MARAUDER_MINI_V3)
     #define HARDWARE_NAME "Marauder Mini v3"
   #elif defined(DUAL_MINI_C5)
@@ -471,7 +474,8 @@
     #define HAS_SD
     #define USE_SD
     #define HAS_GPS
-    #define HAS_CST820
+    #define HAS_CAP_TOUCH
+      #define HAS_CST820
     #define HAS_CYD_PORTRAIT
     #define HAS_NIMBLE_2
     // #define CYD_SOUND
@@ -579,6 +583,31 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     #define HAS_ACT_LED
+  #endif
+
+  #ifdef MARAUDER_PANCAKE
+    #define HAS_TOUCH
+    #define HAS_CAP_TOUCH
+      #define HAS_FT6336
+    //#define HAS_FLIPPER_LED
+    //#define FLIPPER_ZERO_HAT
+    #define HAS_BATTERY
+      #define HAS_MAX1704X
+    #define HAS_BT
+    //#define HAS_BUTTONS
+    #define HAS_NEOPIXEL_LED
+    //#define HAS_PWR_MGMT
+    #define HAS_SCREEN
+    #define HAS_FULL_SCREEN
+    #define HAS_GPS
+    #define HAS_C5_SD
+    #define HAS_SD
+    #define USE_SD
+    #define HAS_DUAL_BAND
+    #define HAS_PSRAM
+    //#define HAS_TEMP_SENSOR
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3
   #endif
 
   #ifdef MARAUDER_MINI_V3
@@ -1463,6 +1492,75 @@
       #define KIT_LED_BUILTIN 13
     #endif 
 
+    #if defined(MARAUDER_PANCAKE)
+      #define CHAN_PER_PAGE 7
+
+      #define SCREEN_CHAR_WIDTH 40
+      #define HAS_ILI9341
+    
+      #define BANNER_TEXT_SIZE 2
+
+      #ifndef TFT_WIDTH
+        #define TFT_WIDTH 320
+      #endif
+
+      #ifndef TFT_HEIGHT
+        #define TFT_HEIGHT 480
+      #endif
+
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
+
+      #define EXT_BUTTON_WIDTH 30
+
+      #define SCREEN_BUFFER
+
+      #define MAX_SCREEN_BUFFER 26
+
+      #define SCREEN_ORIENTATION 0
+    
+      #define CHAR_WIDTH 12
+      #define SCREEN_WIDTH TFT_WIDTH
+      #define SCREEN_HEIGHT TFT_HEIGHT
+      #define HEIGHT_1 TFT_WIDTH
+      #define WIDTH_1 TFT_HEIGHT
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6)
+      #define TEXT_HEIGHT 16
+      #define BOT_FIXED_AREA 0
+      #define TOP_FIXED_AREA 48
+      #define YMAX 480
+      #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
+      //#define MENU_FONT NULL
+      #define MENU_FONT &FreeMono9pt7b // Winner
+      //#define MENU_FONT &FreeMonoBold9pt7b
+      //#define MENU_FONT &FreeSans9pt7b
+      //#define MENU_FONT &FreeSansBold9pt7b
+      #define BUTTON_SCREEN_LIMIT 18
+      #define BUTTON_ARRAY_LEN BUTTON_SCREEN_LIMIT
+      #define STATUS_BAR_WIDTH 16
+      #define LVGL_TICK_PERIOD 6
+
+      #define FRAME_X 100
+      #define FRAME_Y 64
+      #define FRAME_W TFT_WIDTH / 2
+      #define FRAME_H 50
+    
+      // Red zone size
+      #define REDBUTTON_X FRAME_X
+      #define REDBUTTON_Y FRAME_Y
+      #define REDBUTTON_W (FRAME_W/2)
+      #define REDBUTTON_H FRAME_H
+    
+      // Green zone size
+      #define GREENBUTTON_X (REDBUTTON_X + REDBUTTON_W)
+      #define GREENBUTTON_Y FRAME_Y
+      #define GREENBUTTON_W (FRAME_W/2)
+      #define GREENBUTTON_H FRAME_H
+    
+      #define STATUSBAR_COLOR 0x4A49
+    
+      #define KIT_LED_BUILTIN 13
+    #endif
+
     #if defined(MARAUDER_CYD_MICRO)
       #define CHAN_PER_PAGE 7
 
@@ -2308,6 +2406,24 @@
     //#define BUTTON_ARRAY_LEN 5
   #endif
 
+  // Status bar right-side icon x-positions (SCREEN_WIDTH-relative)
+  // V8 (240px): SD=170 WiFi=154 Force=138 Touch=186 Bat=204
+  // Pancake (320px): SD=250 WiFi=234 Force=218 Touch=266 Bat=284
+  #define SB_MEM_X    (SCREEN_WIDTH / 2 - 20)    // D%/P% text: 120 on V8, 160 on Pancake
+  #define SB_SD_X     (SCREEN_WIDTH - 70)
+  #define SB_WIFI_X   (SCREEN_WIDTH - 86)
+  #define SB_FORCE_X  (SCREEN_WIDTH - 102)
+  #define SB_TOUCH_X  (SCREEN_WIDTH - 54)
+  #define SB_BAT_X    (SCREEN_WIDTH - 36)
+
+  // Packet monitor oscilloscope geometry
+  // PKT_HALF  = landscape height midpoint (zero-line y)
+  // PKT_AXIS_W = x-axis draw width
+  // HEIGHT_1 = TFT_WIDTH (landscape height): V8=240 Pancake=320
+  // WIDTH_1  = TFT_HEIGHT (landscape width):  V8=320 Pancake=480
+  #define PKT_HALF    (HEIGHT_1 / 2)
+  #define PKT_AXIS_W  (WIDTH_1 - 10)
+
   #if defined(MARAUDER_V8)
     #define BANNER_TIME 100
     
@@ -2317,6 +2433,25 @@
     #define KEY_X 120 // Centre of key
     #define KEY_Y 50
     #define KEY_W 240 // Width and height
+    #define KEY_H 22
+    #define KEY_SPACING_X 0 // X and Y gap
+    #define KEY_SPACING_Y 1
+    #define KEY_TEXTSIZE 1   // Font size multiplier
+    #define ICON_W 22
+    #define ICON_H 22
+    #define BUTTON_PADDING 22
+    //#define BUTTON_ARRAY_LEN 5
+  #endif
+
+  #if defined(MARAUDER_PANCAKE)
+    #define BANNER_TIME 100
+    
+    #define COMMAND_PREFIX "!"
+    
+    // Keypad start position, key sizes and spacing
+    #define KEY_X 160 // Centre of key
+    #define KEY_Y 59
+    #define KEY_W 320 // Width and height
     #define KEY_H 22
     #define KEY_SPACING_X 0 // X and Y gap
     #define KEY_SPACING_Y 1
@@ -2692,6 +2827,10 @@
       #define SD_CS 10
     #endif
 
+    #ifdef MARAUDER_PANCAKE
+      #define SD_CS 7
+    #endif
+
     #ifdef MARAUDER_MINI_V3
       #define SD_CS 10
     #endif
@@ -2804,6 +2943,8 @@
     #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_V8)
     #define MEM_LOWER_LIM 10000
+  #elif defined(MARAUDER_PANCAKE)
+    #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_MINI_V3)
     #define MEM_LOWER_LIM 10000
   #else
@@ -2829,6 +2970,8 @@
     #elif defined(MARAUDER_C5)
       #define PIN 27
     #elif defined(MARAUDER_V8)
+      #define PIN 27
+    #elif defined(MARAUDER_PANCAKE)
       #define PIN 27
     #elif defined(MARAUDER_CARDPUTER_ADV)
       #define PIN 21
@@ -2945,6 +3088,10 @@
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 14
       #define GPS_RX 13
+    #elif defined(MARAUDER_PANCAKE)
+      #define GPS_SERIAL_INDEX 1
+      #define GPS_TX 14
+      #define GPS_RX 13
     #elif defined(MARAUDER_MINI_V3)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 14
@@ -3011,7 +3158,17 @@
       #define HAS_MAX1704X
       #undef HAS_AXP2101
       #undef HAS_IP5306
+
+    #elif defined(MARAUDER_PANCAKE)
+      #define I2C_SDA 9
+      #define I2C_SCL 10
+      #define HAS_MAX1704X
+      // FT6336 cap touch - shares I2C bus with MAX17048
+      #define CTP_RST 8
+      #define CTP_SDA I2C_SDA
+      #define CTP_SCL I2C_SCL
     #endif
+
 
     //  If we know what we have, we can delete what we're not using
     #ifdef BATTERY_ADC_PIN
@@ -3041,6 +3198,11 @@
       #undef HAS_IP5306
       #undef HAS_MAX1704X
 
+    #elif defined(HAS_MAX1704X)
+      #undef HAS_AXP2101
+      #undef HAS_IP5306
+      #undef HAS_AXP192
+
 
     #else       // punt
        // #define HAS_AXP2101
@@ -3050,6 +3212,7 @@
     #endif
 
   #endif  // HAS_BATTERY
+
 
   //// MARAUDER TITLE STUFF
   #ifdef MARAUDER_V4
@@ -3079,6 +3242,8 @@
   #elif defined(MARAUDER_C5)
     #define MARAUDER_TITLE_BYTES 13578
   #elif defined(MARAUDER_V8)
+    #define MARAUDER_TITLE_BYTES 13578
+  #elif defined(MARAUDER_PANCAKE)
     #define MARAUDER_TITLE_BYTES 13578
   #elif defined(MARAUDER_MINI_V3)
     #define MARAUDER_TITLE_BYTES 13578
@@ -3147,6 +3312,12 @@
     #endif
 
     #ifdef MARAUDER_V8
+      #define SD_MISO TFT_MISO
+      #define SD_MOSI TFT_MOSI
+      #define SD_SCK  TFT_SCLK
+    #endif
+
+    #ifdef MARAUDER_PANCAKE
       #define SD_MISO TFT_MISO
       #define SD_MOSI TFT_MOSI
       #define SD_SCK  TFT_SCLK

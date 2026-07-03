@@ -21,9 +21,13 @@
 #endif
 
 
-#ifdef HAS_CST820
+#ifdef HAS_CST820  // HAS_CAP_TOUCH
    #include "CST820.h"
   extern CST820 CST820_touch;
+#endif
+
+#ifdef  HAS_FT6336 // HAS_CAP_TOUCH
+  #include "ft6336.h"
 #endif
 
 // WiFi stuff
