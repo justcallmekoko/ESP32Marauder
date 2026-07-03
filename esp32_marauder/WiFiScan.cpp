@@ -4271,10 +4271,6 @@ void WiFiScan::setBaseMacAddress(uint8_t macAddr[6]) {
 #ifndef HAS_DUAL_BAND
 static const uint8_t wardrive_channels[] = {
   11, 6, 1,
-  11, 6, 1,
-  11, 6, 1,
-  11, 6, 1,
-
   // Full 2.4 GHz pass
   14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
 };
@@ -4283,10 +4279,6 @@ static const uint8_t wardrive_channels[] = {
   11, 6, 1,
   48, 44, 40, 36,
   161, 157, 153, 149,
-  11, 6, 1,
-  48, 44, 40, 36,
-  161, 157, 153, 149,
-
   // Full 2.4 GHz pass
   14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
 
