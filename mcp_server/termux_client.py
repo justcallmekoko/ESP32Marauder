@@ -7,8 +7,9 @@ Run:
     python termux_client.py
 
 The Marauder Controller Android app must be open with the ESP32 plugged
-in via OTG cable. The app bridges the USB serial connection to localhost:7555
-automatically — no root, no pyserial, no pydantic.
+in via OTG cable. The app bridges the USB serial connection via an abstract
+Unix domain socket (\0marauder_bridge) — no root, no pyserial, no pydantic.
+TCP loopback is blocked by Android 12+ per-UID iptables; abstract sockets bypass it.
 """
 
 import datetime
@@ -29,7 +30,7 @@ import urllib.request
 
 VENICE_BASE_URL = "https://api.venice.ai/api/v1"
 DEFAULT_MODEL   = "gemma-4-uncensored"
-BRIDGE          = ("127.0.0.1", 7555)   # Android app TCP bridge (7555 avoids ADB port conflict)
+BRIDGE_SOCKET   = "\0marauder_bridge"    # abstract Unix domain socket — bypasses Android iptables
 PROMPT          = b"> "                  # Marauder end-of-response marker
 
 SCAN_COMMANDS: dict[str, str] = {
@@ -114,20 +115,23 @@ def _fix_bt(raw: str) -> str:
 def _connect_bridge() -> str:
     global _sock
     try:
-        _sock = socket.create_connection(BRIDGE, timeout=10)
-        _sock.settimeout(0.1)
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.settimeout(10)
+        s.connect(BRIDGE_SOCKET)
+        s.settimeout(0.1)
+        _sock = s
     except OSError as exc:
         _sock = None
         return (
-            f"ERROR: Cannot connect to Android bridge at {BRIDGE[0]}:{BRIDGE[1]} — {exc}\n"
-            "Make sure the Marauder Controller app is open and the ESP32 is plugged in."
+            f"ERROR: Cannot connect to Android bridge (\\0marauder_bridge) — {exc}\n"
+            "Make sure the Marauder Controller app is open and shows 'Bridge: ready'."
         )
     time.sleep(0.5)
     _drain()
     _sock.sendall(b"settings -s SavePCAP disable\n")
     _read_until_prompt(4.0)
     return (
-        f"Connected to ESP32 via Android bridge on {BRIDGE[0]}:{BRIDGE[1]}.\n"
+        "Connected to ESP32 via Android bridge (\\0marauder_bridge).\n"
         "SavePCAP disabled — all scan output streams through USB serial."
     )
 
@@ -143,7 +147,7 @@ def dispatch(name: str, args: dict) -> str:
 
     # ------------------------------------------------------------------ #
     if name == "list_ports":
-        return f"socket://127.0.0.1:5555  —  Android TCP bridge (Termux mode)"
+        return "\\0marauder_bridge  —  Android abstract Unix socket bridge (Termux mode)"
 
     elif name == "connect":
         return _connect_bridge()
@@ -500,7 +504,7 @@ def main() -> None:
 
     print("ESP32 Marauder AI Terminal (Termux — stdlib only)")
     print(f"Model : {model} via Venice AI")
-    print(f"Bridge: {BRIDGE[0]}:{BRIDGE[1]}  (Marauder Controller app)")
+    print(f"Bridge: \\0marauder_bridge  (Marauder Controller app)")
     print("Type 'quit' to exit.\n")
 
     while True:
