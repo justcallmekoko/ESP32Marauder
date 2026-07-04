@@ -12,7 +12,7 @@ class MainActivity : AppCompatActivity() {
     val repository = SerialRepository()
     private lateinit var usbManager: UsbConnectionManager
     private lateinit var binding: ActivityMainBinding
-    private lateinit var tcpBridge: TcpBridgeServer
+    lateinit var tcpBridge: TcpBridgeServer
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

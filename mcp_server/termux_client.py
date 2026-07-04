@@ -7,7 +7,7 @@ Run:
     python termux_client.py
 
 The Marauder Controller Android app must be open with the ESP32 plugged
-in via OTG cable. The app bridges the USB serial connection to localhost:5555
+in via OTG cable. The app bridges the USB serial connection to localhost:7555
 automatically — no root, no pyserial, no pydantic.
 """
 
@@ -29,7 +29,7 @@ import urllib.request
 
 VENICE_BASE_URL = "https://api.venice.ai/api/v1"
 DEFAULT_MODEL   = "gemma-4-uncensored"
-BRIDGE          = ("127.0.0.1", 5555)   # Android app TCP bridge
+BRIDGE          = ("127.0.0.1", 7555)   # Android app TCP bridge (7555 avoids ADB port conflict)
 PROMPT          = b"> "                  # Marauder end-of-response marker
 
 SCAN_COMMANDS: dict[str, str] = {

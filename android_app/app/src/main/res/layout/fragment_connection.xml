@@ -39,4 +39,14 @@
         android:textSize="12sp"
         android:fontFamily="monospace" />
 
+    <TextView
+        android:id="@+id/tvBridgeStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:textColor="#444444"
+        android:textSize="11sp"
+        android:fontFamily="monospace"
+        android:text="Bridge: stopped" />
+
 </LinearLayout>

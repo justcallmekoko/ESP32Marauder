@@ -33,14 +33,22 @@ class ConnectionFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        val activity = requireActivity() as MainActivity
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                vm.isConnected.collect { connected ->
-                    if (connected) {
-                        val dest = findNavController().currentDestination?.id
-                        if (dest == R.id.connectionFragment) {
-                            findNavController().navigate(R.id.action_connection_to_terminal)
+                launch {
+                    vm.isConnected.collect { connected ->
+                        if (connected) {
+                            val dest = findNavController().currentDestination?.id
+                            if (dest == R.id.connectionFragment) {
+                                findNavController().navigate(R.id.action_connection_to_terminal)
+                            }
                         }
+                    }
+                }
+                launch {
+                    activity.tcpBridge.status.collect { msg ->
+                        binding.tvBridgeStatus.text = msg
                     }
                 }
             }
