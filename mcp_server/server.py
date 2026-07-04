@@ -4,16 +4,24 @@ ESP32 Marauder MCP Server
 Exposes the Marauder serial command interface as MCP tools so any MCP client
 (Claude Desktop, Claude Code, etc.) can drive the hardware directly.
 
+Serial data is routed back to this host over USB — SD-card PCAP writing is
+disabled automatically on connect so all scan/sniff output streams through
+the serial port for AI analysis.
+
 Run:
     pip install mcp pyserial
     python server.py [--port /dev/ttyUSB0] [--baud 115200]
 """
 
 import asyncio
+import datetime
+import json
+import os
 import sys
 import time
 import threading
 import argparse
+from pathlib import Path
 from typing import Optional
 import serial
 import serial.tools.list_ports
@@ -31,6 +39,13 @@ _lock = threading.Lock()
 PROMPT = b"> "          # Marauder prompt that marks end of response
 DEFAULT_TIMEOUT = 8.0   # seconds to wait for the prompt after a command
 
+# ---------------------------------------------------------------------------
+# Capture buffer — populated by scan_and_capture, read by get_capture
+# ---------------------------------------------------------------------------
+
+_capture_buffer: str = ""
+_capture_meta: dict = {}
+
 
 def _read_until_prompt(ser: serial.Serial, timeout: float = DEFAULT_TIMEOUT) -> str:
     """Read bytes from ser until the Marauder '> ' prompt appears or timeout."""
@@ -41,11 +56,9 @@ def _read_until_prompt(ser: serial.Serial, timeout: float = DEFAULT_TIMEOUT) -> 
         if chunk:
             buf.extend(chunk)
             if buf.endswith(PROMPT):
-                # Strip the trailing prompt so callers get clean output
                 return buf[: -len(PROMPT)].decode("utf-8", errors="replace").strip()
         else:
             time.sleep(0.02)
-    # Timeout — return whatever accumulated
     return buf.decode("utf-8", errors="replace").strip()
 
 
@@ -60,11 +73,48 @@ def _send(command: str, timeout: float = DEFAULT_TIMEOUT) -> str:
         return _read_until_prompt(_serial, timeout)
 
 
+def _stream_for(duration: float) -> str:
+    """Read raw serial output for `duration` seconds (no command sent, no prompt wait)."""
+    with _lock:
+        if _serial is None or not _serial.is_open:
+            return ""
+        buf = bytearray()
+        deadline = time.monotonic() + duration
+        while time.monotonic() < deadline:
+            chunk = _serial.read(_serial.in_waiting or 1)
+            if chunk:
+                buf.extend(chunk)
+            else:
+                time.sleep(0.05)
+    return buf.decode("utf-8", errors="replace")
+
+
+def _disable_sd_capture() -> None:
+    """Turn off SD-card PCAP writing so all data routes through USB serial."""
+    _send("settings -s SavePCAP disable", timeout=4.0)
+
+
 # ---------------------------------------------------------------------------
 # MCP server setup
 # ---------------------------------------------------------------------------
 
 app = Server("esp32-marauder")
+
+# Supported scan types for scan_and_capture
+SCAN_COMMANDS: dict[str, str] = {
+    "scanall":    "scanall",
+    "beacon":     "sniffbeacon",
+    "probe":      "sniffprobe",
+    "deauth":     "sniffdeauth",
+    "pmkid":      "sniffpmkid",
+    "raw":        "sniffraw",
+    "pwn":        "sniffpwn",
+    "bt":         "sniffbt -t flock",
+    "airtag":     "sniffbt -t airtag",
+    "skim":       "sniffskim",
+    "sae":        "sniffsae",
+    "multissid":  "sniffmultissid",
+}
 
 
 @app.list_tools()
@@ -72,12 +122,16 @@ async def list_tools() -> list[types.Tool]:
     return [
         types.Tool(
             name="list_ports",
-            description="List serial ports available on the host. Useful for finding which port the ESP32 is on.",
+            description="List serial ports available on the host.",
             inputSchema={"type": "object", "properties": {}},
         ),
         types.Tool(
             name="connect",
-            description="Open a serial connection to the ESP32 Marauder.",
+            description=(
+                "Open a serial connection to the ESP32 Marauder. "
+                "Automatically disables SD-card PCAP writing so all scan output "
+                "streams back through USB serial to this host."
+            ),
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -114,39 +168,74 @@ async def list_tools() -> list[types.Tool]:
                 "type": "object",
                 "required": ["command"],
                 "properties": {
-                    "command": {
-                        "type": "string",
-                        "description": "The Marauder command string to execute.",
-                    },
-                    "timeout": {
-                        "type": "number",
-                        "description": "Seconds to wait for the '> ' prompt (default 8).",
-                        "default": 8.0,
-                    },
+                    "command": {"type": "string", "description": "The Marauder command string to execute."},
+                    "timeout": {"type": "number", "description": "Seconds to wait for prompt (default 8).", "default": 8.0},
                 },
             },
         ),
         types.Tool(
             name="read_output",
+            description="Read pending bytes from the serial buffer without sending a command. Useful for polling ongoing scan output.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "duration": {"type": "number", "description": "How many seconds to collect (default 2).", "default": 2.0}
+                },
+            },
+        ),
+        # ---- high-level capture tools ----------------------------------------
+        types.Tool(
+            name="scan_and_capture",
             description=(
-                "Read any pending bytes from the serial buffer without sending a command. "
-                "Useful for polling ongoing scan output."
+                "Run a scan or sniff operation and capture ALL output through USB serial "
+                "back to this Linux host — nothing is written to the SD card. "
+                "After the capture window, stops the scan and retrieves the AP/station lists. "
+                "Results are stored in the capture buffer (use get_capture to re-read them). "
+                "scan_type options: scanall, beacon, probe, deauth, pmkid, raw, pwn, "
+                "bt, airtag, skim, sae, multissid."
             ),
             inputSchema={
                 "type": "object",
                 "properties": {
+                    "scan_type": {
+                        "type": "string",
+                        "description": "Which scan/sniff to run (default: scanall).",
+                        "default": "scanall",
+                    },
                     "duration": {
                         "type": "number",
-                        "description": "How many seconds to collect output (default 2).",
-                        "default": 2.0,
+                        "description": "How many seconds to capture (default: 30).",
+                        "default": 30.0,
+                    },
+                },
+            },
+        ),
+        types.Tool(
+            name="get_capture",
+            description="Return the raw capture buffer from the most recent scan_and_capture call for analysis.",
+            inputSchema={"type": "object", "properties": {}},
+        ),
+        types.Tool(
+            name="save_capture_local",
+            description=(
+                "Save the capture buffer to a file on this Linux host. "
+                "Saves as JSON (structured) + TXT (raw). "
+                "If path is omitted, saves to ~/marauder_captures/ with a timestamp filename."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "Directory or full file path on this host (optional).",
                     }
                 },
             },
         ),
-        # ---- convenience wrappers for common operations ----
+        # ---- convenience wrappers --------------------------------------------
         types.Tool(
             name="scan_wifi",
-            description="Start a full WiFi scan (scanall). Returns the live scan header; use read_output to poll results.",
+            description="Start a WiFi scan (scanall). Use read_output to poll live results.",
             inputSchema={"type": "object", "properties": {}},
         ),
         types.Tool(
@@ -156,12 +245,22 @@ async def list_tools() -> list[types.Tool]:
         ),
         types.Tool(
             name="list_access_points",
-            description="List discovered access points (-a flag).",
+            description="List discovered access points (list -a).",
             inputSchema={"type": "object", "properties": {}},
         ),
         types.Tool(
             name="list_stations",
-            description="List discovered stations / clients (-c flag).",
+            description="List discovered stations / clients (list -c).",
+            inputSchema={"type": "object", "properties": {}},
+        ),
+        types.Tool(
+            name="list_ssids",
+            description="List the SSID list (list -s).",
+            inputSchema={"type": "object", "properties": {}},
+        ),
+        types.Tool(
+            name="list_probes",
+            description="List captured probe SSIDs (list -p).",
             inputSchema={"type": "object", "properties": {}},
         ),
         types.Tool(
@@ -174,7 +273,8 @@ async def list_tools() -> list[types.Tool]:
 
 @app.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
-    global _serial
+    global _serial, _capture_buffer, _capture_meta
+    loop = asyncio.get_event_loop()
 
     def text(s: str) -> list[types.TextContent]:
         return [types.TextContent(type="text", text=s)]
@@ -184,8 +284,7 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
         ports = serial.tools.list_ports.comports()
         if not ports:
             return text("No serial ports found.")
-        lines = [f"{p.device}  —  {p.description}" for p in ports]
-        return text("\n".join(lines))
+        return text("\n".join(f"{p.device}  —  {p.description}" for p in ports))
 
     # ------------------------------------------------------------------ #
     elif name == "connect":
@@ -193,7 +292,6 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
         baud = int(arguments.get("baud", 115200))
 
         if port is None:
-            # Auto-detect: pick first USB/UART/CP210x/CH340 port
             for p in serial.tools.list_ports.comports():
                 desc = (p.description or "").upper()
                 if any(k in desc for k in ("USB", "UART", "CP210", "CH340", "FTDI")):
@@ -210,12 +308,17 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
             except serial.SerialException as exc:
                 return text(f"ERROR opening {port}: {exc}")
 
-        # Drain any boot banner
         time.sleep(0.5)
         with _lock:
             _serial.reset_input_buffer()
 
-        return text(f"Connected to {port} at {baud} baud.")
+        # Route all scan/sniff data through USB serial instead of SD card
+        await loop.run_in_executor(None, _disable_sd_capture)
+
+        return text(
+            f"Connected to {port} at {baud} baud.\n"
+            "SavePCAP disabled — all scan output streams through USB serial to this host."
+        )
 
     # ------------------------------------------------------------------ #
     elif name == "disconnect":
@@ -237,44 +340,133 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
         timeout = float(arguments.get("timeout", DEFAULT_TIMEOUT))
         if not cmd:
             return text("ERROR: 'command' is required.")
-        result = await asyncio.get_event_loop().run_in_executor(None, _send, cmd, timeout)
+        result = await loop.run_in_executor(None, _send, cmd, timeout)
         return text(result or "(no output)")
 
     # ------------------------------------------------------------------ #
     elif name == "read_output":
         duration = float(arguments.get("duration", 2.0))
-        with _lock:
-            if _serial is None or not _serial.is_open:
-                return text("ERROR: Not connected.")
-            buf = bytearray()
-            deadline = time.monotonic() + duration
-            while time.monotonic() < deadline:
-                chunk = _serial.read(_serial.in_waiting or 1)
-                if chunk:
-                    buf.extend(chunk)
-                else:
-                    time.sleep(0.05)
-        return text(buf.decode("utf-8", errors="replace").strip() or "(no output)")
+        raw = await loop.run_in_executor(None, _stream_for, duration)
+        return text(raw.strip() or "(no output)")
+
+    # ------------------------------------------------------------------ #
+    elif name == "scan_and_capture":
+        scan_type = arguments.get("scan_type", "scanall")
+        duration  = float(arguments.get("duration", 30.0))
+
+        cmd = SCAN_COMMANDS.get(scan_type, scan_type)
+        started_at = datetime.datetime.now().isoformat(timespec="seconds")
+
+        # Start scan (wait up to 4 s for the initial ack / prompt)
+        start_resp = await loop.run_in_executor(None, _send, cmd, 4.0)
+
+        # Stream all serial output for the capture window
+        live_output = await loop.run_in_executor(None, _stream_for, duration)
+
+        # Stop scan and pull structured lists
+        await loop.run_in_executor(None, _send, "stopscan", 6.0)
+        ap_list  = await loop.run_in_executor(None, _send, "list -a", DEFAULT_TIMEOUT)
+        st_list  = await loop.run_in_executor(None, _send, "list -c", DEFAULT_TIMEOUT)
+        ssid_list = await loop.run_in_executor(None, _send, "list -s", DEFAULT_TIMEOUT)
+
+        # Assemble capture buffer
+        _capture_buffer = "\n".join([
+            f"=== Marauder capture | type={scan_type} | duration={duration}s | started={started_at} ===",
+            "",
+            "--- Command response ---",
+            start_resp or "(none)",
+            "",
+            "--- Live serial output (streamed through USB) ---",
+            live_output.strip() or "(no live output)",
+            "",
+            "--- Access points (list -a) ---",
+            ap_list or "(none)",
+            "",
+            "--- Stations / clients (list -c) ---",
+            st_list or "(none)",
+            "",
+            "--- SSID list (list -s) ---",
+            ssid_list or "(none)",
+        ])
+
+        _capture_meta = {
+            "scan_type": scan_type,
+            "duration_s": duration,
+            "started_at": started_at,
+            "command": cmd,
+        }
+
+        return text(_capture_buffer)
+
+    # ------------------------------------------------------------------ #
+    elif name == "get_capture":
+        if not _capture_buffer:
+            return text("No capture in buffer. Run scan_and_capture first.")
+        return text(_capture_buffer)
+
+    # ------------------------------------------------------------------ #
+    elif name == "save_capture_local":
+        if not _capture_buffer:
+            return text("No capture to save. Run scan_and_capture first.")
+
+        path_arg = arguments.get("path")
+        ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        scan_type = _capture_meta.get("scan_type", "capture")
+
+        if path_arg:
+            dest = Path(path_arg).expanduser()
+            if dest.is_dir():
+                base = dest / f"marauder_{scan_type}_{ts}"
+            else:
+                base = dest.with_suffix("")  # strip extension, we add both
+        else:
+            base_dir = Path.home() / "marauder_captures"
+            base_dir.mkdir(exist_ok=True)
+            base = base_dir / f"marauder_{scan_type}_{ts}"
+
+        txt_path  = base.with_suffix(".txt")
+        json_path = base.with_suffix(".json")
+
+        txt_path.write_text(_capture_buffer, encoding="utf-8")
+        json_path.write_text(
+            json.dumps({"meta": _capture_meta, "raw": _capture_buffer}, indent=2),
+            encoding="utf-8",
+        )
+
+        return text(
+            f"Saved capture to:\n"
+            f"  {txt_path}\n"
+            f"  {json_path}\n"
+            f"Size: {len(_capture_buffer):,} bytes"
+        )
 
     # ------------------------------------------------------------------ #
     elif name == "scan_wifi":
-        result = await asyncio.get_event_loop().run_in_executor(None, _send, "scanall", 4.0)
+        result = await loop.run_in_executor(None, _send, "scanall", 4.0)
         return text(result or "(scan started — use read_output to poll)")
 
     elif name == "stop_scan":
-        result = await asyncio.get_event_loop().run_in_executor(None, _send, "stopscan", 4.0)
+        result = await loop.run_in_executor(None, _send, "stopscan", 4.0)
         return text(result or "(stopped)")
 
     elif name == "list_access_points":
-        result = await asyncio.get_event_loop().run_in_executor(None, _send, "list -a", DEFAULT_TIMEOUT)
+        result = await loop.run_in_executor(None, _send, "list -a", DEFAULT_TIMEOUT)
         return text(result or "(none)")
 
     elif name == "list_stations":
-        result = await asyncio.get_event_loop().run_in_executor(None, _send, "list -c", DEFAULT_TIMEOUT)
+        result = await loop.run_in_executor(None, _send, "list -c", DEFAULT_TIMEOUT)
+        return text(result or "(none)")
+
+    elif name == "list_ssids":
+        result = await loop.run_in_executor(None, _send, "list -s", DEFAULT_TIMEOUT)
+        return text(result or "(none)")
+
+    elif name == "list_probes":
+        result = await loop.run_in_executor(None, _send, "list -p", DEFAULT_TIMEOUT)
         return text(result or "(none)")
 
     elif name == "get_settings":
-        result = await asyncio.get_event_loop().run_in_executor(None, _send, "settings", DEFAULT_TIMEOUT)
+        result = await loop.run_in_executor(None, _send, "settings", DEFAULT_TIMEOUT)
         return text(result or "(no output)")
 
     # ------------------------------------------------------------------ #
@@ -293,13 +485,13 @@ async def main():
     args = parser.parse_args()
 
     if args.port:
-        # Pre-connect if a port was supplied on the command line
         global _serial
         try:
             _serial = serial.Serial(args.port, args.baud, timeout=0.1)
             time.sleep(0.5)
             _serial.reset_input_buffer()
-            print(f"[marauder-mcp] Pre-connected to {args.port} at {args.baud} baud.", file=sys.stderr)
+            _disable_sd_capture()
+            print(f"[marauder-mcp] Pre-connected to {args.port} at {args.baud} baud. SavePCAP disabled.", file=sys.stderr)
         except serial.SerialException as exc:
             print(f"[marauder-mcp] WARNING: could not open {args.port}: {exc}", file=sys.stderr)
 
