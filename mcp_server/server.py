@@ -149,11 +149,11 @@ async def list_tools() -> list[types.Tool]:
                 "type": "object",
                 "properties": {
                     "port": {
-                        "type": "string",
+                        "type": ["string", "null"],
                         "description": "Serial port, e.g. /dev/ttyUSB0 or COM3. Auto-detected if omitted.",
                     },
                     "baud": {
-                        "type": "integer",
+                        "type": ["integer", "null"],
                         "description": "Baud rate (default 115200).",
                         "default": 115200,
                     },
@@ -247,7 +247,7 @@ async def list_tools() -> list[types.Tool]:
                 "type": "object",
                 "properties": {
                     "path": {
-                        "type": "string",
+                        "type": ["string", "null"],
                         "description": "Directory or full file path on this host (optional).",
                     }
                 },
