@@ -76,7 +76,7 @@ class TcpBridgeServer(private val repository: SerialRepository) {
         return try {
             NetworkInterface.getNetworkInterfaces()
                 ?.asSequence()
-                ?.filter { it.name.startsWith("wlan") || it.name.startsWith("rmnet") }
+                ?.filter { it.name.startsWith("wlan") || it.name.startsWith("ap") }
                 ?.flatMap { it.inetAddresses.asSequence() }
                 ?.filterIsInstance<Inet4Address>()
                 ?.firstOrNull { !it.isLoopbackAddress }

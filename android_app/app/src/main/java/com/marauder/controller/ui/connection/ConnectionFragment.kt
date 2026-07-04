@@ -47,7 +47,7 @@ class ConnectionFragment : Fragment() {
                     }
                 }
                 launch {
-                    activity.tcpBridge.status.collect { msg ->
+                    activity.bridgeStatus.collect { msg ->
                         binding.tvBridgeStatus.text = msg
                     }
                 }
