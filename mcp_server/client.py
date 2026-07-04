@@ -23,22 +23,25 @@ def _is_termux() -> bool:
     return (
         os.path.isdir("/data/data/com.termux")
         or "com.termux" in os.environ.get("PREFIX", "")
+        or "com.termux" in os.environ.get("PATH", "")
+        or "com.termux" in os.environ.get("PROOT_L2S_DIR", "")
+        or os.path.isdir("/sdcard")
     )
 
 
 def _capture_dir() -> str:
     """Human-readable capture save path shown at startup."""
     if _is_termux():
-        downloads = Path.home() / "storage" / "downloads"
-        if downloads.is_dir():
-            return str(downloads / "marauder_captures")
+        for p in [Path("/sdcard/Download"), Path("/storage/emulated/0/Download"), Path.home() / "storage" / "downloads"]:
+            if p.is_dir():
+                return str(p / "marauder_captures")
         return str(Path.home() / "marauder_captures") + "  (run termux-setup-storage for Android Files access)"
     return str(Path.home() / "marauder_captures")
 
 
 # Auto-configure for Termux: connect through the Android app TCP bridge
 if _is_termux() and not os.getenv("MARAUDER_PORT"):
-    os.environ["MARAUDER_PORT"] = "socket://127.0.0.1:5555"
+    os.environ["MARAUDER_PORT"] = "socket://127.0.0.1:7555"
 
 # ---------------------------------------------------------------------------
 # Config
@@ -149,7 +152,7 @@ async def main() -> None:
     print(f"Port    : {os.getenv('MARAUDER_PORT', 'auto-detect')}")
     print(f"Saves   : {_capture_dir()}")
     if on_termux:
-        print(f"Mode    : Termux/Android (TCP bridge on localhost:5555)")
+        print(f"Mode    : Termux/Android (TCP bridge on localhost:7555)")
     print("Type 'quit' to exit, 'verbose' to toggle tool-call output.\n")
 
     verbose = False

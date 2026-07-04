@@ -45,6 +45,9 @@ def _is_termux() -> bool:
     return (
         os.path.isdir("/data/data/com.termux")
         or "com.termux" in os.environ.get("PREFIX", "")
+        or "com.termux" in os.environ.get("PATH", "")
+        or "com.termux" in os.environ.get("PROOT_L2S_DIR", "")
+        or os.path.isdir("/sdcard")
     )
 
 
@@ -143,10 +146,12 @@ def _capture_dir() -> Path:
     On Linux: ~/marauder_captures.
     """
     if _is_termux():
-        shared = Path.home() / "storage" / "downloads"
-        if shared.is_dir():
-            d = shared / "marauder_captures"
-        else:
+        d = None
+        for p in [Path("/sdcard/Download"), Path("/storage/emulated/0/Download"), Path.home() / "storage" / "downloads"]:
+            if p.is_dir():
+                d = p / "marauder_captures"
+                break
+        if d is None:
             d = Path.home() / "marauder_captures"
     else:
         d = Path.home() / "marauder_captures"
@@ -370,7 +375,7 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
     if name == "list_ports":
         lines = []
         if _is_termux():
-            lines.append("socket://127.0.0.1:5555  —  Android TCP bridge (Termux mode)")
+            lines.append("socket://127.0.0.1:7555  —  Android TCP bridge (Termux mode)")
         ports = serial.tools.list_ports.comports()
         lines.extend(f"{p.device}  —  {p.description}" for p in ports)
         if not lines:
@@ -384,7 +389,7 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
 
         if port is None:
             if _is_termux():
-                port = "socket://127.0.0.1:5555"
+                port = "socket://127.0.0.1:7555"
             else:
                 for p in serial.tools.list_ports.comports():
                     desc = (p.description or "").upper()
@@ -611,7 +616,7 @@ async def main():
     parser.add_argument("--baud", type=int, default=115200, help="Baud rate (default 115200)")
     args = parser.parse_args()
 
-    startup_port = args.port or ("socket://127.0.0.1:5555" if _is_termux() else None)
+    startup_port = args.port or ("socket://127.0.0.1:7555" if _is_termux() else None)
     if startup_port:
         global _serial
         try:
