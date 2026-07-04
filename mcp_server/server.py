@@ -35,6 +35,7 @@ from mcp import types
 
 _serial: Optional[serial.Serial] = None
 _lock = threading.Lock()
+_active_pcap_file: Optional[Path] = None
 
 PROMPT = b"> "          # Marauder prompt that marks end of response
 DEFAULT_TIMEOUT = 8.0   # seconds to wait for the prompt after a command
@@ -72,6 +73,58 @@ _capture_buffer: str = ""
 _capture_meta: dict = {}
 
 
+def _handle_binary_buffers(raw_bytes: bytearray) -> bytearray:
+    """Scan raw bytes for [BUF/BEGIN]...[BUF/CLOSE] blocks, write/append them to files on the host,
+    and return the cleaned bytearray with those blocks removed.
+    """
+    global _active_pcap_file
+    cleaned = bytearray()
+    cursor = 0
+    while True:
+        begin_idx = raw_bytes.find(b"[BUF/BEGIN]", cursor)
+        if begin_idx == -1:
+            cleaned.extend(raw_bytes[cursor:])
+            break
+        cleaned.extend(raw_bytes[cursor:begin_idx])
+        
+        close_idx = raw_bytes.find(b"[BUF/CLOSE]", begin_idx + 11)
+        if close_idx == -1:
+            pcap_data = raw_bytes[begin_idx + 11:]
+            cursor = len(raw_bytes)
+        else:
+            pcap_data = raw_bytes[begin_idx + 11:close_idx]
+            cursor = close_idx + 11
+            
+        if pcap_data:
+            try:
+                magic = pcap_data[:4]
+                is_new_pcap = magic in (b'\xa1\xb2\xc3\xd4', b'\xd4\xc3\xb2\xa1')
+                
+                if is_new_pcap:
+                    d = _capture_dir()
+                    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                    _active_pcap_file = d / f"marauder_{ts}.pcap"
+                    _active_pcap_file.write_bytes(pcap_data)
+                    print(f"[marauder-mcp] Started new local PCAP: {_active_pcap_file} ({len(pcap_data)} bytes)", file=sys.stderr)
+                elif _active_pcap_file is not None:
+                    with open(_active_pcap_file, "ab") as f:
+                        f.write(pcap_data)
+                    print(f"[marauder-mcp] Appended {len(pcap_data)} bytes to {_active_pcap_file}", file=sys.stderr)
+                else:
+                    d = _capture_dir()
+                    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                    fallback_file = d / f"marauder_{ts}.log"
+                    fallback_file.write_bytes(pcap_data)
+                    print(f"[marauder-mcp] Saved non-pcap traffic block ({len(pcap_data)} bytes) to {fallback_file}", file=sys.stderr)
+            except Exception as e:
+                print(f"[marauder-mcp] Error handling USB streamed traffic: {e}", file=sys.stderr)
+                
+        if cursor >= len(raw_bytes):
+            break
+            
+    return cleaned
+
+
 def _read_until_prompt(ser: serial.Serial, timeout: float = DEFAULT_TIMEOUT) -> str:
     """Read bytes from ser until the Marauder '> ' prompt appears or timeout."""
     buf = bytearray()
@@ -81,20 +134,40 @@ def _read_until_prompt(ser: serial.Serial, timeout: float = DEFAULT_TIMEOUT) -> 
         if chunk:
             buf.extend(chunk)
             if buf.endswith(PROMPT):
-                return buf[: -len(PROMPT)].decode("utf-8", errors="replace").strip()
+                cleaned = _handle_binary_buffers(buf[: -len(PROMPT)])
+                return cleaned.decode("utf-8", errors="replace").strip()
         else:
             time.sleep(0.02)
-    return buf.decode("utf-8", errors="replace").strip()
+    cleaned = _handle_binary_buffers(buf)
+    return cleaned.decode("utf-8", errors="replace").strip()
+
+
+def _should_append_serial(cmd: str) -> bool:
+    cmd_lower = cmd.strip().lower()
+    if any(cmd_lower.startswith(x) for x in ("sniff", "attack", "scanall")):
+        return "-serial" not in cmd_lower
+    return False
 
 
 def _send(command: str, timeout: float = DEFAULT_TIMEOUT) -> str:
-    global _serial
+    global _serial, _active_pcap_file
+    cmd_to_send = command.strip()
+    
+    # Automatically reset active PCAP file on new scans
+    normalized = cmd_to_send.lower()
+    if any(normalized.startswith(x) for x in ("scan", "sniff", "attack")):
+        _active_pcap_file = None
+        
+    # Append -serial to commands that stream packet/log buffers
+    if _should_append_serial(cmd_to_send):
+        cmd_to_send += " -serial"
+        
     with _lock:
         if _serial is None or not _serial.is_open:
             return "ERROR: Not connected. Use connect() first."
         if not _is_socket():
             _serial.reset_input_buffer()
-        _serial.write((command.strip() + "\n").encode())
+        _serial.write((cmd_to_send + "\n").encode())
         _serial.flush()
         return _read_until_prompt(_serial, timeout)
 
@@ -116,25 +189,19 @@ def _stream_for(duration: float) -> str:
                 buf.extend(chunk)
             else:
                 time.sleep(0.02)
-    return buf.decode("utf-8", errors="replace")
+    cleaned = _handle_binary_buffers(buf)
+    return cleaned.decode("utf-8", errors="replace")
 
 
 def _fix_bt_output(raw: str) -> str:
-    """Insert newlines before BT entries on NO_SCREEN builds.
-
-    On MARAUDER_CYD_3_5_INCH_NO_SCREEN the Serial.println() that terminates
-    each BT advertisement line is inside #ifdef HAS_SCREEN and is omitted,
-    so entries concatenate on a single line like:
-        -72 Device: MyPhone-80 Device: aa:bb:cc:dd:ee:ff-61 Device: Speaker
-    Split on the pattern that starts each entry (negative RSSI followed by ' Device:').
-    """
+    """Insert newlines before BT entries on NO_SCREEN builds."""
     import re
     return re.sub(r"(?<!\n)(?=-?\d+ Device:)", "\n", raw).strip()
 
 
-def _disable_sd_capture() -> None:
-    """Turn off SD-card PCAP writing so all data routes through USB serial."""
-    _send("settings -s SavePCAP disable", timeout=4.0)
+def _enable_pcap_capture() -> None:
+    """Make sure SavePCAP is enabled so the Marauder captures packets to the buffer."""
+    _send("settings -s SavePCAP enable", timeout=4.0)
 
 
 def _capture_dir() -> Path:
@@ -419,12 +486,12 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
                 _serial.reset_input_buffer()
 
         # Route all scan/sniff data through USB serial instead of SD card
-        await loop.run_in_executor(None, _disable_sd_capture)
+        await loop.run_in_executor(None, _enable_pcap_capture)
 
         mode = "TCP bridge (Termux)" if port.startswith("socket://") else "USB serial"
         return text(
             f"Connected to {port} at {baud} baud ({mode}).\n"
-            "SavePCAP disabled — all scan output streams through USB serial to this host."
+            "SavePCAP enabled — all scan output streams through USB serial to this host."
         )
 
     # ------------------------------------------------------------------ #
@@ -624,9 +691,9 @@ async def main():
             if not startup_port.startswith("socket://"):
                 time.sleep(0.5)
                 _serial.reset_input_buffer()
-            _disable_sd_capture()
+            _enable_pcap_capture()
             mode = "TCP bridge (Termux)" if startup_port.startswith("socket://") else "USB serial"
-            print(f"[marauder-mcp] Pre-connected to {startup_port} at {args.baud} baud ({mode}). SavePCAP disabled.", file=sys.stderr)
+            print(f"[marauder-mcp] Pre-connected to {startup_port} at {args.baud} baud ({mode}). SavePCAP enabled.", file=sys.stderr)
         except serial.SerialException as exc:
             print(f"[marauder-mcp] WARNING: could not open {startup_port}: {exc}", file=sys.stderr)
 
