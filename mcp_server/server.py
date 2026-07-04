@@ -39,6 +39,28 @@ _lock = threading.Lock()
 PROMPT = b"> "          # Marauder prompt that marks end of response
 DEFAULT_TIMEOUT = 8.0   # seconds to wait for the prompt after a command
 
+
+def _is_termux() -> bool:
+    """Detect whether we are running inside Termux on Android."""
+    return (
+        os.path.isdir("/data/data/com.termux")
+        or "com.termux" in os.environ.get("PREFIX", "")
+    )
+
+
+def _open_serial(port: str, baud: int) -> serial.Serial:
+    """Open serial port or socket:// URL and return a Serial-compatible object."""
+    if port.startswith("socket://"):
+        return serial.serial_for_url(port, baudrate=baud, timeout=0.1)
+    return serial.Serial(port, baud, timeout=0.1)
+
+
+def _is_socket() -> bool:
+    """True when the current connection is a TCP socket (Termux bridge mode)."""
+    if _serial is None:
+        return False
+    return getattr(_serial, "port", "").startswith("socket://")
+
 # ---------------------------------------------------------------------------
 # Capture buffer — populated by scan_and_capture, read by get_capture
 # ---------------------------------------------------------------------------
@@ -67,7 +89,8 @@ def _send(command: str, timeout: float = DEFAULT_TIMEOUT) -> str:
     with _lock:
         if _serial is None or not _serial.is_open:
             return "ERROR: Not connected. Use connect() first."
-        _serial.reset_input_buffer()
+        if not _is_socket():
+            _serial.reset_input_buffer()
         _serial.write((command.strip() + "\n").encode())
         _serial.flush()
         return _read_until_prompt(_serial, timeout)
@@ -81,11 +104,15 @@ def _stream_for(duration: float) -> str:
         buf = bytearray()
         deadline = time.monotonic() + duration
         while time.monotonic() < deadline:
-            chunk = _serial.read(_serial.in_waiting or 1)
+            try:
+                waiting = _serial.in_waiting
+            except Exception:
+                waiting = 0
+            chunk = _serial.read(waiting or 64)
             if chunk:
                 buf.extend(chunk)
             else:
-                time.sleep(0.05)
+                time.sleep(0.02)
     return buf.decode("utf-8", errors="replace")
 
 
@@ -302,10 +329,14 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
 
     # ------------------------------------------------------------------ #
     if name == "list_ports":
+        lines = []
+        if _is_termux():
+            lines.append("socket://127.0.0.1:5555  —  Android TCP bridge (Termux mode)")
         ports = serial.tools.list_ports.comports()
-        if not ports:
+        lines.extend(f"{p.device}  —  {p.description}" for p in ports)
+        if not lines:
             return text("No serial ports found.")
-        return text("\n".join(f"{p.device}  —  {p.description}" for p in ports))
+        return text("\n".join(lines))
 
     # ------------------------------------------------------------------ #
     elif name == "connect":
@@ -313,31 +344,36 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
         baud = int(arguments.get("baud", 115200))
 
         if port is None:
-            for p in serial.tools.list_ports.comports():
-                desc = (p.description or "").upper()
-                if any(k in desc for k in ("USB", "UART", "CP210", "CH340", "FTDI")):
-                    port = p.device
-                    break
-            if port is None:
-                return text("Could not auto-detect an ESP32 serial port. Pass 'port' explicitly.")
+            if _is_termux():
+                port = "socket://127.0.0.1:5555"
+            else:
+                for p in serial.tools.list_ports.comports():
+                    desc = (p.description or "").upper()
+                    if any(k in desc for k in ("USB", "UART", "CP210", "CH340", "FTDI")):
+                        port = p.device
+                        break
+                if port is None:
+                    return text("Could not auto-detect an ESP32 serial port. Pass 'port' explicitly.")
 
         with _lock:
             if _serial and _serial.is_open:
                 _serial.close()
             try:
-                _serial = serial.Serial(port, baud, timeout=0.1)
+                _serial = _open_serial(port, baud)
             except serial.SerialException as exc:
                 return text(f"ERROR opening {port}: {exc}")
 
-        time.sleep(0.5)
-        with _lock:
-            _serial.reset_input_buffer()
+        if not port.startswith("socket://"):
+            time.sleep(0.5)
+            with _lock:
+                _serial.reset_input_buffer()
 
         # Route all scan/sniff data through USB serial instead of SD card
         await loop.run_in_executor(None, _disable_sd_capture)
 
+        mode = "TCP bridge (Termux)" if port.startswith("socket://") else "USB serial"
         return text(
-            f"Connected to {port} at {baud} baud.\n"
+            f"Connected to {port} at {baud} baud ({mode}).\n"
             "SavePCAP disabled — all scan output streams through USB serial to this host."
         )
 
@@ -509,16 +545,19 @@ async def main():
     parser.add_argument("--baud", type=int, default=115200, help="Baud rate (default 115200)")
     args = parser.parse_args()
 
-    if args.port:
+    startup_port = args.port or ("socket://127.0.0.1:5555" if _is_termux() else None)
+    if startup_port:
         global _serial
         try:
-            _serial = serial.Serial(args.port, args.baud, timeout=0.1)
-            time.sleep(0.5)
-            _serial.reset_input_buffer()
+            _serial = _open_serial(startup_port, args.baud)
+            if not startup_port.startswith("socket://"):
+                time.sleep(0.5)
+                _serial.reset_input_buffer()
             _disable_sd_capture()
-            print(f"[marauder-mcp] Pre-connected to {args.port} at {args.baud} baud. SavePCAP disabled.", file=sys.stderr)
+            mode = "TCP bridge (Termux)" if startup_port.startswith("socket://") else "USB serial"
+            print(f"[marauder-mcp] Pre-connected to {startup_port} at {args.baud} baud ({mode}). SavePCAP disabled.", file=sys.stderr)
         except serial.SerialException as exc:
-            print(f"[marauder-mcp] WARNING: could not open {args.port}: {exc}", file=sys.stderr)
+            print(f"[marauder-mcp] WARNING: could not open {startup_port}: {exc}", file=sys.stderr)
 
     async with stdio_server() as (read_stream, write_stream):
         await app.run(read_stream, write_stream, app.create_initialization_options())

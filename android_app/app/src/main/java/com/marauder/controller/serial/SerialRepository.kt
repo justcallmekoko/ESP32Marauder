@@ -13,6 +13,9 @@ class SerialRepository {
     private val _outputFlow = MutableSharedFlow<TerminalLine>(extraBufferCapacity = 512)
     val outputFlow: SharedFlow<TerminalLine> = _outputFlow.asSharedFlow()
 
+    private val _rawFlow = MutableSharedFlow<ByteArray>(extraBufferCapacity = 1024)
+    val rawFlow: SharedFlow<ByteArray> = _rawFlow.asSharedFlow()
+
     private val _commandPending = MutableStateFlow(false)
     val commandPending: StateFlow<Boolean> = _commandPending.asStateFlow()
 
@@ -71,6 +74,11 @@ class SerialRepository {
         }
     }
 
+    fun writeRaw(data: ByteArray) {
+        val p = port ?: return
+        scope.launch { try { p.write(data, 2000) } catch (_: IOException) {} }
+    }
+
     fun close() {
         disconnect()
         scope.cancel()
@@ -84,7 +92,9 @@ class SerialRepository {
                 try {
                     val n = p.read(buf, 50)
                     if (n > 0) {
-                        val result = detector.feed(buf.copyOf(n))
+                        val chunk = buf.copyOf(n)
+                        scope.launch { _rawFlow.emit(chunk) }
+                        val result = detector.feed(chunk)
                         for (line in result.lines) {
                             emit(TerminalLine(line, LineType.RECEIVED))
                         }

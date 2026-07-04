@@ -18,6 +18,18 @@ from pathlib import Path
 from langchain_openai import ChatOpenAI
 from mcp_use import MCPAgent, MCPClient
 
+
+def _is_termux() -> bool:
+    return (
+        os.path.isdir("/data/data/com.termux")
+        or "com.termux" in os.environ.get("PREFIX", "")
+    )
+
+
+# Auto-configure for Termux: connect through the Android app TCP bridge
+if _is_termux() and not os.getenv("MARAUDER_PORT"):
+    os.environ["MARAUDER_PORT"] = "socket://127.0.0.1:5555"
+
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
