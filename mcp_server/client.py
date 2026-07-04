@@ -98,13 +98,16 @@ async def main() -> None:
 
     model_name = os.getenv("VENICE_MODEL", DEFAULT_MODEL)
 
+    timeout = int(os.getenv("VENICE_TIMEOUT", "120"))
+
     llm = ChatOpenAI(
         model=model_name,
         api_key=api_key,
         base_url=VENICE_BASE_URL,
         temperature=0.3,       # lower = more deterministic tool selection
         max_tokens=4096,
-        request_timeout=60,    # fail fast if Venice AI hangs
+        timeout=timeout,       # fail fast if Venice AI hangs; override with VENICE_TIMEOUT
+        streaming=True,        # stream tokens so the connection stays alive
     )
 
     client = MCPClient.from_dict(build_mcp_config())
