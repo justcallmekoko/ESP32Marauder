@@ -134,6 +134,26 @@ def _disable_sd_capture() -> None:
     _send("settings -s SavePCAP disable", timeout=4.0)
 
 
+def _capture_dir() -> Path:
+    """Return the best writable capture directory for the current platform.
+
+    On Termux: prefers ~/storage/downloads/marauder_captures (visible in the
+    Android Files app) when termux-setup-storage has been run; falls back to
+    ~/marauder_captures inside the Termux sandbox otherwise.
+    On Linux: ~/marauder_captures.
+    """
+    if _is_termux():
+        shared = Path.home() / "storage" / "downloads"
+        if shared.is_dir():
+            d = shared / "marauder_captures"
+        else:
+            d = Path.home() / "marauder_captures"
+    else:
+        d = Path.home() / "marauder_captures"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
 # ---------------------------------------------------------------------------
 # MCP server setup
 # ---------------------------------------------------------------------------
@@ -266,9 +286,11 @@ async def list_tools() -> list[types.Tool]:
         types.Tool(
             name="save_capture_local",
             description=(
-                "Save the capture buffer to a file on this Linux host. "
+                "Save the capture buffer to a file on this device. "
                 "Saves as JSON (structured) + TXT (raw). "
-                "If path is omitted, saves to ~/marauder_captures/ with a timestamp filename."
+                "On Termux/Android saves to ~/storage/downloads/marauder_captures/ "
+                "(visible in Android Files app) if termux-setup-storage was run, "
+                "otherwise ~/marauder_captures/. On Linux saves to ~/marauder_captures/."
             ),
             inputSchema={
                 "type": "object",
@@ -378,6 +400,12 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
             try:
                 _serial = _open_serial(port, baud)
             except serial.SerialException as exc:
+                if port.startswith("socket://"):
+                    return text(
+                        f"ERROR: Could not connect to TCP bridge at {port}.\n"
+                        "Make sure the Marauder Controller app is open, the ESP32 is "
+                        "plugged in via OTG, and the app shows 'Connected'."
+                    )
                 return text(f"ERROR opening {port}: {exc}")
 
         if not port.startswith("socket://"):
@@ -496,11 +524,9 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
             if dest.is_dir():
                 base = dest / f"marauder_{scan_type}_{ts}"
             else:
-                base = dest.with_suffix("")  # strip extension, we add both
+                base = dest.with_suffix("")
         else:
-            base_dir = Path.home() / "marauder_captures"
-            base_dir.mkdir(exist_ok=True)
-            base = base_dir / f"marauder_{scan_type}_{ts}"
+            base = _capture_dir() / f"marauder_{scan_type}_{ts}"
 
         txt_path  = base.with_suffix(".txt")
         json_path = base.with_suffix(".json")
@@ -511,11 +537,19 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
             encoding="utf-8",
         )
 
+        # Tell the user whether the file is visible from Android Files app
+        android_note = ""
+        if _is_termux():
+            if "storage/downloads" in str(txt_path):
+                android_note = "\n(visible in Android Files → Downloads → marauder_captures)"
+            else:
+                android_note = "\n(only accessible inside Termux — run termux-setup-storage for Android Files access)"
+
         return text(
             f"Saved capture to:\n"
             f"  {txt_path}\n"
             f"  {json_path}\n"
-            f"Size: {len(_capture_buffer):,} bytes"
+            f"Size: {len(_capture_buffer):,} bytes{android_note}"
         )
 
     # ------------------------------------------------------------------ #

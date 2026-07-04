@@ -26,6 +26,16 @@ def _is_termux() -> bool:
     )
 
 
+def _capture_dir() -> str:
+    """Human-readable capture save path shown at startup."""
+    if _is_termux():
+        downloads = Path.home() / "storage" / "downloads"
+        if downloads.is_dir():
+            return str(downloads / "marauder_captures")
+        return str(Path.home() / "marauder_captures") + "  (run termux-setup-storage for Android Files access)"
+    return str(Path.home() / "marauder_captures")
+
+
 # Auto-configure for Termux: connect through the Android app TCP bridge
 if _is_termux() and not os.getenv("MARAUDER_PORT"):
     os.environ["MARAUDER_PORT"] = "socket://127.0.0.1:5555"
@@ -51,8 +61,9 @@ access to the hardware via MCP tools.
 3. The captured data is returned directly and also stored in the capture buffer.
    Call get_capture() at any time to re-read the last capture without re-scanning.
 4. To persist findings, call save_capture_local() — it writes both a .txt
-   (human-readable) and a .json (structured) file to ~/marauder_captures/ on
-   this host.
+   (human-readable) and a .json (structured) file. On Android/Termux saves to
+   ~/storage/downloads/marauder_captures/ (visible in Android Files app);
+   on Linux saves to ~/marauder_captures/.
 
 ## Serial output line formats (for parsing capture data)
 - scanall AP discovery:    `<rssi> Ch: <ch> <bssid> ESSID: <ssid> <cap_hex...>`
@@ -132,9 +143,13 @@ async def main() -> None:
         verbose=False,         # set True to see every tool call
     )
 
+    on_termux = _is_termux()
     print(f"ESP32 Marauder AI Terminal")
-    print(f"Model : {model_name} via Venice AI")
-    print(f"Port  : {os.getenv('MARAUDER_PORT', 'auto-detect')}")
+    print(f"Model   : {model_name} via Venice AI")
+    print(f"Port    : {os.getenv('MARAUDER_PORT', 'auto-detect')}")
+    print(f"Saves   : {_capture_dir()}")
+    if on_termux:
+        print(f"Mode    : Termux/Android (TCP bridge on localhost:5555)")
     print("Type 'quit' to exit, 'verbose' to toggle tool-call output.\n")
 
     verbose = False
