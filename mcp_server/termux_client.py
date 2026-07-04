@@ -7,10 +7,17 @@ Run:
     python termux_client.py
 
 The Marauder Controller Android app must be open with the ESP32 plugged
-in via OTG cable. The app bridges the USB serial connection via TCP on port
-7555, bound to all interfaces (0.0.0.0). Termux connects via the phone's
-WiFi IP (e.g. 192.168.1.5:7555) — traffic on wlan0 bypasses Android's
-per-UID iptables loopback block. No root, no pyserial, no pydantic.
+in via OTG cable. The app runs a ForegroundService that bridges the USB
+serial connection via TCP on port 7555, bound to all interfaces (0.0.0.0).
+
+Termux, the hotspot, and the app all run on the SAME phone, so the bridge
+is reachable at the phone's own gateway IP. Termux can't enumerate network
+interfaces without root (netlink / /proc/net / /sys/class/net are blocked),
+so this client simply TRIES the well-known Android hotspot gateway addresses
+(192.168.43.1 first) plus loopback, and uses whichever accepts a connection.
+Override with `export MARAUDER_HOST=<ip>` if your hotspot uses another subnet.
+
+No root, no pyserial, no pydantic.
 """
 
 import datetime
@@ -54,36 +61,35 @@ SCAN_COMMANDS: dict[str, str] = {
 # ---------------------------------------------------------------------------
 
 _sock: socket.socket | None = None
+_connected_host: str = ""
 _capture_buffer: str = ""
 _capture_meta: dict = {}
 
+# Well-known Android hotspot / tether gateway addresses. Because Termux, the
+# hotspot, and the Marauder Controller app all run on the SAME phone, the app's
+# ServerSocket bound to 0.0.0.0:7555 is reachable at the phone's own gateway IP
+# on whichever local interface is up. We try these in order rather than trying
+# to enumerate interfaces — Termux can't read netlink / /proc/net / /sys/class/net
+# without root, so `ip addr` and friends silently fail.
+HOTSPOT_GATEWAYS = [
+    "192.168.43.1",   # AOSP / most Android hotspots
+    "192.168.44.1",   # some Samsung / secondary hotspot subnet
+    "192.168.137.1",  # Windows-style tether (rare on Android)
+    "172.20.10.1",    # iOS-style personal hotspot (rare on Android)
+    "127.0.0.1",      # loopback — works now that the app is a ForegroundService
+]
 
-def _local_ip() -> str:
-    """Return a WiFi or hotspot IP that routes intra-device. Cellular IPs (CGNAT 100.x) don't work."""
+
+def _candidate_hosts() -> list[str]:
+    """Ordered list of addresses to try for the bridge, most-likely first."""
+    hosts: list[str] = []
     override = os.getenv("MARAUDER_HOST", "")
     if override:
-        return override
-    import subprocess
-    try:
-        out = subprocess.run(["ip", "addr"], capture_output=True, text=True, timeout=3).stdout
-        iface = ""
-        for line in out.splitlines():
-            # Detect interface name line
-            if line and line[0].isdigit():
-                iface = line.split(":")[1].strip().split("@")[0].strip() if ":" in line else ""
-            elif "inet " in line and iface:
-                # Skip loopback and cellular interfaces
-                if any(iface.startswith(p) for p in ("lo", "rmnet", "ccmni", "pdp", "v4-rmnet")):
-                    continue
-                ip = line.strip().split()[1].split("/")[0]
-                # Skip CGNAT (100.64–100.127) and link-local (169.254.x.x)
-                if ip.startswith("169.254.") or (ip.startswith("100.") and
-                        64 <= int(ip.split(".")[1]) <= 127):
-                    continue
-                return ip
-    except Exception:
-        pass
-    return ""
+        hosts.append(override)
+    for h in HOTSPOT_GATEWAYS:
+        if h not in hosts:
+            hosts.append(h)
+    return hosts
 
 # ---------------------------------------------------------------------------
 # Serial helpers
@@ -142,34 +148,38 @@ def _fix_bt(raw: str) -> str:
 
 
 def _connect_bridge() -> str:
-    global _sock
-    host = _local_ip()
-    if not host:
+    global _sock, _connected_host
+    candidates = _candidate_hosts()
+    tried: list[str] = []
+    for host in candidates:
+        try:
+            sock = socket.create_connection((host, BRIDGE_PORT), timeout=3)
+        except OSError as exc:
+            tried.append(f"{host} ({exc.__class__.__name__})")
+            continue
+        sock.settimeout(0.1)
+        _sock = sock
+        _connected_host = host
+        time.sleep(0.5)
+        _drain()
+        _sock.sendall(b"settings -s SavePCAP disable\n")
+        _read_until_prompt(4.0)
         return (
-            "ERROR: No WiFi or hotspot interface found.\n"
-            "Android blocks loopback TCP between apps — the bridge needs a real interface.\n"
-            "Fix (pick one):\n"
-            "  1. Connect to a WiFi network, OR\n"
-            "  2. Enable Mobile Hotspot in Settings (no second device needed), OR\n"
-            "  3. export MARAUDER_HOST=192.168.x.x  (set IP manually)\n"
-            "Then run this again."
+            f"Connected to ESP32 via Android bridge at {host}:{BRIDGE_PORT}.\n"
+            "SavePCAP disabled — all scan output streams through USB serial."
         )
-    try:
-        _sock = socket.create_connection((host, BRIDGE_PORT), timeout=10)
-        _sock.settimeout(0.1)
-    except OSError as exc:
-        _sock = None
-        return (
-            f"ERROR: Cannot connect to Android bridge at {host}:{BRIDGE_PORT} — {exc}\n"
-            "Make sure the Marauder Controller app is open and shows 'Bridge: <ip>:7555'."
-        )
-    time.sleep(0.5)
-    _drain()
-    _sock.sendall(b"settings -s SavePCAP disable\n")
-    _read_until_prompt(4.0)
+    _sock = None
+    _connected_host = ""
     return (
-        f"Connected to ESP32 via Android bridge at {host}:{BRIDGE_PORT}.\n"
-        "SavePCAP disabled — all scan output streams through USB serial."
+        f"ERROR: Could not reach the Marauder bridge on port {BRIDGE_PORT}.\n"
+        f"Tried: {', '.join(tried)}\n"
+        "Checklist:\n"
+        "  1. The Marauder Controller app is OPEN and shows the persistent\n"
+        "     'Marauder Bridge active' notification.\n"
+        "  2. The ESP32 is plugged into the phone via OTG (app shows 'Connected').\n"
+        "  3. If your hotspot uses a non-default subnet, set it explicitly:\n"
+        "     export MARAUDER_HOST=<the app's Bridge IP>\n"
+        "     (the app's connection screen shows 'Bridge: <ip>:7555')."
     )
 
 # ---------------------------------------------------------------------------
@@ -177,15 +187,15 @@ def _connect_bridge() -> str:
 # ---------------------------------------------------------------------------
 
 def dispatch(name: str, args: dict) -> str:
-    global _sock, _capture_buffer, _capture_meta
+    global _sock, _connected_host, _capture_buffer, _capture_meta
 
     def need_sock() -> str | None:
         return None if _sock else "ERROR: Not connected. Call connect first."
 
     # ------------------------------------------------------------------ #
     if name == "list_ports":
-        host = _local_ip()
-        return f"{host}:{BRIDGE_PORT}  —  Android TCP bridge via WiFi (Termux mode)"
+        cands = ", ".join(f"{h}:{BRIDGE_PORT}" for h in _candidate_hosts())
+        return f"Android TCP bridge candidates (Termux mode): {cands}"
 
     elif name == "connect":
         return _connect_bridge()
@@ -197,13 +207,14 @@ def dispatch(name: str, args: dict) -> str:
             except OSError:
                 pass
             _sock = None
+        _connected_host = ""
         return "Disconnected."
 
     elif name == "connection_status":
         if _sock:
             try:
                 _sock.getpeername()
-                return f"Connected to Android bridge at {BRIDGE[0]}:{BRIDGE[1]}."
+                return f"Connected to Android bridge at {_connected_host}:{BRIDGE_PORT}."
             except OSError:
                 pass
         return "Not connected."
@@ -540,8 +551,8 @@ def main() -> None:
 
     model = os.environ.get("VENICE_MODEL", DEFAULT_MODEL)
 
-    local = _local_ip()
-    bridge_info = f"{local}:{BRIDGE_PORT}" if local else f"NO WIFI — connect to WiFi or enable Hotspot"
+    override = os.getenv("MARAUDER_HOST", "")
+    bridge_info = f"{override}:{BRIDGE_PORT}" if override else f"auto ({', '.join(HOTSPOT_GATEWAYS[:3])}…):{BRIDGE_PORT}"
     print("ESP32 Marauder AI Terminal (Termux — stdlib only)")
     print(f"Model : {model} via Venice AI")
     print(f"Bridge: {bridge_info}  (Marauder Controller app)")
