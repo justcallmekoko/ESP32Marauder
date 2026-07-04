@@ -104,6 +104,7 @@ async def main() -> None:
         base_url=VENICE_BASE_URL,
         temperature=0.3,       # lower = more deterministic tool selection
         max_tokens=4096,
+        request_timeout=60,    # fail fast if Venice AI hangs
     )
 
     client = MCPClient.from_dict(build_mcp_config())
@@ -143,6 +144,10 @@ async def main() -> None:
         try:
             result = await agent.run(line)
             print(f"\n{result}")
+        except asyncio.CancelledError:
+            print("\n[cancelled]")
+        except KeyboardInterrupt:
+            print("\n[cancelled]")
         except Exception as exc:
             print(f"\n[error] {exc}")
 
@@ -150,4 +155,7 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\nBye.")
