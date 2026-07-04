@@ -316,6 +316,23 @@ async def list_tools() -> list[types.Tool]:
             description="Print current Marauder settings.",
             inputSchema={"type": "object", "properties": {}},
         ),
+        types.Tool(
+            name="read_local_file",
+            description=(
+                "Read a file from the local Linux host filesystem and return its contents. "
+                "Use this to read capture files, logs, or any other local file for analysis."
+            ),
+            inputSchema={
+                "type": "object",
+                "required": ["path"],
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "Absolute or ~-relative path to the file on this Linux host.",
+                    }
+                },
+            },
+        ),
     ]
 
 
@@ -529,6 +546,21 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
     elif name == "get_settings":
         result = await loop.run_in_executor(None, _send, "settings", DEFAULT_TIMEOUT)
         return text(result or "(no output)")
+
+    # ------------------------------------------------------------------ #
+    elif name == "read_local_file":
+        raw_path = arguments.get("path", "")
+        if not raw_path:
+            return text("ERROR: 'path' is required.")
+        p = Path(raw_path).expanduser()
+        if not p.exists():
+            return text(f"ERROR: File not found: {p}")
+        if not p.is_file():
+            return text(f"ERROR: Not a file: {p}")
+        try:
+            return text(p.read_text(encoding="utf-8", errors="replace"))
+        except OSError as exc:
+            return text(f"ERROR reading {p}: {exc}")
 
     # ------------------------------------------------------------------ #
     else:

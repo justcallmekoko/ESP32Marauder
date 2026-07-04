@@ -9,6 +9,9 @@ on:
       - "*"
   pull_request:
 
+permissions:
+  contents: write
+
 jobs:
   compile_sketch:
     name: build ${{ matrix.board.name }}
