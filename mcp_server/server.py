@@ -454,6 +454,272 @@ async def list_tools() -> list[types.Tool]:
                 },
             },
         ),
+        types.Tool(
+            name="attack",
+            description="Launch a specified Wi-Fi attack against selected targets.",
+            inputSchema={
+                "type": "object",
+                "required": ["attack_type"],
+                "properties": {
+                    "attack_type": {
+                        "type": "string",
+                        "enum": ["deauth", "beacon", "probe", "funny", "rickroll", "badmsg", "sleep", "sae", "csa", "quiet"],
+                        "description": "Type of attack to launch."
+                    },
+                    "options": {
+                        "type": ["string", "null"],
+                        "description": "Optional flags/parameters (e.g. '-c' to target clients, '-s <mac>' override source MAC, '-d <mac>' override destination MAC)."
+                    }
+                }
+            }
+        ),
+        types.Tool(
+            name="select_targets",
+            description="Select access points, stations/clients, or SSIDs by indices (comma-separated list of numbers, or 'all'). Selection toggles the select status on the device.",
+            inputSchema={
+                "type": "object",
+                "required": ["target_type", "indices"],
+                "properties": {
+                    "target_type": {
+                        "type": "string",
+                        "enum": ["ap", "station", "ssid"],
+                        "description": "The category of targets to select."
+                    },
+                    "indices": {
+                        "type": "string",
+                        "description": "Comma-separated list of indices (e.g. '0,1,3') or 'all' to select all, or filter expression (e.g. '-f \"equals MyWiFi\"')."
+                    }
+                }
+            }
+        ),
+        types.Tool(
+            name="evil_portal",
+            description="Manage the Evil Portal phishing module. Starts/stops the portal or loads HTML.",
+            inputSchema={
+                "type": "object",
+                "required": ["action"],
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["start", "stop", "sethtml"],
+                        "description": "Action to perform."
+                    },
+                    "html_file": {
+                        "type": ["string", "null"],
+                        "description": "Name of the HTML portal file to load (required for 'start' with custom file and 'sethtml')."
+                    }
+                }
+            }
+        ),
+        types.Tool(
+            name="manage_ssids",
+            description="Add, remove, or generate random SSIDs in the target SSID list.",
+            inputSchema={
+                "type": "object",
+                "required": ["action"],
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["add", "remove", "generate"],
+                        "description": "Action to perform."
+                    },
+                    "name": {
+                        "type": ["string", "null"],
+                        "description": "SSID name/ESSID to add (required for 'add')."
+                    },
+                    "count": {
+                        "type": ["integer", "null"],
+                        "description": "Number of random SSIDs to generate (required for 'generate')."
+                    },
+                    "index": {
+                        "type": ["integer", "null"],
+                        "description": "Index of SSID to remove (required for 'remove')."
+                    }
+                }
+            }
+        ),
+        types.Tool(
+            name="change_channel",
+            description="Set or query the Wi-Fi channel.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "channel": {
+                        "type": ["integer", "null"],
+                        "description": "Channel number (1-14). If omitted, just queries current channel."
+                    }
+                }
+            }
+        ),
+        types.Tool(
+            name="reboot_device",
+            description="Reboot the ESP32 Marauder hardware.",
+            inputSchema={"type": "object", "properties": {}}
+        ),
+        types.Tool(
+            name="clear_lists",
+            description="Clear the discovered access points, stations, or SSIDs lists.",
+            inputSchema={
+                "type": "object",
+                "required": ["list_type"],
+                "properties": {
+                    "list_type": {
+                        "type": "string",
+                        "enum": ["ap", "station", "ssid", "all"],
+                        "description": "Which list to clear."
+                    }
+                }
+            }
+        ),
+        types.Tool(
+            name="configure_settings",
+            description="Enable or disable specific settings, or reset them to default, or print settings.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "setting": {
+                        "type": ["string", "null"],
+                        "description": "Setting name (e.g. SavePCAP, ForceChannel, etc.). If omitted, lists current settings."
+                    },
+                    "value": {
+                        "type": ["string", "null"],
+                        "enum": ["enable", "disable"],
+                        "description": "Value to set (enable/disable). Required if setting is provided."
+                    }
+                }
+            }
+        ),
+        types.Tool(
+            name="led_control",
+            description="Control the onboard Neopixel LED color or pattern.",
+            inputSchema={
+                "type": "object",
+                "required": ["color"],
+                "properties": {
+                    "color": {
+                        "type": "string",
+                        "description": "Hex color code without '#' (e.g. 'FF0000' for red) or 'rainbow' for pattern."
+                    }
+                }
+            }
+        ),
+        types.Tool(
+            name="gps_control",
+            description="Query or configure GPS tracking, NMEA data, and Point of Interest tagging.",
+            inputSchema={
+                "type": "object",
+                "required": ["action"],
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["status", "tracker_start", "tracker_stop", "tag_poi", "nmea_status"],
+                        "description": "GPS action to execute."
+                    },
+                    "poi_label": {
+                        "type": ["string", "null"],
+                        "description": "Label for Point of Interest tagging (required for 'tag_poi')."
+                    }
+                }
+            }
+        ),
+        types.Tool(
+            name="ble_spam",
+            description="Launch Bluetooth Low Energy (BLE) advertisement spamming attacks to simulate pairing/notifications.",
+            inputSchema={
+                "type": "object",
+                "required": ["spam_type"],
+                "properties": {
+                    "spam_type": {
+                        "type": "string",
+                        "enum": ["sourapple", "applejuice", "google", "samsung", "windows", "flipper", "all"],
+                        "description": "Target brand/type of BLE advertisement spam."
+                    }
+                }
+            }
+        ),
+        types.Tool(
+            name="spoof_airtag",
+            description="Spoof Apple AirTag Bluetooth advertisements by index.",
+            inputSchema={
+                "type": "object",
+                "required": ["index"],
+                "properties": {
+                    "index": {
+                        "type": "integer",
+                        "description": "Index of the Airtag to spoof."
+                    }
+                }
+            }
+        ),
+        types.Tool(
+            name="add_device",
+            description="Manually add an access point or client/station to the list.",
+            inputSchema={
+                "type": "object",
+                "required": ["device_type", "mac"],
+                "properties": {
+                    "device_type": {
+                        "type": "string",
+                        "enum": ["ap", "client"],
+                        "description": "Type of device to add."
+                    },
+                    "mac": {
+                        "type": "string",
+                        "description": "MAC address of the device (e.g. 'AA:BB:CC:DD:EE:FF')."
+                    },
+                    "channel": {
+                        "type": ["integer", "null"],
+                        "description": "Channel number (for APs)."
+                    },
+                    "ssid": {
+                        "type": ["string", "null"],
+                        "description": "SSID/ESSID (for APs)."
+                    },
+                    "ap_index": {
+                        "type": ["integer", "null"],
+                        "description": "Associated AP index (required for clients)."
+                    }
+                }
+            }
+        ),
+        types.Tool(
+            name="network_scan",
+            description="Execute advanced diagnostic network scans (ping, port scan, ARP scan, signal monitor, MAC tracking).",
+            inputSchema={
+                "type": "object",
+                "required": ["scan_mode"],
+                "properties": {
+                    "scan_mode": {
+                        "type": "string",
+                        "enum": ["ping", "port", "arp", "mac_track", "signal_monitor"],
+                        "description": "The diagnostic scan mode to run."
+                    },
+                    "options": {
+                        "type": ["string", "null"],
+                        "description": "Extra arguments for scan (e.g. '-f' for ARP scan, '-a -t <ip_index>' or '-s http' for port scan)."
+                    }
+                }
+            }
+        ),
+        types.Tool(
+            name="mac_spoof",
+            description="Configure/randomize/clone MAC addresses on the device.",
+            inputSchema={
+                "type": "object",
+                "required": ["action"],
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["random_ap", "random_client", "clone_ap", "clone_client"],
+                        "description": "MAC spoofing action."
+                    },
+                    "index": {
+                        "type": ["integer", "null"],
+                        "description": "Index of AP or client to clone MAC from (required for 'clone_ap' and 'clone_client')."
+                    }
+                }
+            }
+        ),
     ]
 
 
@@ -787,6 +1053,212 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
                     output += f"\n\nWARNING: Could not reopen serial port: {e}"
 
         return text(output)
+
+    # ------------------------------------------------------------------ #
+    elif name == "attack":
+        attack_type = arguments.get("attack_type")
+        options = arguments.get("options") or ""
+        cmd = f"attack -t {attack_type}"
+        if options:
+            cmd += f" {options.strip()}"
+        res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
+        return text(res or f"Attack '{attack_type}' started.")
+
+    # ------------------------------------------------------------------ #
+    elif name == "select_targets":
+        target_type = arguments.get("target_type")
+        indices = arguments.get("indices")
+        flag = {"ap": "-a", "station": "-c", "ssid": "-s"}.get(target_type, "-a")
+        cmd = f"select {flag} {indices}"
+        res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
+        return text(res or f"Selected {target_type} indices: {indices}")
+
+    # ------------------------------------------------------------------ #
+    elif name == "evil_portal":
+        action = arguments.get("action")
+        html_file = arguments.get("html_file")
+        if action == "start":
+            cmd = "evilportal -c start"
+            if html_file:
+                cmd += f" -w {html_file}"
+        elif action == "sethtml":
+            if not html_file:
+                return text("ERROR: 'html_file' is required when action is 'sethtml'.")
+            cmd = f"evilportal -c sethtml {html_file}"
+        elif action == "stop":
+            cmd = "stopscan"
+        else:
+            return text(f"ERROR: Unknown action '{action}' for evil_portal.")
+        res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
+        return text(res or f"Evil Portal action '{action}' executed.")
+
+    # ------------------------------------------------------------------ #
+    elif name == "manage_ssids":
+        action = arguments.get("action")
+        name_val = arguments.get("name")
+        count = arguments.get("count")
+        index = arguments.get("index")
+        if action == "add":
+            if not name_val:
+                return text("ERROR: 'name' is required when action is 'add'.")
+            cmd = f"ssid -a -n {name_val}"
+        elif action == "generate":
+            if count is None:
+                return text("ERROR: 'count' is required when action is 'generate'.")
+            cmd = f"ssid -a -g {count}"
+        elif action == "remove":
+            if index is None:
+                return text("ERROR: 'index' is required when action is 'remove'.")
+            cmd = f"ssid -r {index}"
+        else:
+            return text(f"ERROR: Unknown action '{action}' for manage_ssids.")
+        res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
+        return text(res or f"SSID action '{action}' executed.")
+
+    # ------------------------------------------------------------------ #
+    elif name == "change_channel":
+        channel = arguments.get("channel")
+        if channel is not None:
+            cmd = f"channel -s {channel}"
+        else:
+            cmd = "channel"
+        res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
+        return text(res or "(no output)")
+
+    # ------------------------------------------------------------------ #
+    elif name == "reboot_device":
+        res = await loop.run_in_executor(None, _send, "reboot", DEFAULT_TIMEOUT)
+        return text(res or "Reboot command sent.")
+
+    # ------------------------------------------------------------------ #
+    elif name == "clear_lists":
+        list_type = arguments.get("list_type")
+        if list_type == "all":
+            cmd = "clearlist -a -c -s"
+        else:
+            flag = {"ap": "-a", "station": "-c", "ssid": "-s"}.get(list_type)
+            cmd = f"clearlist {flag}"
+        res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
+        return text(res or f"List '{list_type}' cleared.")
+
+    # ------------------------------------------------------------------ #
+    elif name == "configure_settings":
+        setting = arguments.get("setting")
+        value = arguments.get("value")
+        if setting:
+            if not value:
+                return text("ERROR: 'value' (enable/disable) is required when specifying a setting.")
+            cmd = f"settings -s {setting} {value}"
+        else:
+            cmd = "settings"
+        res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
+        return text(res or "(no output)")
+
+    # ------------------------------------------------------------------ #
+    elif name == "led_control":
+        color = arguments.get("color", "").strip()
+        if color.lower() == "rainbow":
+            cmd = "led -p rainbow"
+        else:
+            clean_color = color.lstrip("#")
+            cmd = f"led -s #{clean_color}"
+        res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
+        return text(res or f"LED set to {color}.")
+
+    # ------------------------------------------------------------------ #
+    elif name == "gps_control":
+        action = arguments.get("action")
+        poi_label = arguments.get("poi_label")
+        if action == "status":
+            cmd = "gpsdata"
+        elif action == "tracker_start":
+            cmd = "gpstracker -c start"
+        elif action == "tracker_stop":
+            cmd = "gpstracker -c stop"
+        elif action == "tag_poi":
+            if not poi_label:
+                return text("ERROR: 'poi_label' is required when action is 'tag_poi'.")
+            cmd = f"wardrivepoi {poi_label}"
+        elif action == "nmea_status":
+            cmd = "nmea"
+        else:
+            return text(f"ERROR: Unknown action '{action}' for gps_control.")
+        res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
+        return text(res or f"GPS action '{action}' executed.")
+
+    # ------------------------------------------------------------------ #
+    elif name == "ble_spam":
+        spam_type = arguments.get("spam_type")
+        cmd = f"blespam -t {spam_type}"
+        res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
+        return text(res or f"BLE spam '{spam_type}' started.")
+
+    # ------------------------------------------------------------------ #
+    elif name == "spoof_airtag":
+        index = arguments.get("index")
+        cmd = f"spoofat -t {index}"
+        res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
+        return text(res or f"Spoofing AirTag {index} started.")
+
+    # ------------------------------------------------------------------ #
+    elif name == "add_device":
+        device_type = arguments.get("device_type")
+        mac = arguments.get("mac")
+        channel = arguments.get("channel")
+        ssid = arguments.get("ssid")
+        ap_index = arguments.get("ap_index")
+        if device_type == "ap":
+            cmd = f"add -a -b {mac}"
+            if channel is not None:
+                cmd += f" -ch {channel}"
+            if ssid:
+                cmd += f" -e {ssid}"
+        elif device_type == "client":
+            if ap_index is None:
+                return text("ERROR: 'ap_index' is required when adding a client/station.")
+            cmd = f"add -c -b {mac} -ap {ap_index}"
+        else:
+            return text(f"ERROR: Unknown device_type '{device_type}'.")
+        res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
+        return text(res or f"Device {mac} added.")
+
+    # ------------------------------------------------------------------ #
+    elif name == "network_scan":
+        scan_mode = arguments.get("scan_mode")
+        options = arguments.get("options") or ""
+        mode_cmd = {
+            "ping": "pingscan",
+            "port": "portscan",
+            "arp": "arpscan",
+            "mac_track": "mactrack",
+            "signal_monitor": "sigmon"
+        }.get(scan_mode)
+        cmd = mode_cmd
+        if options:
+            cmd += f" {options.strip()}"
+        res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
+        return text(res or f"Network scan '{scan_mode}' executed.")
+
+    # ------------------------------------------------------------------ #
+    elif name == "mac_spoof":
+        action = arguments.get("action")
+        index = arguments.get("index")
+        if action == "random_ap":
+            cmd = "randapmac"
+        elif action == "random_client":
+            cmd = "randstamac"
+        elif action == "clone_ap":
+            if index is None:
+                return text("ERROR: 'index' is required to clone AP MAC.")
+            cmd = f"cloneapmac -a {index}"
+        elif action == "clone_client":
+            if index is None:
+                return text("ERROR: 'index' is required to clone client/station MAC.")
+            cmd = f"clonestamac -s {index}"
+        else:
+            return text(f"ERROR: Unknown action '{action}' for mac_spoof.")
+        res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
+        return text(res or f"MAC spoofing action '{action}' executed.")
 
     # ------------------------------------------------------------------ #
     else:

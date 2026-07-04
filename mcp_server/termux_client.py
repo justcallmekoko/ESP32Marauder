@@ -329,6 +329,197 @@ def dispatch(name: str, args: dict) -> str:
         if err := need_sock(): return err
         return _send_cmd("settings") or "(no output)"
 
+    elif name == "attack":
+        if err := need_sock(): return err
+        attack_type = args.get("attack_type")
+        options = args.get("options") or ""
+        cmd = f"attack -t {attack_type}"
+        if options:
+            cmd += f" {options.strip()}"
+        return _send_cmd(cmd) or f"Attack '{attack_type}' started."
+
+    elif name == "select_targets":
+        if err := need_sock(): return err
+        target_type = args.get("target_type")
+        indices = args.get("indices")
+        flag = {"ap": "-a", "station": "-c", "ssid": "-s"}.get(target_type, "-a")
+        cmd = f"select {flag} {indices}"
+        return _send_cmd(cmd) or f"Selected {target_type} indices: {indices}"
+
+    elif name == "evil_portal":
+        if err := need_sock(): return err
+        action = args.get("action")
+        html_file = args.get("html_file")
+        if action == "start":
+            cmd = "evilportal -c start"
+            if html_file:
+                cmd += f" -w {html_file}"
+        elif action == "sethtml":
+            if not html_file:
+                return "ERROR: 'html_file' is required when action is 'sethtml'."
+            cmd = f"evilportal -c sethtml {html_file}"
+        elif action == "stop":
+            cmd = "stopscan"
+        else:
+            return f"ERROR: Unknown action '{action}' for evil_portal."
+        return _send_cmd(cmd) or f"Evil Portal action '{action}' executed."
+
+    elif name == "manage_ssids":
+        if err := need_sock(): return err
+        action = args.get("action")
+        name_val = args.get("name")
+        count = args.get("count")
+        index = args.get("index")
+        if action == "add":
+            if not name_val:
+                return "ERROR: 'name' is required when action is 'add'."
+            cmd = f"ssid -a -n {name_val}"
+        elif action == "generate":
+            if count is None:
+                return "ERROR: 'count' is required when action is 'generate'."
+            cmd = f"ssid -a -g {count}"
+        elif action == "remove":
+            if index is None:
+                return "ERROR: 'index' is required when action is 'remove'."
+            cmd = f"ssid -r {index}"
+        else:
+            return f"ERROR: Unknown action '{action}' for manage_ssids."
+        return _send_cmd(cmd) or f"SSID action '{action}' executed."
+
+    elif name == "change_channel":
+        if err := need_sock(): return err
+        channel = args.get("channel")
+        if channel is not None:
+            cmd = f"channel -s {channel}"
+        else:
+            cmd = "channel"
+        return _send_cmd(cmd) or "(no output)"
+
+    elif name == "reboot_device":
+        if err := need_sock(): return err
+        return _send_cmd("reboot") or "Reboot command sent."
+
+    elif name == "clear_lists":
+        if err := need_sock(): return err
+        list_type = args.get("list_type")
+        if list_type == "all":
+            cmd = "clearlist -a -c -s"
+        else:
+            flag = {"ap": "-a", "station": "-c", "ssid": "-s"}.get(list_type)
+            cmd = f"clearlist {flag}"
+        return _send_cmd(cmd) or f"List '{list_type}' cleared."
+
+    elif name == "configure_settings":
+        if err := need_sock(): return err
+        setting = args.get("setting")
+        value = args.get("value")
+        if setting:
+            if not value:
+                return "ERROR: 'value' (enable/disable) is required when specifying a setting."
+            cmd = f"settings -s {setting} {value}"
+        else:
+            cmd = "settings"
+        return _send_cmd(cmd) or "(no output)"
+
+    elif name == "led_control":
+        if err := need_sock(): return err
+        color = args.get("color", "").strip()
+        if color.lower() == "rainbow":
+            cmd = "led -p rainbow"
+        else:
+            clean_color = color.lstrip("#")
+            cmd = f"led -s #{clean_color}"
+        return _send_cmd(cmd) or f"LED set to {color}."
+
+    elif name == "gps_control":
+        if err := need_sock(): return err
+        action = args.get("action")
+        poi_label = args.get("poi_label")
+        if action == "status":
+            cmd = "gpsdata"
+        elif action == "tracker_start":
+            cmd = "gpstracker -c start"
+        elif action == "tracker_stop":
+            cmd = "gpstracker -c stop"
+        elif action == "tag_poi":
+            if not poi_label:
+                return "ERROR: 'poi_label' is required when action is 'tag_poi'."
+            cmd = f"wardrivepoi {poi_label}"
+        elif action == "nmea_status":
+            cmd = "nmea"
+        else:
+            return f"ERROR: Unknown action '{action}' for gps_control."
+        return _send_cmd(cmd) or f"GPS action '{action}' executed."
+
+    elif name == "ble_spam":
+        if err := need_sock(): return err
+        spam_type = args.get("spam_type")
+        cmd = f"blespam -t {spam_type}"
+        return _send_cmd(cmd) or f"BLE spam '{spam_type}' started."
+
+    elif name == "spoof_airtag":
+        if err := need_sock(): return err
+        index = args.get("index")
+        cmd = f"spoofat -t {index}"
+        return _send_cmd(cmd) or f"Spoofing AirTag {index} started."
+
+    elif name == "add_device":
+        if err := need_sock(): return err
+        device_type = args.get("device_type")
+        mac = args.get("mac")
+        channel = args.get("channel")
+        ssid = args.get("ssid")
+        ap_index = args.get("ap_index")
+        if device_type == "ap":
+            cmd = f"add -a -b {mac}"
+            if channel is not None:
+                cmd += f" -ch {channel}"
+            if ssid:
+                cmd += f" -e {ssid}"
+        elif device_type == "client":
+            if ap_index is None:
+                return "ERROR: 'ap_index' is required when adding a client/station."
+            cmd = f"add -c -b {mac} -ap {ap_index}"
+        else:
+            return f"ERROR: Unknown device_type '{device_type}'."
+        return _send_cmd(cmd) or f"Device {mac} added."
+
+    elif name == "network_scan":
+        if err := need_sock(): return err
+        scan_mode = args.get("scan_mode")
+        options = args.get("options") or ""
+        mode_cmd = {
+            "ping": "pingscan",
+            "port": "portscan",
+            "arp": "arpscan",
+            "mac_track": "mactrack",
+            "signal_monitor": "sigmon"
+        }.get(scan_mode)
+        cmd = mode_cmd
+        if options:
+            cmd += f" {options.strip()}"
+        return _send_cmd(cmd) or f"Network scan '{scan_mode}' executed."
+
+    elif name == "mac_spoof":
+        if err := need_sock(): return err
+        action = args.get("action")
+        index = args.get("index")
+        if action == "random_ap":
+            cmd = "randapmac"
+        elif action == "random_client":
+            cmd = "randstamac"
+        elif action == "clone_ap":
+            if index is None:
+                return "ERROR: 'index' is required to clone AP MAC."
+            cmd = f"cloneapmac -a {index}"
+        elif action == "clone_client":
+            if index is None:
+                return "ERROR: 'index' is required to clone client/station MAC."
+            cmd = f"clonestamac -s {index}"
+        else:
+            return f"ERROR: Unknown action '{action}' for mac_spoof."
+        return _send_cmd(cmd) or f"MAC spoofing action '{action}' executed."
+
     else:
         return f"Unknown tool: {name}"
 
@@ -437,6 +628,272 @@ TOOLS = [
         "description": "Print current Marauder settings.",
         "parameters": {"type": "object", "properties": {}},
     }},
+    {"type": "function", "function": {
+        "name": "attack",
+        "description": "Launch a specified Wi-Fi attack against selected targets.",
+        "parameters": {
+            "type": "object",
+            "required": ["attack_type"],
+            "properties": {
+                "attack_type": {
+                    "type": "string",
+                    "enum": ["deauth", "beacon", "probe", "funny", "rickroll", "badmsg", "sleep", "sae", "csa", "quiet"],
+                    "description": "Type of attack to launch."
+                },
+                "options": {
+                    "type": "string",
+                    "description": "Optional flags/parameters (e.g. '-c' to target clients, '-s <mac>' override source MAC, '-d <mac>' override destination MAC)."
+                }
+            }
+        }
+    }},
+    {"type": "function", "function": {
+        "name": "select_targets",
+        "description": "Select access points, stations/clients, or SSIDs by indices (comma-separated list of numbers, or 'all'). Selection toggles the select status on the device.",
+        "parameters": {
+            "type": "object",
+            "required": ["target_type", "indices"],
+            "properties": {
+                "target_type": {
+                    "type": "string",
+                    "enum": ["ap", "station", "ssid"],
+                    "description": "The category of targets to select."
+                },
+                "indices": {
+                    "type": "string",
+                    "description": "Comma-separated list of indices (e.g. '0,1,3') or 'all' to select all, or filter expression (e.g. '-f \"equals MyWiFi\"')."
+                }
+            }
+        }
+    }},
+    {"type": "function", "function": {
+        "name": "evil_portal",
+        "description": "Manage the Evil Portal phishing module. Starts/stops the portal or loads HTML.",
+        "parameters": {
+            "type": "object",
+            "required": ["action"],
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["start", "stop", "sethtml"],
+                    "description": "Action to perform."
+                },
+                "html_file": {
+                    "type": "string",
+                    "description": "Name of the HTML portal file to load (required for 'start' with custom file and 'sethtml')."
+                }
+            }
+        }
+    }},
+    {"type": "function", "function": {
+        "name": "manage_ssids",
+        "description": "Add, remove, or generate random SSIDs in the target SSID list.",
+        "parameters": {
+            "type": "object",
+            "required": ["action"],
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["add", "remove", "generate"],
+                    "description": "Action to perform."
+                },
+                "name": {
+                    "type": "string",
+                    "description": "SSID name/ESSID to add (required for 'add')."
+                },
+                "count": {
+                    "type": "integer",
+                    "description": "Number of random SSIDs to generate (required for 'generate')."
+                },
+                "index": {
+                    "type": "integer",
+                    "description": "Index of SSID to remove (required for 'remove')."
+                }
+            }
+        }
+    }},
+    {"type": "function", "function": {
+        "name": "change_channel",
+        "description": "Set or query the Wi-Fi channel.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "channel": {
+                    "type": "integer",
+                    "description": "Channel number (1-14). If omitted, just queries current channel."
+                }
+            }
+        }
+    }},
+    {"type": "function", "function": {
+        "name": "reboot_device",
+        "description": "Reboot the ESP32 Marauder hardware.",
+        "parameters": {"type": "object", "properties": {}}
+    }},
+    {"type": "function", "function": {
+        "name": "clear_lists",
+        "description": "Clear the discovered access points, stations, or SSIDs lists.",
+        "parameters": {
+            "type": "object",
+            "required": ["list_type"],
+            "properties": {
+                "list_type": {
+                    "type": "string",
+                    "enum": ["ap", "station", "ssid", "all"],
+                    "description": "Which list to clear."
+                }
+            }
+        }
+    }},
+    {"type": "function", "function": {
+        "name": "configure_settings",
+        "description": "Enable or disable specific settings, or reset them to default, or print settings.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "setting": {
+                    "type": "string",
+                    "description": "Setting name (e.g. SavePCAP, ForceChannel, etc.). If omitted, lists current settings."
+                },
+                "value": {
+                    "type": "string",
+                    "enum": ["enable", "disable"],
+                    "description": "Value to set (enable/disable). Required if setting is provided."
+                }
+            }
+        }
+    }},
+    {"type": "function", "function": {
+        "name": "led_control",
+        "description": "Control the onboard Neopixel LED color or pattern.",
+        "parameters": {
+            "type": "object",
+            "required": ["color"],
+            "properties": {
+                "color": {
+                    "type": "string",
+                    "description": "Hex color code without '#' (e.g. 'FF0000' for red) or 'rainbow' for pattern."
+                }
+            }
+        }
+    }},
+    {"type": "function", "function": {
+        "name": "gps_control",
+        "description": "Query or configure GPS tracking, NMEA data, and Point of Interest tagging.",
+        "parameters": {
+            "type": "object",
+            "required": ["action"],
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["status", "tracker_start", "tracker_stop", "tag_poi", "nmea_status"],
+                    "description": "GPS action to execute."
+                },
+                "poi_label": {
+                    "type": "string",
+                    "description": "Label for Point of Interest tagging (required for 'tag_poi')."
+                }
+            }
+        }
+    }},
+    {"type": "function", "function": {
+        "name": "ble_spam",
+        "description": "Launch Bluetooth Low Energy (BLE) advertisement spamming attacks to simulate pairing/notifications.",
+        "parameters": {
+            "type": "object",
+            "required": ["spam_type"],
+            "properties": {
+                "spam_type": {
+                    "type": "string",
+                    "enum": ["sourapple", "applejuice", "google", "samsung", "windows", "flipper", "all"],
+                    "description": "Target brand/type of BLE advertisement spam."
+                }
+            }
+        }
+    }},
+    {"type": "function", "function": {
+        "name": "spoof_airtag",
+        "description": "Spoof Apple AirTag Bluetooth advertisements by index.",
+        "parameters": {
+            "type": "object",
+            "required": ["index"],
+            "properties": {
+                "index": {
+                    "type": "integer",
+                    "description": "Index of the Airtag to spoof."
+                }
+            }
+        }
+    }},
+    {"type": "function", "function": {
+        "name": "add_device",
+        "description": "Manually add an access point or client/station to the list.",
+        "parameters": {
+            "type": "object",
+            "required": ["device_type", "mac"],
+            "properties": {
+                "device_type": {
+                    "type": "string",
+                    "enum": ["ap", "client"],
+                    "description": "Type of device to add."
+                },
+                "mac": {
+                    "type": "string",
+                    "description": "MAC address of the device (e.g. 'AA:BB:CC:DD:EE:FF')."
+                },
+                "channel": {
+                    "type": "integer",
+                    "description": "Channel number (for APs)."
+                },
+                "ssid": {
+                    "type": "string",
+                    "description": "SSID/ESSID (for APs)."
+                },
+                "ap_index": {
+                    "type": "integer",
+                    "description": "Associated AP index (required for clients)."
+                }
+            }
+        }
+    }},
+    {"type": "function", "function": {
+        "name": "network_scan",
+        "description": "Execute advanced diagnostic network scans (ping, port scan, ARP scan, signal monitor, MAC tracking).",
+        "parameters": {
+            "type": "object",
+            "required": ["scan_mode"],
+            "properties": {
+                "scan_mode": {
+                    "type": "string",
+                    "enum": ["ping", "port", "arp", "mac_track", "signal_monitor"],
+                    "description": "The diagnostic scan mode to run."
+                },
+                "options": {
+                    "type": "string",
+                    "description": "Extra arguments for scan (e.g. '-f' for ARP scan, '-a -t <ip_index>' or '-s http' for port scan)."
+                }
+            }
+        }
+    }},
+    {"type": "function", "function": {
+        "name": "mac_spoof",
+        "description": "Configure/randomize/clone MAC addresses on the device.",
+        "parameters": {
+            "type": "object",
+            "required": ["action"],
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["random_ap", "random_client", "clone_ap", "clone_client"],
+                    "description": "MAC spoofing action."
+                },
+                "index": {
+                    "type": "integer",
+                    "description": "Index of AP or client to clone MAC from (required for 'clone_ap' and 'clone_client')."
+                }
+            }
+        }
+    }},
 ]
 
 SYSTEM_PROMPT = """\
@@ -452,11 +909,25 @@ access to the hardware via MCP tools.
 
 ## Workflow (follow in order, no skipping)
 1. Call connect() — always, unconditionally, before anything else.
-2. Call scan_and_capture(scan_type, duration) to gather data. It starts the scan,
-   streams live serial output for `duration` seconds, stops the scan, then pulls
-   the AP/station/SSID lists. All output is buffered locally.
-3. Analyze the returned text and report specific findings with real numbers.
-4. Optionally call save_capture_local() to write .txt + .json to ~/marauder_captures/.
+2. To gather wireless data, use scan_and_capture(scan_type, duration) to perform a scan/sniff run.
+3. To select specific targets (access points, stations, or SSIDs) for targeting or analysis, use select_targets(target_type, indices).
+4. To launch attacks (deauth, beacon spam, probe spam, funny, rickroll, badmsg, sleep, sae, csa, quiet), use attack(attack_type, options).
+5. Use dedicated tools for other hardware features:
+   - Configure channel: change_channel(channel)
+   - Control LED: led_control(color)
+   - Manage SSIDs: manage_ssids(action, name, count, index)
+   - Run BLE spamming: ble_spam(spam_type)
+   - Spoof AirTags: spoof_airtag(index)
+   - Manage GPS / Wardriving POIs: gps_control(action, poi_label)
+   - Run network/diagnostic scans (ping, port scan, ARP scan, signal monitor, MAC tracking): network_scan(scan_mode, options)
+   - Configure MAC addresses: mac_spoof(action, index)
+   - Manage Evil Portal: evil_portal(action, html_file)
+   - Clear discovered targets list: clear_lists(list_type)
+   - Custom settings configuration: configure_settings(setting, value)
+   - Manually add device: add_device(device_type, mac, channel, ssid, ap_index)
+   - Reboot device: reboot_device()
+6. Analyze the returned text and report specific findings with real numbers.
+7. Optionally call save_capture_local() to write .txt + .json to ~/marauder_captures/.
 
 ## Serial output line formats
 - scanall AP:      `<rssi> Ch: <ch> <bssid> ESSID: <ssid> <cap_hex...>`
@@ -471,7 +942,7 @@ access to the hardware via MCP tools.
 
 ## Analysis guidance
 - Strongest APs: sort by RSSI (least negative = strongest signal).
-- Deauth floods: many lines from same src_mac to ff:ff:ff:ff:ff:ff = broadcast deauth.
+- Deauth floods: many lines from same src_mac to broadcast (ff:ff:ff:ff:ff:ff) = deauth attack.
 - Hidden SSIDs: ESSID field equals BSSID string = AP hiding its name.
 - Rogue APs: same SSID on multiple BSSIDs, or BSSID on unexpected channel.
 - PMKID: count "Received EAPOL" lines; "Complete EAPOL: N" = full 4-way handshake captured.

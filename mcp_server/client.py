@@ -57,24 +57,42 @@ access to the hardware via MCP tools.
 
 ## Workflow
 1. If not connected, call connect() first. It auto-enables SavePCAP and serial streaming so
-   ALL scan/sniff data streams back to this Linux host through USB serial (SD card writes are bypassed).
-2. To flash or update the device firmware, use flash_firmware(bin_path, port, baud). This will temporarily close the serial connection, write the firmware, and then reopen the connection automatically.
-3. To gather data, use scan_and_capture(scan_type, duration) — it starts the
-   scan, collects live serial output for `duration` seconds, stops the scan,
-   then pulls the AP/station/SSID lists. Everything is buffered locally.
-4. The captured data is returned directly and also stored in the capture buffer.
+   ALL scan/sniff data streams back to this host through USB serial (SD card writes are bypassed).
+2. To gather wireless data, use scan_and_capture(scan_type, duration) to perform a scan/sniff run.
+3. To select specific targets (access points, stations, or SSIDs) for targeting or analysis, use select_targets(target_type, indices).
+4. To launch attacks (deauth, beacon spam, probe spam, funny, rickroll, badmsg, sleep, sae, csa, quiet), use attack(attack_type, options).
+5. Use dedicated tools for other hardware features:
+   - Configure channel: change_channel(channel)
+   - Control LED: led_control(color)
+   - Manage SSIDs: manage_ssids(action, name, count, index)
+   - Run BLE spamming: ble_spam(spam_type)
+   - Spoof AirTags: spoof_airtag(index)
+   - Manage GPS / Wardriving POIs: gps_control(action, poi_label)
+   - Run network/diagnostic scans (ping, port scan, ARP scan, signal monitor, MAC tracking): network_scan(scan_mode, options)
+   - Configure MAC addresses: mac_spoof(action, index)
+   - Manage Evil Portal: evil_portal(action, html_file)
+   - Clear discovered targets list: clear_lists(list_type)
+   - Custom settings configuration: configure_settings(setting, value)
+   - Manually add device: add_device(device_type, mac, channel, ssid, ap_index)
+   - Reboot device: reboot_device()
+6. To flash or update the device firmware, use flash_firmware(bin_path, port, baud).
+7. The captured data is returned directly and also stored in the capture buffer.
    Call get_capture() at any time to re-read the last capture without re-scanning.
-5. To persist findings, call save_capture_local() — it writes both a .txt
-   (human-readable) and a .json (structured) file. On Android/Termux saves to
-   ~/storage/downloads/marauder_captures/ (visible in Android Files app);
-   on Linux saves to ~/marauder_captures/.
+8. To persist findings, call save_capture_local() — it writes both a .txt and .json file.
+
+## MANDATORY RULES — no exceptions
+- ALWAYS call connect() as your very first tool call on every request, no matter what.
+  Do not ask the user to connect. Do not ask them to verify cables or the app.
+  Just call connect(). If it fails, report the error text and stop.
+- NEVER describe what you are about to do — call the tool and report real results.
+- NEVER ask the user to verify hardware state — the tools do that for you.
 
 ## Serial output line formats (for parsing capture data)
 - scanall AP discovery:    `<rssi> Ch: <ch> <bssid> ESSID: <ssid> <cap_hex...>`
   - Hidden AP (empty SSID): ESSID field contains the BSSID again instead of a name
   - Only fires ONCE per AP (first discovery); duplicates are suppressed
 - scanall station:         `<n>: ap: <bssid> -> sta: <mac>`  (or sta -> ap)
-- beacon sniff:            same format as scanall AP but fires for EVERY beacon (~10/s per AP)
+- beacon sniff:            same AP format but fires for EVERY beacon (~10/s per AP)
 - deauth sniff:            `<rssi> Ch: <ch> <src_mac> -> <dst_mac>`
 - pmkid sniff:             `Received EAPOL: <bssid>` + periodic stats block every ~1 s
 - raw sniff:               NO per-packet text; only periodic stats every ~1 s (use for volume metrics)
@@ -82,8 +100,8 @@ access to the hardware via MCP tools.
 - Periodic stats block (raw/pmkid): multi-line block with Mgmt/Data/Channel/Beacon/Probe/RSSI counts
 
 ## Analysis guidance
-- Parse beacon captures: count unique BSSIDs, spot channels, note open (no cap_hex 0x11) vs encrypted.
-- Deauth floods: many lines from the same src_mac to ff:ff:ff:ff:ff:ff = broadcast deauth attack.
+- Parse beacon captures: count unique BSSIDs, spot channels, note open vs encrypted.
+- Deauth floods: many lines from the same src_mac to broadcast (ff:ff:ff:ff:ff:ff) = deauth attack.
 - Hidden SSIDs: ESSID field equals BSSID string = AP is hiding its name.
 - Rogue AP signals: same SSID on multiple BSSIDs, or BSSID on an unexpected channel.
 - PMKID/EAPOL: count "Received EAPOL" lines; "Complete EAPOL: N" in stats = full 4-way handshake.
