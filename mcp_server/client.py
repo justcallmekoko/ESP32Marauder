@@ -58,12 +58,13 @@ access to the hardware via MCP tools.
 ## Workflow
 1. If not connected, call connect() first. It auto-enables SavePCAP and serial streaming so
    ALL scan/sniff data streams back to this Linux host through USB serial (SD card writes are bypassed).
-2. To gather data, use scan_and_capture(scan_type, duration) — it starts the
+2. To flash or update the device firmware, use flash_firmware(bin_path, port, baud). This will temporarily close the serial connection, write the firmware, and then reopen the connection automatically.
+3. To gather data, use scan_and_capture(scan_type, duration) — it starts the
    scan, collects live serial output for `duration` seconds, stops the scan,
    then pulls the AP/station/SSID lists. Everything is buffered locally.
-3. The captured data is returned directly and also stored in the capture buffer.
+4. The captured data is returned directly and also stored in the capture buffer.
    Call get_capture() at any time to re-read the last capture without re-scanning.
-4. To persist findings, call save_capture_local() — it writes both a .txt
+5. To persist findings, call save_capture_local() — it writes both a .txt
    (human-readable) and a .json (structured) file. On Android/Termux saves to
    ~/storage/downloads/marauder_captures/ (visible in Android Files app);
    on Linux saves to ~/marauder_captures/.

@@ -427,6 +427,33 @@ async def list_tools() -> list[types.Tool]:
                 },
             },
         ),
+        types.Tool(
+            name="flash_firmware",
+            description=(
+                "Flash/update the ESP32 Marauder firmware using esptool. "
+                "Automatically handles closing the active serial connection before flashing, "
+                "then runs the flash command and reports status."
+            ),
+            inputSchema={
+                "type": "object",
+                "required": ["bin_path"],
+                "properties": {
+                    "bin_path": {
+                        "type": "string",
+                        "description": "Path to the compiled firmware binary (.bin file).",
+                    },
+                    "port": {
+                        "type": ["string", "null"],
+                        "description": "Serial port. Auto-detected if omitted.",
+                    },
+                    "baud": {
+                        "type": ["integer", "null"],
+                        "description": "Flash baud rate (default 921600).",
+                        "default": 921600,
+                    },
+                },
+            },
+        ),
     ]
 
 
@@ -460,30 +487,55 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
             else:
                 for p in serial.tools.list_ports.comports():
                     desc = (p.description or "").upper()
-                    if any(k in desc for k in ("USB", "UART", "CP210", "CH340", "FTDI")):
+                    device = p.device.upper()
+                    if any(k in desc for k in ("USB", "UART", "CP210", "CH340", "FTDI")) or "TTYUSB" in device or "TTYACM" in device:
                         port = p.device
                         break
                 if port is None:
                     return text("Could not auto-detect an ESP32 serial port. Pass 'port' explicitly.")
 
+        # Try to open the connection with retries and DTR/RTS resetting
+        conn_error = None
         with _lock:
             if _serial and _serial.is_open:
                 _serial.close()
-            try:
-                _serial = _open_serial(port, baud)
-            except serial.SerialException as exc:
-                if port.startswith("socket://"):
-                    return text(
-                        f"ERROR: Could not connect to TCP bridge at {port}.\n"
-                        "Make sure the Marauder Controller app is open, the ESP32 is "
-                        "plugged in via OTG, and the app shows 'Connected'."
-                    )
-                return text(f"ERROR opening {port}: {exc}")
+            
+            for attempt in range(3):
+                try:
+                    _serial = _open_serial(port, baud)
+                    if not port.startswith("socket://"):
+                        # Reset DTR/RTS to prevent ESP32 boot/reset loops and clear buffers
+                        _serial.dtr = False
+                        _serial.rts = False
+                        time.sleep(0.2)
+                        _serial.reset_input_buffer()
+                        _serial.reset_output_buffer()
+                    conn_error = None
+                    break
+                except (serial.SerialException, PermissionError, OSError) as exc:
+                    conn_error = exc
+                    time.sleep(0.5)
 
-        if not port.startswith("socket://"):
-            time.sleep(0.5)
-            with _lock:
-                _serial.reset_input_buffer()
+        if conn_error:
+            if port.startswith("socket://"):
+                return text(
+                    f"ERROR: Could not connect to TCP bridge at {port}.\n"
+                    "Make sure the Marauder Controller app is open, the ESP32 is "
+                    "plugged in via OTG, and the app shows 'Connected'."
+                )
+            
+            # Help user with Linux dialout/permission errors
+            err_msg = str(conn_error)
+            if "Permission denied" in err_msg or (isinstance(conn_error, PermissionError)):
+                return text(
+                    f"ERROR opening {port}: {conn_error}\n\n"
+                    "TIP: This is a permission error. You can fix this by running:\n"
+                    f"  sudo chmod a+rw {port}\n"
+                    "or by adding your user to the dialout group:\n"
+                    "  sudo usermod -a -G dialout $USER\n"
+                    "(Note: You may need to log out and log back in for group changes to take effect)."
+                )
+            return text(f"ERROR opening {port}: {conn_error}")
 
         # Route all scan/sniff data through USB serial instead of SD card
         await loop.run_in_executor(None, _enable_pcap_capture)
@@ -667,6 +719,74 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
             return text(p.read_text(encoding="utf-8", errors="replace"))
         except OSError as exc:
             return text(f"ERROR reading {p}: {exc}")
+
+    # ------------------------------------------------------------------ #
+    elif name == "flash_firmware":
+        bin_path = arguments.get("bin_path")
+        port = arguments.get("port")
+        baud = int(arguments.get("baud", 921600))
+
+        if port is None:
+            if _is_termux():
+                return text("ERROR: Flashing via TCP bridge (Termux) is not supported. Please flash directly.")
+            for p in serial.tools.list_ports.comports():
+                desc = (p.description or "").upper()
+                device = p.device.upper()
+                if any(k in desc for k in ("USB", "UART", "CP210", "CH340", "FTDI")) or "TTYUSB" in device or "TTYACM" in device:
+                    port = p.device
+                    break
+            if port is None:
+                return text("Could not auto-detect serial port for flashing.")
+
+        p = Path(bin_path).expanduser()
+        if not p.exists():
+            return text(f"ERROR: Firmware file not found: {p}")
+
+        # Temporarily close serial connection if open
+        was_open = False
+        with _lock:
+            if _serial and _serial.is_open:
+                _serial.close()
+                was_open = True
+
+        import subprocess
+        # Run esptool using Python venv interpreter
+        venv_python = sys.executable
+        cmd = [
+            venv_python, "-m", "esptool",
+            "--chip", "esp32",
+            "--port", port,
+            "--baud", str(baud),
+            "write_flash", "0x0000", str(p)
+        ]
+        
+        print(f"[marauder-mcp] Flashing firmware using command: {' '.join(cmd)}", file=sys.stderr)
+        try:
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            if res.returncode == 0:
+                output = f"SUCCESS: Firmware flashed successfully.\n\nStdout:\n{res.stdout}"
+            else:
+                output = f"ERROR: Flashing failed with exit code {res.returncode}.\n\nStderr:\n{res.stderr}\n\nStdout:\n{res.stdout}"
+        except Exception as e:
+            output = f"ERROR executing esptool: {e}"
+
+        # Reopen serial if it was open
+        if was_open:
+            with _lock:
+                try:
+                    # Give ESP32 a moment to boot after flashing before opening port
+                    time.sleep(1.0)
+                    _serial = _open_serial(port, 115200)
+                    _serial.dtr = False
+                    _serial.rts = False
+                    time.sleep(0.2)
+                    _serial.reset_input_buffer()
+                    _serial.reset_output_buffer()
+                    _enable_pcap_capture()
+                except Exception as e:
+                    output += f"\n\nWARNING: Could not reopen serial port: {e}"
+
+        return text(output)
 
     # ------------------------------------------------------------------ #
     else:
