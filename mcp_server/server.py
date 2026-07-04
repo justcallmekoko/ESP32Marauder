@@ -243,8 +243,6 @@ SCAN_COMMANDS: dict[str, str] = {
     "pwn":        "sniffpwn",
     "bt":         "sniffbt -t flock",
     "airtag":     "sniffbt -t airtag",
-    "skim":       "sniffskim",
-    "sae":        "sniffsae",
     "multissid":  "sniffmultissid",
 }
 
@@ -253,57 +251,40 @@ SCAN_COMMANDS: dict[str, str] = {
 async def list_tools() -> list[types.Tool]:
     return [
         types.Tool(
-            name="list_ports",
-            description="List serial ports available on the host.",
-            inputSchema={"type": "object", "properties": {}},
-        ),
-        types.Tool(
-            name="connect",
-            description=(
-                "Open a serial connection to the ESP32 Marauder. "
-                "Automatically disables SD-card PCAP writing so all scan output "
-                "streams back through USB serial to this host."
-            ),
+            name="device_connection",
+            description="Manage the serial/TCP connection to the ESP32 Marauder device or list available ports.",
             inputSchema={
                 "type": "object",
+                "required": ["action"],
                 "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["list_ports", "connect", "disconnect", "status", "reboot"],
+                        "description": "Connection or hardware power action to execute."
+                    },
                     "port": {
                         "type": ["string", "null"],
-                        "description": "Serial port, e.g. /dev/ttyUSB0 or COM3. Auto-detected if omitted.",
+                        "description": "Serial port (e.g. /dev/ttyUSB0 or COM3, socket://127.0.0.1:7555). Auto-detected if connect is called and port is omitted."
                     },
                     "baud": {
                         "type": ["integer", "null"],
-                        "description": "Baud rate (default 115200).",
-                        "default": 115200,
-                    },
-                },
-            },
-        ),
-        types.Tool(
-            name="disconnect",
-            description="Close the serial connection to the ESP32.",
-            inputSchema={"type": "object", "properties": {}},
-        ),
-        types.Tool(
-            name="connection_status",
-            description="Check whether the serial connection is open and which port it uses.",
-            inputSchema={"type": "object", "properties": {}},
+                        "description": "Baud rate (default 115200 for connect).",
+                        "default": 115200
+                    }
+                }
+            }
         ),
         types.Tool(
             name="send_command",
-            description=(
-                "Send any Marauder serial command and return the response. "
-                "Examples: 'help', 'scanall', 'stopscan', 'attack -t deauth', "
-                "'list -a', 'settings', 'channel -s 6'."
-            ),
+            description="Send any raw Marauder serial command and return the response. Examples: 'help', 'info', 'channel -s 6', etc.",
             inputSchema={
                 "type": "object",
                 "required": ["command"],
                 "properties": {
                     "command": {"type": "string", "description": "The Marauder command string to execute."},
-                    "timeout": {"type": "number", "description": "Seconds to wait for prompt (default 8).", "default": 8.0},
-                },
-            },
+                    "timeout": {"type": "number", "description": "Seconds to wait for prompt (default 8.0).", "default": 8.0}
+                }
+            }
         ),
         types.Tool(
             name="read_output",
@@ -311,28 +292,74 @@ async def list_tools() -> list[types.Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "duration": {"type": "number", "description": "How many seconds to collect (default 2).", "default": 2.0}
-                },
-            },
+                    "duration": {"type": "number", "description": "How many seconds to collect (default 2.0).", "default": 2.0}
+                }
+            }
         ),
-        # ---- high-level capture tools ----------------------------------------
+        types.Tool(
+            name="read_local_file",
+            description="Read a file from the local Linux host filesystem and return its contents. Use this to read capture files, logs, or any other local file for analysis.",
+            inputSchema={
+                "type": "object",
+                "required": ["path"],
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "Absolute or ~-relative path to the file on this Linux host."
+                    }
+                }
+            }
+        ),
+        types.Tool(
+            name="flash_firmware",
+            description="Flash/update the ESP32 Marauder firmware using esptool. Automatically handles closing the active serial connection before flashing, then runs the flash command and reports status.",
+            inputSchema={
+                "type": "object",
+                "required": ["bin_path"],
+                "properties": {
+                    "bin_path": {
+                        "type": "string",
+                        "description": "Path to the compiled firmware binary (.bin file)."
+                    },
+                    "port": {
+                        "type": ["string", "null"],
+                        "description": "Serial port. Auto-detected if omitted."
+                    },
+                    "baud": {
+                        "type": ["integer", "null"],
+                        "description": "Flash baud rate (default 921600).",
+                        "default": 921600
+                    }
+                }
+            }
+        ),
+        types.Tool(
+            name="wifi_control",
+            description="Start/stop Wi-Fi scans or set/query the Wi-Fi channel.",
+            inputSchema={
+                "type": "object",
+                "required": ["action"],
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["scan", "stop", "set_channel", "query_channel"],
+                        "description": "Wi-Fi control action."
+                    },
+                    "channel": {
+                        "type": ["integer", "null"],
+                        "description": "Wi-Fi channel (1-14). Required for set_channel."
+                    }
+                }
+            }
+        ),
         types.Tool(
             name="scan_and_capture",
             description=(
                 "Run a scan or sniff operation and capture ALL output through USB serial "
-                "back to this Linux host — nothing is written to the SD card. "
+                "back to this host — nothing is written to the SD card. "
                 "After the capture window, stops the scan and retrieves the AP/station lists. "
-                "Results are stored in the capture buffer (use get_capture to re-read them).\n\n"
-                "Output line formats by scan_type:\n"
-                "  scanall  → '<rssi> Ch: <ch> <bssid> ESSID: <ssid> <cap_hex...>' (new APs only)\n"
-                "             '<n>: ap: <bssid> -> sta: <mac>' (new stations only)\n"
-                "  beacon   → same AP format as scanall but fires for EVERY beacon (high volume)\n"
-                "  deauth   → '<rssi> Ch: <ch> <src_mac> -> <dst_mac>'\n"
-                "  pmkid    → 'Received EAPOL: <bssid>' + periodic stats block every ~1 s\n"
-                "  raw      → periodic stats only (no per-packet text); use for traffic volume metrics\n"
-                "  bt/airtag → '<rssi> Device: <name_or_mac>' (one per BT advertisement)\n\n"
-                "scan_type options: scanall, beacon, probe, deauth, pmkid, raw, pwn, "
-                "bt, airtag, skim, sae, multissid."
+                "Results are stored in the capture buffer.\n\n"
+                "scan_type options: scanall, beacon, probe, deauth, pmkid, raw, pwn, bt, airtag, skim, sae, multissid."
             ),
             inputSchema={
                 "type": "object",
@@ -340,119 +367,97 @@ async def list_tools() -> list[types.Tool]:
                     "scan_type": {
                         "type": "string",
                         "description": "Which scan/sniff to run (default: scanall).",
-                        "default": "scanall",
+                        "default": "scanall"
                     },
                     "duration": {
                         "type": "number",
-                        "description": "How many seconds to capture (default: 30).",
-                        "default": 30.0,
-                    },
-                },
-            },
+                        "description": "How many seconds to capture (default: 30.0).",
+                        "default": 30.0
+                    }
+                }
+            }
         ),
         types.Tool(
-            name="get_capture",
-            description="Return the raw capture buffer from the most recent scan_and_capture call for analysis.",
-            inputSchema={"type": "object", "properties": {}},
-        ),
-        types.Tool(
-            name="save_capture_local",
-            description=(
-                "Save the capture buffer to a file on this device. "
-                "Saves as JSON (structured) + TXT (raw). "
-                "On Termux/Android saves to ~/storage/downloads/marauder_captures/ "
-                "(visible in Android Files app) if termux-setup-storage was run, "
-                "otherwise ~/marauder_captures/. On Linux saves to ~/marauder_captures/."
-            ),
+            name="capture_data",
+            description="Return the capture buffer from the most recent scan_and_capture call, or save it to a file on this device.",
             inputSchema={
                 "type": "object",
+                "required": ["action"],
                 "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["get", "save"],
+                        "description": "Action: get (return buffer) or save (write to local file)."
+                    },
                     "path": {
                         "type": ["string", "null"],
-                        "description": "Directory or full file path on this host (optional).",
+                        "description": "Directory or full file path (optional, for 'save')."
                     }
-                },
-            },
-        ),
-        # ---- convenience wrappers --------------------------------------------
-        types.Tool(
-            name="scan_wifi",
-            description="Start a WiFi scan (scanall). Use read_output to poll live results.",
-            inputSchema={"type": "object", "properties": {}},
+                }
+            }
         ),
         types.Tool(
-            name="stop_scan",
-            description="Stop any active scan (stopscan).",
-            inputSchema={"type": "object", "properties": {}},
-        ),
-        types.Tool(
-            name="list_access_points",
-            description="List discovered access points (list -a).",
-            inputSchema={"type": "object", "properties": {}},
-        ),
-        types.Tool(
-            name="list_stations",
-            description="List discovered stations / clients (list -c).",
-            inputSchema={"type": "object", "properties": {}},
-        ),
-        types.Tool(
-            name="list_ssids",
-            description="List the SSID list (list -s).",
-            inputSchema={"type": "object", "properties": {}},
-        ),
-        types.Tool(
-            name="list_probes",
-            description="List captured probe SSIDs (list -p).",
-            inputSchema={"type": "object", "properties": {}},
-        ),
-        types.Tool(
-            name="get_settings",
-            description="Print current Marauder settings.",
-            inputSchema={"type": "object", "properties": {}},
-        ),
-        types.Tool(
-            name="read_local_file",
-            description=(
-                "Read a file from the local Linux host filesystem and return its contents. "
-                "Use this to read capture files, logs, or any other local file for analysis."
-            ),
+            name="list_targets",
+            description="List discovered targets (access points, stations/clients, SSIDs, or captured probe SSIDs).",
             inputSchema={
                 "type": "object",
-                "required": ["path"],
+                "required": ["target_type"],
                 "properties": {
-                    "path": {
+                    "target_type": {
                         "type": "string",
-                        "description": "Absolute or ~-relative path to the file on this Linux host.",
+                        "enum": ["ap", "station", "ssid", "probe"],
+                        "description": "The category of targets to list."
                     }
-                },
-            },
+                }
+            }
         ),
         types.Tool(
-            name="flash_firmware",
-            description=(
-                "Flash/update the ESP32 Marauder firmware using esptool. "
-                "Automatically handles closing the active serial connection before flashing, "
-                "then runs the flash command and reports status."
-            ),
+            name="target_management",
+            description="Manage targets: select for attacks, clear discovered lists, manually add devices, or configure the SSID pool.",
             inputSchema={
                 "type": "object",
-                "required": ["bin_path"],
+                "required": ["action"],
                 "properties": {
-                    "bin_path": {
+                    "action": {
                         "type": "string",
-                        "description": "Path to the compiled firmware binary (.bin file).",
+                        "enum": ["select", "clear", "add", "ssid_add", "ssid_generate", "ssid_remove"],
+                        "description": "Target management action."
                     },
-                    "port": {
+                    "target_type": {
                         "type": ["string", "null"],
-                        "description": "Serial port. Auto-detected if omitted.",
+                        "enum": ["ap", "station", "ssid", "all"],
+                        "description": "Target category (used for 'select' and 'clear')."
                     },
-                    "baud": {
+                    "indices": {
+                        "type": ["string", "null"],
+                        "description": "Comma-separated indices or 'all' to select (used for 'select')."
+                    },
+                    "mac": {
+                        "type": ["string", "null"],
+                        "description": "MAC address (used for manual 'add')."
+                    },
+                    "ssid": {
+                        "type": ["string", "null"],
+                        "description": "SSID name (used for manual 'add' AP or 'ssid_add')."
+                    },
+                    "channel": {
                         "type": ["integer", "null"],
-                        "description": "Flash baud rate (default 921600).",
-                        "default": 921600,
+                        "description": "Channel number (used for manual 'add' AP)."
                     },
-                },
-            },
+                    "ap_index": {
+                        "type": ["integer", "null"],
+                        "description": "Associated AP index (used for manual 'add' client)."
+                    },
+                    "count": {
+                        "type": ["integer", "null"],
+                        "description": "Number of SSIDs to generate (used for 'ssid_generate')."
+                    },
+                    "index": {
+                        "type": ["integer", "null"],
+                        "description": "SSID index to remove (used for 'ssid_remove')."
+                    }
+                }
+            }
         ),
         types.Tool(
             name="attack",
@@ -474,25 +479,6 @@ async def list_tools() -> list[types.Tool]:
             }
         ),
         types.Tool(
-            name="select_targets",
-            description="Select access points, stations/clients, or SSIDs by indices (comma-separated list of numbers, or 'all'). Selection toggles the select status on the device.",
-            inputSchema={
-                "type": "object",
-                "required": ["target_type", "indices"],
-                "properties": {
-                    "target_type": {
-                        "type": "string",
-                        "enum": ["ap", "station", "ssid"],
-                        "description": "The category of targets to select."
-                    },
-                    "indices": {
-                        "type": "string",
-                        "description": "Comma-separated list of indices (e.g. '0,1,3') or 'all' to select all, or filter expression (e.g. '-f \"equals MyWiFi\"')."
-                    }
-                }
-            }
-        ),
-        types.Tool(
             name="evil_portal",
             description="Manage the Evil Portal phishing module. Starts/stops the portal or loads HTML.",
             inputSchema={
@@ -507,84 +493,6 @@ async def list_tools() -> list[types.Tool]:
                     "html_file": {
                         "type": ["string", "null"],
                         "description": "Name of the HTML portal file to load (required for 'start' with custom file and 'sethtml')."
-                    }
-                }
-            }
-        ),
-        types.Tool(
-            name="manage_ssids",
-            description="Add, remove, or generate random SSIDs in the target SSID list.",
-            inputSchema={
-                "type": "object",
-                "required": ["action"],
-                "properties": {
-                    "action": {
-                        "type": "string",
-                        "enum": ["add", "remove", "generate"],
-                        "description": "Action to perform."
-                    },
-                    "name": {
-                        "type": ["string", "null"],
-                        "description": "SSID name/ESSID to add (required for 'add')."
-                    },
-                    "count": {
-                        "type": ["integer", "null"],
-                        "description": "Number of random SSIDs to generate (required for 'generate')."
-                    },
-                    "index": {
-                        "type": ["integer", "null"],
-                        "description": "Index of SSID to remove (required for 'remove')."
-                    }
-                }
-            }
-        ),
-        types.Tool(
-            name="change_channel",
-            description="Set or query the Wi-Fi channel.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "channel": {
-                        "type": ["integer", "null"],
-                        "description": "Channel number (1-14). If omitted, just queries current channel."
-                    }
-                }
-            }
-        ),
-        types.Tool(
-            name="reboot_device",
-            description="Reboot the ESP32 Marauder hardware.",
-            inputSchema={"type": "object", "properties": {}}
-        ),
-        types.Tool(
-            name="clear_lists",
-            description="Clear the discovered access points, stations, or SSIDs lists.",
-            inputSchema={
-                "type": "object",
-                "required": ["list_type"],
-                "properties": {
-                    "list_type": {
-                        "type": "string",
-                        "enum": ["ap", "station", "ssid", "all"],
-                        "description": "Which list to clear."
-                    }
-                }
-            }
-        ),
-        types.Tool(
-            name="configure_settings",
-            description="Enable or disable specific settings, or reset them to default, or print settings.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "setting": {
-                        "type": ["string", "null"],
-                        "description": "Setting name (e.g. SavePCAP, ForceChannel, etc.). If omitted, lists current settings."
-                    },
-                    "value": {
-                        "type": ["string", "null"],
-                        "enum": ["enable", "disable"],
-                        "description": "Value to set (enable/disable). Required if setting is provided."
                     }
                 }
             }
@@ -623,61 +531,25 @@ async def list_tools() -> list[types.Tool]:
             }
         ),
         types.Tool(
-            name="ble_spam",
-            description="Launch Bluetooth Low Energy (BLE) advertisement spamming attacks to simulate pairing/notifications.",
+            name="ble_control",
+            description="Launch BLE advertisement spamming or spoof Apple AirTags.",
             inputSchema={
                 "type": "object",
-                "required": ["spam_type"],
+                "required": ["action"],
                 "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["spam", "spoof"],
+                        "description": "BLE control action."
+                    },
                     "spam_type": {
-                        "type": "string",
-                        "enum": ["sourapple", "applejuice", "google", "samsung", "windows", "flipper", "all"],
-                        "description": "Target brand/type of BLE advertisement spam."
-                    }
-                }
-            }
-        ),
-        types.Tool(
-            name="spoof_airtag",
-            description="Spoof Apple AirTag Bluetooth advertisements by index.",
-            inputSchema={
-                "type": "object",
-                "required": ["index"],
-                "properties": {
-                    "index": {
-                        "type": "integer",
-                        "description": "Index of the Airtag to spoof."
-                    }
-                }
-            }
-        ),
-        types.Tool(
-            name="add_device",
-            description="Manually add an access point or client/station to the list.",
-            inputSchema={
-                "type": "object",
-                "required": ["device_type", "mac"],
-                "properties": {
-                    "device_type": {
-                        "type": "string",
-                        "enum": ["ap", "client"],
-                        "description": "Type of device to add."
-                    },
-                    "mac": {
-                        "type": "string",
-                        "description": "MAC address of the device (e.g. 'AA:BB:CC:DD:EE:FF')."
-                    },
-                    "channel": {
-                        "type": ["integer", "null"],
-                        "description": "Channel number (for APs)."
-                    },
-                    "ssid": {
                         "type": ["string", "null"],
-                        "description": "SSID/ESSID (for APs)."
+                        "enum": ["sourapple", "applejuice", "google", "samsung", "windows", "flipper", "all"],
+                        "description": "Target brand/type of BLE advertisement spam (required for 'spam')."
                     },
-                    "ap_index": {
+                    "index": {
                         "type": ["integer", "null"],
-                        "description": "Associated AP index (required for clients)."
+                        "description": "Index of the Airtag to spoof (required for 'spoof')."
                     }
                 }
             }
@@ -720,6 +592,30 @@ async def list_tools() -> list[types.Tool]:
                 }
             }
         ),
+        types.Tool(
+            name="settings_control",
+            description="Enable/disable/query settings, or reset them to default, or print settings.",
+            inputSchema={
+                "type": "object",
+                "required": ["action"],
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["get", "set"],
+                        "description": "Settings action."
+                    },
+                    "setting": {
+                        "type": ["string", "null"],
+                        "description": "Setting name (e.g. SavePCAP, ForceChannel, etc.)."
+                    },
+                    "value": {
+                        "type": ["string", "null"],
+                        "enum": ["enable", "disable"],
+                        "description": "Value to set (enable/disable)."
+                    }
+                }
+            }
+        )
     ]
 
 
@@ -732,99 +628,80 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
         return [types.TextContent(type="text", text=s)]
 
     # ------------------------------------------------------------------ #
-    if name == "list_ports":
-        lines = []
-        if _is_termux():
-            lines.append("socket://127.0.0.1:7555  —  Android TCP bridge (Termux mode)")
-        ports = serial.tools.list_ports.comports()
-        lines.extend(f"{p.device}  —  {p.description}" for p in ports)
-        if not lines:
-            return text("No serial ports found.")
-        return text("\n".join(lines))
-
-    # ------------------------------------------------------------------ #
-    elif name == "connect":
-        port = arguments.get("port")
-        baud = int(arguments.get("baud", 115200))
-
-        if port is None:
+    if name == "device_connection":
+        action = arguments.get("action")
+        if action == "list_ports":
+            lines = []
             if _is_termux():
-                port = "socket://127.0.0.1:7555"
-            else:
-                for p in serial.tools.list_ports.comports():
-                    desc = (p.description or "").upper()
-                    device = p.device.upper()
-                    if any(k in desc for k in ("USB", "UART", "CP210", "CH340", "FTDI")) or "TTYUSB" in device or "TTYACM" in device:
-                        port = p.device
+                lines.append("socket://127.0.0.1:7555  —  Android TCP bridge (Termux mode)")
+            ports = serial.tools.list_ports.comports()
+            lines.extend(f"{p.device}  —  {p.description}" for p in ports)
+            if not lines:
+                return text("No serial ports found.")
+            return text("\n".join(lines))
+
+        elif action == "connect":
+            port = arguments.get("port")
+            baud = int(arguments.get("baud", 115200))
+            if port is None:
+                if _is_termux():
+                    port = "socket://127.0.0.1:7555"
+                else:
+                    for p in serial.tools.list_ports.comports():
+                        desc = (p.description or "").upper()
+                        device = p.device.upper()
+                        if any(k in desc for k in ("USB", "UART", "CP210", "CH340", "FTDI")) or "TTYUSB" in device or "TTYACM" in device:
+                            port = p.device
+                            break
+                    if port is None:
+                        return text("Could not auto-detect an ESP32 serial port. Pass 'port' explicitly.")
+
+            conn_error = None
+            with _lock:
+                if _serial and _serial.is_open:
+                    _serial.close()
+                for attempt in range(3):
+                    try:
+                        _serial = _open_serial(port, baud)
+                        if not port.startswith("socket://"):
+                            _serial.dtr = False
+                            _serial.rts = False
+                            time.sleep(0.2)
+                            _serial.reset_input_buffer()
+                            _serial.reset_output_buffer()
+                        conn_error = None
                         break
-                if port is None:
-                    return text("Could not auto-detect an ESP32 serial port. Pass 'port' explicitly.")
+                    except (serial.SerialException, PermissionError, OSError) as exc:
+                        conn_error = exc
+                        time.sleep(0.5)
 
-        # Try to open the connection with retries and DTR/RTS resetting
-        conn_error = None
-        with _lock:
-            if _serial and _serial.is_open:
-                _serial.close()
-            
-            for attempt in range(3):
-                try:
-                    _serial = _open_serial(port, baud)
-                    if not port.startswith("socket://"):
-                        # Reset DTR/RTS to prevent ESP32 boot/reset loops and clear buffers
-                        _serial.dtr = False
-                        _serial.rts = False
-                        time.sleep(0.2)
-                        _serial.reset_input_buffer()
-                        _serial.reset_output_buffer()
-                    conn_error = None
-                    break
-                except (serial.SerialException, PermissionError, OSError) as exc:
-                    conn_error = exc
-                    time.sleep(0.5)
+            if conn_error:
+                if port.startswith("socket://"):
+                    return text(f"ERROR: Could not connect to TCP bridge at {port}.\nMake sure the Marauder Controller app is open, the ESP32 is plugged in, and the app shows 'Connected'.")
+                err_msg = str(conn_error)
+                if "Permission denied" in err_msg or (isinstance(conn_error, PermissionError)):
+                    return text(f"ERROR opening {port}: {conn_error}\n\nTIP: Running 'sudo chmod a+rw {port}' or adding user to dialout may resolve this.")
+                return text(f"ERROR opening {port}: {conn_error}")
 
-        if conn_error:
-            if port.startswith("socket://"):
-                return text(
-                    f"ERROR: Could not connect to TCP bridge at {port}.\n"
-                    "Make sure the Marauder Controller app is open, the ESP32 is "
-                    "plugged in via OTG, and the app shows 'Connected'."
-                )
-            
-            # Help user with Linux dialout/permission errors
-            err_msg = str(conn_error)
-            if "Permission denied" in err_msg or (isinstance(conn_error, PermissionError)):
-                return text(
-                    f"ERROR opening {port}: {conn_error}\n\n"
-                    "TIP: This is a permission error. You can fix this by running:\n"
-                    f"  sudo chmod a+rw {port}\n"
-                    "or by adding your user to the dialout group:\n"
-                    "  sudo usermod -a -G dialout $USER\n"
-                    "(Note: You may need to log out and log back in for group changes to take effect)."
-                )
-            return text(f"ERROR opening {port}: {conn_error}")
+            await loop.run_in_executor(None, _enable_pcap_capture)
+            mode = "TCP bridge (Termux)" if port.startswith("socket://") else "USB serial"
+            return text(f"Connected to {port} at {baud} baud ({mode}).\nSavePCAP enabled — scan output streams through USB serial.")
 
-        # Route all scan/sniff data through USB serial instead of SD card
-        await loop.run_in_executor(None, _enable_pcap_capture)
+        elif action == "disconnect":
+            with _lock:
+                if _serial and _serial.is_open:
+                    _serial.close()
+            return text("Disconnected.")
 
-        mode = "TCP bridge (Termux)" if port.startswith("socket://") else "USB serial"
-        return text(
-            f"Connected to {port} at {baud} baud ({mode}).\n"
-            "SavePCAP enabled — all scan output streams through USB serial to this host."
-        )
+        elif action == "status":
+            with _lock:
+                if _serial and _serial.is_open:
+                    return text(f"Connected: {_serial.port} at {_serial.baudrate} baud.")
+            return text("Not connected.")
 
-    # ------------------------------------------------------------------ #
-    elif name == "disconnect":
-        with _lock:
-            if _serial and _serial.is_open:
-                _serial.close()
-        return text("Disconnected.")
-
-    # ------------------------------------------------------------------ #
-    elif name == "connection_status":
-        with _lock:
-            if _serial and _serial.is_open:
-                return text(f"Connected: {_serial.port} at {_serial.baudrate} baud.")
-        return text("Not connected.")
+        elif action == "reboot":
+            res = await loop.run_in_executor(None, _send, "reboot", DEFAULT_TIMEOUT)
+            return text(res or "Reboot command sent.")
 
     # ------------------------------------------------------------------ #
     elif name == "send_command":
@@ -840,136 +717,6 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
         duration = float(arguments.get("duration", 2.0))
         raw = await loop.run_in_executor(None, _stream_for, duration)
         return text(raw.strip() or "(no output)")
-
-    # ------------------------------------------------------------------ #
-    elif name == "scan_and_capture":
-        scan_type = arguments.get("scan_type", "scanall")
-        duration  = float(arguments.get("duration", 30.0))
-
-        cmd = SCAN_COMMANDS.get(scan_type, scan_type)
-        started_at = datetime.datetime.now().isoformat(timespec="seconds")
-
-        # Start scan (wait up to 4 s for the initial ack / prompt)
-        start_resp = await loop.run_in_executor(None, _send, cmd, 4.0)
-
-        # Stream all serial output for the capture window
-        live_output = await loop.run_in_executor(None, _stream_for, duration)
-
-        # BT scans omit newlines between entries on NO_SCREEN builds; fix that
-        if scan_type in ("bt", "airtag"):
-            live_output = _fix_bt_output(live_output)
-
-        # Stop scan and pull structured lists
-        await loop.run_in_executor(None, _send, "stopscan", 6.0)
-        ap_list  = await loop.run_in_executor(None, _send, "list -a", DEFAULT_TIMEOUT)
-        st_list  = await loop.run_in_executor(None, _send, "list -c", DEFAULT_TIMEOUT)
-        ssid_list = await loop.run_in_executor(None, _send, "list -s", DEFAULT_TIMEOUT)
-
-        # Assemble capture buffer
-        _capture_buffer = "\n".join([
-            f"=== Marauder capture | type={scan_type} | duration={duration}s | started={started_at} ===",
-            "",
-            "--- Command response ---",
-            start_resp or "(none)",
-            "",
-            "--- Live serial output (streamed through USB) ---",
-            live_output.strip() or "(no live output)",
-            "",
-            "--- Access points (list -a) ---",
-            ap_list or "(none)",
-            "",
-            "--- Stations / clients (list -c) ---",
-            st_list or "(none)",
-            "",
-            "--- SSID list (list -s) ---",
-            ssid_list or "(none)",
-        ])
-
-        _capture_meta = {
-            "scan_type": scan_type,
-            "duration_s": duration,
-            "started_at": started_at,
-            "command": cmd,
-        }
-
-        return text(_capture_buffer)
-
-    # ------------------------------------------------------------------ #
-    elif name == "get_capture":
-        if not _capture_buffer:
-            return text("No capture in buffer. Run scan_and_capture first.")
-        return text(_capture_buffer)
-
-    # ------------------------------------------------------------------ #
-    elif name == "save_capture_local":
-        if not _capture_buffer:
-            return text("No capture to save. Run scan_and_capture first.")
-
-        path_arg = arguments.get("path")
-        ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        scan_type = _capture_meta.get("scan_type", "capture")
-
-        if path_arg:
-            dest = Path(path_arg).expanduser()
-            if dest.is_dir():
-                base = dest / f"marauder_{scan_type}_{ts}"
-            else:
-                base = dest.with_suffix("")
-        else:
-            base = _capture_dir() / f"marauder_{scan_type}_{ts}"
-
-        txt_path  = base.with_suffix(".txt")
-        json_path = base.with_suffix(".json")
-
-        txt_path.write_text(_capture_buffer, encoding="utf-8")
-        json_path.write_text(
-            json.dumps({"meta": _capture_meta, "raw": _capture_buffer}, indent=2),
-            encoding="utf-8",
-        )
-
-        # Tell the user whether the file is visible from Android Files app
-        android_note = ""
-        if _is_termux():
-            if "storage/downloads" in str(txt_path):
-                android_note = "\n(visible in Android Files → Downloads → marauder_captures)"
-            else:
-                android_note = "\n(only accessible inside Termux — run termux-setup-storage for Android Files access)"
-
-        return text(
-            f"Saved capture to:\n"
-            f"  {txt_path}\n"
-            f"  {json_path}\n"
-            f"Size: {len(_capture_buffer):,} bytes{android_note}"
-        )
-
-    # ------------------------------------------------------------------ #
-    elif name == "scan_wifi":
-        result = await loop.run_in_executor(None, _send, "scanall", 4.0)
-        return text(result or "(scan started — use read_output to poll)")
-
-    elif name == "stop_scan":
-        result = await loop.run_in_executor(None, _send, "stopscan", 4.0)
-        return text(result or "(stopped)")
-
-    elif name == "list_access_points":
-        result = await loop.run_in_executor(None, _send, "list -a", DEFAULT_TIMEOUT)
-        return text(result or "(none)")
-
-    elif name == "list_stations":
-        result = await loop.run_in_executor(None, _send, "list -c", DEFAULT_TIMEOUT)
-        return text(result or "(none)")
-
-    elif name == "list_ssids":
-        result = await loop.run_in_executor(None, _send, "list -s", DEFAULT_TIMEOUT)
-        return text(result or "(none)")
-
-    elif name == "list_probes":
-        result = await loop.run_in_executor(None, _send, "list -p", DEFAULT_TIMEOUT)
-        return text(result or "(none)")
-
-    elif name == "get_settings":
-        result = await loop.run_in_executor(None, _send, "settings", DEFAULT_TIMEOUT)
-        return text(result or "(no output)")
 
     # ------------------------------------------------------------------ #
     elif name == "read_local_file":
@@ -991,10 +738,9 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
         bin_path = arguments.get("bin_path")
         port = arguments.get("port")
         baud = int(arguments.get("baud", 921600))
-
         if port is None:
             if _is_termux():
-                return text("ERROR: Flashing via TCP bridge (Termux) is not supported. Please flash directly.")
+                return text("ERROR: Flashing via TCP bridge (Termux) is not supported.")
             for p in serial.tools.list_ports.comports():
                 desc = (p.description or "").upper()
                 device = p.device.upper()
@@ -1008,7 +754,6 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
         if not p.exists():
             return text(f"ERROR: Firmware file not found: {p}")
 
-        # Temporarily close serial connection if open
         was_open = False
         with _lock:
             if _serial and _serial.is_open:
@@ -1016,31 +761,20 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
                 was_open = True
 
         import subprocess
-        # Run esptool using Python venv interpreter
         venv_python = sys.executable
-        cmd = [
-            venv_python, "-m", "esptool",
-            "--chip", "esp32",
-            "--port", port,
-            "--baud", str(baud),
-            "write_flash", "0x0000", str(p)
-        ]
-        
-        print(f"[marauder-mcp] Flashing firmware using command: {' '.join(cmd)}", file=sys.stderr)
+        cmd = [venv_python, "-m", "esptool", "--chip", "esp32", "--port", port, "--baud", str(baud), "write_flash", "0x0000", str(p)]
         try:
             res = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
             if res.returncode == 0:
                 output = f"SUCCESS: Firmware flashed successfully.\n\nStdout:\n{res.stdout}"
             else:
-                output = f"ERROR: Flashing failed with exit code {res.returncode}.\n\nStderr:\n{res.stderr}\n\nStdout:\n{res.stdout}"
+                output = f"ERROR: Flashing failed.\n\nStderr:\n{res.stderr}\n\nStdout:\n{res.stdout}"
         except Exception as e:
             output = f"ERROR executing esptool: {e}"
 
-        # Reopen serial if it was open
         if was_open:
             with _lock:
                 try:
-                    # Give ESP32 a moment to boot after flashing before opening port
                     time.sleep(1.0)
                     _serial = _open_serial(port, 115200)
                     _serial.dtr = False
@@ -1051,8 +785,165 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
                     _enable_pcap_capture()
                 except Exception as e:
                     output += f"\n\nWARNING: Could not reopen serial port: {e}"
-
         return text(output)
+
+    # ------------------------------------------------------------------ #
+    elif name == "wifi_control":
+        action = arguments.get("action")
+        channel = arguments.get("channel")
+        if action == "scan":
+            cmd = "scanall"
+        elif action == "stop":
+            cmd = "stopscan"
+        elif action == "set_channel":
+            if channel is None:
+                return text("ERROR: 'channel' is required for set_channel.")
+            cmd = f"channel -s {channel}"
+        elif action == "query_channel":
+            cmd = "channel"
+        else:
+            return text(f"ERROR: Unknown action '{action}' for wifi_control.")
+        res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
+        return text(res or f"Wi-Fi control action '{action}' executed.")
+
+    # ------------------------------------------------------------------ #
+    elif name == "scan_and_capture":
+        scan_type = arguments.get("scan_type", "scanall")
+        duration  = float(arguments.get("duration", 30.0))
+        cmd = SCAN_COMMANDS.get(scan_type, scan_type)
+        started_at = datetime.datetime.now().isoformat(timespec="seconds")
+
+        start_resp = await loop.run_in_executor(None, _send, cmd, 4.0)
+        live_output = await loop.run_in_executor(None, _stream_for, duration)
+        if scan_type in ("bt", "airtag"):
+            live_output = _fix_bt_output(live_output)
+
+        await loop.run_in_executor(None, _send, "stopscan", 6.0)
+        ap_list  = await loop.run_in_executor(None, _send, "list -a", DEFAULT_TIMEOUT)
+        st_list  = await loop.run_in_executor(None, _send, "list -c", DEFAULT_TIMEOUT)
+        ssid_list = await loop.run_in_executor(None, _send, "list -s", DEFAULT_TIMEOUT)
+
+        _capture_buffer = "\n".join([
+            f"=== Marauder capture | type={scan_type} | duration={duration}s | started={started_at} ===",
+            "",
+            "--- Command response ---",
+            start_resp or "(none)",
+            "",
+            "--- Live serial output (streamed through USB) ---",
+            live_output.strip() or "(no live output)",
+            "",
+            "--- Access points (list -a) ---",
+            ap_list or "(none)",
+            "",
+            "--- Stations / clients (list -c) ---",
+            st_list or "(none)",
+            "",
+            "--- SSID list (list -s) ---",
+            ssid_list or "(none)",
+        ])
+        _capture_meta = {
+            "scan_type": scan_type,
+            "duration_s": duration,
+            "started_at": started_at,
+            "command": cmd,
+        }
+        return text(_capture_buffer)
+
+    # ------------------------------------------------------------------ #
+    elif name == "capture_data":
+        action = arguments.get("action")
+        if action == "get":
+            if not _capture_buffer:
+                return text("No capture in buffer. Run scan_and_capture first.")
+            return text(_capture_buffer)
+
+        elif action == "save":
+            if not _capture_buffer:
+                return text("No capture to save. Run scan_and_capture first.")
+            path_arg = arguments.get("path")
+            ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            scan_type = _capture_meta.get("scan_type", "capture")
+
+            if path_arg:
+                dest = Path(path_arg).expanduser()
+                base = dest / f"marauder_{scan_type}_{ts}" if dest.is_dir() else dest.with_suffix("")
+            else:
+                base = _capture_dir() / f"marauder_{scan_type}_{ts}"
+
+            txt_path  = base.with_suffix(".txt")
+            json_path = base.with_suffix(".json")
+            txt_path.write_text(_capture_buffer, encoding="utf-8")
+            json_path.write_text(json.dumps({"meta": _capture_meta, "raw": _capture_buffer}, indent=2), encoding="utf-8")
+
+            android_note = ""
+            if _is_termux():
+                android_note = "\n(visible in Android Files)" if "storage/downloads" in str(txt_path) else "\n(only inside Termux)"
+            return text(f"Saved capture to:\n  {txt_path}\n  {json_path}\nSize: {len(_capture_buffer):,} bytes{android_note}")
+
+    # ------------------------------------------------------------------ #
+    elif name == "list_targets":
+        target_type = arguments.get("target_type")
+        flag = {"ap": "-a", "station": "-c", "ssid": "-s", "probe": "-p"}.get(target_type, "-a")
+        res = await loop.run_in_executor(None, _send, f"list {flag}", DEFAULT_TIMEOUT)
+        return text(res or "(none)")
+
+    # ------------------------------------------------------------------ #
+    elif name == "target_management":
+        action = arguments.get("action")
+        target_type = arguments.get("target_type")
+        indices = arguments.get("indices")
+        mac = arguments.get("mac")
+        ssid = arguments.get("ssid")
+        channel = arguments.get("channel")
+        ap_index = arguments.get("ap_index")
+        count = arguments.get("count")
+        index = arguments.get("index")
+
+        if action == "select":
+            if not target_type or not indices:
+                return text("ERROR: 'target_type' and 'indices' are required for select.")
+            flag = {"ap": "-a", "station": "-c", "ssid": "-s"}.get(target_type, "-a")
+            cmd = f"select {flag} {indices}"
+        elif action == "clear":
+            if not target_type:
+                return text("ERROR: 'target_type' is required for clear.")
+            if target_type == "all":
+                cmd = "clearlist -a -c -s"
+            else:
+                flag = {"ap": "-a", "station": "-c", "ssid": "-s"}.get(target_type, "-a")
+                cmd = f"clearlist {flag}"
+        elif action == "add":
+            if not target_type or not mac:
+                return text("ERROR: 'target_type' and 'mac' are required for add.")
+            if target_type == "ap":
+                cmd = f"add -a -b {mac}"
+                if channel is not None:
+                    cmd += f" -ch {channel}"
+                if ssid:
+                    cmd += f" -e {ssid}"
+            elif target_type == "client":
+                if ap_index is None:
+                    return text("ERROR: 'ap_index' is required when adding a client/station.")
+                cmd = f"add -c -b {mac} -ap {ap_index}"
+            else:
+                return text(f"ERROR: Unknown target_type '{target_type}' for manual add.")
+        elif action == "ssid_add":
+            if not ssid:
+                return text("ERROR: 'ssid' name is required for ssid_add.")
+            cmd = f"ssid -a -n {ssid}"
+        elif action == "ssid_generate":
+            if count is None:
+                return text("ERROR: 'count' is required for ssid_generate.")
+            cmd = f"ssid -a -g {count}"
+        elif action == "ssid_remove":
+            if index is None:
+                return text("ERROR: 'index' is required for ssid_remove.")
+            cmd = f"ssid -r {index}"
+        else:
+            return text(f"ERROR: Unknown action '{action}' for target_management.")
+
+        res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
+        return text(res or f"Target management action '{action}' executed.")
 
     # ------------------------------------------------------------------ #
     elif name == "attack":
@@ -1063,15 +954,6 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
             cmd += f" {options.strip()}"
         res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
         return text(res or f"Attack '{attack_type}' started.")
-
-    # ------------------------------------------------------------------ #
-    elif name == "select_targets":
-        target_type = arguments.get("target_type")
-        indices = arguments.get("indices")
-        flag = {"ap": "-a", "station": "-c", "ssid": "-s"}.get(target_type, "-a")
-        cmd = f"select {flag} {indices}"
-        res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
-        return text(res or f"Selected {target_type} indices: {indices}")
 
     # ------------------------------------------------------------------ #
     elif name == "evil_portal":
@@ -1091,68 +973,6 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
             return text(f"ERROR: Unknown action '{action}' for evil_portal.")
         res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
         return text(res or f"Evil Portal action '{action}' executed.")
-
-    # ------------------------------------------------------------------ #
-    elif name == "manage_ssids":
-        action = arguments.get("action")
-        name_val = arguments.get("name")
-        count = arguments.get("count")
-        index = arguments.get("index")
-        if action == "add":
-            if not name_val:
-                return text("ERROR: 'name' is required when action is 'add'.")
-            cmd = f"ssid -a -n {name_val}"
-        elif action == "generate":
-            if count is None:
-                return text("ERROR: 'count' is required when action is 'generate'.")
-            cmd = f"ssid -a -g {count}"
-        elif action == "remove":
-            if index is None:
-                return text("ERROR: 'index' is required when action is 'remove'.")
-            cmd = f"ssid -r {index}"
-        else:
-            return text(f"ERROR: Unknown action '{action}' for manage_ssids.")
-        res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
-        return text(res or f"SSID action '{action}' executed.")
-
-    # ------------------------------------------------------------------ #
-    elif name == "change_channel":
-        channel = arguments.get("channel")
-        if channel is not None:
-            cmd = f"channel -s {channel}"
-        else:
-            cmd = "channel"
-        res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
-        return text(res or "(no output)")
-
-    # ------------------------------------------------------------------ #
-    elif name == "reboot_device":
-        res = await loop.run_in_executor(None, _send, "reboot", DEFAULT_TIMEOUT)
-        return text(res or "Reboot command sent.")
-
-    # ------------------------------------------------------------------ #
-    elif name == "clear_lists":
-        list_type = arguments.get("list_type")
-        if list_type == "all":
-            cmd = "clearlist -a -c -s"
-        else:
-            flag = {"ap": "-a", "station": "-c", "ssid": "-s"}.get(list_type)
-            cmd = f"clearlist {flag}"
-        res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
-        return text(res or f"List '{list_type}' cleared.")
-
-    # ------------------------------------------------------------------ #
-    elif name == "configure_settings":
-        setting = arguments.get("setting")
-        value = arguments.get("value")
-        if setting:
-            if not value:
-                return text("ERROR: 'value' (enable/disable) is required when specifying a setting.")
-            cmd = f"settings -s {setting} {value}"
-        else:
-            cmd = "settings"
-        res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
-        return text(res or "(no output)")
 
     # ------------------------------------------------------------------ #
     elif name == "led_control":
@@ -1187,40 +1007,22 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
         return text(res or f"GPS action '{action}' executed.")
 
     # ------------------------------------------------------------------ #
-    elif name == "ble_spam":
+    elif name == "ble_control":
+        action = arguments.get("action")
         spam_type = arguments.get("spam_type")
-        cmd = f"blespam -t {spam_type}"
-        res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
-        return text(res or f"BLE spam '{spam_type}' started.")
-
-    # ------------------------------------------------------------------ #
-    elif name == "spoof_airtag":
         index = arguments.get("index")
-        cmd = f"spoofat -t {index}"
-        res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
-        return text(res or f"Spoofing AirTag {index} started.")
-
-    # ------------------------------------------------------------------ #
-    elif name == "add_device":
-        device_type = arguments.get("device_type")
-        mac = arguments.get("mac")
-        channel = arguments.get("channel")
-        ssid = arguments.get("ssid")
-        ap_index = arguments.get("ap_index")
-        if device_type == "ap":
-            cmd = f"add -a -b {mac}"
-            if channel is not None:
-                cmd += f" -ch {channel}"
-            if ssid:
-                cmd += f" -e {ssid}"
-        elif device_type == "client":
-            if ap_index is None:
-                return text("ERROR: 'ap_index' is required when adding a client/station.")
-            cmd = f"add -c -b {mac} -ap {ap_index}"
+        if action == "spam":
+            if not spam_type:
+                return text("ERROR: 'spam_type' is required for BLE spam.")
+            cmd = f"blespam -t {spam_type}"
+        elif action == "spoof":
+            if index is None:
+                return text("ERROR: 'index' is required for AirTag spoofing.")
+            cmd = f"spoofat -t {index}"
         else:
-            return text(f"ERROR: Unknown device_type '{device_type}'.")
+            return text(f"ERROR: Unknown action '{action}' for ble_control.")
         res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
-        return text(res or f"Device {mac} added.")
+        return text(res or f"BLE control action '{action}' executed.")
 
     # ------------------------------------------------------------------ #
     elif name == "network_scan":
@@ -1259,6 +1061,22 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
             return text(f"ERROR: Unknown action '{action}' for mac_spoof.")
         res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
         return text(res or f"MAC spoofing action '{action}' executed.")
+
+    # ------------------------------------------------------------------ #
+    elif name == "settings_control":
+        action = arguments.get("action")
+        setting = arguments.get("setting")
+        value = arguments.get("value")
+        if action == "get":
+            cmd = "settings"
+        elif action == "set":
+            if not setting or not value:
+                return text("ERROR: 'setting' and 'value' are required for set setting.")
+            cmd = f"settings -s {setting} {value}"
+        else:
+            return text(f"ERROR: Unknown action '{action}' for settings_control.")
+        res = await loop.run_in_executor(None, _send, cmd, DEFAULT_TIMEOUT)
+        return text(res or "(no settings output)")
 
     # ------------------------------------------------------------------ #
     else:
