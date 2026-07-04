@@ -41,7 +41,7 @@ class TcpBridgeServer(private val repository: SerialRepository) {
         // TCP → USB: forward bytes from the TCP client to the serial port
         runCatching {
             val buf = ByteArray(256)
-            while (isActive && !socket.isClosed) {
+            while (currentCoroutineContext().isActive && !socket.isClosed) {
                 val n = withContext(Dispatchers.IO) { socket.inputStream.read(buf) }
                 if (n <= 0) break
                 repository.writeRaw(buf.copyOf(n))
