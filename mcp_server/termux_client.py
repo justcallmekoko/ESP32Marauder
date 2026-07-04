@@ -7,9 +7,10 @@ Run:
     python termux_client.py
 
 The Marauder Controller Android app must be open with the ESP32 plugged
-in via OTG cable. The app bridges the USB serial connection via an abstract
-Unix domain socket (\0marauder_bridge) — no root, no pyserial, no pydantic.
-TCP loopback is blocked by Android 12+ per-UID iptables; abstract sockets bypass it.
+in via OTG cable. The app bridges the USB serial connection via TCP on port
+7555, bound to all interfaces (0.0.0.0). Termux connects via the phone's
+WiFi IP (e.g. 192.168.1.5:7555) — traffic on wlan0 bypasses Android's
+per-UID iptables loopback block. No root, no pyserial, no pydantic.
 """
 
 import datetime
@@ -30,7 +31,7 @@ import urllib.request
 
 VENICE_BASE_URL = "https://api.venice.ai/api/v1"
 DEFAULT_MODEL   = "gemma-4-uncensored"
-BRIDGE_SOCKET   = "\0marauder_bridge"    # abstract Unix domain socket — bypasses Android iptables
+BRIDGE_PORT     = int(os.getenv("MARAUDER_PORT", "7555"))
 PROMPT          = b"> "                  # Marauder end-of-response marker
 
 SCAN_COMMANDS: dict[str, str] = {
@@ -55,6 +56,19 @@ SCAN_COMMANDS: dict[str, str] = {
 _sock: socket.socket | None = None
 _capture_buffer: str = ""
 _capture_meta: dict = {}
+
+
+def _local_ip() -> str:
+    """Return the phone's WiFi/cellular IP via dummy UDP connect (no packets sent)."""
+    host = os.getenv("MARAUDER_HOST", "")
+    if host:
+        return host
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        try:
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+        except OSError:
+            return "127.0.0.1"
 
 # ---------------------------------------------------------------------------
 # Serial helpers
@@ -114,24 +128,23 @@ def _fix_bt(raw: str) -> str:
 
 def _connect_bridge() -> str:
     global _sock
+    host = _local_ip()
     try:
-        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        s.settimeout(10)
-        s.connect(BRIDGE_SOCKET)
-        s.settimeout(0.1)
-        _sock = s
+        _sock = socket.create_connection((host, BRIDGE_PORT), timeout=10)
+        _sock.settimeout(0.1)
     except OSError as exc:
         _sock = None
         return (
-            f"ERROR: Cannot connect to Android bridge (\\0marauder_bridge) — {exc}\n"
-            "Make sure the Marauder Controller app is open and shows 'Bridge: ready'."
+            f"ERROR: Cannot connect to Android bridge at {host}:{BRIDGE_PORT} — {exc}\n"
+            "Make sure the Marauder Controller app is open and shows 'Bridge: <ip>:7555'.\n"
+            "Override host with: export MARAUDER_HOST=192.168.x.x"
         )
     time.sleep(0.5)
     _drain()
     _sock.sendall(b"settings -s SavePCAP disable\n")
     _read_until_prompt(4.0)
     return (
-        "Connected to ESP32 via Android bridge (\\0marauder_bridge).\n"
+        f"Connected to ESP32 via Android bridge at {host}:{BRIDGE_PORT}.\n"
         "SavePCAP disabled — all scan output streams through USB serial."
     )
 
@@ -147,7 +160,8 @@ def dispatch(name: str, args: dict) -> str:
 
     # ------------------------------------------------------------------ #
     if name == "list_ports":
-        return "\\0marauder_bridge  —  Android abstract Unix socket bridge (Termux mode)"
+        host = _local_ip()
+        return f"{host}:{BRIDGE_PORT}  —  Android TCP bridge via WiFi (Termux mode)"
 
     elif name == "connect":
         return _connect_bridge()
@@ -502,9 +516,10 @@ def main() -> None:
 
     model = os.environ.get("VENICE_MODEL", DEFAULT_MODEL)
 
+    local = _local_ip()
     print("ESP32 Marauder AI Terminal (Termux — stdlib only)")
     print(f"Model : {model} via Venice AI")
-    print(f"Bridge: \\0marauder_bridge  (Marauder Controller app)")
+    print(f"Bridge: {local}:{BRIDGE_PORT}  (Marauder Controller app — connect via WiFi IP)")
     print("Type 'quit' to exit.\n")
 
     while True:
