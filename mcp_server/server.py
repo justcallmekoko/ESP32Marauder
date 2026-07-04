@@ -89,6 +89,19 @@ def _stream_for(duration: float) -> str:
     return buf.decode("utf-8", errors="replace")
 
 
+def _fix_bt_output(raw: str) -> str:
+    """Insert newlines before BT entries on NO_SCREEN builds.
+
+    On MARAUDER_CYD_3_5_INCH_NO_SCREEN the Serial.println() that terminates
+    each BT advertisement line is inside #ifdef HAS_SCREEN and is omitted,
+    so entries concatenate on a single line like:
+        -72 Device: MyPhone-80 Device: aa:bb:cc:dd:ee:ff-61 Device: Speaker
+    Split on the pattern that starts each entry (negative RSSI followed by ' Device:').
+    """
+    import re
+    return re.sub(r"(?<!\n)(?=-?\d+ Device:)", "\n", raw).strip()
+
+
 def _disable_sd_capture() -> None:
     """Turn off SD-card PCAP writing so all data routes through USB serial."""
     _send("settings -s SavePCAP disable", timeout=4.0)
@@ -190,7 +203,15 @@ async def list_tools() -> list[types.Tool]:
                 "Run a scan or sniff operation and capture ALL output through USB serial "
                 "back to this Linux host — nothing is written to the SD card. "
                 "After the capture window, stops the scan and retrieves the AP/station lists. "
-                "Results are stored in the capture buffer (use get_capture to re-read them). "
+                "Results are stored in the capture buffer (use get_capture to re-read them).\n\n"
+                "Output line formats by scan_type:\n"
+                "  scanall  → '<rssi> Ch: <ch> <bssid> ESSID: <ssid> <cap_hex...>' (new APs only)\n"
+                "             '<n>: ap: <bssid> -> sta: <mac>' (new stations only)\n"
+                "  beacon   → same AP format as scanall but fires for EVERY beacon (high volume)\n"
+                "  deauth   → '<rssi> Ch: <ch> <src_mac> -> <dst_mac>'\n"
+                "  pmkid    → 'Received EAPOL: <bssid>' + periodic stats block every ~1 s\n"
+                "  raw      → periodic stats only (no per-packet text); use for traffic volume metrics\n"
+                "  bt/airtag → '<rssi> Device: <name_or_mac>' (one per BT advertisement)\n\n"
                 "scan_type options: scanall, beacon, probe, deauth, pmkid, raw, pwn, "
                 "bt, airtag, skim, sae, multissid."
             ),
@@ -362,6 +383,10 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
 
         # Stream all serial output for the capture window
         live_output = await loop.run_in_executor(None, _stream_for, duration)
+
+        # BT scans omit newlines between entries on NO_SCREEN builds; fix that
+        if scan_type in ("bt", "airtag"):
+            live_output = _fix_bt_output(live_output)
 
         # Stop scan and pull structured lists
         await loop.run_in_executor(None, _send, "stopscan", 6.0)
