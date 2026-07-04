@@ -59,16 +59,31 @@ _capture_meta: dict = {}
 
 
 def _local_ip() -> str:
-    """Return the phone's WiFi/cellular IP via dummy UDP connect (no packets sent)."""
-    host = os.getenv("MARAUDER_HOST", "")
-    if host:
-        return host
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-        try:
-            s.connect(("8.8.8.8", 80))
-            return s.getsockname()[0]
-        except OSError:
-            return "127.0.0.1"
+    """Return a WiFi or hotspot IP that routes intra-device. Cellular IPs (CGNAT 100.x) don't work."""
+    override = os.getenv("MARAUDER_HOST", "")
+    if override:
+        return override
+    import subprocess
+    try:
+        out = subprocess.run(["ip", "addr"], capture_output=True, text=True, timeout=3).stdout
+        iface = ""
+        for line in out.splitlines():
+            # Detect interface name line
+            if line and line[0].isdigit():
+                iface = line.split(":")[1].strip().split("@")[0].strip() if ":" in line else ""
+            elif "inet " in line and iface:
+                # Skip loopback and cellular interfaces
+                if any(iface.startswith(p) for p in ("lo", "rmnet", "ccmni", "pdp", "v4-rmnet")):
+                    continue
+                ip = line.strip().split()[1].split("/")[0]
+                # Skip CGNAT (100.64–100.127) and link-local (169.254.x.x)
+                if ip.startswith("169.254.") or (ip.startswith("100.") and
+                        64 <= int(ip.split(".")[1]) <= 127):
+                    continue
+                return ip
+    except Exception:
+        pass
+    return ""
 
 # ---------------------------------------------------------------------------
 # Serial helpers
@@ -129,6 +144,16 @@ def _fix_bt(raw: str) -> str:
 def _connect_bridge() -> str:
     global _sock
     host = _local_ip()
+    if not host:
+        return (
+            "ERROR: No WiFi or hotspot interface found.\n"
+            "Android blocks loopback TCP between apps — the bridge needs a real interface.\n"
+            "Fix (pick one):\n"
+            "  1. Connect to a WiFi network, OR\n"
+            "  2. Enable Mobile Hotspot in Settings (no second device needed), OR\n"
+            "  3. export MARAUDER_HOST=192.168.x.x  (set IP manually)\n"
+            "Then run this again."
+        )
     try:
         _sock = socket.create_connection((host, BRIDGE_PORT), timeout=10)
         _sock.settimeout(0.1)
@@ -136,8 +161,7 @@ def _connect_bridge() -> str:
         _sock = None
         return (
             f"ERROR: Cannot connect to Android bridge at {host}:{BRIDGE_PORT} — {exc}\n"
-            "Make sure the Marauder Controller app is open and shows 'Bridge: <ip>:7555'.\n"
-            "Override host with: export MARAUDER_HOST=192.168.x.x"
+            "Make sure the Marauder Controller app is open and shows 'Bridge: <ip>:7555'."
         )
     time.sleep(0.5)
     _drain()
@@ -517,9 +541,10 @@ def main() -> None:
     model = os.environ.get("VENICE_MODEL", DEFAULT_MODEL)
 
     local = _local_ip()
+    bridge_info = f"{local}:{BRIDGE_PORT}" if local else f"NO WIFI — connect to WiFi or enable Hotspot"
     print("ESP32 Marauder AI Terminal (Termux — stdlib only)")
     print(f"Model : {model} via Venice AI")
-    print(f"Bridge: {local}:{BRIDGE_PORT}  (Marauder Controller app — connect via WiFi IP)")
+    print(f"Bridge: {bridge_info}  (Marauder Controller app)")
     print("Type 'quit' to exit.\n")
 
     while True:
