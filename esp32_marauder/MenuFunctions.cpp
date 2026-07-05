@@ -1019,6 +1019,7 @@ void MenuFunctions::updateStatusBar()
   display_obj.tft.setTextSize(1);
 
   bool status_changed = false;
+  uint32_t cur_millis = millis();
   
   #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(MARAUDER_MINI_V3)
     display_obj.tft.setFreeFont(NULL);
@@ -1090,6 +1091,58 @@ void MenuFunctions::updateStatusBar()
     #endif
   }
 
+
+  // #ifdef HAS_RTC
+    if((system_time_set) && (cur_millis & (1 << 12))) {
+      char timeBuffer[16];
+      struct tm timeinfo;
+      // static uint32_t tic = 0;
+      uint16_t bg_color = STATUSBAR_COLOR;
+
+      // tic = this->initTime;
+
+      if(!getLocalTime(&timeinfo)){
+          Serial.println(F("Failed to obtain time"));
+          return;
+      }
+
+      //  "%H:%M"
+      strftime(timeBuffer, sizeof(timeBuffer), "%k:%M", &timeinfo);
+
+      int tx, ty, tw, th;
+      tw = (5 * 8) - 4;
+
+      #ifdef HAS_BATTERY
+        if (battery_obj.i2c_supported) {
+          th = 15;
+          bg_color = TFT_BLACK;
+        } else
+      #endif
+        th = 0;
+
+      #ifdef HAS_MINI_SCREEN // SCREEN_ORIENTATION == 1
+        tx = TFT_HEIGHT - tw;
+        // ty = TFT_WIDTH - th; // Bottom Right
+        ty = th;   // Near Top Right
+      #else
+        tx = TFT_WIDTH - tw;
+        // ty = TFT_HEIGHT - th;    // Bottom Right
+        ty = th;   // Near Top Right
+      #endif
+
+      // Serial.print("time: ");
+      // Serial.println(timeBuffer);
+      // Serial.println((String) tx + " : " + (String) ty);
+
+      display_obj.tft.fillRect(tx, ty, tw, th, bg_color);
+      display_obj.tft.setTextColor(TFT_YELLOW, bg_color, true);
+      display_obj.tft.drawString(timeBuffer, tx , ty , 2);
+
+      display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR, true);
+    }
+
+  //#endif
+
   // RAM Stuff
   wifi_scan_obj.free_ram = String(esp_get_free_heap_size());
   if ((wifi_scan_obj.free_ram != wifi_scan_obj.old_free_ram) || (status_changed)) {
@@ -1105,7 +1158,14 @@ void MenuFunctions::updateStatusBar()
   #endif
 
   #ifdef HAS_MINI_SCREEN
-    display_obj.tft.drawString(String(getDRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
+    #ifndef HAS_PSRAM
+      display_obj.tft.drawString(String(getDRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
+    #else
+      if (cur_millis & (1 << 13))  // 13 -> 8.192 seconds
+        display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", 100, 0, 1);
+      else
+        display_obj.tft.drawString("P:" + String(getPSRAMUsagePercent()) + "%", 100, 0, 1);
+    #endif
   #endif
   }
 
@@ -2528,7 +2588,11 @@ void MenuFunctions::RunSetup()
     wifi_scan_obj.StartScan(WIFI_SCAN_OFF, TFT_RED);
     this->changeMenu(current_menu, true);
   });
-
+  #ifdef HAS_RTC
+    this->addNodes(&wifiGeneralMenu, "Sync RTC with WiFi", TFTLIME, NULL, 0, []() {
+      rtc_obj.sync_rtc_ntp();
+    });
+  #endif
 
   // Menu for generating and setting MAC addrs for AP and STA
   setMacMenu.parentMenu = &wifiGeneralMenu;

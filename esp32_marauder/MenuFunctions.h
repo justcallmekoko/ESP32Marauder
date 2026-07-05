@@ -22,6 +22,14 @@
 #include "SDInterface.h"
 #include "settings.h"
 
+#ifdef HAS_RTC
+  #include "RTC.h"
+  extern RTC rtc_obj;
+#endif
+
+// If system time/date has been set
+extern bool system_time_set;
+
 #ifdef HAS_BUTTONS
   #include "Switches.h"
   #if (U_BTN >= 0)

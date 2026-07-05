@@ -237,6 +237,9 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_NMEA_CMD);
     Serial.println(HELP_GPS_POI_CMD);
     Serial.println(HELP_GPS_TRACKER_CMD);
+    Serial.println(HELP_NTP_SYNC);
+    Serial.println(HELP_DATE);
+    Serial.println(HELP_SETDATE);
     
     // WiFi sniff/scan
     Serial.println(HELP_EVIL_PORTAL_CMD);
@@ -1346,8 +1349,9 @@ void CommandLine::runCommand(String input) {
     }
   }
   else if (cmd_args.get(0) == JOIN_CMD) {
-    int ap_sw = this->argSearch(&cmd_args, "-a");
-    int pw_sw = this->argSearch(&cmd_args, "-p");
+    int np_sw = this->argSearch(&cmd_args, "-n");   // Network
+    int ap_sw = this->argSearch(&cmd_args, "-a");   // AP Index
+    int pw_sw = this->argSearch(&cmd_args, "-p");   // Password
     int s_sw  = this->argSearch(&cmd_args, "-s");
 
     if ((ap_sw != -1) && (pw_sw != -1)) {
@@ -1363,6 +1367,17 @@ void CommandLine::runCommand(String input) {
           menu_function_obj.changeMenu(menu_function_obj.current_menu);
         #endif
       #endif
+    }
+    else if ((np_sw != -1) && (pw_sw != -1)) {
+      String password = cmd_args.get(pw_sw + 1);
+      String ssid = cmd_args.get(np_sw + 1);
+
+      Serial.println("Using SSID: " + (String)ssid + " Password: " + (String)password);
+      settings_obj.saveSetting<bool>("ClientSSID", ssid);
+      settings_obj.saveSetting<bool>("ClientPW", password);
+
+      wifi_scan_obj.joinWiFi(ssid, password, false);
+
     }
     else if (s_sw != -1) {
       String ssid = settings_obj.loadSetting<String>("ClientSSID");
@@ -1383,6 +1398,7 @@ void CommandLine::runCommand(String input) {
       return;
     }
   }
+
   // Select access points or stations
   else if (cmd_args.get(0) == SEL_CMD) {
     // Get switches
@@ -1737,6 +1753,50 @@ void CommandLine::runCommand(String input) {
     }
     else {
       Serial.println(F("Usage: add -a -b <mac> or add -c -b <mac> -ap <index>"));
+    }
+  }
+
+
+
+  else if (cmd_args.get(0) == NTP_SYNC_CMD) {
+
+    if (!wifi_scan_obj.wifi_connected) {
+      Serial.println(F("WIFI is not connected."));
+      return;
+    }
+    #ifdef HAS_RTC
+      rtc_obj.sync_rtc_ntp();
+    #else
+      configTime(0, 0, "pool.ntp.org");
+    #endif //  HAS_RTC
+  }
+
+
+  // "+%Y-%m-%d %HH:%MM:SS"
+  else if (cmd_args.get(0) == DATE_CMD) {
+    struct tm timeinfo;
+    if (getLocalTime(&timeinfo)) {
+      Serial.println(&timeinfo, "%F %T");
+    } else {
+      log_w("getLocalTime Fail");
+    }
+  }
+
+
+  else if (cmd_args.get(0) == SETDATE_CMD) {
+    struct tm tm_info = {0}; 
+    extern bool set_system_time(struct tm *timeInfo);
+
+    log_d("SETDATE_CMD: %s %s", cmd_args.get(1).c_str(), cmd_args.get(2).c_str());
+    if ( cmd_args.size() == 3 &&
+         strptime(cmd_args.get(1).c_str(), "%F", &tm_info) &&
+         strptime(cmd_args.get(2).c_str(), "%T", &tm_info) ) {
+
+      set_system_time(&tm_info);
+
+    } else {
+      Serial.println(F("Failed to parse time string."));
+      Serial.println(F("expected format: YYYY-MM-DD HH:MM:SS"));
     }
   }
 

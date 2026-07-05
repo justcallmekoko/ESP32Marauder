@@ -141,6 +141,8 @@
     #define HAS_SD
     #define USE_SD
     #define HAS_TEMP_SENSOR
+    #define HAS_RTC
+      #define HAS_RTC8563
     #define HAS_GPS
   #endif
 
@@ -227,8 +229,10 @@
 
   #ifdef MARAUDER_REV_FEATHER
     //#define FLIPPER_ZERO_HAT
-    //#define HAS_BATTERY
+    #define HAS_BATTERY
     //#define HAS_BT
+    #define HAS_RTC
+      #define HAS_PCF8523
     #define HAS_MINI_KB
     #define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
@@ -2897,7 +2901,6 @@
     #endif
 
   #endif  // HAS_BATTERY
-
 
   //// MARAUDER TITLE STUFF
   #ifdef MARAUDER_V4
