@@ -2796,6 +2796,15 @@
   #endif
   //// END GPS STUFF
 
+
+#ifdef HAS_RTC
+  #if (defined(HAS_DS1307) || defined(HAS_PCF8523))
+    // Need i2c
+  #else
+    #undef HAS_RTC
+  #endif
+#endif
+
   //// BATTERY STUFF
   #ifdef HAS_BATTERY
 
