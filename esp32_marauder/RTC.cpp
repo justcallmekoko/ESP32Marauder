@@ -1,6 +1,6 @@
 #include "configs.h"
 
-#if defined(HAS_RTC) && (defined(HAS_DS1307) || defined(HAS_PCF8523)
+#if defined(HAS_RTC) && (defined(HAS_DS1307) || defined(HAS_PCF8523))
 
 #include "RTC.h"
 
