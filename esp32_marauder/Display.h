@@ -20,6 +20,10 @@
   #include <XPT2046_Touchscreen.h>
 #endif
 
+#ifdef HAS_CAP_TOUCH
+  #include "ft6336.h"
+#endif
+
 // WiFi stuff
 #define OTA_UPDATE 100
 #define SHOW_INFO 101
@@ -141,7 +145,7 @@ class Display
     void getTouchWhileFunction(bool pressed);
     void init();
     void RunSetup();
-    void showCenterText(const char* text, int y, bool small_pp = false);
+    void showCenterText(const char* text, int y, bool small_pp = false, uint8_t text_size = BANNER_TEXT_SIZE);
     void touchToExit();
     void twoPartDisplay(String center_text);
     void updateBanner(String msg);
