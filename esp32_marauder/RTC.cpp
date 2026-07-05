@@ -59,8 +59,8 @@ void RTC::RunSetup() {
   supported = rtclock.begin(_wire);
 
   if (!supported) {
-    log_w("Couldn't find RTC");
-    // return supported;
+    log_w("RTC Was not detected");
+    return;
   }
 
   setup();
