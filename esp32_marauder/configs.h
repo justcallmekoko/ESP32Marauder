@@ -584,6 +584,10 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
   #endif
+
+  #if !defined(MARAUDER_C5) && !defined(MARAUDER_V8) && !defined(MARAUDER_PANCAKE) && !defined(MARAUDER_MINI_V3) && !defined(MARAUDER_M5_NANO_C6)
+    #define HAS_CSI
+  #endif
   //// END BOARD FEATURES
 
   //// POWER MANAGEMENT

@@ -1,4 +1,7 @@
 #include "CSI.h"
+
+#ifdef HAS_CSI
+
 #include "WiFiScan.h"
 
 #ifdef HAS_SCREEN
@@ -371,3 +374,5 @@ void CsiModule::main(uint32_t currentTime) {
   }
 #endif
 }
+
+#endif // HAS_CSI

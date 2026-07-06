@@ -1,8 +1,12 @@
 #include "MenuFunctions.h"
-#include "CSI.h"
+#ifdef HAS_CSI
+  #include "CSI.h"
+#endif
 #include "lang_var.h"
 
-extern CsiModule csi_module;
+#ifdef HAS_CSI
+  extern CsiModule csi_module;
+#endif
 
 #ifdef HAS_SCREEN
 
@@ -1585,7 +1589,9 @@ void MenuFunctions::RunSetup()
   #endif
 
   foxHuntMenu.list = new LinkedList<MenuNode>();
-  csiMenu.list = new LinkedList<MenuNode>();
+  #ifdef HAS_CSI
+    csiMenu.list = new LinkedList<MenuNode>();
+  #endif
 
   // Work menu names
   mainMenu.name = text_table1[6];
@@ -1641,36 +1647,40 @@ void MenuFunctions::RunSetup()
   #endif
 
   foxHuntMenu.name = "Fox Hunt";
-  csiMenu.name = "CSI Sensing";
-  csiMenu.parentMenu = &mainMenu;
+  #ifdef HAS_CSI
+    csiMenu.name = "CSI Sensing";
+    csiMenu.parentMenu = &mainMenu;
 
-  this->addNodes(&csiMenu, text09, TFTLIGHTGREY, 0, [this]() {
-    this->changeMenu(csiMenu.parentMenu, true);
-  });
-  this->addNodes(&csiMenu, "Start CSI (Ch 1)", TFTGREEN, CSI_SENSING, [this]() {
-    display_obj.clearScreen();
-    drawStatusBar();
-    csi_module.start(1);
-  });
-  this->addNodes(&csiMenu, "Start CSI (Ch 6)", TFTGREEN, CSI_SENSING, [this]() {
-    display_obj.clearScreen();
-    drawStatusBar();
-    csi_module.start(6);
-  });
-  this->addNodes(&csiMenu, "Start CSI (Ch 11)", TFTGREEN, CSI_SENSING, [this]() {
-    display_obj.clearScreen();
-    drawStatusBar();
-    csi_module.start(11);
-  });
-  this->addNodes(&csiMenu, "Stop CSI", TFTRED, CSI_SENSING, [this]() {
-    csi_module.stop();
-  });
+    this->addNodes(&csiMenu, text09, TFTLIGHTGREY, 0, [this]() {
+      this->changeMenu(csiMenu.parentMenu, true);
+    });
+    this->addNodes(&csiMenu, "Start CSI (Ch 1)", TFTGREEN, CSI_SENSING, [this]() {
+      display_obj.clearScreen();
+      drawStatusBar();
+      csi_module.start(1);
+    });
+    this->addNodes(&csiMenu, "Start CSI (Ch 6)", TFTGREEN, CSI_SENSING, [this]() {
+      display_obj.clearScreen();
+      drawStatusBar();
+      csi_module.start(6);
+    });
+    this->addNodes(&csiMenu, "Start CSI (Ch 11)", TFTGREEN, CSI_SENSING, [this]() {
+      display_obj.clearScreen();
+      drawStatusBar();
+      csi_module.start(11);
+    });
+    this->addNodes(&csiMenu, "Stop CSI", TFTRED, CSI_SENSING, [this]() {
+      csi_module.stop();
+    });
+  #endif
 
   // Build Main Menu
   mainMenu.parentMenu = NULL;
-  this->addNodes(&mainMenu, "CSI Sensing", TFTCYAN, CSI_SENSING, [this]() {
-    this->changeMenu(&csiMenu, true);
-  });
+  #ifdef HAS_CSI
+    this->addNodes(&mainMenu, "CSI Sensing", TFTCYAN, CSI_SENSING, [this]() {
+      this->changeMenu(&csiMenu, true);
+    });
+  #endif
   this->addNodes(&mainMenu, text_table1[7], TFTGREEN, WIFI, [this]() {
     this->changeMenu(&wifiMenu, true);
   });

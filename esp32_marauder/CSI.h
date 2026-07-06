@@ -4,6 +4,9 @@
 #define CSI_H
 
 #include "configs.h"
+
+#ifdef HAS_CSI
+
 #include <Arduino.h>
 #include "esp_wifi.h"
 #include "esp_wifi_types.h"
@@ -65,4 +68,5 @@ class CsiModule {
     void clearReturnFlag() { returnToMenu = false; }
 };
 
+#endif // HAS_CSI
 #endif
