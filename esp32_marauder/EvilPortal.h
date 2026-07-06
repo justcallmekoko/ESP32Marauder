@@ -40,7 +40,7 @@ extern Buffer buffer_obj;
 extern char apName[MAX_AP_NAME_SIZE];
 
 #ifndef HAS_PSRAM
-  static char index_html[MAX_HTML_SIZE] = "TEST";
+  char index_html[MAX_HTML_SIZE] = "TEST";
 #else
   extern char* index_html;
 #endif
