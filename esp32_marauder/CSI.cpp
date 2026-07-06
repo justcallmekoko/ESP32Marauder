@@ -207,6 +207,7 @@ void CsiModule::updateMotion() {
   personDetected = (sum > CSI_MOTION_THRESH);
 }
 
+#ifdef HAS_SCREEN
 // ---- Display drawing ----
 void CsiModule::drawHeader() {
   display_obj.tft.fillRect(0, 0, TFT_WIDTH, CSI_HDR_H, TFT_NAVY);
@@ -294,6 +295,7 @@ void CsiModule::drawStats() {
     display_obj.tft.printf("M:%u", motionScore);
   }
 }
+#endif
 
 void CsiModule::sendCsiBinary(wifi_csi_info_t *data) {
   uint16_t csiLen = data->len;
@@ -332,7 +334,9 @@ void CsiModule::main(uint32_t currentTime) {
   #if (D_BTN >= 0)
   if (d_btn.justPressed()) {
     viewMode = !viewMode;
+    #ifdef HAS_SCREEN
     display_obj.tft.fillRect(0, CSI_GRAPH_Y, TFT_WIDTH, CSI_GRAPH_H, TFT_BLACK);
+    #endif
   }
   #endif
   #if (C_BTN >= 0)
