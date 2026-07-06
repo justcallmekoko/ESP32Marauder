@@ -349,6 +349,7 @@ void CsiModule::main(uint32_t currentTime) {
     updateMotion();
   }
 
+#ifdef HAS_SCREEN
   // Header update (every 500ms, only update packet count number)
   if (currentTime - lastDisplayUpdate > 500) {
     lastDisplayUpdate = currentTime;
@@ -364,4 +365,5 @@ void CsiModule::main(uint32_t currentTime) {
       drawGraph();
     drawStats();
   }
+#endif
 }
