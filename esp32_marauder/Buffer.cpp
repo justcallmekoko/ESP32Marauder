@@ -6,6 +6,7 @@ Buffer::Buffer(){
   bufB = (uint8_t*)malloc(BUF_SIZE);
 }
 
+#ifdef NO_USE
 void Buffer::createFile(const char* name, bool is_pcap, bool is_gpx){
   int i=0;
   if (is_pcap) {
@@ -29,6 +30,44 @@ void Buffer::createFile(const char* name, bool is_pcap, bool is_gpx){
 
   Serial.println(fileName);
   
+  file = fs->open(fileName, FILE_WRITE);
+  file.close();
+}
+#endif
+
+void Buffer::createFile(const char* name, bool is_pcap, bool is_gpx) {
+  int i = 0;
+  char buf[64];   // LFN can be up to 255 chars on FatFs
+
+  // With timestamp if system time is set:
+  if (system_time_set) {
+    struct tm timeinfo;
+    getLocalTime(&timeinfo);
+    if (is_pcap) {
+      do {
+        snprintf(buf, sizeof(buf), "/%s_%04d%02d%02d_%02d%02d%02d_%d.pcap",
+          name,
+          timeinfo.tm_year + 1900,
+          timeinfo.tm_mon + 1,
+          timeinfo.tm_mday,
+          timeinfo.tm_hour,
+          timeinfo.tm_min,
+          timeinfo.tm_sec,
+          i++);
+      } while (fs->exists(buf));
+    }
+    // similar for log/gpx...
+  } else {
+    // fallback to existing numeric scheme
+    if (is_pcap) {
+      do {
+        snprintf(buf, sizeof(buf), "/%s_%d.pcap", name, i++);
+      } while (fs->exists(buf));
+    }
+  }
+
+  fileName = String(buf);
+  Serial.println(fileName);
   file = fs->open(fileName, FILE_WRITE);
   file.close();
 }
