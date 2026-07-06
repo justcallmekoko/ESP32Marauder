@@ -8,6 +8,7 @@ dependencies = [
     "mcp-use>=0.1.0",
     "pyserial>=3.5",
     "langchain-openai>=0.2.0",
+    "esptool>=4.8",
 ]
 
 [build-system]

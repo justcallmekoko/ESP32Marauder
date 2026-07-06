@@ -63,9 +63,9 @@ ESP32 Marauder
     │ USB OTG
     ▼
 Marauder Controller app (Android)
-    │ TCP socket  localhost:5555
+    │ TCP socket  localhost:7555
     ▼
-server.py  (socket://127.0.0.1:5555)
+server.py  (socket://127.0.0.1:7555)
     │ MCP stdio
     ▼
 client.py  (Venice AI agent)
@@ -87,7 +87,7 @@ This script:
 
 - Android phone with OTG support
 - OTG adapter or OTG cable
-- [Marauder Controller](https://play.google.com/store/apps/details?id=com.justcallmekoko.maraudercompanion) app (free) — bridges USB serial to `localhost:5555`
+- [Marauder Controller](https://play.google.com/store/apps/details?id=com.justcallmekoko.maraudercompanion) app (free) — bridges USB serial to `localhost:7555`
 
 ### Run
 
@@ -112,9 +112,9 @@ python client.py
 ```
 ESP32 Marauder AI Terminal
 Model   : gemma-4-uncensored via Venice AI
-Port    : socket://127.0.0.1:5555
+Port    : socket://127.0.0.1:7555
 Saves   : /data/data/com.termux/files/home/storage/downloads/marauder_captures
-Mode    : Termux/Android (TCP bridge on localhost:5555)
+Mode    : Termux/Android (TCP bridge on localhost:7555)
 
 > scan wifi for 30 seconds and tell me what you found
 

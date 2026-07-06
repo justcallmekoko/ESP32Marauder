@@ -2839,7 +2839,7 @@ void WiFiScan::startPcap(const char* file_name) {
   buffer_obj.pcapOpen(
     file_name,
     #if defined(HAS_SD)
-      sd_obj.supported ? &SD :
+      (sd_obj.supported && !save_serial) ? &SD :
     #endif
     NULL,
     save_serial // Set with commandline options
@@ -2850,7 +2850,7 @@ void WiFiScan::startLog(const char* file_name) {
   buffer_obj.logOpen(
     file_name,
     #if defined(HAS_SD)
-      sd_obj.supported ? &SD :
+      (sd_obj.supported && !save_serial) ? &SD :
     #endif
     NULL,
     save_serial // Set with commandline options
@@ -2861,7 +2861,7 @@ void WiFiScan::startGPX(const char* file_name) {
   buffer_obj.gpxOpen(
     file_name,
     #if defined(HAS_SD)
-      sd_obj.supported ? &SD :
+      (sd_obj.supported && !save_serial) ? &SD :
     #endif
     NULL,
     save_serial // Set with commandline options

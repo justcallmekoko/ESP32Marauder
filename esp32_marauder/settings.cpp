@@ -405,13 +405,13 @@ bool Settings::createDefaultSettings(fs::FS &fs, bool spec, uint8_t index, const
 
     jsonBuffer["Settings"][0]["name"] = "ForcePMKID";
     jsonBuffer["Settings"][0]["type"] = "bool";
-    jsonBuffer["Settings"][0]["value"] = false;
+    jsonBuffer["Settings"][0]["value"] = true;
     jsonBuffer["Settings"][0]["range"]["min"] = false;
     jsonBuffer["Settings"][0]["range"]["max"] = true;
 
     jsonBuffer["Settings"][1]["name"] = "ForceProbe";
     jsonBuffer["Settings"][1]["type"] = "bool";
-    jsonBuffer["Settings"][1]["value"] = false;
+    jsonBuffer["Settings"][1]["value"] = true;
     jsonBuffer["Settings"][1]["range"]["min"] = false;
     jsonBuffer["Settings"][1]["range"]["max"] = true;
 
@@ -429,13 +429,13 @@ bool Settings::createDefaultSettings(fs::FS &fs, bool spec, uint8_t index, const
 
     jsonBuffer["Settings"][4]["name"] = "EPDeauth";
     jsonBuffer["Settings"][4]["type"] = "bool";
-    jsonBuffer["Settings"][4]["value"] = false;
+    jsonBuffer["Settings"][4]["value"] = true;
     jsonBuffer["Settings"][4]["range"]["min"] = false;
     jsonBuffer["Settings"][4]["range"]["max"] = true;
 
     jsonBuffer["Settings"][5]["name"] = "ChanHop";
     jsonBuffer["Settings"][5]["type"] = "bool";
-    jsonBuffer["Settings"][5]["value"] = false;
+    jsonBuffer["Settings"][5]["value"] = true;
     jsonBuffer["Settings"][5]["range"]["min"] = false;
     jsonBuffer["Settings"][5]["range"]["max"] = true;
 
