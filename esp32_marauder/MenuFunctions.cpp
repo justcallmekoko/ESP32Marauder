@@ -1649,7 +1649,7 @@ void MenuFunctions::RunSetup()
   foxHuntMenu.name = "Fox Hunt";
   #ifdef HAS_CSI
     csiMenu.name = "CSI Sensing";
-    csiMenu.parentMenu = &mainMenu;
+    csiMenu.parentMenu = &wifiMenu;
 
     this->addNodes(&csiMenu, text09, TFTLIGHTGREY, 0, [this]() {
       this->changeMenu(csiMenu.parentMenu, true);
@@ -1676,11 +1676,6 @@ void MenuFunctions::RunSetup()
 
   // Build Main Menu
   mainMenu.parentMenu = NULL;
-  #ifdef HAS_CSI
-    this->addNodes(&mainMenu, "CSI Sensing", TFTCYAN, CSI_SENSING, [this]() {
-      this->changeMenu(&csiMenu, true);
-    });
-  #endif
   this->addNodes(&mainMenu, text_table1[7], TFTGREEN, WIFI, [this]() {
     this->changeMenu(&wifiMenu, true);
   });
@@ -1725,6 +1720,11 @@ void MenuFunctions::RunSetup()
   this->addNodes(&wifiMenu, text_table1[33], TFTPURPLE, GENERAL_APPS, [this]() {
     this->changeMenu(&wifiGeneralMenu, true);
   });
+  #ifdef HAS_CSI
+    this->addNodes(&wifiMenu, "CSI Sensing", TFTCYAN, CSI_SENSING, [this]() {
+      this->changeMenu(&csiMenu, true);
+    });
+  #endif
 
   // Build WiFi scanner Menu
   wifiScannerMenu.parentMenu = &wifiMenu; // Main Menu is second menu parent

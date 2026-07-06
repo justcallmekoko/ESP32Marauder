@@ -480,11 +480,11 @@ void loop()
     battery_obj.main(currentTime);
   #endif
   #ifdef HAS_CSI
-  if (!csi_module.isActive() && ((wifi_scan_obj.currentScanMode != WIFI_PACKET_MONITOR) ||
+  if (!csi_module.isActive() && ((wifi_scan_obj.currentScanMode != WIFI_PACKET_MONITOR) || (mini)))
   #else
-  if ((wifi_scan_obj.currentScanMode != WIFI_PACKET_MONITOR) ||
+  if ((wifi_scan_obj.currentScanMode != WIFI_PACKET_MONITOR) || (mini))
   #endif
-      (mini))) {
+  {
     #ifdef HAS_SCREEN
       menu_function_obj.main(currentTime);
     #endif
