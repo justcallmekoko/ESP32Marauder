@@ -6,27 +6,35 @@ Run:
     export VENICE_API_KEY=your_key_here
     python termux_client.py
 
-The Marauder Controller Android app must be open with the ESP32 plugged
-in via OTG cable. The app runs a ForegroundService that bridges the USB
-serial connection via TCP on port 7555, bound to all interfaces (0.0.0.0).
+Two connection backends, tried in this order (all stdlib, no pyserial):
 
-Termux, the hotspot, and the app all run on the SAME phone, so the bridge
-is reachable at the phone's own gateway IP. Termux can't enumerate network
-interfaces without root (netlink / /proc/net / /sys/class/net are blocked),
-so this client simply TRIES the well-known Android hotspot gateway addresses
-(192.168.43.1 first) plus loopback, and uses whichever accepts a connection.
-Override with `export MARAUDER_HOST=<ip>` if your hotspot uses another subnet.
+1. DIRECT USB SERIAL — best on a ROOTED phone (or any host whose kernel has the
+   CH34x / CDC-ACM driver). Talks to /dev/ttyUSB0 straight from Termux via
+   termios, chmod'ing the node with root if needed. No Android app, no hotspot,
+   no iptables. Force a device with `export MARAUDER_SERIAL=/dev/ttyUSB0`.
 
-No root, no pyserial, no pydantic.
+2. TCP BRIDGE — non-root fallback. The Marauder Controller Android app runs a
+   ForegroundService bridging USB serial over TCP 7555 (bound to 0.0.0.0).
+   Termux, the hotspot, and the app share the phone, so the bridge is reachable
+   at the phone's own gateway IP. Without root, interface enumeration is blocked
+   (netlink / /proc/net / /sys/class/net), so we TRY the well-known hotspot
+   gateways (192.168.43.1 first) plus loopback. WITH root we also read the real
+   interface IPs via `su -c ip addr`, so it works on home WiFi too. Override with
+   `export MARAUDER_HOST=<ip>`.
+
+No pyserial, no pydantic. Root is optional but unlocks backend #1.
 """
 
 import datetime
+import glob
 import json
 import os
 import pathlib
 import re
+import select
 import socket
 import ssl
+import subprocess
 import sys
 import time
 import urllib.error
@@ -60,10 +68,11 @@ SCAN_COMMANDS: dict[str, str] = {
 # Global serial state
 # ---------------------------------------------------------------------------
 
-_sock: socket.socket | None = None
+_sock = None                 # socket.socket OR _SerialConn (both expose recv/sendall/…)
 _connected_host: str = ""
 _capture_buffer: str = ""
 _capture_meta: dict = {}
+_ROOT: "bool | None" = None   # memoized root-availability check
 
 # Well-known Android hotspot / tether gateway addresses. Because Termux, the
 # hotspot, and the Marauder Controller app all run on the SAME phone, the app's
@@ -80,16 +89,165 @@ HOTSPOT_GATEWAYS = [
 ]
 
 
+def _have_root() -> bool:
+    """True if a working `su` grants uid 0. Memoized so we only probe once."""
+    global _ROOT
+    if _ROOT is None:
+        try:
+            out = subprocess.run(["su", "-c", "id -u"], capture_output=True,
+                                 text=True, timeout=6)
+            _ROOT = (out.returncode == 0 and out.stdout.strip() == "0")
+        except Exception:
+            _ROOT = False
+    return _ROOT
+
+
+def _root_ips() -> list[str]:
+    """With root, read REAL interface IPs (via `su -c ip -4 -o addr`) so the TCP
+    bridge works on any network — home WiFi, etc. — not just hotspot guesses.
+    Skips loopback, cellular, link-local, and CGNAT (which don't route intra-device)."""
+    if not _have_root():
+        return []
+    try:
+        out = subprocess.run(["su", "-c", "ip -4 -o addr"], capture_output=True,
+                             text=True, timeout=6).stdout
+    except Exception:
+        return []
+    ips: list[str] = []
+    for line in out.splitlines():
+        parts = line.split()                       # "N: wlan0 inet 192.168.1.5/24 ..."
+        if len(parts) < 4 or parts[2] != "inet":
+            continue
+        iface = parts[1]
+        if any(iface.startswith(p) for p in ("lo", "rmnet", "ccmni", "pdp", "v4-rmnet")):
+            continue
+        ip = parts[3].split("/")[0]
+        octets = ip.split(".")
+        if ip.startswith("169.254.") or (ip.startswith("100.") and len(octets) == 4
+                                         and 64 <= int(octets[1]) <= 127):
+            continue
+        if ip not in ips:
+            ips.append(ip)
+    return ips
+
+
 def _candidate_hosts() -> list[str]:
     """Ordered list of addresses to try for the bridge, most-likely first."""
     hosts: list[str] = []
     override = os.getenv("MARAUDER_HOST", "")
     if override:
         hosts.append(override)
+    for ip in _root_ips():                          # real interface IPs when rooted
+        if ip not in hosts:
+            hosts.append(ip)
     for h in HOTSPOT_GATEWAYS:
         if h not in hosts:
             hosts.append(h)
     return hosts
+
+
+# ---------------------------------------------------------------------------
+# Direct USB serial backend (rooted phone, or any host with a CH34x/CDC driver)
+# ---------------------------------------------------------------------------
+
+class _SerialConn:
+    """Adapter that makes a raw serial fd look like the socket subset the rest
+    of this client relies on (recv / sendall / settimeout / close / getpeername).
+    This lets the entire command + attack layer run UNCHANGED over a direct
+    /dev/ttyUSB* connection, with no Android app / bridge in the middle."""
+
+    def __init__(self, fd: int, path: str):
+        self._fd = fd
+        self._path = path
+        self._timeout = 0.1
+
+    def settimeout(self, t: float) -> None:
+        self._timeout = t
+
+    def recv(self, n: int) -> bytes:
+        r, _, _ = select.select([self._fd], [], [], self._timeout)
+        if not r:
+            raise socket.timeout()                  # matches existing except-handlers
+        return os.read(self._fd, n)
+
+    def sendall(self, data: bytes) -> None:
+        mv = memoryview(data)
+        while mv:
+            mv = mv[os.write(self._fd, mv):]
+
+    def getpeername(self):
+        return self._path
+
+    def close(self) -> None:
+        try:
+            os.close(self._fd)
+        except OSError:
+            pass
+
+
+def _serial_devices() -> list[str]:
+    """Candidate serial device nodes. MARAUDER_SERIAL forces one explicitly."""
+    override = os.getenv("MARAUDER_SERIAL", "")
+    if override:
+        return [override]
+    devs = sorted(glob.glob("/dev/ttyUSB*") + glob.glob("/dev/ttyACM*"))
+    if not devs and _have_root():
+        # Nodes may exist but not be visible to our uid; probe common names as root.
+        for name in ("/dev/ttyUSB0", "/dev/ttyUSB1", "/dev/ttyACM0"):
+            r = subprocess.run(["su", "-c", f"ls {name} 2>/dev/null"],
+                               capture_output=True, text=True, timeout=6)
+            if r.returncode == 0 and name in r.stdout:
+                devs.append(name)
+    return devs
+
+
+def _configure_tty(fd: int) -> None:
+    """Raw 115200 8N1, and deassert DTR/RTS so the ESP32 auto-reset circuit lets
+    the firmware run (asserting them can hold it in reset or the ROM bootloader)."""
+    import termios, fcntl, struct
+    attrs = termios.tcgetattr(fd)
+    attrs[0] = 0                                     # iflag
+    attrs[1] = 0                                     # oflag
+    attrs[2] = termios.CS8 | termios.CREAD | termios.CLOCAL
+    attrs[3] = 0                                     # lflag: no echo/canonical/signals
+    attrs[4] = termios.B115200                       # ispeed
+    attrs[5] = termios.B115200                       # ospeed
+    attrs[6][termios.VMIN] = 0
+    attrs[6][termios.VTIME] = 0
+    termios.tcsetattr(fd, termios.TCSANOW, attrs)
+    try:
+        status = struct.unpack("I", fcntl.ioctl(fd, termios.TIOCMGET,
+                                                 struct.pack("I", 0)))[0]
+        status &= ~(termios.TIOCM_DTR | termios.TIOCM_RTS)
+        fcntl.ioctl(fd, termios.TIOCMSET, struct.pack("I", status))
+    except Exception:
+        pass                                         # not fatal; some drivers lack modem ctl
+
+
+def _open_serial(path: str) -> "tuple[_SerialConn | None, str]":
+    """Open a serial device, chmod'ing it via root if permission is denied.
+    Returns (conn, "") on success or (None, error_string)."""
+    flags = os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK
+    try:
+        fd = os.open(path, flags)
+    except PermissionError:
+        if _have_root():
+            subprocess.run(["su", "-c", f"chmod 666 {path}"],
+                           capture_output=True, timeout=6)
+            try:
+                fd = os.open(path, flags)
+            except OSError as exc:
+                return None, f"{path}: {exc}"
+        else:
+            return None, f"{path}: permission denied (need root, or a udev/plugdev rule)"
+    except OSError as exc:
+        return None, f"{path}: {exc}"
+    try:
+        _configure_tty(fd)
+    except Exception as exc:
+        os.close(fd)
+        return None, f"{path}: tty setup failed ({exc})"
+    return _SerialConn(fd, path), ""
 
 # ---------------------------------------------------------------------------
 # Serial helpers
@@ -165,6 +323,29 @@ def _fix_bt(raw: str) -> str:
 
 def _connect_bridge() -> str:
     global _sock, _connected_host
+
+    # 1. DIRECT USB SERIAL — best path on a rooted phone (or any host whose
+    #    kernel has the CH34x/CDC-ACM driver + device permission). No Android
+    #    app, no hotspot, no IP guessing, no iptables in the way.
+    serial_errors: list[str] = []
+    for path in _serial_devices():
+        conn, err = _open_serial(path)
+        if conn is None:
+            serial_errors.append(err)
+            continue
+        _sock = conn
+        _connected_host = f"usb:{path}"
+        time.sleep(0.3)
+        _drain()
+        _sock.sendall(b"settings -s SavePCAP disable\n")
+        _read_until_prompt(4.0)
+        return (
+            f"Connected to ESP32 directly over USB serial at {path} (115200 8N1)."
+            + (" [root]" if _have_root() else "") + "\n"
+            "No Android bridge needed. SavePCAP disabled — output streams over USB."
+        )
+
+    # 2. TCP BRIDGE via the Android app (non-root path, or no serial driver).
     candidates = _candidate_hosts()
     tried: list[str] = []
     for host in candidates:
@@ -184,18 +365,22 @@ def _connect_bridge() -> str:
             f"Connected to ESP32 via Android bridge at {host}:{BRIDGE_PORT}.\n"
             "SavePCAP disabled — all scan output streams through USB serial."
         )
+
     _sock = None
     _connected_host = ""
+    serial_note = ""
+    if serial_errors:
+        serial_note = "Direct USB serial tried: " + "; ".join(serial_errors) + "\n"
     return (
-        f"ERROR: Could not reach the Marauder bridge on port {BRIDGE_PORT}.\n"
-        f"Tried: {', '.join(tried)}\n"
+        f"ERROR: Could not reach the Marauder.\n"
+        + serial_note +
+        f"TCP bridge tried on port {BRIDGE_PORT}: {', '.join(tried)}\n"
         "Checklist:\n"
-        "  1. The Marauder Controller app is OPEN and shows the persistent\n"
-        "     'Marauder Bridge active' notification.\n"
-        "  2. The ESP32 is plugged into the phone via OTG (app shows 'Connected').\n"
-        "  3. If your hotspot uses a non-default subnet, set it explicitly:\n"
-        "     export MARAUDER_HOST=<the app's Bridge IP>\n"
-        "     (the app's connection screen shows 'Bridge: <ip>:7555')."
+        "  • ROOTED phone: ensure the kernel has the CH34x/CDC driver so\n"
+        "    /dev/ttyUSB0 appears, or force it: export MARAUDER_SERIAL=/dev/ttyUSB0\n"
+        "  • NON-ROOT phone: open the Marauder Controller app (persistent\n"
+        "    'Marauder Bridge active' notification) with the ESP32 on OTG; if your\n"
+        "    hotspot uses an odd subnet, export MARAUDER_HOST=<the app's Bridge IP>."
     )
 
 # ---------------------------------------------------------------------------
@@ -212,8 +397,11 @@ def dispatch(name: str, args: dict) -> str:
     if name == "device_connection":
         action = args.get("action")
         if action == "list_ports":
+            devs = _serial_devices()
+            serial_line = ("Direct USB serial: " + ", ".join(devs)) if devs \
+                else "Direct USB serial: none found (need root + CH34x driver, or MARAUDER_SERIAL)"
             cands = ", ".join(f"{h}:{BRIDGE_PORT}" for h in _candidate_hosts())
-            return f"Android TCP bridge candidates (Termux mode): {cands}"
+            return f"{serial_line}\nTCP bridge candidates: {cands}"
         elif action == "connect":
             return _connect_bridge()
         elif action == "disconnect":
@@ -229,7 +417,9 @@ def dispatch(name: str, args: dict) -> str:
             if _sock:
                 try:
                     _sock.getpeername()
-                    return f"Connected to Android bridge at {_connected_host}:{BRIDGE_PORT}."
+                    if _connected_host.startswith("usb:"):
+                        return f"Connected to ESP32 over USB serial at {_connected_host[4:]}."
+                    return f"Connected to ESP32 via Android bridge at {_connected_host}:{BRIDGE_PORT}."
                 except OSError:
                     pass
             return "Not connected."
@@ -568,7 +758,7 @@ def dispatch(name: str, args: dict) -> str:
 TOOLS = [
     {"type": "function", "function": {
         "name": "device_connection",
-        "description": "Manage the serial/TCP connection to the ESP32 Marauder device or list available ports.",
+        "description": "Manage the connection to the ESP32 Marauder. connect() auto-selects the backend: direct USB serial (/dev/ttyUSB*, best on rooted phones) if available, else the Android app's TCP bridge. list_ports shows both.",
         "parameters": {
             "type": "object",
             "required": ["action"],
@@ -1092,11 +1282,16 @@ def main() -> None:
 
     model = os.environ.get("VENICE_MODEL", DEFAULT_MODEL)
 
-    override = os.getenv("MARAUDER_HOST", "")
-    bridge_info = f"{override}:{BRIDGE_PORT}" if override else f"auto ({', '.join(HOTSPOT_GATEWAYS[:3])}…):{BRIDGE_PORT}"
+    devs = _serial_devices()
+    if devs:
+        link = f"USB serial {devs[0]}" + (" [root]" if _have_root() else "")
+    else:
+        override = os.getenv("MARAUDER_HOST", "")
+        host = override if override else f"auto ({', '.join(HOTSPOT_GATEWAYS[:3])}…)"
+        link = f"TCP bridge {host}:{BRIDGE_PORT} (Marauder Controller app)"
     print("ESP32 Marauder AI Terminal (Termux — stdlib only)")
     print(f"Model : {model} via Venice AI")
-    print(f"Bridge: {bridge_info}  (Marauder Controller app)")
+    print(f"Link  : {link}")
     print("Type 'quit' to exit.\n")
 
     while True:
