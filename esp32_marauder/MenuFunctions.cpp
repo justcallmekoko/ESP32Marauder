@@ -2596,22 +2596,30 @@ void MenuFunctions::RunSetup()
     wifi_scan_obj.StartScan(WIFI_SCAN_OFF, TFT_RED);
     this->changeMenu(current_menu, true);
   });
-    this->addNodes(&wifiGeneralMenu, "Sync RTC with WiFi", TFTLIME, NULL, 0, []() {
+    this->addNodes(&wifiGeneralMenu, "Sync RTC with WiFi", TFTLIME, 0, [this]() {
+
 
       #ifdef HAS_RTC
-        log_d("rtc_obj.supported %d", rtc_obj.supported);
         if(rtc_obj.supported) {
           rtc_obj.sync_rtc_ntp();
         } else
       #endif //  HAS_RTC
         configTime(GMTOFFSET_SEC, DAYLIGHTOFFSET_SEC, "pool.ntp.org", "time.nist.gov", "1.pool.ntp.org");
+
         struct tm timeinfo;
         if (getLocalTime(&timeinfo)) {
           char timeBuffer[64];
           system_time_set = true;
           strftime(timeBuffer, sizeof(timeBuffer), "%F %T", &timeinfo);
-          display_obj.tft.drawCentreString(timeBuffer, TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
-          Serial.println(&timeinfo, "%F %T");
+          display_obj.tft.fillScreen(TFT_BLACK);
+          display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+
+          #ifdef HAS_MINI_SCREEN
+            display_obj.tft.drawCentreString(timeBuffer, TFT_WIDTH/2, TFT_HEIGHT * 0.33, 2);
+          #else
+            display_obj.tft.drawCentreString(timeBuffer, TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+          #endif
+         
         } else {
           display_obj.tft.drawCentreString("Connection Failed", TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
           log_d("getLocalTime Fail");
@@ -3056,8 +3064,15 @@ void MenuFunctions::RunSetup()
           char timeBuffer[64];
           system_time_set = true;
           strftime(timeBuffer, sizeof(timeBuffer), "%F %T", &timeinfo);
-          display_obj.tft.drawCentreString(timeBuffer, TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+          display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+
+          #ifdef HAS_MINI_SCREEN
+            display_obj.tft.drawCentreString(timeBuffer, TFT_WIDTH/2, TFT_HEIGHT * 0.33, 2);
+          #else
+            display_obj.tft.drawCentreString(timeBuffer, TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+          #endif
           Serial.println(&timeinfo, "%F %T");
+         
         } else {
           display_obj.tft.drawCentreString("Connection Failed", TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
           log_d("getLocalTime Fail");

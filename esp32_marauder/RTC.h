@@ -68,8 +68,8 @@ class RTC  {    // RTC_PCF8523
     //  };
 
     // const char* ntpServer = NTPSERVER;
-    const long gmtOffset_sec = 0;   // Always 0 for UTC
-    const int daylightOffset_sec = 0;
+    // const long gmtOffset_sec = 0;   // Always 0 for UTC
+    // const int daylightOffset_sec = 0;
     void setSystemTimeFromCompile();
     void syncFromRTC();
 

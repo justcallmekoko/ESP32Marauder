@@ -4,6 +4,9 @@
 
   #define configs_h
 
+  #include "soc/soc_caps.h"
+  #include "esp_arduino_version.h"
+
   #define POLISH_POTATO
 
   //#define DEVELOPER

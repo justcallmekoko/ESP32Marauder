@@ -229,7 +229,7 @@ void RTC::syncFromRTC() {
     return false;
   }
 
-  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  configTime(GMTOFFSET_SEC, DAYLIGHTOFFSET_SEC, ntpServer);
 
   delay(1000);
 
@@ -259,17 +259,6 @@ void RTC::syncFromRTC() {
     rtclock.adjust(ntpTime);
     Serial.println(F("RTC updated with NTP time."));
     // log_d("PCF8523 RTC updated with NTP time.");
-
-  /*
-  rtclock.adjust(DateTime(
-    timeinfo.tm_year + 1900,
-    timeinfo.tm_mon + 1,
-    timeinfo.tm_mday,
-    timeinfo.tm_hour,
-    timeinfo.tm_min,
-    timeinfo.tm_sec
-  ));
-  */
 
   return true;
 }
