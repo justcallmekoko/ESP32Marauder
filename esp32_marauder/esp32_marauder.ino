@@ -14,6 +14,8 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #include <stdio.h>
 
+#include "CSI.h"
+
 #ifdef HAS_GPS
   #include "GpsInterface.h"
 #endif
@@ -70,6 +72,7 @@ https://www.online-utility.org/image/convert/to/XBM
 #endif
 
 WiFiScan wifi_scan_obj;
+CsiModule csi_module;
 EvilPortal evil_portal_obj;
 Buffer buffer_obj;
 Settings settings_obj;
@@ -358,6 +361,7 @@ void setup()
   #endif
 
   wifi_scan_obj.RunSetup();
+  csi_module.setup();
 
   #ifdef HAS_SCREEN
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
@@ -446,6 +450,14 @@ void loop()
   // Update all of our objects
   cli_obj.main(currentTime);
   wifi_scan_obj.main(currentTime);
+  csi_module.main(currentTime);
+
+  #ifdef HAS_SCREEN
+  if (csi_module.shouldReturnToMenu()) {
+    csi_module.clearReturnFlag();
+    menu_function_obj.changeMenu(menu_function_obj.current_menu, true);
+  }
+  #endif
 
   #ifdef HAS_GPS
     gps_obj.main();
@@ -457,8 +469,8 @@ void loop()
   #ifdef HAS_BATTERY
     battery_obj.main(currentTime);
   #endif
-  if ((wifi_scan_obj.currentScanMode != WIFI_PACKET_MONITOR) ||
-      (mini)) {
+  if (!csi_module.isActive() && ((wifi_scan_obj.currentScanMode != WIFI_PACKET_MONITOR) ||
+      (mini))) {
     #ifdef HAS_SCREEN
       menu_function_obj.main(currentTime);
     #endif
