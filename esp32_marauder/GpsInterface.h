@@ -78,6 +78,8 @@ class GpsInterface {
     String generateGXgga();
     String generateGXrmc();
 
+    bool gps_enabled = false;
+
   private:
     enum type_t {
       GPSTYPE_NATIVE = 0,
@@ -104,7 +106,6 @@ class GpsInterface {
     float accuracy = 0.0;
     String datetime = "";
     
-    bool gps_enabled = false;
     bool good_fix = false;
     char nav_system='\0';
     uint8_t num_sats = 0;

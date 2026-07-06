@@ -590,6 +590,19 @@
   #endif
   //// END BOARD FEATURES
 
+    #if defined(HAS_PCF8523) || defined(HAS_DS1307)
+        #define HAS_RTC         // i2c real-time clock (RTC)
+    #endif
+
+    #ifndef GMTOFFSET_SEC
+      #define GMTOFFSET_SEC 0  // -8 hours for Pacific Time
+    #endif
+
+    #ifndef DAYLIGHTOFFSET_SEC
+      #define DAYLIGHTOFFSET_SEC 0
+    #endif
+
+
   //// POWER MANAGEMENT
   #ifdef HAS_PWR_MGMT
     #if defined(HAS_AXP192)
@@ -900,6 +913,9 @@
       #define TOUCH_CS -1
       //#define SD_CS 1
 
+      #define RTC_SDA 33
+      #define RTC_SCL 22
+
       #define SCREEN_BUFFER
 
       #define MAX_SCREEN_BUFFER 9
@@ -975,6 +991,9 @@
       #define TFT_RST 12
       #define TFT_BL 27
       #define TOUCH_CS -1
+
+      #define RTC_SDA 33
+      #define RTC_SCL 22
 
       #define SCREEN_BUFFER
 
@@ -1983,6 +2002,9 @@
       //#define TOUCH_CS 21
       #define SD_CS 4
 
+      #define RTC_SCL 4
+      #define RTC_SDA 3
+
       #define SCREEN_BUFFER
 
       #define MAX_SCREEN_BUFFER 9
@@ -2562,6 +2584,7 @@
   #define TFTDARKGREY  16
   #define TFTSKYBLUE   17
   #define TFTLIME      18
+  #define TFTPINK      21
   //// END SPACE SAVING COLORS
 
   #define TFT_FARTGRAY 0x528a
@@ -2797,13 +2820,6 @@
   //// END GPS STUFF
 
 
-#ifdef HAS_RTC
-  #if (defined(HAS_DS1307) || defined(HAS_PCF8523))
-    // Need i2c
-  #else
-    #undef HAS_RTC
-  #endif
-#endif
 
   //// BATTERY STUFF
   #ifdef HAS_BATTERY

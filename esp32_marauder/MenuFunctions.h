@@ -30,6 +30,9 @@
 // If system time/date has been set
 extern bool system_time_set;
 
+extern void print_reset_reason();
+extern const char *resetReasonName();
+
 #ifdef HAS_BUTTONS
   #include "Switches.h"
   #if (U_BTN >= 0)
@@ -206,6 +209,9 @@ class MenuFunctions
 
     Menu foxHuntMenu;
 
+    // Admin
+    Menu adminMenu;
+    Menu adminSubMenu;
     //static void lv_tick_handler();
 
     // Menu icons

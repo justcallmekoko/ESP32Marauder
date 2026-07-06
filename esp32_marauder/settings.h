@@ -30,6 +30,7 @@ class Settings {
       bool  ForcePMKID  = false;
       bool  ForceProbe  = false;
       bool  SavePCAP    = true;
+      bool  TimeStPCAP  = true;
       bool  EnableLED   = true;
       bool  EPDeauth    = false;
       bool  ChanHop     = false;

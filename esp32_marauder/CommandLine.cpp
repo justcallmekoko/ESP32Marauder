@@ -1764,24 +1764,25 @@ void CommandLine::runCommand(String input) {
       Serial.println(F("WIFI is not connected."));
       return;
     }
-    #ifdef HAS_RTC
+  #ifdef HAS_RTC
+    log_d("rtc_obj.supported %d", rtc_obj.supported);
+    if(rtc_obj.supported) {
       rtc_obj.sync_rtc_ntp();
-    #else
-      configTime(0, 0, "pool.ntp.org");
-    #endif //  HAS_RTC
-  }
+    } else
+  #endif //  HAS_RTC
+    configTime(GMTOFFSET_SEC, DAYLIGHTOFFSET_SEC, "pool.ntp.org", "time.nist.gov", "1.pool.ntp.org");
 
-
-  // "+%Y-%m-%d %HH:%MM:SS"
-  else if (cmd_args.get(0) == DATE_CMD) {
     struct tm timeinfo;
     if (getLocalTime(&timeinfo)) {
-      Serial.println(&timeinfo, "%F %T");
+        char timeBuffer[64];
+        system_time_set = true;
+        strftime(timeBuffer, sizeof(timeBuffer), "%F %T", &timeinfo);
+        Serial.println(&timeinfo, "%F %T");
     } else {
-      log_w("getLocalTime Fail");
+        log_w("getLocalTime Fail");
+        perror("getLocalTime");
     }
   }
-
 
   else if (cmd_args.get(0) == SETDATE_CMD) {
     struct tm tm_info = {0}; 

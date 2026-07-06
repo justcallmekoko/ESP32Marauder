@@ -1668,6 +1668,9 @@ void MenuFunctions::RunSetup()
   saveATsMenu.name = "Save Airtags";
   loadATsMenu.name = "Load Airtags";
 
+  adminMenu.list = new LinkedList<MenuNode>();
+  adminSubMenu.list = new LinkedList<MenuNode>();
+
   bluetoothSnifferMenu.name = text_table1[23];
   bluetoothAttackMenu.name = "Bluetooth Attacks";
   generateSSIDsMenu.name = text_table1[27];
@@ -1699,6 +1702,8 @@ void MenuFunctions::RunSetup()
     gpsPOIMenu.name = "GPS POI";
   #endif
 
+  adminMenu.name = "Admin Tools";
+  adminSubMenu.name = "-";
   foxHuntMenu.name = "Fox Hunt";
 
   // Build Main Menu
@@ -2591,11 +2596,27 @@ void MenuFunctions::RunSetup()
     wifi_scan_obj.StartScan(WIFI_SCAN_OFF, TFT_RED);
     this->changeMenu(current_menu, true);
   });
-  #ifdef HAS_RTC
     this->addNodes(&wifiGeneralMenu, "Sync RTC with WiFi", TFTLIME, NULL, 0, []() {
-      rtc_obj.sync_rtc_ntp();
+
+      #ifdef HAS_RTC
+        log_d("rtc_obj.supported %d", rtc_obj.supported);
+        if(rtc_obj.supported) {
+          rtc_obj.sync_rtc_ntp();
+        } else
+      #endif //  HAS_RTC
+        configTime(GMTOFFSET_SEC, DAYLIGHTOFFSET_SEC, "pool.ntp.org", "time.nist.gov", "1.pool.ntp.org");
+        struct tm timeinfo;
+        if (getLocalTime(&timeinfo)) {
+          char timeBuffer[64];
+          system_time_set = true;
+          strftime(timeBuffer, sizeof(timeBuffer), "%F %T", &timeinfo);
+          display_obj.tft.drawCentreString(timeBuffer, TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+          Serial.println(&timeinfo, "%F %T");
+        } else {
+          display_obj.tft.drawCentreString("Connection Failed", TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+          log_d("getLocalTime Fail");
+       }
     });
-  #endif
 
   // Menu for generating and setting MAC addrs for AP and STA
   setMacMenu.parentMenu = &wifiGeneralMenu;
@@ -2988,6 +3009,68 @@ void MenuFunctions::RunSetup()
   this->addNodes(&loadATsMenu, text09, TFTLIGHTGREY, 0, [this]() {
     this->changeMenu(loadATsMenu.parentMenu, true);
   });
+
+
+  // Admin Menu
+  // TFT_GREENYELLOW
+  this->addNodes(&deviceMenu, "Admin Tools", TFTPINK, SD_UPDATE, [this]() {
+    this->changeMenu(&adminMenu, true);
+  });
+  adminMenu.parentMenu = &deviceMenu;
+
+  this->addNodes(&adminMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(adminMenu.parentMenu, true);
+  });
+
+#if defined(HAS_SD) || defined(USE_SD)
+  this->addNodes(&adminMenu, "Rescan SD", TFTPINK, SD_UPDATE, [this]() {
+    this->changeMenu(&adminMenu, true);
+    sd_obj.initSD();
+  });
+#endif
+    adminSubMenu.parentMenu = &adminMenu;
+    this->addNodes(&adminSubMenu, text09, TFTLIGHTGREY, 0, [this]() {
+      this->changeMenu(adminSubMenu.parentMenu, true);
+    });
+  #ifdef HAS_GPS
+    if ( !gps_obj.gps_enabled)
+      this->addNodes(&saveFileMenu, "Probe GPS", TFTSKYBLUE, SD_UPDATE, [this]() {
+        gps_obj.begin();
+      });
+  #endif //  HAS_GPS
+
+      this->addNodes(&adminMenu, "Sync RTC with WiFi", TFTPINK, SETTINGS, [this]() {
+        this->changeMenu(&adminSubMenu, true);
+        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+
+        #ifdef HAS_RTC
+          log_d("rtc_obj.supported %d", rtc_obj.supported);
+          if(rtc_obj.supported) {
+            rtc_obj.sync_rtc_ntp();
+          } else
+        #endif //  HAS_RTC
+          configTime(GMTOFFSET_SEC, DAYLIGHTOFFSET_SEC, "pool.ntp.org", "time.nist.gov", "1.pool.ntp.org");
+
+        struct tm timeinfo;
+        if (getLocalTime(&timeinfo)) {
+          char timeBuffer[64];
+          system_time_set = true;
+          strftime(timeBuffer, sizeof(timeBuffer), "%F %T", &timeinfo);
+          display_obj.tft.drawCentreString(timeBuffer, TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+          Serial.println(&timeinfo, "%F %T");
+        } else {
+          display_obj.tft.drawCentreString("Connection Failed", TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+          log_d("getLocalTime Fail");
+       }
+
+    });
+
+    this->addNodes(&adminMenu, "Reset Reasion", TFTMAGENTA, SETTINGS, [this]() {
+      this->changeMenu(&adminSubMenu, true);
+        display_obj.tft.setTextColor(TFT_SKYBLUE, TFT_BLACK);
+        display_obj.tft.drawCentreString(resetReasonName(), TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+        print_reset_reason();
+    });
 
   // GPS Menu
   #ifdef HAS_GPS
