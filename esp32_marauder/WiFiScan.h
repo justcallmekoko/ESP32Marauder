@@ -168,6 +168,15 @@
 
 #define BASE_MULTIPLIER 4
 
+// Defensive fallback for BANNER_TIME. configs.h (included above) already defines
+// it for EVERY board -- per screen-board, and via GRAPH_REFRESH for screenless
+// boards -- so this normally never fires. It only guards a future board that
+// forgets to define it, now that the analyzer loops reference BANNER_TIME
+// unconditionally (headless streaming).
+#ifndef BANNER_TIME
+  #define BANNER_TIME 100
+#endif
+
 #define ANALYZER_NAME_REFRESH 100 // Number of events to refresh the name
 
 // PineScan and Multi SSID

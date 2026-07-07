@@ -43,6 +43,10 @@
 
   #define MARAUDER_VERSION "v1.13.0"
 
+  // JSON serial protocol version (reported by the `jsoninfo` command). Bump
+  // when the machine-readable serial protocol changes.
+  #define MARAUDER_JSON_PROTO 1
+
   #define GRAPH_REFRESH   100
 
   #define TRACK_EVICT_SEC 90 // Seconds before marking tracked MAC as tombstone
