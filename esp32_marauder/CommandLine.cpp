@@ -1740,6 +1740,29 @@ void CommandLine::runCommand(String input) {
     }
   }
 
+    else if (cmd_args.get(0) == RESET_REASON_CMD) {
+      extern void print_reset_reason();
+      print_reset_reason();
+    }
+
+  else if (cmd_args.get(0) == WIFI_TXPWR_CMD) {
+    int8_t txpower = 20;
+    extern int8_t wifi_power;
+    if (cmd_args.size() > 1) {
+        txpower = cmd_args.get(1).toInt();
+    }
+    if (txpower < 8 || txpower > 84) {
+        Serial.println(F("Invalid level: use X value between 8>84"));
+    }
+
+    wifi_power = txpower;
+    esp_wifi_set_max_tx_power(txpower);
+
+    if (txpower == 80) {
+        Serial.println(F("Set to default level: 80 (20dBm)"));
+    }
+  }
+
   // SSID stuff
   else if (cmd_args.get(0) == SSID_CMD) {
     int add_sw = this->argSearch(&cmd_args, "-a");

@@ -227,7 +227,8 @@
 
   #ifdef MARAUDER_REV_FEATHER
     //#define FLIPPER_ZERO_HAT
-    //#define HAS_BATTERY
+    #define HAS_BATTERY
+      #define HAS_MAX1704X
     //#define HAS_BT
     #define HAS_MINI_KB
     #define HAS_BUTTONS
@@ -2485,7 +2486,7 @@
     #endif
 
     #ifdef MARAUDER_REV_FEATHER
-      #define SD_CS 5
+      #define SD_CS 10     // Adalogger
     #endif
 
     #ifdef MARAUDER_M5STICKC
@@ -2558,6 +2559,7 @@
   #define TFTDARKGREY  16
   #define TFTSKYBLUE   17
   #define TFTLIME      18
+  #define TFTPINK      18
   //// END SPACE SAVING COLORS
 
   #define TFT_FARTGRAY 0x528a
