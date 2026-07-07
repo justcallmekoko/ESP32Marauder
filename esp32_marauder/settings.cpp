@@ -32,6 +32,12 @@ void Settings::_buildCache() {
       _cache.ClientSSID = json["Settings"][i]["value"].as<String>();
     else if (strcmp(name, "ClientPW") == 0)
       _cache.ClientPW = json["Settings"][i]["value"].as<String>();
+    else if (strcmp(name, "wu") == 0)
+      _cache.wu = json["Settings"][i]["value"].as<String>();
+    else if (strcmp(name, "wt") == 0)
+      _cache.wt = json["Settings"][i]["value"].as<String>();
+    else if (strcmp(name, WDG_KEY_NAME) == 0)
+      _cache.wdg_key = json["Settings"][i]["value"].as<String>();
   }
 }
 
@@ -107,9 +113,14 @@ template <> int Settings::loadSetting<int>(const char* key) {
 template <> String Settings::loadSetting<String>(const char* key) {
   if (strcmp(key, "ClientSSID") == 0)
     return _cache.ClientSSID;
-
   if (strcmp(key, "ClientPW") == 0)
     return _cache.ClientPW;
+    if (strcmp(key, "wu") == 0)
+    return _cache.wu;
+  if (strcmp(key, "wt") == 0)
+    return _cache.wt;
+  if (strcmp(key, WDG_KEY_NAME) == 0)
+    return _cache.wdg_key;
 
   // Unknown String key: fall back to JSON so the setting can be auto-created.
   DynamicJsonDocument json(JSON_SETTING_SIZE);
@@ -302,6 +313,12 @@ template <> bool Settings::saveSetting<bool>(const char* key, String value) {
         _cache.ClientSSID = value;
       else if (strcmp(key, "ClientPW") == 0)
         _cache.ClientPW = value;
+      else if (strcmp(key, "wu") == 0)
+        _cache.wu = value;
+      else if (strcmp(key, "wt") == 0)
+        _cache.wt = value;
+      else if (strcmp(key, WDG_KEY_NAME) == 0)
+        _cache.wdg_key = value;
 
       this->printJsonSettings(settings_string);
 

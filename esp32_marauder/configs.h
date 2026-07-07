@@ -566,7 +566,7 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     //#define HAS_SIMPLEX_DISPLAY
-    //#define HAS_DIRECT_UPLOAD
+    #define HAS_DIRECT_UPLOAD
   #endif
 
   #if defined(MARAUDER_M5_NANO_C6)

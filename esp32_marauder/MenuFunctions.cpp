@@ -2616,12 +2616,10 @@ void MenuFunctions::RunSetup()
         display_obj.tft.println("WiFi Credentials Empty.");
         display_obj.tft.println("Returning...");
         display_obj.tft.setTextWrap(false);
-
-        delay(2000);
-
-        this->changeMenu(&uploadLogsMenu, true);
       }
       else {
+        display_obj.clearScreen();
+        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2);
         if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
           display_obj.clearScreen();
           display_obj.tft.setTextWrap(true);
@@ -2630,10 +2628,6 @@ void MenuFunctions::RunSetup()
           display_obj.tft.println("Could not connect to WiFi.");
           display_obj.tft.println("Returning...");
           display_obj.tft.setTextWrap(false);
-
-          delay(2000);
-
-          this->changeMenu(&uploadLogsMenu, true);
         }
         else {
           delay(1000);
@@ -2642,13 +2636,16 @@ void MenuFunctions::RunSetup()
               Serial.println("Uploading " + sd_obj.sd_files->get(i) + "...");
               if (wifi_scan_obj.uploadFile("/" + sd_obj.sd_files->get(i), true, WIGLE_UPLOAD)) {
                 display_obj.clearScreen();
-                display_obj.tft.drawCentreString("WiGLE OK", TFT_WIDTH / 2, TFT_WIDTH / 2, 2);
+                display_obj.showCenterText("WiGLE OK", TFT_HEIGHT / 2);
               } else {
                 display_obj.clearScreen();
-                display_obj.tft.drawCentreString("WiGLE failed", TFT_WIDTH / 2, TFT_WIDTH / 2, 2);
+                display_obj.showCenterText("WiGLE failed", TFT_HEIGHT / 2);
               }
             }
           }
+          WiFi.disconnect(true);
+          delay(100);
+          wifi_scan_obj.StartScan(WIFI_SCAN_OFF, TFT_RED);
         }
       }
 
@@ -2668,12 +2665,10 @@ void MenuFunctions::RunSetup()
         display_obj.tft.println("WiFi Credentials Empty.");
         display_obj.tft.println("Returning...");
         display_obj.tft.setTextWrap(false);
-
-        delay(2000);
-
-        this->changeMenu(&uploadLogsMenu, true);
       }
       else {
+        display_obj.clearScreen();
+        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2);
         if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
           display_obj.clearScreen();
           display_obj.tft.setTextWrap(true);
@@ -2682,10 +2677,6 @@ void MenuFunctions::RunSetup()
           display_obj.tft.println("Could not connect to WiFi.");
           display_obj.tft.println("Returning...");
           display_obj.tft.setTextWrap(false);
-
-          delay(2000);
-
-          this->changeMenu(&uploadLogsMenu, true);
         }
         else {
           delay(1000);
@@ -2694,13 +2685,16 @@ void MenuFunctions::RunSetup()
               Serial.println("Uploading " + sd_obj.sd_files->get(i) + "...");
               if (wifi_scan_obj.uploadFile("/" + sd_obj.sd_files->get(i), true, WDG_UPLOAD)) {
                 display_obj.clearScreen();
-                display_obj.tft.drawCentreString("WDG OK", TFT_WIDTH / 2, TFT_WIDTH / 2, 2);
+                display_obj.showCenterText("WDG OK", TFT_HEIGHT / 2);
               } else {
                 display_obj.clearScreen();
-                display_obj.tft.drawCentreString("WDG failed", TFT_WIDTH / 2, TFT_WIDTH / 2, 2);
+                display_obj.showCenterText("WDG failed", TFT_HEIGHT / 2);
               }
             }
           }
+          WiFi.disconnect(true);
+          delay(100);
+          wifi_scan_obj.StartScan(WIFI_SCAN_OFF, TFT_RED);
         }
       }
 
@@ -2720,12 +2714,10 @@ void MenuFunctions::RunSetup()
         display_obj.tft.println("WiFi Credentials Empty.");
         display_obj.tft.println("Returning...");
         display_obj.tft.setTextWrap(false);
-
-        delay(2000);
-
-        this->changeMenu(&uploadLogsMenu, true);
       }
       else {
+        display_obj.clearScreen();
+        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2);
         if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
           display_obj.clearScreen();
           display_obj.tft.setTextWrap(true);
@@ -2734,10 +2726,6 @@ void MenuFunctions::RunSetup()
           display_obj.tft.println("Could not connect to WiFi.");
           display_obj.tft.println("Returning...");
           display_obj.tft.setTextWrap(false);
-
-          delay(2000);
-
-          this->changeMenu(&uploadLogsMenu, true);
         }
         else {
           delay(1000);
@@ -2746,13 +2734,16 @@ void MenuFunctions::RunSetup()
               Serial.println("Uploading " + sd_obj.sd_files->get(i) + "...");
               if (wifi_scan_obj.uploadFile("/" + sd_obj.sd_files->get(i), true, BOTH_UPLOAD)) {
                 display_obj.clearScreen();
-                display_obj.tft.drawCentreString("Upload OK", TFT_WIDTH / 2, TFT_WIDTH / 2, 2);
+                display_obj.showCenterText("Upload OK", TFT_HEIGHT / 2);
               } else {
                 display_obj.clearScreen();
-                display_obj.tft.drawCentreString("Upload failed", TFT_WIDTH / 2, TFT_WIDTH / 2, 2);
+                display_obj.showCenterText("Upload failed", TFT_HEIGHT / 2);
               }
             }
           }
+          WiFi.disconnect(true);
+          delay(100);
+          wifi_scan_obj.StartScan(WIFI_SCAN_OFF, TFT_RED);
         }
       }
 
@@ -2801,20 +2792,19 @@ void MenuFunctions::RunSetup()
       String ssid = settings_obj.loadSetting<String>("ClientSSID");
       String pw = settings_obj.loadSetting<String>("ClientPW");
 
+      display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+
       if ((ssid == "") && (pw == "")) {
         display_obj.clearScreen();
         display_obj.tft.setTextWrap(true);
         display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
         display_obj.tft.println("WiFi Credentials Empty.");
         display_obj.tft.println("Returning...");
         display_obj.tft.setTextWrap(false);
-
-        delay(2000);
-
-        this->changeMenu(&uploadLogsMenu, true);
       }
       else {
+        display_obj.clearScreen();
+        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2, true);
         if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
           display_obj.clearScreen();
           display_obj.tft.setTextWrap(true);
@@ -2823,21 +2813,21 @@ void MenuFunctions::RunSetup()
           display_obj.tft.println("Could not connect to WiFi.");
           display_obj.tft.println("Returning...");
           display_obj.tft.setTextWrap(false);
-
-          delay(2000);
-
-          this->changeMenu(&uploadLogsMenu, true);
         }
         else {
           delay(1000);
           Serial.println("Uploading " + sd_obj.selected_file_name + "...");
           if (wifi_scan_obj.uploadFile("/" + sd_obj.selected_file_name, true, WIGLE_UPLOAD)) {
             display_obj.clearScreen();
-            display_obj.tft.drawCentreString("WiGLE OK", TFT_WIDTH / 2, TFT_WIDTH / 2, 2);
+            display_obj.showCenterText("WiGLE OK", TFT_HEIGHT / 2, true);
           } else {
             display_obj.clearScreen();
-            display_obj.tft.drawCentreString("WiGLE failed", TFT_WIDTH / 2, TFT_WIDTH / 2, 2);
+            display_obj.showCenterText("WiGLE failed", TFT_HEIGHT / 2, true);
           }
+
+          WiFi.disconnect(true);
+          delay(100);
+          wifi_scan_obj.StartScan(WIFI_SCAN_OFF, TFT_RED);
         }
       }
 
@@ -2849,43 +2839,41 @@ void MenuFunctions::RunSetup()
       String ssid = settings_obj.loadSetting<String>("ClientSSID");
       String pw = settings_obj.loadSetting<String>("ClientPW");
 
+      display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+
       if ((ssid == "") && (pw == "")) {
         display_obj.clearScreen();
         display_obj.tft.setTextWrap(true);
         display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
         display_obj.tft.println("WiFi Credentials Empty.");
         display_obj.tft.println("Returning...");
         display_obj.tft.setTextWrap(false);
-
-        delay(2000);
-
-        this->changeMenu(&uploadLogsMenu, true);
       }
       else {
+        display_obj.clearScreen();
+        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2, true);
         if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
           display_obj.clearScreen();
           display_obj.tft.setTextWrap(true);
           display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-          display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
           display_obj.tft.println("Could not connect to WiFi.");
           display_obj.tft.println("Returning...");
           display_obj.tft.setTextWrap(false);
-
-          delay(2000);
-
-          this->changeMenu(&uploadLogsMenu, true);
         }
         else {
           delay(1000);
           Serial.println("Uploading " + sd_obj.selected_file_name + "...");
           if (wifi_scan_obj.uploadFile("/" + sd_obj.selected_file_name, true, WDG_UPLOAD)) {
             display_obj.clearScreen();
-            display_obj.tft.drawCentreString("WDG OK", TFT_WIDTH / 2, TFT_WIDTH / 2, 2);
+            display_obj.showCenterText("WDG OK", TFT_HEIGHT / 2, true);
           } else {
             display_obj.clearScreen();
-            display_obj.tft.drawCentreString("WDG failed", TFT_WIDTH / 2, TFT_WIDTH / 2, 2);
+            display_obj.showCenterText("WDG failed", TFT_HEIGHT / 2, true);
           }
+
+          WiFi.disconnect(true);
+        delay(100);
+        wifi_scan_obj.StartScan(WIFI_SCAN_OFF, TFT_RED);
         }
       }
 
@@ -2897,43 +2885,41 @@ void MenuFunctions::RunSetup()
       String ssid = settings_obj.loadSetting<String>("ClientSSID");
       String pw = settings_obj.loadSetting<String>("ClientPW");
 
+      display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+
       if ((ssid == "") && (pw == "")) {
         display_obj.clearScreen();
         display_obj.tft.setTextWrap(true);
         display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
         display_obj.tft.println("WiFi Credentials Empty.");
         display_obj.tft.println("Returning...");
         display_obj.tft.setTextWrap(false);
-
-        delay(2000);
-
-        this->changeMenu(&uploadLogsMenu, true);
       }
       else {
+        display_obj.clearScreen();
+        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2, true);
         if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
           display_obj.clearScreen();
           display_obj.tft.setTextWrap(true);
           display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-          display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
           display_obj.tft.println("Could not connect to WiFi.");
           display_obj.tft.println("Returning...");
           display_obj.tft.setTextWrap(false);
-
-          delay(2000);
-
-          this->changeMenu(&uploadLogsMenu, true);
         }
         else {
           delay(1000);
           Serial.println("Uploading " + sd_obj.selected_file_name + "...");
           if (wifi_scan_obj.uploadFile("/" + sd_obj.selected_file_name, true, BOTH_UPLOAD)) {
             display_obj.clearScreen();
-            display_obj.tft.drawCentreString("Upload OK", TFT_WIDTH / 2, TFT_WIDTH / 2, 2);
+            display_obj.showCenterText("Upload OK", TFT_HEIGHT / 2, true);
           } else {
             display_obj.clearScreen();
-            display_obj.tft.drawCentreString("Upload failed", TFT_WIDTH / 2, TFT_WIDTH / 2, 2);
+            display_obj.showCenterText("Upload failed", TFT_HEIGHT / 2, true);
           }
+
+          WiFi.disconnect(true);
+          delay(100);
+          wifi_scan_obj.StartScan(WIFI_SCAN_OFF, TFT_RED);
         }
       }
 
