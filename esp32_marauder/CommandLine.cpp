@@ -517,8 +517,13 @@ void CommandLine::runCommand(String input) {
         result = settings_obj.saveSetting<bool>(setting_name.c_str(), true);
       else if (da_sw != -1)
         result = settings_obj.saveSetting<bool>(setting_name.c_str(), false);
-      else
-        return;
+      else {
+        // Set a String-valued setting, e.g. `settings -s wu <api_name>`
+        String setting_value = cmd_args.get(ss_sw + 2);
+        // Ensure the key exists first (auto-creates empty String keys like wu/wt)
+        settings_obj.loadSetting<String>(setting_name.c_str());
+        result = settings_obj.saveSetting<bool>(setting_name.c_str(), setting_value);
+      }
 
       if (!result) {
         Serial.print(F("Could not successfully update setting \""));
