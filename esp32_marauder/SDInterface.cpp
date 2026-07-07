@@ -27,7 +27,7 @@ bool SDInterface::initSD() {
       // NOTE SD is namespace alias for SD_MMC
       // SD_MMC call here to avoid confusion
       // place before HAS_CYD_TOUCH ifdef 
-      log_d("SD_MMC using pins: SD_SCLK=%d SD_MOSI=%d SD_MISO=%d\n", SD_SCK, SD_MOSI, SD_MISO);
+      log_d("SD_MMC using pins: SD_SCLK=%d SD_MOSI=%d SD_MISO=%d", SD_SCK, SD_MOSI, SD_MISO);
       SD_MMC.setPins(SD_SCK, SD_MOSI, SD_MISO, SD_DATA1, SD_DATA2, SD_DATA3);
       if (!SD_MMC.begin("/sdcard", SD_MODE1BIT)) {
     #elif (defined(MARAUDER_M5STICKC)) || (defined(HAS_CYD_TOUCH)) || (defined(MARAUDER_CARDPUTER)) || (defined(MARAUDER_CARDPUTER_ADV))
@@ -53,7 +53,7 @@ bool SDInterface::initSD() {
         this->spiExt = new SPIClass(FSPI);
       #endif
       Serial.println(F("Using external SPI configuration..."));
-      Serial.printf("SPI_SCK=%d SPI_MISO=%d SPI_MOSI=%d SD_CS=%d\n", SPI_SCK, SPI_MISO, SPI_MOSI, SD_CS);
+      log_d("SPI_SCK=%d SPI_MISO=%d SPI_MOSI=%d SD_CS=%d", SPI_SCK, SPI_MISO, SPI_MOSI, SD_CS);
       this->spiExt->begin(SPI_SCK, SPI_MISO, SPI_MOSI, SD_CS);
       delay(10);
 
