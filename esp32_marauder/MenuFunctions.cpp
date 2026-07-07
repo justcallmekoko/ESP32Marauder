@@ -1494,6 +1494,51 @@ bool MenuFunctions::isKeyPressed(char c)
 }
 #endif
 
+#ifdef HAS_DIRECT_UPLOAD
+  void MenuFunctions::buildUploadFileMenu() {
+    if (sd_obj.supported) {
+      this->setupSDFileList();
+
+      uploadLogsMenu.list->clear();
+      delete uploadLogsMenu.list;
+      uploadLogsMenu.list = new LinkedList<MenuNode>();
+      uploadLogsMenu.name = "Logs";
+
+      uploadLogsMenu.parentMenu = &wifiGeneralMenu;
+
+      this->addNodes(&uploadLogsMenu, "Back", TFTLIGHTGREY, 0, [this]() {
+        this->changeMenu(uploadLogsMenu.parentMenu, true);
+      });
+
+      this->addNodes(&uploadLogsMenu, "Delete Wardrive Logs", TFTORANGE, 0, [this]() {
+        this->changeMenu(&deleteAllMenu, true);
+      });
+
+      this->addNodes(&uploadLogsMenu, "Upload All", TFTGREEN, 0, [this]() {
+        this->changeMenu(&uploadAllMenu, true);
+        
+      });
+
+      for (int i = 0; i < sd_obj.sd_files->size(); i++) {
+        File current_file = sd_obj.getFile("/" + sd_obj.sd_files->get(i));
+        if (sd_obj.sd_files->get(i).startsWith("wardrive_") || sd_obj.sd_files->get(i).startsWith("wigle-")) {
+          if (!sd_obj.sd_files->get(i).endsWith(".wdg") && !sd_obj.sd_files->get(i).endsWith(".wigle")) {
+            this->addNodes(&uploadLogsMenu, sd_obj.sd_files->get(i).c_str(), TFTCYAN, 0, [this, i]() {
+              sd_obj.selected_file_name = sd_obj.sd_files->get(i);
+              Serial.println(sd_obj.sd_files->get(i) + " selected");
+              this->changeMenu(&actionMenu, true);
+            });
+          }
+        }
+      }
+
+      Serial.println("Built SD file menu with " + (String)sd_obj.sd_files->size() + " files");
+    } else {
+      Serial.println("SD Card not detected. Skipping menu creation...");
+    }
+  }
+#endif
+
 // Function to build the menus
 void MenuFunctions::RunSetup()
 {
@@ -1567,6 +1612,13 @@ void MenuFunctions::RunSetup()
   clearAPsMenu.list = new LinkedList<MenuNode>();
   saveFileMenu.list = new LinkedList<MenuNode>();
 
+  #ifdef HAS_DIRECT_UPLOAD
+    uploadLogsMenu.list = new LinkedList<MenuNode>();
+    uploadAllMenu.list = new LinkedList<MenuNode>();
+    deleteAllMenu.list = new LinkedList<MenuNode>();
+    actionMenu.list = new LinkedList<MenuNode>();
+  #endif
+
   saveSSIDsMenu.list = new LinkedList<MenuNode>();
   loadSSIDsMenu.list = new LinkedList<MenuNode>();
   saveAPsMenu.list = new LinkedList<MenuNode>();
@@ -1616,6 +1668,14 @@ void MenuFunctions::RunSetup()
   setMacMenu.name = "Set MACs";
   genAPMacMenu.name = "Generate AP MAC";
   wifiStationMenu.name = "Select Stations";
+
+  #ifdef HAS_DIRECT_UPLOAD
+    uploadLogsMenu.name = "Upload Logs";
+    uploadAllMenu.name = "Upload All?";
+    deleteAllMenu.name = "Delete All?";
+    actionMenu.name = "Destination";
+  #endif
+
   #ifdef HAS_GPS
     gpsMenu.name = "GPS"; 
     gpsInfoMenu.name = "GPS Data";
@@ -2528,6 +2588,348 @@ void MenuFunctions::RunSetup()
     wifi_scan_obj.StartScan(WIFI_SCAN_OFF, TFT_RED);
     this->changeMenu(current_menu, true);
   });
+  
+  #ifdef HAS_DIRECT_UPLOAD
+    this->addNodes(&wifiGeneralMenu, "Upload Wardrive Logs", TFTGREEN, 0, [this]() {
+      display_obj.clearScreen();
+      display_obj.tft.setTextWrap(false);
+      display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+      display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+      display_obj.tft.println("Loading...");
+
+      this->buildUploadFileMenu();
+
+      this->changeMenu(&uploadLogsMenu, true);
+    });
+
+    uploadAllMenu.parentMenu = &uploadLogsMenu;
+    this->addNodes(&uploadAllMenu, text09, TFTLIGHTGREY, 0, [this]() {
+      this->changeMenu(uploadAllMenu.parentMenu, true);
+    });
+    this->addNodes(&uploadAllMenu, "WiGLE", TFTLIGHTGREY, 0, [this]() {
+      String ssid = settings_obj.loadSetting<String>("ClientSSID");
+      String pw = settings_obj.loadSetting<String>("ClientPW");
+
+      if ((ssid == "") && (pw == "")) {
+        display_obj.clearScreen();
+        display_obj.tft.setTextWrap(true);
+        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+        display_obj.tft.println("WiFi Credentials Empty.");
+        display_obj.tft.println("Returning...");
+        display_obj.tft.setTextWrap(false);
+      }
+      else {
+        display_obj.clearScreen();
+        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2);
+        if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
+          display_obj.clearScreen();
+          display_obj.tft.setTextWrap(true);
+          display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+          display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+          display_obj.tft.println("Could not connect to WiFi.");
+          display_obj.tft.println("Returning...");
+          display_obj.tft.setTextWrap(false);
+        }
+        else {
+          delay(1000);
+          for (int i = 0; i < sd_obj.sd_files->size(); i++) {
+            if (sd_obj.sd_files->get(i).startsWith("wardrive_") || sd_obj.sd_files->get(i).startsWith("wigle-")) {
+              Serial.println("Uploading " + sd_obj.sd_files->get(i) + "...");
+              if (wifi_scan_obj.uploadFile("/" + sd_obj.sd_files->get(i), true, WIGLE_UPLOAD)) {
+                display_obj.clearScreen();
+                display_obj.showCenterText("WiGLE OK", TFT_HEIGHT / 2);
+              } else {
+                display_obj.clearScreen();
+                display_obj.showCenterText("WiGLE failed", TFT_HEIGHT / 2);
+              }
+            }
+          }
+          WiFi.disconnect(true);
+          delay(100);
+          wifi_scan_obj.StartScan(WIFI_SCAN_OFF, TFT_RED);
+        }
+      }
+
+      delay(2000);
+
+      this->changeMenu(uploadAllMenu.parentMenu, true);
+    });
+    this->addNodes(&uploadAllMenu, "WDGWars", TFTLIGHTGREY, 0, [this]() {
+      String ssid = settings_obj.loadSetting<String>("ClientSSID");
+      String pw = settings_obj.loadSetting<String>("ClientPW");
+
+      if ((ssid == "") && (pw == "")) {
+        display_obj.clearScreen();
+        display_obj.tft.setTextWrap(true);
+        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+        display_obj.tft.println("WiFi Credentials Empty.");
+        display_obj.tft.println("Returning...");
+        display_obj.tft.setTextWrap(false);
+      }
+      else {
+        display_obj.clearScreen();
+        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2);
+        if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
+          display_obj.clearScreen();
+          display_obj.tft.setTextWrap(true);
+          display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+          display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+          display_obj.tft.println("Could not connect to WiFi.");
+          display_obj.tft.println("Returning...");
+          display_obj.tft.setTextWrap(false);
+        }
+        else {
+          delay(1000);
+          for (int i = 0; i < sd_obj.sd_files->size(); i++) {
+            if (sd_obj.sd_files->get(i).startsWith("wardrive_") || sd_obj.sd_files->get(i).startsWith("wigle-")) {
+              Serial.println("Uploading " + sd_obj.sd_files->get(i) + "...");
+              if (wifi_scan_obj.uploadFile("/" + sd_obj.sd_files->get(i), true, WDG_UPLOAD)) {
+                display_obj.clearScreen();
+                display_obj.showCenterText("WDG OK", TFT_HEIGHT / 2);
+              } else {
+                display_obj.clearScreen();
+                display_obj.showCenterText("WDG failed", TFT_HEIGHT / 2);
+              }
+            }
+          }
+          WiFi.disconnect(true);
+          delay(100);
+          wifi_scan_obj.StartScan(WIFI_SCAN_OFF, TFT_RED);
+        }
+      }
+
+      delay(2000);
+
+      this->changeMenu(uploadAllMenu.parentMenu, true);
+    });
+    this->addNodes(&uploadAllMenu, "Both", TFTLIGHTGREY, 0, [this]() {
+      String ssid = settings_obj.loadSetting<String>("ClientSSID");
+      String pw = settings_obj.loadSetting<String>("ClientPW");
+
+      if ((ssid == "") && (pw == "")) {
+        display_obj.clearScreen();
+        display_obj.tft.setTextWrap(true);
+        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+        display_obj.tft.println("WiFi Credentials Empty.");
+        display_obj.tft.println("Returning...");
+        display_obj.tft.setTextWrap(false);
+      }
+      else {
+        display_obj.clearScreen();
+        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2);
+        if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
+          display_obj.clearScreen();
+          display_obj.tft.setTextWrap(true);
+          display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+          display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+          display_obj.tft.println("Could not connect to WiFi.");
+          display_obj.tft.println("Returning...");
+          display_obj.tft.setTextWrap(false);
+        }
+        else {
+          delay(1000);
+          for (int i = 0; i < sd_obj.sd_files->size(); i++) {
+            if (sd_obj.sd_files->get(i).startsWith("wardrive_") || sd_obj.sd_files->get(i).startsWith("wigle-")) {
+              Serial.println("Uploading " + sd_obj.sd_files->get(i) + "...");
+              if (wifi_scan_obj.uploadFile("/" + sd_obj.sd_files->get(i), true, BOTH_UPLOAD)) {
+                display_obj.clearScreen();
+                display_obj.showCenterText("Upload OK", TFT_HEIGHT / 2);
+              } else {
+                display_obj.clearScreen();
+                display_obj.showCenterText("Upload failed", TFT_HEIGHT / 2);
+              }
+            }
+          }
+          WiFi.disconnect(true);
+          delay(100);
+          wifi_scan_obj.StartScan(WIFI_SCAN_OFF, TFT_RED);
+        }
+      }
+
+      delay(2000);
+
+      this->changeMenu(uploadAllMenu.parentMenu, true);
+    });
+
+    deleteAllMenu.parentMenu = &uploadLogsMenu;
+    this->addNodes(&deleteAllMenu, "No", TFTLIGHTGREY, 0, [this]() {
+      this->changeMenu(deleteAllMenu.parentMenu, true);
+    });
+    this->addNodes(&deleteAllMenu, "Yes", TFTRED, 0, [this]() {
+      display_obj.clearScreen();
+
+      display_obj.tft.drawCentreString("Deleting Logs...",TFT_WIDTH / 2, TFT_HEIGHT / 2, 2);
+
+      for (int i = 0; i < sd_obj.sd_files->size(); i++) {
+        if (sd_obj.sd_files->get(i).startsWith("wardrive_") || sd_obj.sd_files->get(i).startsWith("wigle-")) {
+          if (sd_obj.removeFile("/" + sd_obj.sd_files->get(i))) {
+            Serial.println("Removed file: " + sd_obj.sd_files->get(i));
+            sd_obj.removeFile("/" + sd_obj.sd_files->get(i) + ".wdg");
+            sd_obj.removeFile("/" + sd_obj.sd_files->get(i) + ".wigle");
+          }
+          else {
+            Serial.println("Could not remove file: " + sd_obj.sd_files->get(i));
+          }
+        }
+      }
+      display_obj.clearScreen();
+
+      display_obj.tft.drawCentreString("Logs removed",TFT_WIDTH / 2, TFT_HEIGHT / 2, 2);
+
+      delay(2000);
+
+      this->buildUploadFileMenu();
+
+      this->changeMenu(&uploadLogsMenu, true);
+    });
+
+    actionMenu.parentMenu = &uploadLogsMenu;
+    this->addNodes(&actionMenu, text09, TFTLIGHTGREY, 0, [this]() {
+      this->changeMenu(actionMenu.parentMenu, true);
+    });
+    this->addNodes(&actionMenu, "WiGLE", TFTLIGHTGREY, 0, [this]() {
+      String ssid = settings_obj.loadSetting<String>("ClientSSID");
+      String pw = settings_obj.loadSetting<String>("ClientPW");
+
+      display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+
+      if ((ssid == "") && (pw == "")) {
+        display_obj.clearScreen();
+        display_obj.tft.setTextWrap(true);
+        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+        display_obj.tft.println("WiFi Credentials Empty.");
+        display_obj.tft.println("Returning...");
+        display_obj.tft.setTextWrap(false);
+      }
+      else {
+        display_obj.clearScreen();
+        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2, true);
+        if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
+          display_obj.clearScreen();
+          display_obj.tft.setTextWrap(true);
+          display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+          display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+          display_obj.tft.println("Could not connect to WiFi.");
+          display_obj.tft.println("Returning...");
+          display_obj.tft.setTextWrap(false);
+        }
+        else {
+          delay(1000);
+          Serial.println("Uploading " + sd_obj.selected_file_name + "...");
+          if (wifi_scan_obj.uploadFile("/" + sd_obj.selected_file_name, true, WIGLE_UPLOAD)) {
+            display_obj.clearScreen();
+            display_obj.showCenterText("WiGLE OK", TFT_HEIGHT / 2, true);
+          } else {
+            display_obj.clearScreen();
+            display_obj.showCenterText("WiGLE failed", TFT_HEIGHT / 2, true);
+          }
+
+          WiFi.disconnect(true);
+          delay(100);
+          wifi_scan_obj.StartScan(WIFI_SCAN_OFF, TFT_RED);
+        }
+      }
+
+      delay(2000);
+
+      this->changeMenu(&actionMenu, true);
+    });
+    this->addNodes(&actionMenu, "WDGWars", TFTLIGHTGREY, 0, [this]() {
+      String ssid = settings_obj.loadSetting<String>("ClientSSID");
+      String pw = settings_obj.loadSetting<String>("ClientPW");
+
+      display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+
+      if ((ssid == "") && (pw == "")) {
+        display_obj.clearScreen();
+        display_obj.tft.setTextWrap(true);
+        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+        display_obj.tft.println("WiFi Credentials Empty.");
+        display_obj.tft.println("Returning...");
+        display_obj.tft.setTextWrap(false);
+      }
+      else {
+        display_obj.clearScreen();
+        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2, true);
+        if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
+          display_obj.clearScreen();
+          display_obj.tft.setTextWrap(true);
+          display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+          display_obj.tft.println("Could not connect to WiFi.");
+          display_obj.tft.println("Returning...");
+          display_obj.tft.setTextWrap(false);
+        }
+        else {
+          delay(1000);
+          Serial.println("Uploading " + sd_obj.selected_file_name + "...");
+          if (wifi_scan_obj.uploadFile("/" + sd_obj.selected_file_name, true, WDG_UPLOAD)) {
+            display_obj.clearScreen();
+            display_obj.showCenterText("WDG OK", TFT_HEIGHT / 2, true);
+          } else {
+            display_obj.clearScreen();
+            display_obj.showCenterText("WDG failed", TFT_HEIGHT / 2, true);
+          }
+
+          WiFi.disconnect(true);
+        delay(100);
+        wifi_scan_obj.StartScan(WIFI_SCAN_OFF, TFT_RED);
+        }
+      }
+
+      delay(2000);
+
+      this->changeMenu(&actionMenu, true);
+    });
+    this->addNodes(&actionMenu, "Both", TFTLIGHTGREY, 0, [this]() {
+      String ssid = settings_obj.loadSetting<String>("ClientSSID");
+      String pw = settings_obj.loadSetting<String>("ClientPW");
+
+      display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+
+      if ((ssid == "") && (pw == "")) {
+        display_obj.clearScreen();
+        display_obj.tft.setTextWrap(true);
+        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+        display_obj.tft.println("WiFi Credentials Empty.");
+        display_obj.tft.println("Returning...");
+        display_obj.tft.setTextWrap(false);
+      }
+      else {
+        display_obj.clearScreen();
+        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2, true);
+        if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
+          display_obj.clearScreen();
+          display_obj.tft.setTextWrap(true);
+          display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+          display_obj.tft.println("Could not connect to WiFi.");
+          display_obj.tft.println("Returning...");
+          display_obj.tft.setTextWrap(false);
+        }
+        else {
+          delay(1000);
+          Serial.println("Uploading " + sd_obj.selected_file_name + "...");
+          if (wifi_scan_obj.uploadFile("/" + sd_obj.selected_file_name, true, BOTH_UPLOAD)) {
+            display_obj.clearScreen();
+            display_obj.showCenterText("Upload OK", TFT_HEIGHT / 2, true);
+          } else {
+            display_obj.clearScreen();
+            display_obj.showCenterText("Upload failed", TFT_HEIGHT / 2, true);
+          }
+
+          WiFi.disconnect(true);
+          delay(100);
+          wifi_scan_obj.StartScan(WIFI_SCAN_OFF, TFT_RED);
+        }
+      }
+
+      delay(2000);
+
+      this->changeMenu(&actionMenu, true);
+    });
+  #endif
 
 
   // Menu for generating and setting MAC addrs for AP and STA
