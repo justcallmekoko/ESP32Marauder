@@ -1648,10 +1648,13 @@ void WiFiScan::RunSetup() {
             break;
         }
 
-        settings_obj.saveSetting<bool>("wu", contents);
+        if (settings_obj.saveSetting<bool>("wu", contents)) {
+          sd_obj.removeFile("/wigle_api_name.txt");
+          Serial.println("Saved WiGLE API Name: " + contents);
+        } else {
+          Serial.println("Failed to save WiGLE API Name");
+        }
         api_settings_file.close();
-        sd_obj.removeFile("/wigle_api_name.txt");
-        Serial.println("Saved WiGLE API Name: " + contents);
       }
 
       if (SD.exists("/wigle_api_token.txt")) {
@@ -1669,10 +1672,14 @@ void WiFiScan::RunSetup() {
             break;
         }
 
-        settings_obj.saveSetting<bool>("wt", contents);
+        if (settings_obj.saveSetting<bool>("wt", contents)) {
+          sd_obj.removeFile("/wigle_api_token.txt");
+          Serial.println("Saved WiGLE API Token: " + contents);
+        } else {
+          Serial.println("Failed to save WiGLE API Token");
+        }
+
         api_settings_file.close();
-        sd_obj.removeFile("/wigle_api_token.txt");
-        Serial.println("Saved WiGLE API Token: " + contents);
       }
 
       if (SD.exists("/wdg_key.txt")) {
@@ -1690,10 +1697,13 @@ void WiFiScan::RunSetup() {
             break;
         }
 
-        settings_obj.saveSetting<bool>(WDG_KEY_NAME, contents);
+        if (settings_obj.saveSetting<bool>(WDG_KEY_NAME, contents)) {
+          sd_obj.removeFile("/wdg_key.txt");
+          Serial.println("Saved WDG API Token: " + contents);
+        } else {
+          Serial.println("Failed to save WDG API Token");
+        }
         api_settings_file.close();
-        sd_obj.removeFile("/wdg_key.txt");
-        Serial.println("Saved WDG API Token: " + contents);
       }
 
 

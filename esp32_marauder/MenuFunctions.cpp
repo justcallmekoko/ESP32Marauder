@@ -1522,11 +1522,13 @@ bool MenuFunctions::isKeyPressed(char c)
       for (int i = 0; i < sd_obj.sd_files->size(); i++) {
         File current_file = sd_obj.getFile("/" + sd_obj.sd_files->get(i));
         if (sd_obj.sd_files->get(i).startsWith("wardrive_") || sd_obj.sd_files->get(i).startsWith("wigle-")) {
-          this->addNodes(&uploadLogsMenu, sd_obj.sd_files->get(i).c_str(), TFTCYAN, 0, [this, i]() {
-            sd_obj.selected_file_name = sd_obj.sd_files->get(i);
-            Serial.println(sd_obj.sd_files->get(i) + " selected");
-            this->changeMenu(&actionMenu, true);
-          });
+          if (!sd_obj.sd_files->get(i).endsWith(".wdg") && !sd_obj.sd_files->get(i).endsWith(".wigle")) {
+            this->addNodes(&uploadLogsMenu, sd_obj.sd_files->get(i).c_str(), TFTCYAN, 0, [this, i]() {
+              sd_obj.selected_file_name = sd_obj.sd_files->get(i);
+              Serial.println(sd_obj.sd_files->get(i) + " selected");
+              this->changeMenu(&actionMenu, true);
+            });
+          }
         }
       }
 
