@@ -10016,31 +10016,101 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
 }
 
 #ifdef HAS_DIRECT_UPLOAD
+  bool WiFiScan::sidecarExists(String filePath, String service) {
+    return SD.exists(filePath + "." + service);
+  }
+
+  void WiFiScan::writeSidecar(String filePath, String service) {
+    String sidecarPath = filePath + "." + service;
+    File f = SD.open(sidecarPath, FILE_WRITE);
+    if (f) {
+      f.println("uploaded=" + gps_obj.getDatetime());
+      f.close();
+      Serial.println("[UPLOAD] Sidecar written: " + sidecarPath);
+    } else {
+      Serial.println("[UPLOAD] Could not write sidecar: " + sidecarPath);
+    }
+  }
+
+  bool WiFiScan::uploadFile(String filePath, bool retry, uint8_t upload_type) {
+    display_obj.clearScreen();
+    display_obj.showCenterText(String("Uploading " + filePath).c_str(), TFT_HEIGHT / 2);
+    delay(1000);
+    
+    Serial.println("[UPLOAD] uploadFile: " + filePath +
+                (retry ? " (retry)" : ""));
+
+    bool wigle_already = !retry && this->sidecarExists(filePath, "wigle");
+    bool wdg_already   = !retry && this->sidecarExists(filePath, "wdg");
+
+    bool wigle_ok = wigle_already;
+    bool wdg_ok   = wdg_already;
+
+    if ((upload_type == WIGLE_UPLOAD) || (upload_type == BOTH_UPLOAD)) {
+      if (!wigle_already) {
+        Serial.println("[UPLOAD] Uploading to WiGLE: " + filePath);
+        wigle_ok = this->wigleUpload(filePath);
+        if (wigle_ok) {
+          this->writeSidecar(filePath, "wigle");
+          Serial.println("[UPLOAD] WiGLE upload succeeded");
+        } else {
+          Serial.println("[UPLOAD] WiGLE upload failed");
+        }
+      } else {
+        Serial.println("[UPLOAD] WiGLE already uploaded, skipping");
+      }
+    }
+
+    if ((upload_type == WDG_UPLOAD) || (upload_type == BOTH_UPLOAD)) {
+      if (!wdg_already) {
+        Serial.println("[UPLOAD] Uploading to WDG Wars: " + filePath);
+        wdg_ok = this->wdgwarsUpload(filePath);
+        if (wdg_ok) {
+          this->writeSidecar(filePath, "wdg");
+          Serial.println("[UPLOAD] WDG Wars upload succeeded");
+        } else {
+          Serial.println("[UPLOAD] WDG Wars upload failed");
+        }
+      } else {
+        Serial.println("[UPLOAD] WDG Wars already uploaded, skipping");
+      }
+    }
+
+    if (upload_type == WIGLE_UPLOAD)
+      return wigle_ok;
+    else if (upload_type == WDG_UPLOAD)
+      return wdg_ok;
+    else if (upload_type == BOTH_UPLOAD)
+      return wigle_ok && wdg_ok;
+    
+    return false;
+  }
+
   // Upload one log file to WDG Wars.
   // Mirrors backendUpload() but uses X-API-Key auth and wdgwars.pl endpoint.
   bool WiFiScan::wdgwarsUpload(String filePath) {
-    //display.clearScreen();
-    //display.drawCenteredText("WDG Upload...", true);
+    display_obj.clearScreen();
+    display_obj.showCenterText("WDG Upload...", TFT_HEIGHT / 2);
     delay(100);
 
     if (!SD.exists(filePath)) {
-      //display.drawCenteredText(filePath + " not found", true);
+      display_obj.showCenterText(String(filePath + " not found").c_str(), TFT_HEIGHT / 2);
       Serial.println("[WDG] File not found: " + filePath);
       return false;
     }
 
     String apiKey = settings_obj.loadSetting<String>(WDG_KEY_NAME);
     if (apiKey.isEmpty()) {
-      //display.clearScreen();
-      //display.drawCenteredText("No WDG API key", true);
+      display_obj.clearScreen();
+      display_obj.showCenterText("No WDG API key", TFT_HEIGHT / 2);
       Serial.println("[WDG] No WDG Wars API key configured");
       return false;
     }
 
     File fileToUpload = SD.open(filePath);
     if (!fileToUpload) {
-      //display.clearScreen();
-      //display.drawCenteredText("Could not open file", true);
+      display_obj.clearScreen();
+      display_obj.showCenterText("Could not open file", TFT_HEIGHT / 2);
       Serial.println("[WDG] Could not open: " + filePath);
       return false;
     }
@@ -10061,8 +10131,8 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
     if (!client->connect("wdgwars.pl", 443)) {
       fileToUpload.close();
       client->stop();
-      //display.clearScreen();
-      //display.drawCenteredText("WDG connect fail", true);
+      display_obj.clearScreen();
+      display_obj.showCenterText("WDG connect fail", TFT_HEIGHT / 2);
       Serial.println("[WDG] Failed to connect to wdgwars.pl");
       return false;
     }
@@ -10092,10 +10162,10 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
       totalSent += n;
       client->write(buf, n);
       pct = (totalSent * 100) / fileToUpload.size();
-      //display.tft->drawRect(0, (TFT_HEIGHT / 3) * 2, TFT_WIDTH, TFT_HEIGHT - (TFT_HEIGHT / 3) * 2, ST77XX_BLACK);
-      //display.tft->setCursor(0, (TFT_HEIGHT / 3) * 2);
+      display_obj.tft.drawRect(0, (TFT_HEIGHT / 3) * 2, TFT_WIDTH, TFT_HEIGHT - (TFT_HEIGHT / 3) * 2, TFT_BLACK);
+      display_obj.tft.setCursor(0, (TFT_HEIGHT / 3) * 2);
       pctStr = String(pct) + "%";
-      //display.drawCenteredText(pctStr, false);
+      display_obj.showCenterText(pctStr.c_str(), TFT_HEIGHT / 2);
     }
 
     client->print(part2);
@@ -10124,8 +10194,8 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
     bool ok = response.indexOf("202 Accepted") >= 0 ||
     response.indexOf("\"ok\":true") >= 0;
 
-    //display.clearScreen();
-    //display.drawCenteredText(ok ? "WDG OK" : "WDG Failed", true);
+    display_obj.clearScreen();
+    display_obj.showCenterText(ok ? "WDG OK" : "WDG Failed", TFT_HEIGHT / 2);
     delay(1000);
 
     return ok;
@@ -10133,24 +10203,22 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
 
   // Upload one log file to Wigle
   bool WiFiScan::wigleUpload(String filePath) {
-    //server.begin();
-
-    //display.clearScreen();
-    //display.drawCenteredText("Wigle Upload...", true);
+    display_obj.clearScreen();
+    display_obj.showCenterText("Wigle Upload...", TFT_HEIGHT / 2);
 
     delay(100);
 
     if (!SD.exists(filePath)) {
-      //display.clearScreen();
-      //display.drawCenteredText(filePath + " not found", true);
+      display_obj.clearScreen();
+      display_obj.showCenterText(String(filePath + " not found").c_str(), TFT_HEIGHT / 2);
       Serial.println("File does not exist: " + filePath);
       return false;
     }
 
     File fileToUpload = SD.open(filePath);
     if (!fileToUpload) {
-      //display.clearScreen();
-      //display.drawCenteredText("Could not open file", true);
+      display_obj.clearScreen();
+      display_obj.showCenterText("Could not open file", TFT_HEIGHT / 2);
       Serial.println("Could not open file: " + filePath);
       return false;
     }
@@ -10160,8 +10228,8 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
     String token = settings_obj.loadSetting<String>("wt");
     if (username.isEmpty() || token.isEmpty()) {
       fileToUpload.close();
-      //display.clearScreen();
-      //display.drawCenteredText("No wigle creds", true);
+      display_obj.clearScreen();
+      display_obj.showCenterText("No wigle creds", TFT_HEIGHT / 2);
       Serial.println("Missing wigle credentials");
       return false;
     }
@@ -10202,8 +10270,8 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
       fileToUpload.close();
       //delete client;
       client->stop();
-      //display.clearScreen();
-      //display.drawCenteredText("Could not connect", true);
+      display_obj.clearScreen();
+      display_obj.showCenterText("Could not connect", TFT_HEIGHT / 2);
       Serial.println("Failed to connected to api.wigle.net");
       return false;
     }
@@ -10247,10 +10315,10 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
       Serial.print(totalBytesSent);
       Serial.println(" bytes...");
       percent_sent = (totalBytesSent * 100) / fileToUpload.size();
-      //display.tft->drawRect(0, (TFT_HEIGHT / 3) * 2, TFT_WIDTH, TFT_HEIGHT, ST77XX_BLACK);
-      //display.tft->setCursor(0, (TFT_HEIGHT / 3) * 2);
+      display_obj.tft.drawRect(0, (TFT_HEIGHT / 3) * 2, TFT_WIDTH, TFT_HEIGHT, TFT_BLACK);
+      display_obj.tft.setCursor(0, (TFT_HEIGHT / 3) * 2);
       display_percent = (String)percent_sent + "%";
-      //display.drawCenteredText(display_percent, false);
+      display_obj.showCenterText(display_percent.c_str(), TFT_HEIGHT / 2);
       client->write(buffer, bytesRead);
     }
 
@@ -10286,8 +10354,8 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
 
     bool ok = response.indexOf("200 OK") >= 0;
 
-    //display.clearScreen();
-    //display.drawCenteredText(ok ? "WIGLE OK" : "WIGLE Failed", true);
+    display_obj.clearScreen();
+    display_obj.showCenterText(ok ? "WIGLE OK" : "WIGLE Failed", TFT_HEIGHT / 2);
 
     return ok;
   }
