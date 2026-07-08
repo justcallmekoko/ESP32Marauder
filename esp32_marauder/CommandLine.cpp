@@ -499,46 +499,50 @@ void CommandLine::runCommand(String input) {
   }
 
   else if (cmd_args.get(0) == UPLOAD_CMD) {
-    int dest_sw = this->argSearch(&cmd_args, "-d");
-    String upload_dest_arg = cmd_args.get(dest_sw + 1);
-    int upload_dest = -1;
+    #ifdef HAS_DIRECT_UPLOAD
+      int dest_sw = this->argSearch(&cmd_args, "-d");
+      String upload_dest_arg = cmd_args.get(dest_sw + 1);
+      int upload_dest = -1;
 
-    if (upload_dest_arg == "wdg")
-      upload_dest = WDG_UPLOAD;
-    else if (upload_dest_arg == "wigle")
-      upload_dest = WIGLE_UPLOAD;
-    else if (upload_dest_arg == "both")
-      upload_dest = BOTH_UPLOAD;
+      if (upload_dest_arg == "wdg")
+        upload_dest = WDG_UPLOAD;
+      else if (upload_dest_arg == "wigle")
+        upload_dest = WIGLE_UPLOAD;
+      else if (upload_dest_arg == "both")
+        upload_dest = BOTH_UPLOAD;
 
-    if (upload_dest > -1) {
-      String ssid = settings_obj.loadSetting<String>("ClientSSID");
-      String pw = settings_obj.loadSetting<String>("ClientPW");
+      if (upload_dest > -1) {
+        String ssid = settings_obj.loadSetting<String>("ClientSSID");
+        String pw = settings_obj.loadSetting<String>("ClientPW");
 
-      Serial.println("Connecting to " + ssid);
+        Serial.println("Connecting to " + ssid);
 
-      if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
-        Serial.println("Failed to connected to " + ssid);
-        return;
-      }
-      delay(1000);
-      for (int i = 0; i < sd_obj.sd_files->size(); i++) {
-        if (sd_obj.sd_files->get(i).startsWith("wardrive_") || sd_obj.sd_files->get(i).startsWith("wigle-")) {
-          if (!sd_obj.sd_files->get(i).endsWith(".wigle") && !sd_obj.sd_files->get(i).endsWith(".wdg") && !sd_obj.sd_files->get(i).endsWith(".gpx")) {
-            Serial.println("Uploading " + sd_obj.sd_files->get(i) + "...");
-            if (wifi_scan_obj.uploadFile("/" + sd_obj.sd_files->get(i), true, upload_dest)) {
-              Serial.println("Upload OK");
-            } else {
-              Serial.println("WiGLE failed");
+        if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
+          Serial.println("Failed to connected to " + ssid);
+          return;
+        }
+        delay(1000);
+        for (int i = 0; i < sd_obj.sd_files->size(); i++) {
+          if (sd_obj.sd_files->get(i).startsWith("wardrive_") || sd_obj.sd_files->get(i).startsWith("wigle-")) {
+            if (!sd_obj.sd_files->get(i).endsWith(".wigle") && !sd_obj.sd_files->get(i).endsWith(".wdg") && !sd_obj.sd_files->get(i).endsWith(".gpx")) {
+              Serial.println("Uploading " + sd_obj.sd_files->get(i) + "...");
+              if (wifi_scan_obj.uploadFile("/" + sd_obj.sd_files->get(i), true, upload_dest)) {
+                Serial.println("Upload OK");
+              } else {
+                Serial.println("WiGLE failed");
+              }
             }
           }
         }
-      }
-      WiFi.disconnect(true);
-      delay(100);
-      wifi_scan_obj.StartScan(WIFI_SCAN_OFF, TFT_RED);
+        WiFi.disconnect(true);
+        delay(100);
+        wifi_scan_obj.StartScan(WIFI_SCAN_OFF, TFT_RED);
 
-      Serial.println("Upload complete");
-    }
+        Serial.println("Upload complete");
+      }
+    #else
+      Serial.println("Direct upload not supported");
+    #endif
   }
 
   else if (cmd_args.get(0) == SETTINGS_CMD) {
