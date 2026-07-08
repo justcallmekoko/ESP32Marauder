@@ -27,7 +27,6 @@ class Settings {
     // Flat cache populated once at begin() and kept in sync by saveSetting().
     // All loadSetting<T>() reads hit this struct — zero heap, zero JSON parse.
     struct SettingsCache {
-      bool  ForcePMKID  = false;
       bool  ForceProbe  = false;
       bool  SavePCAP    = true;
       bool  EnableLED   = true;
@@ -38,6 +37,9 @@ class Settings {
   #endif
       String ClientSSID = "";
       String ClientPW   = "";
+      String wu           = "";
+      String wt           = "";
+      String wdg_key      = "";
     } _cache;
 
     void _buildCache();  // parse json_settings_string -> _cache
