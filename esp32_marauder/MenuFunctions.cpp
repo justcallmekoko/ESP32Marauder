@@ -1522,7 +1522,7 @@ bool MenuFunctions::isKeyPressed(char c)
       for (int i = 0; i < sd_obj.sd_files->size(); i++) {
         File current_file = sd_obj.getFile("/" + sd_obj.sd_files->get(i));
         if (sd_obj.sd_files->get(i).startsWith("wardrive_") || sd_obj.sd_files->get(i).startsWith("wigle-")) {
-          if (!sd_obj.sd_files->get(i).endsWith(".wdg") && !sd_obj.sd_files->get(i).endsWith(".wigle")) {
+          if (!sd_obj.sd_files->get(i).endsWith(".wdg") && !sd_obj.sd_files->get(i).endsWith(".wigle") && !sd_obj.sd_files->get(i).endsWith(".gpx")) {
             this->addNodes(&uploadLogsMenu, sd_obj.sd_files->get(i).c_str(), TFTCYAN, 0, [this, i]() {
               sd_obj.selected_file_name = sd_obj.sd_files->get(i);
               Serial.println(sd_obj.sd_files->get(i) + " selected");
@@ -2607,6 +2607,8 @@ void MenuFunctions::RunSetup()
       this->changeMenu(uploadAllMenu.parentMenu, true);
     });
     this->addNodes(&uploadAllMenu, "WiGLE", TFTLIGHTGREY, 0, [this]() {
+      display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+
       String ssid = settings_obj.loadSetting<String>("ClientSSID");
       String pw = settings_obj.loadSetting<String>("ClientPW");
 
@@ -2614,19 +2616,17 @@ void MenuFunctions::RunSetup()
         display_obj.clearScreen();
         display_obj.tft.setTextWrap(true);
         display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
         display_obj.tft.println("WiFi Credentials Empty.");
         display_obj.tft.println("Returning...");
         display_obj.tft.setTextWrap(false);
       }
       else {
         display_obj.clearScreen();
-        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2);
+        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2, true);
         if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
           display_obj.clearScreen();
           display_obj.tft.setTextWrap(true);
           display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-          display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
           display_obj.tft.println("Could not connect to WiFi.");
           display_obj.tft.println("Returning...");
           display_obj.tft.setTextWrap(false);
@@ -2659,23 +2659,23 @@ void MenuFunctions::RunSetup()
       String ssid = settings_obj.loadSetting<String>("ClientSSID");
       String pw = settings_obj.loadSetting<String>("ClientPW");
 
+      display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+
       if ((ssid == "") && (pw == "")) {
         display_obj.clearScreen();
         display_obj.tft.setTextWrap(true);
         display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
         display_obj.tft.println("WiFi Credentials Empty.");
         display_obj.tft.println("Returning...");
         display_obj.tft.setTextWrap(false);
       }
       else {
         display_obj.clearScreen();
-        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2);
+        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2, true);
         if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
           display_obj.clearScreen();
           display_obj.tft.setTextWrap(true);
           display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-          display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
           display_obj.tft.println("Could not connect to WiFi.");
           display_obj.tft.println("Returning...");
           display_obj.tft.setTextWrap(false);
@@ -2708,23 +2708,23 @@ void MenuFunctions::RunSetup()
       String ssid = settings_obj.loadSetting<String>("ClientSSID");
       String pw = settings_obj.loadSetting<String>("ClientPW");
 
+      display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+
       if ((ssid == "") && (pw == "")) {
         display_obj.clearScreen();
         display_obj.tft.setTextWrap(true);
         display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
         display_obj.tft.println("WiFi Credentials Empty.");
         display_obj.tft.println("Returning...");
         display_obj.tft.setTextWrap(false);
       }
       else {
         display_obj.clearScreen();
-        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2);
+        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2, true);
         if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
           display_obj.clearScreen();
           display_obj.tft.setTextWrap(true);
           display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-          display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
           display_obj.tft.println("Could not connect to WiFi.");
           display_obj.tft.println("Returning...");
           display_obj.tft.setTextWrap(false);
