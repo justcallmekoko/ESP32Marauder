@@ -64,6 +64,7 @@ class SDInterface {
     bool supported = false;
 
     String card_sz;
+    String selected_file_name = "";
   
     bool initSD();
 
