@@ -275,6 +275,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_LIST_AP_CMD_D);
     Serial.println(HELP_LIST_AP_CMD_E);
     Serial.println(HELP_LIST_AP_CMD_F);
+    Serial.println(HELP_LIST_AP_CMD_G);
     Serial.println(HELP_SEL_CMD_A);
     Serial.println(HELP_SSID_CMD_A);
     Serial.println(HELP_SSID_CMD_B);
@@ -287,6 +288,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_MAC_CMD_D);
     Serial.println(HELP_ADD_CMD_A);
     Serial.println(HELP_ADD_CMD_B);
+    Serial.println(HELP_UPLOAD_CMD);
 
     // Bluetooth sniff/scan
     #ifdef HAS_BT
@@ -496,6 +498,53 @@ void CommandLine::runCommand(String input) {
     }
   }
 
+  else if (cmd_args.get(0) == UPLOAD_CMD) {
+    #ifdef HAS_DIRECT_UPLOAD
+      int dest_sw = this->argSearch(&cmd_args, "-d");
+      String upload_dest_arg = cmd_args.get(dest_sw + 1);
+      int upload_dest = -1;
+
+      if (upload_dest_arg == "wdg")
+        upload_dest = WDG_UPLOAD;
+      else if (upload_dest_arg == "wigle")
+        upload_dest = WIGLE_UPLOAD;
+      else if (upload_dest_arg == "both")
+        upload_dest = BOTH_UPLOAD;
+
+      if (upload_dest > -1) {
+        String ssid = settings_obj.loadSetting<String>("ClientSSID");
+        String pw = settings_obj.loadSetting<String>("ClientPW");
+
+        Serial.println("Connecting to " + ssid);
+
+        if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
+          Serial.println("Failed to connected to " + ssid);
+          return;
+        }
+        delay(1000);
+        for (int i = 0; i < sd_obj.sd_files->size(); i++) {
+          if (sd_obj.sd_files->get(i).startsWith("wardrive_") || sd_obj.sd_files->get(i).startsWith("wigle-")) {
+            if (!sd_obj.sd_files->get(i).endsWith(".wigle") && !sd_obj.sd_files->get(i).endsWith(".wdg") && !sd_obj.sd_files->get(i).endsWith(".gpx")) {
+              Serial.println("Uploading " + sd_obj.sd_files->get(i) + "...");
+              if (wifi_scan_obj.uploadFile("/" + sd_obj.sd_files->get(i), true, upload_dest)) {
+                Serial.println("Upload OK");
+              } else {
+                Serial.println("WiGLE failed");
+              }
+            }
+          }
+        }
+        WiFi.disconnect(true);
+        delay(100);
+        wifi_scan_obj.StartScan(WIFI_SCAN_OFF, TFT_RED);
+
+        Serial.println("Upload complete");
+      }
+    #else
+      Serial.println("Direct upload not supported");
+    #endif
+  }
+
   else if (cmd_args.get(0) == SETTINGS_CMD) {
     int ss_sw = this->argSearch(&cmd_args, "-s"); // Set setting
     int re_sw = this->argSearch(&cmd_args, "-r"); // Reset setting
@@ -543,14 +592,30 @@ void CommandLine::runCommand(String input) {
 
     // Signal strength scan
     if (cmd_args.get(0) == SIGSTREN_CMD) {
-      this->startScanFromCLI(WIFI_SCAN_SIG_STREN, TFT_MAGENTA, "Signal Strength Scan");
-      /*Serial.println(STOPSCAN_CMD);
-      #ifdef HAS_SCREEN
-        display_obj.clearScreen();
-        menu_function_obj.drawStatusBar();
-      #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_MAGENTA);*/
-      wifi_scan_obj.renderPacketRate();
+      int bt_sw = this->argSearch(&cmd_args, "-b");
+      int wf_sw = this->argSearch(&cmd_args, "-w");
+      if (wf_sw > -1) {
+        int targ_index = cmd_args.get(wf_sw + 1).toInt();
+        if (targ_index < access_points->size()) {
+          for (int i = 0; i < access_points->size(); i++) {
+            AccessPoint access_point = access_points->get(i);
+            access_point.selected = (i == targ_index);
+            access_points->set(i, access_point);
+          }
+          this->startScanFromCLI(WIFI_SCAN_SIG_STREN, TFT_GREEN, "Fox Hunt");
+        }
+      }
+      else if (bt_sw > -1) {
+        int targ_index = cmd_args.get(bt_sw + 1).toInt();
+        if (targ_index < ble_devices->size()) {
+          for (int i = 0; i < ble_devices->size(); i++) {
+            BleDevice ble_device = ble_devices->get(i);
+            ble_device.selected = (i == targ_index);
+            ble_devices->set(i, ble_device);
+          }
+          this->startScanFromCLI(BT_SCAN_FOX_HUNT, TFT_CYAN, "Bluetooth Fox Hunt");
+        }
+      }
     }
     // Packet count
     else if (cmd_args.get(0) == PACKET_COUNT_CMD) {
@@ -1267,6 +1332,7 @@ void CommandLine::runCommand(String input) {
     int at_sw = this->argSearch(&cmd_args, "-t");
     int ip_sw = this->argSearch(&cmd_args, "-i");
     int pr_sw = this->argSearch(&cmd_args, "-p");
+    int bt_sw = this->argSearch(&cmd_args, "-b");
 
     // List APs
     if (ap_sw != -1) {
@@ -1280,6 +1346,12 @@ void CommandLine::runCommand(String input) {
           Serial.println("[" + (String)i + "][CH:" + (String)access_point.channel + "] " + access_point.essid + " " + (String)access_point.rssi);
       }
       this->showCounts(count_selected);
+    }
+    else if (bt_sw != -1) {
+      for (int i = 0; i < ble_devices->size(); i++) {
+        BleDevice ble_device = ble_devices->get(i);
+        Serial.println("[" + (String)i + "][RSSI:" + (String)ble_device.rssi + "] " + ble_device.name);
+      }
     }
     // List IPs
     else if (ip_sw != -1) {

@@ -70,6 +70,7 @@
 
 #ifdef HAS_DIRECT_UPLOAD
   #include <WiFiClientSecure.h>
+  #include <HTTPClient.h>
   #include "mbedtls/sha256.h"
 #endif
 
