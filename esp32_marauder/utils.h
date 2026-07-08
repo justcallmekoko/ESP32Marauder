@@ -257,12 +257,59 @@ inline uint16_t getNextPort(uint16_t port) {
   return port + 1;
 }
 
-String base64Encode(const String& input) {
+inline String base64Encode(const String& input) {
   size_t outputLen;
   unsigned char output[256];
   mbedtls_base64_encode(output, sizeof(output), &outputLen,
                         (const unsigned char*)input.c_str(), input.length());
   return String((char*)output).substring(0, outputLen);
+}
+
+inline static void printHex(const uint8_t *data, size_t len) {
+  for (size_t i = 0; i < len; i++) {
+    if (data[i] < 0x10) Serial.print('0');
+    Serial.print(data[i], HEX);
+    if (i + 1 < len) Serial.print(' ');
+  }
+}
+
+inline static void printStringData(const char *label, const std::string &data) {
+  Serial.printf("%s [%u]: ", label, (unsigned)data.length());
+  printHex((const uint8_t *)data.data(), data.length());
+  Serial.println();
+}
+
+inline static uint8_t rssiToMenuColor(int rssi) {
+  if (rssi >= -60) {
+    return TFTGREEN;
+  } else if (rssi >= -70) {
+    return TFTYELLOW;
+  } else if (rssi >= -80) {
+    return TFTORANGE;
+  } else {
+    return TFTRED;
+  }
+}
+
+inline static uint16_t rssiToColorScaled(int rssi) {
+  // Clamp to expected BLE RSSI range
+  rssi = constrain(rssi, -100, -40);
+
+  // Map RSSI to 0-255
+  uint8_t green = map(rssi, -100, -40, 0, 255);
+  uint8_t red   = 255 - green;
+
+  // RGB888 -> RGB565
+  return ((red & 0xF8) << 8) |
+          ((green & 0xFC) << 3);
+}
+
+inline static int rssiToBarWidth(int rssi) {
+    // Clamp to the full possible RSSI range
+    rssi = constrain(rssi, -127, 0);
+
+    // Map RSSI to a width between 0 and TFT_WIDTH
+    return map(rssi, -127, 0, 0, TFT_WIDTH);
 }
 
 #endif

@@ -263,6 +263,7 @@ jobs:
               sed -i 's/compiler.c.elf.libs.esp32s3=/compiler.c.elf.libs.esp32s3=-zmuldefs /' "$i"
               sed -i 's/compiler.c.elf.libs.esp32s2=/compiler.c.elf.libs.esp32s2=-zmuldefs /' "$i"
               sed -i 's/compiler.c.elf.libs.esp32=/compiler.c.elf.libs.esp32=-zmuldefs /' "$i"
+              sed -i 's/-fexceptions/-fno-exceptions/g' "$i"
               cat "$i" | grep compiler.c.elf.libs.esp32c3
               cat "$i" | grep compiler.c.elf.libs.esp32s3
               cat "$i" | grep compiler.c.elf.libs.esp32s2
@@ -273,6 +274,9 @@ jobs:
           if [[ ${{ matrix.board.idf_ver }} == "3.3.4" ]]; then
             for i in $(find /home/runner/.arduino15/packages/esp32/hardware/esp32/ -name "platform.txt"); do
               sed -i 's/compiler.c.elf.extra_flags=/compiler.c.elf.extra_flags=-Wl,-zmuldefs /' "$i"
+            done
+            for f in $(find /home/runner/.arduino15/packages/esp32/tools/esp32-arduino-libs/ -name "cpp_flags"); do
+              sed -i 's/-fexceptions/-fno-exceptions/g' "$f"
             done
           fi
           
