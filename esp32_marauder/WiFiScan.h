@@ -71,6 +71,7 @@
 
 #ifdef HAS_DIRECT_UPLOAD
   #include <WiFiClientSecure.h>
+  #include <HTTPClient.h>
   #include "mbedtls/sha256.h"
 #endif
 
@@ -216,6 +217,10 @@
 #define CLEAR_MULTI 6
 #define CLEAR_SSID  7
 #define CLEAR_BLE   8
+
+#define WIGLE_UPLOAD 0
+#define WDG_UPLOAD   1
+#define BOTH_UPLOAD  2
 
 extern EvilPortal evil_portal_obj;
 
@@ -611,6 +616,8 @@ class WiFiScan
 
     bool wigleUpload(String filePath);
     bool wdgwarsUpload(String filePath);
+    void writeSidecar(String filePath, String service);
+    bool sidecarExists(String filePath, String service); 
 
     void runFoxHunt(uint32_t currentTime);
     void throwThatShitInACircle();
@@ -885,6 +892,7 @@ class WiFiScan
 
     wifi_config_t ap_config;
 
+    bool uploadFile(String filePath, bool retry = false, uint8_t upload_type = WIGLE_UPLOAD);
     String checkEmptyProbe(String essid);
     bool checkFlockOUI(const uint8_t mac[6]);
     bool startWiFi(String ssid, String password, bool gui = true);

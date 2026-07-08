@@ -377,7 +377,7 @@ void setup()
 
   settings_obj.begin();
 
-  const char* type = settings_obj.getSettingType("ChanHop");
+  const char* type = settings_obj.getSettingType("wu");
 
   if (type == nullptr || type[0] == '\0') {
     Serial.println(F("Current settings format not supported. Installing new default settings..."));

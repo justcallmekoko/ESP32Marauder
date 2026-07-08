@@ -203,10 +203,16 @@ class MenuFunctions
     Menu adminMenu;
     Menu adminSubMenu;
 
+    #ifdef HAS_DIRECT_UPLOAD
+      Menu deleteAllMenu;
+      Menu uploadAllMenu;
+    #endif
+
     //static void lv_tick_handler();
 
     // Menu icons
 
+    void buildUploadFileMenu();
     void setupSDFileList(bool update = false);
     void buildSDFileMenu(bool update = false);
     void displayMenuButtons();
@@ -268,6 +274,11 @@ class MenuFunctions
 
     Menu infoMenu;
     Menu apInfoMenu;
+
+    #ifdef HAS_DIRECT_UPLOAD
+      Menu uploadLogsMenu;
+      Menu actionMenu;
+    #endif
 
     //Ticker tick;
 
