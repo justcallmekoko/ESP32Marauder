@@ -2635,13 +2635,15 @@ void MenuFunctions::RunSetup()
           delay(1000);
           for (int i = 0; i < sd_obj.sd_files->size(); i++) {
             if (sd_obj.sd_files->get(i).startsWith("wardrive_") || sd_obj.sd_files->get(i).startsWith("wigle-")) {
-              Serial.println("Uploading " + sd_obj.sd_files->get(i) + "...");
-              if (wifi_scan_obj.uploadFile("/" + sd_obj.sd_files->get(i), true, WIGLE_UPLOAD)) {
-                display_obj.clearScreen();
-                display_obj.showCenterText("WiGLE OK", TFT_HEIGHT / 2);
-              } else {
-                display_obj.clearScreen();
-                display_obj.showCenterText("WiGLE failed", TFT_HEIGHT / 2);
+              if (!sd_obj.sd_files->get(i).endsWith(".wigle") && !sd_obj.sd_files->get(i).endsWith(".wdg") && !sd_obj.sd_files->get(i).endsWith(".gpx")) {
+                Serial.println("Uploading " + sd_obj.sd_files->get(i) + "...");
+                if (wifi_scan_obj.uploadFile("/" + sd_obj.sd_files->get(i), true, WIGLE_UPLOAD)) {
+                  display_obj.clearScreen();
+                  display_obj.showCenterText("WiGLE OK", TFT_HEIGHT / 2);
+                } else {
+                  display_obj.clearScreen();
+                  display_obj.showCenterText("WiGLE failed", TFT_HEIGHT / 2);
+                }
               }
             }
           }
@@ -2684,13 +2686,15 @@ void MenuFunctions::RunSetup()
           delay(1000);
           for (int i = 0; i < sd_obj.sd_files->size(); i++) {
             if (sd_obj.sd_files->get(i).startsWith("wardrive_") || sd_obj.sd_files->get(i).startsWith("wigle-")) {
-              Serial.println("Uploading " + sd_obj.sd_files->get(i) + "...");
-              if (wifi_scan_obj.uploadFile("/" + sd_obj.sd_files->get(i), true, WDG_UPLOAD)) {
-                display_obj.clearScreen();
-                display_obj.showCenterText("WDG OK", TFT_HEIGHT / 2);
-              } else {
-                display_obj.clearScreen();
-                display_obj.showCenterText("WDG failed", TFT_HEIGHT / 2);
+              if (!sd_obj.sd_files->get(i).endsWith(".wigle") && !sd_obj.sd_files->get(i).endsWith(".wdg") && !sd_obj.sd_files->get(i).endsWith(".gpx")) {
+                Serial.println("Uploading " + sd_obj.sd_files->get(i) + "...");
+                if (wifi_scan_obj.uploadFile("/" + sd_obj.sd_files->get(i), true, WDG_UPLOAD)) {
+                  display_obj.clearScreen();
+                  display_obj.showCenterText("WDG OK", TFT_HEIGHT / 2);
+                } else {
+                  display_obj.clearScreen();
+                  display_obj.showCenterText("WDG failed", TFT_HEIGHT / 2);
+                }
               }
             }
           }
@@ -2733,13 +2737,15 @@ void MenuFunctions::RunSetup()
           delay(1000);
           for (int i = 0; i < sd_obj.sd_files->size(); i++) {
             if (sd_obj.sd_files->get(i).startsWith("wardrive_") || sd_obj.sd_files->get(i).startsWith("wigle-")) {
-              Serial.println("Uploading " + sd_obj.sd_files->get(i) + "...");
-              if (wifi_scan_obj.uploadFile("/" + sd_obj.sd_files->get(i), true, BOTH_UPLOAD)) {
-                display_obj.clearScreen();
-                display_obj.showCenterText("Upload OK", TFT_HEIGHT / 2);
-              } else {
-                display_obj.clearScreen();
-                display_obj.showCenterText("Upload failed", TFT_HEIGHT / 2);
+              if (!sd_obj.sd_files->get(i).endsWith(".wigle") && !sd_obj.sd_files->get(i).endsWith(".wdg") && !sd_obj.sd_files->get(i).endsWith(".gpx")) {
+                Serial.println("Uploading " + sd_obj.sd_files->get(i) + "...");
+                if (wifi_scan_obj.uploadFile("/" + sd_obj.sd_files->get(i), true, BOTH_UPLOAD)) {
+                  display_obj.clearScreen();
+                  display_obj.showCenterText("Upload OK", TFT_HEIGHT / 2);
+                } else {
+                  display_obj.clearScreen();
+                  display_obj.showCenterText("Upload failed", TFT_HEIGHT / 2);
+                }
               }
             }
           }
