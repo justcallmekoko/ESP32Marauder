@@ -104,8 +104,9 @@ public:
     bool supported = false;
 
     String card_sz;
-
     bool initSD();
+
+    String selected_file_name = "";
 
     LinkedList<String>* sd_files;
 
