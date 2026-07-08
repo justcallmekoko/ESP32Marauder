@@ -36,6 +36,10 @@ class Settings {
       bool  ChanHop     = false;
       String ClientSSID = "";
       String ClientPW   = "";
+      String wu           = "";
+      String wt           = "";
+      String wdg_key      = "";
+
     } _cache;
 
     void _buildCache();  // parse json_settings_string -> _cache
