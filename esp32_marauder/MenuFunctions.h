@@ -196,10 +196,18 @@ class MenuFunctions
 
     Menu evilPortalMenu;
 
+    Menu foxHuntMenu;
+
+    #ifdef HAS_DIRECT_UPLOAD
+      Menu deleteAllMenu;
+      Menu uploadAllMenu;
+    #endif
+
     //static void lv_tick_handler();
 
     // Menu icons
 
+    void buildUploadFileMenu();
     void setupSDFileList(bool update = false);
     void buildSDFileMenu(bool update = false);
     void displayMenuButtons();
@@ -218,7 +226,7 @@ class MenuFunctions
     void drawGraph(int16_t *values);
     void drawGraphSmall(uint8_t *values);
     void renderGraphUI(uint8_t scan_mode = 0);
-    void addNodes(Menu* menu, const char* name, uint8_t color, Menu* child, int place, std::function<void()> callable, bool selected = false);
+    void addNodes(Menu* menu, const char* name, uint8_t color, int place, std::function<void()> callable, bool selected = false);
     void battery(bool initial = false);
     void battery2(bool initial = false);
     const char* callSetting(const char* key);
@@ -261,6 +269,11 @@ class MenuFunctions
 
     Menu infoMenu;
     Menu apInfoMenu;
+
+    #ifdef HAS_DIRECT_UPLOAD
+      Menu uploadLogsMenu;
+      Menu actionMenu;
+    #endif
 
     //Ticker tick;
 
