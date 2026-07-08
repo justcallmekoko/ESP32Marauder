@@ -240,6 +240,8 @@
     #define USE_SD
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
+    //value between 8>84
+    MAX_WIFI_TX_POWER = 60
   #endif
 
   #ifdef MARAUDER_V4

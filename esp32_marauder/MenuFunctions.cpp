@@ -2969,6 +2969,7 @@ void MenuFunctions::RunSetup()
       wifi_power = 78;
       esp_wifi_set_max_tx_power(wifi_power);
      this->changeMenu(&adminMenu, true);
+     // esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P9); // Set maximum 9 dBm power
   });
   this->addNodes(&adminMenu, "WifiTx 15dBm", TFTGREEN, WIFI, []() {
      // WIFI_POWER_15dBm = 60
