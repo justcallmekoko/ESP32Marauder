@@ -1,6 +1,8 @@
-#include "AXP192.h"
+#include "configs.h"
 
 #ifdef HAS_AXP192
+
+#include "AXP192.h"
 
 #ifndef AXP192_SDA
   #ifdef I2C_SDA
@@ -453,4 +455,4 @@ void AXP192::SetPeripherialsPower(uint8_t state) {
     // uint8_t data;
     // Set EXTEN to enable 5v boost
 }
-#endif HAS_AXP192
+#endif  // HAS_AXP192
