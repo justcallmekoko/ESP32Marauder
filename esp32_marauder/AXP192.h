@@ -1,11 +1,12 @@
 #pragma once
 
-#include "configs.h"
+#ifndef __AXP192_H__
+#define __AXP192_H__
+
+#include <configs.h>
 
 #ifdef HAS_AXP192
 
-#ifndef __AXP192_H__
-#define __AXP192_H__
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -87,5 +88,5 @@ class AXP192 {
       TwoWire *_wire;
 };
 
-#endif
-#endif HAS_AXP192
+#endif //  HAS_AXP192
+#endif //  __AXP192_H__

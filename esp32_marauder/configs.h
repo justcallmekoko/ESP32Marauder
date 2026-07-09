@@ -954,6 +954,13 @@
       #define TOUCH_CS -1
       //#define SD_CS 1
 
+      #define I2C_SDA 21
+      #define I2C_SCL 22
+      #define I2C_INT 35
+      // J1 Grove connector
+      // GPIO32
+      // GPIO33
+
       #define SCREEN_BUFFER
 
       #define MAX_SCREEN_BUFFER 9
