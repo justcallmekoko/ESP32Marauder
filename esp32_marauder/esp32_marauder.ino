@@ -273,7 +273,7 @@ void setup()
   #ifdef MAX_WIFI_TX_POWER
     extern int8_t wifi_power;
     wifi_power = 60;
-    esp_wifi_set_max_tx_power(MAX_WIFI_TX_POWER)  //  value between 8>84
+    esp_wifi_set_max_tx_power(MAX_WIFI_TX_POWER);  //  value between 8>84
     Serial.print("Setting MAX_WIFI_TX_POWER = ");
     Serial.println(MAX_WIFI_TX_POWER);
 #endif

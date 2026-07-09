@@ -3360,32 +3360,32 @@ void MenuFunctions::RunSetup()
       });
 #endif //  HAS_GPS
 
-  this->addNodes(&adminMenu, "WifiTx 21dBm (Max)", TFTGREEN, WIFI, []() {
+  this->addNodes(&adminMenu, "WifiTx 21dBm (Max)", TFTGREEN, WIFI, [this]() {
       // WIFI_POWER_21dBm = 84,
       wifi_power = 84;
       esp_wifi_set_max_tx_power(wifi_power);
      this->changeMenu(&adminMenu, true);
   });
-  this->addNodes(&adminMenu, "WifiTx 20dBm (Default)", TFTGREEN, WIFI, []() {
+  this->addNodes(&adminMenu, "WifiTx 20dBm (Default)", TFTGREEN, WIFI, [this]() {
       // WIFI_POWER_20dB = 80
       wifi_power = 78;
       esp_wifi_set_max_tx_power(wifi_power);
      this->changeMenu(&adminMenu, true);
      // esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P9); // Set maximum 9 dBm power
   });
-  this->addNodes(&adminMenu, "WifiTx 15dBm", TFTGREEN, WIFI, []() {
+  this->addNodes(&adminMenu, "WifiTx 15dBm", TFTGREEN, WIFI, [this]() {
      // WIFI_POWER_15dBm = 60
       wifi_power = 60;
       esp_wifi_set_max_tx_power(wifi_power);
      this->changeMenu(&adminMenu, true);
   });
-  this->addNodes(&adminMenu, "WifiTx 8.5dBm", TFTGREEN, WIFI, []() {
+  this->addNodes(&adminMenu, "WifiTx 8.5dBm", TFTGREEN, WIFI, [this]() {
     // WIFI_POWER_8_5dBm = 34
       wifi_power = 34;
       esp_wifi_set_max_tx_power(wifi_power);
      this->changeMenu(&adminMenu, true);
   });
-  this->addNodes(&adminMenu, "WifiTx 5dBm", TFTGREEN, WIFI, []() {
+  this->addNodes(&adminMenu, "WifiTx 5dBm", TFTGREEN, WIFI, [this]() {
       // WIFI_POWER_5dBm = 20,
       wifi_power = 20;
       esp_wifi_set_max_tx_power(wifi_power);
