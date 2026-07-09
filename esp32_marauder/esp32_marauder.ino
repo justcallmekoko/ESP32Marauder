@@ -110,6 +110,7 @@ const String PROGMEM version_number = MARAUDER_VERSION;
 
 
 
+#ifndef NO_SHUTDOWN
   void DeepSleep(int8_t wakeup_but) {
 
     // 1. Disconnect from the network gracefully
@@ -174,6 +175,7 @@ const String PROGMEM version_number = MARAUDER_VERSION;
     #endif
   }
 
+#endif
 
 uint32_t currentTime  = 0;
 

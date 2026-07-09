@@ -259,6 +259,7 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     #define HAS_C5_SD
+    #define NO_SHUTDOWN
   #endif
 
   #if defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
@@ -280,6 +281,7 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     #define HAS_C5_SD
+    #define NO_SHUTDOWN
   #endif
 
   #ifdef MARAUDER_CYD_MICRO
@@ -383,6 +385,7 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     #define HAS_C5_SD
+    #define NO_SHUTDOWN
   #endif
 
   #ifdef GENERIC_ESP32
