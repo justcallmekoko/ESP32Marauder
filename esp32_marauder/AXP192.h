@@ -1,5 +1,9 @@
 #pragma once
 
+#include "configs.h"
+
+#ifdef HAS_AXP192
+
 #ifndef __AXP192_H__
 #define __AXP192_H__
 
@@ -78,6 +82,10 @@ class AXP192 {
     uint32_t Read24bit(uint8_t Addr);
     uint32_t Read32bit(uint8_t Addr);
     void ReadBuff(uint8_t Addr, uint8_t Size, uint8_t *Buff);
+
+    private:
+      TwoWire *_wire;
 };
 
 #endif
+#endif HAS_AXP192
