@@ -918,8 +918,12 @@
       #define TOUCH_CS -1
       //#define SD_CS 1
 
-      #define RTC_SDA 33
-      #define RTC_SCL 22
+      #define I2C_SDA 21
+      #define I2C_SCL 22
+      #define I2C_INT 35
+      // J1 Grove connector
+      // GPIO32
+      // GPIO33
 
       #define SCREEN_BUFFER
 
@@ -2830,7 +2834,7 @@
   #ifdef HAS_BATTERY
 
     #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2) 
-      #define I2C_SDA 33
+      #define I2C_SDA 21
       #define I2C_SCL 22
 
     #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_KIT)
