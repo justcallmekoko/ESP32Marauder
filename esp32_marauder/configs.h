@@ -144,8 +144,8 @@
     #define HAS_SD
     #define USE_SD
     #define HAS_TEMP_SENSOR
-    #define HAS_RTC
-      #define HAS_RTC8563
+    // #define HAS_RTC
+    //  #define HAS_RTC8563
     #define HAS_GPS
   #endif
 

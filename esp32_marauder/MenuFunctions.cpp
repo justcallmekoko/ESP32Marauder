@@ -1093,7 +1093,7 @@ void MenuFunctions::updateStatusBar()
 
 
   // #ifdef HAS_RTC
-    if((system_time_set) && (cur_millis & (1 << 12))) {
+    if((system_time_set) && (cur_millis & (1 << 12))) {  // we dont need to update the clock several time a sec.
       char timeBuffer[16];
       struct tm timeinfo;
       // static uint32_t tic = 0;
