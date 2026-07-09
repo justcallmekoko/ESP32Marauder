@@ -78,11 +78,10 @@ bool RTC::setup() {
         log_d("RTC lostPower");
 
     // rtclock.adjust(DateTime(F(__DATE__), F(__TIME__)));
-    synced = false;
+    system_time_set = false;
     // setSystemTimeFromCompile();
     // log_i("SystemTime set from Build time");
   } else {
-    synced = true;
     system_time_set = true;
     syncFromRTC();
     log_i("SystemTime set from RTC");
@@ -121,7 +120,6 @@ log_i("RTC::DS1307_setup");
     Serial.flush();
     log_w("RTC is NOT initialized");
   }  else {
-    synced = true;
     system_time_set = true;
     syncFromRTC();
     Serial.println(F("SystemTime set from RTC"));
@@ -171,7 +169,6 @@ void RTC::syncFromRTC() {
   struct timeval tv = { .tv_sec = t, .tv_usec = 0 };
 
   settimeofday(&tv, NULL);
-  synced = true;
   system_time_set = true;
   Serial.println(F("system time synced with RTC"));
 // #elif defined(HAS_BM8563)
@@ -209,7 +206,6 @@ void RTC::syncFromRTC() {
           return false;
       }
 
-      synced = true;
       system_time_set = true;
       Serial.println(F("System time updated successfully!"));
       return true;
@@ -237,7 +233,6 @@ void RTC::syncFromRTC() {
     log_w("Failed to obtain time from NTP");
     return false;
   }
-  synced = true;
   system_time_set = true;
 
   Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
@@ -319,7 +314,6 @@ String RTC::dt_string() {
 
   Serial.println(now.toString("%F %T"));
   Serial.println(now.toString(format));
-
 
   return now.toString(format);   // one I2C read
 }

@@ -12,6 +12,7 @@
   #include "RTClib.h"
 // #elif defined(HAS_BM8563)
 //   #include "I2C_BM8563.h"
+
 #endif
 
 #ifndef NTPSERVER
@@ -24,24 +25,14 @@
 #include <Wire.h>
 #include "WiFiScan.h"
 
-
 extern WiFiScan wifi_scan_obj;
 
 // If system time/date has been set
 extern bool system_time_set;
 
-
-/*
-const char* ntpServer = "pool.ntp.org";
-const long gmtOffset_sec = -28800;      // Replace with your offset (e.g., -28800 for PST)
-const int daylightOffset_sec = 3600;    // Adjust daylight savings (e.g., 3600 for DST)
-*/
-
-
 class RTC  {    // RTC_PCF8523
 
   public:
-
     #if defined(HAS_PCF8523)
       RTC_PCF8523 rtclock;
     #elif defined(HAS_DS1307)
@@ -57,8 +48,6 @@ class RTC  {    // RTC_PCF8523
     String dt_string();
     String millis_dt_string();
     bool sync_rtc_ntp(const char* ntpServer = NTPSERVER);
-    bool synced = false;
-
 
     // float getTemperature();  // PCF8523 only
 
