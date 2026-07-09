@@ -3,7 +3,7 @@
 #ifndef __AXP192_H__
 #define __AXP192_H__
 
-#include <configs.h>
+#include "configs.h"
 
 #ifdef HAS_AXP192
 
