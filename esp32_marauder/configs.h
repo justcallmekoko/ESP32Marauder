@@ -41,7 +41,7 @@
 
   #define JSON_SETTING_SIZE 2048
 
-  #define MARAUDER_VERSION "v1.13.0"
+  #define MARAUDER_VERSION "v1.14.0"
 
   #define GRAPH_REFRESH   100
 
@@ -494,6 +494,7 @@
     //#define HAS_TEMP_SENSOR
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
+    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_V8
@@ -517,6 +518,7 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     #define HAS_ACT_LED
+    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_PANCAKE
@@ -564,7 +566,7 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     //#define HAS_SIMPLEX_DISPLAY
-    //#define HAS_DIRECT_UPLOAD
+    #define HAS_DIRECT_UPLOAD
   #endif
 
   #if defined(MARAUDER_M5_NANO_C6)
