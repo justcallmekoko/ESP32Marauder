@@ -29,6 +29,7 @@
   //#define MARAUDER_DEV_BOARD_PRO
   //#define XIAO_ESP32_S3
   //#define MARAUDER_REV_FEATHER
+  //#define MARAUDER_REV_FEATHER_S3
   //#define MARAUDER_CYD_MICRO // 2432S028
   //#define MARAUDER_CYD_2USB // Another 2432S028 but it has tWo UsBs OoOoOoO
   //#define MARAUDER_CYD_GUITION // ESP32-2432S024 GUITION
@@ -81,6 +82,8 @@
     #define HARDWARE_NAME "Marauder v7.1"
   #elif defined(MARAUDER_REV_FEATHER)
     #define HARDWARE_NAME "Adafruit Feather ESP32-S2 Reverse TFT"
+  #elif defined(MARAUDER_REV_FEATHER_S3)
+    #define HARDWARE_NAME "Adafruit Feather ESP32-S3 Reverse TFT"
   #elif defined(MARAUDER_V4)
     #define HARDWARE_NAME "Marauder v4"
   #elif defined(MARAUDER_V6)
@@ -238,21 +241,41 @@
     //#define HAS_NIMBLE_2
   #endif
 
-  #ifdef MARAUDER_REV_FEATHER
-    //#define FLIPPER_ZERO_HAT
-    //#define HAS_BATTERY
-    //#define HAS_BT
-    #define HAS_MINI_KB
-    #define HAS_BUTTONS
-    #define HAS_NEOPIXEL_LED
-    //#define HAS_PWR_MGMT
-    #define HAS_SCREEN
-    #define HAS_MINI_SCREEN
-    #define HAS_SD
+#if defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_REV_FEATHER_S3)
+  //#define FLIPPER_ZERO_HAT
+  #ifdef MARAUDER_REV_FEATHER_S3
+    #define MARAUDER_REV_FEATHER
+    #define HAS_BT
+    //   #define HAS_PCF8523         // i2c real-time clock (RTC)
+    // #define HAS_TEMP_SENSOR
+    // #define HAS_PCT2075         // i2c TEMP_SENSOR
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3
+    // #define HAS_SD
+    // #define USE_SD
+  #else   // REV_FEATHER S2
+    #define HAS_SD              // Adalogger
     #define USE_SD
-    #define HAS_TEMP_SENSOR
-    #define HAS_GPS
-  #endif
+    #define HAS_RTC
+      #define HAS_PCF8523         // i2c real-time clock (RTC)
+  #endif  // S3
+  #define HAS_BATTERY
+    #define HAS_MAX1704X
+  #define HAS_PSRAM
+  #define HAS_MINI_KB
+  #define HAS_BUTTONS
+  #define HAS_LED
+    #define HAS_NEOPIXEL_LED
+  //#define HAS_PWR_MGMT
+  #define HAS_SCREEN
+  #define HAS_MINI_SCREEN
+  // #define HAS_GPS
+  // #define HAS_TEMP_SENSOR
+  // #if ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0)
+  //   #define HAS_IDF_3
+  // #endif
+#endif
+
 
   #ifdef MARAUDER_V4
     #define HAS_TOUCH
