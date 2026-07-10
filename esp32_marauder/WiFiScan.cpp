@@ -469,9 +469,36 @@ extern "C" {
               #endif
             }
           }
-          else if (wifi_scan_obj.currentScanMode == BT_SCAN_ALL) {
+          else if ((wifi_scan_obj.currentScanMode == BT_SCAN_ALL) ||
+                   (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT)) {
             if (buf >= 0)
             {
+              BleDevice ble_device;
+              if (name_length > 0)
+                ble_device.name = name;
+              else
+                ble_device.name = mac;
+
+              ble_device.rssi = rssi;
+
+              memcpy(ble_device.mac, mac_char, sizeof(mac_char));
+
+              int device_match_check = wifi_scan_obj.seenBLEDevice(ble_device);
+
+              if (device_match_check >= 0) {
+                ble_device.selected = ble_devices->get(device_match_check).selected;
+                ble_device.name = ble_devices->get(device_match_check).name;
+                memcpy(ble_device.mac, ble_devices->get(device_match_check).mac, sizeof(mac_char));
+                ble_devices->set(device_match_check, ble_device);
+                //Serial.println(ble_devices->get(device_match_check).name + " RSSI updated: " + String(ble_devices->get(device_match_check).rssi));
+                return;
+              }
+
+              if (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT)
+                return;
+
+              ble_devices->add(ble_device);
+              
               #ifndef HAS_MINI_SCREEN
                 display_string.concat(text_table4[0]);
               #endif
