@@ -2765,9 +2765,11 @@ void MenuFunctions::RunSetup()
       this->changeMenu(deleteAllMenu.parentMenu, true);
     });
     this->addNodes(&deleteAllMenu, "Yes", TFTRED, 0, [this]() {
+      display_obj.tft.setTextColor(TFT_ORANGE, TFT_BLACK);
+
       display_obj.clearScreen();
 
-      display_obj.tft.drawCentreString("Deleting Logs...",TFT_WIDTH / 2, TFT_HEIGHT / 2, 2);
+      display_obj.showCenterText("Deleting logs...", TFT_HEIGHT / 2, true);
 
       for (int i = 0; i < sd_obj.sd_files->size(); i++) {
         if (sd_obj.sd_files->get(i).startsWith("wardrive_") || sd_obj.sd_files->get(i).startsWith("wigle-")) {
@@ -2783,7 +2785,7 @@ void MenuFunctions::RunSetup()
       }
       display_obj.clearScreen();
 
-      display_obj.tft.drawCentreString("Logs removed",TFT_WIDTH / 2, TFT_HEIGHT / 2, 2);
+      display_obj.showCenterText("Logs removed", TFT_HEIGHT / 2, true);
 
       delay(2000);
 
