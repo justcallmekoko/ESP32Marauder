@@ -5314,7 +5314,7 @@ void WiFiScan::RunRawScan(uint8_t scan_mode, uint16_t color) {
       }
       else {
         display_obj.tft.setTextColor(TFT_BLACK, color);
-        display_obj.tft.drawCentreString("Signal Monitor", TFT_WIDTH / 2, 16, 2);
+        display_obj.tft.drawCentreString("Fox Hunt", TFT_WIDTH / 2, 16, 2);
       }
     #endif
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
@@ -10282,7 +10282,9 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
 
     Serial.println("[WDG] Bytes sent: " + String(totalSent));
 
-    display_obj.showCenterText("Waiting for response...", (TFT_HEIGHT / 3) * 2, true);
+    #ifdef HAS_SCREEN
+      display_obj.showCenterText("Waiting for response...", (TFT_HEIGHT / 3) * 2, true);
+    #endif
 
     // Read response
     String response;
@@ -10476,7 +10478,9 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
 
     Serial.println("Finished sending part2 and part3");
 
-    display_obj.showCenterText("Waiting for response...", (TFT_HEIGHT / 3) * 2, true);
+    #ifdef HAS_SCREEN
+      display_obj.showCenterText("Waiting for response...", (TFT_HEIGHT / 3) * 2, true);
+    #endif
 
     fileToUpload.close();
 
