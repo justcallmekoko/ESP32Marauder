@@ -7951,8 +7951,8 @@ void WiFiScan::broadcastSetSSID(uint32_t current_time, const char* ESSID, uint8_
   }
 
   this->changeChannel(set_channel);
-
-  delay(1);  
+  // (changeChannel() already delay(1)'d for the channel switch to settle; the extra
+  // delay here was a redundant per-frame block on the beacon-spam path.)
 
   // Randomize SRC MAC
   if(!legit) {
