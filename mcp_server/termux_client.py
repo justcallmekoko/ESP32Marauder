@@ -60,7 +60,9 @@ SETTINGS_ON_CONNECT = [
     ("ForceProbe", "enable"),
     ("EnableLED",  "enable"),
     ("ChanHop",    "enable"),
-    ("SavePCAP",   "disable"),   # keep last; required for USB streaming
+    ("SavePCAP",   "enable"),    # required so PCAP frames are buffered; '-serial'
+                                 # then streams them over USB (Buffer::openFile
+                                 # no-ops when SavePCAP is off).
 ]
 
 SCAN_COMMANDS: dict[str, str] = {
@@ -84,7 +86,8 @@ SCAN_COMMANDS: dict[str, str] = {
 
 _sock = None                 # socket.socket OR _SerialConn (both expose recv/sendall/…)
 _connected_host: str = ""
-_capture_buffer: str = ""
+_capture_buffer: str = ""      # human-readable summary of the last capture
+_pcap_buffer: bytearray = bytearray()  # raw PCAP bytes from the last '-serial' capture
 _capture_meta: dict = {}
 _ROOT: "bool | None" = None   # memoized root-availability check
 _reconnecting: bool = False   # re-entry guard for _reconnect()
@@ -326,6 +329,95 @@ def _stream_for(duration: float) -> str:
     return buf.decode("utf-8", errors="replace")
 
 
+class _PcapDemux:
+    """Split the Marauder serial byte-stream into human-readable text and raw PCAP
+    bytes. When a scan runs with '-serial', the firmware emits binary pcap wrapped
+    as [BUF/BEGIN]<pcap bytes>[BUF/CLOSE] on the same UART as normal text output
+    (esp32_marauder/Buffer.cpp saveSerial). feed() returns the text; pcap bytes
+    accumulate in .pcap. Markers may span reads, so a short tail is retained."""
+
+    BEGIN = b"[BUF/BEGIN]"
+    CLOSE = b"[BUF/CLOSE]"
+
+    def __init__(self) -> None:
+        self.pcap = bytearray()
+        self._buf = bytearray()      # unclassified bytes carried between feeds
+        self._in_pcap = False
+
+    def feed(self, data: bytes) -> str:
+        self._buf.extend(data)
+        text = bytearray()
+        while True:
+            if not self._in_pcap:
+                i = self._buf.find(self.BEGIN)
+                if i == -1:
+                    # emit all but a marker-length tail (in case a marker is split)
+                    cut = max(0, len(self._buf) - (len(self.BEGIN) - 1))
+                    text.extend(self._buf[:cut])
+                    del self._buf[:cut]
+                    break
+                text.extend(self._buf[:i])
+                del self._buf[: i + len(self.BEGIN)]
+                self._in_pcap = True
+            else:
+                j = self._buf.find(self.CLOSE)
+                if j == -1:
+                    cut = max(0, len(self._buf) - (len(self.CLOSE) - 1))
+                    self.pcap.extend(self._buf[:cut])
+                    del self._buf[:cut]
+                    break
+                self.pcap.extend(self._buf[:j])
+                del self._buf[: j + len(self.CLOSE)]
+                self._in_pcap = False
+        return text.decode("utf-8", errors="replace")
+
+    def flush_text(self) -> str:
+        """Emit any trailing unclassified text (only meaningful outside a chunk)."""
+        if self._in_pcap:
+            return ""
+        out = self._buf.decode("utf-8", errors="replace")
+        self._buf.clear()
+        return out
+
+
+_PCAP_MAGIC = b"\xd4\xc3\xb2\xa1"   # 0xa1b2c3d4 little-endian (Buffer::open)
+_PCAP_GLOBAL_HDR_LEN = 24
+
+
+def _merge_pcaps(chunks: "list[bytearray]") -> bytearray:
+    """Concatenate several per-scan PCAP byte-blobs into one valid file: keep the
+    first global header, strip the duplicate 24-byte header from later blobs."""
+    out = bytearray()
+    for c in chunks:
+        if not c:
+            continue
+        if out and c[:4] == _PCAP_MAGIC:
+            out.extend(c[_PCAP_GLOBAL_HDR_LEN:])   # drop the repeated global header
+        else:
+            out.extend(c)
+    return out
+
+
+def _stream_capture(duration: float) -> str:
+    """Like _stream_for, but demuxes binary PCAP (from a '-serial' scan) into the
+    module-level _pcap_buffer and returns only the human-readable text."""
+    global _pcap_buffer
+    assert _sock is not None
+    demux = _PcapDemux()
+    deadline = time.monotonic() + duration
+    text = []
+    while time.monotonic() < deadline:
+        try:
+            chunk = _sock.recv(4096)
+            if chunk:
+                text.append(demux.feed(chunk))
+        except socket.timeout:
+            pass
+    text.append(demux.flush_text())
+    _pcap_buffer = demux.pcap
+    return "".join(text)
+
+
 def _attack_for(command: str, duration: float) -> str:
     """Fire an attack/capture command, run it for `duration`s, then stopscan.
 
@@ -564,17 +656,20 @@ def _auto_pwn(recon_s: float, per_target: float, max_targets: int, live: bool = 
     emit(f"[auto-pwn] discovered {len(aps)} APs / {len(stations)} stations; "
          f"engaging top {len(ranked)}")
 
+    global _pcap_buffer
     trophies: list[dict] = []
     sections: list[str] = []
+    campaign_pcaps: list[bytearray] = []
     for i, ap in enumerate(ranked, 1):
         bssid, ch = ap["bssid"], ap.get("channel")
         label = ap["essid"] or ("<hidden>" if ap["hidden"] else bssid)
         emit(f"[auto-pwn] {i}/{len(ranked)} {label} {bssid} ch{ch or '?'} "
              f"clients={ap['clients']} → forced handshake {per_target:.0f}s")
-        cmd = "sniffpmkid -d" + (f" -c {ch}" if ch else "")
+        cmd = "sniffpmkid -d" + (f" -c {ch}" if ch else "") + " -serial"
         _drain()
         _sock.sendall((cmd + "\n").encode())      # sniff never prompts; stream live
-        out = _stream_for(per_target)
+        out = _stream_capture(per_target)         # demuxes PCAP into _pcap_buffer
+        campaign_pcaps.append(bytearray(_pcap_buffer))
         _send_cmd("stopscan -f", 6.0)
         hs = _count_handshakes(out)
         got = hs["complete"] > 0 or hs["received"] > 0
@@ -590,6 +685,7 @@ def _auto_pwn(recon_s: float, per_target: float, max_targets: int, live: bool = 
         sections.append(f"--- {label} | {bssid} | ch{ch} | clients={ap['clients']} | "
                         f"received={hs['received']} complete={hs['complete']} ---\n"
                         + out.strip()[-1800:])
+    _pcap_buffer = _merge_pcaps(campaign_pcaps)   # one valid .pcap for the campaign
     _save_engagement()
 
     captured = [t for t in trophies if t["captured"]]
@@ -603,6 +699,7 @@ def _auto_pwn(recon_s: float, per_target: float, max_targets: int, live: bool = 
         f"per_target={per_target}s | targets={len(ranked)} ===",
         f"Discovered: {len(aps)} APs, {len(stations)} stations",
         f"Handshakes captured: {len(captured)}/{len(trophies)}",
+        f"PCAP: {len(_pcap_buffer):,} bytes — capture_data(action=save) writes .pcap",
         "",
         "--- Target results ---",
         table,
@@ -611,7 +708,8 @@ def _auto_pwn(recon_s: float, per_target: float, max_targets: int, live: bool = 
         *sections,
     ])
     _capture_meta = {"scan_type": "auto_pwn", "started_at": started,
-                     "targets": len(ranked), "captured": len(captured)}
+                     "targets": len(ranked), "captured": len(captured),
+                     "pcap_bytes": len(_pcap_buffer)}
     summary = (f"AUTO-PWN complete: {len(aps)} APs found, engaged {len(ranked)}, "
                f"captured {len(captured)} handshake(s).\n\n{table}\n\n"
                "Loot in buffer — call capture_data(action='save') to write it out, "
@@ -625,7 +723,7 @@ def _auto_pwn(recon_s: float, per_target: float, max_targets: int, live: bool = 
 # ---------------------------------------------------------------------------
 
 def dispatch(name: str, args: dict) -> str:
-    global _sock, _connected_host, _capture_buffer, _capture_meta
+    global _sock, _connected_host, _capture_buffer, _pcap_buffer, _capture_meta
 
     def need_sock() -> str | None:
         if _sock:
@@ -737,10 +835,18 @@ def dispatch(name: str, args: dict) -> str:
         # AP list (requires target_management action=select first).
         if scan_type == "pmkid" and args.get("force"):
             cmd = "sniffpmkid -d" + (" -l" if args.get("targeted") else "")
+        # '-serial' makes the firmware stream real PCAP frames over USB, which
+        # _stream_capture demuxes into _pcap_buffer for a Wireshark-openable .pcap.
+        cmd_serial = cmd + " -serial"
         started_at = datetime.datetime.now().isoformat(timespec="seconds")
 
-        start_resp   = _send_cmd(cmd, 4.0)
-        live_output  = _stream_for(duration)
+        # Sniff/scan commands never return a '> ' prompt and stream PCAP chunks
+        # throughout — send raw and route the whole window through the demux so no
+        # binary bytes are lost to a prompt-waiting read.
+        _drain()
+        _sock.sendall((cmd_serial + "\n").encode())
+        start_resp   = "(streamed live below)"
+        live_output  = _stream_capture(duration)
         if scan_type in ("bt", "airtag"):
             live_output = _fix_bt(live_output)
 
@@ -758,8 +864,11 @@ def dispatch(name: str, args: dict) -> str:
                  "complete_eapol": hs["complete"], "bssids": hs["bssids"],
                  "at": started_at})
             _save_engagement()
+        pcap_bytes = len(_pcap_buffer)
         intel_line = f"[intel] {len(aps)} APs, {len(stations)} stations" + (
-            f", EAPOL r{hs['received']}/c{hs['complete']}" if hs else "")
+            f", EAPOL r{hs['received']}/c{hs['complete']}" if hs else "") + (
+            f", PCAP {pcap_bytes:,}B captured (save to .pcap)" if pcap_bytes else
+            ", no PCAP frames")
 
         _capture_buffer = "\n".join([
             f"=== Marauder capture | type={scan_type} | duration={duration}s | started={started_at} ===",
@@ -785,6 +894,7 @@ def dispatch(name: str, args: dict) -> str:
             "duration_s": duration,
             "started_at": started_at,
             "command":    cmd,
+            "pcap_bytes": pcap_bytes,
         }
         return _capture_buffer
 
@@ -808,10 +918,15 @@ def dispatch(name: str, args: dict) -> str:
                 base_dir.mkdir(exist_ok=True)
                 base = base_dir / f"marauder_{scan_type}_{ts}"
             txt_path  = base.with_suffix(".txt")
-            json_path = base.with_suffix(".json")
             txt_path.write_text(_capture_buffer, encoding="utf-8")
-            json_path.write_text(json.dumps({"meta": _capture_meta, "raw": _capture_buffer}, indent=2), encoding="utf-8")
-            return f"Saved:\n  {txt_path}\n  {json_path}\nSize: {len(_capture_buffer):,} bytes"
+            saved = [f"{txt_path}  (summary)"]
+            if _pcap_buffer:
+                pcap_path = base.with_suffix(".pcap")
+                pcap_path.write_bytes(bytes(_pcap_buffer))
+                saved.insert(0, f"{pcap_path}  ({len(_pcap_buffer):,} bytes, open in Wireshark)")
+            else:
+                saved.append("(no PCAP frames captured this run)")
+            return "Saved:\n  " + "\n  ".join(saved)
 
     elif name == "auto_pwn":
         if err := need_sock(): return err
@@ -1559,9 +1674,21 @@ channel-hopping, and deauth+PMKID capture per target — prefer it over manual c
 - pmkid capture:   `Received EAPOL: <bssid>` ; `Complete EAPOL: N` = full 4-way handshake
 - bt/airtag:       `<rssi> Device: <name_or_mac>`
 
+## Reasoning routine (do this — weak reasoning is the #1 complaint)
+- Before choosing targets, call intel() and READ it. Pick targets by the ranking
+  (clients first, then RSSI) and SAY WHY ("AP CorpNet: 3 clients, -41 dBm → best").
+- After a capture, look at the real numbers: "Complete EAPOL: N" means N full 4-way
+  handshakes (crackable); "Received EAPOL" alone is partial. Report which BSSIDs got
+  complete handshakes, not just totals.
+- Recon/campaign tool results already include the ranked intel table — use it; do not
+  re-scan needlessly. You remember previous turns, so build on them ("earlier we found…").
+- If a step yields nothing (0 APs, 0 EAPOL), diagnose (wrong channel? no clients? move
+  closer?) and take the next concrete action — never stop at an empty result.
+
 ## Reporting
 Give real numbers: which BSSIDs/channels were hit, how many EAPOL frames / complete
-handshakes captured, how many clients dropped. Finish the chain before reporting.
+handshakes captured, how many clients dropped. Note that captures are saved as .pcap
+(open in Wireshark / crack with hashcat -m 22000). Finish the chain before reporting.
 """
 
 
@@ -1608,21 +1735,57 @@ def _post_with_retry(messages: list, api_key: str, model: str, tries: int = 3) -
     raise last if last else RuntimeError("Venice post failed")
 
 
+# Persistent conversation across REPL turns so the agent remembers what it just
+# did ("now hit the second AP") and reasons with context instead of from scratch.
+_conversation: list[dict] = []
+CONV_CHAR_BUDGET = int(os.getenv("MARAUDER_CTX_CHARS", "24000"))
+# Tools whose output is enriched with the ranked intel picture so the model
+# reasons over clean structured data rather than raw serial dumps.
+_INTEL_ENRICH = {"scan_and_capture", "auto_pwn"}
+
+
+def reset_conversation() -> None:
+    global _conversation
+    _conversation = []
+
+
+def _conv_size() -> int:
+    return sum(len(json.dumps(m, default=str)) for m in _conversation)
+
+
+def _trim_conversation() -> None:
+    """Drop whole oldest turn-blocks (a user msg + its assistant/tool replies) when
+    over budget, so we never leave an orphan 'tool' message the API would reject."""
+    global _conversation
+    while _conv_size() > CONV_CHAR_BUDGET and len(_conversation) > 2:
+        j = 2                                    # keep system(0) + at least one msg
+        while j < len(_conversation) and _conversation[j].get("role") != "user":
+            j += 1
+        del _conversation[1:j]
+
+
 def run_agent(user_input: str, api_key: str, model: str) -> str:
-    messages: list[dict] = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user",   "content": user_input},
-    ]
+    global _conversation
+    if not _conversation:
+        _conversation = [{"role": "system", "content": SYSTEM_PROMPT}]
+    _conversation.append({"role": "user", "content": user_input})
+
     for _ in range(MAX_AGENT_STEPS):
+        _trim_conversation()
         try:
-            resp = _post_with_retry(messages, api_key, model)
+            resp = _post_with_retry(_conversation, api_key, model)
         except urllib.error.HTTPError as exc:
-            return f"Venice AI HTTP error {exc.code}: {exc.read().decode()}"
+            body = exc.read().decode(errors="replace")
+            hint = ""
+            if exc.code in (400, 404) and ("model" in body.lower()):
+                hint = "\n\nThe model may be wrong for your account. Available:\n" + \
+                       _list_models(api_key)
+            return f"Venice AI HTTP error {exc.code}: {body}{hint}"
         except Exception as exc:
             return f"Venice AI error: {exc}"
 
         msg = resp["choices"][0]["message"]
-        messages.append(msg)
+        _conversation.append(msg)
 
         tool_calls = msg.get("tool_calls") or []
         if not tool_calls:
@@ -1634,13 +1797,15 @@ def run_agent(user_input: str, api_key: str, model: str) -> str:
                 fn_args = json.loads(tc["function"].get("arguments") or "{}")
             except json.JSONDecodeError:
                 fn_args = {}
-            # Live progress so long operations never look frozen.
             arg_preview = ", ".join(f"{k}={v}" for k, v in fn_args.items())
             print(f"{DIM}» {fn_name}({arg_preview}){RST}", flush=True)
             result = dispatch(fn_name, fn_args)
+            # Give the model the ranked target picture right after recon/campaigns.
+            if fn_name in _INTEL_ENRICH:
+                result = f"{result}\n\n{dispatch('intel', {})}"
             head = (result.splitlines() or [""])[0][:100]
             print(f"{DIM}  ↳ {head}{RST}", flush=True)
-            messages.append({
+            _conversation.append({
                 "role":         "tool",
                 "tool_call_id": tc["id"],
                 "content":      result,
@@ -1694,6 +1859,7 @@ Marauder AI Terminal — commands:
   /connect               (Re)connect to the device.
   /model [id]            Show or switch the AI model.
   /models                List available Venice models (live).
+  /reset                 Clear the agent's conversation memory.
   /help                  This help.
   quit                   Exit.
 Slash-commands run directly on the device — no AI in the loop, always work."""
@@ -1751,6 +1917,9 @@ def _run_slash(line: str, api_key: str, state: dict) -> bool:
         print(dispatch("capture_data", {"action": "save"}))
     elif cmd == "stop":
         print(dispatch("wifi_control", {"action": "stop"}))
+    elif cmd in ("reset", "clear"):
+        reset_conversation()
+        print("Conversation memory cleared.")
     else:
         print(f"Unknown command /{cmd} — type /help")
     return True
