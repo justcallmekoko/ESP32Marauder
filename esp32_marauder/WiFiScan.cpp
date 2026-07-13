@@ -298,6 +298,10 @@ extern "C" {
         void onResult(NimBLEAdvertisedDevice *advertisedDevice) {
           extern WiFiScan wifi_scan_obj;
 
+          String name = advertisedDevice->getName().c_str();
+          int name_length = advertisedDevice->getName().length();
+          int rssi = advertisedDevice->getRSSI();
+          String mac = advertisedDevice->getAddress().toString().c_str();
           unsigned char mac_char[6];
           wifi_scan_obj.copyNimbleMac(advertisedDevice->getAddress(), mac_char);
 
@@ -494,8 +498,10 @@ extern "C" {
                 return;
               }
 
-              if (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT)
+              if (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT) {
+                wifi_scan_obj.bt_cb_busy = false;
                 return;
+              }
 
               ble_devices->add(ble_device);
 
@@ -1115,8 +1121,10 @@ extern "C" {
                 return;
               }
 
-              if (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT)
+              if (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT) {
+                wifi_scan_obj.bt_cb_busy = false;
                 return;
+              }
 
               ble_devices->add(ble_device);
 
