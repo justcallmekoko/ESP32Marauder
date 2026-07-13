@@ -298,6 +298,10 @@ extern "C" {
         void onResult(NimBLEAdvertisedDevice *advertisedDevice) {
           extern WiFiScan wifi_scan_obj;
 
+          String name = advertisedDevice->getName().c_str();
+          int name_length = advertisedDevice->getName().length();
+          int rssi = advertisedDevice->getRSSI();
+          String mac = advertisedDevice->getAddress().toString().c_str();
           unsigned char mac_char[6];
           wifi_scan_obj.copyNimbleMac(advertisedDevice->getAddress(), mac_char);
 
