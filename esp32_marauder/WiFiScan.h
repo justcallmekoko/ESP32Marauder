@@ -372,6 +372,8 @@ class WiFiScan
     const wifi_promiscuous_filter_t filt = {.filter_mask=WIFI_PROMIS_FILTER_MASK_MGMT | WIFI_PROMIS_FILTER_MASK_DATA};
     #ifdef HAS_BT
       NimBLEScan* pBLEScan;
+    #endif
+    #ifdef HAS_NIMBLE_2
       NimBLEClient* nimbleClient;
     #endif
 
@@ -624,7 +626,7 @@ class WiFiScan
       NimBLEAdvertisementData GetUniversalAdvertisementData(EBLEPayloadType type);
     #endif
 
-    #ifdef HAS_BT
+    #ifdef HAS_NIMBLE_2
       bool connectAndProcessTracker(NimBLEAddress& address);
       bool sendAirtagSoundCommand(NimBLEClient* currentClient);
     #endif
@@ -929,6 +931,8 @@ class WiFiScan
     void save_mac(unsigned char* mac);
     #ifdef HAS_BT
       void copyNimbleMac(const BLEAddress &addr, unsigned char out[6]);
+    #endif
+    #ifdef HAS_NIMBLE_2
       bool executeFindMySound(bool gui = false);
     #endif
     bool filterActive();

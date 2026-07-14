@@ -3198,6 +3198,7 @@ void MenuFunctions::RunSetup()
         this->changeMenu(&wifiAPMenu, true);
       });
 
+      #ifdef HAS_NIMBLE_2
       this->addNodes(&bluetoothAttackMenu, "FindMy Sound", TFTCYAN, ATTACKS, [this](){
           wifiAPMenu.parentMenu = &bluetoothAttackMenu;
 
@@ -3244,6 +3245,7 @@ void MenuFunctions::RunSetup()
         }
         this->changeMenu(&wifiAPMenu, true);
       });
+      #endif
 
       wifiAPMenu.parentMenu = &bluetoothAttackMenu;
       this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, 0, [this]() {

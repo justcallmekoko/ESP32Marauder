@@ -4518,7 +4518,7 @@ void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color) {
   initTime = millis();
 }
 
-#ifdef HAS_BT
+#ifdef HAS_NIMBLE_2
 bool WiFiScan::connectAndProcessTracker(NimBLEAddress& address) {
   //const NimBLEAddress address(targ_addr, addr_type);
   NimBLEDevice::init("Tracker-Client");
