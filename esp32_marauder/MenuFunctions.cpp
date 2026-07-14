@@ -1,5 +1,12 @@
 #include "MenuFunctions.h"
+#ifdef HAS_CSI
+  #include "CSI.h"
+#endif
 #include "lang_var.h"
+
+#ifdef HAS_CSI
+  extern CsiModule csi_module;
+#endif
 
 #ifdef HAS_SCREEN
 
@@ -1634,6 +1641,9 @@ void MenuFunctions::RunSetup()
   #endif
 
   foxHuntMenu.list = new LinkedList<MenuNode>();
+  #ifdef HAS_CSI
+    csiMenu.list = new LinkedList<MenuNode>();
+  #endif
 
   // Work menu names
   mainMenu.name = text_table1[6];
@@ -1697,6 +1707,32 @@ void MenuFunctions::RunSetup()
   #endif
 
   foxHuntMenu.name = "Fox Hunt";
+  #ifdef HAS_CSI
+    csiMenu.name = "CSI Sensing";
+    csiMenu.parentMenu = &wifiMenu;
+
+    this->addNodes(&csiMenu, text09, TFTLIGHTGREY, 0, [this]() {
+      this->changeMenu(csiMenu.parentMenu, true);
+    });
+    this->addNodes(&csiMenu, "Start CSI (Ch 1)", TFTGREEN, CSI_SENSING, [this]() {
+      display_obj.clearScreen();
+      drawStatusBar();
+      csi_module.start(1);
+    });
+    this->addNodes(&csiMenu, "Start CSI (Ch 6)", TFTGREEN, CSI_SENSING, [this]() {
+      display_obj.clearScreen();
+      drawStatusBar();
+      csi_module.start(6);
+    });
+    this->addNodes(&csiMenu, "Start CSI (Ch 11)", TFTGREEN, CSI_SENSING, [this]() {
+      display_obj.clearScreen();
+      drawStatusBar();
+      csi_module.start(11);
+    });
+    this->addNodes(&csiMenu, "Stop CSI", TFTRED, CSI_SENSING, [this]() {
+      csi_module.stop();
+    });
+  #endif
 
   // Build Main Menu
   mainMenu.parentMenu = NULL;
@@ -1744,6 +1780,11 @@ void MenuFunctions::RunSetup()
   this->addNodes(&wifiMenu, text_table1[33], TFTPURPLE, GENERAL_APPS, [this]() {
     this->changeMenu(&wifiGeneralMenu, true);
   });
+  #ifdef HAS_CSI
+    this->addNodes(&wifiMenu, "CSI Sensing", TFTCYAN, CSI_SENSING, [this]() {
+      this->changeMenu(&csiMenu, true);
+    });
+  #endif
 
   // Build WiFi scanner Menu
   wifiScannerMenu.parentMenu = &wifiMenu; // Main Menu is second menu parent

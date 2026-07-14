@@ -102,6 +102,9 @@ extern Settings settings_obj;
 #define FLOCK 41
 #define BRIGHTNESS 42
 #define SETTINGS 43
+#ifdef HAS_CSI
+  #define CSI_SENSING 44
+#endif
 
 struct Menu;
 
@@ -146,6 +149,9 @@ class MenuFunctions
     Menu bluetoothMenu;
     #ifdef HAS_GPS
       Menu gpsMenu;   // H4W9 Added GPS Menu option to Main Menu
+    #endif
+    #ifdef HAS_CSI
+      Menu csiMenu;
     #endif
     Menu badusbMenu;
     Menu deviceMenu;
