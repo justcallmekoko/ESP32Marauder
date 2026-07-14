@@ -167,7 +167,7 @@ void CommandLine::filterAccessPoints(String filter) {
             (ssidEquals.charAt(0) == '\'' && ssidEquals.charAt(ssidEquals.length() - 1) == '\'' && ssidEquals.length() > 1)) {
           ssidEquals = ssidEquals.substring(1, ssidEquals.length() - 1);
         }
-        if (access_point.essid.equalsIgnoreCase(ssidEquals)) {
+        if (strcasecmp(access_point.essid, ssidEquals.c_str()) == 0) {
           matchesFilter = true;
           break;
         }
@@ -1714,7 +1714,7 @@ void CommandLine::runCommand(String input) {
         essid = cmd_args.get(essid_sw + 1);
 
       AccessPoint ap;
-      ap.essid = essid;
+      strlcpy(ap.essid, essid.c_str(), sizeof(ap.essid));
       ap.channel = channel;
       memcpy(ap.bssid, mac, 6);
       ap.selected = true;
@@ -1725,7 +1725,7 @@ void CommandLine::runCommand(String input) {
       ap.packets = 0;
       ap.sec = 0;
       ap.wps = false;
-      ap.man = "";
+      ap.man[0] = 0;
       ap.has_msg_1 = false;
       ap.has_msg_2 = false;
       ap.has_msg_3 = false;

@@ -53,7 +53,13 @@ struct ssid {
 };
 
 struct AccessPoint {
-  String essid;
+  // essid/man are fixed char[] (were Arduino String). access_points is mutated from
+  // sniffer RX callbacks (WiFi task) and copied by-value by the main-task UI/attack
+  // readers (get() returns AccessPoint by value); a String field would free+realloc its
+  // heap buffer during that copy -> a cross-task use-after-free / heap over-read. POD
+  // char[] makes the by-value copy a plain memcpy (a torn copy = garbled text for one
+  // frame, never a heap fault). 33 = 32-char SSID + NUL.
+  char essid[33];
   uint8_t channel;
   uint8_t bssid[6];
   bool selected;
@@ -64,7 +70,7 @@ struct AccessPoint {
   uint16_t packets;
   uint8_t sec;
   bool wps;
-  String man;
+  char man[33];
   bool has_msg_1;
   bool has_msg_2;
   bool has_msg_3;
