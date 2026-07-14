@@ -292,7 +292,9 @@ struct AirTag {
     bool is_airtag = false;
     bool is_fmna   = false;
     bool is_dult   = false;
+    #ifdef HAS_BT
     NimBLEAddress device_address;
+    #endif
 };
 
 struct Flipper {
