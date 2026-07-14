@@ -8793,7 +8793,11 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
   }
   else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
     #ifndef HAS_DUAL_BAND
-      wifi_scan_obj.channel_activity[wifi_scan_obj.set_channel - 1] = wifi_scan_obj.channel_activity[wifi_scan_obj.set_channel - 1] + 1;
+      // Guard the index: set_channel is written by the channel hopper (main task) and
+      // read here in the RX callback (WiFi task); a transient 0 would index [-1] and
+      // corrupt heap adjacent to channel_activity. Clamp to the valid 1..MAX_CHANNEL range.
+      if (wifi_scan_obj.set_channel >= 1 && wifi_scan_obj.set_channel <= MAX_CHANNEL)
+        wifi_scan_obj.channel_activity[wifi_scan_obj.set_channel - 1] = wifi_scan_obj.channel_activity[wifi_scan_obj.set_channel - 1] + 1;
     #else
       wifi_scan_obj.channel_activity[wifi_scan_obj.dual_band_channel_index] = wifi_scan_obj.channel_activity[wifi_scan_obj.dual_band_channel_index] + 1;
     #endif
