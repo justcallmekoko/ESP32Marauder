@@ -826,7 +826,12 @@ class WiFiScan
 
     uint8_t activity_page = 1;
 
-    String analyzer_name_string = "";
+    // Fixed buffer (not Arduino String) written by the Channel-Analyzer RX callback
+    // (WiFi task) and read by the main-task display path via the guarded
+    // setAnalyzerName/getAnalyzerName accessors -> no cross-task String use-after-free.
+    char analyzer_name_string[33] = "";
+    void setAnalyzerName(const char *s);
+    void getAnalyzerName(char *out, size_t n);
     
     uint8_t analyzer_frames_recvd = 0;
 
