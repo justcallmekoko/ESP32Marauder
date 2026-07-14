@@ -70,6 +70,7 @@
 
 #ifdef HAS_DIRECT_UPLOAD
   #include <WiFiClientSecure.h>
+  #include <HTTPClient.h>
   #include "mbedtls/sha256.h"
 #endif
 
@@ -166,6 +167,7 @@
 #ifdef HAS_CSI
   #define WIFI_CSI_CAPTURE 85
 #endif
+#define BT_FINDMY_SOUND 86
 
 #define WIFI_ATTACK_FUNNY_BEACON 99 
 
@@ -219,6 +221,10 @@
 #define CLEAR_SSID  7
 #define CLEAR_BLE   8
 
+#define WIGLE_UPLOAD 0
+#define WDG_UPLOAD   1
+#define BOTH_UPLOAD  2
+
 extern EvilPortal evil_portal_obj;
 
 #ifdef HAS_SCREEN
@@ -251,6 +257,18 @@ esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx, const void *buffer, int len, b
 #define VALID_ENTRY 1
 #define TOMBSTONE_ENTRY 2
 
+#ifdef HAS_NIMBLE_2
+static constexpr uint8_t AIRTAG_BEEP_COMMAND = 0xAF;
+
+static const NimBLEUUID AIRTAG_SERVICE_UUID(
+    "7dfc9000-7d1c-4951-86aa-8d9728f8d66c"
+);
+
+static const NimBLEUUID AIRTAG_CHARACTERISTIC_UUID(
+    "7dfc9001-7d1c-4951-86aa-8d9728f8d66c"
+);
+#endif
+
 #pragma pack(push, 1)
 struct MacEntry {
   uint8_t  mac[6];
@@ -274,6 +292,12 @@ struct AirTag {
     bool selected;
     int8_t rssi;
     uint32_t last_seen;
+    bool is_airtag = false;
+    bool is_fmna   = false;
+    bool is_dult   = false;
+    #ifdef HAS_BT
+    NimBLEAddress device_address;
+    #endif
 };
 
 struct Flipper {
@@ -355,6 +379,9 @@ class WiFiScan
     const wifi_promiscuous_filter_t filt = {.filter_mask=WIFI_PROMIS_FILTER_MASK_MGMT | WIFI_PROMIS_FILTER_MASK_DATA};
     #ifdef HAS_BT
       NimBLEScan* pBLEScan;
+    #endif
+    #ifdef HAS_NIMBLE_2
+      NimBLEClient* nimbleClient;
     #endif
 
     const char* rick_roll[8] = {
@@ -606,8 +633,15 @@ class WiFiScan
       NimBLEAdvertisementData GetUniversalAdvertisementData(EBLEPayloadType type);
     #endif
 
+    #ifdef HAS_NIMBLE_2
+      bool connectAndProcessTracker(NimBLEAddress& address);
+      bool sendAirtagSoundCommand(NimBLEClient* currentClient);
+    #endif
+
     bool wigleUpload(String filePath);
     bool wdgwarsUpload(String filePath);
+    void writeSidecar(String filePath, String service);
+    bool sidecarExists(String filePath, String service); 
 
     void runFoxHunt(uint32_t currentTime);
     void throwThatShitInACircle();
@@ -882,6 +916,7 @@ class WiFiScan
 
     wifi_config_t ap_config;
 
+    bool uploadFile(String filePath, bool retry = false, uint8_t upload_type = WIGLE_UPLOAD);
     String checkEmptyProbe(String essid);
     bool checkFlockOUI(const uint8_t mac[6]);
     bool startWiFi(String ssid, String password, bool gui = true);
@@ -903,6 +938,9 @@ class WiFiScan
     void save_mac(unsigned char* mac);
     #ifdef HAS_BT
       void copyNimbleMac(const BLEAddress &addr, unsigned char out[6]);
+    #endif
+    #ifdef HAS_NIMBLE_2
+      bool executeFindMySound(bool gui = false);
     #endif
     bool filterActive();
     bool RunGPSInfo(bool tracker = false, bool display = true, bool poi = false);
