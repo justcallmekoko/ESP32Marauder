@@ -254,6 +254,7 @@ esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx, const void *buffer, int len, b
 #define VALID_ENTRY 1
 #define TOMBSTONE_ENTRY 2
 
+#ifdef HAS_NIMBLE_2
 static constexpr uint8_t AIRTAG_BEEP_COMMAND = 0xAF;
 
 static const NimBLEUUID AIRTAG_SERVICE_UUID(
@@ -263,6 +264,7 @@ static const NimBLEUUID AIRTAG_SERVICE_UUID(
 static const NimBLEUUID AIRTAG_CHARACTERISTIC_UUID(
     "7dfc9001-7d1c-4951-86aa-8d9728f8d66c"
 );
+#endif
 
 #pragma pack(push, 1)
 struct MacEntry {
