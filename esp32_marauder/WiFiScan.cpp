@@ -1,4 +1,5 @@
 #include "esp_random.h"
+#include "esp_task_wdt.h"
 #include "WiFiScan.h"
 #include "lang_var.h"
 
@@ -7984,6 +7985,7 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_s
 
   this->changeChannel(this->set_channel);
   delay(1);
+  esp_task_wdt_reset();
 
   // Figure out what's going at the end and the lengths
   uint8_t temp[64]; // big enough for worst case
@@ -8105,7 +8107,8 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, ssid custom_ssid, bo
   memcpy(temp_frame, packet, frame_len);
 
   this->changeChannel(this->set_channel);
-  delay(1);  
+  delay(1);
+  esp_task_wdt_reset();
 
   // Randomize SRC MAC
   temp_frame[10] = temp_frame[16] = custom_ssid.bssid[0];
@@ -8154,7 +8157,8 @@ void WiFiScan::broadcastSetSSID(uint32_t current_time, const char* ESSID, uint8_
 
   this->changeChannel(set_channel);
 
-  delay(1);  
+  delay(1);
+  esp_task_wdt_reset();
 
   // Randomize SRC MAC
   if(!legit) {
@@ -8320,7 +8324,8 @@ void WiFiScan::sendDeauthFrame(uint8_t bssid[6], int channel, uint8_t mac[6]) {
   WiFiScan::set_channel = channel;
   this->changeChannel(channel);
   delay(1);
-  
+  esp_task_wdt_reset();
+
   // Build AP source packet
   deauth_frame_default[4] = mac[0];
   deauth_frame_default[5] = mac[1];
@@ -8384,6 +8389,7 @@ void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6], u
   WiFiScan::set_channel = channel;
   this->changeChannel(channel);
   delay(1);
+  esp_task_wdt_reset();
 
   uint8_t frame_size = 153;
 
@@ -8436,6 +8442,7 @@ void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6], u
   WiFiScan::set_channel = channel;
   this->changeChannel(channel);
   delay(1);
+  esp_task_wdt_reset();
 
   uint8_t frame_size = 153;
 
@@ -8482,6 +8489,7 @@ void WiFiScan::sendAssociationSleep(const char* ESSID, uint8_t bssid[6], int cha
   WiFiScan::set_channel = channel;
   this->changeChannel(channel);
   delay(1);
+  esp_task_wdt_reset();
 
   static uint16_t sequence_number = 0;
 
