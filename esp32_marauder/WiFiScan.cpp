@@ -7,7 +7,17 @@
 #endif
 
 static const uint8_t *g_filter_bssid = nullptr;
-uint8_t *current_act = nullptr;
+
+// SAE anti-clogging token capture buffer. Fixed + bounded so getSAEACT() -- which runs
+// in the promiscuous RX callback (WiFi-driver task) -- never free()/malloc()s a pointer
+// that the main-task SAE flood loop (sendSAECommitFrame) may be mid-dereference. That was
+// a cross-task use-after-free: a free()/realloc landing inside the reader's copy loop
+// dereferences freed/short heap and can broadcast it over the air via esp_wifi_80211_tx().
+// A spinlock serializes the short copy in/out; the length is clamped to the buffer.
+#define CURRENT_ACT_MAX 255                 // 802.11 element length is a single byte
+static uint8_t      current_act_buf[CURRENT_ACT_MAX];
+static portMUX_TYPE current_act_mux = portMUX_INITIALIZER_UNLOCKED;
+uint8_t            *current_act = nullptr;  // -> current_act_buf once populated (never freed)
 
 MacEntry WiFiScan::mac_entries[mac_history_len_half];
 uint8_t WiFiScan::mac_entry_state[mac_history_len_half];
@@ -7354,17 +7364,22 @@ bool WiFiScan::sendSAECommitFrame(uint8_t* targ_addr, uint8_t* src_addr) {
   for (int i = 0; i < 64; i++)
     current_index++;
 
-  // If ACT exists, append it to the frame
+  // If ACT exists, append it to the frame. Copy under the spinlock so the RX-task
+  // writer (getSAEACT) can't mutate current_act_buf mid-copy; clamp to the buffer bound.
   if (this->current_act_len > 0 && current_act != NULL) {
     *current_index++ = 0x4C; // ACT required
 
-    *current_index++ = this->current_act_len;
+    size_t act_n = (size_t)this->current_act_len;
+    if (act_n > CURRENT_ACT_MAX) act_n = CURRENT_ACT_MAX;
 
-    for (size_t i = 0; i < this->current_act_len; i++)
+    *current_index++ = (uint8_t)act_n;
+
+    portENTER_CRITICAL(&current_act_mux);
+    for (size_t i = 0; i < act_n; i++)
       current_index[i] = current_act[i];
+    portEXIT_CRITICAL(&current_act_mux);
 
-    for (int i = 0; i < this->current_act_len; i++)
-      current_index++;
+    current_index += act_n;
   }
 
   if (esp_wifi_80211_tx(WIFI_IF_STA, frame, current_index - frame, false) != ESP_OK)
@@ -7414,15 +7429,16 @@ bool WiFiScan::getSAEACT(const uint8_t *frame, size_t frame_len, uint16_t &group
       const uint8_t *act_index = frame + frame_header_len;
       act_len_out = frame_len - frame_header_len;
 
-      // Copy ACT
+      // Copy ACT into the fixed static buffer (no heap free/malloc in this RX-task
+      // callback -> no cross-task UAF). Clamp so a large frame can't overrun the buffer
+      // or the single-byte element length; publish under the spinlock.
       if (act_len_out != 0) {
-        if (current_act)
-          free(current_act);
-
-        current_act = (uint8_t *)malloc(act_len_out);
-        if (current_act) {
-          memcpy(current_act, act_index, act_len_out);
-        }
+        if (act_len_out > CURRENT_ACT_MAX)
+          act_len_out = CURRENT_ACT_MAX;
+        portENTER_CRITICAL(&current_act_mux);
+        memcpy(current_act_buf, act_index, act_len_out);
+        current_act = current_act_buf;
+        portEXIT_CRITICAL(&current_act_mux);
       }
     }
   }
