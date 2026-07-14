@@ -391,6 +391,8 @@ extern "C" {
               airtag.payloadSize = len;
               airtag.rssi = rssi;
               airtag.last_seen = millis();
+              airtag.is_airtag = true;
+              airtag.device_address = advertisedDevice->getAddress();
 
               airtags->add(airtag);
 
@@ -1025,6 +1027,8 @@ extern "C" {
               #endif              
               airtag.rssi = rssi;
               airtag.last_seen = millis();
+              airtag.is_airtag = true;
+              airtag.device_address = advertisedDevice->getAddress();
 
               airtags->add(airtag);
 
@@ -4513,6 +4517,167 @@ void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color) {
   this->wifi_initialized = true;
   initTime = millis();
 }
+
+#ifdef HAS_NIMBLE_2
+bool WiFiScan::connectAndProcessTracker(NimBLEAddress& address) {
+  //const NimBLEAddress address(targ_addr, addr_type);
+  NimBLEDevice::init("Tracker-Client");
+
+  /*
+    * Do not proactively require bonding, MITM, or Secure Connections.
+    */
+  NimBLEDevice::setSecurityAuth(
+    false,
+    false,
+    false
+  );
+
+  nimbleClient = NimBLEDevice::createClient();
+
+  if (nimbleClient == nullptr) {
+    Serial.printf("Failed to create NimBLE client\n");
+
+    return false;
+  }
+
+  Serial.println(address.toString().c_str());
+
+  nimbleClient->setConnectTimeout(5000);
+
+  if (!nimbleClient->connect(address, true, false, true)) {
+    Serial.printf("Connection failed; error=%d\n", nimbleClient->getLastError());
+     
+    return false;
+  }
+
+  return true;
+}
+
+bool WiFiScan::sendAirtagSoundCommand(NimBLEClient* currentClient) {
+  if (currentClient == nullptr || !currentClient->isConnected())
+    return false;
+
+  NimBLERemoteService* service = currentClient->getService(AIRTAG_SERVICE_UUID);
+
+  if (service == nullptr) {
+    Serial.println("AirTag service unavailable");
+
+    return false;
+  }
+
+  NimBLERemoteCharacteristic* characteristic = service->getCharacteristic(AIRTAG_CHARACTERISTIC_UUID);
+
+  if (characteristic == nullptr) {
+    Serial.println("AirTag sound characteristic unavailable");
+
+    return false;
+  }
+
+  if (!characteristic->canWrite()) {
+    Serial.println("AirTag sound characteristic does not advertise WRITE");
+
+    return false;
+  }
+
+  if (!currentClient->isConnected()) {
+    Serial.println("Airtag dropped connection before send");
+    return false;
+  }
+
+  Serial.println("Submitting AirTag unauthorized-sound command...");
+
+  const bool writeReturnedSuccess = characteristic->writeValue(&AIRTAG_BEEP_COMMAND, sizeof(AIRTAG_BEEP_COMMAND), true);
+
+  if (writeReturnedSuccess) {
+    Serial.println("AirTag write acknowledged normally");
+
+    return true;
+  }
+
+  /*if (airTagCompletionSeen) {
+    Serial.printf(
+      "[%s] AirTag sound command completed through "
+      "expected remote disconnect\n",
+      TAG
+    );
+
+    return true;
+  }*/
+
+  Serial.println("AirTag sound command failed");
+
+  return false;
+}
+
+bool WiFiScan::executeFindMySound(bool gui) {
+  bool send_success = false;
+  bool selected = false;
+
+  #ifdef HAS_SCREEN
+  if (gui) {
+    display_obj.clearScreen();
+    display_obj.tft.setCursor(0, (TFT_HEIGHT / 4));
+    display_obj.tft.println("Sending sound command...\n");
+  }
+  #endif
+
+  for (int i = 0; i < airtags->size(); i++) {
+
+    AirTag airtag = airtags->get(i);
+
+    if (airtag.selected) {
+      #ifdef HAS_SCREEN
+      if (gui)
+        display_obj.tft.println("Targeting " + airtag.mac);
+      #endif
+
+      selected = true;
+
+      uint8_t addr[6];
+
+      convertMacStringToUint8(airtag.mac, addr);
+
+      if (this->connectAndProcessTracker(airtag.device_address)) {
+        Serial.println("Connected to " + airtag.mac);
+        #ifdef HAS_SCREEN
+        if (gui)
+          display_obj.tft.println("Connected");
+        #endif
+
+        if (airtag.is_airtag) {
+          send_success = this->sendAirtagSoundCommand(nimbleClient);
+          if (send_success) {
+            #ifdef HAS_SCREEN
+            if (gui)
+              display_obj.tft.println("Command sent");
+            #endif
+          }
+        }
+      } else {
+        #ifdef HAS_SCREEN
+        if (gui)
+          display_obj.tft.println("Failed to connect");
+        #endif
+      }
+    }
+  }
+
+  if (nimbleClient != nullptr) {
+    if (nimbleClient->isConnected()) {
+      Serial.println("Disconnecting locally...");
+
+      nimbleClient->disconnect();
+    }
+
+    NimBLEDevice::deleteClient(nimbleClient);
+    nimbleClient = nullptr;
+  }
+
+  NimBLEDevice::deinit(true);
+
+  return send_success;
+}
+#endif
 
 void WiFiScan::executeBLESpam(EBLEPayloadType type) {
   #ifdef HAS_BT
