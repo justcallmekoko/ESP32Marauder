@@ -169,6 +169,8 @@ void Display::setCalData(bool landscape) {
         uint16_t calData[5] = { 312, 3431, 191, 3456, 2 };
       #elif defined(TFT_DIY)
         uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // tft.setRotation(0); // Portrait with DIY TFT
+      #elif defined(MARAUDER_NM_CYD_C5)
+        uint16_t calData[5] = { 333, 3466, 212, 3414, 2 }; // tft.setRotation(0); // Portrait with DIY NM-CYD-C5
       #endif
       #ifdef HAS_ILI9341
         tft.setTouch(calData);
@@ -181,8 +183,10 @@ void Display::setCalData(bool landscape) {
         uint16_t calData[5] = { 272, 3648, 234, 3565, 7 };
       #elif defined(MARAUDER_V8)
         uint16_t calData[5] = { 213, 3396, 350, 3275, 1 };
-      #else if defined(TFT_DIY)
-        uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
+      #elif defined(TFT_DIY)
+        uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT 
+      #elif defined(MARAUDER_NM_CYD_C5)
+        uint16_t calData[5] = { 225, 3413, 403, 3334, 1 };
       #endif
       #ifdef HAS_ILI9341
         tft.setTouch(calData);

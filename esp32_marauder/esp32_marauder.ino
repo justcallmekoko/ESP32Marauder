@@ -216,7 +216,7 @@ uint32_t currentTime  = 0;
 #endif
 
 #ifdef HAS_C5_SD
-  SPIClass sharedSPI(SPI);
+  SPIClass sharedSPI(FSPI);
   SDInterface sd_obj = SDInterface(&sharedSPI, SD_CS);
 #endif
 
@@ -265,6 +265,7 @@ void setup()
   
   // Preset SPI CS pins to avoid bus conflicts
   #ifdef HAS_SCREEN
+    pinMode(TFT_CS, OUTPUT);
     digitalWrite(TFT_CS, HIGH);
   #endif
   

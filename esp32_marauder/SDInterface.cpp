@@ -98,6 +98,8 @@ File SDInterface::getFile(String path) {
     //if (file)
     return file;
   }
+
+  return File();
 }
 
 bool SDInterface::removeFile(String file_path) {
