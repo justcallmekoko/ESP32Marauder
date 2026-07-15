@@ -254,7 +254,7 @@ esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx, const void *buffer, int len, b
 #define VALID_ENTRY 1
 #define TOMBSTONE_ENTRY 2
 
-#ifdef HAS_NIMBLE_2
+#ifdef HAS_BT
 
 #define IS_AIRTAG 0
 #define IS_FMNA   1
@@ -1047,7 +1047,9 @@ class WiFiScan
     static void pineScanSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type); // Pineapple
     static int extractPineScanChannel(const uint8_t* payload, int len); // Pineapple
     static void multiSSIDSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type); // MultiSSID
-    static void trackerNotifyCallback(NimBLERemoteCharacteristic* characteristic, uint8_t* data, size_t length, bool isNotify);
+    #ifdef HAS_NIMBLE_2
+      static void trackerNotifyCallback(NimBLERemoteCharacteristic* characteristic, uint8_t* data, size_t length, bool isNotify);
+    #endif
     static inline uint32_t hash_mac(const uint8_t mac[6]);
 };
 #endif
