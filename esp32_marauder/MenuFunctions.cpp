@@ -1395,9 +1395,9 @@ void MenuFunctions::orientDisplay() {
 
   display_obj.tft.setCursor(0, 0);
 
-  #ifdef HAS_ILI9341
+  #if defined(HAS_ILI9341) && !defined(HAS_ST7789)
     #ifndef HAS_CYD_TOUCH
-      display_obj.setCalData();
+       display_obj.setCalData();
     #else
       display_obj.touchscreen.setRotation(0);
     #endif
