@@ -254,7 +254,11 @@ esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx, const void *buffer, int len, b
 #define VALID_ENTRY 1
 #define TOMBSTONE_ENTRY 2
 
-#ifdef HAS_NIMBLE_2
+#ifdef HAS_BT
+
+#define IS_AIRTAG 0
+#define IS_FMNA   1
+#define IS_DULT   2
 static constexpr uint8_t AIRTAG_BEEP_COMMAND = 0xAF;
 
 static const NimBLEUUID AIRTAG_SERVICE_UUID(
@@ -264,6 +268,38 @@ static const NimBLEUUID AIRTAG_SERVICE_UUID(
 static const NimBLEUUID AIRTAG_CHARACTERISTIC_UUID(
     "7dfc9001-7d1c-4951-86aa-8d9728f8d66c"
 );
+
+static const NimBLEUUID FMNA_SERVICE_UUID(
+    "0000fd44-0000-1000-8000-00805f9b34fb"
+);
+
+static const NimBLEUUID FMNA_SOUND_CHARACTERISTIC_UUID(
+    "4f860003-943b-49ef-bed4-2f730304427a"
+);
+
+static const NimBLEUUID DULT_SERVICE_UUID(
+    "15190001-12f4-c226-88ed-2ac5579f2a85"
+);
+
+static const NimBLEUUID DULT_SOUND_CHARACTERISTIC_UUID(
+    "8e0c0001-1d68-fb92-bf61-48377421680e"
+);
+
+static const uint8_t FMNA_START_SOUND_COMMAND[] = {
+    0x01, 0x00, 0x03
+};
+
+static const uint8_t FMNA_STOP_SOUND_COMMAND[] = {
+    0x01, 0x01, 0x03
+};
+
+static const uint8_t DULT_START_SOUND_COMMAND[] = {
+    0x00, 0x03
+};
+
+static const uint8_t DULT_STOP_SOUND_COMMAND[] = {
+    0x01, 0x03
+};
 #endif
 
 #pragma pack(push, 1)
@@ -631,8 +667,12 @@ class WiFiScan
     #endif
 
     #ifdef HAS_NIMBLE_2
-      bool connectAndProcessTracker(NimBLEAddress& address);
+      int connectAndProcessTracker(NimBLEAddress& address);
       bool sendAirtagSoundCommand(NimBLEClient* currentClient);
+      bool sendFmnaSoundCommand(NimBLEClient* currentClient);
+      bool sendDultSoundCommand(NimBLEClient* currentClient);
+      bool enableTrackerResponses(NimBLERemoteCharacteristic* characteristic);
+      void createNimbleClient();
     #endif
 
     bool wigleUpload(String filePath);
@@ -1007,6 +1047,9 @@ class WiFiScan
     static void pineScanSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type); // Pineapple
     static int extractPineScanChannel(const uint8_t* payload, int len); // Pineapple
     static void multiSSIDSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type); // MultiSSID
+    #ifdef HAS_NIMBLE_2
+      static void trackerNotifyCallback(NimBLERemoteCharacteristic* characteristic, uint8_t* data, size_t length, bool isNotify);
+    #endif
     static inline uint32_t hash_mac(const uint8_t mac[6]);
 };
 #endif
