@@ -22,6 +22,8 @@
 #include "SDInterface.h"
 #include "settings.h"
 
+extern int8_t wifi_power;
+
 #ifdef HAS_BUTTONS
   #include "Switches.h"
   #if (U_BTN >= 0)
@@ -197,6 +199,9 @@ class MenuFunctions
     Menu evilPortalMenu;
 
     Menu foxHuntMenu;
+
+    Menu adminMenu;
+    Menu adminSubMenu;
 
     #ifdef HAS_DIRECT_UPLOAD
       Menu deleteAllMenu;

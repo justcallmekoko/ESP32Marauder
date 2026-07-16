@@ -14,6 +14,7 @@
   #include <NimBLEDevice.h> // 1.3.8, 2.3.2
 #endif
 
+
 /*#ifdef HAS_IDF_3
   extern "C" {
     #include "esp_netif.h"
@@ -247,6 +248,11 @@ extern Settings settings_obj;
 #elif defined(HAS_NEOPIXEL_LED)
   extern LedInterface led_obj;
 #endif
+
+ //  WIFI_POWER_21dBm = 84,      // 21dBm
+ //  WIFI_POWER_20_5dBm = 82,    // 20.5dBm
+ //  WIFI_POWER_20dBm = 80,      // 20dBm
+int8_t wifi_power;
 
 esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx, const void *buffer, int len, bool en_sys_seq);
 

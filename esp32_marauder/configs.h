@@ -227,7 +227,8 @@
 
   #ifdef MARAUDER_REV_FEATHER
     //#define FLIPPER_ZERO_HAT
-    //#define HAS_BATTERY
+    #define HAS_BATTERY
+      #define HAS_MAX1704X
     //#define HAS_BT
     #define HAS_MINI_KB
     #define HAS_BUTTONS
@@ -239,6 +240,8 @@
     #define USE_SD
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
+    //value between 8>84
+    #define MAX_WIFI_TX_POWER 60
   #endif
 
   #ifdef MARAUDER_V4
@@ -898,6 +901,13 @@
       #define TFT_BL -1
       #define TOUCH_CS -1
       //#define SD_CS 1
+
+      #define I2C_SDA 21
+      #define I2C_SCL 22
+      #define I2C_INT 35
+      // J1 Grove connector
+      // GPIO32
+      // GPIO33
 
       #define SCREEN_BUFFER
 
@@ -2488,7 +2498,7 @@
     #endif
 
     #ifdef MARAUDER_REV_FEATHER
-      #define SD_CS 5
+      #define SD_CS 10     // Adalogger
     #endif
 
     #ifdef MARAUDER_M5STICKC
@@ -2561,6 +2571,7 @@
   #define TFTDARKGREY  16
   #define TFTSKYBLUE   17
   #define TFTLIME      18
+  #define TFTPINK      18
   //// END SPACE SAVING COLORS
 
   #define TFT_FARTGRAY 0x528a
@@ -2799,7 +2810,7 @@
   #ifdef HAS_BATTERY
 
     #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2) 
-      #define I2C_SDA 33
+      #define I2C_SDA 21
       #define I2C_SCL 22
 
     #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_KIT)

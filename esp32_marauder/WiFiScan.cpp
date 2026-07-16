@@ -2013,6 +2013,7 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui) {
   this->setMac();
     
   WiFi.begin(ssid.c_str(), password.c_str());
+  esp_wifi_set_max_tx_power(wifi_power);
 
   #ifdef HAS_SCREEN
     if (gui) {
@@ -2024,6 +2025,7 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui) {
     }
   #endif
 
+  eventId = WiFi.onEvent(WiFiScan::onWiFiEvent);
   Serial.print(F("Connecting to WiFi"));
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -2130,6 +2132,7 @@ void WiFiScan::initWiFi(uint8_t scan_mode) {
   if (scan_mode != WIFI_SCAN_OFF) {
     //Serial.println(F("Initializing WiFi settings..."));
     this->changeChannel();
+    esp_wifi_set_max_tx_power(wifi_power);
   
     this->force_pmkid = settings_obj.loadSetting<bool>(text_table4[5]);
     this->force_probe = settings_obj.loadSetting<bool>(text_table4[6]);
@@ -2448,7 +2451,7 @@ void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, const char* t
   this->setMac();
   this->changeChannel(this->set_channel);
   esp_wifi_set_promiscuous(true);
-  esp_wifi_set_max_tx_power(82);
+  esp_wifi_set_max_tx_power(wifi_power);
   this->wifi_initialized = true;
   this->setLEDMode(MODE_ATTACK);
   initTime = millis();
@@ -2465,6 +2468,7 @@ bool WiFiScan::shutdownWiFi() {
     
       esp_wifi_set_mode(WIFI_MODE_NULL);
       esp_wifi_stop();
+      esp_wifi_set_max_tx_power(wifi_power);
       esp_wifi_restore();
       esp_wifi_deinit();
       esp_netif_deinit(); 
@@ -2695,6 +2699,7 @@ void WiFiScan::getMAC(bool get_sta, uint8_t* mac) {
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_STA);
   esp_wifi_start();
+  esp_wifi_set_max_tx_power(wifi_power);
   this->setMac();
   if (get_sta)
     esp_err_t mac_status = esp_wifi_get_mac(WIFI_IF_STA, mac);
@@ -3185,6 +3190,7 @@ void WiFiScan::setWiFiMode(wifi_mode_t mode, wifi_promiscuous_cb_t cb) {
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(mode);
   esp_wifi_start();
+  esp_wifi_set_max_tx_power(wifi_power);
   this->setMac();
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
@@ -4356,6 +4362,7 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color) {
   /*esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
   esp_wifi_start();
+  esp_wifi_set_max_tx_power(wifi_power);
   this->setMac();
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
@@ -4441,6 +4448,7 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color) {
   this->throwThatShitInACircle();
 
   esp_wifi_start();
+  esp_wifi_set_max_tx_power(wifi_power);
   this->setMac();
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
@@ -4485,6 +4493,7 @@ void WiFiScan::RunPineScan(uint8_t scan_mode, uint16_t color) {
   /*esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_mode(WIFI_MODE_NULL);
   esp_wifi_start();
+  esp_wifi_set_max_tx_power(wifi_power);
   this->setMac();
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);

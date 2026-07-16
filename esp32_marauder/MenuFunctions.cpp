@@ -1629,10 +1629,15 @@ void MenuFunctions::RunSetup()
   evilPortalMenu.list = new LinkedList<MenuNode>();
   ssidsMenu.list = new LinkedList<MenuNode>();
 
+  adminMenu.list = new LinkedList<MenuNode>();
+  adminSubMenu.list = new LinkedList<MenuNode>();
+
   #ifdef HAS_GPS
     gpsPOIMenu.list = new LinkedList<MenuNode>();
   #endif
 
+  adminMenu.name = "Admin Tools";
+  adminSubMenu.name = "-";
   foxHuntMenu.list = new LinkedList<MenuNode>();
 
   // Work menu names
@@ -3386,6 +3391,78 @@ void MenuFunctions::RunSetup()
     this->changeMenu(loadATsMenu.parentMenu, true);
   });
 
+
+  // Admin Menu
+  // TFT_GREENYELLOW
+  this->addNodes(&deviceMenu, "Admin Tools", TFTPINK, SD_UPDATE, [this]() {
+    this->changeMenu(&adminMenu, true);
+  });
+  adminMenu.parentMenu = &deviceMenu;
+
+  this->addNodes(&adminMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(adminMenu.parentMenu, true);
+  });
+#if defined(HAS_SD) || defined(USE_SD)
+  this->addNodes(&adminMenu, "Rescan SD", TFTPINK, SD_UPDATE, [this]() {
+    sd_obj.initSD();
+    this->changeMenu(&adminMenu, true);
+  });
+#endif
+
+  // adminSubMenu is just a blank screen a Done button
+  adminSubMenu.parentMenu = &adminMenu;
+    this->addNodes(&adminSubMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(adminSubMenu.parentMenu, true);
+  });
+
+#ifdef HAS_GPS
+      this->addNodes(&saveFileMenu, "Probe GPS", TFTSKYBLUE, SD_UPDATE, [this]() {
+        gps_obj.begin();
+       this->changeMenu(&adminMenu, true);
+      });
+#endif //  HAS_GPS
+
+  this->addNodes(&adminMenu, "WifiTx 21dBm (Max)", TFTGREEN, WIFI, [this]() {
+      // WIFI_POWER_21dBm = 84,
+      wifi_power = 84;
+      esp_wifi_set_max_tx_power(wifi_power);
+     this->changeMenu(&adminMenu, true);
+  });
+  this->addNodes(&adminMenu, "WifiTx 20dBm (Default)", TFTGREEN, WIFI, [this]() {
+      // WIFI_POWER_20dB = 80
+      wifi_power = 78;
+      esp_wifi_set_max_tx_power(wifi_power);
+     this->changeMenu(&adminMenu, true);
+     // esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P9); // Set maximum 9 dBm power
+  });
+  this->addNodes(&adminMenu, "WifiTx 15dBm", TFTGREEN, WIFI, [this]() {
+     // WIFI_POWER_15dBm = 60
+      wifi_power = 60;
+      esp_wifi_set_max_tx_power(wifi_power);
+     this->changeMenu(&adminMenu, true);
+  });
+  this->addNodes(&adminMenu, "WifiTx 8.5dBm", TFTGREEN, WIFI, [this]() {
+    // WIFI_POWER_8_5dBm = 34
+      wifi_power = 34;
+      esp_wifi_set_max_tx_power(wifi_power);
+     this->changeMenu(&adminMenu, true);
+  });
+  this->addNodes(&adminMenu, "WifiTx 5dBm", TFTGREEN, WIFI, [this]() {
+      // WIFI_POWER_5dBm = 20,
+      wifi_power = 20;
+      esp_wifi_set_max_tx_power(wifi_power);
+     this->changeMenu(&adminMenu, true);
+  });
+
+  this->addNodes(&adminMenu, "Reset Reasion", TFTRED, SETTINGS, [this]() {
+    this->changeMenu(&adminSubMenu, true);
+    extern const char *resetReasonName();
+    extern void print_reset_reason();
+    display_obj.tft.setTextColor(TFT_SKYBLUE, TFT_BLACK);
+    display_obj.tft.drawCentreString(resetReasonName(), TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+    print_reset_reason();
+  });
+
   // GPS Menu
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
@@ -4201,6 +4278,7 @@ uint16_t MenuFunctions::getColor(uint16_t color) {
   else if (color == TFTSILVER) return TFT_SILVER;
   else if (color == TFTDARKGREY) return TFT_DARKGREY;
   else if (color == TFTSKYBLUE) return TFT_SKYBLUE;
+  else if (color == TFTPINK) return TFT_PINK;
   else if (color == TFTLIME) return 0x97e0;
   else return color;
 }
