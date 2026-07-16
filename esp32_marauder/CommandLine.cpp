@@ -282,6 +282,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_SAVE_CMD);
     Serial.println(HELP_LOAD_CMD);
     Serial.println(HELP_JOIN_CMD);
+    Serial.println(HELP_SORT_CMD);
     Serial.println(HELP_MAC_CMD_A);
     Serial.println(HELP_MAC_CMD_B);
     Serial.println(HELP_MAC_CMD_C);
@@ -1628,7 +1629,9 @@ void CommandLine::runCommand(String input) {
       this->showCounts(count_selected, count_unselected);
     }
   }
-  else if (cmd_args.get(0) == SAVE_CMD) {
+  else if (cmd_args.get(0) == SORT_CMD) {
+    wifi_scan_obj.RunSortAPList();
+  } else if (cmd_args.get(0) == SAVE_CMD) {
     int ap_sw = this->argSearch(&cmd_args, "-a");
     int st_sw = this->argSearch(&cmd_args, "-s");
 
