@@ -88,20 +88,21 @@ void Buffer::gpxOpen(const char* file_name, fs::FS* fs, bool serial) {
   openFile(file_name, fs, serial, false, true);
 }
 
+// Serializes the double-buffer size/select fields between the RX-callback writer
+// (WiFi-driver task) and the main-task save(). Only SHORT sections are held under the
+// spinlock (memcpy/size updates, and the save() swap) -- the blocking SD/serial drain
+// runs OUTSIDE the lock on a buffer the writer no longer touches.
+static portMUX_TYPE buf_mux = portMUX_INITIALIZER_UNLOCKED;
+
 void Buffer::add(const uint8_t* buf, uint32_t len, bool is_pcap){
-  // buffer is full -> drop packet
-  if((useA && bufSizeA + len >= BUF_SIZE && bufSizeB > 0) || (!useA && bufSizeB + len >= BUF_SIZE && bufSizeA > 0)){
-    //Serial.print(";"); 
-    return;
-  }
-  
-  if(useA && bufSizeA + len + 16 >= BUF_SIZE && bufSizeB == 0){
-    useA = false;
-    //Serial.println("\nswitched to buffer B");
-  }
-  else if(!useA && bufSizeB + len + 16 >= BUF_SIZE && bufSizeA == 0){
-    useA = true;
-    //Serial.println("\nswitched to buffer A");
+  // Drop the WHOLE record if it won't fit the active buffer (record = payload + up to
+  // the 16-byte pcap header). The mid-cycle self-switch was removed -- save() owns the
+  // ping-pong swap now, so add() never mutates useA (which the main task also touches).
+  // write() re-bounds-checks under the lock, so a stale unlocked read here can only
+  // cause a benign spurious drop, never an overrun.
+  {
+    volatile uint32_t &sz = useA ? bufSizeA : bufSizeB;
+    if(sz + len + 16 > BUF_SIZE) return;
   }
 
   uint32_t microSeconds = micros(); // e.g. 45200400 => 45s 200ms 400us
@@ -119,18 +120,15 @@ void Buffer::add(const uint8_t* buf, uint32_t len, bool is_pcap){
   write(buf, len); // packet payload
 }
 
+// Gate on `writing` (set from the SavePCAP check in openFile) instead of hitting NVS
+// via loadSetting() on EVERY captured frame in the RX callback -- a flash-backed read
+// per packet is slow and pointless (write() already early-returns when !writing).
 void Buffer::append(wifi_promiscuous_pkt_t *packet, int len) {
-  bool save_packet = settings_obj.loadSetting<bool>(text_table4[7]);
-  if (save_packet) {
-    add(packet->payload, len, true);
-  }
+  if (writing) add(packet->payload, len, true);
 }
 
 void Buffer::append(String log) {
-  bool save_packet = settings_obj.loadSetting<bool>(text_table4[7]);
-  if (save_packet) {
-    add((const uint8_t*)log.c_str(), log.length(), false);
-  }
+  if (writing) add((const uint8_t*)log.c_str(), log.length(), false);
 }
 
 void Buffer::write(int32_t n){
@@ -160,44 +158,29 @@ void Buffer::write(uint16_t n){
 
 void Buffer::write(const uint8_t* buf, uint32_t len){
   if(!writing) return;
-  while(saving) delay(10);
-  
+  // Copy + size-bump under the spinlock so save()'s swap can't zero/flip the buffer
+  // mid-write. Bounds-checked so a full buffer drops the record instead of overrunning
+  // (was the old while(saving)delay busy-wait / TOCTOU).
+  portENTER_CRITICAL(&buf_mux);
   if(useA){
-    memcpy(&bufA[bufSizeA], buf, len);
-    bufSizeA += len;
+    if(bufSizeA + len <= BUF_SIZE){ memcpy(&bufA[bufSizeA], buf, len); bufSizeA += len; }
   }else{
-    memcpy(&bufB[bufSizeB], buf, len);
-    bufSizeB += len;
+    if(bufSizeB + len <= BUF_SIZE){ memcpy(&bufB[bufSizeB], buf, len); bufSizeB += len; }
   }
+  portEXIT_CRITICAL(&buf_mux);
 }
 
-void Buffer::saveFs(){
+void Buffer::saveFs(const uint8_t* buf, uint32_t len){
   file = fs->open(fileName, FILE_APPEND);
   if (!file) {
     Serial.println(text02+fileName+"'");
     return;
   }
-
-  if(useA){
-    if(bufSizeB > 0){
-      file.write(bufB, bufSizeB);
-    }
-    if(bufSizeA > 0){
-      file.write(bufA, bufSizeA);
-    }
-  } else {
-    if(bufSizeA > 0){
-      file.write(bufA, bufSizeA);
-    }
-    if(bufSizeB > 0){
-      file.write(bufB, bufSizeB);
-    }
-  }
-
+  if(len > 0) file.write(buf, len);
   file.close();
 }
 
-void Buffer::saveSerial() {
+void Buffer::saveSerial(const uint8_t* src, uint32_t len) {
   // Saves to main console UART, user-facing app will ignore these markers
   // Uses / and ] in markers as they are illegal characters for SSIDs
   const char* mark_begin = "[BUF/BEGIN]";
@@ -207,31 +190,12 @@ void Buffer::saveSerial() {
 
   // Additional buffer and memcpy's so that a single Serial.write() is called
   // This is necessary so that other console output isn't mixed into buffer stream
-  uint8_t* buf = (uint8_t*)malloc(mark_begin_len + bufSizeA + bufSizeB + mark_close_len);
+  uint8_t* buf = (uint8_t*)malloc(mark_begin_len + len + mark_close_len);
+  if(!buf) return;
   uint8_t* it = buf;
   memcpy(it, mark_begin, mark_begin_len);
   it += mark_begin_len;
-
-  if(useA){
-    if(bufSizeB > 0){
-      memcpy(it, bufB, bufSizeB);
-      it += bufSizeB;
-    }
-    if(bufSizeA > 0){
-      memcpy(it, bufA, bufSizeA);
-      it += bufSizeA;
-    }
-  } else {
-    if(bufSizeA > 0){
-      memcpy(it, bufA, bufSizeA);
-      it += bufSizeA;
-    }
-    if(bufSizeB > 0){
-      memcpy(it, bufB, bufSizeB);
-      it += bufSizeB;
-    }
-  }
-
+  if(len > 0){ memcpy(it, src, len); it += len; }
   memcpy(it, mark_close, mark_close_len);
   it += mark_close_len;
   Serial.write(buf, it - buf);
@@ -239,18 +203,22 @@ void Buffer::saveSerial() {
 }
 
 void Buffer::save() {
-  saving = true;
-
-  if((bufSizeA + bufSizeB) == 0){
-    saving = false;
-    return;
+  // Ping-pong drain. Under the spinlock, snapshot the active buffer + flip useA so the
+  // RX-callback writer immediately fills the OTHER (already-drained, empty) buffer; then
+  // drain the snapshotted buffer OUTSIDE the lock (the writer no longer touches it) ->
+  // no writer/drainer overlap, no TOCTOU (replaces the while(saving) delay busy-wait).
+  uint8_t* drainBuf = nullptr;
+  uint32_t drainLen = 0;
+  portENTER_CRITICAL(&buf_mux);
+  if(useA){
+    if(bufSizeA > 0){ drainBuf = bufA; drainLen = bufSizeA; bufSizeA = 0; useA = false; }
+  } else {
+    if(bufSizeB > 0){ drainBuf = bufB; drainLen = bufSizeB; bufSizeB = 0; useA = true; }
   }
+  portEXIT_CRITICAL(&buf_mux);
 
-  if(this->fs) saveFs();
-  if(this->serial) saveSerial();
+  if(!drainBuf || drainLen == 0) return;
 
-  bufSizeA = 0;
-  bufSizeB = 0;
-
-  saving = false;
+  if(this->fs)     saveFs(drainBuf, drainLen);
+  if(this->serial) saveSerial(drainBuf, drainLen);
 }

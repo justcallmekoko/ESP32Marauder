@@ -35,18 +35,21 @@ class Buffer {
     void write(uint32_t n);
     void write(uint16_t n);
     void write(const uint8_t* buf, uint32_t len);
-    void saveFs();
-    void saveSerial();
+    void saveFs(const uint8_t* buf, uint32_t len);       // drain one buffer
+    void saveSerial(const uint8_t* buf, uint32_t len);   // drain one buffer
     
     uint8_t* bufA;
     uint8_t* bufB;
 
-    uint32_t bufSizeA = 0;
-    uint32_t bufSizeB = 0;
+    // Shared between the RX-callback writer (WiFi task) and the main-task save() ->
+    // volatile + guarded by buf_mux (in the .cpp). ping-pong: save() flips useA to hand
+    // the writer a fresh buffer, then drains the old one.
+    volatile uint32_t bufSizeA = 0;
+    volatile uint32_t bufSizeB = 0;
 
-    bool writing = false; // acceppting writes to buffer
-    bool useA = true; // writing to bufA or bufB
-    bool saving = false; // currently saving onto the SD card
+    volatile bool writing = false; // acceppting writes to buffer
+    volatile bool useA = true; // writing to bufA or bufB
+    volatile bool saving = false; // (legacy; retained, no longer the sync primitive)
 
     String fileName = "/0.pcap";
     File file;
