@@ -1,9 +1,13 @@
 #pragma once
 
+
+#include "configs.h"
+
+#if  defined(HAS_XIAO_LED) || defined(XIAO_ESP32_S3)
+
 #ifndef xiaoLED_H
 #define xiaoLED_H
 
-#include "configs.h"
 #include "settings.h"
 
 #include <Arduino.h>
@@ -16,10 +20,12 @@ class xiaoLED {
 
     public:
         void RunSetup();
-        void main();
+        void main(uint32_t currentTime);
         void attackLED();
         void sniffLED();
         void offLED();
 };
 
 #endif  /* xiaoLED_H */
+
+#endif  // HAS_XIAO_LED
