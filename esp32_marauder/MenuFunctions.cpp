@@ -2020,7 +2020,7 @@ void MenuFunctions::RunSetup()
     // Get AP list ready
     for (int i = 0; i < access_points->size(); i++) {
       // This is the menu node
-      this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, 255, [this, i](){
+      this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTCYAN, 255, [this, i](){
         if (evil_portal_obj.setAP(access_points->get(i).essid)) {
           AccessPoint new_ap = access_points->get(i);
           new_ap.selected = true;
@@ -2316,7 +2316,7 @@ void MenuFunctions::RunSetup()
       // Populate the menu with buttons
       for (int i = 0; i < access_points->size(); i++) {
         // This is the menu node
-        this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, 255, [this, i](){
+        this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTCYAN, 255, [this, i](){
         AccessPoint new_ap = access_points->get(i);
         new_ap.selected = !access_points->get(i).selected;
 
@@ -2343,7 +2343,7 @@ void MenuFunctions::RunSetup()
       // Populate the menu with buttons
       for (int i = 0; i < access_points->size(); i++) {
         // This is the menu node
-        this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, 255, [this, i](){
+        this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTCYAN, 255, [this, i](){
           this->changeMenu(&apInfoMenu, true);
           wifi_scan_obj.RunAPInfo(i);
         });
@@ -2381,7 +2381,7 @@ void MenuFunctions::RunSetup()
 
       for (int i = 0; i < menu_limit; i++) {
         wifiStationMenu.list->clear();
-        this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, 255, [this, i](){
+        this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTCYAN, 255, [this, i](){
 
           wifiStationMenu.list->clear();
 
@@ -2449,7 +2449,7 @@ void MenuFunctions::RunSetup()
       // Populate the menu with buttons
       for (int i = 0; i < access_points->size(); i++) {
         // This is the menu node
-        this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, 255, [this, i](){
+        this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTCYAN, 255, [this, i](){
           // Join WiFi using mini keyboard
           #ifdef HAS_MINI_KB
             this->changeMenu(&miniKbMenu, true);
@@ -2497,7 +2497,7 @@ void MenuFunctions::RunSetup()
         // Populate the menu with buttons
         for (int i = 0; i < access_points->size(); i++) {
           // This is the menu node
-          this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, 255, [this, i](){
+          this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTCYAN, 255, [this, i](){
             // Join WiFi using mini keyboard
             #ifdef HAS_MINI_KB
               this->changeMenu(&miniKbMenu, true);
@@ -2973,7 +2973,7 @@ void MenuFunctions::RunSetup()
       // Populate the menu with buttons
       for (int i = 0; i < access_points->size(); i++) {
         // This is the menu node
-        this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTLIME, 255, [this, i](){
+        this->addNodes(&wifiAPMenu, access_points->get(i).essid, TFTLIME, 255, [this, i](){
           this->changeMenu(&genAPMacMenu, true);
           wifi_scan_obj.RunSetMac(access_points->get(i).bssid, true);
         });

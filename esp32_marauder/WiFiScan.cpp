@@ -3462,7 +3462,7 @@ void WiFiScan::RunLoadAPList() {
     for (JsonObject obj : array) {
       AccessPoint ap;
 
-      ap.essid   = obj.containsKey("essid")   ? obj["essid"].as<String>()      : "";
+      strlcpy(ap.essid, obj.containsKey("essid") ? obj["essid"].as<String>().c_str() : "", sizeof(ap.essid));
       ap.channel = obj.containsKey("channel") ? obj["channel"].as<uint8_t>()   : 1;
       ap.selected = false;
 
@@ -3472,7 +3472,7 @@ void WiFiScan::RunLoadAPList() {
       } else {
         memset(ap.bssid, 0, 6); // Zero BSSID if missing
       }
-      Serial.println("Got: " + ap.essid);
+      Serial.println(String("Got: ") + ap.essid);
 
       ap.stations = new LinkedList<uint16_t>();
 
@@ -3494,7 +3494,7 @@ void WiFiScan::RunLoadAPList() {
       ap.packets  = obj.containsKey("packet") ? obj["packet"].as<uint32_t>()   : 0;
       ap.sec      = obj.containsKey("sec")    ? obj["sec"].as<uint8_t>()       : 0;
       ap.wps      = obj.containsKey("wps")    ? obj["wps"].as<bool>()          : false;
-      ap.man      = obj.containsKey("man")    ? obj["man"].as<String>()        : "Unknown";
+      strlcpy(ap.man, obj.containsKey("man") ? obj["man"].as<String>().c_str() : "Unknown", sizeof(ap.man));
       ap.has_msg_1 = false;
       ap.has_msg_2 = false;
       ap.has_msg_3 = false;
@@ -6397,7 +6397,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
 
       if ((index > 0) && (!access_point.wps)) {
         //new_ap.wps = true;
-        access_point.man = man;
+        strlcpy(access_point.man, man.c_str(), sizeof(access_point.man));
         access_points->set(index, access_point);
       }
       //}
@@ -6471,7 +6471,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
         if (wifi_scan_obj.checkMem()) {
 
           AccessPoint ap;
-          ap.essid = essid;
+          strlcpy(ap.essid, essid.c_str(), sizeof(ap.essid));
           ap.channel = snifferPacket->rx_ctrl.channel;
           ap.bssid[0] = snifferPacket->payload[10];
           ap.bssid[1] = snifferPacket->payload[11];
@@ -6507,7 +6507,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
 
           ap.packets = 0;
 
-          ap.man = "";
+          ap.man[0] = 0;
 
           access_points->add(ap);
         }
@@ -8352,8 +8352,8 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_s
   }
 
   // Figure out ESSID stuff and lengths based on attack type
-  char ESSID[custom_ssid.essid.length() + 1] = {};
-  custom_ssid.essid.toCharArray(ESSID, custom_ssid.essid.length() + 1);
+  char ESSID[strlen(custom_ssid.essid) + 1] = {};   // AccessPoint overload: essid is char[]
+  strlcpy(ESSID, custom_ssid.essid, sizeof(ESSID));
 
   int realLen = strlen(ESSID);
   int ssidLen = realLen;
@@ -8625,13 +8625,13 @@ void WiFiScan::sendProbeAttack(uint32_t currentTime) {
       prob_req_packet[15] = random(256);
 
       // Set SSID length
-      int ssidLen = access_point.essid.length();
+      int ssidLen = strlen(access_point.essid);
       int fullLen = ssidLen;
       prob_req_packet[25] = fullLen;
 
       // Insert ESSID
-      char buf[access_point.essid.length() + 1] = {};
-      access_point.essid.toCharArray(buf, access_point.essid.length() + 1);
+      char buf[strlen(access_point.essid) + 1] = {};
+      strlcpy(buf, access_point.essid, strlen(access_point.essid) + 1);
       
       for(int i = 0; i < ssidLen; i++)
         prob_req_packet[26 + i] = buf[i];
@@ -8994,7 +8994,7 @@ void WiFiScan::sendAssocSleepAttack(uint32_t currentTime, bool all) {
       AccessPoint access_point = access_points->get(i);
       for (int x = 0; x < access_point.stations->size(); x++) {
         if (stations->get(access_point.stations->get(x)).selected) {
-          this->sendAssociationSleep(access_point.essid.c_str(), access_point.bssid,
+          this->sendAssociationSleep(access_point.essid, access_point.bssid,
                                   access_point.channel,
                                   stations->get(access_point.stations->get(x)).mac);
         }
@@ -9006,7 +9006,7 @@ void WiFiScan::sendAssocSleepAttack(uint32_t currentTime, bool all) {
       AccessPoint access_point = access_points->get(i);
       if (access_point.selected) {
         for (int x = 0; x < access_point.stations->size(); x++) {
-          this->sendAssociationSleep(access_point.essid.c_str(), access_point.bssid,
+          this->sendAssociationSleep(access_point.essid, access_point.bssid,
                                   access_point.channel,
                                   stations->get(access_point.stations->get(x)).mac);
         }
@@ -9334,7 +9334,7 @@ void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
         uint8_t security_type = wifi_scan_obj.getSecurityType(snifferPacket->payload, len);
 
         AccessPoint ap;
-        ap.essid = essid;
+        strlcpy(ap.essid, essid.c_str(), sizeof(ap.essid));
         ap.channel = snifferPacket->rx_ctrl.channel;
         ap.bssid[0] = snifferPacket->payload[10];
         ap.bssid[1] = snifferPacket->payload[11];
@@ -10186,9 +10186,9 @@ void WiFiScan::renderPacketRate() {
     AccessPoint access_point = access_points->get(i);
     if (access_point.selected) {
       #ifdef HAS_SCREEN
-        display_obj.tft.println(access_point.essid + ": " + (String)access_point.packets);
+        display_obj.tft.println(String(access_point.essid) + ": " + (String)access_point.packets);
       #endif
-      Serial.println(access_point.essid + ": " + (String)access_point.packets);
+      Serial.println(String(access_point.essid) + ": " + (String)access_point.packets);
     }
   }
   for (int i = 0; i < stations->size(); i++) {
@@ -11148,9 +11148,9 @@ void WiFiScan::runFoxHunt(uint32_t currentTime) {
           display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
 
           #ifdef HAS_MINI_SCREEN
-            display_obj.showCenterText(access_points->get(i).essid.c_str(), (TFT_HEIGHT / 4), true);
+            display_obj.showCenterText(access_points->get(i).essid, (TFT_HEIGHT / 4), true);
           #else
-            display_obj.showCenterText(access_points->get(i).essid.c_str(), (TFT_HEIGHT / 4), false, 2);
+            display_obj.showCenterText(access_points->get(i).essid, (TFT_HEIGHT / 4), false, 2);
           #endif
 
           #ifdef HAS_MINI_SCREEN
@@ -11381,7 +11381,7 @@ void WiFiScan::main(uint32_t currentTime)
 
             int8_t rssi = access_point.rssi;
 
-            display_obj.tft.print(access_point.essid + ": ");
+            display_obj.tft.print(String(access_point.essid) + ": ");
             display_obj.tft.setTextColor(this->rssiToColor(rssi), TFT_BLACK);
             display_obj.tft.println((String)rssi);
             display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
