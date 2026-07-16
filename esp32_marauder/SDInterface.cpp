@@ -175,7 +175,7 @@ void SDInterface::runUpdate(String file_name) {
     if(updateBin.isDirectory()){
       #ifdef HAS_SCREEN
         display_obj.tft.setTextColor(TFT_RED);
-        display_obj.tft.println(F(text_table2[0]));
+        cnDraw(text_table2[0], display_obj.tft.getCursorX(), display_obj.tft.getCursorY()); display_obj.tft.setCursor(display_obj.tft.getCursorX(), display_obj.tft.getCursorY() + 12)
       #endif
       Serial.print(F("Error, could not find \""));
       Serial.print(file_name);
@@ -191,7 +191,7 @@ void SDInterface::runUpdate(String file_name) {
 
     if (updateSize > 0) {
       #ifdef HAS_SCREEN
-        display_obj.tft.println(F(text_table2[1]));
+        cnDraw(text_table2[1], display_obj.tft.getCursorX(), display_obj.tft.getCursorY()); display_obj.tft.setCursor(display_obj.tft.getCursorX(), display_obj.tft.getCursorY() + 12)
       #endif
       Serial.println(F("Starting update over SD. Please wait..."));
       this->performUpdate(updateBin, updateSize);
@@ -199,7 +199,7 @@ void SDInterface::runUpdate(String file_name) {
     else {
       #ifdef HAS_SCREEN
         display_obj.tft.setTextColor(TFT_RED);
-        display_obj.tft.println(F(text_table2[2]));
+        cnDraw(text_table2[2], display_obj.tft.getCursorX(), display_obj.tft.getCursorY()); display_obj.tft.setCursor(display_obj.tft.getCursorX(), display_obj.tft.getCursorY() + 12)
       #endif
       Serial.println(F("Error, file is empty"));
       #ifdef HAS_SCREEN
@@ -212,7 +212,7 @@ void SDInterface::runUpdate(String file_name) {
     
       // whe finished remove the binary from sd card to indicate end of the process
     #ifdef HAS_SCREEN
-      display_obj.tft.println(F(text_table2[3]));
+      cnDraw(text_table2[3], display_obj.tft.getCursorX(), display_obj.tft.getCursorY()); display_obj.tft.setCursor(display_obj.tft.getCursorX(), display_obj.tft.getCursorY() + 12)
     #endif
     const esp_partition_t *running = esp_ota_get_running_partition();
 
@@ -225,7 +225,7 @@ void SDInterface::runUpdate(String file_name) {
   else {
     #ifdef HAS_SCREEN
       display_obj.tft.setTextColor(TFT_RED);
-      display_obj.tft.println(F(text_table2[4]));
+      cnDraw(text_table2[4], display_obj.tft.getCursorX(), display_obj.tft.getCursorY()); display_obj.tft.setCursor(display_obj.tft.getCursorX(), display_obj.tft.getCursorY() + 12)
     #endif
     Serial.println(F("Could not load update.bin from sd root"));
     #ifdef HAS_SCREEN
@@ -237,13 +237,13 @@ void SDInterface::runUpdate(String file_name) {
 void SDInterface::performUpdate(Stream &updateSource, size_t updateSize) {
   if (Update.begin(updateSize)) {   
     #ifdef HAS_SCREEN
-      display_obj.tft.println(text_table2[5] + String(updateSize));
-      display_obj.tft.println(F(text_table2[6]));
+      cnDraw(text_table2[5] , display_obj.tft.getCursorX(), display_obj.tft.getCursorY()); display_obj.tft.print(String(updateSize)); display_obj.tft.setCursor(display_obj.tft.getCursorX(), display_obj.tft.getCursorY() + 12)
+      cnDraw(text_table2[6], display_obj.tft.getCursorX(), display_obj.tft.getCursorY()); display_obj.tft.setCursor(display_obj.tft.getCursorX(), display_obj.tft.getCursorY() + 12)
     #endif
     size_t written = Update.writeStream(updateSource);
     if (written == updateSize) {
       #ifdef HAS_SCREEN
-        display_obj.tft.println(text_table2[7] + String(written) + text_table2[10]);
+        cnDraw(text_table2[7] , display_obj.tft.getCursorX(), display_obj.tft.getCursorY()); display_obj.tft.print(String(written)); cnDraw(text_table2[10], display_obj.tft.getCursorX(), display_obj.tft.getCursorY()); display_obj.tft.setCursor(display_obj.tft.getCursorX(), display_obj.tft.getCursorY() + 12)
       #endif
       Serial.print(F("Written : "));
       Serial.print(written);
@@ -251,7 +251,7 @@ void SDInterface::performUpdate(Stream &updateSource, size_t updateSize) {
     }
     else {
       #ifdef HAS_SCREEN
-        display_obj.tft.println(text_table2[8] + String(written) + "/" + String(updateSize) + text_table2[9]);
+        cnDraw(text_table2[8] , display_obj.tft.getCursorX(), display_obj.tft.getCursorY()); display_obj.tft.print(String(written) + "/" + String(updateSize)); cnDraw(text_table2[9], display_obj.tft.getCursorX(), display_obj.tft.getCursorY()); display_obj.tft.setCursor(display_obj.tft.getCursorX(), display_obj.tft.getCursorY() + 12)
       #endif
       Serial.print(F("Written only : "));
       Serial.print(written);
@@ -266,7 +266,7 @@ void SDInterface::performUpdate(Stream &updateSource, size_t updateSize) {
       else {
         #ifdef HAS_SCREEN
           display_obj.tft.setTextColor(TFT_RED);
-          display_obj.tft.println(text_table2[12]);
+          cnDraw(text_table2[12], display_obj.tft.getCursorX(), display_obj.tft.getCursorY()); display_obj.tft.setCursor(display_obj.tft.getCursorX(), display_obj.tft.getCursorY() + 12);
         #endif
         Serial.println(F("Update not finished? Something went wrong!"));
         #ifdef HAS_SCREEN
@@ -276,7 +276,7 @@ void SDInterface::performUpdate(Stream &updateSource, size_t updateSize) {
     }
     else {
       #ifdef HAS_SCREEN
-        display_obj.tft.println(text_table2[13] + String(Update.getError()));
+        cnDraw(text_table2[13] , display_obj.tft.getCursorX(), display_obj.tft.getCursorY()); display_obj.tft.print(String(Update.getError())); display_obj.tft.setCursor(display_obj.tft.getCursorX(), display_obj.tft.getCursorY() + 12)
       #endif
       Serial.print(F("Error Occurred. Error #: "));
       Serial.println(Update.getError());
@@ -286,7 +286,7 @@ void SDInterface::performUpdate(Stream &updateSource, size_t updateSize) {
   else
   {
     #ifdef HAS_SCREEN
-      display_obj.tft.println(text_table2[14]);
+      cnDraw(text_table2[14], display_obj.tft.getCursorX(), display_obj.tft.getCursorY()); display_obj.tft.setCursor(display_obj.tft.getCursorX(), display_obj.tft.getCursorY() + 12);
     #endif
     Serial.println(F("Not enough space to begin OTA"));
   }

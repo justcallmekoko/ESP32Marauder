@@ -174,7 +174,7 @@ void Buffer::write(const uint8_t* buf, uint32_t len){
 void Buffer::saveFs(){
   file = fs->open(fileName, FILE_APPEND);
   if (!file) {
-    Serial.println(text02+fileName+"'");
+    Serial.print(cnRead(text02)); Serial.print(fileName); Serial.println("'");
     return;
   }
 

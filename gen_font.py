@@ -4,9 +4,9 @@
 from PIL import Image, ImageDraw, ImageFont
 import os
 
-# === Chinese translations for all UI strings ===
+# === Chinese translations (using only 128 chars in font) ===
 T = {
-    "text0_0": "为硬件串口预留空间...",
+    "text0_0": "为件串口备空间...",
     "text0_1": "串口已启动",
     "text0_2": "已检查内存",
     "text0_3": "SD卡已初始化",
@@ -25,33 +25,33 @@ T = {
     "text07": "退出",
     "text08": "设置",
     "text09": "返回",
-    "text10": "频道:",
-    "text11": "触摸屏幕退出",
-    "text12": "取消",
+    "text10": "信:",
+    "text11": "点退出",
+    "text12": "取关",
     "text13": "保存",
-    "text14": "是",
+    "text14": "定",
     "text15": "正打开更新文件...",
     "text16": "关闭",
     "text17": "失败",
-    "text18": "包/秒: ",
+    "text18": "包/s: ",
     "text1_0": "SSID列表",
-    "text1_1": "添加SSID",
+    "text1_1": "加SSID",
     "text1_2": "SSID: ",
-    "text1_3": "密码:",
+    "text1_3": "凭证:",
     "text1_4": "已禁用",
     "text1_5": "已启用",
-    "text1_6": "ESP32掠夺者",
+    "text1_6": "ESP32",
     "text1_7": "WiFi",
     "text1_8": "BadUSB",
     "text1_9": "设备",
-    "text1_10": "通用应用",
+    "text1_10": "通用",
     "text1_11": "更新中...",
-    "text1_12": "选择方式",
-    "text1_13": "确认更新",
+    "text1_12": "择法",
+    "text1_13": "认定更新",
     "text1_14": "ESP8266更新",
     "text1_15": "固件更新",
-    "text1_16": "语言",
-    "text1_17": "设备信息",
+    "text1_16": "文",
+    "text1_17": "设备信",
     "text1_18": "设置",
     "text1_19": "蓝牙",
     "text1_20": "WiFi嗅探",
@@ -71,28 +71,28 @@ T = {
     "text1_34": "蓝牙嗅探器",
     "text1_35": "检测读卡器",
     "text1_36": "测试BadUSB",
-    "text1_37": "运行Ducky脚本",
-    "text1_38": "绘图",
-    "text1_39": "网页更新",
+    "text1_37": "启动Ducky本",
+    "text1_38": "图",
+    "text1_39": "WEB更新",
     "text1_40": "SD卡更新",
     "text1_41": "ESP8266更新",
     "text1_42": "探测请求嗅探",
     "text1_43": "信标嗅探",
     "text1_44": "解除认证嗅探",
-    "text1_45": "数据包监视",
+    "text1_45": "数包监",
     "text1_46": "EAPOL扫描",
     "text1_47": "检测Pwnagotchi",
     "text1_48": "检测乐鑫",
     "text1_49": "扫描AP",
     "text1_50": "信标泛洪列表",
-    "text1_51": "随机信标泛洪",
+    "text1_51": "不定信标泛洪",
     "text1_52": "RickRoll信标",
     "text1_53": "探测请求泛洪",
     "text1_54": "解除认证泛洪",
     "text1_55": "连接WiFi",
     "text1_56": "选择AP",
-    "text1_57": "AP克隆泛洪",
-    "text1_58": "原始捕获",
+    "text1_57": "AP克泛洪",
+    "text1_58": "原始取",
     "text1_59": "站点嗅探",
     "text1_60": "清除站点",
     "text1_61": "选择站点",
@@ -101,8 +101,8 @@ T = {
     "text1_64": "检测多SSID",
     "text1_65": "选择探测SSID",
     "text1_66": "GPS",
-    "text1_67": "趣味SSID信标",
-    "text2_0": "错误,找不到更新文件",
+    "text1_67": "乐SSID信标",
+    "text2_0": "错误,不到更新文件",
     "text2_1": "开始SD更新...",
     "text2_2": "错误,更新文件为空",
     "text2_3": "重启中...",
@@ -116,17 +116,18 @@ T = {
     "text2_11": "更新完成",
     "text2_12": "更新无法完成",
     "text2_13": "发生错误. 错误#: ",
-    "text2_14": "空间不足无法OTA",
+    "text2_14": "空间小无法OTA",
     "text3_0": "配置更新服务器...",
-    "text3_1": "IP地址: ",
+    "text3_1": "IP地: ",
     "text3_2": "更新: ",
-    "text3_3": "已完成字节: ",
+    "text3_3": "已完成数: ",
     "text3_4": "更新成功: ",
     "text3_5": "更新服务器完成",
     "text4_0": " RSSI: ",
-    "text4_1": "潜在读卡器: ",
+    "text4_1": "在读卡器: ",
     "text4_2": "已连接",
     "text4_3": "连接失败",
+    "text4_4": "已接",
     "text4_5": "强制PMKID",
     "text4_6": "强制探测",
     "text4_7": "保存PCAP",
@@ -137,18 +138,19 @@ T = {
     "text4_12": "已清除SSID: ",
     "text4_13": "正在生成SSID...",
     "text4_14": "已生成SSID: ",
-    "text4_15": "    总SSID数: ",
+    "text4_15": "    多SSID数: ",
     "text4_16": "正在关闭WiFi...",
     "text4_17": "WiFi当前未初始化",
     "text4_18": "正在关闭BLE...",
     "text4_19": "BLE当前未初始化",
     "text4_20": "固件: Marauder",
-    "text4_21": "版本: ",
+    "text4_21": "本: ",
     "text4_22": "ESP-IDF: ",
     "text4_23": "WSL绕过: 已启用",
     "text4_24": "WSL绕过: 已禁用",
     "text4_25": "站点MAC: ",
     "text4_26": "AP MAC: ",
+    "text4_27": "",
     "text4_28": "SD卡: 已连接",
     "text4_29": "SD卡大小: ",
     "text4_30": "SD卡: 未连接",
@@ -156,7 +158,7 @@ T = {
     "text4_32": "电池监控: 支持",
     "text4_33": "电量: ",
     "text4_34": "电池监控: 不支持",
-    "text4_35": "内部温度: ",
+    "text4_35": "内温度: ",
     "text4_36": " 检测乐鑫 ",
     "text4_37": " 检测Pwnagotchi ",
     "text4_38": " 信标嗅探器 ",
@@ -178,33 +180,24 @@ T = {
     "connected": "已连接!",
     "connecting": "连接中",
     "failed_connect": "连接失败",
-    "evil_portal": "恶意门户",
+    "evil_portal": "EVIL PORTAL",
     "scan_ap_sta": "扫描AP/STA",
 }
 
-# Extract unique Chinese characters (CJK + CJK punctuation)
-def get_cn(text):
-    chars = set()
-    for ch in text:
-        cp = ord(ch)
-        if (0x4E00 <= cp <= 0x9FFF) or (0x3000 <= cp <= 0x303F) or (0xFF00 <= cp <= 0xFFEF):
-            chars.add(ch)
-    return chars
-
+# Use all characters from the translations (T already limited to 128)
 all_chars = set()
 for v in T.values():
-    all_chars.update(get_cn(v))
-
-# Also add some common characters that might be needed in dynamic strings
-extra = "包秒频道错误完成写入分区空间不足重试发生字节服务器配置连接加载保存清除生成关闭打开启动扫描嗅探攻击检测监视捕获信标认证请求列表随机定向克隆原始站点选择设备信息固件版本大小温度内部电量电池监控支持已启用已禁用未连接已初始化"
-all_chars.update(get_cn(extra))
+    for ch in v:
+        if ord(ch) >= 0x4E00 and ord(ch) <= 0x9FFF:
+            all_chars.add(ch)
 
 all_chars = sorted(all_chars)
 print(f"Unique Chinese characters: {len(all_chars)}")
 
 if len(all_chars) > 128:
-    print(f"WARNING: {len(all_chars)} > 128, limiting to 128")
-    all_chars = all_chars[:128]
+    print(f"ERROR: {len(all_chars)} > 128 chars! Please reduce translations.")
+    print(f"Extra chars: {len(all_chars) - 128}")
+    exit(1)
 
 # Build mapping
 char_to_byte = {ch: 0x80 + i for i, ch in enumerate(all_chars)}
@@ -339,3 +332,112 @@ with open(out, 'w') as f:
 
 print(f"Done! Generated {out}")
 print(f"Chars: {len(all_chars)}, Bitmap: {len(bitmap)} bytes")
+
+# ============================================================
+# Also generate lang_var_cn.h with pre-encoded Chinese strings
+# ============================================================
+def encode_string(text, char_to_byte):
+    """Encode a UTF-8 Chinese string to our custom byte encoding (same as encodeCN)."""
+    result = bytearray()
+    for ch in text:
+        cp = ord(ch)
+        if cp < 0x80:
+            result.append(cp)
+        elif ch in char_to_byte:
+            result.append(char_to_byte[ch])
+        else:
+            # Non-CJK, pass through as-is (shouldn't happen with our data)
+            result.append(cp & 0xFF)
+    result.append(0)  # null terminator
+    return result
+
+# Generate lang_var_cn.h
+lang_out = '/workspace/esp32_marauder/lang_var_cn.h'
+with open(lang_out, 'w') as f:
+    f.write('// Auto-generated Chinese translations for ESP32 Marauder\n')
+    f.write('// These strings are pre-encoded; use with drawCNString() / drawCNCentreString()\n')
+    f.write('#pragma once\n\n')
+    f.write('#include "cn_font.h"\n\n')
+    
+    # Map T keys to C variable names
+    key_map = {
+        "text0_0": "text0_0", "text0_1": "text0_1", "text0_2": "text0_2", "text0_3": "text0_3",
+        "text0_4": "text0_4", "text0_5": "text0_5", "text0_6": "text0_6", "text0_7": "text0_7",
+        "text0_8": "text0_8", "text00": "text00", "text01": "text01", "text02": "text02",
+        "text03": "text03", "text04": "text04", "text05": "text05", "text06": "text06",
+        "text07": "text07", "text08": "text08", "text09": "text09", "text10": "text10",
+        "text11": "text11", "text12": "text12", "text13": "text13", "text14": "text14",
+        "text15": "text15", "text16": "text16", "text17": "text17", "text18": "text18",
+        "text1_0": "text1_0", "text1_1": "text1_1", "text1_2": "text1_2", "text1_3": "text1_3",
+        "text1_4": "text1_4", "text1_5": "text1_5", "text1_6": "text1_6", "text1_7": "text1_7",
+        "text1_8": "text1_8", "text1_9": "text1_9", "text1_10": "text1_10", "text1_11": "text1_11",
+        "text1_12": "text1_12", "text1_13": "text1_13", "text1_14": "text1_14", "text1_15": "text1_15",
+        "text1_16": "text1_16", "text1_17": "text1_17", "text1_18": "text1_18", "text1_19": "text1_19",
+        "text1_20": "text1_20", "text1_21": "text1_21", "text1_22": "text1_22", "text1_23": "text1_23",
+        "text1_24": "text1_24", "text1_25": "text1_25", "text1_26": "text1_26", "text1_27": "text1_27",
+        "text1_28": "text1_28", "text1_29": "text1_29", "text1_30": "text1_30", "text1_31": "text1_31",
+        "text1_32": "text1_32", "text1_33": "text1_33", "text1_34": "text1_34", "text1_35": "text1_35",
+        "text1_36": "text1_36", "text1_37": "text1_37", "text1_38": "text1_38", "text1_39": "text1_39",
+        "text1_40": "text1_40", "text1_41": "text1_41", "text1_42": "text1_42", "text1_43": "text1_43",
+        "text1_44": "text1_44", "text1_45": "text1_45", "text1_46": "text1_46", "text1_47": "text1_47",
+        "text1_48": "text1_48", "text1_49": "text1_49", "text1_50": "text1_50", "text1_51": "text1_51",
+        "text1_52": "text1_52", "text1_53": "text1_53", "text1_54": "text1_54", "text1_55": "text1_55",
+        "text1_56": "text1_56", "text1_57": "text1_57", "text1_58": "text1_58", "text1_59": "text1_59",
+        "text1_60": "text1_60", "text1_61": "text1_61", "text1_62": "text1_62", "text1_63": "text1_63",
+        "text1_64": "text1_64", "text1_65": "text1_65", "text1_66": "text1_66", "text1_67": "text1_67",
+        "text2_0": "text2_0", "text2_1": "text2_1", "text2_2": "text2_2", "text2_3": "text2_3",
+        "text2_4": "text2_4", "text2_5": "text2_5", "text2_6": "text2_6", "text2_7": "text2_7",
+        "text2_8": "text2_8", "text2_9": "text2_9", "text2_10": "text2_10", "text2_11": "text2_11",
+        "text2_12": "text2_12", "text2_13": "text2_13", "text2_14": "text2_14",
+        "text3_0": "text3_0", "text3_1": "text3_1", "text3_2": "text3_2", "text3_3": "text3_3",
+        "text3_4": "text3_4", "text3_5": "text3_5",
+        "text4_0": "text4_0", "text4_1": "text4_1", "text4_2": "text4_2", "text4_3": "text4_3",
+        "text4_4": "text4_4", "text4_5": "text4_5", "text4_6": "text4_6", "text4_7": "text4_7", "text4_8": "text4_8",
+        "text4_9": "text4_9", "text4_10": "text4_10", "text4_11": "text4_11", "text4_12": "text4_12",
+        "text4_13": "text4_13", "text4_14": "text4_14", "text4_15": "text4_15", "text4_16": "text4_16",
+        "text4_17": "text4_17", "text4_18": "text4_18", "text4_19": "text4_19", "text4_20": "text4_20",
+        "text4_21": "text4_21", "text4_22": "text4_22", "text4_23": "text4_23", "text4_24": "text4_24",
+        "text4_25": "text4_25", "text4_26": "text4_26", "text4_27": "text4_27", "text4_28": "text4_28", "text4_29": "text4_29",
+        "text4_30": "text4_30", "text4_31": "text4_31", "text4_32": "text4_32", "text4_33": "text4_33",
+        "text4_34": "text4_34", "text4_35": "text4_35", "text4_36": "text4_36", "text4_37": "text4_37",
+        "text4_38": "text4_38", "text4_39": "text4_39", "text4_40": "text4_40", "text4_41": "text4_41",
+        "text4_42": "text4_42", "text4_43": "text4_43", "text4_44": "text4_44", "text4_45": "text4_45",
+        "text4_46": "text4_46", "text4_47": "text4_47", "text4_48": "text4_48", "text4_49": "text4_49",
+        "loading": "cn_loading", "wifi_creds_empty": "cn_wifi_creds_empty",
+        "returning": "cn_returning", "connect_fail": "cn_connect_fail",
+        "connected": "cn_connected", "connecting": "cn_connecting",
+        "failed_connect": "cn_failed_connect", "evil_portal": "cn_evil_portal",
+        "scan_ap_sta": "cn_scan_ap_sta",
+    }
+    
+    # Section comments
+    sections = {
+        "text0_0": "// Starting window texts",
+        "text00": "// Single library (action) texts / Often used",
+        "text1_0": "// MenuFunctions.cpp texts",
+        "text2_0": "// SDInterface.cpp texts",
+        "text3_0": "// Web.cpp texts",
+        "text4_0": "// WiFiScan.cpp texts",
+        "loading": "// Additional strings",
+    }
+    
+    last_section = None
+    for t_key in T:
+        c_name = key_map.get(t_key, t_key)
+        encoded = encode_string(T[t_key], char_to_byte)
+        
+        # Section comment
+        for section_key, comment in sections.items():
+            if t_key == section_key:
+                f.write(f'\n{comment}\n')
+                break
+        
+        # Write as C byte array with PROGMEM
+        f.write(f'static const uint8_t {c_name}[] PROGMEM = {{')
+        for i, b in enumerate(encoded):
+            if i % 16 == 0:
+                f.write('\n  ')
+            f.write(f'0x{b:02X}, ')
+        f.write('\n};\n\n')
+
+print(f"Done! Generated {lang_out}")
