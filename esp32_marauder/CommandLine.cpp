@@ -251,6 +251,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_SNIFF_RAW_CMD);
     Serial.println(HELP_SNIFF_BEACON_CMD);
     Serial.println(HELP_SNIFF_PROBE_CMD);
+    Serial.println(HELP_SNIFF_FLOCK_CMD);
     Serial.println(HELP_SNIFF_PWN_CMD);
     Serial.println(HELP_SNIFF_PINESCAN_CMD);
     Serial.println(HELP_SNIFF_MULTISSID_CMD);
@@ -732,6 +733,10 @@ void CommandLine::runCommand(String input) {
     else if (cmd_args.get(0) == SNIFF_PROBE_CMD) {
       this->startScanFromCLI(WIFI_SCAN_PROBE, TFT_MAGENTA, "Probe sniff");
     }
+    // Flock sniff
+    else if (cmd_args.get(0) == SNIFF_FLOCK_CMD) {
+      this->startScanFromCLI(WIFI_SCAN_FLOCK, TFT_ORANGE, "Flock sniff");
+    }
     // Deauth sniff
     else if (cmd_args.get(0) == SNIFF_DEAUTH_CMD) {
       this->startScanFromCLI(WIFI_SCAN_DEAUTH, TFT_RED, "Deauth sniff");
@@ -1053,9 +1058,6 @@ void CommandLine::runCommand(String input) {
           }
           else if (bt_type == "flipper") {
             this->startScanFromCLI(BT_SCAN_FLIPPER, TFT_ORANGE, "Flipper sniff");
-          }
-          else if (bt_type == "flock") {
-            this->startScanFromCLI(BT_SCAN_FLOCK, TFT_ORANGE, "Flock sniff");
           }
           else if (bt_type == "meta") {
             this->startScanFromCLI(BT_SCAN_RAYBAN, TFT_ORANGE, "Meta sniff");

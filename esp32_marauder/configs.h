@@ -3092,7 +3092,8 @@
   //// WIFI STUFF
 
   #ifndef HAS_DUAL_BAND
-    #define HOP_DELAY 1000
+    // changed from 1000 to 250 to match guidance of doubling the interval of the event you are listening for.
+    #define HOP_DELAY 250
   #else
     #define HOP_DELAY 250
   #endif
