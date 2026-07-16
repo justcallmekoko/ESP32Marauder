@@ -1,6 +1,8 @@
 #include "Display.h"
 #include "lang_var.h"
 
+extern Display display_obj;
+
 #ifdef HAS_SCREEN
 
 Display::Display()
@@ -345,7 +347,9 @@ void Display::tftDrawChannelScaleButtons(int set_channel, bool lnd_an) {
   #endif
   if (lnd_an) {
     tft.drawFastVLine(178, 0, 20, TFT_WHITE);
-    tft.setCursor(145, 21); tft.setTextColor(TFT_WHITE); tft.setTextSize(1); tft.print(text10); tft.print(set_channel);
+    tft.setCursor(145, 21); tft.setTextColor(TFT_WHITE); tft.setTextSize(1);
+    cnDraw(text10, 145, 21);
+    tft.setCursor(145 + 24, 21); tft.print(set_channel);
 
     key[CHAN_MINUS_INDEX].initButton(&tft, // channel - box
                           164,
@@ -518,7 +522,7 @@ void Display::touchToExit()
 {
   tft.setTextColor(TFT_BLACK, TFT_LIGHTGREY);
   tft.fillRect(0,32,HEIGHT_1,16, TFT_LIGHTGREY);
-  tft.drawCentreString(text11,TFT_WIDTH / 2,32,2);
+  cnDrawCentre(text11, TFT_WIDTH / 2, 32);
 }
 
 
@@ -585,9 +589,9 @@ void Display::processAndPrintString(TFT_eSPI& tft, const String& originalString)
 
   String spaces(buf);
 
-  // Set text color and print the string
+  // Set text color and print the string with Chinese support
   tft.setTextColor(text_color, background_color);
-  tft.print(new_string + spaces);
+  drawCNString(tft, new_string + spaces, tft.getCursorX(), tft.getCursorY());
 }
 
 void Display::displayBuffer(bool do_clear)
@@ -654,14 +658,8 @@ void Display::showCenterText(const char* text, int y, bool small_pp, uint8_t tex
   if (!text)
     text = "";
 
-  size_t len = strlen(text);
-
-  if (!small_pp)
-    tft.setCursor((SCREEN_WIDTH - (len * (6 * text_size))) / 2, y);
-  else
-    tft.setCursor((SCREEN_WIDTH - (len * 6)) / 2, y);
-
-  tft.println(text);
+  // Use drawCNCentreString for Chinese support
+  drawCNCentreString(tft, String(text), SCREEN_WIDTH / 2, y);
 }
 
 
