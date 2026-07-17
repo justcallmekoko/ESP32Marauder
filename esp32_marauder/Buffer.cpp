@@ -1,36 +1,70 @@
 #include "Buffer.h"
 #include "lang_var.h"
+#include <Preferences.h>   // persist the pcap name-index hint (avoids an O(N^2) rescan)
 
 Buffer::Buffer(){
   bufA = (uint8_t*)malloc(BUF_SIZE);
   bufB = (uint8_t*)malloc(BUF_SIZE);
 }
 
+// Directory-entry safety cap on the verify scan: set well above what a FAT16 /pcaps
+// subdir can hold (~30k after LFN), so the exists()-verify can always find a real gap.
+#define PCAP_MAX_INDEX 65536
+
 void Buffer::createFile(const char* name, bool is_pcap, bool is_gpx){
-  int i=0;
-  if (is_pcap) {
-    do{
-      fileName = "/"+String(name)+"_"+(String)i+".pcap";
-      i++;
-    } while(fs->exists(fileName));
-  }
-  else if ((!is_pcap) && (!is_gpx)) {
-    do{
-      fileName = "/"+String(name)+"_"+(String)i+".log";
-      i++;
-    } while(fs->exists(fileName));
-  }
-  else {
-    do{
-      fileName = "/"+String(name)+"_"+(String)i+".gpx";
-      i++;
-    } while(fs->exists(fileName));
+  const char* ext = is_pcap ? ".pcap" : (is_gpx ? ".gpx" : ".log");
+
+  if (!is_pcap) {
+    // logs/gpx keep the historical SD-root path + a simple bounded, checked search.
+    bool found = false;
+    for (int i = 0; i < PCAP_MAX_INDEX; i++) {
+      fileName = "/" + String(name) + "_" + (String)i + ext;
+      if (!fs->exists(fileName)) { found = true; break; }
+    }
+    if (!found) { Serial.println("createFile: directory full - not saving"); return; }
+    Serial.println(fileName);
+    file = fs->open(fileName, FILE_WRITE);
+    if (!file) { Serial.println("createFile: open failed - not saving"); return; }
+    file.close();
+    return;
   }
 
+  // --- pcap ---------------------------------------------------------------------
+  // 1) Write into a /pcaps/ subdirectory, not the SD ROOT. The root is the most
+  //    entry-limited region on FAT (FAT16 root is a hard ~512-entry cap), so a busy
+  //    card stops accepting new root files; a subdir grows to the ~65k FAT ceiling
+  //    and keeps the card tidy.
+  // 2) Pick the next name from a PERSISTED index hint instead of scanning from 0
+  //    every time. The old "increment i from 0 while fs->exists()" is ~O(N^2) because
+  //    each fs->exists() linearly scans the directory -- it does not scale to the tens
+  //    of thousands a subdir can hold.
+  // 3) VERIFY the hint with fs->exists() and advance on collision. The hint lives in
+  //    the board's NVS but the files live on the SD card, so a card swap can desync
+  //    them; verifying means we can NEVER truncate/overwrite an existing capture.
+  //    Creating /pcaps (fresh/empty/swapped card) resets the hint so each card
+  //    numbers cleanly from _0.
+  // 4) CHECK fs->open()'s return. The old code ignored it and wrote the pcap header
+  //    into an invalid File on a full dir/card -- a silent capture loss.
+  Preferences prefs;
+  prefs.begin("pcap", false);
+  uint32_t hint;
+  if (!fs->exists("/pcaps")) { fs->mkdir("/pcaps"); hint = 0; }
+  else                       { hint = prefs.getULong("next", 0); }
+
+  bool found = false;
+  uint32_t idx = hint;
+  for (int scanned = 0; scanned < PCAP_MAX_INDEX; scanned++, idx++) {
+    fileName = "/pcaps/" + String(name) + "_" + String(idx) + ext;
+    if (!fs->exists(fileName)) { found = true; break; }   // usually the first probe
+  }
+  if (!found) { prefs.end(); Serial.println("createFile: /pcaps full - not saving"); return; }
+
   Serial.println(fileName);
-  
   file = fs->open(fileName, FILE_WRITE);
+  if (!file) { prefs.end(); Serial.println("createFile: open failed (SD/dir full) - not saving"); return; }
   file.close();
+  prefs.putULong("next", idx + 1);   // advance the hint past the name we just claimed
+  prefs.end();
 }
 
 void Buffer::open(bool is_pcap){
