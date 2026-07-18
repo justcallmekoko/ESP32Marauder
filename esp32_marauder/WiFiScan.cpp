@@ -11608,7 +11608,9 @@ void WiFiScan::main(uint32_t currentTime)
     this->packetRateLoop(currentTime);
   }
   else if (currentScanMode == BT_ATTACK_FINDMY_LIVE) {
+    #ifdef HAS_NIMBLE_2
     this->executeFindMyLive(currentTime);
+    #endif
   }
   else if ((currentScanMode == BT_ATTACK_SWIFTPAIR_SPAM) ||
            (currentScanMode == BT_ATTACK_SOUR_APPLE) ||
