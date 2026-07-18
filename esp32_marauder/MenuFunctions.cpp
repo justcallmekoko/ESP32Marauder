@@ -339,6 +339,7 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == BT_SCAN_ALL) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN) ||
+          (wifi_scan_obj.currentScanMode == BT_ATTACK_FINDMY_LIVE) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_RAYBAN) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_AIRTAG) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_AIRTAG_MON) ||
@@ -407,6 +408,7 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_DISPLAY_AP_INFO) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_EVIL_PORTAL) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN) ||
+            (wifi_scan_obj.currentScanMode == BT_ATTACK_FINDMY_LIVE) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA) ||
             (wifi_scan_obj.currentScanMode == WIFI_PING_SCAN) ||
             (wifi_scan_obj.currentScanMode == WIFI_ARP_SCAN) ||
@@ -3205,17 +3207,17 @@ void MenuFunctions::RunSetup()
 
           // Clear nodes and add back button
           wifiAPMenu.list->clear();
-          this->addNodes(&wifiAPMenu, text09, TFT_LIGHTGREY, 0, [this]() {
+          this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, 0, [this]() {
           this->changeMenu(wifiAPMenu.parentMenu, true);
         });
 
-        // Add buttons for all airtags
-        // Find out how big our menu is going to be
-        int menu_limit;
-        if (airtags->size() <= BUTTON_ARRAY_LEN)
-          menu_limit = airtags->size();
-        else
-          menu_limit = BUTTON_ARRAY_LEN;
+        /*this->addNodes(&wifiAPMenu, "Live", TFTMAGENTA, 0, [this]() {
+          display_obj.clearScreen();
+          this->drawStatusBar();
+          wifi_scan_obj.StartScan(BT_ATTACK_FINDMY_LIVE, TFT_RED);
+        });*/
+
+        int menu_limit = airtags->size();
 
         // Create the menu nodes for all of the list items
         for (int i = 0; i < menu_limit; i++) {
@@ -3224,6 +3226,7 @@ void MenuFunctions::RunSetup()
           this->addNodes(&wifiAPMenu, node_name.c_str(), node_color, BLUETOOTH, [this, i](){
             AirTag new_at = airtags->get(i);
             new_at.selected = true;
+            new_at.connectable = true;
 
             airtags->set(i, new_at);
 
