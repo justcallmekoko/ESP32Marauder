@@ -460,7 +460,7 @@
     //#define HAS_GPS
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
-    #define HAS_DIRECT_UPLOAD
+    //#define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_DEV_BOARD_PRO
@@ -603,7 +603,7 @@
     //#define HAS_GPS
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
-    #define HAS_DIRECT_UPLOAD
+    //#define HAS_DIRECT_UPLOAD
   #endif
   //// END BOARD FEATURES
 
