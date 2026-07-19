@@ -1,9 +1,10 @@
 #include "CommandLine.h"
 
-// Brightness functions defined in esp32_marauder.ino
+// Brightness functions defined in BackLight.cpp
 #ifndef HAS_MINI_SCREEN
   extern void brightnessCycle();
   extern uint8_t getBrightnessLevel();
+  extern const uint8_t BL_NUM_LEVELS;
 #endif
 
 void CommandLine::RunSetup() {
@@ -237,6 +238,19 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_NMEA_CMD);
     Serial.println(HELP_GPS_POI_CMD);
     Serial.println(HELP_GPS_TRACKER_CMD);
+    Serial.println(HELP_SHUTDOWN_CMD);
+
+    #ifdef HAS_SD
+      Serial.println(HELP_RESCANSD_CMD);
+    #endif
+
+    #ifdef MSC_SHARE
+      Serial.println(HELP_MSC_CMD);
+    #endif
+    #ifdef ADJ_CPUFREQ
+      Serial.println(HELP_CPUFREQ_CMD);
+    #endif
+    Serial.println(HELP_RESET_REASON_CMD);
     
     // WiFi sniff/scan
     Serial.println(HELP_EVIL_PORTAL_CMD);
@@ -577,8 +591,104 @@ void CommandLine::runCommand(String input) {
     }
   }
 
+  #ifdef  HAS_SD
+    else if (cmd_args.get(0) == RESCANSD_CMD) {
+      sd_obj.initSD();
+    }
+  #endif
+
+  #ifdef MSC_SHARE
+    else if (cmd_args.get(0) == MSC_CMD) {
+      int st_sw = this->argSearch(&cmd_args, "start");
+      int sp_sw = this->argSearch(&cmd_args, "stop");
+      int pa_sw  = this->argSearch(&cmd_args, "pause");
+      int re_sw  = this->argSearch(&cmd_args, "resume");
+
+      if (st_sw != -1) {
+        if (MSC_Share_obj.msc_started)
+          Serial.println(F("MSC Share already running"));
+        else {
+          MSC_Share_obj.RunSetup();
+          Serial.println(F("MSC Share Started"));
+        }
+
+      } else if (sp_sw != -1) {
+        if (MSC_Share_obj.msc_started) {
+          MSC_Share_obj.ShareEnd();
+          Serial.println(F("MSC Share Stopped"));
+        } else 
+          Serial.println(F("MSC Share USB not running"));
+
+      } else if (pa_sw != -1) {
+        if (MSC_Share_obj.msc_started) {
+          MSC_Share_obj.msc_pause();
+          Serial.println(F("MSC Share Paused"));
+        } else
+          Serial.println(F("MSC Share USB not running"));
+
+      } else if (re_sw != -1) {
+        if (MSC_Share_obj.msc_started) {
+          MSC_Share_obj.msc_start();
+           Serial.println(F("MSC Share Unpaused"));
+         } else
+           Serial.println(F("MSC Share USB not running"));
+
+      } else {
+       if (MSC_Share_obj.msc_started) {
+         if (MSC_Share_obj.msc_active)
+           Serial.println(F("MSC Share is active"));
+         else
+           Serial.println(F("MSC Share is paused"));
+       } else
+         Serial.println(F("MSC not running"));
+      }
+
+    }
+   #endif // MSC_SHARE
+
+    else if (cmd_args.get(0) == RESET_REASON_CMD) {
+      print_reset_reason();
+    }
+
+   #ifdef ADJ_CPUFREQ
+    else if (cmd_args.get(0) == CPUFREQ_CMD) {
+      int a_sw = this->argSearch(&cmd_args, "240");
+      int b_sw = this->argSearch(&cmd_args, "160");
+      int c_sw = this->argSearch(&cmd_args, "80");
+      // int d_sw = this->argSearch(&cmd_args, "40");
+      // int e_sw = this->argSearch(&cmd_args, "20");
+
+      if (a_sw != -1) {
+        setCpuFrequencyMhz(240);
+        Serial.println(F("Set CPU to 240Mhz"));
+      } else if (b_sw != -1) {
+        setCpuFrequencyMhz(160);
+        Serial.println(F("Set CPU to 160Mhz"));
+      } else if (c_sw != -1) {
+        setCpuFrequencyMhz(80);
+        Serial.println(F("Set CPU to 80Mhz"));
+
+       /*
+      } else if (d_sw != -1) {
+        setCpuFrequencyMhz(40);
+        Serial.println(F("Set CPU to 40Mhz"));
+      } else if (e_sw != -1) {
+        setCpuFrequencyMhz(20);
+        Serial.println(F("Set CPU to 20Mhz"));
+        */
+
+      }
+      uint32_t cpuFreq = getCpuFrequencyMhz();
+      Serial.print(F("CpuFrequency = "));
+      Serial.print(getCpuFrequencyMhz());
+      Serial.println(F(" Mhz"));
+    }
+  #endif  // ADJ_CPUFREQ
+
   else if (cmd_args.get(0) == REBOOT_CMD)
     ESP.restart();
+  else if (cmd_args.get(0) == SHUTDOWN_CMD)
+    shutdown();
 
   //// WiFi/Bluetooth Scan/Attack commands
   if (!wifi_scan_obj.scanning()) {
@@ -1161,7 +1271,8 @@ void CommandLine::runCommand(String input) {
             Serial.print(F("[Brightness] Set to level "));
             Serial.println(lvl);
           } else {
-            Serial.println(F("Level must be 0-9"));
+            Serial.print(F("Level must be 0-"));
+            Serial.println(BL_NUM_LEVELS);
           }
         } else {
           Serial.print(F("[Brightness] Current level: "));
@@ -1421,6 +1532,7 @@ void CommandLine::runCommand(String input) {
     int ap_sw = this->argSearch(&cmd_args, "-a");
     int pw_sw = this->argSearch(&cmd_args, "-p");
     int s_sw  = this->argSearch(&cmd_args, "-s");
+    int n_sw  = this->argSearch(&cmd_args, "-n");
 
     if ((ap_sw != -1) && (pw_sw != -1)) {
       int index = cmd_args.get(ap_sw + 1).toInt();
@@ -1435,6 +1547,13 @@ void CommandLine::runCommand(String input) {
           menu_function_obj.changeMenu(menu_function_obj.current_menu);
         #endif
       #endif
+    }
+    else if ((n_sw != -1) && (pw_sw != -1)) {
+      String password = cmd_args.get(pw_sw + 1);
+      String network = cmd_args.get(pw_sw + 1);
+      Serial.println("Using : " + (String)network + " Password: " + (String)password);
+      wifi_scan_obj.joinWiFi(network, password, false);
+
     }
     else if (s_sw != -1) {
       String ssid = settings_obj.loadSetting<String>("ClientSSID");

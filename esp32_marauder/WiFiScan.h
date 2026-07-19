@@ -14,12 +14,17 @@
   #include <NimBLEDevice.h> // 1.3.8, 2.3.2
 #endif
 
-/*#ifdef HAS_IDF_3
+#ifdef MSC_SHARE
+  #include "MSC_Share.h"
+    extern MSC_Share MSC_Share_obj;
+#endif
+
+#ifdef HAS_IDF_3
   extern "C" {
     #include "esp_netif.h"
     #include "esp_netif_net_stack.h"
   }
-#endif*/
+#endif
 
 //#include <WiFi.h>
 #include <ESP32Ping.h>
@@ -1025,6 +1030,8 @@ class WiFiScan
     void RunLoadAPList();
     void RunSaveATList(bool save_as = true);
     void RunLoadATList();
+    void RunLoadAll();
+    void RunSaveAll();
     void RunSetupGPSTracker(uint8_t scan_mode);
     void channelHop(bool filtered = false, bool ranged = false);
     uint8_t currentScanMode = 0;
