@@ -1107,7 +1107,14 @@ void MenuFunctions::updateStatusBar()
   #endif
 
   #ifdef HAS_MINI_SCREEN
-    display_obj.tft.drawString(String(getDRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
+    #ifndef HAS_PSRAM
+      display_obj.tft.drawString(String(getDRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
+    #else
+      if (this->initTime & (1 << 13))  // 13 -> 8.192 seconds
+        display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
+      else
+        display_obj.tft.drawString("P:" + String(getPSRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
+    #endif
   #endif
   }
 
@@ -1285,7 +1292,14 @@ void MenuFunctions::drawStatusBar()
   #endif
 
   #ifdef HAS_MINI_SCREEN
-    display_obj.tft.drawString(String(getDRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
+    #ifndef HAS_PSRAM
+      display_obj.tft.drawString(String(getDRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
+    #else
+      if (this->initTime & (1 << 13))  // 13 -> 8.192 seconds
+        display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
+      else
+        display_obj.tft.drawString("P:" + String(getPSRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
+    #endif
   #endif
 
 
