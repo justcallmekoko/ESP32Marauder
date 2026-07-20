@@ -4680,6 +4680,8 @@ void WiFiScan::createNimbleClient() {
 
 int WiFiScan::connectAndProcessTracker(NimBLEAddress& address) {
   //const NimBLEAddress address(targ_addr, addr_type);
+  bool has_services = false;
+
   this->createNimbleClient();
 
   if (nimbleClient == nullptr) {
@@ -4693,7 +4695,7 @@ int WiFiScan::connectAndProcessTracker(NimBLEAddress& address) {
     if (nimbleClient == nullptr) {
       Serial.printf("Failed to create NimBLE client\n");
 
-      return -1;
+      return -2;
     }
   }
 
@@ -4729,6 +4731,8 @@ int WiFiScan::connectAndProcessTracker(NimBLEAddress& address) {
     }
 
     const NimBLEUUID serviceUuid = service->getUUID();
+
+    has_services = true;
 
     if (serviceUuid.equals(AIRTAG_SERVICE_UUID)) {
 
@@ -4788,6 +4792,9 @@ int WiFiScan::connectAndProcessTracker(NimBLEAddress& address) {
   else if ((hasDultService) && (hasDultSoundCharacteristic))
     return IS_DULT;
   
+  if (has_services)
+    return -3;
+
   return -1;
 }
 
@@ -5091,6 +5098,22 @@ bool WiFiScan::backendFindMySound(NimBLEAddress& address, bool gui) {
         #endif
       }
     }
+  } else if (device_type == -2) {
+    #ifdef HAS_SCREEN
+    if (gui) {
+      display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+      display_obj.tft.println("Failed to init client");
+      display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    }
+    #endif
+  } else if (device_type == -3) {
+    #ifdef HAS_SCREEN
+    if (gui) {
+      display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+      display_obj.tft.println("No target services");
+      display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    }
+    #endif
   } else {
     #ifdef HAS_SCREEN
     if (gui) {
