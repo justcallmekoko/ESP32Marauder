@@ -5541,6 +5541,7 @@ void WiFiScan::executeWarDrive() {
       // Weighted US-focused wardriving channel schedule.
       // 2.4 GHz: 1, 6, 11 prioritized.
       // 5 GHz: common non-DFS lower/upper UNII channels prioritized.
+      #ifdef HAS_DUAL_BAND
       static const uint8_t wardrive_channels[] = {
         161, 157, 153, 149,
         48, 44, 40, 36,
@@ -5557,6 +5558,15 @@ void WiFiScan::executeWarDrive() {
         // Full 2.4 GHz pass (reversed)
         14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1
       };
+      #else
+      static const uint8_t wardrive_channels[] = {
+        11, 6, 1,
+        11, 6, 1,
+
+        // Full 2.4 GHz pass (reversed)
+        14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1
+      };
+      #endif
 
       //static uint8_t wardrive_channel_index = 0;
 
@@ -5690,7 +5700,11 @@ void WiFiScan::executeWarDrive() {
         uint8_t scan_channel = wardrive_channels[this->wardrive_channel_index];
         this->wardrive_channel_index++;
 
-        WiFi.scanNetworks(true, true, false, 80, scan_channel);
+        #ifdef HAS_DUAL_BAND
+          WiFi.scanNetworks(true, true, false, 80, scan_channel);
+        #else
+          WiFi.scanNetworks(true, true, false, 125, scan_channel);
+        #endif
       }
     }
   #endif
