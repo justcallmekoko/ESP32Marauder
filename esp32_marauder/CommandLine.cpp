@@ -1093,6 +1093,7 @@ void CommandLine::runCommand(String input) {
       }
     }
     else if (cmd_args.get(0) == BT_FINDMY_CMD) {
+      #ifdef HAS_NIMBLE_2
       int index_sw = this->argSearch(&cmd_args, "-t");
 
       if (index_sw != -1) {
@@ -1110,6 +1111,7 @@ void CommandLine::runCommand(String input) {
           wifi_scan_obj.executeFindMySound(false);
         }
       }
+      #endif
     }
     else if (cmd_args.get(0) == BT_SPAM_CMD) {
       int bt_type_sw = this->argSearch(&cmd_args, "-t");
