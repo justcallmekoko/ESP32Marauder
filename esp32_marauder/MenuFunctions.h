@@ -135,6 +135,18 @@ class MenuFunctions
     float _graph_scale = 1.0;
     uint32_t initTime = 0;
     int menu_start_index = 0;
+
+    #ifdef MARAUDER_TEMBED_CC1101
+      // Rotary encoder (quadrature, pins A=4, B=5)
+      int _enc_lastEncoded = 0;
+      long _enc_value = 0;
+      long _enc_lastDetent = 0;
+      bool _enc_init = false;
+      void updateEncoder();
+      bool encoderUp();
+      bool encoderDown();
+    #endif
+
     uint8_t mini_kb_index = 0;
     uint8_t old_gps_sat_count = 0;
     uint8_t max_graph_value = 0;
