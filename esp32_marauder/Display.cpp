@@ -81,6 +81,44 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
           }
           return 1;
         }
+      #elif defined(HAS_GT911_TOUCH)
+        // GT911 capacitive touch. Rotation 0 (startup portrait) and
+        // rotation 1 (landscape, used by Packet Monitor) are both
+        // hardware-verified. Rotation 2 is currently unreachable dead
+        // code - grep the whole project, nothing ever calls
+        // setRotation(2) - so it's a logical best-effort (mirrors
+        // rotation 0 on both axes) rather than a tested value. Rotation
+        // 3 is real but Pancake-only (HAS_CAP_TOUCH path above), so it
+        // never executes for this board either.
+        {
+          uint16_t raw_x, raw_y;
+          if (!gt911_read_raw(&raw_x, &raw_y)) return 0;
+
+          uint8_t rot = this->tft.getRotation();
+          switch (rot) {
+            case 0: // Portrait, startup default - verified
+              *x = raw_x;
+              *y = raw_y;
+              break;
+            case 1: // Landscape, e.g. Packet Monitor - verified
+              *x = raw_y;
+              *y = (TFT_WIDTH - 1) - raw_x;
+              break;
+            case 2: // Unreachable currently - untested
+              *x = (TFT_WIDTH - 1) - raw_x;
+              *y = (TFT_HEIGHT - 1) - raw_y;
+              break;
+            case 3: // Pancake-only in practice - untested for this board
+              *x = (TFT_HEIGHT - 1) - raw_y;
+              *y = raw_x;
+              break;
+            default:
+              *x = raw_x;
+              *y = raw_y;
+              break;
+          }
+          return 1;
+        }
       #elif !defined(HAS_CYD_TOUCH)
         return this->tft.getTouch(x, y, threshold);
       #else
@@ -158,7 +196,7 @@ void Display::init() {
 }
 
 void Display::setCalData(bool landscape) {
-  #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH)
+  #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH) && !defined(HAS_GT911_TOUCH)
     if (!landscape) {
       #ifdef TFT_SHIELD
         uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield
@@ -211,7 +249,11 @@ void Display::RunSetup() {
   #ifdef HAS_CAP_TOUCH
     ft6336_init();
   #endif
-  
+
+  #ifdef HAS_GT911_TOUCH
+    gt911_init();
+  #endif
+
   tft.init();
 
   tft.setRotation(SCREEN_ORIENTATION);
@@ -220,7 +262,7 @@ void Display::RunSetup() {
 
   #ifdef HAS_ILI9341
 
-    #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH)
+    #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH) && !defined(HAS_GT911_TOUCH)
       this->setCalData();
     #endif
 

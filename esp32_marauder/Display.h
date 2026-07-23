@@ -24,6 +24,10 @@
   #include "ft6336.h"
 #endif
 
+#ifdef HAS_GT911_TOUCH
+  #include "gt911.h"
+#endif
+
 // WiFi stuff
 #define OTA_UPDATE 100
 #define SHOW_INFO 101
