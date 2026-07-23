@@ -336,6 +336,13 @@
 
   #ifdef MARAUDER_CYD_3_5_INCH
     #define HAS_TOUCH
+    #define HAS_GT911_TOUCH
+
+    // ESP32-3248S035C GT911 capacitive touch
+    #define TOUCH_SDA 33
+    #define TOUCH_SCL 32
+    #define TOUCH_INT 21
+    #define TOUCH_RST 25
     #define HAS_FLIPPER_LED
     //#define FLIPPER_ZERO_HAT
     //#define HAS_BATTERY

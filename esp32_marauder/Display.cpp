@@ -3,6 +3,14 @@
 
 #ifdef HAS_SCREEN
 
+#ifdef HAS_GT911_TOUCH
+  #include <Wire.h>
+  #include <TouchDrvGT911.hpp>
+
+  static TouchDrvGT911 cyd_gt911;
+  static bool cyd_gt911_ready = false;
+#endif
+
 Display::Display()
 #ifdef HAS_CYD_TOUCH
   : touchscreenSPI(VSPI),
@@ -42,7 +50,94 @@ int8_t Display::menuButton(uint16_t *x, uint16_t *y, bool pressed, bool check_ho
 uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
   #ifdef HAS_ILI9341
     if (!this->headless_mode) {
-      #ifdef HAS_CAP_TOUCH
+      #ifdef HAS_GT911_TOUCH
+        /*
+         * GT911 only reports a new data frame periodically. getPoint()
+         * clears that frame, so an immediate second poll may return zero
+         * even though the finger is still touching the panel.
+         *
+         * Keep the touch logically pressed across short gaps. A genuine
+         * release is reported only after no GT911 frame has arrived for
+         * GT911_RELEASE_MS.
+         */
+        static bool gt911_down = false;
+        static uint32_t gt911_last_frame = 0;
+        static uint16_t gt911_last_x = 0;
+        static uint16_t gt911_last_y = 0;
+
+        constexpr uint32_t GT911_RELEASE_MS = 100;
+
+        if (!cyd_gt911_ready) {
+          gt911_down = false;
+          return 0;
+        }
+
+        int16_t gt_x[1] = {0};
+        int16_t gt_y[1] = {0};
+
+        const uint8_t point_count =
+          cyd_gt911.getPoint(gt_x, gt_y, 1);
+
+        if (point_count > 0) {
+          const int32_t raw_x = gt_x[0];
+          const int32_t raw_y = gt_y[0];
+
+          uint16_t screen_x = 0;
+          uint16_t screen_y = 0;
+
+          switch (this->tft.getRotation()) {
+            case 0:
+              screen_x = raw_x;
+              screen_y = raw_y;
+              break;
+
+            case 1:
+              screen_x = raw_y;
+              screen_y = (TFT_WIDTH - 1) - raw_x;
+              break;
+
+            case 2:
+              screen_x = (TFT_WIDTH - 1) - raw_x;
+              screen_y = (TFT_HEIGHT - 1) - raw_y;
+              break;
+
+            case 3:
+              screen_x = (TFT_HEIGHT - 1) - raw_y;
+              screen_y = raw_x;
+              break;
+
+            default:
+              gt911_down = false;
+              return 0;
+          }
+
+          gt911_last_x = screen_x;
+          gt911_last_y = screen_y;
+          gt911_last_frame = millis();
+          gt911_down = true;
+
+          *x = screen_x;
+          *y = screen_y;
+          return 1;
+        }
+
+        /*
+         * Ignore short zero-report gaps between valid GT911 frames.
+         * Keep returning the most recent coordinate while the debounce
+         * interval has not expired.
+         */
+        if (gt911_down &&
+            static_cast<uint32_t>(millis() - gt911_last_frame)
+              < GT911_RELEASE_MS) {
+          *x = gt911_last_x;
+          *y = gt911_last_y;
+          return 1;
+        }
+
+        gt911_down = false;
+        return 0;
+
+      #elif defined(HAS_CAP_TOUCH)
         // FT6336 capacitive touch: rotation-aware + edge exclusion
         {
           uint16_t raw_x, raw_y;
@@ -158,7 +253,7 @@ void Display::init() {
 }
 
 void Display::setCalData(bool landscape) {
-  #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH)
+  #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH) && !defined(HAS_GT911_TOUCH)
     if (!landscape) {
       #ifdef TFT_SHIELD
         uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield
@@ -216,11 +311,32 @@ void Display::RunSetup() {
 
   tft.setRotation(SCREEN_ORIENTATION);
 
+  #ifdef HAS_GT911_TOUCH
+    cyd_gt911.setPins(-1, TOUCH_INT);
+
+    cyd_gt911_ready =
+      cyd_gt911.begin(Wire, 0x5D, TOUCH_SDA, TOUCH_SCL);
+
+    if (!cyd_gt911_ready) {
+      cyd_gt911_ready =
+        cyd_gt911.begin(Wire, 0x14, TOUCH_SDA, TOUCH_SCL);
+    }
+
+    if (cyd_gt911_ready) {
+      cyd_gt911.setMaxCoordinates(TFT_WIDTH, TFT_HEIGHT);
+      cyd_gt911.setSwapXY(false);
+      cyd_gt911.setMirrorXY(false, false);
+      Serial.println("GT911 capacitive touch initialized");
+    } else {
+      Serial.println("ERROR: GT911 not detected at 0x5D or 0x14");
+    }
+  #endif
+
   tft.setCursor(0, 0);
 
   #ifdef HAS_ILI9341
 
-    #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH)
+    #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH) && !defined(HAS_GT911_TOUCH)
       this->setCalData();
     #endif
 
