@@ -15,7 +15,7 @@
 #endif
 
 // -----------------------------------------------------------------------------
-// RunSetup — wire selection, pin config, begin()
+// RunSetup - wire selection, pin config, begin()
 // -----------------------------------------------------------------------------
 void RTC::RunSetup() {
   log_d("RTC::RunSetup SDA=%d SCL=%d Freq=%d", RTC_SDA, RTC_SCL, RTC_FREQ);
@@ -37,17 +37,19 @@ void RTC::RunSetup() {
     _wire->setClock(RTC_FREQ);
   #endif
 
-  // -- begin() differs per driver ----------------------------------------------
+  // -- begin() - all drivers take TwoWire* --------------------------------------
+  // begin() returns false ONLY if chip not on bus
+  // time validity (OS bit) is checked separately in setup() via initialized()
   #if defined(HAS_PCF85063)
     log_d("Looking for PCF85063");
-    supported = rtclock.begin(*_wire);      // our driver takes TwoWire&
+    supported = rtclock.begin(_wire);
   #elif defined(HAS_PCF8523) || defined(HAS_DS1307)
     log_d("Looking for RTClib device");
-    supported = rtclock.begin(_wire);       // RTClib takes TwoWire*
+    supported = rtclock.begin(_wire);
   #endif
 
   if (!supported) {
-    log_w("RTC not detected");
+    log_e("RTC: chip not found on I2C bus");
     return;
   }
 
@@ -55,7 +57,7 @@ void RTC::RunSetup() {
 }
 
 // -----------------------------------------------------------------------------
-// setup() — per-chip post-init
+// setup() - per-chip post-init
 // -----------------------------------------------------------------------------
 
 #if defined(HAS_PCF85063)
@@ -63,18 +65,24 @@ void RTC::RunSetup() {
 bool RTC::setup() {
   log_i("RTC::PCF85063_setup");
 
-  if (!rtclock.isClockIntegrityOK()) {
-    log_d("RTC integrity lost — time not set");
-    Serial.println(F("RTC is NOT initialized or lost power"));
+  // supported = chip is present on bus (already confirmed by begin())
+  // rtc_synced = time is valid (OS bit clear = battery held time through power loss)
+  // These are independent - chip can be present but time unset
+  if (!rtclock.initialized() || rtclock.lostPower()) {
+    log_w("RTC: chip found but time not set (OS bit set)");
+    Serial.println(F("RTC found - time not set, needs adjust()"));
     system_time_set = false;
+    rtc_synced = false;
+    // supported stays true - caller can call adjust_rtc() or sync_rtc_ntp() later
   } else {
-    system_time_set = true;
+    rtc_synced = true;
     syncFromRTC();
-    log_i("SystemTime set from RTC");
+    system_time_set = true;
+    log_i("RTC: time valid, system clock synced");
   }
 
   Serial.println(dt_string());
-  return supported;
+  return true;  // chip found - always true here
 }
 
 #elif defined(HAS_PCF8523)
@@ -127,35 +135,25 @@ bool RTC::setup() {
 #endif
 
 // -----------------------------------------------------------------------------
-// syncFromRTC — read chip time → set ESP32 system clock
+// syncFromRTC - read chip time → set ESP32 system clock
+// All chips use rtclock.now() → DateTime (RTClib-compatible interface)
 // -----------------------------------------------------------------------------
 void RTC::syncFromRTC() {
-  struct tm tm_time = {};
+  DateTime now = rtclock.now();
+  // struct tm tm_time = now.toTm();
 
-  #if defined(HAS_PCF85063)
-    PCF85063DateTime dt;
-    if (!rtclock.getDateTime(dt)) {
-      log_w("syncFromRTC: PCF85063 read failed");
-      return;
-    }
-    tm_time.tm_year = dt.year - 1900;
-    tm_time.tm_mon  = dt.month - 1;
-    tm_time.tm_mday = dt.day;
-    tm_time.tm_hour = dt.hour;
-    tm_time.tm_min  = dt.minute;
-    tm_time.tm_sec  = dt.second;
+  // 2. Populate the standard C tm structure
+  struct tm tm_time;
+  tm_time.tm_year = now.year() - 1900;  // Years since 1900
+  tm_time.tm_mon  = now.month() - 1;    // Months (0-11)
+  tm_time.tm_mday = now.day();          // Day of the month (1-31)
+  tm_time.tm_hour = now.hour();         // Hours (0-23)
+  tm_time.tm_min  = now.minute();       // Minutes (0-59)
+  tm_time.tm_sec  = now.second();       // Seconds (0-59)
 
-  #elif defined(HAS_PCF8523) || defined(HAS_DS1307)
-    DateTime now = rtclock.now();
-    tm_time.tm_year = now.year()   - 1900;
-    tm_time.tm_mon  = now.month()  - 1;
-    tm_time.tm_mday = now.day();
-    tm_time.tm_hour = now.hour();
-    tm_time.tm_min  = now.minute();
-    tm_time.tm_sec  = now.second();
-  #endif
-
+  // Set isdst to -1 to let the system decide based on your timezone settings
   tm_time.tm_isdst = -1;
+
   time_t t = mktime(&tm_time);
   struct timeval tv = { .tv_sec = t, .tv_usec = 0 };
   settimeofday(&tv, NULL);
@@ -164,43 +162,23 @@ void RTC::syncFromRTC() {
 }
 
 // -----------------------------------------------------------------------------
-// adjust_rtc overloads
+// adjust_rtc overloads - all chips use rtclock.adjust(DateTime)
 // -----------------------------------------------------------------------------
-
-#if defined(HAS_PCF85063)
-
-void RTC::adjust_rtc(uint16_t year, uint8_t month, uint8_t day,
-                     uint8_t hour, uint8_t minute, uint8_t second) {
-  rtclock.setDateTime(year, month, day, hour, minute, second);
-}
-
-void RTC::adjust_rtc(struct tm *timeInfo) {
-  rtclock.setDateTime(
-    (uint16_t)(timeInfo->tm_year + 1900),
-    (uint8_t) (timeInfo->tm_mon  + 1),
-    (uint8_t)  timeInfo->tm_mday,
-    (uint8_t)  timeInfo->tm_hour,
-    (uint8_t)  timeInfo->tm_min,
-    (uint8_t)  timeInfo->tm_sec
-  );
-}
-
-void RTC::adjust_rtc(uint32_t t) {
-  time_t tt = (time_t)t;
-  struct tm *ti = gmtime(&tt);
-  adjust_rtc(ti);
-}
-
-#else  // RTClib targets
 
 void RTC::adjust_rtc(const char *time_str) {
   rtclock.adjust(DateTime(time_str));
 }
 
-void RTC::adjust_rtc(struct tm *timeInfo) {
-  time_t t = mktime(timeInfo);
-  rtclock.adjust(DateTime((uint32_t)t));
-}
+void RTC::adjust_rtc(struct tm *ti) {
+  rtclock.adjust(DateTime(
+    (uint16_t)(ti->tm_year + 1900),
+    (uint8_t) (ti->tm_mon  + 1),
+    (uint8_t)  ti->tm_mday,
+    (uint8_t)  ti->tm_hour,
+    (uint8_t)  ti->tm_min,
+    (uint8_t)  ti->tm_sec
+    ));
+  }
 
 void RTC::adjust_rtc(const DateTime &dt) {
   rtclock.adjust(dt);
@@ -209,8 +187,6 @@ void RTC::adjust_rtc(const DateTime &dt) {
 void RTC::adjust_rtc(uint32_t t) {
   rtclock.adjust(DateTime(t));
 }
-
-#endif
 
 // -----------------------------------------------------------------------------
 // NTP sync
@@ -265,22 +241,12 @@ bool RTC::getSystemTimeFromString(const char *timeStr) {
 // -----------------------------------------------------------------------------
 String RTC::dt_string() {
   if (!supported) { log_w("RTC not supported"); return ""; }
-
-  #if defined(HAS_PCF85063)
-    PCF85063DateTime dt;
-    if (!rtclock.getDateTime(dt)) return "";
-    char buf[20];
-    snprintf(buf, sizeof(buf), "%04u-%02u-%02u %02u:%02u:%02u",
-             dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second);
-    return String(buf);
-
-  #elif defined(HAS_PCF8523) || defined(HAS_DS1307)
-    DateTime now = rtclock.now();
-    char format[] = "%Y-%m-%d %H:%M:%S";
-    return now.toString(format);
-  #endif
-
-  return "";
+  DateTime now = rtclock.now();
+  char buf[20];
+  snprintf(buf, sizeof(buf), "%04u-%02u-%02u %02u:%02u:%02u",
+           now.year(), now.month(), now.day(),
+           now.hour(), now.minute(), now.second());
+  return String(buf);
 }
 
 String RTC::millis_dt_string() {

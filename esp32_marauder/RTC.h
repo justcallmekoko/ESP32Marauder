@@ -15,7 +15,7 @@
   #include "RTClib.h"
 #endif
 
-// -- Native PCF85063 driver ----------------------------------------------------
+// -- PCF85063 driver - RTClib-compatible interface -----------------------------
 #if defined(HAS_PCF85063)
   #include "PCF85063.h"
 #endif
@@ -32,7 +32,7 @@ extern bool system_time_set;
 class RTC {
 public:
 
-  // -- Hardware object — one per build target ----------------------------------
+  // -- Hardware object - one per build target ----------------------------------
   #if defined(HAS_PCF8523)
     RTC_PCF8523  rtclock;
   #elif defined(HAS_DS1307)
@@ -42,6 +42,7 @@ public:
   #endif
 
   bool   supported = false;
+  bool   rtc_synced = false;
 
   void   RunSetup();
   bool   setup();
@@ -56,24 +57,12 @@ public:
   bool getSystemTimeFromString(const char *timeStr);
   void setSystemTimeFromCompile();
 
-  // -- Adjust overloads -------------------------------------------------------
-  // PCF85063 uses its own struct; RTClib targets use DateTime
-  #if defined(HAS_PCF85063)
-    void adjust_rtc(uint16_t year, uint8_t month, uint8_t day,
-                    uint8_t hour, uint8_t minute, uint8_t second);
-    void adjust_rtc(struct tm *timeInfo);
-    void adjust_rtc(uint32_t t);          // Unix epoch
-    void adjust(uint16_t year, uint8_t month, uint8_t day,
-                uint8_t hour, uint8_t minute, uint8_t second) {
-      rtclock.setDateTime(year, month, day, hour, minute, second);
-    }
-  #else
-    void adjust_rtc(const char *time_str);
-    void adjust_rtc(struct tm *timeInfo);
-    void adjust_rtc(const DateTime &dt);
-    void adjust_rtc(uint32_t t);
-    void adjust(const DateTime &dt) { rtclock.adjust(dt); }
-  #endif
+  // -- Adjust overloads - all chips use DateTime now --------------------------
+  void adjust_rtc(const char *time_str);   // ISO8601 string
+  void adjust_rtc(struct tm *timeInfo);
+  void adjust_rtc(const DateTime &dt);
+  void adjust_rtc(uint32_t t);             // Unix epoch
+  void adjust(const DateTime &dt) { rtclock.adjust(dt); }
 
 private:
   TwoWire *_wire = nullptr;
