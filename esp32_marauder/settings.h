@@ -28,13 +28,16 @@ class Settings {
     // All loadSetting<T>() reads hit this struct — zero heap, zero JSON parse.
     struct SettingsCache {
       bool  ForcePMKID    = false;
-      bool  ForceProbe    = false;
-      bool  SavePCAP      = true;
-      bool  EnableLED     = true;
-      bool  EPDeauth      = false;
-      bool  ChanHop       = false;
-      String ClientSSID   = "";
-      String ClientPW     = "";
+      bool  ForceProbe  = false;
+      bool  SavePCAP    = true;
+      bool  EnableLED   = true;
+      bool  EPDeauth    = false;
+      bool  ChanHop     = false;
+  #ifdef CYD_SOUND
+      bool  EnableSND   = true;
+  #endif
+      String ClientSSID = "";
+      String ClientPW   = "";
       String wu           = "";
       String wt           = "";
       String wdg_key      = "";
