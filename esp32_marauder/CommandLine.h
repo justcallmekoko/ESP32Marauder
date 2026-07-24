@@ -20,6 +20,14 @@
   #include "LedInterface.h"
 #endif
 
+#ifdef HAS_RTC
+  #include "RTC.h"
+  extern RTC rtc_obj;
+#endif
+
+// If system time/date has been set
+extern bool system_time_set;
+
 #ifdef HAS_SCREEN
   extern MenuFunctions menu_function_obj;
   extern Display display_obj;
@@ -60,6 +68,9 @@ const char PROGMEM GPS_CMD[] = "gps";
 const char PROGMEM NMEA_CMD[] = "nmea";
 const char PROGMEM GPS_POI_CMD[] = "gpspoi";
 const char PROGMEM GPS_TRACKER_CMD[] = "gpstracker";
+const char PROGMEM NTP_SYNC_CMD[] = "ntp_sync";
+const char PROGMEM DATE_CMD[] = "date";
+const char PROGMEM SETDATE_CMD[] = "setdate";
 
 // WiFi sniff/scan
 const char PROGMEM EVIL_PORTAL_CMD[] = "evilportal";
@@ -138,6 +149,9 @@ const char PROGMEM HELP_GPS_CMD[] = "gps [-t] [-g] <fix/sat/lon/lat/alt/date/acc
 const char PROGMEM HELP_GPS_POI_CMD[] = "gpspoi -s/-m/-e";
 const char PROGMEM HELP_GPS_TRACKER_CMD[] = "gpstracker -c <start/stop>";
 const char PROGMEM HELP_NMEA_CMD[] = "nmea";
+const char PROGMEM HELP_NTP_SYNC[] = "ntp_sync";
+const char PROGMEM HELP_DATE[] = "date";
+const char PROGMEM HELP_SETDATE[] = "setdate YY-MM-DD HH:MM:SS";
 
 // WiFi sniff/scan
 const char PROGMEM HELP_EVIL_PORTAL_CMD[] = "evilportal [-c start [-w html.html]/sethtml <html.html>]";
@@ -179,7 +193,7 @@ const char PROGMEM HELP_SSID_CMD_A[] = "ssid -a [-g <count>/-n <name>]";
 const char PROGMEM HELP_SSID_CMD_B[] = "ssid -r <index>";
 const char PROGMEM HELP_SAVE_CMD[] = "save -a/-s";
 const char PROGMEM HELP_LOAD_CMD[] = "load -a/-s";
-const char PROGMEM HELP_JOIN_CMD[] = "join -a <index> -p <password>/-s";
+const char PROGMEM HELP_JOIN_CMD[] = "join (-a <index> -n <network>) -p <password>/-s";
 const char PROGMEM HELP_MAC_CMD_A[] = "randapmac";
 const char PROGMEM HELP_MAC_CMD_B[] = "randstamac";
 const char PROGMEM HELP_MAC_CMD_C[] = "cloneapmac [-a <index>]";

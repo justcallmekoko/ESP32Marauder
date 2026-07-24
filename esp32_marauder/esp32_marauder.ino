@@ -79,6 +79,11 @@ CommandLine cli_obj;
   GpsInterface gps_obj;
 #endif
 
+#ifdef HAS_RTC
+  #include "RTC.h"
+  RTC rtc_obj;
+#endif
+
 #ifdef HAS_BATTERY
   BatteryInterface battery_obj;
 #endif
@@ -220,6 +225,66 @@ uint32_t currentTime  = 0;
   SDInterface sd_obj = SDInterface(&sharedSPI, SD_CS);
 #endif
 
+//  Converts reason type to a C string.
+//  Type is located in /tools/sdk/esp32/include/esp_system/include/esp_system.h
+const char *resetReasonName() {
+  esp_reset_reason_t r = esp_reset_reason();
+  switch (r) {
+    case ESP_RST_UNKNOWN:   return "Unknown";
+    case ESP_RST_POWERON:   return "PowerOn";    //Power on or RST pin toggled
+    case ESP_RST_EXT:       return "ExtPin";     //External pin - not applicable for ESP32
+    case ESP_RST_SW:        return "Reboot";     //esp_restart()
+    case ESP_RST_PANIC:     return "Crash";      //Exception/panic
+    case ESP_RST_INT_WDT:   return "WDT_Int";    //Interrupt watchdog (software or hardware)
+    case ESP_RST_TASK_WDT:  return "WDT_Task";   //Task watchdog
+    case ESP_RST_WDT:       return "WDT_Other";  //Other watchdog
+    case ESP_RST_DEEPSLEEP: return "Sleep";      //Reset after exiting deep sleep mode
+    case ESP_RST_BROWNOUT:  return "BrownOut";   //Brownout reset (software or hardware)
+    case ESP_RST_SDIO:      return "SDIO";       //Reset over SDIO
+    default:                return "";
+  }
+}
+
+void print_reset_reason() {
+  Serial.print(F("Last reset reason: "));
+  Serial.println(resetReasonName());
+}
+
+bool system_time_set = false;
+
+bool set_system_time(struct tm *timeInfo) {
+    // struct tm tmp = timeInfo;
+    time_t t = mktime(timeInfo);
+    if (t == (time_t)-1) {
+        log_w("set_system_time: mktime failed");
+        return false;
+    }
+    struct timeval now = { .tv_sec = t, .tv_usec = 0 };
+    if (settimeofday(&now, NULL) != 0) {
+        log_d("settimeofday failed");
+        return false;
+    }
+    system_time_set = true;
+    log_d("system time updated");
+
+    #ifdef HAS_RTC
+      log_d("set_system_time: calling rtc_obj.adjust_rtc");
+      rtc_obj.adjust_rtc(t);
+    #endif
+
+    return true;
+}
+
+bool set_system_time(const String& time_str) {
+    struct tm tm_info = {0};
+    // log_d("set_system_time: '%s'", time_str.c_str());
+    if (strptime(time_str.c_str(), "%F %T", &tm_info) != NULL) {
+        return set_system_time(&tm_info);
+    }
+    log_d("set_system_time: invalid time_str '%s'", time_str.c_str());
+    return false;
+}
+
 void setup()
 {
   randomSeed(esp_random());
@@ -282,6 +347,14 @@ void setup()
 
   //while(!Serial)
   //  delay(10);
+
+  struct tm timeinfo;
+  if (getLocalTime(&timeinfo)) {
+    Serial.print("RTC::setup: ");
+    Serial.println(&timeinfo, "%F %T");
+  } else {
+    log_w("getLocalTime Fail");
+  }
 
   Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
 
@@ -358,6 +431,12 @@ void setup()
   #endif
 
   wifi_scan_obj.RunSetup();
+
+  #ifdef HAS_RTC
+    rtc_obj.RunSetup();
+  #else
+    Serial.println(F("RTC NOT Installed"));
+  #endif
 
   #ifdef HAS_SCREEN
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);

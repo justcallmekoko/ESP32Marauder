@@ -1,4 +1,3 @@
-#pragma once
 
 #ifndef MenuFunctions_h
 #define MenuFunctions_h
@@ -21,6 +20,17 @@
 #include "BatteryInterface.h"
 #include "SDInterface.h"
 #include "settings.h"
+
+#ifdef HAS_RTC
+  #include "RTC.h"
+  extern RTC rtc_obj;
+#endif
+
+// If system time/date has been set
+extern bool system_time_set;
+
+extern void print_reset_reason();
+extern const char *resetReasonName();
 
 #ifdef HAS_BUTTONS
   #include "Switches.h"
@@ -197,6 +207,10 @@ class MenuFunctions
     Menu evilPortalMenu;
 
     Menu foxHuntMenu;
+
+    // Admin
+    Menu adminMenu;
+    Menu adminSubMenu;
 
     #ifdef HAS_DIRECT_UPLOAD
       Menu deleteAllMenu;

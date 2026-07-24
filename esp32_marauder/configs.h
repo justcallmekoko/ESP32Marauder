@@ -4,6 +4,9 @@
 
   #define configs_h
 
+  #include "soc/soc_caps.h"
+  #include "esp_arduino_version.h"
+
   #define POLISH_POTATO
 
   //#define DEVELOPER
@@ -141,6 +144,8 @@
     #define HAS_SD
     #define USE_SD
     #define HAS_TEMP_SENSOR
+    // #define HAS_RTC
+    //  #define HAS_RTC8563
     #define HAS_GPS
     #define HAS_DIRECT_UPLOAD
   #endif
@@ -232,8 +237,10 @@
 
   #ifdef MARAUDER_REV_FEATHER
     //#define FLIPPER_ZERO_HAT
-    //#define HAS_BATTERY
+    #define HAS_BATTERY
     //#define HAS_BT
+    #define HAS_RTC
+      #define HAS_PCF8523
     #define HAS_MINI_KB
     #define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
@@ -607,6 +614,19 @@
   #endif
   //// END BOARD FEATURES
 
+    #if defined(HAS_PCF8523) || defined(HAS_DS1307)
+        #define HAS_RTC         // i2c real-time clock (RTC)
+    #endif
+
+    #ifndef GMTOFFSET_SEC
+      #define GMTOFFSET_SEC 0  // -8 hours for Pacific Time
+    #endif
+
+    #ifndef DAYLIGHTOFFSET_SEC
+      #define DAYLIGHTOFFSET_SEC 0
+    #endif
+
+
   //// POWER MANAGEMENT
   #ifdef HAS_PWR_MGMT
     #if defined(HAS_AXP192)
@@ -917,6 +937,13 @@
       #define TOUCH_CS -1
       //#define SD_CS 1
 
+      #define I2C_SDA 21
+      #define I2C_SCL 22
+      #define I2C_INT 35
+      // J1 Grove connector
+      // GPIO32
+      // GPIO33
+
       #define SCREEN_BUFFER
 
       #define MAX_SCREEN_BUFFER 9
@@ -992,6 +1019,9 @@
       #define TFT_RST 12
       #define TFT_BL 27
       #define TOUCH_CS -1
+
+      #define RTC_SDA 33
+      #define RTC_SCL 22
 
       #define SCREEN_BUFFER
 
@@ -2000,6 +2030,9 @@
       //#define TOUCH_CS 21
       #define SD_CS 4
 
+      #define RTC_SCL 4
+      #define RTC_SDA 3
+
       #define SCREEN_BUFFER
 
       #define MAX_SCREEN_BUFFER 9
@@ -2579,6 +2612,7 @@
   #define TFTDARKGREY  16
   #define TFTSKYBLUE   17
   #define TFTLIME      18
+  #define TFTPINK      21
   //// END SPACE SAVING COLORS
 
   #define TFT_FARTGRAY 0x528a
@@ -2813,11 +2847,13 @@
   #endif
   //// END GPS STUFF
 
+
+
   //// BATTERY STUFF
   #ifdef HAS_BATTERY
 
     #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2) 
-      #define I2C_SDA 33
+      #define I2C_SDA 21
       #define I2C_SCL 22
 
     #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_KIT)
@@ -2925,7 +2961,6 @@
     #endif
 
   #endif  // HAS_BATTERY
-
 
   //// MARAUDER TITLE STUFF
   #ifdef MARAUDER_V4

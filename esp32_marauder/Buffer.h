@@ -12,6 +12,13 @@
 //#define BUF_SIZE 3 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
 //#define SNAP_LEN 2324 // max len of each recieved packet
 
+// #ifdef HAS_RTC
+//   #include "RTC.h"
+//   extern RTC rtc_obj;
+// #endif
+
+extern bool system_time_set;
+
 //extern bool useSD;
 
 extern Settings settings_obj;
