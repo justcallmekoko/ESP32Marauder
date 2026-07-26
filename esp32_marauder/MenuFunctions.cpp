@@ -537,6 +537,61 @@ void MenuFunctions::main(uint32_t currentTime)
         }
       }*/
 
+      #if defined(CYD_2432S022) && defined(CYD_2432S022C_TOUCH)
+        static int8_t cyd_touched_menu_row = -1;
+        bool cyd_handled_menu_row_touch = false;
+
+        if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
+            (wifi_scan_obj.currentScanMode == WIFI_CONNECTED) ||
+            (wifi_scan_obj.currentScanMode == OTA_UPDATE)) {
+          int visible_rows = current_menu->list->size() - this->menu_start_index;
+          if (visible_rows > BUTTON_SCREEN_LIMIT)
+            visible_rows = BUTTON_SCREEN_LIMIT;
+
+          int8_t touched_row = -1;
+          for (uint8_t b = 0; b < visible_rows; b++) {
+            bool row_pressed = pressed && display_obj.key[b].contains(t_x, t_y);
+            display_obj.key[b].press(row_pressed);
+            if (row_pressed)
+              touched_row = b;
+          }
+
+          if (pressed && touched_row >= 0) {
+            int target_index = this->menu_start_index + touched_row;
+            cyd_handled_menu_row_touch = true;
+
+            if (current_menu->selected != target_index) {
+              int previous_index = current_menu->selected;
+              current_menu->selected = target_index;
+              if (previous_index >= this->menu_start_index &&
+                  previous_index < this->menu_start_index + BUTTON_SCREEN_LIMIT) {
+                this->buttonNotSelected(previous_index - this->menu_start_index, previous_index);
+              }
+              this->buttonSelected(touched_row, target_index);
+            }
+
+            cyd_touched_menu_row = touched_row;
+          }
+          else if (!pressed && cyd_touched_menu_row >= 0) {
+            int target_index = this->menu_start_index + cyd_touched_menu_row;
+            if (target_index >= 0 && target_index < current_menu->list->size() &&
+                display_obj.key[cyd_touched_menu_row].justReleased()) {
+              current_menu->selected = target_index;
+              current_menu->list->get(current_menu->selected).callable();
+              cyd_handled_menu_row_touch = true;
+            }
+
+            cyd_touched_menu_row = -1;
+          }
+        }
+
+        if (cyd_handled_menu_row_touch) {
+          x = -1;
+          y = -1;
+          return;
+        }
+      #endif
+
       // Detect up, down, select
       uint8_t menu_button = display_obj.menuButton(&t_x, &t_y, pressed);
 
