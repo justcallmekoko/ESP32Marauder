@@ -37,6 +37,7 @@
   //#define MARAUDER_MINI_V3
   //#define MARAUDER_M5_NANO_C6
   //#define DUAL_MINI_C5
+  //#define MARAUDER_LCDWIKI_28 // LCDWiki 2.8" ESP32-S3 Display (240x320 ILI9341V + FT6336 cap touch)
   //// END BOARD TARGETS
 
   #define JSON_SETTING_SIZE 2048
@@ -112,6 +113,8 @@
     #define HARDWARE_NAME "Dual Mini C5"
   #elif defined(MARAUDER_M5_NANO_C6)
     #define HARDWARE_NAME "M5 Nano C6"
+  #elif defined(MARAUDER_LCDWIKI_28)
+    #define HARDWARE_NAME "LCDWiki ESP32-S3 2.8"
   #else
     #define HARDWARE_NAME "ESP32"
   #endif
@@ -605,6 +608,31 @@
     #define HAS_IDF_3
     //#define HAS_DIRECT_UPLOAD
   #endif
+
+  #ifdef MARAUDER_LCDWIKI_28
+    #define HAS_TOUCH
+    #define HAS_CAP_TOUCH       // FT6336 capacitive touch (I2C) via ft6336.h
+    //#define HAS_FLIPPER_LED   // board has a single WS2812 RGB on IO42, not a 3-pin RGB LED
+    //#define FLIPPER_ZERO_HAT
+    //#define HAS_BATTERY
+    #define HAS_BT
+    #define HAS_BT_REMOTE
+    #define HAS_BUTTONS
+    //#define HAS_NEOPIXEL_LED  // WS2812 RGB is on IO42; left off (turned dark in Display.cpp via neopixelWrite)
+    //#define HAS_PWR_MGMT
+    #define HAS_SCREEN
+    #define HAS_FULL_SCREEN
+    #define HAS_SD
+    #define USE_SD
+    #define HAS_SEPARATE_SD     // microSD on its own SPI bus (pins below)
+    #define HAS_CYD_PORTRAIT
+    #define HAS_TEMP_SENSOR
+    #define HAS_GPS
+    #define HAS_PSRAM           // N16R8: 8MB OPI PSRAM (set Arduino "PSRAM: OPI PSRAM")
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3
+    #define HAS_DIRECT_UPLOAD
+  #endif
   //// END BOARD FEATURES
 
   //// POWER MANAGEMENT
@@ -888,6 +916,26 @@
       #define HAS_R
       #define HAS_U
       #define HAS_D
+      #define HAS_C
+
+      #define L_PULL true
+      #define C_PULL true
+      #define U_PULL true
+      #define R_PULL true
+      #define D_PULL true
+    #endif
+
+    #ifdef MARAUDER_LCDWIKI_28
+      #define L_BTN -1
+      #define C_BTN 0    // BOOT button
+      #define U_BTN -1
+      #define R_BTN -1
+      #define D_BTN -1
+
+      //#define HAS_L
+      //#define HAS_R
+      //#define HAS_U
+      //#define HAS_D
       #define HAS_C
 
       #define L_PULL true
@@ -1480,7 +1528,87 @@
       #define GREENBUTTON_H FRAME_H
     
       #define STATUSBAR_COLOR 0x4A49
-    
+
+      #define KIT_LED_BUILTIN 13
+    #endif
+
+    #if defined(MARAUDER_LCDWIKI_28)
+      #define CHAN_PER_PAGE 7
+
+      #define SCREEN_CHAR_WIDTH 40
+      #define HAS_ILI9341        // ILI9341V panel
+
+      #define BANNER_TEXT_SIZE 2
+
+      #ifndef TFT_WIDTH
+        #define TFT_WIDTH 240
+      #endif
+
+      #ifndef TFT_HEIGHT
+        #define TFT_HEIGHT 320
+      #endif
+
+      // FT6336G capacitive touch (I2C @0x38). INT (IO17) unused.
+      #define CTP_SDA 16
+      #define CTP_SCL 15
+      #define CTP_RST 18
+
+      // Touch calibration (measured via TOUCH_CAL: raw panel range -> screen px)
+      #define LCDWIKI_TCAL_X0 10
+      #define LCDWIKI_TCAL_X1 220
+      #define LCDWIKI_TCAL_Y0 11
+      #define LCDWIKI_TCAL_Y1 318
+
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
+
+      #define EXT_BUTTON_WIDTH 30
+
+      #define SCREEN_BUFFER
+
+      #define MAX_SCREEN_BUFFER 21
+
+      #define SCREEN_ORIENTATION 0
+
+      #define CHAR_WIDTH 12
+      #define SCREEN_WIDTH TFT_WIDTH
+      #define SCREEN_HEIGHT TFT_HEIGHT
+      #define HEIGHT_1 TFT_WIDTH
+      #define WIDTH_1 TFT_HEIGHT
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
+      #define TEXT_HEIGHT 16 // Height of text to be printed and scrolled
+      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
+      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
+      #define YMAX 320 // Bottom of screen area
+      #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
+      //#define MENU_FONT NULL
+      #define MENU_FONT &FreeMono9pt7b // Winner
+      //#define MENU_FONT &FreeMonoBold9pt7b
+      //#define MENU_FONT &FreeSans9pt7b
+      //#define MENU_FONT &FreeSansBold9pt7b
+      #define BUTTON_SCREEN_LIMIT 12
+      #define BUTTON_ARRAY_LEN BUTTON_SCREEN_LIMIT
+      #define STATUS_BAR_WIDTH 16
+      #define LVGL_TICK_PERIOD 6
+
+      #define FRAME_X 100
+      #define FRAME_Y 64
+      #define FRAME_W 120
+      #define FRAME_H 50
+
+      // Red zone size
+      #define REDBUTTON_X FRAME_X
+      #define REDBUTTON_Y FRAME_Y
+      #define REDBUTTON_W (FRAME_W/2)
+      #define REDBUTTON_H FRAME_H
+
+      // Green zone size
+      #define GREENBUTTON_X (REDBUTTON_X + REDBUTTON_W)
+      #define GREENBUTTON_Y FRAME_Y
+      #define GREENBUTTON_W (FRAME_W/2)
+      #define GREENBUTTON_H FRAME_H
+
+      #define STATUSBAR_COLOR 0x4A49
+
       #define KIT_LED_BUILTIN 13
     #endif
 
@@ -2178,6 +2306,24 @@
     //#define BUTTON_ARRAY_LEN 5
   #endif
 
+  #if defined(MARAUDER_LCDWIKI_28)
+    #define BANNER_TIME 100
+
+    #define COMMAND_PREFIX "!"
+
+    // Keypad start position, key sizes and spacing (240x320 portrait)
+    #define KEY_X 120 // Centre of key
+    #define KEY_Y 50
+    #define KEY_W 240 // Width and height
+    #define KEY_H 22
+    #define KEY_SPACING_X 0 // X and Y gap
+    #define KEY_SPACING_Y 1
+    #define KEY_TEXTSIZE 1   // Font size multiplier
+    #define ICON_W 22
+    #define ICON_H 22
+    #define BUTTON_PADDING 22
+  #endif
+
   // Status bar right-side icon x-positions (SCREEN_WIDTH-relative)
   // V8 (240px): SD=170 WiFi=154 Force=138 Touch=186 Bat=204
   // Pancake (320px): SD=250 WiFi=234 Force=218 Touch=266 Bat=284
@@ -2557,6 +2703,10 @@
       #define SD_CS 10
     #endif
 
+    #ifdef MARAUDER_LCDWIKI_28
+      #define SD_CS 47    // D3 line used as chip-select in SPI mode
+    #endif
+
   #endif
   //// END SD DEFINITIONS
 
@@ -2738,6 +2888,12 @@
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 21
       #define GPS_RX 25
+    #elif defined(MARAUDER_LCDWIKI_28)
+      // GPS on the broken-out UART header: TXD0=IO44 (board TX -> GPS RX),
+      // RXD0=IO43 (board RX <- GPS TX). NOT 11/12 (those are TFT MOSI/SCLK).
+      #define GPS_SERIAL_INDEX 1
+      #define GPS_TX 44
+      #define GPS_RX 43
     #elif defined(MARAUDER_CYD_GUITION)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 21 // Fits the extended I/O
@@ -3026,6 +3182,13 @@
       #define SD_MISO TFT_MISO
       #define SD_MOSI TFT_MOSI
       #define SD_SCK  TFT_SCLK
+    #endif
+
+    #ifdef MARAUDER_LCDWIKI_28
+      // Dedicated microSD bus (SDIO pins driven in SPI mode)
+      #define SD_MISO 39
+      #define SD_MOSI 40
+      #define SD_SCK  38
     #endif
 
     #ifdef MARAUDER_V4
