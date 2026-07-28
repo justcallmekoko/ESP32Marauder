@@ -48,6 +48,23 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
           uint16_t raw_x, raw_y;
           if (!ft6336_read_raw(&raw_x, &raw_y)) return 0;
 
+          #ifdef MARAUDER_LCDWIKI_28
+            // Linear touch calibration (raw panel coords -> screen pixels).
+            // Defaults are identity; the TOUCH_CAL routine prints measured values.
+            #ifndef LCDWIKI_TCAL_X0
+              #define LCDWIKI_TCAL_X0 0
+              #define LCDWIKI_TCAL_X1 (TFT_WIDTH - 1)
+              #define LCDWIKI_TCAL_Y0 0
+              #define LCDWIKI_TCAL_Y1 (TFT_HEIGHT - 1)
+            #endif
+            {
+              long _mx = map((long)raw_x, (long)LCDWIKI_TCAL_X0, (long)LCDWIKI_TCAL_X1, 0, TFT_WIDTH - 1);
+              long _my = map((long)raw_y, (long)LCDWIKI_TCAL_Y0, (long)LCDWIKI_TCAL_Y1, 0, TFT_HEIGHT - 1);
+              raw_x = (uint16_t)constrain(_mx, 0, TFT_WIDTH - 1);
+              raw_y = (uint16_t)constrain(_my, 0, TFT_HEIGHT - 1);
+            }
+          #endif
+
           // Discard touches within PANCAKE_TOUCH_MARGIN pixels of any panel edge
           #define PANCAKE_PANEL_W TFT_WIDTH
           #define PANCAKE_PANEL_H TFT_HEIGHT
@@ -215,6 +232,65 @@ void Display::RunSetup() {
   tft.init();
 
   tft.setRotation(SCREEN_ORIENTATION);
+
+  #ifdef MARAUDER_LCDWIKI_28
+    // Turn off the onboard RGB LED (WS2812 on IO42) via the core built-in.
+    neopixelWrite(42, 0, 0, 0);
+    // NOTE: backlight (IO45) is owned by the PWM brightness system (brightnessInit
+    // -> ledcAttach(TFT_BL)), which runs right after RunSetup — do not drive it
+    // with digitalWrite here or it fights the PWM dimming.
+  #endif
+
+  #if defined(MARAUDER_LCDWIKI_28) && defined(TOUCH_CAL)
+    // Interactive 2-point capacitive touch calibration. Prints the map constants
+    // to serial; bake them in as -DLCDWIKI_TCAL_X0.. then rebuild without TOUCH_CAL.
+    {
+      pinMode(TFT_BL, OUTPUT); digitalWrite(TFT_BL, HIGH);
+      const int M = 24;
+      int sx[2] = { M, TFT_WIDTH - 1 - M };
+      int sy[2] = { M, TFT_HEIGHT - 1 - M };
+      uint16_t rx[2] = {0, 0}, ry[2] = {0, 0};
+      for (int i = 0; i < 2; i++) {
+        tft.fillScreen(TFT_BLACK);
+        tft.setFreeFont(NULL); tft.setTextSize(1);
+        tft.setTextColor(TFT_WHITE, TFT_BLACK);
+        tft.drawCentreString("TOUCH CALIBRATION", TFT_WIDTH / 2, 40, 1);
+        tft.drawCentreString(i == 0 ? "tap the GREEN dot (top-left)"
+                                    : "tap the GREEN dot (bot-right)", TFT_WIDTH / 2, 60, 1);
+        tft.drawLine(sx[i] - 12, sy[i], sx[i] + 12, sy[i], TFT_RED);
+        tft.drawLine(sx[i], sy[i] - 12, sx[i], sy[i] + 12, TFT_RED);
+        tft.fillCircle(sx[i], sy[i], 3, TFT_GREEN);
+        delay(500); // debounce previous release
+        // Wait for a stable tap: average 10 raw samples
+        uint32_t ax = 0, ay = 0; int n = 0;
+        while (n < 10) {
+          uint16_t a, b;
+          if (ft6336_read_raw(&a, &b)) { ax += a; ay += b; n++; }
+          delay(8);
+        }
+        rx[i] = ax / n; ry[i] = ay / n;
+        tft.fillCircle(sx[i], sy[i], 3, TFT_BLUE);
+        // Wait for release
+        uint16_t a, b; while (ft6336_read_raw(&a, &b)) delay(8);
+      }
+      float slopeX = (float)(rx[1] - rx[0]) / (float)(sx[1] - sx[0]);
+      float slopeY = (float)(ry[1] - ry[0]) / (float)(sy[1] - sy[0]);
+      long X0 = lround(rx[0] - slopeX * sx[0]);
+      long X1 = lround(rx[1] + slopeX * ((TFT_WIDTH - 1) - sx[1]));
+      long Y0 = lround(ry[0] - slopeY * sy[0]);
+      long Y1 = lround(ry[1] + slopeY * ((TFT_HEIGHT - 1) - sy[1]));
+      tft.fillScreen(TFT_BLACK);
+      tft.drawCentreString("CAL DONE", TFT_WIDTH / 2, TFT_HEIGHT / 2 - 10, 1);
+      tft.drawCentreString("see serial log", TFT_WIDTH / 2, TFT_HEIGHT / 2 + 6, 1);
+      while (true) {
+        Serial.printf("[TOUCHCAL] raw TL=(%u,%u) BR=(%u,%u)\n", rx[0], ry[0], rx[1], ry[1]);
+        Serial.printf("[TOUCHCAL] -DLCDWIKI_TCAL_X0=%ld -DLCDWIKI_TCAL_X1=%ld -DLCDWIKI_TCAL_Y0=%ld -DLCDWIKI_TCAL_Y1=%ld\n",
+                      X0, X1, Y0, Y1);
+        Serial.flush();
+        delay(1500);
+      }
+    }
+  #endif
 
   tft.setCursor(0, 0);
 

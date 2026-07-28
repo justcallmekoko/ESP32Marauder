@@ -240,8 +240,16 @@ void setup()
     digitalWrite(ACT_LED_PIN, LOW);
   #endif
 
-  while(!Serial)
-    delay(10);
+  #if defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT
+    // Native-USB CDC serial: don't hang forever waiting for a host to open the
+    // port (otherwise the board never boots off a powerbank/charger), and make
+    // prints non-blocking so a full TX buffer with no host can't stall boot.
+    Serial.setTxTimeoutMs(0);
+    { unsigned long _t0 = millis(); while (!Serial && (millis() - _t0 < 1500)) delay(10); }
+  #else
+    while(!Serial)
+      delay(10);
+  #endif
 
   #ifdef HAS_C5_SD
     sharedSPI.begin(SD_SCK, SD_MISO, SD_MOSI);
