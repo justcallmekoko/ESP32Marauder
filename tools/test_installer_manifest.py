@@ -41,6 +41,8 @@ class InstallerManifestTests(unittest.TestCase):
         )
         workflow_flags = set(re.findall(r'flag: "([A-Z0-9_]+)"', workflow))
         registry_flags = {target["buildFlag"] for target in registry["targets"]}
+        self.assertIn("set-build-path: true", workflow)
+        self.assertIn("BUILD_DIR=./esp32_marauder/build", workflow)
         self.assertEqual(len(registry["targets"]), 22)
         self.assertEqual(registry_flags, workflow_flags)
         self.assertEqual(
