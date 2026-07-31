@@ -9,27 +9,10 @@ on:
       - "*"
   pull_request:
 
-permissions:
-  contents: read
-
 jobs:
-  installer_manifest_tests:
-    name: Validate installer manifest tooling
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Validate target registry
-        run: python3 tools/installer_manifest.py --validate-registry
-
-      - name: Test manifest generation
-        run: python3 -m unittest tools/test_installer_manifest.py -v
-
   compile_sketch:
     name: build ${{ matrix.board.name }}
     runs-on: ubuntu-latest
-    needs: installer_manifest_tests
     strategy:
       fail-fast: false
       matrix:
@@ -257,66 +240,51 @@ jobs:
         with:
           sketch-names: esp32_marauder.ino
           arduino-board-fqbn: ${{ matrix.board.fbqn }}
-          set-build-path: true
           extra-arduino-cli-args: "--warnings none --build-property compiler.cpp.extra_flags='-D${{ matrix.board.flag }}'"
           arduino-platform: esp32:esp32@${{ matrix.board.idf_ver }}
           platform-url: https://github.com/espressif/arduino-esp32/releases/download/${{ matrix.board.idf_ver }}/package_esp32_dev_index.json
 
-      - name: Generate authoritative installer assets for ${{ matrix.board.name }}
+      #- name: Rename Marauder ${{ matrix.board.name }} bin
+      #  run: |
+      #    mv ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.ino.bin ./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}/esp32_marauder.${{ matrix.board.file_name }}.bin
+      
+      - name: Rename and Upload ${{ matrix.board.name }} Artifact
         run: |
-          VERSION_DOT=$(grep '#define MARAUDER_VERSION' ./esp32_marauder/configs.h | sed -E 's/.*"v([^"]+)"/v\1/')
+          VERSION=$(grep '#define MARAUDER_VERSION' ./esp32_marauder/configs.h | sed -E 's/.*"v([^"]+)"/v\1/' | tr '.' '_')
           DATE=$(date +%Y%m%d)
-          BUILD_DIR=./esp32_marauder/build
 
-          arduino-cli compile \
-            --fqbn "${{ matrix.board.fbqn }}" \
-            --build-path "$BUILD_DIR" \
-            --show-properties=expanded \
-            ./esp32_marauder > "$BUILD_DIR/arduino-build-properties.txt"
+          BUILD_DIR=./esp32_marauder/build/esp32.esp32.${{ matrix.board.build_dir }}
+          INPUT_BIN=$BUILD_DIR/esp32_marauder.ino.bin
+          OUTPUT_BIN=esp32_marauder_${VERSION}_${DATE}_${{ matrix.board.file_name }}.bin
+          VERSION_DOT=${VERSION_DOT}
 
-          python3 tools/installer_manifest.py \
-            --generate-target \
-            --build-flag "${{ matrix.board.flag }}" \
-            --build-dir "$BUILD_DIR" \
-            --version "$VERSION_DOT" \
-            --release-date "$DATE" \
-            --source-commit "$GITHUB_SHA" \
-            --output-dir release-assets
+          mv "$INPUT_BIN" "$BUILD_DIR/$OUTPUT_BIN"
 
+          echo "artifact_name=$OUTPUT_BIN" >> $GITHUB_ENV
+          echo "artifact_path=$BUILD_DIR/$OUTPUT_BIN" >> $GITHUB_ENV
       - name: Upload ${{ matrix.board.name }} Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: installer-${{ matrix.board.file_name }}
-          path: release-assets
-          if-no-files-found: error
+          name: ${{ env.artifact_name }}
+          path: ${{ env.artifact_path }}
           retention-days: 5
 
   post_compile_steps:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [compile_sketch, installer_manifest_tests]
+    needs: [compile_sketch]
     if: ${{ github.event_name == 'workflow_dispatch' }}
-    permissions:
-      contents: write
     steps: 
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          path: release-assets
           merge-multiple: true
           
       - name: Get Tag Version
         run: |
           VERSION_DOT=$(grep '#define MARAUDER_VERSION' ./esp32_marauder/configs.h | sed -E 's/.*"v([^"]+)"/v\1/')
           echo "version_dot=$VERSION_DOT" >> $GITHUB_ENV
-
-      - name: Combine and validate authoritative release manifest
-        run: |
-          python3 tools/installer_manifest.py \
-            --combine \
-            --input-dir release-assets \
-            --output release-assets/firmware-manifest.json
-
+          
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
@@ -325,8 +293,7 @@ jobs:
           generate_release_notes: false
           draft: true
           files: |
-            release-assets/*.bin
-            release-assets/firmware-manifest.json
+            esp32_marauder_v*.bin
           body: |
             [justcallmekokollc.com](https://justcallmekokollc.com)
 

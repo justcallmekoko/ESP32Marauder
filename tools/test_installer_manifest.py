@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -10,11 +9,14 @@ from tools.installer_manifest import (
     ManifestError,
     combine_manifests,
     generate_target_manifest,
+    load_normal_build_matrix,
     load_registry,
 )
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 REGISTRY = REPOSITORY_ROOT / "installer" / "targets.json"
+NORMAL_WORKFLOW = REPOSITORY_ROOT / ".github/workflows/build_parallel.yml"
+INSTALLER_WORKFLOW = REPOSITORY_ROOT / ".github/workflows/build_installer_manifests.yml"
 
 
 class InstallerManifestTests(unittest.TestCase):
@@ -52,20 +54,32 @@ class InstallerManifestTests(unittest.TestCase):
 
     def test_registry_contains_unique_complete_build_targets(self) -> None:
         registry = load_registry(REGISTRY)
-        workflow = (REPOSITORY_ROOT / ".github/workflows/build_parallel.yml").read_text(
-            encoding="utf-8"
-        )
-        workflow_flags = set(re.findall(r'flag: "([A-Z0-9_]+)"', workflow))
+        boards = load_normal_build_matrix(NORMAL_WORKFLOW, REGISTRY)
+        workflow_flags = {board["flag"] for board in boards}
         registry_flags = {target["buildFlag"] for target in registry["targets"]}
-        self.assertIn("set-build-path: true", workflow)
-        self.assertIn("BUILD_DIR=./esp32_marauder/build", workflow)
-        self.assertIn("--show-properties=expanded", workflow)
+        normal_workflow = NORMAL_WORKFLOW.read_text(encoding="utf-8")
+        installer_workflow = INSTALLER_WORKFLOW.read_text(encoding="utf-8")
+
+        self.assertNotIn("installer_manifest.py", normal_workflow)
+        self.assertIn("--export-build-matrix", installer_workflow)
+        self.assertIn("set-build-path: true", installer_workflow)
+        self.assertIn("--show-properties=expanded", installer_workflow)
+        self.assertIn("github.event_name == 'release'", installer_workflow)
         self.assertEqual(len(registry["targets"]), 22)
+        self.assertEqual(len(boards), 22)
         self.assertEqual(registry_flags, workflow_flags)
         self.assertEqual(
             len(registry_flags),
             len(registry["targets"]),
         )
+
+    def test_build_matrix_parser_fails_closed_on_unsupported_syntax(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workflow = Path(temporary) / "build_parallel.yml"
+            contents = NORMAL_WORKFLOW.read_text(encoding="utf-8")
+            workflow.write_text(contents.replace("fbqn:", "fbqn=", 1), encoding="utf-8")
+            with self.assertRaisesRegex(ManifestError, "Unsupported build matrix syntax"):
+                load_normal_build_matrix(workflow, REGISTRY)
 
     def test_generates_hashed_update_and_factory_segments_from_flash_args(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -91,6 +105,9 @@ class InstallerManifestTests(unittest.TestCase):
             self.assertEqual(len(manifest["flash"]["update"]["segments"]), 1)
             self.assertEqual(len(manifest["flash"]["factory"]["segments"]), 4)
             for segment in manifest["flash"]["factory"]["segments"]:
+                self.assertTrue(
+                    segment["fileName"].startswith("esp32_marauder_installer_")
+                )
                 self.assertRegex(segment["sha256"], r"^[0-9a-f]{64}$")
                 self.assertTrue((output / segment["fileName"]).is_file())
 

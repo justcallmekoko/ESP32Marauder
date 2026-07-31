@@ -23,10 +23,31 @@ REQUIRED_TARGET_KEYS = {
     "chipFamily",
     "esptoolChip",
 }
+REQUIRED_BUILD_MATRIX_KEYS = {
+    "name",
+    "flag",
+    "fbqn",
+    "file_name",
+    "tft",
+    "tft_file",
+    "build_dir",
+    "addr",
+    "idf_ver",
+    "nimble_ver",
+    "esp_async",
+    "esp_async_ver",
+}
+OPTIONAL_BUILD_MATRIX_KEYS = {"tft_repo", "tft_ref"}
 CHIP_FAMILIES = {"ESP32", "ESP32-S2", "ESP32-S3", "ESP32-C5", "ESP32-C6"}
 SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 OFFSET_PATTERN = re.compile(r"^0x[0-9a-fA-F]+$")
 SIZE_PATTERN = re.compile(r"^(?P<size>\d+)(?P<unit>MB|M|KB|K|B)?$", re.IGNORECASE)
+FLOW_ENTRY_PATTERN = re.compile(r"^\s*-\s*\{(?P<body>.*)\}\s*$")
+FLOW_FIELD_PATTERN = re.compile(
+    r'\s*(?P<key>[a-z_][a-z0-9_]*)\s*:\s*'
+    r'(?:(?:"(?P<string>[^"]*)")|(?P<boolean>true|false))\s*'
+    r"(?P<separator>,|$)"
+)
 
 
 class ManifestError(RuntimeError):
@@ -80,6 +101,72 @@ def target_for_flag(registry: dict[str, Any], build_flag: str) -> dict[str, Any]
     if len(matches) != 1:
         raise ManifestError(f"Expected exactly one registry target for {build_flag}.")
     return matches[0]
+
+
+def parse_workflow_flow_mapping(body: str, line_number: int) -> dict[str, Any]:
+    values: dict[str, Any] = {}
+    position = 0
+    while position < len(body):
+        match = FLOW_FIELD_PATTERN.match(body, position)
+        if match is None:
+            raise ManifestError(
+                f"Unsupported build matrix syntax on workflow line {line_number}."
+            )
+        key = match.group("key")
+        if key in values:
+            raise ManifestError(f"Duplicate build matrix field {key} on line {line_number}.")
+        values[key] = (
+            match.group("string")
+            if match.group("string") is not None
+            else match.group("boolean") == "true"
+        )
+        position = match.end()
+    return values
+
+
+def load_normal_build_matrix(
+    workflow_path: Path, registry_path: Path
+) -> list[dict[str, Any]]:
+    try:
+        workflow_lines = workflow_path.read_text(encoding="utf-8").splitlines()
+    except OSError as error:
+        raise ManifestError(f"Cannot read normal build workflow {workflow_path}: {error}") from error
+
+    boards: list[dict[str, Any]] = []
+    allowed_keys = REQUIRED_BUILD_MATRIX_KEYS | OPTIONAL_BUILD_MATRIX_KEYS
+    for line_number, line in enumerate(workflow_lines, start=1):
+        if "flag:" not in line or not line.lstrip().startswith("- {"):
+            continue
+        match = FLOW_ENTRY_PATTERN.fullmatch(line)
+        if match is None:
+            raise ManifestError(f"Malformed build matrix entry on workflow line {line_number}.")
+        board = parse_workflow_flow_mapping(match.group("body"), line_number)
+        missing = REQUIRED_BUILD_MATRIX_KEYS - set(board)
+        extra = set(board) - allowed_keys
+        if missing or extra:
+            raise ManifestError(
+                f"Build matrix entry on line {line_number} has missing={sorted(missing)}, "
+                f"extra={sorted(extra)}."
+            )
+        boards.append(board)
+
+    if not boards:
+        raise ManifestError(f"No hardware matrix entries found in {workflow_path}.")
+    for key in ("name", "flag", "file_name"):
+        values = [board[key] for board in boards]
+        if len(values) != len(set(values)):
+            raise ManifestError(f"Normal build matrix contains duplicate {key} values.")
+
+    registry = load_registry(registry_path)
+    registry_flags = {target["buildFlag"] for target in registry["targets"]}
+    matrix_flags = {board["flag"] for board in boards}
+    if matrix_flags != registry_flags:
+        raise ManifestError(
+            "Installer target registry does not match the normal build workflow; "
+            f"missing={sorted(matrix_flags - registry_flags)}, "
+            f"extra={sorted(registry_flags - matrix_flags)}."
+        )
+    return boards
 
 
 def parse_size(value: str) -> int:
@@ -204,7 +291,7 @@ def generate_target_manifest(
 
     version_slug = version.replace(".", "_")
     application_stem = (
-        f"esp32_marauder_{version_slug}_{release_date}_{target['assetSuffix']}"
+        f"esp32_marauder_installer_{version_slug}_{release_date}_{target['assetSuffix']}"
     )
     copied_segments: list[dict[str, Any]] = []
     used_names: set[str] = set()
@@ -336,6 +423,12 @@ def build_parser() -> argparse.ArgumentParser:
     action.add_argument("--validate-registry", action="store_true")
     action.add_argument("--generate-target", action="store_true")
     action.add_argument("--combine", action="store_true")
+    action.add_argument("--export-build-matrix", action="store_true")
+    parser.add_argument(
+        "--workflow",
+        type=Path,
+        default=Path(".github/workflows/build_parallel.yml"),
+    )
     parser.add_argument("--build-flag")
     parser.add_argument("--build-dir", type=Path)
     parser.add_argument("--version")
@@ -358,6 +451,10 @@ def main() -> None:
     if args.validate_registry:
         registry = load_registry(args.registry)
         print(f"Validated {len(registry['targets'])} installer targets.")
+        return
+    if args.export_build_matrix:
+        boards = load_normal_build_matrix(args.workflow, args.registry)
+        print(json.dumps({"include": boards}, separators=(",", ":")))
         return
     if args.generate_target:
         output = generate_target_manifest(
