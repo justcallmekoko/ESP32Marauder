@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 1,
+  "sourceWorkflow": ".github/workflows/build_parallel.yml",
+  "targets": [
+    {
+      "id": "flipper-zero-wifi-dev-board",
+      "displayName": "Flipper Zero WiFi Dev Board",
+      "aliases": ["Flipper Zero", "WiFi Dev Board"],
+      "buildFlag": "MARAUDER_FLIPPER",
+      "assetSuffix": "flipper",
+      "chipFamily": "ESP32-S2",
+      "esptoolChip": "esp32s2"
+    },
+    {
+      "id": "flipper-zero-multiboard-s3",
+      "displayName": "Flipper Zero Multi Board S3",
+      "aliases": ["MultiBoard S3", "Multiboard S3"],
+      "buildFlag": "MARAUDER_MULTIBOARD_S3",
+      "assetSuffix": "multiboardS3",
+      "chipFamily": "ESP32-S3",
+      "esptoolChip": "esp32s3"
+    },
+    {
+      "id": "og-marauder",
+      "displayName": "OG Marauder",
+      "aliases": ["Marauder v4", "Old hardware"],
+      "buildFlag": "MARAUDER_V4",
+      "assetSuffix": "old_hardware",
+      "chipFamily": "ESP32",
+      "esptoolChip": "esp32"
+    },
+    {
+      "id": "marauder-v6",
+      "displayName": "Marauder v6",
+      "aliases": ["New hardware"],
+      "buildFlag": "MARAUDER_V6",
+      "assetSuffix": "v6",
+      "chipFamily": "ESP32",
+      "esptoolChip": "esp32"
+    },
+    {
+      "id": "marauder-v6-1",
+      "displayName": "Marauder v6.1",
+      "aliases": ["Marauder v6.2", "AWOK V2 screen", "AWOK V3 screen"],
+      "buildFlag": "MARAUDER_V6_1",
+      "assetSuffix": "v6_1",
+      "chipFamily": "ESP32",
+      "esptoolChip": "esp32"
+    },
+    {
+      "id": "marauder-kit",
+      "displayName": "Marauder Kit",
+      "aliases": [],
+      "buildFlag": "MARAUDER_KIT",
+      "assetSuffix": "kit",
+      "chipFamily": "ESP32",
+      "esptoolChip": "esp32"
+    },
+    {
+      "id": "marauder-mini",
+      "displayName": "Marauder Mini",
+      "aliases": [],
+      "buildFlag": "MARAUDER_MINI",
+      "assetSuffix": "mini",
+      "chipFamily": "ESP32",
+      "esptoolChip": "esp32"
+    },
+    {
+      "id": "esp32-lddb",
+      "displayName": "ESP32 LDDB",
+      "aliases": ["NodeMCU", "Wemos"],
+      "buildFlag": "ESP32_LDDB",
+      "assetSuffix": "esp32_lddb",
+      "chipFamily": "ESP32",
+      "esptoolChip": "esp32"
+    },
+    {
+      "id": "marauder-dev-board-pro",
+      "displayName": "Marauder Dev Board Pro",
+      "aliases": ["BFFB", "AWOK V3 flipper"],
+      "buildFlag": "MARAUDER_DEV_BOARD_PRO",
+      "assetSuffix": "marauder_dev_board_pro",
+      "chipFamily": "ESP32",
+      "esptoolChip": "esp32"
+    },
+    {
+      "id": "m5stickc-plus",
+      "displayName": "M5StickC Plus",
+      "aliases": [],
+      "buildFlag": "MARAUDER_M5STICKC",
+      "assetSuffix": "m5stickc_plus",
+      "chipFamily": "ESP32",
+      "esptoolChip": "esp32"
+    },
+    {
+      "id": "m5stickc-plus-2",
+      "displayName": "M5StickC Plus 2",
+      "aliases": [],
+      "buildFlag": "MARAUDER_M5STICKCP2",
+      "assetSuffix": "m5stickc_plus2",
+      "chipFamily": "ESP32",
+      "esptoolChip": "esp32"
+    },
+    {
+      "id": "reverse-feather",
+      "displayName": "ESP32-S2 Reverse Feather",
+      "aliases": ["Rev Feather"],
+      "buildFlag": "MARAUDER_REV_FEATHER",
+      "assetSuffix": "rev_feather",
+      "chipFamily": "ESP32-S2",
+      "esptoolChip": "esp32s2"
+    },
+    {
+      "id": "marauder-v7",
+      "displayName": "Marauder v7",
+      "aliases": [],
+      "buildFlag": "MARAUDER_V7",
+      "assetSuffix": "marauder_v7",
+      "chipFamily": "ESP32",
+      "esptoolChip": "esp32"
+    },
+    {
+      "id": "cyd-2432s028",
+      "displayName": "Marauder CYD 2432S028",
+      "aliases": ["CYD 2432S028R"],
+      "buildFlag": "MARAUDER_CYD_MICRO",
+      "assetSuffix": "cyd_2432S028",
+      "chipFamily": "ESP32",
+      "esptoolChip": "esp32"
+    },
+    {
+      "id": "cyd-2432s024-guition",
+      "displayName": "Marauder CYD 2432S024 GUITION",
+      "aliases": ["RL Phantom"],
+      "buildFlag": "MARAUDER_CYD_GUITION",
+      "assetSuffix": "cyd_2432S024_guition",
+      "chipFamily": "ESP32",
+      "esptoolChip": "esp32"
+    },
+    {
+      "id": "cyd-2432s028-2usb",
+      "displayName": "Marauder CYD 2432S028 2 USB",
+      "aliases": [],
+      "buildFlag": "MARAUDER_CYD_2USB",
+      "assetSuffix": "cyd_2432S028_2usb",
+      "chipFamily": "ESP32",
+      "esptoolChip": "esp32"
+    },
+    {
+      "id": "cyd-3-5-inch",
+      "displayName": "Marauder CYD 3.5 inch",
+      "aliases": [],
+      "buildFlag": "MARAUDER_CYD_3_5_INCH",
+      "assetSuffix": "cyd_3_5_inch",
+      "chipFamily": "ESP32",
+      "esptoolChip": "esp32"
+    },
+    {
+      "id": "m5cardputer",
+      "displayName": "M5 Cardputer",
+      "aliases": [],
+      "buildFlag": "MARAUDER_CARDPUTER",
+      "assetSuffix": "m5cardputer",
+      "chipFamily": "ESP32-S3",
+      "esptoolChip": "esp32s3"
+    },
+    {
+      "id": "m5cardputer-adv",
+      "displayName": "M5 Cardputer ADV",
+      "aliases": [],
+      "buildFlag": "MARAUDER_CARDPUTER_ADV",
+      "assetSuffix": "m5cardputer_adv",
+      "chipFamily": "ESP32-S3",
+      "esptoolChip": "esp32s3"
+    },
+    {
+      "id": "esp32-c5-devkitc-1",
+      "displayName": "ESP32-C5-DevKitC-1",
+      "aliases": ["ESP32-C5 DevKit"],
+      "buildFlag": "MARAUDER_C5",
+      "assetSuffix": "esp32c5devkitc1",
+      "chipFamily": "ESP32-C5",
+      "esptoolChip": "esp32c5"
+    },
+    {
+      "id": "m5-nano-c6",
+      "displayName": "M5 Nano C6",
+      "aliases": ["M5NanoC6"],
+      "buildFlag": "MARAUDER_M5_NANO_C6",
+      "assetSuffix": "m5nanoc6",
+      "chipFamily": "ESP32-C6",
+      "esptoolChip": "esp32c6"
+    },
+    {
+      "id": "marauder-pancake",
+      "displayName": "Marauder Pancake",
+      "aliases": ["Pancake Marauder V8"],
+      "buildFlag": "MARAUDER_PANCAKE",
+      "assetSuffix": "pancake",
+      "chipFamily": "ESP32-C5",
+      "esptoolChip": "esp32c5"
+    }
+  ]
+}
