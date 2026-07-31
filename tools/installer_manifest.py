@@ -119,19 +119,47 @@ def sha256(path: Path) -> str:
 
 
 def parse_flash_args(build_dir: Path) -> tuple[dict[str, str], list[tuple[int, Path]]]:
-    candidates = [build_dir / "flash_args", build_dir / "flash_args.txt"]
-    flash_args = next((candidate for candidate in candidates if candidate.is_file()), None)
-    if flash_args is None:
-        raise ManifestError(f"No flash_args or flash_args.txt found in {build_dir}.")
-
-    tokens = shlex.split(flash_args.read_text(encoding="utf-8"))
-    options: dict[str, str] = {}
-    for option in ("--flash_mode", "--flash_freq", "--flash_size"):
+    properties_path = build_dir / "arduino-build-properties.txt"
+    if properties_path.is_file():
+        properties: dict[str, str] = {}
+        for line in properties_path.read_text(encoding="utf-8").splitlines():
+            key, separator, value = line.partition("=")
+            if separator:
+                properties[key] = value
         try:
-            index = tokens.index(option)
-            options[option] = tokens[index + 1]
-        except (ValueError, IndexError) as error:
-            raise ManifestError(f"{flash_args} does not declare {option}.") from error
+            tokens = shlex.split(properties["tools.esptool_py.upload.pattern_args"])
+            options = {
+                "--flash_mode": properties["build.flash_mode"],
+                "--flash_freq": properties["build.flash_freq"],
+                "--flash_size": properties["build.flash_size"],
+            }
+        except KeyError as error:
+            raise ManifestError(
+                f"{properties_path} is missing required ESP32 upload properties: {error.args[0]}."
+            ) from error
+        source_description = properties_path
+    else:
+        candidates = [build_dir / "flash_args", build_dir / "flash_args.txt"]
+        flash_args = next((candidate for candidate in candidates if candidate.is_file()), None)
+        if flash_args is None:
+            raise ManifestError(
+                f"No Arduino build properties or flash_args found in {build_dir}."
+            )
+        tokens = shlex.split(flash_args.read_text(encoding="utf-8"))
+        options = {}
+        for normalized, spellings in (
+            ("--flash_mode", ("--flash_mode", "--flash-mode")),
+            ("--flash_freq", ("--flash_freq", "--flash-freq")),
+            ("--flash_size", ("--flash_size", "--flash-size")),
+        ):
+            option = next((spelling for spelling in spellings if spelling in tokens), None)
+            try:
+                if option is None:
+                    raise ValueError
+                options[normalized] = tokens[tokens.index(option) + 1]
+            except (ValueError, IndexError) as error:
+                raise ManifestError(f"{flash_args} does not declare {normalized}.") from error
+        source_description = flash_args
 
     segments: list[tuple[int, Path]] = []
     for index, token in enumerate(tokens[:-1]):
@@ -145,7 +173,7 @@ def parse_flash_args(build_dir: Path) -> tuple[dict[str, str], list[tuple[int, P
         segments.append((int(token, 16), source))
 
     if not segments:
-        raise ManifestError(f"{flash_args} does not contain any flash segments.")
+        raise ManifestError(f"{source_description} does not contain any flash segments.")
     if len({offset for offset, _ in segments}) != len(segments):
         raise ManifestError("Flash arguments contain duplicate offsets.")
     if len([path for _, path in segments if role_for_file(path) == "application"]) != 1:

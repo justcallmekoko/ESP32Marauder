@@ -34,6 +34,22 @@ class InstallerManifestTests(unittest.TestCase):
         )
         return build
 
+    @staticmethod
+    def make_fake_properties_build(root: Path) -> Path:
+        build = InstallerManifestTests.make_fake_build(root)
+        (build / "flash_args").unlink()
+        (build / "arduino-build-properties.txt").write_text(
+            "build.flash_mode=dio\n"
+            "build.flash_freq=80m\n"
+            "build.flash_size=4MB\n"
+            "tools.esptool_py.upload.pattern_args=--chip esp32 --flash-mode keep "
+            "--flash-freq keep --flash-size keep 0x1000 bootloader.bin "
+            "0x8000 partitions.bin 0xe000 boot_app0.bin "
+            "0x10000 esp32_marauder.ino.bin\n",
+            encoding="utf-8",
+        )
+        return build
+
     def test_registry_contains_unique_complete_build_targets(self) -> None:
         registry = load_registry(REGISTRY)
         workflow = (REPOSITORY_ROOT / ".github/workflows/build_parallel.yml").read_text(
@@ -43,6 +59,7 @@ class InstallerManifestTests(unittest.TestCase):
         registry_flags = {target["buildFlag"] for target in registry["targets"]}
         self.assertIn("set-build-path: true", workflow)
         self.assertIn("BUILD_DIR=./esp32_marauder/build", workflow)
+        self.assertIn("--show-properties=expanded", workflow)
         self.assertEqual(len(registry["targets"]), 22)
         self.assertEqual(registry_flags, workflow_flags)
         self.assertEqual(
@@ -79,7 +96,7 @@ class InstallerManifestTests(unittest.TestCase):
 
     def test_fails_closed_without_actual_flash_arguments(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            with self.assertRaisesRegex(ManifestError, "No flash_args"):
+            with self.assertRaisesRegex(ManifestError, "No Arduino build properties"):
                 generate_target_manifest(
                     REGISTRY,
                     "MARAUDER_V6",
@@ -89,6 +106,31 @@ class InstallerManifestTests(unittest.TestCase):
                     "a" * 40,
                     Path(temporary) / "output",
                 )
+
+    def test_generates_from_expanded_arduino_upload_properties(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            build = self.make_fake_properties_build(root)
+            output = root / "output"
+
+            path = generate_target_manifest(
+                REGISTRY,
+                "MARAUDER_FLIPPER",
+                build,
+                "v1.2.3",
+                "20260731",
+                "a" * 40,
+                output,
+            )
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+
+            self.assertEqual(manifest["flash"]["mode"], "dio")
+            self.assertEqual(manifest["flash"]["frequency"], "80m")
+            self.assertEqual(manifest["flash"]["sizeBytes"], 4 * 1024 * 1024)
+            self.assertEqual(
+                [segment["offset"] for segment in manifest["flash"]["factory"]["segments"]],
+                [0x1000, 0x8000, 0xE000, 0x10000],
+            )
 
     def test_combiner_requires_complete_registry_coverage(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
