@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/justcallmekoko/ESP32Marauder/master/installer/firmware-manifest.schema.json",
+  "title": "ESP32 Marauder stable installer release manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "kind",
+    "metadataStatus",
+    "sourceRepository",
+    "sourceCommit",
+    "channel",
+    "version",
+    "targets"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "format": "uri" },
+    "schemaVersion": { "const": 1 },
+    "kind": { "const": "esp32-marauder-installer-release" },
+    "metadataStatus": { "const": "authoritative" },
+    "sourceRepository": { "const": "justcallmekoko/ESP32Marauder" },
+    "sourceCommit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "channel": { "const": "stable" },
+    "version": { "type": "string", "pattern": "^v[0-9A-Za-z._-]+$" },
+    "targets": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/target" }
+    }
+  },
+  "$defs": {
+    "segment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "offset", "size", "sha256", "fileName"],
+      "properties": {
+        "role": {
+          "enum": [
+            "bootloader",
+            "partition-table",
+            "ota-data",
+            "application",
+            "auxiliary"
+          ]
+        },
+        "offset": { "type": "integer", "minimum": 0 },
+        "size": { "type": "integer", "minimum": 1 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "fileName": { "type": "string", "minLength": 1 }
+      }
+    },
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["erase", "preservesUserData", "segments"],
+      "properties": {
+        "erase": { "type": "boolean" },
+        "preservesUserData": { "type": "boolean" },
+        "segments": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/segment" }
+        }
+      }
+    },
+    "flash": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sizeBytes", "mode", "frequency", "update", "factory"],
+      "properties": {
+        "sizeBytes": { "type": "integer", "minimum": 1 },
+        "mode": { "enum": ["dio", "dout", "qio", "qout"] },
+        "frequency": { "type": "string", "pattern": "^[0-9]+m$" },
+        "update": { "$ref": "#/$defs/plan" },
+        "factory": { "$ref": "#/$defs/plan" }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "displayName",
+        "aliases",
+        "buildFlag",
+        "assetSuffix",
+        "chipFamily",
+        "esptoolChip",
+        "flash"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "displayName": { "type": "string", "minLength": 1 },
+        "aliases": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "buildFlag": { "type": "string", "pattern": "^[A-Z0-9_]+$" },
+        "assetSuffix": { "type": "string", "pattern": "^[A-Za-z0-9_]+$" },
+        "chipFamily": {
+          "enum": ["ESP32", "ESP32-S2", "ESP32-S3", "ESP32-C5", "ESP32-C6"]
+        },
+        "esptoolChip": {
+          "enum": ["esp32", "esp32s2", "esp32s3", "esp32c5", "esp32c6"]
+        },
+        "flash": { "$ref": "#/$defs/flash" }
+      }
+    }
+  }
+}
