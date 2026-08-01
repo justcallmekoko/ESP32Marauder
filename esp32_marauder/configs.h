@@ -485,24 +485,24 @@
 
 
   #ifdef MARAUDER_CYD_HMI
-    #define HAS_TOUCH
     #define HAS_BT
+      #define HAS_NIMBLE_2
     #define HAS_BATTERY
       #define BATTERY_ADC_PIN 5
     #define HAS_BUTTONS
     #define HAS_SCREEN
-    #define HAS_FULL_SCREEN
+      #define HAS_FULL_SCREEN
+      #define BK_LIGHT_PIN 38
+      #define TFT_BL 38
     #define HAS_SDMMC
       #define HAS_SD
       #define USE_SD
-    #define HAS_CYD_TOUCH
+    #define HAS_TOUCH
+      #define HAS_CYD_TOUCH
     #define HAS_AW9364
     #define HAS_PSRAM
-      #define BK_LIGHT_PIN 38
-      #define TFT_BL 38
     // #define HAS_GPS
     #define HAS_CYD_PORTRAIT
-    #define HAS_NIMBLE_2
     #if ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0)
       #define HAS_IDF_3
     #endif
@@ -2846,8 +2846,6 @@
       #define PIN 21
     #elif defined(MARAUDER_M5_NANO_C6)
       #define PIN 20
-    #elif defined(MARAUDER_CYD_HMI)
-      #define PIN 15
     #else
       #define PIN 25
     #endif
@@ -2959,6 +2957,10 @@
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 14
       #define GPS_RX 13
+    #ifdef MARAUDER_CYD_HMI
+      #define GPS_SERIAL_INDEX 1
+      #define GPS_TX 15         // Gover 1
+      #define GPS_RX 16
     #endif
   #else
     #define mac_history_len 100
@@ -3140,7 +3142,6 @@
       #define XPT2046_MISO 4
       #define XPT2046_CLK  1
       #define XPT2046_CS   2
-
     #endif
 
     #ifdef MARAUDER_CYD_2USB
