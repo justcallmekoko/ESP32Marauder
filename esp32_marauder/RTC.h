@@ -65,6 +65,7 @@ public:
   void adjust_rtc(struct tm *timeInfo);
   void adjust_rtc(const DateTime &dt);
   void adjust_rtc(uint32_t t);             // Unix epoch
+  void adjust_rtc(time_t t) { rtclock.adjust((uint32_t) t); }             // Unix epoch
   void adjust(const DateTime &dt) { rtclock.adjust(dt); }
 
 private:

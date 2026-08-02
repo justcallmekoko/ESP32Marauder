@@ -580,6 +580,9 @@ void GpsInterface::setGPSInfo() {
   this->num_sats = nmea.getNumSatellites();
 
   this->datetime = this->dt_string_from_gps();
+  if (!system_time_set)
+    set_system_time(this->datetime);
+
 
   this->lat_int = nmea.getLatitude();
   this->lon_int = nmea.getLongitude();

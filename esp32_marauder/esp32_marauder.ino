@@ -12,6 +12,9 @@ https://www.online-utility.org/image/convert/to/XBM
   #define Display_h
 #endif
 
+
+#include "ESP32_PinDebug.h"
+
 #include <stdio.h>
 
 #ifdef HAS_GPS
@@ -49,6 +52,23 @@ https://www.online-utility.org/image/convert/to/XBM
   #include "MenuFunctions.h"
 #endif
 
+#ifdef HAS_CH32V003
+    #include <CH32V003_IOExpander.h>
+    CH32V003_IOExpander CH32V003_obj;
+#endif
+
+// Yet another Cap Touch
+#ifdef HAS_CST3530
+    #include <CST3530.h>
+    CST3530 CST3530_obj;
+#endif
+
+#if defined(HAS_SHTC3) && defined(HAS_TEMP_SENSOR)
+    #include <SHTC3.h>
+    SHTC3 SHTC3_obj;
+#endif
+
+
 #ifdef HAS_BUTTONS
   #include "Switches.h"
   
@@ -85,6 +105,11 @@ CommandLine cli_obj;
 
 #ifdef HAS_GPS
   GpsInterface gps_obj;
+#endif
+
+#ifdef HAS_RTC
+  #include "RTC.h"
+  RTC rtc_obj;
 #endif
 
 #ifdef HAS_BATTERY
@@ -199,6 +224,74 @@ uint32_t currentTime  = 0;
   SDInterface sd_obj = SDInterface(&sharedSPI, SD_CS);
 #endif
 
+// Screen backlight moved to Backlight.cpp
+#ifdef HAS_SCREEN
+  extern void brightnessInit();
+  extern void backlightOn();
+  extern void backlightOff();
+#endif
+
+//   Converts reason type to a C string.
+//  Type is located in /tools/sdk/esp32/include/esp_system/include/esp_system.h
+const char *resetReasonName() {
+  esp_reset_reason_t r = esp_reset_reason();
+  switch (r) {
+    case ESP_RST_UNKNOWN:   return "Unknown";
+    case ESP_RST_POWERON:   return "PowerOn";    //Power on or RST pin toggled
+    case ESP_RST_EXT:       return "ExtPin";     //External pin - not applicable for ESP32
+    case ESP_RST_SW:        return "Reboot";     //esp_restart()
+    case ESP_RST_PANIC:     return "Crash";      //Exception/panic
+    case ESP_RST_INT_WDT:   return "WDT_Int";    //Interrupt watchdog (software or hardware)
+    case ESP_RST_TASK_WDT:  return "WDT_Task";   //Task watchdog
+    case ESP_RST_WDT:       return "WDT_Other";  //Other watchdog
+    case ESP_RST_DEEPSLEEP: return "Sleep";      //Reset after exiting deep sleep mode
+    case ESP_RST_BROWNOUT:  return "BrownOut";   //Brownout reset (software or hardware)
+    case ESP_RST_SDIO:      return "SDIO";       //Reset over SDIO
+    default:                return "";
+  }
+}
+
+void print_reset_reason() {
+  Serial.print(F("Last reset reason: "));
+  Serial.println(resetReasonName());
+}
+
+
+bool system_time_set = false;
+
+bool set_system_time(struct tm *timeInfo) {
+    // struct tm tmp = timeInfo;
+    time_t t = mktime(timeInfo);
+    if (t == (time_t)-1) {
+        log_w("set_system_time: mktime failed");
+        return false;
+    }
+    struct timeval now = { .tv_sec = t, .tv_usec = 0 };
+    if (settimeofday(&now, NULL) != 0) {
+        log_d("settimeofday failed");
+        return false;
+    }
+    system_time_set = true;
+    log_d("system time updated");
+
+    #ifdef HAS_RTC
+      log_d("set_system_time: calling rtc_obj.adjust_rtc");
+      rtc_obj.adjust_rtc(timeInfo);
+    #endif
+
+    return true;
+}
+
+bool set_system_time(const String& time_str) {
+    struct tm tm_info = {0};
+    // log_d("set_system_time: '%s'", time_str.c_str());
+    if (strptime(time_str.c_str(), "%F %T", &tm_info) != NULL) {
+        return set_system_time(&tm_info);
+    }
+    log_d("set_system_time: invalid time_str '%s'", time_str.c_str());
+    return false;
+}
+
 void setup()
 {
 
@@ -233,6 +326,16 @@ void setup()
   #endif
 
   Serial.begin(115200);
+
+  #ifdef HAS_CH32V003
+    log_d("HAS_CH32V003: Wire: I2C_SDA=%d  I2C_SCL=%d", TP_SDA, TP_SCL);
+    Wire.begin(TP_SDA, TP_SCL);
+    if (CH32V003_obj.begin()) {
+      Serial.println("CH32V003 found");
+    } else {
+      Serial.println("CH32V003 not found - check wiring and I2C address");
+    }
+  #endif
 
   #ifdef HAS_ACT_LED
     pinMode(ACT_LED_PIN, OUTPUT);
@@ -277,7 +380,8 @@ void setup()
     digitalWrite(POWER_HOLD_PIN, HIGH);
   #endif
   
-  #ifdef HAS_SCREEN
+  #ifdef HAS_SCREEN && defined(TFT_BL) && TFT_BL >= 0
+    log_d("pinMode %d OUTPUT", TFT_BL);
     pinMode(TFT_BL, OUTPUT);
   #endif
   
@@ -290,6 +394,55 @@ void setup()
     pinMode(CHARGING_PIN, INPUT);
   #endif
   
+
+  #ifdef MARAUDER_WS_C5_28
+
+    // Must happen before display init CH32V003 controls LCD_RST and backlight
+    log_d("Wire: I2C_SDA=%d  I2C_SCL=%d", TP_SDA, TP_SCL);
+    // Wire.begin(TP_SDA, TP_SCL);
+    // Wire.setPins(TP_SDA, TP_SCL);
+    // Wire.begin(TP_SDA, TP_SCL);
+
+    // log_d("CH32V003_obj.begin start");
+    // while(!CH32V003_obj.begin()) {
+    //  Serial.println("CH32V003 not found - check wiring and I2C address");
+    //  delay(1000);
+    // }
+    // log_d("CH32V003 found");
+    // Serial.println("CH32V003 found");
+
+
+    log_d("CH32V003_obj.lcdReset");
+    CH32V003_obj.lcdReset();      // pulses LCD_RST via EXIO1
+
+    #if defined(TFT_CS) && TFT_CS >= 0
+      pinMode(TFT_CS, OUTPUT);
+    #endif
+
+    log_d("CH32V003_obj.setPWM");
+    CH32V003_obj.setPWM(80); // 80% brightness
+
+    log_d("CH32V003_obj.touchReset");
+    CH32V003_obj.touchReset();    // pulses Touch_RST via EXIO0
+
+    #ifdef HAS_CST3530
+      CST3530_obj.begin(Wire);
+      // #if defined(TP_INT) && TP_INT >= 0
+      //   CST3530_obj.enableInterrupt(TP_INT);
+      // #endif
+      // CST3530_obj.begin(&Wire, TP_RST, TP_INT, TP_FREQ);
+      log_d("CST3530_obj.begin done");
+    #else
+      log_d("HAS_CST3530 False");
+    #endif
+
+    #if defined(HAS_SHTC3) && defined(HAS_TEMP_SENSOR)
+      SHTC3_obj.begin(&Wire);
+      log_d("SHTC3_obj.begin done");
+    #endif
+
+  #endif  // MARAUDER_WS_C5_28
+
   // Preset SPI CS pins to avoid bus conflicts
   #if defined(HAS_SCREEN) && defined(TFT_CS)
     digitalWrite(TFT_CS, HIGH);
@@ -307,6 +460,14 @@ void setup()
 
   //while(!Serial)
   //  delay(10);
+
+  struct tm timeinfo;
+  if (getLocalTime(&timeinfo)) {
+    Serial.print("RTC::setup: ");
+    Serial.println(&timeinfo, "%F %T");
+  } else {
+    log_w("getLocalTime Fail");
+  }
 
   Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
   #ifdef ESP_ARDUINO_VERSION_STR
@@ -335,6 +496,8 @@ void setup()
     #endif
   #endif
 
+  Serial.println("display_obj.RunSetup");
+  describeAllPins();
   #ifdef HAS_SCREEN
     display_obj.RunSetup();
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
@@ -384,6 +547,8 @@ void setup()
 
   buffer_obj = Buffer();
 
+  Serial.println("ifndef HAS_SIMPLEX_DISPLAY defined(HAS_SD)");
+  describeAllPins();
   #ifndef HAS_SIMPLEX_DISPLAY
     #if defined(HAS_SD)
       // Do some SD stuff
@@ -395,6 +560,12 @@ void setup()
 
   wifi_scan_obj.RunSetup();
 
+  #ifdef HAS_RTC
+    rtc_obj.RunSetup();
+  #else
+    Serial.println(F("RTC NOT Installed"));
+  #endif
+
   #ifdef HAS_SCREEN
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
     display_obj.tft.drawCentreString("Initializing...", TFT_WIDTH/2, TFT_HEIGHT * 0.82, 1);
@@ -402,6 +573,8 @@ void setup()
 
   evil_portal_obj.setup();
 
+  Serial.println("battery_obj.RunSetup");
+  describeAllPins();
   #ifdef HAS_BATTERY
     battery_obj.RunSetup();
   #endif
@@ -447,17 +620,26 @@ void setup()
   menu_function_obj.changeMenu(menu_function_obj.current_menu);*/
 
   wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
-  
+
   cli_obj.RunSetup();
-
-
+  describeAllPins();
 }
 
+
+int opins = 1;
 
 void loop()
 {
   currentTime = millis();
   bool mini = false;
+
+  /*
+  int apins = currentTime & (1 << 13);
+  if (apins != opins) {
+     opins = apins;
+     describeAllPins();
+  }
+  */
 
   #ifdef SCREEN_BUFFER
     #ifndef HAS_ILI9341
@@ -473,6 +655,7 @@ void loop()
         else
           menu_function_obj.disable_touch = true;
 
+        Serial.println("!esp32_marauder.ino: menu_function_obj.updateStatusBar");
         menu_function_obj.updateStatusBar();
 
         while (!c_btn.justReleased())
@@ -495,10 +678,13 @@ void loop()
   #ifdef HAS_BATTERY
     battery_obj.main(currentTime);
   #endif
+  menu_function_obj.updateStatusBar();
   if ((wifi_scan_obj.currentScanMode != WIFI_PACKET_MONITOR) ||
       (mini)) {
     #ifdef HAS_SCREEN
       menu_function_obj.main(currentTime);
+    #else
+      Serial.println("!!!!!esp32_marauder.ino: HAS_SCREEN menu_function_obj.main");
     #endif
   }
   #ifdef HAS_FLIPPER_LED

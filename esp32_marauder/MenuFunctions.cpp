@@ -979,7 +979,7 @@ void MenuFunctions::battery(bool initial)
 {
   #ifdef HAS_BATTERY
     uint16_t the_color;
-    if (battery_obj.i2c_supported)
+    if (battery_obj.supported)
     {
       // Could use int compare maybe idk
       if (((String)battery_obj.battery_level != "25") && ((String)battery_obj.battery_level != "0"))
@@ -1003,9 +1003,11 @@ void MenuFunctions::battery(bool initial)
                                     the_color);
       }*/
       #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
-        display_obj.tft.drawString((String)battery_obj.battery_level + "%", SB_BAT_X, 0, 1);
+        // display_obj.tft.drawString((String)battery_obj.battery_level + "%", SB_BAT_X, 0, 1);
+        display_obj.tft.drawRightString((String)battery_obj.battery_level + "%", SCREEN_WIDTH, 0, 1);
       #else
-        display_obj.tft.drawString((String)battery_obj.battery_level + "%", SB_BAT_X, 0, 2);
+        // display_obj.tft.drawString((String)battery_obj.battery_level + "%", SB_BAT_X, 0, 2);
+        display_obj.tft.drawRightString((String)battery_obj.battery_level + "%", SCREEN_WIDTH, 0, 2);
       #endif
     }
   #endif
@@ -1021,6 +1023,7 @@ void MenuFunctions::updateStatusBar()
   display_obj.tft.setTextSize(1);
 
   bool status_changed = false;
+  uint32_t cur_millis = millis();
   
   #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(MARAUDER_MINI_V3)
     display_obj.tft.setFreeFont(NULL);
@@ -1092,6 +1095,87 @@ void MenuFunctions::updateStatusBar()
     #endif
   }
 
+
+  static uint32_t clock_update = 1;
+  // #ifdef HAS_RTC
+    uint32_t ct = cur_millis & (1 << 12);
+    if((system_time_set) && (ct != clock_update)) {  // we dont need to update the clock several time a sec.
+      clock_update = ct;
+      char timeBuffer[16];
+      struct tm timeinfo;
+      // static uint32_t tic = 0;
+      uint16_t bg_color = STATUSBAR_COLOR;
+
+      // tic = this->initTime;
+
+      if(getLocalTime(&timeinfo)){
+
+        //  "%H:%M"
+
+        int tx, ty, tw, th;
+        tw = (5 * 8) - 4;
+
+        #ifdef HAS_BATTERY
+          if (battery_obj.supported) {
+            th = 15;
+            bg_color = TFT_BLACK;
+          } else
+        #endif
+          th = 0;
+
+        // log_d("getLocalTime: %s  th=%d", timeBuffer, th);
+
+        #ifdef HAS_MINI_SCREEN // SCREEN_ORIENTATION == 1
+          tx = TFT_HEIGHT; //  - tw;
+          // ty = TFT_WIDTH - th; // Bottom Right
+          ty = th;   // Near Top Right
+        #else
+          tx = TFT_WIDTH;  // - tw;
+          // ty = TFT_HEIGHT - th;    // Bottom Right
+          ty = th;   // Near Top Right
+        #endif
+
+        // Serial.print("time: ");
+        // Serial.println(timeBuffer);
+        // Serial.println((String) tx + " : " + (String) ty);
+
+        static int16_t  str_w = 32;
+
+
+        // display_obj.tft.fillRect(tx, ty, tw, th, bg_color);
+        // Serial.printf("Str width = %d\n", str_w);
+        display_obj.tft.fillRect(TFT_WIDTH - str_w, ty, str_w, th, bg_color);
+        display_obj.tft.setTextColor(TFT_YELLOW, bg_color, true);
+
+        #ifdef HAS_SHTC3 
+        if (clock_update) {
+          strftime(timeBuffer, sizeof(timeBuffer), "%k:%M", &timeinfo);
+          str_w = display_obj.tft.drawRightString(timeBuffer, tx , ty , 2);
+        } else {
+          float temp, hum;
+
+          SHTC3_obj.read(temp, hum);
+          snprintf(timeBuffer, sizeof(timeBuffer), "%.1fC", temp);
+          // display_obj.tft.drawString(timeBuffer, tx , ty , 2);
+          str_w = display_obj.tft.drawRightString(timeBuffer, tx, ty , 2);
+          // Serial.println(timeBuffer);
+        }
+        #else
+          strftime(timeBuffer, sizeof(timeBuffer), "%k:%M", &timeinfo);
+          str_w = display_obj.tft.drawRightString(timeBuffer, tx , ty , 2);
+        #endif
+
+        // reset TextColor
+        display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR, true);
+      } else {
+          // Serial.println(F("Failed to obtain time"));
+          // return;
+          // system_time_set = false;
+
+      }
+  }
+  //#endif
+
   // RAM Stuff
   wifi_scan_obj.free_ram = String(esp_get_free_heap_size());
   if ((wifi_scan_obj.free_ram != wifi_scan_obj.old_free_ram) || (status_changed)) {
@@ -1107,7 +1191,14 @@ void MenuFunctions::updateStatusBar()
   #endif
 
   #ifdef HAS_MINI_SCREEN
-    display_obj.tft.drawString(String(getDRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
+    #ifndef HAS_PSRAM
+      display_obj.tft.drawString(String(getDRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
+    #else
+      if (cur_millis & (1 << 13))  // 13 -> 8.192 seconds
+        display_obj.tft.drawString("D:" + String(getDRAMUsagePercent()) + "%", 100, 0, 1);
+      else
+        display_obj.tft.drawString("P:" + String(getPSRAMUsagePercent()) + "%", 100, 0, 1);
+    #endif
   #endif
   }
 
@@ -1659,6 +1750,9 @@ void MenuFunctions::RunSetup()
   saveATsMenu.name = "Save Airtags";
   loadATsMenu.name = "Load Airtags";
 
+  adminMenu.list = new LinkedList<MenuNode>();
+  adminSubMenu.list = new LinkedList<MenuNode>();
+
   bluetoothSnifferMenu.name = text_table1[23];
   bluetoothAttackMenu.name = "Bluetooth Attacks";
   generateSSIDsMenu.name = text_table1[27];
@@ -1698,6 +1792,8 @@ void MenuFunctions::RunSetup()
     gpsPOIMenu.name = "GPS POI";
   #endif
 
+  adminMenu.name = "Admin Tools";
+  adminSubMenu.name = "-";
   foxHuntMenu.name = "Fox Hunt";
 
   // Build Main Menu
@@ -2952,6 +3048,34 @@ void MenuFunctions::RunSetup()
   #endif
 
 
+    this->addNodes(&wifiGeneralMenu, "Sync RTC with WiFi", TFTLIME, 0, [this]() {
+      #ifdef HAS_RTC
+        if(rtc_obj.supported) {
+          rtc_obj.sync_rtc_ntp();
+        } else
+      #endif //  HAS_RTC
+        configTime(GMTOFFSET_SEC, DAYLIGHTOFFSET_SEC, "pool.ntp.org", "time.nist.gov", "1.pool.ntp.org");
+
+        struct tm timeinfo;
+        if (getLocalTime(&timeinfo)) {
+          char timeBuffer[64];
+          system_time_set = true;
+          strftime(timeBuffer, sizeof(timeBuffer), "%F %T", &timeinfo);
+          display_obj.tft.fillScreen(TFT_BLACK);
+          display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+
+          #ifdef HAS_MINI_SCREEN
+            display_obj.tft.drawCentreString(timeBuffer, TFT_WIDTH/2, TFT_HEIGHT * 0.33, 2);
+          #else
+            display_obj.tft.drawCentreString(timeBuffer, TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+          #endif
+         
+        } else {
+          display_obj.tft.drawCentreString("Connection Failed", TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+          log_d("getLocalTime Fail");
+       }
+    });
+
   // Menu for generating and setting MAC addrs for AP and STA
   setMacMenu.parentMenu = &wifiGeneralMenu;
   this->addNodes(&setMacMenu, text09, TFTLIGHTGREY, 0, [this]() {
@@ -3405,6 +3529,75 @@ void MenuFunctions::RunSetup()
   this->addNodes(&loadATsMenu, text09, TFTLIGHTGREY, 0, [this]() {
     this->changeMenu(loadATsMenu.parentMenu, true);
   });
+
+
+  // Admin Menu
+  // TFT_GREENYELLOW
+  this->addNodes(&deviceMenu, "Admin Tools", TFTPINK, SD_UPDATE, [this]() {
+    this->changeMenu(&adminMenu, true);
+  });
+  adminMenu.parentMenu = &deviceMenu;
+
+  this->addNodes(&adminMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(adminMenu.parentMenu, true);
+  });
+
+#if defined(HAS_SD) || defined(USE_SD)
+  this->addNodes(&adminMenu, "Rescan SD", TFTPINK, SD_UPDATE, [this]() {
+    this->changeMenu(&adminMenu, true);
+    sd_obj.initSD();
+  });
+#endif
+    adminSubMenu.parentMenu = &adminMenu;
+    this->addNodes(&adminSubMenu, text09, TFTLIGHTGREY, 0, [this]() {
+      this->changeMenu(adminSubMenu.parentMenu, true);
+    });
+  #ifdef HAS_GPS
+    if ( !gps_obj.gps_enabled)
+      this->addNodes(&saveFileMenu, "Probe GPS", TFTSKYBLUE, SD_UPDATE, [this]() {
+        gps_obj.begin();
+      });
+  #endif //  HAS_GPS
+
+      this->addNodes(&adminMenu, "Sync RTC with WiFi", TFTPINK, SETTINGS, [this]() {
+        this->changeMenu(&adminSubMenu, true);
+        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+
+        #ifdef HAS_RTC
+          log_d("rtc_obj.supported %d", rtc_obj.supported);
+          if(rtc_obj.supported) {
+            rtc_obj.sync_rtc_ntp();
+          } else
+        #endif //  HAS_RTC
+          configTime(GMTOFFSET_SEC, DAYLIGHTOFFSET_SEC, "pool.ntp.org", "time.nist.gov", "1.pool.ntp.org");
+
+        struct tm timeinfo;
+        if (getLocalTime(&timeinfo)) {
+          char timeBuffer[64];
+          system_time_set = true;
+          strftime(timeBuffer, sizeof(timeBuffer), "%F %T", &timeinfo);
+          display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+
+          #ifdef HAS_MINI_SCREEN
+            display_obj.tft.drawCentreString(timeBuffer, TFT_WIDTH/2, TFT_HEIGHT * 0.33, 2);
+          #else
+            display_obj.tft.drawCentreString(timeBuffer, TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+          #endif
+          Serial.println(&timeinfo, "%F %T");
+         
+        } else {
+          display_obj.tft.drawCentreString("Connection Failed", TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+          log_d("getLocalTime Fail");
+       }
+
+    });
+
+    this->addNodes(&adminMenu, "Reset Reasion", TFTMAGENTA, SETTINGS, [this]() {
+      this->changeMenu(&adminSubMenu, true);
+        display_obj.tft.setTextColor(TFT_SKYBLUE, TFT_BLACK);
+        display_obj.tft.drawCentreString(resetReasonName(), TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+        print_reset_reason();
+    });
 
   // GPS Menu
   #ifdef HAS_GPS
@@ -4299,12 +4492,14 @@ void MenuFunctions::buildButtons(Menu *menu, int starting_index, const char* but
   }
 
   for (int i = BUTTON_ARRAY_LEN; i < BUTTON_ARRAY_LEN + 3; i++) {
-    uint16_t x = TFT_WIDTH / 2;
-    uint16_t y = TFT_HEIGHT / 3 * (i - BUTTON_ARRAY_LEN) + ((TFT_HEIGHT / 3) / 2);
-    uint16_t w = TFT_WIDTH;
+    // uint16_t x = TFT_WIDTH / 2;
+    // uint16_t y = TFT_HEIGHT / 3 * (i - BUTTON_ARRAY_LEN) + ((TFT_HEIGHT / 3) / 2);
+    uint16_t x = 15;
+    uint16_t y = TFT_HEIGHT / 3 * (i - BUTTON_ARRAY_LEN);
+    uint16_t w = TFT_WIDTH - 30;
     uint16_t h = TFT_HEIGHT / 3 - 1;
 
-    display_obj.key[i].initButton(&display_obj.tft,
+    display_obj.key[i].initButtonUL(&display_obj.tft,
                                   x,
                                   y,
                                   w,

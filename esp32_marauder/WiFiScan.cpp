@@ -4327,8 +4327,8 @@ void WiFiScan::RunInfo() {
   #endif
 
   #ifdef HAS_BATTERY
-    battery_obj.battery_level = battery_obj.getBatteryLevel();
-    if (battery_obj.i2c_supported) {
+    if (battery_obj.supported) {
+      battery_obj.battery_level = battery_obj.getBatteryLevel();
       #ifdef HAS_SCREEN
         display_obj.tft.println(text_table4[32]);
         display_obj.tft.println(text_table4[33] + (String)battery_obj.battery_level + "%");

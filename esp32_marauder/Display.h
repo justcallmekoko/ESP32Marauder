@@ -20,8 +20,17 @@
   #include <XPT2046_Touchscreen.h>
 #endif
 
-#ifdef HAS_CAP_TOUCH
+#ifdef HAS_FT6336
   #include "ft6336.h"
+#endif
+
+#ifdef MARAUDER_WS_C5_28
+  #include <CH32V003_IOExpander.h>
+  extern CH32V003_IOExpander CH32V003_obj;
+#endif
+#ifdef HAS_CST3530
+  #include <CST3530.h>
+  extern CST3530 CST3530_obj;
 #endif
 
 // WiFi stuff

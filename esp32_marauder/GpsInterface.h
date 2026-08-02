@@ -16,6 +16,9 @@
 //#define GPS_NMEA_SCRNWRAP true //default:true, except on MARAUDER_MINI where false
 //#define GPS_NMEA_MAXQUEUE 30 //default:30 messages max in queue
 
+extern bool system_time_set;
+extern bool set_system_time(const String&);
+
 #if defined(MARAUDER_MINI) || defined(MARAUDER_MINI_V3)
   #ifndef GPS_NMEA_SCRNWRAP
     #define GPS_NMEA_SCRNWRAP false
@@ -75,6 +78,8 @@ class GpsInterface {
     String generateGXgga();
     String generateGXrmc();
 
+    bool gps_enabled = false;
+
   private:
     enum type_t {
       GPSTYPE_NATIVE = 0,
@@ -101,7 +106,6 @@ class GpsInterface {
     float accuracy = 0.0;
     String datetime = "";
     
-    bool gps_enabled = false;
     bool good_fix = false;
     char nav_system='\0';
     uint8_t num_sats = 0;

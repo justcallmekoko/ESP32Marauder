@@ -166,8 +166,12 @@ void RTC::adjust_rtc(const char *time_str) {
 }
 
 void RTC::adjust_rtc(struct tm *ti) {
+  log_d("RTC::adjust_rtc struct tm: %d", ti->tm_year, ti->tm_year + 1900);
+  Serial.print("RTC::adjust_rtc ");
+  Serial.println(ti, "%F %T");
+
   rtclock.adjust(DateTime(
-    (uint16_t)(ti->tm_year + 1900),
+    (uint16_t)(ti->tm_year) + 1900,
     (uint8_t) (ti->tm_mon  + 1),
     (uint8_t)  ti->tm_mday,
     (uint8_t)  ti->tm_hour,
@@ -199,8 +203,10 @@ bool RTC::sync_rtc_ntp(const char *ntpServer) {
     log_w("Failed to obtain time from NTP");
     return false;
   }
+  Serial.printf("sync_rtc_ntp getLocalTime timeinfo.tm_year=%d\n", timeinfo.tm_year);
   system_time_set = true;
-  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+  // Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+  Serial.println(&timeinfo, "%F %T");
   Serial.println(F("RTC successfully set via NTP"));
 
   adjust_rtc(&timeinfo);
