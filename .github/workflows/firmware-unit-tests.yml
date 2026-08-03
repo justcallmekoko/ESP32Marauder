@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 concurrency:
   group: firmware-unit-tests-${{ github.event.pull_request.number || github.ref }}
@@ -26,7 +27,18 @@ jobs:
       - name: Install PlatformIO
         run: |
           python3 -m venv .venv
-          .venv/bin/python -m pip install --disable-pip-version-check platformio==6.1.19
+          .venv/bin/python -m pip install --disable-pip-version-check platformio==6.1.19 gcovr==7.2
 
       - name: Run firmware unit tests
         run: .venv/bin/platformio test -e native
+
+      - name: Generate coverage report
+        run: .venv/bin/gcovr --root . --filter esp32_marauder --exclude test --cobertura coverage.xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@04b047e8bb82a0c002c8312c1c880fbc6a999d45
+        with:
+          files: coverage.xml
+          flags: firmware-unit-tests
+          fail_ci_if_error: false
+          use_oidc: true
