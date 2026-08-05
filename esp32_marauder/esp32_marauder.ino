@@ -73,8 +73,20 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #endif
 
+#ifdef HAS_CH32V003
+    #include <CH32V003_IOExpander.hpp>
+    CH32V003_IOExpander CH32V003_obj;
+#endif
+
+// Yet another Cap Touch
+#ifdef HAS_CST3530
+    #include <CST3530.hpp>
+    CST3530 CST3530_obj;
+#endif
+
+// Yet another Cap Touch
 #ifdef HAS_CST820
-  #include <CST820.h>
+  #include <CST820.hpp>
   CST820 CST820_touch;
 #endif
 
@@ -313,6 +325,13 @@ void setup()
   #if defined(HAS_CST820)
       CST820_touch.begin(CST820_SDA, CST820_SCL, CST820_RST, CST820_INT);
       // delay(500);
+  #elif defined(HAS_CST3530)
+    #ifdef CST3530_SDA
+      Wire.begin(CST3530_SDA, CST3530_SCL);
+    #else
+      Wire.begin(I2C_SDA, I2C_SCL);
+    #endif
+    CST3530_obj.begin(Wire);
   #endif
 
   #ifdef HAS_SCREEN

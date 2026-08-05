@@ -22,7 +22,7 @@
 
 
 #ifdef HAS_CST820  // HAS_CAP_TOUCH
-   #include "CST820.h"
+   #include "CST820.hpp"
   extern CST820 CST820_touch;
 #endif
 
