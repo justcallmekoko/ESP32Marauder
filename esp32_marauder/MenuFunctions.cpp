@@ -981,10 +981,8 @@ void MenuFunctions::battery(bool initial)
 {
   #ifdef HAS_BATTERY
     uint16_t the_color;
-  log_d("MenuFunctions::battery B");
     if (battery_obj.supported)
     {
-  log_d("MenuFunctions::battery C");
       // Could use int compare maybe idk
       if (((String)battery_obj.battery_level != "25") && ((String)battery_obj.battery_level != "0"))
         the_color = TFT_GREEN;
@@ -995,7 +993,6 @@ void MenuFunctions::battery(bool initial)
         battery_obj.old_level = battery_obj.battery_level;
         display_obj.tft.fillRect(204, 0, SCREEN_WIDTH, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
       }
-  log_d("MenuFunctions::battery D");
 
       display_obj.tft.setCursor(0, 1);
       /*if (!this->disable_touch) {
@@ -1767,7 +1764,7 @@ void MenuFunctions::RunSetup()
   #ifdef HAS_GPS
     gpsMenu.name = "GPS"; 
     gpsInfoMenu.name = "GPS Data";
-    //wardrivingMenu.name = "Wardriving";
+    wardrivingMenu.name = "Wardriving";
   #endif  
   htmlMenu.name = "EP HTML List";
   miniKbMenu.name = "Mini Keyboard";
@@ -1830,11 +1827,11 @@ void MenuFunctions::RunSetup()
   this->addNodes(&wifiMenu, "Scanners", TFTORANGE, SCANNERS, [this]() {
     this->changeMenu(&wifiScannerMenu, true);
   });
-  /*#ifdef HAS_GPS
+  #ifdef HAS_GPS
     this->addNodes(&wifiMenu, "Wardriving", TFTGREEN, BEACON_SNIFF, [this]() {
       this->changeMenu(&wardrivingMenu, true);
     });
-  #endif*/
+  #endif
   this->addNodes(&wifiMenu, text_table1[32], TFTRED, ATTACKS, [this]() {
     this->changeMenu(&wifiAttackMenu, true);
   });

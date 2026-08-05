@@ -17,7 +17,7 @@
 
 // -- PCF85063 driver - RTClib-compatible interface -----------------------------
 #if defined(HAS_PCF85063)
-  #include "PCF85063.h"
+  #include "PCF85063.hpp"
 #endif
 
 #ifndef NTPSERVER

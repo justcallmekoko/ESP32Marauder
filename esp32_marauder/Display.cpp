@@ -52,7 +52,7 @@ int8_t Display::menuButton(uint16_t *x, uint16_t *y, bool pressed, bool check_ho
 uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
 
 
-    #ifdef HAS_CST3530
+  #ifdef HAS_CST3530
      if (CST3530_obj.available()) {
        // if (CST3530_obj.data.event == 0) {  // Down event
          CST3530_obj.readData();
@@ -70,6 +70,16 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
      //   }
      } else {
        // log_d("CST3530_obj.available : FALSE");
+     }
+     return 0;
+
+  #elif HAS_CST820
+     if (CST820_touch.available()) {
+       if (CST820_touch.data.event == 0) {  // Down event
+         *x = CST820_touch.data.x;
+         *y = CST820_touch.data.y;
+         return 1;
+       }
      }
      return 0;
 

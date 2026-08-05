@@ -28,7 +28,7 @@
 #endif
 
 #ifdef HAS_CH32V003
-  #include <CH32V003_IOExpander.h>
+  #include <CH32V003_IOExpander.hpp>
   extern CH32V003_IOExpander CH32V003_obj;
 #endif
 

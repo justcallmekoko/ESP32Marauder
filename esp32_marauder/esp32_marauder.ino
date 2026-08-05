@@ -53,18 +53,18 @@ https://www.online-utility.org/image/convert/to/XBM
 #endif
 
 #ifdef HAS_CH32V003
-    #include <CH32V003_IOExpander.h>
+    #include <CH32V003_IOExpander.hpp>
     CH32V003_IOExpander CH32V003_obj;
 #endif
 
 // Yet another Cap Touch
 #ifdef HAS_CST3530
-    #include <CST3530.h>
+    #include <CST3530.hpp>
     CST3530 CST3530_obj;
 #endif
 
 #if defined(HAS_SHTC3) && defined(HAS_TEMP_SENSOR)
-    #include <SHTC3.h>
+    #include <SHTC3.hpp>
     SHTC3 SHTC3_obj;
 #endif
 

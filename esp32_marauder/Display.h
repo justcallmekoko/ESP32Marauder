@@ -24,13 +24,19 @@
   #include "ft6336.h"
 #endif
 
-#ifdef MARAUDER_WS_C5_28
-  #include <CH32V003_IOExpander.h>
-  extern CH32V003_IOExpander CH32V003_obj;
-#endif
+// #ifdef MARAUDER_WS_C5_28
+//   #include <CH32V003_IOExpander.hpp>
+//   extern CH32V003_IOExpander CH32V003_obj;
+// #endif
+
 #ifdef HAS_CST3530
-  #include <CST3530.h>
+  #include <CST3530.hpp>
   extern CST3530 CST3530_obj;
+#endif
+
+#ifdef HAS_CST820
+  #include <CST820.hpp>
+  extern CST820 CST820_touch;
 #endif
 
 // WiFi stuff

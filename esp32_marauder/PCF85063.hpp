@@ -1,6 +1,10 @@
 /*
  * PCF85063 - Arduino/PlatformIO RTC library
  * NXP PCF85063A/TP, I2C address 0x51
+ * RTClib RTC_PCF8523-compatible interface
+ * Register map from Waveshare BSP PCF85063Constants.h
+ *
+ * Single-header, header-only version.
  *
  * Drop-in replacement for RTClib RTC_PCF8523:
  *   rtc.begin(&Wire)
@@ -29,9 +33,8 @@
 
 #pragma once
 
-
-#ifndef PCF85063_h
-#define PCF85063_h  1
+#ifndef PCF85063_HPP
+#define PCF85063_HPP  1
 
 #include "configs.h"
 
@@ -166,7 +169,7 @@ public:
         t.tm_min  = _minute;
         t.tm_sec  = _second;
         t.tm_wday = dayOfTheWeek();
-      log_d("Datetime toTm tm_y=%d _y=%d: ", t.tm_year, _year);
+        log_d("Datetime toTm tm_y=%d _y=%d: ", t.tm_year, _year);
         Serial.println(&t, "%F %T");
         return t;
     }
@@ -184,28 +187,116 @@ private:
 // -- PCF85063 - RTClib RTC_PCF8523-compatible interface -----------------------
 class PCF85063 {
 public:
-    PCF85063();
+    PCF85063() : _wire(&Wire) {}
 
     // RTClib-compatible begin - takes TwoWire pointer
-    bool begin(TwoWire *wire = &Wire);
+    bool begin(TwoWire *wire = &Wire) {
+        _wire = wire ? wire : &Wire;
+        return _initImpl();
+    }
 
     // Extended begin - takes TwoWire reference + optional SDA/SCL pins
     // Matches Waveshare BSP: rtc.begin(Wire, SDA, SCL)
-    bool begin(TwoWire &wire, int sda = -1, int scl = -1);
+    bool begin(TwoWire &wire, int sda = -1, int scl = -1) {
+        _wire = &wire;
+        if (sda != -1 && scl != -1) {
+            _wire->setPins(sda, scl);
+        }
+        _wire->begin();
+        return _initImpl();
+    }
 
     // -- RTClib RTC_PCF8523 interface ------------------------------------------
-    DateTime now();
-    void     adjust(const DateTime &dt);
-    bool     initialized();     // true = clock has valid time (OS bit clear)
-    bool     lostPower();       // true = clock lost power (OS bit set)  - inverse of initialized()
-    void     start();
-    void     stop();
-    uint8_t  isrunning();       // matches RTClib spelling
+
+    DateTime now() {
+        uint8_t buf[7];
+        if (!readRegs(REG_SEC, buf, 7)) return DateTime();
+
+        return DateTime(
+            (uint16_t)_bcd2dec(buf[6])          + 2000,  // YEAR  (REG_YEAR  = 0x0A, offset 6)
+            _bcd2dec(buf[5] & 0x1F),                      // MONTH (REG_MONTH = 0x09, offset 5)
+            _bcd2dec(buf[3] & 0x3F),                      // DAY   (REG_DAY   = 0x07, offset 3)
+            _bcd2dec(buf[2] & 0x3F),                      // HOUR  (REG_HOUR  = 0x06, offset 2)
+            _bcd2dec(buf[1] & 0x7F),                      // MIN   (REG_MIN   = 0x05, offset 1)
+            _bcd2dec(buf[0] & 0x7F)                       // SEC   (REG_SEC   = 0x04, offset 0)
+        );
+    }
+
+    void adjust(const DateTime &dt) {
+        uint8_t buf[7];
+        buf[0] = _dec2bcd(dt.second())          & 0x7F;  // SEC   - clear OS bit
+        buf[1] = _dec2bcd(dt.minute());                   // MIN
+        buf[2] = _dec2bcd(dt.hour());                     // HOUR
+        buf[3] = _dec2bcd(dt.day());                      // DAY
+        buf[4] = dt.dayOfTheWeek();                       // WEEKDAY
+        buf[5] = _dec2bcd(dt.month());                    // MONTH
+        buf[6] = _dec2bcd((uint8_t)(dt.year() % 100));    // YEAR
+        log_d("PCF85063::adjust  DateTime year bug[6]=%d, dt.year=%d", buf[6], dt.year());
+
+        _wire->beginTransmission(PCF85063_ADDR);
+        _wire->write(REG_SEC);
+        _wire->write(buf, 7);
+        bool ok = (_wire->endTransmission() == 0);
+        log_d("PCF85063::adjust %s  %04u-%02u-%02u %02u:%02u:%02u",
+              ok ? "OK" : "FAIL",
+              dt.year(), dt.month(), dt.day(),
+              dt.hour(), dt.minute(), dt.second());
+    }
+
+    // OS bit clear = clock has been running continuously = initialized
+    bool initialized() {
+        int val = readReg(REG_SEC);
+        if (val < 0) return false;
+        return !(val & (1 << BIT_OS));
+    }
+
+    // inverse of initialized() - mirrors RTClib lostPower()
+    bool lostPower() {
+        return !initialized();
+    }
+
+    void start() {
+        int val = readReg(REG_CTRL1);
+        if (val >= 0) writeReg(REG_CTRL1, (uint8_t)(val & ~(1 << BIT_STOP)));
+    }
+
+    void stop() {
+        int val = readReg(REG_CTRL1);
+        if (val >= 0) writeReg(REG_CTRL1, (uint8_t)(val | (1 << BIT_STOP)));
+    }
+
+    uint8_t isrunning() {
+        int val = readReg(REG_CTRL1);
+        if (val < 0) return 0;
+        return !(val & (1 << BIT_STOP));
+    }
 
     // -- Low-level -------------------------------------------------------------
-    bool writeReg(uint8_t reg, uint8_t value);
-    int  readReg(uint8_t reg);
-    bool readRegs(uint8_t reg, uint8_t *buf, uint8_t len);
+
+    bool writeReg(uint8_t reg, uint8_t value) {
+        _wire->beginTransmission(PCF85063_ADDR);
+        _wire->write(reg);
+        _wire->write(value);
+        return (_wire->endTransmission() == 0);
+    }
+
+    int readReg(uint8_t reg) {
+        uint8_t value = 0;
+        _wire->beginTransmission(PCF85063_ADDR);
+        _wire->write(reg);
+        _wire->endTransmission(true);
+        _wire->requestFrom(PCF85063_ADDR, (uint8_t)1);
+        if (_wire->readBytes(&value, 1) != 1) return -1;
+        return value;
+    }
+
+    bool readRegs(uint8_t reg, uint8_t *buf, uint8_t len) {
+        _wire->beginTransmission(PCF85063_ADDR);
+        _wire->write(reg);
+        _wire->endTransmission(true);
+        _wire->requestFrom(PCF85063_ADDR, len);
+        return (_wire->readBytes(buf, len) == len);
+    }
 
 private:
     TwoWire *_wire;
@@ -229,8 +320,45 @@ private:
     static uint8_t _bcd2dec(uint8_t b) { return ((b >> 4) * 10) + (b & 0x0F); }
     static uint8_t _dec2bcd(uint8_t d) { return ((d / 10) << 4) | (d % 10);   }
 
-    bool _initImpl();
+    // Shared init - mirrors SensorPCF85063::initImpl()
+    bool _initImpl() {
+        // Chip detection via RAM register R/W test
+        int val = readReg(REG_RAM);
+        if (val < 0) {
+            log_e("PCF85063: not responding");
+            return false;
+        }
+        uint8_t tmp = (uint8_t)val;
+
+        writeReg(REG_RAM, tmp | 0x80);
+        if (!(readReg(REG_RAM) & 0x80)) {
+            log_e("PCF85063: RAM bit7 set failed - may be PCF8563");
+            return false;
+        }
+        writeReg(REG_RAM, tmp & ~0x80);
+        if (readReg(REG_RAM) & 0x80) {
+            log_e("PCF85063: RAM bit7 clear failed");
+            return false;
+        }
+        writeReg(REG_RAM, tmp);  // restore
+
+        // Force 24H mode
+        int ctrl1 = readReg(REG_CTRL1);
+        if (ctrl1 < 0) return false;
+        if (ctrl1 & (1 << BIT_12H)) {
+            writeReg(REG_CTRL1, (uint8_t)(ctrl1 & ~(1 << BIT_12H)));
+            log_d("PCF85063: forced 24H mode");
+        }
+
+        start();
+
+        // begin() returns true = chip found and clock running
+        // begin() returns false = chip not on bus or hardware fault
+        // OS bit / time validity is the caller's responsibility via
+        // initialized() / lostPower() - checked separately after begin()
+        return isrunning();
+    }
 };
 
-#endif  //  PCF85063_h
 #endif  //  HAS_PCF85063
+#endif  //  PCF85063_HPP

@@ -26,6 +26,9 @@
   extern RTC rtc_obj;
 #endif
 
+#define USE_CPU_TEMP
+#include "cpu_temp_sensor.hpp"
+
 // If system time/date has been set
 extern bool system_time_set;
 
@@ -62,7 +65,7 @@ extern void shutdown();
 extern void DeepSleep(int8_t);
 
 #ifdef HAS_SHTC3
-  #include "SHTC3.h"
+  #include "SHTC3.hpp"
   extern SHTC3 SHTC3_obj;
 #endif
 
