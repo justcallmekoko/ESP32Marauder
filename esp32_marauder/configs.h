@@ -513,10 +513,12 @@
 
 
   #ifdef MARAUDER_CYD_HMI
+    #define HAS_TEMP_SENSOR
+      #define USE_CPU_TEMP
     #define HAS_BT
       #define HAS_NIMBLE_2
     #define HAS_BATTERY
-      #define BATTERY_ADC_PIN 5
+      #define ATTERY_ADC_PIN 5
     #define HAS_BUTTONS
     #define HAS_SCREEN
       #define HAS_FULL_SCREEN

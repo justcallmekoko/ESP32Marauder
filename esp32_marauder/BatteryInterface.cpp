@@ -13,11 +13,16 @@ BatteryInterface::BatteryInterface() {
 
 void BatteryInterface::main(uint32_t currentTime) {
   if (currentTime != 0) {
+      // Serial.println("Checking Battery Level");
+      // Serial.printf("%d - %d >= %d 3000", currentTime, initTime, (currentTime - initTime));
+
     if (currentTime - initTime >= 3000) {
-      //Serial.println("Checking Battery Level");
+      Serial.println("Checking Battery Level");
       this->initTime = millis();
+      this->battery_level = this->getBatteryLevel();
+      Serial.println("Battery Level: " + (String)this->battery_level);
+      return;
       int8_t new_level = this->getBatteryLevel();
-      //this->battery_level = this->getBatteryLevel();
       if (this->battery_level != new_level) {
         // Serial.println(text00 + (String)new_level);
         this->battery_level = new_level;
