@@ -43,6 +43,7 @@ extern Settings settings_obj;
 #endif
 
 extern LinkedList<AccessPoint>* access_points;
+extern LinkedList<BleDevice>* ble_devices;
 extern LinkedList<AirTag>* airtags;
 extern LinkedList<ssid>* ssids;
 extern LinkedList<Station>* stations;
@@ -88,7 +89,7 @@ const char PROGMEM RESET_REASON_CMD[] = "resetreasion";
 const char PROGMEM EVIL_PORTAL_CMD[] = "evilportal";
 const char PROGMEM KARMA_CMD[] = "karma";
 const char PROGMEM PACKET_COUNT_CMD[] = "packetcount";
-const char PROGMEM SIGSTREN_CMD[] = "sigmon";
+const char PROGMEM SIGSTREN_CMD[] = "foxhunt";
 const char PROGMEM SCAN_ALL_CMD[] = "scanall";
 //const char PROGMEM SCANSTA_CMD[] = "scansta";
 const char PROGMEM SNIFF_RAW_CMD[] = "sniffraw";
@@ -133,9 +134,11 @@ const char PROGMEM MAC_CMD_B[] = "randstamac";
 const char PROGMEM MAC_CMD_C[] = "cloneapmac";
 const char PROGMEM MAC_CMD_D[] = "clonestamac";
 const char PROGMEM ADD_CMD[] = "add";
+const char PROGMEM UPLOAD_CMD[] = "upload";
 
 // Bluetooth sniff/scan
 const char PROGMEM BT_SPAM_CMD[] = "blespam";
+const char PROGMEM BT_FINDMY_CMD[] = "findmy";
 const char PROGMEM BT_SNIFF_CMD[] = "sniffbt";
 const char PROGMEM BT_SPOOFAT_CMD[] = "spoofat";
 //const char PROGMEM BT_WARDRIVE_CMD[] = "btwardrive";
@@ -177,7 +180,7 @@ const char PROGMEM HELP_RESET_REASON_CMD[] = "resetreasion : print reason for la
 const char PROGMEM HELP_EVIL_PORTAL_CMD[] = "evilportal [-c start [-w html.html]/sethtml <html.html>]";
 const char PROGMEM HELP_KARMA_CMD[] = "karma -p <index>";
 const char PROGMEM HELP_PACKET_COUNT_CMD[] = "packetcount";
-const char PROGMEM HELP_SIGSTREN_CMD[] = "sigmon";
+const char PROGMEM HELP_SIGSTREN_CMD[] = "foxhunt -b/-w";
 const char PROGMEM HELP_SCAN_ALL_CMD[] = "scanall";
 //const char PROGMEM HELP_SCANSTA_CMD[] = "scansta";
 const char PROGMEM HELP_SNIFF_RAW_CMD[] = "sniffraw";
@@ -206,6 +209,7 @@ const char PROGMEM HELP_LIST_AP_CMD_C[] = "list -c";
 const char PROGMEM HELP_LIST_AP_CMD_D[] = "list -t";
 const char PROGMEM HELP_LIST_AP_CMD_E[] = "list -i";
 const char PROGMEM HELP_LIST_AP_CMD_F[] = "list -p";
+const char PROGMEM HELP_LIST_AP_CMD_G[] = "list -b";
 const char PROGMEM HELP_INFO_CMD[] = "info [-a <index>]";
 const char PROGMEM HELP_SEL_CMD_A[] = "select -a/-s/-c <index (comma separated)>/-f \"equals <String> or contains <String>\"";
 const char PROGMEM HELP_SSID_CMD_A[] = "ssid -a [-g <count>/-n <name>]";
@@ -219,9 +223,11 @@ const char PROGMEM HELP_MAC_CMD_C[] = "cloneapmac [-a <index>]";
 const char PROGMEM HELP_MAC_CMD_D[] = "clonestamac [-s <index>]";
 const char PROGMEM HELP_ADD_CMD_A[] = "add -a -b <mac> [-ch <channel>] [-e <ssid>]";
 const char PROGMEM HELP_ADD_CMD_B[] = "add -c -b <mac> -ap <ap_index>";
+const char PROGMEM HELP_UPLOAD_CMD[] = "upload -d <wdg/wigle/both>";
 
 // Bluetooth sniff/scan
 const char PROGMEM HELP_BT_SNIFF_CMD[] = "sniffbt [-t] <airtag/flipper/flock/meta>";
+const char PROGMEM HELP_BT_FINDMY_CMD[] = "findmy -t <index>";
 const char PROGMEM HELP_BT_SPAM_CMD[] = "blespam -t <sourapple/applejuice/google/samsung/windows/flipper/all>";
 const char PROGMEM HELP_BT_SPOOFAT_CMD[] = "spoofat -t <index>";
 //const char PROGMEM HELP_BT_SOUR_APPLE_CMD[] = "sourapple";

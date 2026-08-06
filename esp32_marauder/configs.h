@@ -44,7 +44,7 @@
 
   #define JSON_SETTING_SIZE 2048
 
-  #define MARAUDER_VERSION "v1.14.0"
+  #define MARAUDER_VERSION "v1.14.1"
 
   #define GRAPH_REFRESH   100
 
@@ -153,6 +153,7 @@
     #define USE_SD
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
+    #define HAS_DIRECT_UPLOAD
   #endif
 
   #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
@@ -169,6 +170,7 @@
     #define USE_SD
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
+    #define HAS_DIRECT_UPLOAD
 
     #ifdef MARAUDER_CARDPUTER_ADV
       #define HAS_BATTERY
@@ -195,6 +197,7 @@
     #define HAS_IDF_3
     //#define HAS_C5_SD
     #define HAS_SIMPLEX_DISPLAY
+    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_V7
@@ -215,6 +218,7 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     #define HAS_C5_SD
+    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_V7_1
@@ -234,6 +238,7 @@
     #define HAS_GPS
     #define HAS_PSRAM
     //#define HAS_NIMBLE_2
+    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_REV_FEATHER
@@ -254,6 +259,7 @@
     #define HAS_PSRAM
     #define ADJ_CPUFREQ
     #define HAS_GPS
+    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_V4
@@ -274,6 +280,7 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     #define HAS_C5_SD
+    #define HAS_DIRECT_UPLOAD
   #endif
 
   #if defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
@@ -295,6 +302,7 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     #define HAS_C5_SD
+    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_CYD_MICRO
@@ -315,6 +323,7 @@
     #define HAS_GPS
     #define HAS_CYD_TOUCH
     //#define HAS_NIMBLE_2
+    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_CYD_2USB
@@ -337,6 +346,7 @@
     #define HAS_CYD_PORTRAIT
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
+    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_CYD_3_5_INCH
@@ -359,6 +369,7 @@
     #define HAS_SEPARATE_SD
     #define HAS_CYD_PORTRAIT
     //#define HAS_NIMBLE_2
+    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_CYD_GUITION
@@ -379,6 +390,7 @@
     #define HAS_GPS
     //#define HAS_CYD_TOUCH
     //#define HAS_NIMBLE_2
+    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_KIT
@@ -398,6 +410,7 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     #define HAS_C5_SD
+    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef GENERIC_ESP32
@@ -428,6 +441,7 @@
     #define USE_SD
     #define HAS_PSRAM
     //#define HAS_TEMP_SENSOR
+    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_MULTIBOARD_S3
@@ -444,6 +458,7 @@
     #define USE_SD
     //#define HAS_PSRAM
     //#define HAS_TEMP_SENSOR
+    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef ESP32_LDDB
@@ -460,6 +475,7 @@
     //#define HAS_GPS
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
+    //#define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_DEV_BOARD_PRO
@@ -476,6 +492,7 @@
     #define HAS_GPS
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
+    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef XIAO_ESP32_S3
@@ -540,7 +557,7 @@
     //#define HAS_TEMP_SENSOR
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
-    //#define HAS_DIRECT_UPLOAD
+    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_V8
@@ -588,6 +605,7 @@
     //#define HAS_TEMP_SENSOR
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
+    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_MINI_V3
@@ -631,6 +649,7 @@
     //#define HAS_GPS
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
+    //#define HAS_DIRECT_UPLOAD
   #endif
   //// END BOARD FEATURES
 
@@ -2985,7 +3004,9 @@
     #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_KIT)
       #define I2C_SDA 33
       #define I2C_SCL 22
-      #define HAS_IP5306
+      #define HAS_MAX1704X
+      #undef HAS_AXP2101
+      #undef HAS_IP5306
 
     #elif defined(MARAUDER_MINI)
       #define I2C_SDA 33
@@ -2994,11 +3015,16 @@
     #elif defined(MARAUDER_V7)
       #define I2C_SDA 33
       #define I2C_SCL 16
-      #define HAS_IP5306
+      #define HAS_MAX1704X
+      #undef HAS_AXP2101
+      #undef HAS_IP5306
 
     #elif defined(MARAUDER_V7_1)
       #define I2C_SDA 33
       #define I2C_SCL 27
+      #define HAS_MAX1704X
+      #undef HAS_AXP2101
+      #undef HAS_IP5306
 
     #elif defined(MARAUDER_CYD_MICRO)
       #define I2C_SDA 22
