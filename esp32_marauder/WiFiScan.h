@@ -165,6 +165,7 @@
 #define WIFI_SCAN_DISPLAY_AP_INFO 83
 #define BT_SCAN_FOX_HUNT 84
 #define BT_FINDMY_SOUND 85
+#define BT_ATTACK_FINDMY_LIVE 86
 
 #define WIFI_ATTACK_FUNNY_BEACON 99 
 
@@ -300,6 +301,14 @@ static const uint8_t DULT_START_SOUND_COMMAND[] = {
 static const uint8_t DULT_STOP_SOUND_COMMAND[] = {
     0x01, 0x03
 };
+
+static NimBLEAddress pendingAddress(
+    "00:00:00:00:00:00",
+    BLE_ADDR_PUBLIC
+);
+
+bool connectionPending = false;
+bool operationInProgress = false;
 #endif
 
 #pragma pack(push, 1)
@@ -325,9 +334,10 @@ struct AirTag {
     bool selected;
     int8_t rssi;
     uint32_t last_seen;
-    bool is_airtag = false;
-    bool is_fmna   = false;
-    bool is_dult   = false;
+    bool is_airtag   = false;
+    bool is_fmna     = false;
+    bool is_dult     = false;
+    bool connectable = true;
     #ifdef HAS_BT
     NimBLEAddress device_address;
     #endif
@@ -668,11 +678,13 @@ class WiFiScan
 
     #ifdef HAS_NIMBLE_2
       int connectAndProcessTracker(NimBLEAddress& address);
+      bool backendFindMySound(NimBLEAddress& address, bool gui = false);
       bool sendAirtagSoundCommand(NimBLEClient* currentClient);
       bool sendFmnaSoundCommand(NimBLEClient* currentClient);
       bool sendDultSoundCommand(NimBLEClient* currentClient);
       bool enableTrackerResponses(NimBLERemoteCharacteristic* characteristic);
       void createNimbleClient();
+      void initializeFindMyScan();
     #endif
 
     bool wigleUpload(String filePath);
@@ -737,6 +749,7 @@ class WiFiScan
     void broadcastCustomBeacon(uint32_t current_time, ssid custom_ssid, bool for_camera = false);
     void broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_ssid, int scan_mode);
     void broadcastSetSSID(uint32_t current_time, const char* ESSID, uint8_t chan = 0, bool legit = false);
+    void executeFindMyLive(uint32_t current_time);
     void RunAPScan(uint8_t scan_mode, uint16_t color);
     void RunGPSNmea();
     void RunPwnScan(uint8_t scan_mode, uint16_t color);
@@ -751,6 +764,7 @@ class WiFiScan
     void RunPacketMonitor(uint8_t scan_mode, uint16_t color);
     void RunBluetoothScan(uint8_t scan_mode, uint16_t color);
     void RunSourApple(uint8_t scan_mode, uint16_t color);
+    void RunFindMyLive(uint8_t scan_mode, uint16_t color);
     void RunSwiftpairSpam(uint8_t scan_mode, uint16_t color);
     void RunEvilPortal(uint8_t scan_mode, uint16_t color);
     void RunPingScan(uint8_t scan_mode, uint16_t color);

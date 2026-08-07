@@ -114,6 +114,7 @@ const char PROGMEM UPLOAD_CMD[] = "upload";
 
 // Bluetooth sniff/scan
 const char PROGMEM BT_SPAM_CMD[] = "blespam";
+const char PROGMEM BT_FINDMY_CMD[] = "findmy";
 const char PROGMEM BT_SNIFF_CMD[] = "sniffbt";
 const char PROGMEM BT_SPOOFAT_CMD[] = "spoofat";
 //const char PROGMEM BT_WARDRIVE_CMD[] = "btwardrive";
@@ -189,6 +190,7 @@ const char PROGMEM HELP_UPLOAD_CMD[] = "upload -d <wdg/wigle/both>";
 
 // Bluetooth sniff/scan
 const char PROGMEM HELP_BT_SNIFF_CMD[] = "sniffbt [-t] <airtag/flipper/flock/meta>";
+const char PROGMEM HELP_BT_FINDMY_CMD[] = "findmy -t <index>";
 const char PROGMEM HELP_BT_SPAM_CMD[] = "blespam -t <sourapple/applejuice/google/samsung/windows/flipper/all>";
 const char PROGMEM HELP_BT_SPOOFAT_CMD[] = "spoofat -t <index>";
 //const char PROGMEM HELP_BT_SOUR_APPLE_CMD[] = "sourapple";

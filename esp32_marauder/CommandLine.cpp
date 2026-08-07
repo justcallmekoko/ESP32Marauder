@@ -294,6 +294,7 @@ void CommandLine::runCommand(String input) {
     #ifdef HAS_BT
       Serial.println(HELP_BT_SNIFF_CMD);
       Serial.println(HELP_BT_SPAM_CMD);
+      Serial.println(HELP_BT_FINDMY_CMD);
       Serial.println(HELP_BT_SPOOFAT_CMD);
       Serial.println(HELP_BT_SKIM_CMD);
     #endif
@@ -1090,6 +1091,27 @@ void CommandLine::runCommand(String input) {
           }
         #endif
       }
+    }
+    else if (cmd_args.get(0) == BT_FINDMY_CMD) {
+      #ifdef HAS_NIMBLE_2
+      int index_sw = this->argSearch(&cmd_args, "-t");
+
+      if (index_sw != -1) {
+        int targ_index = cmd_args.get(index_sw + 1).toInt();
+        if (targ_index < airtags->size()) {
+          for (int x = 0; x < airtags->size(); x++) {
+            AirTag new_atx = airtags->get(x);
+            if (x != targ_index)
+              new_atx.selected = false;
+            else
+              new_atx.selected = true;
+            airtags->set(x, new_atx);
+          }
+
+          wifi_scan_obj.executeFindMySound(false);
+        }
+      }
+      #endif
     }
     else if (cmd_args.get(0) == BT_SPAM_CMD) {
       int bt_type_sw = this->argSearch(&cmd_args, "-t");
