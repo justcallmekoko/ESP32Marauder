@@ -29,6 +29,14 @@ void EvilPortal::setup() {
 void EvilPortal::cleanup() {
   this->ap_index = -1;
 
+  // Free the per-activation network resources so repeated Start/Stop cycles don't
+  // leak: stop the DNS server (frees its UDP pcb) and tear down the SoftAP netif +
+  // DHCP lease pool. Previously cleanup() freed only the PSRAM HTML buffer, so each
+  // cycle leaked the DNS socket + AP netif and the web handlers grew unbounded (see
+  // the register-once guard in startAP()).
+  this->dnsServer.stop();
+  WiFi.softAPdisconnect(true);
+
   #ifdef HAS_PSRAM
     free(index_html);
     index_html = nullptr;
@@ -320,11 +328,21 @@ void EvilPortal::startAP() {
   Serial.print(F("ap ip address: "));
   Serial.println(WiFi.softAPIP());
 
-  this->setupServer();
+  // Register the web-server endpoints + captive handler ONCE for the app lifetime.
+  // setupServer() appends ~12 handlers and addHandler() allocates a
+  // CaptiveRequestHandler; re-running them on every Start leaked those per activation
+  // (server._handlers grew unbounded). They are owned by the global `server` and this
+  // is the singleton evil_portal_obj, so once is enough; server.begin() is idempotent.
+  // The AP + DNS themselves ARE rebuilt each Start (cleanup() tears them down).
+  static bool s_server_registered = false;
+  if (!s_server_registered) {
+    this->setupServer();
+    server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);
+    server.begin();
+    s_server_registered = true;
+  }
 
   this->dnsServer.start(53, "*", WiFi.softAPIP());
-  server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);
-  server.begin();
   Serial.println(F("Evil Portal READY"));
   #ifdef HAS_SCREEN
     this->sendToDisplay(F("Evil Portal READY"));
