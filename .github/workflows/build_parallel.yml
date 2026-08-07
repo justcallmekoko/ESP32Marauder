@@ -321,8 +321,10 @@ jobs:
             | v6 | `_new_hardware.bin`/`_v6.bin` |
             | v6.1/v6.2 | `_v6_1.bin` |
             | v7 | `_v7.bin` |
+            | v8 | `_v8.bin` |
             | Kit | `_kit.bin` |
             | Mini | `_mini.bin` |
+            | Mini v3 | `_mini_v3.bin` |
             | Flipper Zero | `_flipper.bin` |
             | MutliBoard S3 | `_multiboardS3.bin` |
             | LDDB/NodeMCU/Wemos | `_lddb.bin` |
