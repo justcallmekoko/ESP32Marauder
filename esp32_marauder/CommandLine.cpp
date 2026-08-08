@@ -263,7 +263,10 @@ void CommandLine::runCommand(String input) {
       Serial.println(HELP_WARDRIVEPOI_CMD);
     #endif
     Serial.println(HELP_MAC_TRACK_CMD);
-    
+    Serial.println(HELP_TAIL_IGNORE_CMD);
+    Serial.println(HELP_TAIL_ZONE_CMD);
+    Serial.println(HELP_TAIL_REPORT_CMD);
+
     // WiFi attack
     Serial.println(HELP_ATTACK_CMD);
     
@@ -791,6 +794,78 @@ void CommandLine::runCommand(String input) {
         menu_function_obj.drawStatusBar();
       #endif
       wifi_scan_obj.StartScan(WIFI_SCAN_DETECT_FOLLOW, TFT_MAGENTA);*/
+    }
+    // Tail ignore list
+    else if (cmd_args.get(0) == TAIL_IGNORE_CMD) {
+      int add_sw = this->argSearch(&cmd_args, "-a");
+      int rem_sw = this->argSearch(&cmd_args, "-r");
+      int list_sw = this->argSearch(&cmd_args, "-l");
+      int clear_sw = this->argSearch(&cmd_args, "-c");
+      int baseline_sw = this->argSearch(&cmd_args, "-b");
+      int mac_sw = this->argSearch(&cmd_args, "-m");
+
+      if (add_sw != -1) {
+        if (mac_sw == -1 || !this->checkValueExists(&cmd_args, mac_sw)) {
+          Serial.println(F("MAC required: tailignore -a -m <mac>"));
+        } else {
+          wifi_scan_obj.addIgnoreMac(cmd_args.get(mac_sw + 1));
+        }
+      }
+      else if (rem_sw != -1) {
+        if (mac_sw == -1 || !this->checkValueExists(&cmd_args, mac_sw)) {
+          Serial.println(F("MAC required: tailignore -r -m <mac>"));
+        } else {
+          wifi_scan_obj.removeIgnoreMac(cmd_args.get(mac_sw + 1));
+        }
+      }
+      else if (list_sw != -1) {
+        wifi_scan_obj.loadTailIgnoreData();
+        Serial.println("Tail ignore list (" + (String)wifi_scan_obj.tail_ignore_macs->size() + "):");
+        for (int i = 0; i < wifi_scan_obj.tail_ignore_macs->size(); i++) {
+          Serial.println(wifi_scan_obj.tail_ignore_macs->get(i));
+        }
+      }
+      else if (clear_sw != -1) {
+        wifi_scan_obj.clearIgnoreMacs();
+      }
+      else if (baseline_sw != -1) {
+        wifi_scan_obj.startTailBaselineScan();
+      }
+      else {
+        Serial.println(HELP_TAIL_IGNORE_CMD);
+      }
+    }
+    // Tail safe zones
+    else if (cmd_args.get(0) == TAIL_ZONE_CMD) {
+      #ifdef HAS_GPS
+        int add_sw = this->argSearch(&cmd_args, "-a");
+        int clear_sw = this->argSearch(&cmd_args, "-c");
+        int radius_sw = this->argSearch(&cmd_args, "-r");
+
+        if (add_sw != -1) {
+          if (!gps_obj.getFixStatus()) {
+            Serial.println(F("Cannot add safe zone: no GPS fix"));
+          } else {
+            uint16_t radius_m = TAIL_DEFAULT_ZONE_RADIUS_M;
+            if (radius_sw != -1 && this->checkValueExists(&cmd_args, radius_sw)) {
+              radius_m = (uint16_t)cmd_args.get(radius_sw + 1).toInt();
+            }
+            wifi_scan_obj.addSafeZone(gps_obj.getLatInt(), gps_obj.getLonInt(), radius_m);
+          }
+        }
+        else if (clear_sw != -1) {
+          wifi_scan_obj.clearSafeZones();
+        }
+        else {
+          Serial.println(HELP_TAIL_ZONE_CMD);
+        }
+      #else
+        Serial.println(F("This board has no GPS"));
+      #endif
+    }
+    // Tail report
+    else if (cmd_args.get(0) == TAIL_REPORT_CMD) {
+      wifi_scan_obj.renderTailReport(false);
     }
 
 

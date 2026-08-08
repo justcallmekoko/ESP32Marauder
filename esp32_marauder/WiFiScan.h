@@ -324,8 +324,21 @@ struct MacEntry {
   int32_t dloc;
   int8_t rssi;
   bool bt;
+  // Time-window reappearance tracking
+  uint16_t seen_bitmap;     // bit i = seen in window (now - i*TAIL_WINDOW_SEC), bit 0 = current window
+  uint32_t bitmap_epoch_ms; // anchor time for bit 0
+  bool tail_flag;
+  bool ignored;
+  bool bitmap_initialized;  // don't use bitmap_epoch_ms==0 as the "unset" check, millis() can be 0 too
 };
 #pragma pack(pop)
+
+// Devices seen only within radius_m of this point are ignored for tail/follow alerts
+struct SafeZone {
+  int32_t lat_e6;
+  int32_t lon_e6;
+  uint16_t radius_m;
+};
 
 struct AirTag {
     String mac;                  // MAC address of the AirTag
@@ -782,12 +795,32 @@ class WiFiScan
 
     bool send_deauth = false;
 
+    // Set by the sniffer callback on a tail/follow alert, serviced by main() (keeps
+    // NeoPixel access out of the RX callback)
+    volatile uint32_t tail_alert_led_until_ms = 0;
+
     bool channel_hop = false;
     uint8_t connected_devices = 0;
 
 
     static MacEntry mac_entries[mac_history_len_half];
     static uint8_t mac_entry_state[mac_history_len_half];
+
+    // MAC Monitor ignore list / safe zones (allocated in RunSetup(), same as access_points etc)
+    LinkedList<String>* tail_ignore_macs = nullptr;
+    SafeZone tail_safe_zones[TAIL_MAX_SAFE_ZONES];
+    uint8_t tail_safe_zone_count = 0;
+    bool tail_ignore_loaded = false;
+
+    // Baseline scan - capture-only window that bulk-adds everything seen to the ignore list
+    bool tail_baseline_active = false;
+    uint32_t tail_baseline_start_ms = 0;
+
+    // Tail alert CSV log - own File handle since buffer_obj is already the mac_track pcap
+    String tail_log_filename = "";
+    #ifdef HAS_SD
+      File tail_log_file;
+    #endif
 
     String header_line = "WigleWifi-1.4,appRelease=" + (String)MARAUDER_VERSION + ",model=ESP32 Marauder,release=" + (String)MARAUDER_VERSION + ",device=ESP32 Marauder,display=SPI TFT,board=ESP32 Marauder,brand=JustCallMeKoko\nMAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\n";
 
@@ -987,6 +1020,32 @@ class WiFiScan
     void evict_and_insert(const uint8_t mac[6], uint32_t now_ms);
     uint8_t build_top10_for_ui(MacEntry* out_top10, MacSortMode mode);
     void save_mac(unsigned char* mac);
+
+    // MAC Monitor tail detection / ignore list
+    void update_seen_window(MacEntry& entry, uint32_t now_ms);
+    bool isIgnoredMac(const uint8_t mac[6]);
+    void addIgnoreMac(const uint8_t mac[6]);
+    void addIgnoreMac(String mac_str);
+    void removeIgnoreMac(String mac_str);
+    void clearIgnoreMacs();
+    void loadTailIgnoreData();
+    void saveIgnoreMacs();
+    bool insideSafeZone(int32_t lat_e6, int32_t lon_e6);
+    bool addSafeZone(int32_t lat_e6, int32_t lon_e6, uint16_t radius_m);
+    void clearSafeZones();
+    void saveSafeZones();
+    void startTailBaselineScan();
+    void finishTailBaselineScanIfDue();
+    void logTailAlert(const MacEntry& entry, bool follow_edge, bool tail_edge);
+    void renderTailReport(bool to_display = true);
+    void openTailLog();
+    void closeTailLog();
+    void fireTailAlert(const MacEntry& entry, bool follow_edge, bool tail_edge);
+    void serviceTailAlertLed();
+    // Shared by the WiFi/BLE sniffer callbacks - evaluates follow/tail state for the entry
+    // update_mac_entry() just touched and fires an alert on a false->true transition. Returns
+    // the live (non-sticky) GPS-following state for callers gating per-frame side effects.
+    bool evaluateTailCandidate(int frame_check);
     #ifdef HAS_BT
       void copyNimbleMac(const BLEAddress &addr, unsigned char out[6]);
     #endif

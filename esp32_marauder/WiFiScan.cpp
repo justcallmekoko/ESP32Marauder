@@ -914,6 +914,7 @@ extern "C" {
           }
           else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_DETECT_FOLLOW) {
             int frame_check = wifi_scan_obj.update_mac_entry(mac_char, advertisedDevice->getRSSI(), true);
+            wifi_scan_obj.evaluateTailCandidate(frame_check);
           }
           else if (wifi_scan_obj.currentScanMode == BT_SCAN_RAYBAN) { // Filters from https://github.com/NullPxl
             bool match = false;
@@ -1542,6 +1543,7 @@ extern "C" {
           else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_DETECT_FOLLOW) {
 
             int frame_check = wifi_scan_obj.update_mac_entry(mac_char, rssi, true);
+            wifi_scan_obj.evaluateTailCandidate(frame_check);
           }
           else if (wifi_scan_obj.currentScanMode == BT_SCAN_RAYBAN) { // Filters from https://github.com/NullPxl
             bool match = false;
@@ -1794,6 +1796,7 @@ void WiFiScan::RunSetup() {
   ble_devices = new LinkedList<BleDevice>();
   ipList = new LinkedList<IPAddress>();
   probe_req_ssids = new LinkedList<ProbeReqSsid>;
+  tail_ignore_macs = new LinkedList<String>();
   // for Pinescan
   pinescan_trackers = new LinkedList<PineScanTracker>();
   confirmed_pinescan = new LinkedList<ConfirmedPineScan>();
@@ -2629,6 +2632,10 @@ bool WiFiScan::shutdownBLE() {
 
 // Function to stop all wifi scans
 void WiFiScan::StopScan(uint8_t scan_mode) {
+  if (currentScanMode == WIFI_SCAN_DETECT_FOLLOW) {
+    this->closeTailLog();
+  }
+
   if ((currentScanMode == WIFI_SCAN_PROBE) ||
   (currentScanMode == WIFI_SCAN_SAE_COMMIT) ||
   (currentScanMode == WIFI_SCAN_AP) ||
@@ -2921,6 +2928,7 @@ int WiFiScan::update_mac_entry(const uint8_t mac[6], int8_t rssi, bool bt) {
           }
 
           mac_entries[idx].rssi = rssi;
+          this->update_seen_window(mac_entries[idx], now_ms);
 
           return idx + mac_history_len_half;
         }
@@ -2953,6 +2961,12 @@ inline void WiFiScan::insert_mac_entry(uint32_t idx, const uint8_t mac[6], uint3
   mac_entries[idx].dloc = 0;
   mac_entries[idx].rssi = rssi;
   mac_entries[idx].bt = bt;
+  mac_entries[idx].seen_bitmap = 0;
+  mac_entries[idx].bitmap_epoch_ms = 0;
+  mac_entries[idx].bitmap_initialized = false;
+  mac_entries[idx].tail_flag = false;
+  mac_entries[idx].ignored = this->isIgnoredMac(mac);
+  this->update_seen_window(mac_entries[idx], now_ms);
   mac_entry_state[idx] = VALID_ENTRY;
 }
 
@@ -3031,6 +3045,23 @@ static inline int32_t iabs32(int32_t v) {
   return (v < 0) ? -v : v;
 }
 
+// Cheap lat/lon delta proxy in e6-degree units (~9 e6-units per meter at mid-latitudes).
+// Shared by the GPS-displacement "following" heuristic and the safe-zone radius check.
+static inline int32_t dist_e6_proxy(int32_t lat1_e6, int32_t lon1_e6, int32_t lat2_e6, int32_t lon2_e6) {
+  int32_t dlat = iabs32(lat1_e6 - lat2_e6);
+  int32_t dlon = iabs32(lon1_e6 - lon2_e6);
+
+  // Rough longitude scaling for mid-latitudes (~0.75)
+  dlon = (dlon * 3) / 4;
+
+  return (dlat > dlon) ? dlat : dlon;
+}
+
+// Converts a radius in meters to the e6-degree proxy threshold used above.
+static inline int32_t meters_to_e6_proxy(uint16_t meters) {
+  return (int32_t)meters * 9;
+}
+
 // Uses e6 degrees. No meters conversion at runtime.
 // Writes computed location delta (e6 degrees) into out_dloc if provided.
 static inline bool is_following_candidate_light(
@@ -3041,7 +3072,7 @@ static inline bool is_following_candidate_light(
   const bool has_first = !(e.first_lat_e6 == 0 && e.first_lon_e6 == 0);
   const bool has_last  = !(e.last_lat_e6  == 0 && e.last_lon_e6  == 0);
   if (!has_first || !has_last) {
-    if (out_dloc) 
+    if (out_dloc)
       *out_dloc = 0;
 
     return false;
@@ -3056,22 +3087,518 @@ static inline bool is_following_candidate_light(
     return false;
   }
 
-  // Movement threshold:
-  // meters are e6 degrees = meters * 9
-  const int32_t THRESH_E6 = (int32_t)(2000 * 9); // ~75 m to-do: needs tuning
+  // Movement threshold, preserved exactly as before the refactor into dist_e6_proxy()
+  // (the "~75 m" comment on the original constant doesn't match meters_to_e6_proxy's
+  // conversion - not touching that pre-existing behavior here, out of scope for this change).
+  const int32_t THRESH_E6 = (int32_t)(2000 * 9); // to-do: needs tuning
 
-  int32_t dlat = iabs32(e.last_lat_e6 - e.first_lat_e6);
-  int32_t dlon = iabs32(e.last_lon_e6 - e.first_lon_e6);
-
-  // Rough longitude scaling for mid-latitudes (~0.75)
-  dlon = (dlon * 3) / 4;
-
-  // Cheap distance proxy
-  int32_t d = (dlat > dlon) ? dlat : dlon;
+  int32_t d = dist_e6_proxy(e.first_lat_e6, e.first_lon_e6, e.last_lat_e6, e.last_lon_e6);
 
   if (out_dloc) *out_dloc = d;
 
   return d >= THRESH_E6;
+}
+
+// Tail detection concept from Chasing Your Tail (CYT-NG) https://github.com/ArgeliusLabs/Chasing-Your-Tail-NG
+// Buckets sightings of a MAC into TAIL_WINDOW_SEC-wide time windows, kept as a rolling bitmap
+// (bit 0 = current window, bit i = seen i windows ago). A device that's just continuously
+// nearby only ever shows a contiguous run of bits from bit 0 - one that vanished for a whole
+// window and came back leaves a gap. is_tail_candidate() below tests for that gap.
+void WiFiScan::update_seen_window(MacEntry& entry, uint32_t now_ms) {
+  if (!entry.bitmap_initialized) {
+    // Don't test bitmap_epoch_ms==0 as the "unset" check instead of this flag - 0 is a
+    // legitimate millis() value too (at boot, and again on wraparound ~every 49.7 days).
+    entry.seen_bitmap = 0x1;
+    entry.bitmap_epoch_ms = now_ms;
+    entry.bitmap_initialized = true;
+    return;
+  }
+
+  const uint32_t window_ms = (uint32_t)TAIL_WINDOW_SEC * 1000UL;
+  uint32_t elapsed = age_ms(now_ms, entry.bitmap_epoch_ms);
+  uint32_t windows_passed = elapsed / window_ms;
+
+  if (windows_passed > 0) {
+    // Saturate the shift instead of relying on UB for shifts >= bit width
+    if (windows_passed >= TAIL_WINDOW_COUNT) {
+      entry.seen_bitmap = 0;
+    } else {
+      entry.seen_bitmap = (uint16_t)(entry.seen_bitmap << windows_passed);
+    }
+    entry.bitmap_epoch_ms += windows_passed * window_ms;
+  }
+
+  entry.seen_bitmap |= 0x1; // mark current window as seen
+}
+
+static inline uint8_t popcount16(uint16_t v) {
+  uint8_t c = 0;
+  while (v) {
+    c += (v & 1);
+    v >>= 1;
+  }
+  return c;
+}
+
+// True if entry was seen in the current window and in some earlier window, with at least
+// one empty window in between (a real gap, not just continuous presence)
+static inline bool is_tail_candidate(const MacEntry& entry) {
+  const uint16_t bitmap = entry.seen_bitmap;
+
+  if (!(bitmap & 0x1)) return false; // not seen in the current window
+  if (popcount16(bitmap) < TAIL_MIN_HITS) return false;
+
+  // Strip the contiguous run starting at bit 0 - whatever's left is from before a gap
+  uint16_t tmp = bitmap;
+  while (tmp & 0x1) tmp >>= 1;
+
+  return tmp != 0;
+}
+
+// MAC whitelist + GPS safe zones for MAC Monitor, so known-fixed devices (your own AP, etc.)
+// and known-safe locations (home, office) don't trigger tail/follow alerts. Persisted as
+// plain text on SD (one MAC per line, "lat_e6,lon_e6,radius_m" per zone); without HAS_SD
+// these still work for the current session, they just won't survive a reboot.
+void WiFiScan::loadTailIgnoreData() {
+  if (this->tail_ignore_loaded) return;
+  this->tail_ignore_loaded = true;
+
+  #ifdef HAS_SD
+    if (!sd_obj.supported) return;
+
+    File f = SD.open("/tail_ignore.txt", FILE_READ);
+    if (f) {
+      while (f.available()) {
+        String line = f.readStringUntil('\n');
+        line.trim();
+        if (line.length() == 17) {
+          this->tail_ignore_macs->add(line);
+        }
+      }
+      f.close();
+    }
+
+    File zf = SD.open("/tail_zones.txt", FILE_READ);
+    if (zf) {
+      this->tail_safe_zone_count = 0;
+      while (zf.available() && this->tail_safe_zone_count < TAIL_MAX_SAFE_ZONES) {
+        String line = zf.readStringUntil('\n');
+        line.trim();
+        if (line.length() == 0) continue;
+
+        int c1 = line.indexOf(',');
+        int c2 = (c1 < 0) ? -1 : line.indexOf(',', c1 + 1);
+        if (c1 < 0 || c2 < 0) continue;
+
+        SafeZone z;
+        z.lat_e6 = (int32_t)line.substring(0, c1).toInt();
+        z.lon_e6 = (int32_t)line.substring(c1 + 1, c2).toInt();
+        z.radius_m = (uint16_t)line.substring(c2 + 1).toInt();
+        this->tail_safe_zones[this->tail_safe_zone_count++] = z;
+      }
+      zf.close();
+    }
+
+    Serial.println("Tail ignore list: loaded " + (String)this->tail_ignore_macs->size() + " MAC(s), " + (String)this->tail_safe_zone_count + " safe zone(s)");
+  #endif
+}
+
+void WiFiScan::saveIgnoreMacs() {
+  #ifdef HAS_SD
+    if (!sd_obj.supported) return;
+    SD.remove("/tail_ignore.txt");
+    File f = SD.open("/tail_ignore.txt", FILE_WRITE);
+    if (!f) return;
+    for (int i = 0; i < this->tail_ignore_macs->size(); i++) {
+      f.println(this->tail_ignore_macs->get(i));
+    }
+    f.close();
+  #endif
+}
+
+void WiFiScan::saveSafeZones() {
+  #ifdef HAS_SD
+    if (!sd_obj.supported) return;
+    SD.remove("/tail_zones.txt");
+    File f = SD.open("/tail_zones.txt", FILE_WRITE);
+    if (!f) return;
+    for (uint8_t i = 0; i < this->tail_safe_zone_count; i++) {
+      f.println((String)this->tail_safe_zones[i].lat_e6 + "," +
+                (String)this->tail_safe_zones[i].lon_e6 + "," +
+                (String)this->tail_safe_zones[i].radius_m);
+    }
+    f.close();
+  #endif
+}
+
+bool WiFiScan::isIgnoredMac(const uint8_t mac[6]) {
+  this->loadTailIgnoreData();
+
+  String mac_str = macToString(mac);
+  for (int i = 0; i < this->tail_ignore_macs->size(); i++) {
+    if (this->tail_ignore_macs->get(i).equalsIgnoreCase(mac_str))
+      return true;
+  }
+  return false;
+}
+
+void WiFiScan::addIgnoreMac(const uint8_t mac[6]) {
+  this->addIgnoreMac(macToString(mac));
+}
+
+void WiFiScan::addIgnoreMac(String mac_str) {
+  this->loadTailIgnoreData();
+
+  mac_str.trim();
+  mac_str.toUpperCase();
+  if (mac_str.length() != 17) {
+    Serial.println("Invalid MAC (expected XX:XX:XX:XX:XX:XX): " + mac_str);
+    return;
+  }
+
+  for (int i = 0; i < this->tail_ignore_macs->size(); i++) {
+    if (this->tail_ignore_macs->get(i).equalsIgnoreCase(mac_str))
+      return; // already present
+  }
+
+  this->tail_ignore_macs->add(mac_str);
+  this->saveIgnoreMacs();
+
+  // Immediately suppress any live entry for this MAC so it stops alerting right away.
+  uint8_t mac_bytes[6] = {0, 0, 0, 0, 0, 0};
+  convertMacStringToUint8(mac_str, mac_bytes);
+  for (uint32_t i = 0; i < mac_history_len_half; i++) {
+    if (mac_entry_state[i] == VALID_ENTRY && memcmp(mac_entries[i].mac, mac_bytes, 6) == 0) {
+      mac_entries[i].ignored = true;
+      mac_entries[i].following = false;
+      mac_entries[i].tail_flag = false;
+    }
+  }
+
+  Serial.println("Added " + mac_str + " to tail ignore list");
+}
+
+void WiFiScan::removeIgnoreMac(String mac_str) {
+  this->loadTailIgnoreData();
+
+  mac_str.trim();
+  for (int i = 0; i < this->tail_ignore_macs->size(); i++) {
+    if (this->tail_ignore_macs->get(i).equalsIgnoreCase(mac_str)) {
+      this->tail_ignore_macs->remove(i);
+      this->saveIgnoreMacs();
+      Serial.println("Removed " + mac_str + " from tail ignore list");
+      return;
+    }
+  }
+  Serial.println("MAC not found in tail ignore list: " + mac_str);
+}
+
+void WiFiScan::clearIgnoreMacs() {
+  this->loadTailIgnoreData();
+  this->tail_ignore_macs->clear();
+  #ifdef HAS_SD
+    if (sd_obj.supported)
+      SD.remove("/tail_ignore.txt");
+  #endif
+  Serial.println("Cleared tail ignore list");
+}
+
+bool WiFiScan::insideSafeZone(int32_t lat_e6, int32_t lon_e6) {
+  this->loadTailIgnoreData();
+
+  if (lat_e6 == 0 && lon_e6 == 0) return false; // no fix / no data
+
+  for (uint8_t i = 0; i < this->tail_safe_zone_count; i++) {
+    const SafeZone& z = this->tail_safe_zones[i];
+    if (dist_e6_proxy(lat_e6, lon_e6, z.lat_e6, z.lon_e6) <= meters_to_e6_proxy(z.radius_m))
+      return true;
+  }
+  return false;
+}
+
+bool WiFiScan::addSafeZone(int32_t lat_e6, int32_t lon_e6, uint16_t radius_m) {
+  this->loadTailIgnoreData();
+
+  if (this->tail_safe_zone_count >= TAIL_MAX_SAFE_ZONES) {
+    Serial.println("Safe zone list full (" + (String)TAIL_MAX_SAFE_ZONES + " max)");
+    return false;
+  }
+
+  SafeZone z;
+  z.lat_e6 = lat_e6;
+  z.lon_e6 = lon_e6;
+  z.radius_m = radius_m;
+  this->tail_safe_zones[this->tail_safe_zone_count++] = z;
+  this->saveSafeZones();
+
+  Serial.println("Added safe zone: " + (String)lat_e6 + "," + (String)lon_e6 + " r=" + (String)radius_m + "m");
+  return true;
+}
+
+void WiFiScan::clearSafeZones() {
+  this->loadTailIgnoreData();
+  this->tail_safe_zone_count = 0;
+  #ifdef HAS_SD
+    if (sd_obj.supported)
+      SD.remove("/tail_zones.txt");
+  #endif
+  Serial.println("Cleared tail safe zones");
+}
+
+// Runs the tracker for TAIL_BASELINE_SCAN_SEC seconds and bulk-adds everything seen to the
+// ignore list - quickly whitelists whatever's already nearby before real tracking starts.
+void WiFiScan::startTailBaselineScan() {
+  this->loadTailIgnoreData();
+  this->tail_baseline_active = true;
+  this->tail_baseline_start_ms = millis();
+  Serial.println("Tail baseline scan started (" + (String)TAIL_BASELINE_SCAN_SEC + "s)...");
+}
+
+void WiFiScan::finishTailBaselineScanIfDue() {
+  if (!this->tail_baseline_active) return;
+  if (age_ms(millis(), this->tail_baseline_start_ms) < (uint32_t)TAIL_BASELINE_SCAN_SEC * 1000UL) return;
+
+  this->tail_baseline_active = false;
+
+  uint16_t added = 0;
+  for (uint32_t i = 0; i < mac_history_len_half; i++) {
+    if (mac_entry_state[i] != VALID_ENTRY) continue;
+
+    String mac_str = macToString(mac_entries[i].mac);
+    bool already = false;
+    for (int j = 0; j < this->tail_ignore_macs->size(); j++) {
+      if (this->tail_ignore_macs->get(j).equalsIgnoreCase(mac_str)) {
+        already = true;
+        break;
+      }
+    }
+    if (!already) {
+      this->tail_ignore_macs->add(mac_str);
+      mac_entries[i].ignored = true;
+      mac_entries[i].following = false;
+      mac_entries[i].tail_flag = false;
+      added++;
+    }
+  }
+  this->saveIgnoreMacs();
+
+  Serial.println("Tail baseline scan complete: added " + (String)added + " MAC(s) to ignore list");
+  #ifdef HAS_SCREEN
+    display_obj.display_buffer->add("Baseline: ignored " + (String)added + " MACs");
+  #endif
+}
+
+// Own SD File handle for the alert CSV, since buffer_obj is already busy with the mac_track
+// pcap capture (one Buffer instance can only own one file at a time)
+void WiFiScan::openTailLog() {
+  #ifdef HAS_SD
+    if (!sd_obj.supported) return;
+
+    int i = 0;
+    String fname;
+    do {
+      fname = "/tail_log_" + (String)i + ".log";
+      i++;
+    } while (SD.exists(fname));
+
+    this->tail_log_filename = fname;
+    this->tail_log_file = SD.open(fname, FILE_WRITE);
+    if (this->tail_log_file) {
+      this->tail_log_file.print("datetime,mac,rssi,lat,lon,follow,tail\n");
+      this->tail_log_file.flush();
+    }
+  #endif
+}
+
+void WiFiScan::closeTailLog() {
+  #ifdef HAS_SD
+    if (this->tail_log_file)
+      this->tail_log_file.close();
+  #endif
+}
+
+// One CSV row per edge-triggered alert (not per frame) - datetime,mac,rssi,lat,lon,follow,tail
+void WiFiScan::logTailAlert(const MacEntry& entry, bool follow_edge, bool tail_edge) {
+  String datetime = "";
+  String lat = "0";
+  String lon = "0";
+  #ifdef HAS_GPS
+    datetime = gps_obj.getDatetime();
+    lat = gps_obj.getLat();
+    lon = gps_obj.getLon();
+  #endif
+
+  String row = datetime + "," +
+               macToString(entry.mac) + "," +
+               (String)entry.rssi + "," +
+               lat + "," +
+               lon + "," +
+               (String)(follow_edge ? 1 : 0) + "," +
+               (String)(tail_edge ? 1 : 0) + "\n";
+
+  Serial.print("TAIL ALERT " + row);
+
+  #ifdef HAS_SD
+    if (this->tail_log_file) {
+      this->tail_log_file.print(row);
+      this->tail_log_file.flush();
+    }
+  #endif
+}
+
+// Shared by the WiFi sniffer callback and both BLE advertisement callbacks. frame_check is
+// whatever update_mac_entry() returned - only >= mac_history_len_half (a matched, existing
+// entry) has anything to evaluate; a fresh insert/evict has nothing recorded yet.
+bool WiFiScan::evaluateTailCandidate(int frame_check) {
+  if (frame_check < (int)mac_history_len_half) return false;
+
+  MacEntry& entry = this->mac_entries[frame_check - mac_history_len_half];
+
+  if (this->tail_baseline_active) return false; // just accumulating sightings for now
+
+  if (entry.ignored || this->insideSafeZone(entry.last_lat_e6, entry.last_lon_e6)) {
+    entry.ignored = true;
+    entry.following = false;
+    entry.tail_flag = false;
+    return false;
+  }
+
+  int32_t dloc = 0;
+  bool is_following = is_following_candidate_light(entry, millis(), &dloc);
+  bool is_tail = is_tail_candidate(entry);
+
+  bool follow_edge = is_following && !entry.following;
+  bool tail_edge = is_tail && !entry.tail_flag;
+
+  entry.dloc = dloc;
+  // following stays sticky once true, matching the old behavior. tail_flag tracks the live
+  // windowed state instead, so a device can re-alert once its old gap closes up again.
+  entry.following = entry.following || is_following;
+  entry.tail_flag = is_tail;
+
+  if (follow_edge || tail_edge) {
+    this->fireTailAlert(entry, follow_edge, tail_edge);
+  }
+
+  return is_following;
+}
+
+// Fired once per false->true transition, not once per frame
+void WiFiScan::fireTailAlert(const MacEntry& entry, bool follow_edge, bool tail_edge) {
+  String reason = follow_edge && tail_edge ? "FOLLOW+TAIL" : (follow_edge ? "FOLLOW" : "TAIL");
+  String line = reason + " " + macToString(entry.mac) + " RSSI:" + (String)entry.rssi;
+
+  Serial.println("*** " + line + " ***");
+
+  #ifdef HAS_SCREEN
+    display_obj.display_buffer->add(line);
+  #endif
+
+  this->logTailAlert(entry, follow_edge, tail_edge);
+
+  #ifdef HAS_NEOPIXEL_LED
+    this->tail_alert_led_until_ms = millis() + 400;
+    if (this->tail_alert_led_until_ms == 0) this->tail_alert_led_until_ms = 1; // avoid the off sentinel on wrap
+  #endif
+}
+
+// Drives a short red LED flash for fireTailAlert(), then hands back to the normal sniff color
+void WiFiScan::serviceTailAlertLed() {
+  #ifdef HAS_NEOPIXEL_LED
+    if (this->tail_alert_led_until_ms == 0) return;
+
+    if ((int32_t)(millis() - this->tail_alert_led_until_ms) < 0) {
+      led_obj.setMode(MODE_CUSTOM);
+      led_obj.setColor(255, 0, 0);
+    } else {
+      this->tail_alert_led_until_ms = 0;
+      led_obj.setMode(MODE_SNIFF);
+    }
+  #endif
+}
+
+// Reads back the tail alert CSV log and prints a per-MAC summary (hit count, first/last seen)
+void WiFiScan::renderTailReport(bool to_display) {
+  #ifdef HAS_SD
+    if (!sd_obj.supported) {
+      Serial.println("No SD card - no tail log to report on");
+      return;
+    }
+
+    if (this->tail_log_filename.length() == 0) {
+      Serial.println("No tail log recorded yet");
+      return;
+    }
+
+    File f = SD.open(this->tail_log_filename, FILE_READ);
+    if (!f) {
+      Serial.println("Could not open " + this->tail_log_filename + " for report");
+      return;
+    }
+
+    struct TailReportRow {
+      String mac;
+      uint16_t hits;
+      String first_seen;
+      String last_seen;
+    };
+
+    const uint8_t MAX_REPORT_ROWS = 30;
+    TailReportRow rows[MAX_REPORT_ROWS];
+    uint8_t row_count = 0;
+
+    while (f.available()) {
+      String line = f.readStringUntil('\n');
+      line.trim();
+      if (line.length() == 0) continue;
+
+      int c1 = line.indexOf(',');
+      int c2 = (c1 < 0) ? -1 : line.indexOf(',', c1 + 1);
+      if (c1 < 0 || c2 < 0) continue;
+
+      String datetime = line.substring(0, c1);
+      String mac_str = line.substring(c1 + 1, c2);
+
+      int found = -1;
+      for (uint8_t i = 0; i < row_count; i++) {
+        if (rows[i].mac == mac_str) {
+          found = i;
+          break;
+        }
+      }
+
+      if (found < 0 && row_count < MAX_REPORT_ROWS) {
+        found = row_count++;
+        rows[found].mac = mac_str;
+        rows[found].hits = 0;
+        rows[found].first_seen = datetime;
+      }
+
+      if (found >= 0) {
+        rows[found].hits++;
+        rows[found].last_seen = datetime;
+      }
+    }
+    f.close();
+
+    Serial.println("--- Tail Report (" + (String)row_count + " device(s)) ---");
+    for (uint8_t i = 0; i < row_count; i++) {
+      String line = rows[i].mac + "  hits=" + (String)rows[i].hits +
+                    "  first=" + rows[i].first_seen +
+                    "  last=" + rows[i].last_seen;
+      Serial.println(line);
+      #ifdef HAS_SCREEN
+        if (to_display)
+          display_obj.display_buffer->add(line);
+      #endif
+    }
+
+    if (row_count == MAX_REPORT_ROWS) {
+      Serial.println("(report truncated at " + (String)MAX_REPORT_ROWS + " devices)");
+    }
+  #else
+    Serial.println("No SD card - no tail log to report on");
+  #endif
 }
 
 // Returns how many entries were written to out_top10 (0..10)
@@ -3090,12 +3617,12 @@ uint8_t WiFiScan::build_top10_for_ui(MacEntry* out_top10, MacSortMode mode) {
     const MacEntry& A = mac_entries[a_idx];
     const MacEntry& B = mac_entries[b_idx];
 
-    const bool A_follow = is_following_candidate_light(A, now_ms);
-    const bool B_follow = is_following_candidate_light(B, now_ms);
+    const bool A_flagged = is_following_candidate_light(A, now_ms) || is_tail_candidate(A);
+    const bool B_flagged = is_following_candidate_light(B, now_ms) || is_tail_candidate(B);
 
-    // Following entries always rank ahead of non-following
-    if (A_follow != B_follow)
-      return A_follow && !B_follow;
+    // Following/tail-flagged entries always rank ahead of unflagged ones
+    if (A_flagged != B_flagged)
+      return A_flagged && !B_flagged;
 
     // Original sort rules
     if (mode == MacSortMode::MOST_FRAMES) {
@@ -3150,6 +3677,7 @@ uint8_t WiFiScan::build_top10_for_ui(MacEntry* out_top10, MacSortMode mode) {
       int32_t dloc = 0;
       out_top10[k] = mac_entries[(uint32_t)src];
       out_top10[k].following = is_following_candidate_light(out_top10[k], now_ms, &dloc);
+      out_top10[k].tail_flag = is_tail_candidate(out_top10[k]);
       out_top10[k].dloc = dloc;
     }
   }
@@ -6209,8 +6737,11 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color) {
     startPcap("probe");
   else if (scan_mode == BT_SCAN_FLOCK)
     startPcap("flock");
-  else if (scan_mode == WIFI_SCAN_DETECT_FOLLOW)
+  else if (scan_mode == WIFI_SCAN_DETECT_FOLLOW) {
     startPcap("mac_track");
+    this->loadTailIgnoreData();
+    this->openTailLog();
+  }
 
   this->setLEDMode(MODE_SNIFF);
   
@@ -8411,15 +8942,10 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
   }
   else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_DETECT_FOLLOW) {
     int frame_check = wifi_scan_obj.update_mac_entry(src_addr, snifferPacket->rx_ctrl.rssi);
+    bool is_following_now = wifi_scan_obj.evaluateTailCandidate(frame_check);
 
-    if (frame_check >= mac_history_len_half) {
-      int32_t dloc = 0;
-      bool is_following = is_following_candidate_light(wifi_scan_obj.mac_entries[frame_check - mac_history_len_half], millis(), &dloc);
-      if (is_following) {
-        wifi_scan_obj.mac_entries[frame_check - mac_history_len_half].dloc = dloc;
-        wifi_scan_obj.mac_entries[frame_check - mac_history_len_half].following = is_following;
-        buffer_obj.append(snifferPacket, len);
-      }
+    if (is_following_now) {
+      buffer_obj.append(snifferPacket, len);
     }
   }
   else if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_SAE_COMMIT) ||
@@ -10798,6 +11324,8 @@ void WiFiScan::updateTrackerUI() {
 
     display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
     display_obj.tft.print("FOLLOW");
+    display_obj.tft.setTextColor(TFT_ORANGE, TFT_BLACK);
+    display_obj.tft.print("/TAIL");
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
     display_obj.tft.print(" | WIFI | ");
     display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
@@ -10816,11 +11344,23 @@ void WiFiScan::updateTrackerUI() {
   Serial.println(F("---------------"));
 
   for (int i = 0; i < n; i++) {
-    if (ui_list[i].following) {
+    if (ui_list[i].following && ui_list[i].tail_flag) {
       #ifdef HAS_SCREEN
         display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
       #endif
-      Serial.print(F("FOLLOWING "));
+      Serial.print(F("FOLLOW+TAIL "));
+    }
+    else if (ui_list[i].following) {
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+      #endif
+      Serial.print(F("FOLLOW "));
+    }
+    else if (ui_list[i].tail_flag) {
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextColor(TFT_ORANGE, TFT_BLACK);
+      #endif
+      Serial.print(F("TAIL "));
     }
     else if (ui_list[i].bt) {
       #ifdef HAS_SCREEN
@@ -11459,6 +11999,9 @@ void WiFiScan::main(uint32_t currentTime)
       this->last_ui_update = millis();
       this->updateTrackerUI();
     }
+
+    this->finishTailBaselineScanIfDue();
+    this->serviceTailAlertLed();
   }
   else if ((currentScanMode == BT_SCAN_FLOCK) ||
           (currentScanMode == BT_SCAN_FLIPPER) ||

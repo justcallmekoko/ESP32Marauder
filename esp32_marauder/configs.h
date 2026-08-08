@@ -45,7 +45,15 @@
 
   #define GRAPH_REFRESH   100
 
-  #define TRACK_EVICT_SEC 90 // Seconds before marking tracked MAC as tombstone
+  #define TRACK_EVICT_SEC 2700 // Seconds before marking tracked MAC as tombstone
+
+  // MAC Monitor tail detection
+  #define TAIL_WINDOW_SEC 300             // Width of one detection time-bucket (5 min)
+  #define TAIL_WINDOW_COUNT 16            // Buckets kept per MAC (16 * 5 min = 80 min horizon)
+  #define TAIL_MIN_HITS 2                 // Min distinct windows seen before a gap counts as "tail"
+  #define TAIL_DEFAULT_ZONE_RADIUS_M 100  // Default safe-zone radius in meters
+  #define TAIL_MAX_SAFE_ZONES 8           // Max number of persisted GPS safe zones
+  #define TAIL_BASELINE_SCAN_SEC 30       // Duration of the baseline auto-ignore capture
 
   #define DUAL_BAND_CHANNELS 51
 

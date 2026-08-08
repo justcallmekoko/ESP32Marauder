@@ -198,6 +198,10 @@ class MenuFunctions
 
     Menu foxHuntMenu;
 
+    // MAC Monitor options
+    Menu tailOptionsMenu;
+    Menu tailIgnoreMacMenu;
+
     #ifdef HAS_DIRECT_UPLOAD
       Menu deleteAllMenu;
       Menu uploadAllMenu;
