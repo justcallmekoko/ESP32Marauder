@@ -1782,11 +1782,15 @@ void WiFiScan::RunSetup() {
     this->wsl_bypass_enabled = false;
 
   #ifdef HAS_PSRAM
-    ssids = new (ps_malloc(sizeof(LinkedList<ssid>))) LinkedList<ssid>();
-    new (ssids) LinkedList<ssid>();
-  #else
+    void* ssids_mem = ps_malloc(sizeof(LinkedList<ssid>));
+    if (ssids_mem != nullptr) {
+      ssids = new (ssids_mem) LinkedList<ssid>();
+    } else {
+      ssids = new LinkedList<ssid>();
+    }
+#else
     ssids = new LinkedList<ssid>();
-  #endif
+#endif
   access_points = new LinkedList<AccessPoint>();
   stations = new LinkedList<Station>();
   airtags = new LinkedList<AirTag>();

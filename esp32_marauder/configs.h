@@ -18,7 +18,7 @@
   //#define MARAUDER_V7
   //#define MARAUDER_V7_1
   //#define MARAUDER_KIT
-  //#define GENERIC_ESP32
+  #define GENERIC_ESP32
   //#define MARAUDER_FLIPPER
   //#define MARAUDER_MULTIBOARD_S3
   //#define ESP32_LDDB
@@ -41,7 +41,7 @@
 
   #define JSON_SETTING_SIZE 2048
 
-  #define MARAUDER_VERSION "v1.14.1"
+  #define MARAUDER_VERSION "v1.14.0"
 
   #define GRAPH_REFRESH   100
 
@@ -402,6 +402,7 @@
     //#define FLIPPER_ZERO_HAT
     //#define HAS_BATTERY
     #define HAS_BT
+    #define HAS_PSRAM
     //#define HAS_BUTTONS
     //#define HAS_NEOPIXEL_LED
     //#define HAS_PWR_MGMT

@@ -13,7 +13,7 @@ https://www.online-utility.org/image/convert/to/XBM
 #endif
 
 #include <stdio.h>
-
+#include "WiFiControlBridge.h"
 #ifdef HAS_GPS
   #include "GpsInterface.h"
 #endif
@@ -74,6 +74,7 @@ EvilPortal evil_portal_obj;
 Buffer buffer_obj;
 Settings settings_obj;
 CommandLine cli_obj;
+WiFiControlBridge wifi_control;
 
 #ifdef HAS_GPS
   GpsInterface gps_obj;
@@ -222,6 +223,10 @@ uint32_t currentTime  = 0;
 
 void setup()
 {
+  Serial.begin(115200);
+  delay(2000);
+  Serial.println("BOOT TEST OK");
+  
   randomSeed(esp_random());
   
   #ifndef DEVELOPER
@@ -240,8 +245,7 @@ void setup()
     digitalWrite(ACT_LED_PIN, LOW);
   #endif
 
-  while(!Serial)
-    delay(10);
+    delay(1000);
 
   #ifdef HAS_C5_SD
     sharedSPI.begin(SD_SCK, SD_MISO, SD_MOSI);
@@ -413,6 +417,7 @@ void setup()
   wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
   
   cli_obj.RunSetup();
+  wifi_control.begin("NotYourConcern", "AsterKing27");
 }
 
 
