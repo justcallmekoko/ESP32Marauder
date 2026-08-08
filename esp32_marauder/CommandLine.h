@@ -213,7 +213,6 @@ class CommandLine {
     LinkedList<String> parseCommand(String input, char* delim);
     String toLowerCase(String str);
     void filterAccessPoints(String filter);
-    void runCommand(String input);
     bool checkValueExists(LinkedList<String>* cmd_args_list, int index);
     bool inRange(int max, int index);
     //bool apSelected();
@@ -251,6 +250,7 @@ class CommandLine {
         
   public:
 
+    void runCommand(String input);
     void RunSetup();
     void main(uint32_t currentTime);
 };

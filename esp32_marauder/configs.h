@@ -41,7 +41,7 @@
 
   #define JSON_SETTING_SIZE 2048
 
-  #define MARAUDER_VERSION "v1.14.1"
+  #define MARAUDER_VERSION "v1.14.0"
 
   #define GRAPH_REFRESH   100
 
@@ -402,6 +402,7 @@
     //#define FLIPPER_ZERO_HAT
     //#define HAS_BATTERY
     #define HAS_BT
+    #define HAS_PSRAM
     //#define HAS_BUTTONS
     //#define HAS_NEOPIXEL_LED
     //#define HAS_PWR_MGMT

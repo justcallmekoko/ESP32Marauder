@@ -41,7 +41,9 @@
   #include "esp_mac.h"
 #endif
 #if defined(HAS_BT) && !defined(HAS_NIMBLE_2)
-  #include "esp_bt.h"
+  #ifdef CONFIG_BT_ENABLED
+    #include "esp_bt.h"
+  #endif
 #endif
 #ifdef HAS_SCREEN
   #include "Display.h"
