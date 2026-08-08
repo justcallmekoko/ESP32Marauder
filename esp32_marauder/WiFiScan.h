@@ -419,6 +419,8 @@ class WiFiScan
     void initWiFi(uint8_t scan_mode);
     uint8_t bluetoothScanTime = 5;
     int packets_sent = 0;
+    uint64_t bad_msg_replay_counter = 1;
+    uint16_t bad_msg_sequence_number = 3;
     const wifi_promiscuous_filter_t filt = {.filter_mask=WIFI_PROMIS_FILTER_MASK_MGMT | WIFI_PROMIS_FILTER_MASK_DATA};
     #ifdef HAS_BT
       NimBLEScan* pBLEScan;

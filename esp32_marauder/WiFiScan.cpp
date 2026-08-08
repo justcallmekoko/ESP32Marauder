@@ -8982,13 +8982,19 @@ void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6], u
   eapol_packet_bad_msg1[20] = bssid[4];
   eapol_packet_bad_msg1[21] = bssid[5]; 
 
+  const uint16_t sequence_control =
+    static_cast<uint16_t>((bad_msg_sequence_number & 0x0fffU) << 4);
+  eapol_packet_bad_msg1[22] = sequence_control & 0xffU;
+  eapol_packet_bad_msg1[23] = (sequence_control >> 8) & 0xffU;
+
   /* Generate random Nonce */
   for (uint8_t i = 0; i < 32; i++) {
     eapol_packet_bad_msg1[49 + i] = esp_random() & 0xFF;
   }
   /* Update replay counter */
   for (uint8_t i = 0; i < 8; i++) {
-    eapol_packet_bad_msg1[41 + i] = (packets_sent >> (56 - i * 8)) & 0xFF;
+    eapol_packet_bad_msg1[41 + i] =
+      (bad_msg_replay_counter >> (56 - i * 8)) & 0xffU;
   }
 
   if(sec == WIFI_SECURITY_WPA3 || sec == WIFI_SECURITY_WPA3_ENTERPRISE || sec == WIFI_SECURITY_WAPI) {
@@ -9000,9 +9006,17 @@ void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6], u
   }
 
   // Send packet
-  esp_wifi_80211_tx(WIFI_IF_AP, eapol_packet_bad_msg1, frame_size, false);
-
-  packets_sent = packets_sent + 1;
+  const esp_err_t tx_result = esp_wifi_80211_tx(
+    WIFI_IF_AP,
+    eapol_packet_bad_msg1,
+    frame_size,
+    false);
+  if (tx_result == ESP_OK) {
+    packets_sent++;
+    bad_msg_replay_counter++;
+    bad_msg_sequence_number =
+      static_cast<uint16_t>((bad_msg_sequence_number + 1U) & 0x0fffU);
+  }
 }
 
 /*void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, String dst_mac_str, uint8_t sec) {
