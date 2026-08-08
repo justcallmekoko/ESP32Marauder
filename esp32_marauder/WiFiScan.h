@@ -703,6 +703,7 @@ class WiFiScan
     void setupScanDisplayArea(uint16_t background, uint16_t color);
     void updateTrackerUI();
     void showNetworkInfo();
+    void showScanNetworkInfo();
     void setNetworkInfo();
     void fullARP();
     bool readARP(IPAddress targ_ip);
