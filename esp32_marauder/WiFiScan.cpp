@@ -3342,7 +3342,7 @@ void WiFiScan::RunPingScan(uint8_t scan_mode, uint16_t color) {
     #endif
     this->prepareScanStage(TFT_RED, TFT_BLACK);
   #endif
-  this->current_scan_ip = this->gateway;
+  this->current_scan_ip = getNetworkBase(this->ip_addr, this->subnet);
   //Serial.print(F("Cleared IPs: "));
   this->clearList(CLEAR_IPS);
   if (scan_mode == WIFI_PING_SCAN)
@@ -3422,7 +3422,7 @@ void WiFiScan::RunPortScanAll(uint8_t scan_mode, uint16_t color) {
       (scan_mode == WIFI_SCAN_HTTP) ||
       (scan_mode == WIFI_SCAN_HTTPS) ||
       (scan_mode == WIFI_SCAN_RDP))
-    this->current_scan_ip = this->gateway;
+    this->current_scan_ip = getNetworkBase(this->ip_addr, this->subnet);
 
   Serial.println(F("Starting Port Scan with..."));
   this->showNetworkInfo();
