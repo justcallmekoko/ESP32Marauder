@@ -1502,7 +1502,7 @@ void CommandLine::runCommand(String input) {
         }
       }
 
-      Serial.println("Using SSID: " + (String)access_point.essid + " Password: <redacted>");
+      Serial.println("Using SSID: " + join_ssid + " Password: <redacted>");
       //wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
       //wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
       wifi_scan_obj.joinWiFi(join_ssid, password, false, access_point.channel, access_point.bssid);

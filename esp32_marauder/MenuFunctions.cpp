@@ -2744,7 +2744,7 @@ void MenuFunctions::RunSetup()
             this->changeMenu(&miniKbMenu, true);
             String password = this->miniKeyboard(&miniKbMenu, true);
             if (password != "") {
-              Serial.println("Using SSID: " + (String)access_points->get(i).essid + " Password: <redacted>");
+              Serial.println("Using SSID: " + join_ssid + " Password: <redacted>");
               wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
               wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW);
               wifi_scan_obj.joinWiFi(join_ssid, password, true, target_ap.channel, target_ap.bssid);
