@@ -4,6 +4,7 @@
 #ifdef HAS_SCREEN
 
 extern const unsigned char menu_icons[][66];
+extern LinkedList<Station>* stations;
 
 #ifdef HAS_MINI_SCREEN
 void MenuFunctions::drawMiniMenuButton(int b, int x, bool selected) {
@@ -1541,6 +1542,88 @@ bool MenuFunctions::isKeyPressed(char c)
   }
 #endif
 
+void MenuFunctions::showStationInfo(uint16_t station_index) {
+  if ((stations == nullptr) ||
+      (station_index >= static_cast<uint16_t>(stations->size()))) {
+    Serial.println(F("Station unavailable"));
+    this->changeMenu(&wifiStationInfoMenu, true);
+    return;
+  }
+
+  const Station station = stations->get(station_index);
+  const String mac = macToString(station);
+
+  Serial.println(String(F("Station MAC: ")) + mac);
+  Serial.println(String(F("Station packets: ")) + station.packets);
+  Serial.println(String(F("Station selected: ")) +
+                 (station.selected ? F("yes") : F("no")));
+
+  this->changeMenu(&stationInfoMenu, true);
+  display_obj.tft.setFreeFont(NULL);
+  display_obj.tft.setTextWrap(false, false);
+
+  const bool roomy_layout = (TFT_WIDTH >= 280) && (TFT_HEIGHT >= 240);
+  const int16_t y = roomy_layout
+    ? 92
+    : (STATUS_BAR_WIDTH * 2) + CHAR_WIDTH + KEY_H + 8;
+
+  if (!roomy_layout) {
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+    display_obj.tft.setCursor(6, y);
+    display_obj.tft.println(F("MAC"));
+    display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    display_obj.tft.setCursor(6, y + 12);
+
+    int16_t details_y = y + 32;
+    if (TFT_WIDTH < 112) {
+      display_obj.tft.println(mac.substring(0, 8));
+      display_obj.tft.setCursor(6, y + 24);
+      display_obj.tft.println(mac.substring(9));
+      details_y = y + 44;
+    }
+    else {
+      display_obj.tft.println(mac);
+    }
+
+    display_obj.tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+    display_obj.tft.setCursor(6, details_y);
+    display_obj.tft.println(String(F("Packets: ")) + station.packets);
+    display_obj.tft.setCursor(6, details_y + 12);
+    display_obj.tft.println(String(F("Selected: ")) +
+                            (station.selected ? F("yes") : F("no")));
+    return;
+  }
+
+  display_obj.tft.setTextSize(1);
+  display_obj.tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+  display_obj.tft.setCursor(12, y);
+  display_obj.tft.println(F("MAC"));
+  display_obj.tft.setTextSize(2);
+  display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+  display_obj.tft.setCursor(12, y + 14);
+  display_obj.tft.println(mac);
+
+  display_obj.tft.setTextSize(1);
+  display_obj.tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+  display_obj.tft.setCursor(12, y + 50);
+  display_obj.tft.println(F("Packets"));
+  display_obj.tft.setTextSize(2);
+  display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  display_obj.tft.setCursor(12, y + 64);
+  display_obj.tft.println(station.packets);
+
+  display_obj.tft.setTextSize(1);
+  display_obj.tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+  display_obj.tft.setCursor(12, y + 100);
+  display_obj.tft.println(F("Selected"));
+  display_obj.tft.setTextSize(2);
+  display_obj.tft.setTextColor(
+    station.selected ? TFT_GREEN : TFT_ORANGE, TFT_BLACK);
+  display_obj.tft.setCursor(12, y + 114);
+  display_obj.tft.println(station.selected ? F("yes") : F("no"));
+}
+
 // Function to build the menus
 void MenuFunctions::RunSetup()
 {
@@ -1591,6 +1674,8 @@ void MenuFunctions::RunSetup()
   wifiGeneralMenu.list = new LinkedList<MenuNode>();
   wifiAPMenu.list = new LinkedList<MenuNode>();
   wifiIPMenu.list = new LinkedList<MenuNode>();
+  wifiStationInfoMenu.list = new LinkedList<MenuNode>();
+  stationInfoMenu.list = new LinkedList<MenuNode>();
   apInfoMenu.list = new LinkedList<MenuNode>();
   setMacMenu.list = new LinkedList<MenuNode>();
   genAPMacMenu.list = new LinkedList<MenuNode>();
@@ -1666,6 +1751,8 @@ void MenuFunctions::RunSetup()
   clearAPsMenu.name = text_table1[29];
   wifiAPMenu.name = "Select";
   wifiIPMenu.name = "Active IPs";
+  wifiStationInfoMenu.name = "Select Station";
+  stationInfoMenu.name = "Station Info";
   apInfoMenu.name = "AP Info";
   setMacMenu.name = "Set MACs";
   genAPMacMenu.name = "Generate AP MAC";
@@ -2356,6 +2443,46 @@ void MenuFunctions::RunSetup()
     apInfoMenu.parentMenu = &wifiAPMenu;
     this->addNodes(&apInfoMenu, text09, TFTLIGHTGREY, 0, [this]() {
       this->changeMenu(apInfoMenu.parentMenu, true);
+    });
+
+    this->addNodes(&wifiGeneralMenu, "View Station Info", TFTCYAN, KEYBOARD_ICO, [this]() {
+      wifiStationInfoMenu.parentMenu = &wifiGeneralMenu;
+      wifiStationInfoMenu.list->clear();
+      this->addNodes(&wifiStationInfoMenu, text09, TFTLIGHTGREY, 0, [this]() {
+        this->changeMenu(wifiStationInfoMenu.parentMenu, true);
+      });
+
+      if ((stations == nullptr) || (stations->size() == 0)) {
+        this->addNodes(
+          &wifiStationInfoMenu,
+          "No stations in memory",
+          TFTRED,
+          255,
+          [this]() {
+            this->changeMenu(wifiStationInfoMenu.parentMenu, true);
+          });
+        this->changeMenu(&wifiStationInfoMenu, true);
+        return;
+      }
+
+      for (int index = 0; index < stations->size(); ++index) {
+        const String label = macToString(stations->get(index));
+        this->addNodes(
+          &wifiStationInfoMenu,
+          label.c_str(),
+          TFTCYAN,
+          255,
+          [this, index]() {
+            stationInfoMenu.parentMenu = &wifiStationInfoMenu;
+            this->showStationInfo(index);
+          });
+      }
+      this->changeMenu(&wifiStationInfoMenu, true);
+    });
+
+    stationInfoMenu.parentMenu = &wifiStationInfoMenu;
+    this->addNodes(&stationInfoMenu, text09, TFTLIGHTGREY, 0, [this]() {
+      this->changeMenu(stationInfoMenu.parentMenu, true);
     });
 
     wifiAPMenu.parentMenu = &wifiGeneralMenu;

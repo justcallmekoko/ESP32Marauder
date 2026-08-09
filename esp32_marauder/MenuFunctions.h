@@ -170,6 +170,8 @@ class MenuFunctions
     Menu wifiGeneralMenu;
     Menu wifiAPMenu;
     Menu wifiIPMenu;
+    Menu wifiStationInfoMenu;
+    Menu stationInfoMenu;
     Menu ssidsMenu;
     //#ifdef HAS_BT
     //  Menu airtagMenu;
@@ -211,6 +213,7 @@ class MenuFunctions
     void setupSDFileList(bool update = false);
     void buildSDFileMenu(bool update = false);
     void displayMenuButtons();
+    void showStationInfo(uint16_t station_index);
     uint16_t getColor(uint16_t color);
     void drawAvgLine(int16_t value);
     void drawMaxLine(int16_t value, uint16_t color);
