@@ -1850,7 +1850,11 @@ void MenuFunctions::RunSetup()
     this->addNodes(&wifiSnifferMenu, text_table1[46], TFTVIOLET, EAPOL, [this]() {
       display_obj.clearScreen();
       this->drawStatusBar();
-      wifi_scan_obj.StartScan(WIFI_SCAN_EAPOL, TFT_VIOLET);
+      const uint8_t scan_mode =
+        settings_obj.loadSetting<bool>(text_table4[5])
+          ? WIFI_SCAN_ACTIVE_EAPOL
+          : WIFI_SCAN_EAPOL;
+      wifi_scan_obj.StartScan(scan_mode, TFT_VIOLET);
     });
     this->addNodes(&wifiSnifferMenu, text_table1[45], TFTBLUE, PACKET_MONITOR, [this]() {
       wifi_scan_obj.StartScan(WIFI_PACKET_MONITOR, TFT_BLUE);
@@ -1859,7 +1863,11 @@ void MenuFunctions::RunSetup()
     this->addNodes(&wifiSnifferMenu, text_table1[46], TFTVIOLET, EAPOL, [this]() {
       display_obj.clearScreen();
       this->drawStatusBar();
-      wifi_scan_obj.StartScan(WIFI_SCAN_EAPOL, TFT_VIOLET);
+      const uint8_t scan_mode =
+        settings_obj.loadSetting<bool>(text_table4[5])
+          ? WIFI_SCAN_ACTIVE_EAPOL
+          : WIFI_SCAN_EAPOL;
+      wifi_scan_obj.StartScan(scan_mode, TFT_VIOLET);
     });
     this->addNodes(&wifiSnifferMenu, text_table1[45], TFTBLUE, PACKET_MONITOR, [this]() {
       display_obj.clearScreen();
