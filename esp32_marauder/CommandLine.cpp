@@ -491,11 +491,8 @@ void CommandLine::runCommand(String input) {
     // Search for channel set arg
     int ch_set = this->argSearch(&cmd_args, "-s");
 
-    if (ch_set != -1) {
-      wifi_scan_obj.set_channel = cmd_args.get(ch_set + 1).toInt();
-      wifi_scan_obj.changeChannel();
-      Serial.println(wifi_scan_obj.set_channel);
-    }
+    if (ch_set != -1)
+      wifi_scan_obj.changeChannel(cmd_args.get(ch_set + 1).toInt());
     Serial.println(wifi_scan_obj.set_channel);
   }
   // Clear APs
@@ -790,8 +787,8 @@ void CommandLine::runCommand(String input) {
       }
       
       if (ch_sw != -1) {
-        wifi_scan_obj.set_channel = cmd_args.get(ch_sw + 1).toInt();
-        wifi_scan_obj.changeChannel();
+        if (!wifi_scan_obj.changeChannel(cmd_args.get(ch_sw + 1).toInt()))
+          return;
         Serial.println("Set channel: " + (String)wifi_scan_obj.set_channel);
         
       }

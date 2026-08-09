@@ -169,6 +169,8 @@ class MenuFunctions
       Menu wardrivingMenu;
     #endif*/
     Menu wifiGeneralMenu;
+    Menu wifiChannelMenu;
+    Menu wifiChannelListMenu;
     Menu wifiAPMenu;
     Menu wifiIPMenu;
     Menu wifiProfilesMenu;
@@ -222,16 +224,14 @@ class MenuFunctions
     float calculateGraphScale(int16_t value);
     float calculateGraphScale(uint8_t value);
     float graphScaleCheck(const int16_t array[TFT_WIDTH]);
-    #ifndef HAS_DUAL_BAND
-      float graphScaleCheckSmall(const uint8_t array[MAX_CHANNEL]);
-    #else
-      float graphScaleCheckSmall(const uint8_t array[DUAL_BAND_CHANNELS]);
-    #endif
+    float graphScaleCheckSmall(const uint8_t array[CHAN_PER_PAGE]);
     void drawGraph(int16_t *values);
-    void drawGraphSmall(uint8_t *values);
+    void drawGraphSmall(const uint8_t *values);
     void renderGraphUI(uint8_t scan_mode = 0);
     String promptJoinSSID(const AccessPoint& access_point);
     void buildWiFiProfilesMenu(bool forget_mode);
+    void buildWiFiChannelMenu();
+    void buildWiFiChannelListMenu(bool five_ghz);
     void buildForgetWiFiConfirmMenu(uint32_t profile_id, Menu* parent_menu);
     void buildResetWiFiConfirmMenu();
     void showWiFiProfileStatus(const String& title, const String& message, bool success = false);

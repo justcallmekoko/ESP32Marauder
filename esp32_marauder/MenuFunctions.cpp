@@ -142,6 +142,140 @@ void MenuFunctions::showWiFiProfileStatus(
   this->changeMenu(&wifiProfileStatusMenu, true);
 }
 
+void MenuFunctions::buildWiFiChannelMenu() {
+  wifiChannelMenu.list->clear();
+  wifiChannelMenu.parentMenu = &wifiGeneralMenu;
+
+  this->addNodes(&wifiChannelMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(wifiChannelMenu.parentMenu, true);
+  });
+
+  uint8_t current_channel = wifi_scan_obj.set_channel;
+  wifi_second_chan_t secondary_channel = WIFI_SECOND_CHAN_NONE;
+  if (esp_wifi_get_channel(&current_channel, &secondary_channel) != ESP_OK)
+    current_channel = wifi_scan_obj.set_channel;
+
+  const bool channel_hop_enabled =
+    settings_obj.loadSetting<bool>("ChanHop");
+  this->addNodes(
+    &wifiChannelMenu,
+    "Unset Channel",
+    channel_hop_enabled ? TFTGREEN : TFTCYAN,
+    PACKET_MONITOR,
+    [this]() {
+      const bool was_enabled = settings_obj.loadSetting<bool>("ChanHop");
+      if (!was_enabled && !settings_obj.saveSetting<bool>("ChanHop", true)) {
+        this->showWiFiProfileStatus(
+          "Channel Error", "Could not enable channel hopping");
+        return;
+      }
+
+      wifi_scan_obj.channel_hop = true;
+      this->showWiFiProfileStatus(
+        "Channel Unset", "Channel hopping enabled.", true);
+    });
+
+  this->addNodes(
+    &wifiChannelMenu,
+    "2.4 GHz",
+    !channel_hop_enabled && (current_channel <= 14) ? TFTGREEN : TFTCYAN,
+    PACKET_MONITOR,
+    [this]() {
+      this->buildWiFiChannelListMenu(false);
+      this->changeMenu(&wifiChannelListMenu, true);
+    });
+
+  #ifdef HAS_DUAL_BAND
+    this->addNodes(
+      &wifiChannelMenu,
+      "5 GHz",
+      !channel_hop_enabled && (current_channel > 14) ? TFTGREEN : TFTCYAN,
+      PACKET_MONITOR,
+      [this]() {
+        this->buildWiFiChannelListMenu(true);
+        this->changeMenu(&wifiChannelListMenu, true);
+      });
+  #endif
+}
+
+void MenuFunctions::buildWiFiChannelListMenu(bool five_ghz) {
+  wifiChannelListMenu.list->clear();
+  wifiChannelListMenu.parentMenu = &wifiChannelMenu;
+  wifiChannelListMenu.name = five_ghz ? "5 GHz Channels" : "2.4 GHz Channels";
+
+  this->addNodes(&wifiChannelListMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(wifiChannelListMenu.parentMenu, true);
+  });
+
+  uint8_t current_channel = wifi_scan_obj.set_channel;
+  wifi_second_chan_t secondary_channel = WIFI_SECOND_CHAN_NONE;
+  if (esp_wifi_get_channel(&current_channel, &secondary_channel) != ESP_OK)
+    current_channel = wifi_scan_obj.set_channel;
+
+  const bool channel_hop_enabled =
+    settings_obj.loadSetting<bool>("ChanHop");
+
+  auto add_channel = [this, current_channel, channel_hop_enabled, five_ghz](uint8_t channel) {
+    #ifdef CONFIG_IDF_TARGET_ESP32C5
+      // The C5 driver rejects these entries even though they are present in
+      // the generic dual-band hopping table.
+      if ((channel == 14) || (channel == 144) || (channel > 165))
+        return;
+    #endif
+
+    if (five_ghz != (channel > 14))
+      return;
+
+    String label = String(F("Channel ")) + String(channel);
+    this->addNodes(
+      &wifiChannelListMenu,
+      label.c_str(),
+      !channel_hop_enabled && (channel == current_channel)
+        ? TFTGREEN
+        : TFTCYAN,
+      PACKET_MONITOR,
+      [this, channel]() {
+        uint8_t previous_channel = wifi_scan_obj.set_channel;
+        wifi_second_chan_t previous_secondary = WIFI_SECOND_CHAN_NONE;
+        if (esp_wifi_get_channel(&previous_channel, &previous_secondary) != ESP_OK)
+          previous_channel = wifi_scan_obj.set_channel;
+
+        if (!wifi_scan_obj.changeChannel(channel)) {
+          this->showWiFiProfileStatus(
+            "Channel Error", "Could not set the selected channel");
+          return;
+        }
+
+        const bool channel_hop_enabled =
+          settings_obj.loadSetting<bool>("ChanHop");
+        if (channel_hop_enabled &&
+            !settings_obj.saveSetting<bool>("ChanHop", false)) {
+          wifi_scan_obj.changeChannel(previous_channel, false);
+          this->showWiFiProfileStatus(
+            "Channel Error", "Could not disable channel hopping");
+          return;
+        }
+
+        wifi_scan_obj.channel_hop = false;
+        this->showWiFiProfileStatus(
+          "Channel Fixed",
+          String(F("Channel ")) + String(channel) +
+            F(" fixed. Channel hopping disabled."),
+          true);
+      });
+  };
+
+  #ifdef HAS_DUAL_BAND
+    for (int i = 0; i < DUAL_BAND_CHANNELS; i++)
+      add_channel(wifi_scan_obj.dual_band_channels[i]);
+  #else
+    if (!five_ghz) {
+      for (int channel = 1; channel <= MAX_CHANNEL; channel++)
+        add_channel(static_cast<uint8_t>(channel));
+    }
+  #endif
+}
+
 void MenuFunctions::buildForgetWiFiConfirmMenu(
   uint32_t profile_id,
   Menu* parent_menu) {
@@ -453,9 +587,10 @@ void MenuFunctions::main(uint32_t currentTime)
 
       if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
         #ifdef HAS_SCREEN
-          this->setGraphScale(this->graphScaleCheckSmall(wifi_scan_obj.channel_activity));
+          const uint8_t *page_values = wifi_scan_obj.channel_activity + wifi_scan_obj.activityPageStart();
+          this->setGraphScale(this->graphScaleCheckSmall(page_values));
 
-          this->drawGraphSmall(wifi_scan_obj.channel_activity);
+          this->drawGraphSmall(page_values);
 
         #endif
       }
@@ -847,30 +982,11 @@ void MenuFunctions::main(uint32_t currentTime)
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_PROBE) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_DEAUTH) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN)) {
-            #ifndef HAS_DUAL_BAND
-              if (wifi_scan_obj.set_channel < 14)
-                wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
-              else
-                wifi_scan_obj.changeChannel(1);
-            #else
-              if (wifi_scan_obj.dual_band_channel_index < DUAL_BAND_CHANNELS - 1)
-                wifi_scan_obj.dual_band_channel_index++;
-              else
-                wifi_scan_obj.dual_band_channel_index = 0;
-
-              wifi_scan_obj.changeChannel(wifi_scan_obj.dual_band_channels[wifi_scan_obj.dual_band_channel_index]);
-            #endif
+            wifi_scan_obj.stepChannel(1);
           }
           else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
-            #ifndef HAS_DUAL_BAND
-              if (wifi_scan_obj.activity_page < MAX_CHANNEL / CHAN_PER_PAGE) {
-                wifi_scan_obj.activity_page++;
-              }
-            #else
-              if (wifi_scan_obj.activity_page < DUAL_BAND_CHANNELS / CHAN_PER_PAGE) {
-                wifi_scan_obj.activity_page++;
-              }
-            #endif
+            if (wifi_scan_obj.activity_page < wifi_scan_obj.activityPageCount())
+              wifi_scan_obj.activity_page++;
             wifi_scan_obj.drawChannelLine();
           }
         }
@@ -916,30 +1032,11 @@ void MenuFunctions::main(uint32_t currentTime)
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_PROBE) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_DEAUTH) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN)) {
-            #ifndef HAS_DUAL_BAND
-              if (wifi_scan_obj.set_channel > 1)
-                wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
-              else
-                wifi_scan_obj.changeChannel(14);
-            #else
-              if (wifi_scan_obj.dual_band_channel_index > 0)
-                wifi_scan_obj.dual_band_channel_index--;
-              else
-                wifi_scan_obj.dual_band_channel_index = DUAL_BAND_CHANNELS - 1;
-
-              wifi_scan_obj.changeChannel(wifi_scan_obj.dual_band_channels[wifi_scan_obj.dual_band_channel_index]);
-            #endif
+            wifi_scan_obj.stepChannel(-1);
           }
           else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
-            #ifndef HAS_DUAL_BAND
-              if (wifi_scan_obj.activity_page > 1) {
-                wifi_scan_obj.activity_page--;
-              }
-            #else
-              if (wifi_scan_obj.activity_page > 0) {
-                wifi_scan_obj.activity_page--;
-              }
-            #endif
+            if (wifi_scan_obj.activity_page > 1)
+              wifi_scan_obj.activity_page--;
             wifi_scan_obj.drawChannelLine();
           }
         }
@@ -1004,30 +1101,11 @@ void MenuFunctions::main(uint32_t currentTime)
                       (wifi_scan_obj.currentScanMode == WIFI_SCAN_PROBE) ||
                       (wifi_scan_obj.currentScanMode == WIFI_SCAN_DEAUTH) ||
                       (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN)) {
-                #ifndef HAS_DUAL_BAND
-                  if (wifi_scan_obj.set_channel < 14)
-                    wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
-                  else
-                    wifi_scan_obj.changeChannel(1);
-                #else
-                  if (wifi_scan_obj.dual_band_channel_index < DUAL_BAND_CHANNELS - 1)
-                    wifi_scan_obj.dual_band_channel_index++;
-                  else
-                    wifi_scan_obj.dual_band_channel_index = 0;
-
-                  wifi_scan_obj.changeChannel(wifi_scan_obj.dual_band_channels[wifi_scan_obj.dual_band_channel_index]);
-                #endif
+            wifi_scan_obj.stepChannel(1);
               }
               else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
-                #ifndef HAS_DUAL_BAND
-                  if (wifi_scan_obj.activity_page < MAX_CHANNEL / CHAN_PER_PAGE) {
-                    wifi_scan_obj.activity_page++;
-                  }
-                #else
-                  if (wifi_scan_obj.activity_page < DUAL_BAND_CHANNELS / CHAN_PER_PAGE) {
-                    wifi_scan_obj.activity_page++;
-                  }
-                #endif
+                if (wifi_scan_obj.activity_page < wifi_scan_obj.activityPageCount())
+                  wifi_scan_obj.activity_page++;
                 wifi_scan_obj.drawChannelLine();
               }
             }
@@ -1081,30 +1159,11 @@ void MenuFunctions::main(uint32_t currentTime)
                 (wifi_scan_obj.currentScanMode == WIFI_SCAN_PROBE) ||
                 (wifi_scan_obj.currentScanMode == WIFI_SCAN_DEAUTH) ||
                 (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN)) {
-          #ifndef HAS_DUAL_BAND
-            if (wifi_scan_obj.set_channel > 1)
-              wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
-            else
-              wifi_scan_obj.changeChannel(14);
-          #else
-            if (wifi_scan_obj.dual_band_channel_index > 0)
-              wifi_scan_obj.dual_band_channel_index--;
-            else
-              wifi_scan_obj.dual_band_channel_index = DUAL_BAND_CHANNELS - 1;
-
-            wifi_scan_obj.changeChannel(wifi_scan_obj.dual_band_channels[wifi_scan_obj.dual_band_channel_index]);
-          #endif
+            wifi_scan_obj.stepChannel(-1);
         }
         else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
-          #ifndef HAS_DUAL_BAND
-            if (wifi_scan_obj.activity_page > 1) {
-              wifi_scan_obj.activity_page--;
-            }
-          #else
-            if (wifi_scan_obj.activity_page > 0) {
-              wifi_scan_obj.activity_page--;
-            }
-          #endif
+          if (wifi_scan_obj.activity_page > 1)
+            wifi_scan_obj.activity_page--;
           wifi_scan_obj.drawChannelLine();
         }
       }
@@ -1117,19 +1176,7 @@ void MenuFunctions::main(uint32_t currentTime)
       if (this->isKeyPressed('/')) {
       #endif
         if (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
-          #ifndef HAS_DUAL_BAND
-            if (wifi_scan_obj.set_channel < 14)
-              wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
-            else
-              wifi_scan_obj.changeChannel(1);
-          #else
-            if (wifi_scan_obj.dual_band_channel_index < DUAL_BAND_CHANNELS - 1)
-              wifi_scan_obj.dual_band_channel_index++;
-            else
-              wifi_scan_obj.dual_band_channel_index = 0;
-
-            wifi_scan_obj.changeChannel(wifi_scan_obj.dual_band_channels[wifi_scan_obj.dual_band_channel_index]);
-          #endif
+            wifi_scan_obj.stepChannel(1);
         }
       }
       #endif
@@ -1141,19 +1188,7 @@ void MenuFunctions::main(uint32_t currentTime)
       if (this->isKeyPressed(',')) {
       #endif
         if (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
-          #ifndef HAS_DUAL_BAND
-            if (wifi_scan_obj.set_channel > 1)
-              wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
-            else
-              wifi_scan_obj.changeChannel(14);
-          #else
-            if (wifi_scan_obj.dual_band_channel_index > 0)
-              wifi_scan_obj.dual_band_channel_index--;
-            else
-              wifi_scan_obj.dual_band_channel_index = DUAL_BAND_CHANNELS - 1;
-
-            wifi_scan_obj.changeChannel(wifi_scan_obj.dual_band_channels[wifi_scan_obj.dual_band_channel_index]);
-          #endif
+            wifi_scan_obj.stepChannel(-1);
         }
       }
       #endif
@@ -1858,6 +1893,8 @@ void MenuFunctions::RunSetup()
     wardrivingMenu.list = new LinkedList<MenuNode>();
   #endif*/
   wifiGeneralMenu.list = new LinkedList<MenuNode>();
+  wifiChannelMenu.list = new LinkedList<MenuNode>();
+  wifiChannelListMenu.list = new LinkedList<MenuNode>();
   wifiAPMenu.list = new LinkedList<MenuNode>();
   wifiIPMenu.list = new LinkedList<MenuNode>();
   wifiProfilesMenu.list = new LinkedList<MenuNode>();
@@ -1923,6 +1960,8 @@ void MenuFunctions::RunSetup()
   wifiScannerMenu.name = "Scanners";
   wifiAttackMenu.name = text_table1[21];
   wifiGeneralMenu.name = text_table1[22];
+  wifiChannelMenu.name = "Set Channel";
+  wifiChannelListMenu.name = "Channels";
   saveFileMenu.name = "Save/Load Files";
   saveSSIDsMenu.name = "Save SSIDs";
   loadSSIDsMenu.name = "Load SSIDs";
@@ -2426,6 +2465,11 @@ void MenuFunctions::RunSetup()
   this->addNodes(&wifiGeneralMenu, text_table1[27], TFTSKYBLUE, GENERATE, [this]() {
     this->changeMenu(&generateSSIDsMenu, true);
     wifi_scan_obj.RunGenerateSSIDs();
+  });
+
+  this->addNodes(&wifiGeneralMenu, "Set Channel", TFTCYAN, PACKET_MONITOR, [this]() {
+    this->buildWiFiChannelMenu();
+    this->changeMenu(&wifiChannelMenu, true);
   });
 
 	//Add Select probe ssid
@@ -4374,22 +4418,16 @@ void MenuFunctions::drawMaxLine(uint8_t value, uint16_t color) {
   display_obj.tft.println((String)value);
 }
 
-void MenuFunctions::drawGraphSmall(uint8_t *values) {
-  uint8_t maxValue = 0;
-  //(i + (CHAN_PER_PAGE * (this->activity_page - 1)))
-
+void MenuFunctions::drawGraphSmall(const uint8_t *values) {
   int bar_width = SCREEN_WIDTH / (CHAN_PER_PAGE * 2);
   //display_obj.tft.fillRect(0, TFT_HEIGHT / 2 + 1, SCREEN_WIDTH, (TFT_HEIGHT / 2) + 1, TFT_BLACK);
 
   #ifndef HAS_DUAL_BAND
     for (int i = 1; i < CHAN_PER_PAGE + 1; i++) {
-      int targ_val = i + (CHAN_PER_PAGE * (wifi_scan_obj.activity_page - 1)) - 1;
+      int targ_val = i - 1;
       int x_mult = (i * 2) - 1;
       int x_coord = (SCREEN_WIDTH / (CHAN_PER_PAGE * 2)) * (x_mult - 1);
 
-      if (values[targ_val] > maxValue) {
-        maxValue = values[targ_val];
-      }
 
       if (values[targ_val] * this->_graph_scale <= GRAPH_VERT_LIM) {
         display_obj.tft.fillRect(x_coord, SCREEN_HEIGHT / 2 + 1, bar_width, SCREEN_HEIGHT / 2 + 1, TFT_BLACK);
@@ -4400,13 +4438,10 @@ void MenuFunctions::drawGraphSmall(uint8_t *values) {
     }
   #else
     for (int i = 1; i < CHAN_PER_PAGE + 1; i++) {
-      int targ_val = i + (CHAN_PER_PAGE * (wifi_scan_obj.activity_page - 1)) - 1;
+      int targ_val = i - 1;
       int x_mult = (i * 2) - 1;
       int x_coord = (SCREEN_WIDTH / (CHAN_PER_PAGE * 2)) * (x_mult - 1);
 
-      if (values[targ_val] > maxValue) {
-        maxValue = values[targ_val];
-      }
 
       if (values[targ_val] * this->_graph_scale <= GRAPH_VERT_LIM) {
         display_obj.tft.fillRect(x_coord, SCREEN_HEIGHT / 2 + 1, bar_width + 3, SCREEN_HEIGHT / 2 + 1, TFT_BLACK);
@@ -4416,8 +4451,6 @@ void MenuFunctions::drawGraphSmall(uint8_t *values) {
       display_obj.tft.drawLine(x_coord - 2, SCREEN_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2), x_coord - 2, SCREEN_HEIGHT, TFT_WHITE);
     }
   #endif
-
-  this->drawMaxLine(maxValue, TFT_GREEN); // Draw max
 }
 
 void MenuFunctions::drawGraph(int16_t *values) {
@@ -4518,6 +4551,19 @@ void MenuFunctions::changeMenu(Menu* menu, bool simple_change) {
 	  backlightOn();
     #endif
   }
+  // Boolean settings can also be changed through the serial CLI. Refresh the
+  // menu snapshots before drawing so their colors always reflect the value
+  // that scans actually use.
+  if (menu == &settingsMenu) {
+    for (int i = 1; i < settingsMenu.list->size(); i++) {
+      MenuNode node = settingsMenu.list->get(i);
+      if ((node.icon == SETTINGS) && (node.color == TFTLIGHTGREY)) {
+        node.selected = settings_obj.loadSetting<bool>(node.name.c_str());
+        settingsMenu.list->set(i, node);
+      }
+    }
+  }
+
   current_menu = menu;
 
   current_menu->selected = 0;
