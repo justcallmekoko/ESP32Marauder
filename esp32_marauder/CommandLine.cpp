@@ -1379,7 +1379,8 @@ void CommandLine::runCommand(String input) {
     // List Probes
     else if (pr_sw != -1) {
       for (int i = 0; i < probe_req_ssids->size(); i++) {
-        Serial.println("[" + (String)i + "] " + probe_req_ssids->get(i).essid);
+        const ProbeReqSsid probe = probe_req_ssids->get(i);
+        Serial.println("[" + (String)i + "][REQ:" + (String)probe.requests + "] " + probe.essid);
       }
     }
     // List SSIDs

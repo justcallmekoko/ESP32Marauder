@@ -8144,12 +8144,12 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
           display_string.concat(" -> ");
           for (int i = 0; i < snifferPacket->payload[25]; i++)
           {
-            Serial.print((char)snifferPacket->payload[26 + i]);
             probe_req_essid.concat((char)snifferPacket->payload[26 + i]);
           }
 
           probe_req_essid = wifi_scan_obj.checkEmptyProbe(probe_req_essid);
 
+          Serial.print(probe_req_essid);
           display_string.concat(probe_req_essid);
 
           if (probe_req_essid.length() > 0) {
