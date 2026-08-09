@@ -1,5 +1,58 @@
 #include "settings.h"
 
+namespace {
+bool isSensitiveSetting(const char* name) {
+  return name != nullptr &&
+         (strcmp(name, "ClientPW") == 0 ||
+          strcmp(name, "wt") == 0 ||
+          strcmp(name, WDG_KEY_NAME) == 0);
+}
+
+constexpr const char* SETTINGS_PATH = "/settings.json";
+constexpr const char* SETTINGS_TEMP_PATH = "/settings.wifi.tmp";
+constexpr const char* SETTINGS_BACKUP_PATH = "/settings.wifi.bak";
+
+bool validSettingsFile(const char* path) {
+  File file = SPIFFS.open(path, FILE_READ);
+  if (!file || file.isDirectory()) {
+    if (file)
+      file.close();
+    return false;
+  }
+
+  DynamicJsonDocument json(JSON_SETTING_SIZE);
+  const DeserializationError error = deserializeJson(json, file);
+  file.close();
+  return !error && json["Settings"].is<JsonArray>();
+}
+
+bool recoverSettingsFile() {
+  if (validSettingsFile(SETTINGS_PATH)) {
+    if (SPIFFS.exists(SETTINGS_TEMP_PATH))
+      SPIFFS.remove(SETTINGS_TEMP_PATH);
+    if (SPIFFS.exists(SETTINGS_BACKUP_PATH))
+      SPIFFS.remove(SETTINGS_BACKUP_PATH);
+    return true;
+  }
+
+  const char* candidates[] = {SETTINGS_BACKUP_PATH, SETTINGS_TEMP_PATH};
+  for (const char* candidate : candidates) {
+    if (!SPIFFS.exists(candidate) || !validSettingsFile(candidate))
+      continue;
+    if (SPIFFS.exists(SETTINGS_PATH) && !SPIFFS.remove(SETTINGS_PATH))
+      return false;
+    if (!SPIFFS.rename(candidate, SETTINGS_PATH))
+      return false;
+    if (SPIFFS.exists(SETTINGS_TEMP_PATH))
+      SPIFFS.remove(SETTINGS_TEMP_PATH);
+    if (SPIFFS.exists(SETTINGS_BACKUP_PATH))
+      SPIFFS.remove(SETTINGS_BACKUP_PATH);
+    return true;
+  }
+  return false;
+}
+}
+
 // ---------------------------------------------------------------------------
 // _buildCache — called once after json_settings_string is loaded/updated.
 // Parses the JSON exactly once and fills every field of _cache.
@@ -50,12 +103,19 @@ bool Settings::begin() {
     return false;
   }
 
+  const bool settings_generation_exists =
+    SPIFFS.exists(SETTINGS_PATH) ||
+    SPIFFS.exists(SETTINGS_TEMP_PATH) ||
+    SPIFFS.exists(SETTINGS_BACKUP_PATH);
+  if (settings_generation_exists && !recoverSettingsFile())
+    return false;
+
   File settingsFile;
 
   // SPIFFS.remove("/settings.json"); // NEED TO REMOVE THIS LINE
 
-  if (SPIFFS.exists("/settings.json")) {
-    settingsFile = SPIFFS.open("/settings.json", FILE_READ);
+  if (SPIFFS.exists(SETTINGS_PATH)) {
+    settingsFile = SPIFFS.open(SETTINGS_PATH, FILE_READ);
 
     if (!settingsFile) {
       settingsFile.close();
@@ -329,6 +389,74 @@ template <> bool Settings::saveSetting<bool>(const char* key, String value) {
   return false;
 }
 
+bool Settings::saveWiFiCredentials(const String& ssid, const String& password) {
+  DynamicJsonDocument json(JSON_SETTING_SIZE);
+  if (deserializeJson(json, this->json_settings_string))
+    return false;
+
+  bool found_ssid = false;
+  bool found_password = false;
+  for (int i = 0; i < (int)json["Settings"].size(); ++i) {
+    const char* setting_name = json["Settings"][i]["name"] | "";
+    if (strcmp(setting_name, "ClientSSID") == 0) {
+      json["Settings"][i]["value"] = ssid;
+      found_ssid = true;
+    }
+    else if (strcmp(setting_name, "ClientPW") == 0) {
+      json["Settings"][i]["value"] = password;
+      found_password = true;
+    }
+  }
+
+  if (!found_ssid || !found_password)
+    return false;
+
+  String settings_string;
+  serializeJson(json, settings_string);
+  if (!settings_string.length())
+    return false;
+
+  if (SPIFFS.exists(SETTINGS_TEMP_PATH) && !SPIFFS.remove(SETTINGS_TEMP_PATH))
+    return false;
+
+  File settings_file = SPIFFS.open(SETTINGS_TEMP_PATH, FILE_WRITE);
+  if (!settings_file)
+    return false;
+  const size_t written = settings_file.write(
+    reinterpret_cast<const uint8_t*>(settings_string.c_str()),
+    settings_string.length());
+  settings_file.flush();
+  settings_file.close();
+  if (written != settings_string.length() || !validSettingsFile(SETTINGS_TEMP_PATH)) {
+    SPIFFS.remove(SETTINGS_TEMP_PATH);
+    return false;
+  }
+
+  if (SPIFFS.exists(SETTINGS_BACKUP_PATH) && !SPIFFS.remove(SETTINGS_BACKUP_PATH))
+    return false;
+  if (SPIFFS.exists(SETTINGS_PATH) && !SPIFFS.rename(SETTINGS_PATH, SETTINGS_BACKUP_PATH))
+    return false;
+  if (!SPIFFS.rename(SETTINGS_TEMP_PATH, SETTINGS_PATH)) {
+    if (SPIFFS.exists(SETTINGS_BACKUP_PATH))
+      SPIFFS.rename(SETTINGS_BACKUP_PATH, SETTINGS_PATH);
+    return false;
+  }
+  if (!validSettingsFile(SETTINGS_PATH)) {
+    SPIFFS.remove(SETTINGS_PATH);
+    if (SPIFFS.exists(SETTINGS_BACKUP_PATH))
+      SPIFFS.rename(SETTINGS_BACKUP_PATH, SETTINGS_PATH);
+    return false;
+  }
+  if (SPIFFS.exists(SETTINGS_BACKUP_PATH))
+    SPIFFS.remove(SETTINGS_BACKUP_PATH);
+
+  this->json_settings_string = settings_string;
+  _cache.ClientSSID = ssid;
+  _cache.ClientPW = password;
+  this->printJsonSettings(settings_string);
+  return true;
+}
+
 // ---------------------------------------------------------------------------
 // toggleSetting — reads current bool value from cache (fast), then delegates
 // to saveSetting which will update the cache again.
@@ -397,9 +525,13 @@ void Settings::printJsonSettings(String json_string) {
 
   Serial.println("Settings\n----------------------------------------------");
   for (int i = 0; i < (int)json["Settings"].size(); i++) {
-    Serial.println("Name: " + json["Settings"][i]["name"].as<String>());
+    const char* name = json["Settings"][i]["name"] | "";
+    Serial.println("Name: " + String(name));
     Serial.println("Type: " + json["Settings"][i]["type"].as<String>());
-    Serial.println("Value: " + json["Settings"][i]["value"].as<String>() + "\n");
+    if (isSensitiveSetting(name))
+      Serial.println(F("Value: <redacted>\n"));
+    else
+      Serial.println("Value: " + json["Settings"][i]["value"].as<String>() + "\n");
   }
 }
 

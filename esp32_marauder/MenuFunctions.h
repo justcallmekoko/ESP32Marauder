@@ -18,6 +18,7 @@
 #define BATTERY_ANALOG_ON 0
 
 #include "WiFiScan.h"
+#include "WiFiProfileStore.h"
 #include "BatteryInterface.h"
 #include "SDInterface.h"
 #include "settings.h"
@@ -168,8 +169,13 @@ class MenuFunctions
       Menu wardrivingMenu;
     #endif*/
     Menu wifiGeneralMenu;
+    Menu wifiChannelMenu;
+    Menu wifiChannelListMenu;
     Menu wifiAPMenu;
     Menu wifiIPMenu;
+    Menu wifiProfilesMenu;
+    Menu forgetWiFiConfirmMenu;
+    Menu wifiProfileStatusMenu;
     Menu ssidsMenu;
     //#ifdef HAS_BT
     //  Menu airtagMenu;
@@ -218,14 +224,17 @@ class MenuFunctions
     float calculateGraphScale(int16_t value);
     float calculateGraphScale(uint8_t value);
     float graphScaleCheck(const int16_t array[TFT_WIDTH]);
-    #ifndef HAS_DUAL_BAND
-      float graphScaleCheckSmall(const uint8_t array[MAX_CHANNEL]);
-    #else
-      float graphScaleCheckSmall(const uint8_t array[DUAL_BAND_CHANNELS]);
-    #endif
+    float graphScaleCheckSmall(const uint8_t array[CHAN_PER_PAGE]);
     void drawGraph(int16_t *values);
-    void drawGraphSmall(uint8_t *values);
+    void drawGraphSmall(const uint8_t *values);
     void renderGraphUI(uint8_t scan_mode = 0);
+    String promptJoinSSID(const AccessPoint& access_point);
+    void buildWiFiProfilesMenu(bool forget_mode);
+    void buildWiFiChannelMenu();
+    void buildWiFiChannelListMenu(bool five_ghz);
+    void buildForgetWiFiConfirmMenu(uint32_t profile_id, Menu* parent_menu);
+    void buildResetWiFiConfirmMenu();
+    void showWiFiProfileStatus(const String& title, const String& message, bool success = false);
     void addNodes(Menu* menu, const char* name, uint8_t color, int place, std::function<void()> callable, bool selected = false);
     void battery(bool initial = false);
     void battery2(bool initial = false);
@@ -238,7 +247,7 @@ class MenuFunctions
     #endif
     //#if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
     #ifdef HAS_MINI_KB
-      String miniKeyboard(Menu * targetMenu, bool do_pass = false);
+      String miniKeyboard(Menu * targetMenu, bool do_pass = false, bool add_to_ssid_list = true);
     #endif
     //#endif
 
