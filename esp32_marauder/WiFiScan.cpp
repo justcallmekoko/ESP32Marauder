@@ -2219,8 +2219,8 @@ bool WiFiScan::joinWiFi(
     if (!has_bssid)
       return true;
 
-    uint8_t current_bssid[6] = {0};
-    return (WiFi.BSSID(current_bssid) != nullptr) &&
+    const uint8_t* current_bssid = WiFi.BSSID();
+    return (current_bssid != nullptr) &&
            (memcmp(current_bssid, target_bssid, sizeof(target_bssid)) == 0);
   };
 

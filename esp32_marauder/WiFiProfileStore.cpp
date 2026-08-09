@@ -638,12 +638,13 @@ bool WiFiProfileStore::remember(
     return false;
   }
 
-  this->secret_profiles.add(WiFiProfileSecret{
-    id,
-    ssid,
-    profile_band,
-    profile_channel,
-    password});
+  WiFiProfileSecret new_secret;
+  new_secret.id = id;
+  new_secret.ssid = ssid;
+  new_secret.band = profile_band;
+  new_secret.channel = profile_channel;
+  new_secret.password = password;
+  this->secret_profiles.add(new_secret);
 
   if (!this->writeSecrets()) {
     this->refresh();
@@ -652,7 +653,12 @@ bool WiFiProfileStore::remember(
     return false;
   }
 
-  this->metadata_profiles.add(WiFiProfileInfo{id, ssid, profile_band, profile_channel});
+  WiFiProfileInfo new_metadata;
+  new_metadata.id = id;
+  new_metadata.ssid = ssid;
+  new_metadata.band = profile_band;
+  new_metadata.channel = profile_channel;
+  this->metadata_profiles.add(new_metadata);
   if (!this->writeMetadata()) {
     const int rollback_index = this->secretIndexById(id);
     if (rollback_index >= 0)
@@ -808,8 +814,16 @@ bool WiFiProfileStore::migrateLegacy(bool secrets_exist) {
     if (id == 0)
       return false;
 
-    this->secret_profiles.add(WiFiProfileSecret{id, legacy_ssid, 0, 0, legacy_password});
-    this->metadata_profiles.add(WiFiProfileInfo{id, legacy_ssid, 0, 0});
+    WiFiProfileSecret migrated_secret;
+    migrated_secret.id = id;
+    migrated_secret.ssid = legacy_ssid;
+    migrated_secret.password = legacy_password;
+    this->secret_profiles.add(migrated_secret);
+
+    WiFiProfileInfo migrated_metadata;
+    migrated_metadata.id = id;
+    migrated_metadata.ssid = legacy_ssid;
+    this->metadata_profiles.add(migrated_metadata);
   }
 
   if (!this->writeSecrets()) {
@@ -827,11 +841,12 @@ bool WiFiProfileStore::rebuildMetadataFromSecrets() {
   this->metadata_profiles.clear();
   for (int i = 0; i < this->secret_profiles.size(); ++i) {
     const WiFiProfileSecret secret = this->secret_profiles.get(i);
-    this->metadata_profiles.add(WiFiProfileInfo{
-      secret.id,
-      secret.ssid,
-      secret.band,
-      secret.channel});
+    WiFiProfileInfo metadata;
+    metadata.id = secret.id;
+    metadata.ssid = secret.ssid;
+    metadata.band = secret.band;
+    metadata.channel = secret.channel;
+    this->metadata_profiles.add(metadata);
   }
 
   if (!this->writeMetadata()) {
