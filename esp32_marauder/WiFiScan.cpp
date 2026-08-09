@@ -2,6 +2,10 @@
 #include "WiFiScan.h"
 #include "lang_var.h"
 
+#ifdef HAS_OUI_LABELS
+  #include "MarauderOuiSd.h"
+#endif
+
 #ifdef HAS_PSRAM
   struct mac_addr* mac_history = nullptr;
 #endif
@@ -4198,8 +4202,17 @@ void WiFiScan::RunAPInfo(uint16_t index, bool do_display) {
 
   AccessPoint access_point = access_points->get(index);
 
+  #ifdef HAS_OUI_LABELS
+    const marauder::StoredMacIdentity oui_identity =
+        marauder::identifyMacAddressFromSd(access_point.bssid);
+  #endif
+
   Serial.println("   ESSID: " + (String)access_point.essid);
   Serial.println("   BSSID: " + (String)macToString(access_point.bssid));
+  #ifdef HAS_OUI_LABELS
+    Serial.print(F("     OUI: "));
+    Serial.println(marauder::ouiIdentityLabel(oui_identity));
+  #endif
   Serial.println(" Channel: " + (String)access_point.channel);
   Serial.println("    RSSI: " + (String)access_point.rssi);
   Serial.println("  Frames: " + (String)access_point.packets);
@@ -4232,6 +4245,10 @@ void WiFiScan::RunAPInfo(uint16_t index, bool do_display) {
     if (do_display) {
       display_obj.tft.println("   ESSID: " + (String)access_point.essid);
       display_obj.tft.println("   BSSID: " + (String)macToString(access_point.bssid));
+      #ifdef HAS_OUI_LABELS
+        display_obj.tft.print(F("     OUI: "));
+        display_obj.tft.println(marauder::ouiIdentityLabel(oui_identity));
+      #endif
       display_obj.tft.println(" Channel: " + (String)access_point.channel);
       display_obj.tft.println("    RSSI: " + (String)access_point.rssi);
       display_obj.tft.println("  Frames: " + (String)access_point.packets);

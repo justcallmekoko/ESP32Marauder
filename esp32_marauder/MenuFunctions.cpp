@@ -1,9 +1,44 @@
 #include "MenuFunctions.h"
 #include "lang_var.h"
 
+#ifdef HAS_OUI_LABELS
+  #include "MarauderOuiSd.h"
+#endif
+
 #ifdef HAS_SCREEN
 
 extern const unsigned char menu_icons[][66];
+
+#ifdef HAS_OUI_LABELS
+namespace {
+
+String formatStationOuiMenuLabel(
+    const uint8_t mac[marauder::kOuiMacAddressSize],
+    marauder::SdOuiDatabase& database) {
+  const String mac_text = macToString(mac);
+  const marauder::StoredMacIdentity result = database.identify(mac);
+
+  if (result.identity.classification ==
+      marauder::OuiClassification::kVendor) {
+    String vendor = result.identity.vendor;
+    if (vendor.length() > 12) {
+      vendor.remove(12);
+    }
+    String compact_mac = mac_text;
+    compact_mac.replace(":", "");
+    return compact_mac + " " + vendor;
+  }
+  if (result.identity.classification ==
+      marauder::OuiClassification::kLocal) {
+    String compact_mac = mac_text;
+    compact_mac.replace(":", "");
+    return compact_mac + " local";
+  }
+  return mac_text;
+}
+
+}  // namespace
+#endif
 
 #ifdef HAS_MINI_SCREEN
 void MenuFunctions::drawMiniMenuButton(int b, int x, bool selected) {
@@ -2414,10 +2449,20 @@ void MenuFunctions::RunSetup()
           });
 
           // Add the AP's stations to the specific AP menu
+          #ifdef HAS_OUI_LABELS
+            marauder::SdOuiDatabase oui_database;
+            oui_database.open();
+          #endif
           for (int x = 0; x < access_points->get(i).stations->size(); x++) {
             int cur_ap_sta = access_points->get(i).stations->get(x);
 
-            this->addNodes(&wifiStationMenu, macToString(stations->get(cur_ap_sta)).c_str(), TFTCYAN, 255, [this, i, cur_ap_sta, x](){
+            #ifdef HAS_OUI_LABELS
+              String station_label = formatStationOuiMenuLabel(
+                  stations->get(cur_ap_sta).mac, oui_database);
+            #else
+              String station_label = macToString(stations->get(cur_ap_sta));
+            #endif
+            this->addNodes(&wifiStationMenu, station_label.c_str(), TFTCYAN, 255, [this, i, cur_ap_sta, x](){
             Station new_sta = stations->get(cur_ap_sta);
             new_sta.selected = !stations->get(cur_ap_sta).selected;
 
@@ -2993,9 +3038,19 @@ void MenuFunctions::RunSetup()
       });
 
       // Populate the menu with buttons
+      #ifdef HAS_OUI_LABELS
+        marauder::SdOuiDatabase oui_database;
+        oui_database.open();
+      #endif
       for (int i = 0; i < stations->size(); i++) {
         // This is the menu node
-        this->addNodes(&wifiAPMenu, macToString(stations->get(i).mac).c_str(), TFTMAGENTA, 255, [this, i](){
+        #ifdef HAS_OUI_LABELS
+          String station_label = formatStationOuiMenuLabel(
+              stations->get(i).mac, oui_database);
+        #else
+          String station_label = macToString(stations->get(i).mac);
+        #endif
+        this->addNodes(&wifiAPMenu, station_label.c_str(), TFTMAGENTA, 255, [this, i](){
           this->changeMenu(&genAPMacMenu, true);
           wifi_scan_obj.RunSetMac(stations->get(i).mac, false);
         });
