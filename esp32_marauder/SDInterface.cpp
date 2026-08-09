@@ -1,6 +1,10 @@
 #include "SDInterface.h"
 #include "lang_var.h"
 
+namespace {
+  const size_t SD_FILE_LIST_HEAP_GUARD = 24576;
+}
+
 #ifdef HAS_C5_SD
   SDInterface::SDInterface(SPIClass* spi, int cs)
     : _spi(spi), _cs(cs) {}
@@ -161,7 +165,7 @@ bool SDInterface::listDirToLinkedList(LinkedList<String>* file_names,
 
     // CustomLinkedList::add() cannot report allocation failure. Keep a
     // conservative reserve so a large SD root cannot exhaust the device heap.
-    if (ESP.getFreeHeap() <= 24576 || !file_names->add(file_name)) {
+    if (ESP.getFreeHeap() <= SD_FILE_LIST_HEAP_GUARD || !file_names->add(file_name)) {
       entry.close();
       dir.close();
       file_names->clear();

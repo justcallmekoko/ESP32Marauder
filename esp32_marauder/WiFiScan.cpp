@@ -107,16 +107,20 @@ namespace {
     return -1;
   }
 
-  bool parseSavedAirTagPayload(const String& value,
+  bool parseSavedAirTagPayload(const char* value,
+                               size_t value_length,
                                uint16_t expected_size,
                                std::vector<uint8_t>& payload) {
+    if (value == nullptr)
+      return false;
+
     if (expected_size == 0) {
       payload.clear();
-      return value.length() == 0;
+      return value[0] == '\0';
     }
 
     const size_t expected_text_length = (static_cast<size_t>(expected_size) * 5) - 1;
-    if (value.length() != expected_text_length)
+    if (value_length != expected_text_length)
       return false;
     if ((ESP.getFreeHeap() <= AP_LIST_HEAP_GUARD) ||
         (expected_size > (ESP.getFreeHeap() - AP_LIST_HEAP_GUARD)))
@@ -758,7 +762,7 @@ namespace {
       return false;
     }
 
-    DynamicJsonDocument document(10048);
+    DynamicJsonDocument document(MAX_SAVED_AIRTAG_FILE_SIZE);
     if (document.capacity() == 0) {
       file.close();
       error_message = F("not enough memory to verify AirTag list");
@@ -817,9 +821,14 @@ namespace {
       }
 
       const uint16_t stored_size = object["payload_size"].as<uint16_t>();
+      const char* stored_payload_text = object["payload"].as<const char*>();
+      const size_t stored_payload_length = stored_payload_text == nullptr
+        ? 0
+        : strlen(stored_payload_text);
       std::vector<uint8_t> stored_payload;
       if (!parseSavedAirTagPayload(
-            String(object["payload"].as<const char*>()),
+            stored_payload_text,
+            stored_payload_length,
             stored_size,
             stored_payload) ||
           (stored_size != expected.payloadSize) ||
@@ -5180,7 +5189,7 @@ bool WiFiScan::RunLoadATList(String path,
       return fail(F("file is too large"));
     }
 
-    DynamicJsonDocument doc(10048);
+    DynamicJsonDocument doc(MAX_SAVED_AIRTAG_FILE_SIZE);
     const DeserializationError error = deserializeJson(doc, file);
     const bool trailing_data_valid = !error &&
       hasOnlySavedListTrailingWhitespace(file);
@@ -5218,9 +5227,14 @@ bool WiFiScan::RunLoadATList(String path,
         return fail_loaded(F("invalid MAC"));
 
       const uint16_t payload_size = object["payload_size"].as<uint16_t>();
+      const char* payload_text = object["payload"].as<const char*>();
+      const size_t payload_text_length = payload_text == nullptr
+        ? 0
+        : strlen(payload_text);
       std::vector<uint8_t> payload;
       if (!parseSavedAirTagPayload(
-            String(object["payload"].as<const char*>()),
+            payload_text,
+            payload_text_length,
             payload_size,
             payload))
         return fail_loaded(F("invalid payload"));
