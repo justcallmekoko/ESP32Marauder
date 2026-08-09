@@ -5910,6 +5910,7 @@ void WiFiScan::onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
         lastClientIP = "N/A";
 
         if (wifi_scan_obj.currentScanMode == WIFI_SCAN_DISPLAY_AP_INFO) {
+          display_obj.tft.setTextSize(1);
           display_obj.tft.fillRect(0,
                                 ((SCREEN_HEIGHT / 3) * 2),
                                 TFT_WIDTH,
