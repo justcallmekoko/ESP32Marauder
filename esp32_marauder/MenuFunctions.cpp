@@ -1610,8 +1610,10 @@ void MenuFunctions::RunSetup()
 
   // Settings stuff
   generateSSIDsMenu.list = new LinkedList<MenuNode>();
+  clearConfirmMenu.list = new LinkedList<MenuNode>();
   clearSSIDsMenu.list = new LinkedList<MenuNode>();
   clearAPsMenu.list = new LinkedList<MenuNode>();
+  clearStationsMenu.list = new LinkedList<MenuNode>();
   saveFileMenu.list = new LinkedList<MenuNode>();
 
   #ifdef HAS_DIRECT_UPLOAD
@@ -1664,6 +1666,7 @@ void MenuFunctions::RunSetup()
   generateSSIDsMenu.name = text_table1[27];
   clearSSIDsMenu.name = text_table1[28];
   clearAPsMenu.name = text_table1[29];
+  clearStationsMenu.name = text_table1[60];
   wifiAPMenu.name = "Select";
   wifiIPMenu.name = "Active IPs";
   apInfoMenu.name = "AP Info";
@@ -2242,16 +2245,19 @@ void MenuFunctions::RunSetup()
     });
   #endif
   this->addNodes(&wifiGeneralMenu, text_table1[28], TFTSILVER, CLEAR_ICO, [this]() {
-    this->changeMenu(&clearSSIDsMenu, true);
-    wifi_scan_obj.RunClearSSIDs();
+    this->showClearConfirmation("Clear all SSIDs?", &clearSSIDsMenu, []() {
+      wifi_scan_obj.RunClearSSIDs();
+    });
   });
   this->addNodes(&wifiGeneralMenu, text_table1[29], TFTDARKGREY, CLEAR_ICO, [this]() {
-    this->changeMenu(&clearAPsMenu, true);
-    wifi_scan_obj.RunClearAPs();
+    this->showClearConfirmation("Clear APs + stations?", &clearAPsMenu, []() {
+      wifi_scan_obj.RunClearAPs();
+    });
   });
   this->addNodes(&wifiGeneralMenu, text_table1[60], TFTBLUE, CLEAR_ICO, [this]() {
-    this->changeMenu(&clearAPsMenu, true);
-    wifi_scan_obj.RunClearStations();
+    this->showClearConfirmation("Clear all stations?", &clearStationsMenu, []() {
+      wifi_scan_obj.RunClearStations();
+    });
   });
   //#else // Mini EP HTML select
     this->addNodes(&wifiGeneralMenu, "Select EP HTML File", TFTCYAN, KEYBOARD_ICO, [this](){
@@ -3024,6 +3030,10 @@ void MenuFunctions::RunSetup()
   clearAPsMenu.parentMenu = &wifiGeneralMenu;
   this->addNodes(&clearAPsMenu, text09, TFTLIGHTGREY, 0, [this]() {
     this->changeMenu(clearAPsMenu.parentMenu, true);
+  });
+  clearStationsMenu.parentMenu = &wifiGeneralMenu;
+  this->addNodes(&clearStationsMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(clearStationsMenu.parentMenu, true);
   });
 
 #ifdef HAS_BT
@@ -3992,6 +4002,23 @@ void MenuFunctions::addNodes(Menu * menu, const char* name, uint8_t color, int p
 {
   //Serial.println("Building node: " + name);
   menu->list->add(MenuNode{String(name), false, color, place, selected, callable});
+}
+
+void MenuFunctions::showClearConfirmation(const char* prompt, Menu* result_menu, std::function<void()> action)
+{
+  clearConfirmMenu.list->clear();
+  clearConfirmMenu.name = prompt;
+  clearConfirmMenu.parentMenu = &wifiGeneralMenu;
+
+  this->addNodes(&clearConfirmMenu, text12, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(clearConfirmMenu.parentMenu, true);
+  });
+  this->addNodes(&clearConfirmMenu, text14, TFTRED, CLEAR_ICO, [this, result_menu, action]() {
+    this->changeMenu(result_menu, true);
+    action();
+  });
+
+  this->changeMenu(&clearConfirmMenu, true);
 }
 
 void MenuFunctions::setGraphScale(float scale) {
