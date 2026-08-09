@@ -9305,8 +9305,52 @@ void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6], u
 }*/
 
 void WiFiScan::sendAssociationSleep(const char* ESSID, uint8_t bssid[6], int channel, uint8_t mac[6]) {
-  WiFiScan::set_channel = channel;
-  this->changeChannel(channel);
+  uint8_t first_supported_channel = 0;
+  uint8_t supported_channel_count = 0;
+  uint8_t operating_class = 0;
+
+  if ((channel >= 1) && (channel <= 13)) {
+    first_supported_channel = 1;
+    supported_channel_count = 13;
+    operating_class = 0x51;
+  }
+  else if (channel == 14) {
+    first_supported_channel = 14;
+    supported_channel_count = 1;
+    operating_class = 0x52;
+  }
+  else if ((channel >= 36) && (channel <= 48) && (((channel - 36) % 4) == 0)) {
+    first_supported_channel = 36;
+    supported_channel_count = 4;
+    operating_class = 0x73;
+  }
+  else if ((channel >= 52) && (channel <= 64) && (((channel - 52) % 4) == 0)) {
+    first_supported_channel = 52;
+    supported_channel_count = 4;
+    operating_class = 0x76;
+  }
+  else if ((channel >= 100) && (channel <= 144) && (((channel - 100) % 4) == 0)) {
+    first_supported_channel = 100;
+    supported_channel_count = 12;
+    operating_class = 0x79;
+  }
+  else if ((channel >= 149) && (channel <= 161) && (((channel - 149) % 4) == 0)) {
+    first_supported_channel = 149;
+    supported_channel_count = 4;
+    operating_class = 0x7c;
+  }
+  else if ((channel >= 165) && (channel <= 177) && (((channel - 165) % 4) == 0)) {
+    first_supported_channel = 149;
+    supported_channel_count = 8;
+    operating_class = 0x7d;
+  }
+  else {
+    Serial.printf("Association frame rejected: unsupported channel %d\n", channel);
+    return;
+  }
+
+  if (!this->changeChannel(channel))
+    return;
   delay(1);
 
   static uint16_t sequence_number = 0;
@@ -9334,8 +9378,10 @@ void WiFiScan::sendAssociationSleep(const char* ESSID, uint8_t bssid[6], int cha
   association_packet[21] = bssid[5];
 
   /* Set Sequence Control */
-  association_packet[23] = (sequence_number >> 8) & 0xFF; // Sequence Number MSB
-  association_packet[22] = sequence_number & 0xFF;        // Sequence Number LSB
+  const uint16_t sequence_control =
+    static_cast<uint16_t>((sequence_number & 0x0fffU) << 4);
+  association_packet[22] = sequence_control & 0xFF;
+  association_packet[23] = (sequence_control >> 8) & 0xFF;
 
   /* SSID tag */
   association_packet[29] = (uint8_t)strlen((char *)ESSID); // SSID Length
@@ -9359,8 +9405,8 @@ void WiFiScan::sendAssociationSleep(const char* ESSID, uint8_t bssid[6], int cha
   /* Supported Channels tag */
   association_packet[offset++] = 0x24; // Supported Channels tag
   association_packet[offset++] = 0x02; // Length
-  association_packet[offset++] = 0x01; // First Channel
-  association_packet[offset++] = 0x0d; // Last Channel
+  association_packet[offset++] = first_supported_channel;
+  association_packet[offset++] = supported_channel_count;
 
   /* RSN tag */
   association_packet[offset++] = 0x30; // RSN tag
@@ -9388,28 +9434,9 @@ void WiFiScan::sendAssociationSleep(const char* ESSID, uint8_t bssid[6], int cha
 
   /* Supported Operating Classes tag */
   association_packet[offset++] = 0x3b; // Supported Operating Classes tag
-  association_packet[offset++] = 0x14; // Length
-  association_packet[offset++] = 0x51; // Current Operating Class 1 (2.4 GHz)
-  /* alternate Operating Class */
-  association_packet[offset++] = 0x86; // Operating Class 2 (5 GHz)
-  association_packet[offset++] = 0x85; // Operating Class 3 (6 GHz)
-  association_packet[offset++] = 0x84; // Operating Class 4 (60 GHz)
-  association_packet[offset++] = 0x83; // Operating Class 5 (60 GHz)
-  association_packet[offset++] = 0x81; // Operating Class 6 (60 GHz)
-  association_packet[offset++] = 0x7f; // Operating Class 7 (60 GHz)
-  association_packet[offset++] = 0x7e; // Operating Class 8 (60 GHz)
-  association_packet[offset++] = 0x7d; // Operating Class 9 (60 GHz)
-  association_packet[offset++] = 0x7c; // Operating Class 10 (60 GHz)
-  association_packet[offset++] = 0x7b; // Operating Class 11 (60 GHz)
-  association_packet[offset++] = 0x7a; // Operating Class 12 (60 GHz)
-  association_packet[offset++] = 0x79; // Operating Class 13 (60 GHz)
-  association_packet[offset++] = 0x78; // Operating Class 14 (60 GHz)
-  association_packet[offset++] = 0x77; // Operating Class 15 (60 GHz)
-  association_packet[offset++] = 0x76; // Operating Class 16 (60 GHz)
-  association_packet[offset++] = 0x75; // Operating Class 17 (60 GHz)
-  association_packet[offset++] = 0x74; // Operating Class 18 (60 GHz)
-  association_packet[offset++] = 0x73; // Operating Class 19 (60 GHz)
-  association_packet[offset++] = 0x51; // Operating Class 20 (2.4 GHz)
+  association_packet[offset++] = 0x02; // Current class plus supported class
+  association_packet[offset++] = operating_class;
+  association_packet[offset++] = operating_class;
 
   /* Vendor Specific tag */
   association_packet[offset++] = 0xdd; // Vendor Specific tag
@@ -9426,9 +9453,16 @@ void WiFiScan::sendAssociationSleep(const char* ESSID, uint8_t bssid[6], int cha
   association_packet[offset++] = 0x02;
 
   // Send packet
-  esp_wifi_80211_tx(WIFI_IF_AP, association_packet, offset, false);
-
-  packets_sent = packets_sent + 1;
+  const esp_err_t tx_result =
+    esp_wifi_80211_tx(WIFI_IF_AP, association_packet, offset, false);
+  if (tx_result == ESP_OK) {
+    packets_sent++;
+    sequence_number =
+      static_cast<uint16_t>((sequence_number + 1U) & 0x0fffU);
+  }
+  else {
+    Serial.printf("Association frame TX failed: %s\n", esp_err_to_name(tx_result));
+  }
 }
 
 
