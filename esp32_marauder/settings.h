@@ -54,6 +54,8 @@ class Settings {
     template <typename T>
     T saveSetting(const char* key, String value);
 
+    bool saveWiFiCredentials(const String& ssid, const String& password);
+
     bool toggleSetting(const char* key);
     const char* getSettingType(const char* key);
     String setting_index_to_name(int i);

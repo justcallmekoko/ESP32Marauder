@@ -1,5 +1,6 @@
 #include "esp_random.h"
 #include "WiFiScan.h"
+#include "WiFiProfileStore.h"
 #include "lang_var.h"
 
 #ifdef HAS_PSRAM
@@ -2072,6 +2073,73 @@ void WiFiScan::setNetworkInfo() {
   this->subnet = WiFi.subnetMask();
 }
 
+#if defined(HAS_SCREEN) && defined(HAS_TOUCH)
+static void waitForFreshTouch() {
+  uint16_t touch_x = 0;
+  uint16_t touch_y = 0;
+
+  while (display_obj.updateTouch(&touch_x, &touch_y))
+    delay(10);
+  while (!display_obj.updateTouch(&touch_x, &touch_y))
+    delay(10);
+  while (display_obj.updateTouch(&touch_x, &touch_y))
+    delay(10);
+}
+
+static void showJoinResultAcknowledgement(
+  bool connected,
+  const String& ssid,
+  bool credentials_saved = true) {
+  display_obj.clearScreen();
+  display_obj.tft.setFreeFont(NULL);
+  display_obj.tft.setTextWrap(false, false);
+
+  if (connected) {
+    display_obj.tft.setCursor(0, TFT_HEIGHT / 3);
+    display_obj.tft.setTextSize(2);
+    display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+    display_obj.tft.println(F("WiFi connected"));
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    display_obj.tft.print(F("SSID: "));
+    display_obj.tft.println(ssid);
+    display_obj.tft.print(F("IP address: "));
+    display_obj.tft.println(WiFi.localIP());
+    display_obj.tft.print(F("Gateway: "));
+    display_obj.tft.println(WiFi.gatewayIP());
+    display_obj.tft.print(F("Netmask: "));
+    display_obj.tft.println(WiFi.subnetMask());
+    display_obj.tft.print(F("MAC: "));
+    display_obj.tft.println(WiFi.macAddress());
+    display_obj.tft.print(F("Channel: "));
+    display_obj.tft.println(WiFi.channel());
+    display_obj.tft.print(F("BSSID: "));
+    display_obj.tft.println(WiFi.BSSIDstr());
+    if (!credentials_saved) {
+      display_obj.tft.setTextColor(TFT_ORANGE, TFT_BLACK);
+      display_obj.tft.println(F("Credentials not fully saved"));
+    }
+    display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    display_obj.tft.println(F("Tap to continue"));
+  }
+  else {
+    display_obj.tft.setTextSize(2);
+    display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+    display_obj.showCenterText(
+      "Connection failed", (TFT_HEIGHT / 2) - 12, false, 2);
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    String ssid_line = String(F("SSID: ")) + ssid;
+    display_obj.showCenterText(
+      ssid_line.c_str(), (TFT_HEIGHT / 2) + 10, false, 1);
+    display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    display_obj.showCenterText(
+      "Tap to continue", (TFT_HEIGHT / 2) + 30, false, 1);
+  }
+  waitForFreshTouch();
+}
+#endif
+
 void WiFiScan::showNetworkInfo() {
   Serial.print(F("IP address: "));
   Serial.println(this->ip_addr);
@@ -2097,29 +2165,187 @@ void WiFiScan::showNetworkInfo() {
   #endif
 }
 
-bool WiFiScan::joinWiFi(String ssid, String password, bool gui) {
+bool WiFiScan::joinWiFi(
+  String ssid,
+  String password,
+  bool gui,
+  int32_t channel,
+  const uint8_t* bssid,
+  uint8_t preferred_band) {
   static const char * btns[] ={text16, ""};
   int count = 0;
-  
-  if ((WiFi.status() == WL_CONNECTED) && (ssid == connected_network) && (ssid != "")) {
+
+  uint8_t target_bssid[6] = {0};
+  bool has_bssid = false;
+  if (bssid != nullptr) {
+    memcpy(target_bssid, bssid, sizeof(target_bssid));
+    bool all_zero = true;
+    bool all_ff = true;
+    for (uint8_t octet : target_bssid) {
+      all_zero = all_zero && (octet == 0x00);
+      all_ff = all_ff && (octet == 0xFF);
+    }
+    has_bssid = !all_zero && !all_ff && ((target_bssid[0] & 0x01) == 0);
+  }
+
+  int32_t target_channel = (has_bssid && (channel > 0)) ? channel : 0;
+
+  auto band_for_channel = [](int32_t active_channel) -> uint8_t {
+    if (active_channel <= 0)
+      return 0;
+    return active_channel <= 14 ? 2 : 5;
+  };
+
+  auto band_mode_matches = [&]() -> bool {
+    #if defined(HAS_DUAL_BAND) && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 4, 2)
+      return WiFi.getBandMode() == WIFI_BAND_MODE_AUTO;
+    #else
+      return true;
+    #endif
+  };
+
+  auto connected_to_target = [&]() -> bool {
+    if ((WiFi.status() != WL_CONNECTED) ||
+        (ssid == "") ||
+        (WiFi.SSID() != ssid))
+      return false;
+
+    if (preferred_band != 0 && band_for_channel(WiFi.channel()) != preferred_band)
+      return false;
+
+    if (!band_mode_matches())
+      return false;
+
+    if (!has_bssid)
+      return true;
+
+    uint8_t current_bssid[6] = {0};
+    return (WiFi.BSSID(current_bssid) != nullptr) &&
+           (memcmp(current_bssid, target_bssid, sizeof(target_bssid)) == 0);
+  };
+
+  auto remember_connection = [&]() -> bool {
+    const bool legacy_saved = settings_obj.saveWiFiCredentials(ssid, password);
+    const bool profile_saved = wifi_profile_store.remember(ssid, password, WiFi.channel());
+    const bool multi_profile_optional =
+      wifi_profile_store.state() == WiFiProfileStoreState::NoSD;
+
+    if (!legacy_saved || (!profile_saved && !multi_profile_optional))
+      Serial.println(F("Connected, but credentials were not fully saved"));
+    return legacy_saved && (profile_saved || multi_profile_optional);
+  };
+
+  if (connected_to_target()) {
+    this->connected_network = ssid;
     this->wifi_initialized = true;
     this->currentScanMode = WIFI_CONNECTED;
+    #if defined(HAS_SCREEN) && defined(HAS_TOUCH)
+      if (gui)
+        showJoinResultAcknowledgement(true, ssid);
+    #endif
     return true;
   }
   else if (WiFi.status() == WL_CONNECTED) {
     //Serial.println(F("Already connected. Disconnecting..."));
     WiFi.disconnect();
+    this->wifi_connected = false;
   }
 
   WiFi.disconnect(true);
+  this->wifi_connected = false;
   delay(100);
   WiFi.mode(WIFI_MODE_STA);
+
+  bool target_ready = preferred_band == 0 || preferred_band == 2 || preferred_band == 5;
+  const bool resolve_band_target = preferred_band != 0 && !has_bssid;
+  #if defined(HAS_DUAL_BAND) && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 4, 2)
+    if (target_ready)
+      target_ready = WiFi.setBandMode(WIFI_BAND_MODE_AUTO);
+
+    if (target_ready && resolve_band_target) {
+      const wifi_band_mode_t scan_band = preferred_band == 2
+        ? WIFI_BAND_MODE_2G_ONLY
+        : WIFI_BAND_MODE_5G_ONLY;
+      target_ready = WiFi.setBandMode(scan_band);
+
+      if (target_ready) {
+        #ifdef HAS_SCREEN
+          if (gui) {
+            display_obj.clearScreen();
+            display_obj.tft.setCursor(0, TFT_HEIGHT / 2);
+            display_obj.tft.setTextSize(1);
+            display_obj.tft.print(F("Finding saved WiFi..."));
+          }
+        #endif
+
+        const int16_t network_count = WiFi.scanNetworks(
+          false,
+          true,
+          false,
+          300,
+          0,
+          ssid.c_str(),
+          nullptr);
+        if (network_count < 0)
+          esp_wifi_scan_stop();
+
+        const int scan_result_count = network_count > 256 ? 256 : network_count;
+        int best_network = -1;
+        int32_t best_rssi = -1000;
+        for (int i = 0; i < scan_result_count; ++i) {
+          if (WiFi.SSID(i) != ssid ||
+              band_for_channel(WiFi.channel(i)) != preferred_band ||
+              WiFi.RSSI(i) <= best_rssi)
+            continue;
+          best_network = i;
+          best_rssi = WiFi.RSSI(i);
+        }
+
+        has_bssid = false;
+        target_channel = 0;
+        if (best_network >= 0 &&
+            WiFi.BSSID(best_network, target_bssid) != nullptr) {
+          bool all_zero = true;
+          bool all_ff = true;
+          for (uint8_t octet : target_bssid) {
+            all_zero = all_zero && (octet == 0x00);
+            all_ff = all_ff && (octet == 0xFF);
+          }
+          has_bssid = !all_zero && !all_ff && ((target_bssid[0] & 0x01) == 0);
+          target_channel = WiFi.channel(best_network);
+          target_ready = has_bssid;
+        }
+        else {
+          target_ready = false;
+        }
+        WiFi.scanDelete();
+      }
+
+      const bool auto_restored = WiFi.setBandMode(WIFI_BAND_MODE_AUTO);
+      target_ready = target_ready && auto_restored;
+    }
+  #else
+    if (preferred_band == 5)
+      target_ready = false;
+  #endif
+
+  if (!target_ready) {
+    Serial.println(F("Could not find saved WiFi in requested band"));
+    this->wifi_connected = false;
+    this->wifi_initialized = true;
+    this->StartScan(WIFI_SCAN_OFF, TFT_BLACK);
+    #if defined(HAS_SCREEN) && defined(HAS_TOUCH)
+      if (gui)
+        showJoinResultAcknowledgement(false, ssid);
+    #endif
+    return false;
+  }
 
   //esp_wifi_set_mode(WIFI_IF_STA);
 
   this->setMac();
     
-  WiFi.begin(ssid.c_str(), password.c_str());
+  WiFi.begin(ssid.c_str(), password.c_str(), target_channel, has_bssid ? target_bssid : nullptr);
 
   #ifdef HAS_SCREEN
     if (gui) {
@@ -2144,6 +2370,7 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui) {
     if (count == 20)
     {
       Serial.println(F("\nCould not connect to WiFi network"));
+      this->wifi_connected = false;
       #ifdef HAS_SCREEN
         if (gui) {
           display_obj.tft.println("\nFailed to connect");
@@ -2155,12 +2382,38 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui) {
       #ifdef HAS_SCREEN
         display_obj.tft.setTextWrap(false, false);
       #endif
+      #if defined(HAS_SCREEN) && defined(HAS_TOUCH)
+        if (gui)
+          showJoinResultAcknowledgement(false, ssid);
+      #endif
       return false;
     }
   }
+
+  if (!connected_to_target()) {
+    Serial.println(F("\nConnected WiFi target did not match selection"));
+    WiFi.disconnect(true);
+    this->wifi_connected = false;
+    #ifdef HAS_SCREEN
+      if (gui) {
+        display_obj.tft.println("\nFailed to connect");
+        delay(1000);
+      }
+    #endif
+    this->wifi_initialized = true;
+    this->StartScan(WIFI_SCAN_OFF, TFT_BLACK);
+    #ifdef HAS_SCREEN
+      display_obj.tft.setTextWrap(false, false);
+    #endif
+    #if defined(HAS_SCREEN) && defined(HAS_TOUCH)
+      if (gui)
+        showJoinResultAcknowledgement(false, ssid);
+    #endif
+    return false;
+  }
   this->connected_network = ssid;
   this->setNetworkInfo();
-  if (gui) 
+  if (gui)
     this->showNetworkInfo();
 
   this->wifi_initialized = true;
@@ -2171,8 +2424,12 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui) {
     #endif
   #endif
 
-  settings_obj.saveSetting<bool>("ClientSSID", ssid);
-  settings_obj.saveSetting<bool>("ClientPW", password);
+  const bool profile_saved = remember_connection();
+
+  #if defined(HAS_SCREEN) && defined(HAS_TOUCH)
+    if (gui)
+      showJoinResultAcknowledgement(true, ssid, profile_saved);
+  #endif
 
   return true;
 }
