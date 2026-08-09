@@ -12,6 +12,7 @@ uint8_t *current_act = nullptr;
 MacEntry WiFiScan::mac_entries[mac_history_len_half];
 uint8_t WiFiScan::mac_entry_state[mac_history_len_half];
 WiFiEventId_t WiFiScan::eventId;
+bool WiFiScan::wifiEventHandlerRegistered = false;
 String WiFiScan::lastClientMAC = "N/A";
 String WiFiScan::lastClientIP  = "N/A";
 
@@ -2067,12 +2068,22 @@ int WiFiScan::generateSSIDs(int count) {
 }
 
 void WiFiScan::setNetworkInfo() {
-  this->ip_addr = WiFi.localIP();
-  this->gateway = WiFi.gatewayIP();
-  this->subnet = WiFi.subnetMask();
+  if (WiFi.getMode() == WIFI_MODE_AP) {
+    this->ip_addr = WiFi.softAPIP();
+    this->gateway = this->ip_addr;
+    this->subnet = WiFi.softAPSubnetMask();
+  }
+  else {
+    this->ip_addr = WiFi.localIP();
+    this->gateway = WiFi.gatewayIP();
+    this->subnet = WiFi.subnetMask();
+  }
 }
 
 void WiFiScan::showNetworkInfo() {
+  bool access_point_mode = WiFi.getMode() == WIFI_MODE_AP;
+  String mac_address = access_point_mode ? WiFi.softAPmacAddress() : WiFi.macAddress();
+
   Serial.print(F("IP address: "));
   Serial.println(this->ip_addr);
   Serial.print(F("Gateway: "));
@@ -2080,10 +2091,10 @@ void WiFiScan::showNetworkInfo() {
   Serial.print(F("Netmask: "));
   Serial.println(this->subnet);
   Serial.print(F("MAC: "));
-  Serial.println(WiFi.macAddress());
+  Serial.println(mac_address);
 
   #ifdef HAS_SCREEN
-    display_obj.tft.println("\nConnected!");
+    display_obj.tft.println(access_point_mode ? "\nAccess point started!" : "\nConnected!");
     display_obj.tft.print("IP address: ");
     display_obj.tft.println(this->ip_addr);
     display_obj.tft.print("Gateway: ");
@@ -2091,10 +2102,24 @@ void WiFiScan::showNetworkInfo() {
     display_obj.tft.print("Netmask: ");
     display_obj.tft.println(this->subnet);
     display_obj.tft.print("MAC: ");
-    display_obj.tft.println(WiFi.macAddress());
+    display_obj.tft.println(mac_address);
     display_obj.tft.println("Returning...");
     delay(2000);
   #endif
+}
+
+void WiFiScan::registerWiFiEventHandler() {
+  if (!wifiEventHandlerRegistered) {
+    eventId = WiFi.onEvent(WiFiScan::onWiFiEvent);
+    wifiEventHandlerRegistered = true;
+  }
+}
+
+void WiFiScan::unregisterWiFiEventHandler() {
+  if (wifiEventHandlerRegistered) {
+    WiFi.removeEvent(eventId);
+    wifiEventHandlerRegistered = false;
+  }
 }
 
 bool WiFiScan::joinWiFi(String ssid, String password, bool gui) {
@@ -2111,6 +2136,7 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui) {
     WiFi.disconnect();
   }
 
+  this->unregisterWiFiEventHandler();
   WiFi.disconnect(true);
   delay(100);
   WiFi.mode(WIFI_MODE_STA);
@@ -2178,10 +2204,10 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui) {
 }
 
 bool WiFiScan::startWiFi(String ssid, String password, bool gui) {
-  static const char * btns[] ={text16, ""};
-  int count = 0;
-  
-  if ((WiFi.status() == WL_CONNECTED) && (ssid == connected_network) && (ssid != "")) {
+  if ((WiFi.getMode() == WIFI_MODE_AP) && (WiFi.softAPIP() != IPAddress(0, 0, 0, 0)) &&
+      (WiFi.softAPSSID() == ssid) && (ssid != "")) {
+    this->registerWiFiEventHandler();
+    this->wifi_connected = true;
     this->wifi_initialized = true;
     this->currentScanMode = WIFI_CONNECTED;
     return true;
@@ -2198,12 +2224,13 @@ bool WiFiScan::startWiFi(String ssid, String password, bool gui) {
 
   this->setMac();
 
-  eventId = WiFi.onEvent(WiFiScan::onWiFiEvent);
-    
+  this->registerWiFiEventHandler();
+
+  bool access_point_started;
   if (password != "")
-    WiFi.softAP(ssid.c_str(), password.c_str());
+    access_point_started = WiFi.softAP(ssid.c_str(), password.c_str());
   else
-    WiFi.softAP(ssid.c_str());
+    access_point_started = WiFi.softAP(ssid.c_str());
 
   #ifdef HAS_SCREEN
     if (gui) {
@@ -2215,13 +2242,31 @@ bool WiFiScan::startWiFi(String ssid, String password, bool gui) {
     }
   #endif
 
-  Serial.print(F("Started WiFi"));
+  if (!access_point_started) {
+    Serial.println(F("Could not start WiFi access point"));
+    #ifdef HAS_SCREEN
+      if (gui) {
+        display_obj.tft.println(F("\nFailed to start"));
+        display_obj.tft.setTextWrap(false, false);
+      }
+    #endif
+    this->unregisterWiFiEventHandler();
+    WiFi.softAPdisconnect(true);
+    this->connected_network = "";
+    this->wifi_connected = false;
+    this->wifi_initialized = false;
+    this->currentScanMode = WIFI_SCAN_OFF;
+    return false;
+  }
+
+  Serial.println(F("Started WiFi access point"));
   
   this->connected_network = ssid;
   this->setNetworkInfo();
   
   this->showNetworkInfo();
 
+  this->wifi_connected = true;
   this->wifi_initialized = true;
   this->currentScanMode = WIFI_CONNECTED;
   #ifdef HAS_SCREEN
@@ -2722,11 +2767,16 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
       this->complete_eapol = 0;
       this->connected_devices = 0;
 
-      WiFi.removeEvent(eventId);
-
-      evil_portal_obj.cleanup();
     #endif
-    evil_portal_obj.has_ap = false;
+
+    if (currentScanMode == WIFI_SCAN_EVIL_PORTAL) {
+      evil_portal_obj.cleanup();
+      evil_portal_obj.has_ap = false;
+      this->unregisterWiFiEventHandler();
+    }
+    else if (WiFi.softAPIP() == IPAddress(0, 0, 0, 0)) {
+      this->unregisterWiFiEventHandler();
+    }
   }
 
   if ((currentScanMode == GPS_TRACKER) ||
@@ -5830,8 +5880,8 @@ void WiFiScan::onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
 
         Serial.println("Client IP assigned" + lastClientIP);
 
-        display_obj.tft.setTextSize(1);
         if (wifi_scan_obj.currentScanMode == WIFI_SCAN_DISPLAY_AP_INFO) {
+          display_obj.tft.setTextSize(1);
           display_obj.tft.fillRect(0,
                               ((SCREEN_HEIGHT / 3) * 2),
                               TFT_WIDTH,
@@ -5849,21 +5899,26 @@ void WiFiScan::onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
         snprintf(macStr,
                 sizeof(macStr),
                 "%02X:%02X:%02X:%02X:%02X:%02X",
-                info.wifi_ap_staconnected.mac[0],
-                info.wifi_ap_staconnected.mac[1],
-                info.wifi_ap_staconnected.mac[2],
-                info.wifi_ap_staconnected.mac[3],
-                info.wifi_ap_staconnected.mac[4],
-                info.wifi_ap_staconnected.mac[5]);
+                info.wifi_ap_stadisconnected.mac[0],
+                info.wifi_ap_stadisconnected.mac[1],
+                info.wifi_ap_stadisconnected.mac[2],
+                info.wifi_ap_stadisconnected.mac[3],
+                info.wifi_ap_stadisconnected.mac[4],
+                info.wifi_ap_stadisconnected.mac[5]);
 
-        display_obj.tft.fillRect(0,
-                              ((SCREEN_HEIGHT / 3) * 2),
-                              TFT_WIDTH,
-                              SCREEN_HEIGHT,
-                              TFT_BLACK);
-        display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
-        display_obj.tft.setCursor(0, ((SCREEN_HEIGHT / 3) * 2));
-        display_obj.tft.println(String(macStr) + "\nClient disconnected");
+        lastClientMAC = String(macStr);
+        lastClientIP = "N/A";
+
+        if (wifi_scan_obj.currentScanMode == WIFI_SCAN_DISPLAY_AP_INFO) {
+          display_obj.tft.fillRect(0,
+                                ((SCREEN_HEIGHT / 3) * 2),
+                                TFT_WIDTH,
+                                SCREEN_HEIGHT,
+                                TFT_BLACK);
+          display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+          display_obj.tft.setCursor(0, ((SCREEN_HEIGHT / 3) * 2));
+          display_obj.tft.println(lastClientMAC + "\nClient disconnected");
+        }
         break;
       }
 

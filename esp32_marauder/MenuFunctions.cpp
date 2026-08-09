@@ -5,6 +5,29 @@
 
 extern const unsigned char menu_icons[][66];
 
+#ifdef HAS_TOUCH
+static void waitForTouchAcknowledgement(const char* message) {
+  display_obj.clearScreen();
+  display_obj.tft.setFreeFont(NULL);
+  display_obj.tft.setTextWrap(false, false);
+  display_obj.tft.setTextSize(2);
+  display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+  display_obj.showCenterText(message, (TFT_HEIGHT / 2) - 16, false, 2);
+  display_obj.tft.setTextSize(1);
+  display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  display_obj.showCenterText("Tap to continue", (TFT_HEIGHT / 2) + 16, true);
+
+  uint16_t touch_x = 0;
+  uint16_t touch_y = 0;
+  while (display_obj.updateTouch(&touch_x, &touch_y))
+    delay(10);
+  while (!display_obj.updateTouch(&touch_x, &touch_y))
+    delay(10);
+  while (display_obj.updateTouch(&touch_x, &touch_y))
+    delay(10);
+}
+#endif
+
 #ifdef HAS_MINI_SCREEN
 void MenuFunctions::drawMiniMenuButton(int b, int x, bool selected) {
   if (!current_menu || !current_menu->list || x < 0 || x >= current_menu->list->size())
@@ -2559,7 +2582,9 @@ void MenuFunctions::RunSetup()
             char passwordBuf[64] = {0};  // or prefill with existing SSID
             if (keyboardInput(passwordBuf, sizeof(passwordBuf), "Enter Password")) {
               Serial.println("Using SSID: " + (String)ssids->get(i).essid + " Password: " + String(passwordBuf));
-              wifi_scan_obj.startWiFi(ssids->get(i).essid, String(passwordBuf));
+              const bool access_point_started = wifi_scan_obj.startWiFi(ssids->get(i).essid, String(passwordBuf));
+              if (!access_point_started)
+                waitForTouchAcknowledgement("AP start failed");
             }
 
             this->changeMenu(&wifiGeneralMenu, false);
