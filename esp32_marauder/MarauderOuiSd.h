@@ -34,9 +34,10 @@ class SdOuiDatabase : private OuiByteReader {
   void close();
   OuiStorageStatus status() const;
   StoredMacIdentity identify(
-      const uint8_t mac[kOuiMacAddressSize]) const;
+      const uint8_t mac[kOuiMacAddressSize]);
 
  private:
+  void invalidate();
   size_t size() const override;
   bool read(size_t offset, uint8_t* destination,
             size_t length) const override;

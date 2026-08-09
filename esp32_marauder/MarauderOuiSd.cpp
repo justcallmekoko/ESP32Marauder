@@ -75,7 +75,7 @@ void SdOuiDatabase::close() {
 OuiStorageStatus SdOuiDatabase::status() const { return status_; }
 
 StoredMacIdentity SdOuiDatabase::identify(
-    const uint8_t mac[kOuiMacAddressSize]) const {
+    const uint8_t mac[kOuiMacAddressSize]) {
   StoredMacIdentity result = makeUnresolvedIdentity(mac, status_);
   if (result.identity.classification != OuiClassification::kUnknown ||
       status_ != OuiStorageStatus::kReady) {
@@ -83,9 +83,18 @@ StoredMacIdentity SdOuiDatabase::identify(
   }
 
   if (database_.lookup(mac, result.identity) != OuiLookupStatus::kSuccess) {
-    result = makeUnresolvedIdentity(mac, OuiStorageStatus::kInvalid);
+    invalidate();
+    result = makeUnresolvedIdentity(mac, status_);
   }
   return result;
+}
+
+void SdOuiDatabase::invalidate() {
+  database_.close();
+  if (database_file_) {
+    database_file_.close();
+  }
+  status_ = OuiStorageStatus::kInvalid;
 }
 
 size_t SdOuiDatabase::size() const { return database_file_.size(); }

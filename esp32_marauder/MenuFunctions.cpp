@@ -14,7 +14,7 @@ namespace {
 
 String formatStationOuiMenuLabel(
     const uint8_t mac[marauder::kOuiMacAddressSize],
-    const marauder::SdOuiDatabase& database) {
+    marauder::SdOuiDatabase& database) {
   const String mac_text = macToString(mac);
   const marauder::StoredMacIdentity result = database.identify(mac);
 
