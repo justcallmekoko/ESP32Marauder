@@ -237,12 +237,15 @@ void CommandLine::startScanFromCLI(int scan_mode, uint16_t color, const char* sc
 
 void CommandLine::runCommand(String input) {
   if (input == "") return;
+
+  const bool gps_nmea_active =
+    wifi_scan_obj.scanning() &&
+    (wifi_scan_obj.currentScanMode == WIFI_SCAN_GPS_NMEA);
+  if (gps_nmea_active && (input != STOPSCAN_CMD)) return;
+
   LinkedList<String> cmd_args = this->parseCommand(input, " ");
 
-  if(wifi_scan_obj.scanning() && wifi_scan_obj.currentScanMode == WIFI_SCAN_GPS_NMEA){
-    if(input != STOPSCAN_CMD) return;    
-  }
-  else
+  if (!gps_nmea_active)
     Serial.println("#" + redactCommandForLog(input, cmd_args));
 
   //// Admin commands
