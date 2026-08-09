@@ -2457,7 +2457,7 @@ void MenuFunctions::RunSetup()
             this->changeMenu(&miniKbMenu, true);
             String password = this->miniKeyboard(&miniKbMenu, true);
             if (password != "") {
-              Serial.println("Using SSID: " + (String)access_points->get(i).essid + " Password: " + (String)password);
+              Serial.println("Using SSID: " + (String)access_points->get(i).essid + " Password: <redacted>");
               wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
               wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
               wifi_scan_obj.joinWiFi(access_points->get(i).essid, password);
@@ -2505,7 +2505,7 @@ void MenuFunctions::RunSetup()
               this->changeMenu(&miniKbMenu, true);
               String password = this->miniKeyboard(&miniKbMenu, true);
               if (password != "") {
-                Serial.println("Using SSID: " + (String)access_points->get(i).essid + " Password: " + (String)password);
+                Serial.println("Using SSID: " + (String)access_points->get(i).essid + " Password: <redacted>");
                 wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
                 wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
                 wifi_scan_obj.joinWiFi(access_points->get(i).essid, password);
@@ -2546,7 +2546,7 @@ void MenuFunctions::RunSetup()
             this->changeMenu(&miniKbMenu, true);
             String password = this->miniKeyboard(&miniKbMenu, true);
             if (password != "") {
-              Serial.println("Using SSID: " + (String)ssids->get(i).essid + " Password: " + (String)password);
+              Serial.println("Using SSID: " + (String)ssids->get(i).essid + " Password: <redacted>");
               wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
               wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
               wifi_scan_obj.startWiFi(ssids->get(i).essid, password);
@@ -2558,7 +2558,7 @@ void MenuFunctions::RunSetup()
           #ifdef HAS_TOUCH
             char passwordBuf[64] = {0};  // or prefill with existing SSID
             if (keyboardInput(passwordBuf, sizeof(passwordBuf), "Enter Password")) {
-              Serial.println("Using SSID: " + (String)ssids->get(i).essid + " Password: " + String(passwordBuf));
+              Serial.println("Using SSID: " + (String)ssids->get(i).essid + " Password: <redacted>");
               wifi_scan_obj.startWiFi(ssids->get(i).essid, String(passwordBuf));
             }
 

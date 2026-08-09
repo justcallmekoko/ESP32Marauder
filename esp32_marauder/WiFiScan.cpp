@@ -1850,7 +1850,7 @@ void WiFiScan::RunSetup() {
 
         if (settings_obj.saveSetting<bool>("wt", contents)) {
           sd_obj.removeFile("/wigle_api_token.txt");
-          Serial.println("Saved WiGLE API Token: " + contents);
+          Serial.println(F("Saved WiGLE API Token"));
         } else {
           Serial.println("Failed to save WiGLE API Token");
         }
@@ -1875,7 +1875,7 @@ void WiFiScan::RunSetup() {
 
         if (settings_obj.saveSetting<bool>(WDG_KEY_NAME, contents)) {
           sd_obj.removeFile("/wdg_key.txt");
-          Serial.println("Saved WDG API Token: " + contents);
+          Serial.println(F("Saved WDG API Token"));
         } else {
           Serial.println("Failed to save WDG API Token");
         }
