@@ -1008,7 +1008,13 @@ class WiFiScan
     bool shutdownWiFi();
     bool shutdownBLE();
     bool scanning();
-    bool joinWiFi(String ssid, String password, bool gui = true);
+    bool joinWiFi(
+      String ssid,
+      String password,
+      bool gui = true,
+      int32_t channel = 0,
+      const uint8_t* bssid = nullptr,
+      uint8_t preferred_band = 0);
     void getMAC(bool get_sta, uint8_t* mac);
     void changeChannel(int chan = -1);
     void RunAPInfo(uint16_t index, bool do_display = true);
