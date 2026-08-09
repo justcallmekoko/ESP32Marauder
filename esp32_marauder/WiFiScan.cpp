@@ -11,9 +11,17 @@ static const uint8_t *g_filter_bssid = nullptr;
 
 namespace {
   constexpr size_t SAE_COMMIT_FRAME_CAPACITY = 256;
-  constexpr size_t SAE_COMMIT_BASE_LENGTH = 128;
+  constexpr size_t SAE_COMMIT_PREFIX_LENGTH = 32;  // 802.11 auth fields + group
+  constexpr size_t SAE_GROUP_19_SCALAR_LENGTH = 32;
+  constexpr size_t SAE_GROUP_19_ELEMENT_LENGTH = 64;
+  constexpr size_t SAE_COMMIT_BASE_LENGTH =
+    SAE_COMMIT_PREFIX_LENGTH +
+    SAE_GROUP_19_SCALAR_LENGTH +
+    SAE_GROUP_19_ELEMENT_LENGTH;
   constexpr size_t MAX_SAE_ACT_LENGTH =
     SAE_COMMIT_FRAME_CAPACITY - SAE_COMMIT_BASE_LENGTH;
+  static_assert(SAE_COMMIT_BASE_LENGTH <= SAE_COMMIT_FRAME_CAPACITY,
+                "SAE commit base exceeds frame capacity");
 
   portMUX_TYPE sae_act_mux = portMUX_INITIALIZER_UNLOCKED;
   uint8_t current_act[MAX_SAE_ACT_LENGTH] = {};
@@ -7923,7 +7931,7 @@ bool WiFiScan::sendSAECommitFrame(uint8_t* targ_addr, uint8_t* src_addr) {
 
   memset(frame, 0, sizeof(frame));
 
-  for (int i = 0; i < 32; i++) // Copy frame header
+  for (size_t i = 0; i < SAE_COMMIT_PREFIX_LENGTH; i++) // Copy frame prefix
     frame[i] = sae_commit[i];
 
   for (int i = 0; i < 6; i++) { // Copy addresses
@@ -7934,8 +7942,8 @@ bool WiFiScan::sendSAECommitFrame(uint8_t* targ_addr, uint8_t* src_addr) {
 
   frame[30] = 0x13;  // SAE Group
 
-  uint8_t *current_index = frame + 32;
-  size_t scalar_len = 32;
+  uint8_t *current_index = frame + SAE_COMMIT_PREFIX_LENGTH;
+  size_t scalar_len = SAE_GROUP_19_SCALAR_LENGTH;
 
   // In a classic SAE commit the token follows the group directly, before the
   // scalar and element. Copy only the token bound to this target BSSID.
@@ -7969,10 +7977,10 @@ bool WiFiScan::sendSAECommitFrame(uint8_t* targ_addr, uint8_t* src_addr) {
   for (size_t i = 0; i < scalar_len; i++)
     current_index++;
 
-  for (size_t i = 0; i < 64; i++)
+  for (size_t i = 0; i < SAE_GROUP_19_ELEMENT_LENGTH; i++)
     current_index[i] = ecp_point_bin[i + 1];
 
-  for (int i = 0; i < 64; i++)
+  for (size_t i = 0; i < SAE_GROUP_19_ELEMENT_LENGTH; i++)
     current_index++;
 
   if (esp_wifi_80211_tx(WIFI_IF_STA, frame, current_index - frame, false) != ESP_OK)
@@ -7990,7 +7998,7 @@ bool WiFiScan::sendSAECommitFrame(uint8_t* targ_addr, uint8_t* src_addr) {
 bool WiFiScan::getSAEACT(const uint8_t *frame, size_t frame_len, uint16_t &group_out, size_t &act_len_out) {
   extern WiFiScan wifi_scan_obj;
 
-  constexpr size_t frame_header_len = 32;
+  constexpr size_t frame_header_len = SAE_COMMIT_PREFIX_LENGTH;
   // wifi_pkt_rx_ctrl_t::sig_len includes the four-byte 802.11 FCS. It is
   // transport metadata, not part of the anti-clogging token.
   constexpr size_t frame_check_sequence_len = 4;
