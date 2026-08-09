@@ -7991,6 +7991,9 @@ bool WiFiScan::getSAEACT(const uint8_t *frame, size_t frame_len, uint16_t &group
   extern WiFiScan wifi_scan_obj;
 
   constexpr size_t frame_header_len = 32;
+  // wifi_pkt_rx_ctrl_t::sig_len includes the four-byte 802.11 FCS. It is
+  // transport metadata, not part of the anti-clogging token.
+  constexpr size_t frame_check_sequence_len = 4;
   group_out = 0;
   act_len_out = 0;
 
@@ -8029,7 +8032,11 @@ bool WiFiScan::getSAEACT(const uint8_t *frame, size_t frame_len, uint16_t &group
     group_out = le16(frame + 30);
 
     if (le16(frame + 28) == 0x004C) {
-      const size_t received_act_len = frame_len - frame_header_len;
+      if (frame_len <= (frame_header_len + frame_check_sequence_len))
+        return false;
+
+      const size_t received_act_len =
+        frame_len - frame_header_len - frame_check_sequence_len;
       if ((group_out != 19) ||
           (received_act_len == 0) ||
           (received_act_len > MAX_SAE_ACT_LENGTH)) {
