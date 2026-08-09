@@ -10048,7 +10048,7 @@ void WiFiScan::channelHop(bool filtered, bool ranged) {
         top_chan = this->activityPageEnd() - 1;
       }
       else {
-        top_chan = DUAL_BAND_CHANNELS;
+        top_chan = DUAL_BAND_CHANNELS - 1;
         bot_chan = 0;
       }
 

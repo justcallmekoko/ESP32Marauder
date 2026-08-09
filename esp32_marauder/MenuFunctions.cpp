@@ -4050,6 +4050,13 @@ void MenuFunctions::drawMaxLine(uint8_t value, uint16_t color) {
 }
 
 void MenuFunctions::drawGraphSmall(const uint8_t *values) {
+  uint8_t maxValue = 0;
+  for (int i = 0; i < CHAN_PER_PAGE; i++) {
+    if (values[i] > maxValue) {
+      maxValue = values[i];
+    }
+  }
+
   int bar_width = SCREEN_WIDTH / (CHAN_PER_PAGE * 2);
   //display_obj.tft.fillRect(0, TFT_HEIGHT / 2 + 1, SCREEN_WIDTH, (TFT_HEIGHT / 2) + 1, TFT_BLACK);
 
@@ -4082,6 +4089,8 @@ void MenuFunctions::drawGraphSmall(const uint8_t *values) {
       display_obj.tft.drawLine(x_coord - 2, SCREEN_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2), x_coord - 2, SCREEN_HEIGHT, TFT_WHITE);
     }
   #endif
+
+  this->drawMaxLine(maxValue, TFT_GREEN); // Draw max
 }
 
 void MenuFunctions::drawGraph(int16_t *values) {
