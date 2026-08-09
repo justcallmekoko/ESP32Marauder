@@ -5,6 +5,409 @@
 
 extern const unsigned char menu_icons[][66];
 
+static bool isHiddenAccessPoint(const AccessPoint& ap) {
+  return !ap.essid.length() || ap.essid.equalsIgnoreCase(macToString(ap.bssid));
+}
+
+static String formatAPMenuLabel(const AccessPoint& ap) {
+  const String bssid = macToString(ap.bssid);
+  const bool hidden = isHiddenAccessPoint(ap);
+
+  String label = F("[CH ");
+  label += ap.channel;
+  label += F("] ");
+  if (hidden) {
+    label += F("<hidden> MAC: ");
+    label += bssid;
+  }
+  else {
+    label += ap.essid;
+  }
+  return label;
+}
+
+static String formatWiFiProfileLabel(const WiFiProfileInfo& profile) {
+  if (profile.band == 0)
+    return String(F("[any AP] ")) + profile.ssid;
+
+  String label = profile.band == 2 ? String(F("[2.4G] ")) : String(F("[5G] "));
+  label += profile.ssid;
+  return label;
+}
+
+#if defined(HAS_TOUCH)
+static void waitForProfileStatusTouch() {
+  uint16_t touch_x = 0;
+  uint16_t touch_y = 0;
+
+  while (display_obj.updateTouch(&touch_x, &touch_y))
+    delay(10);
+  while (!display_obj.updateTouch(&touch_x, &touch_y))
+    delay(10);
+  while (display_obj.updateTouch(&touch_x, &touch_y))
+    delay(10);
+}
+
+static void showCenteredProfileStatusMessage(const String& message) {
+  constexpr uint8_t MAX_LINES = 6;
+  const size_t max_chars = TFT_WIDTH > 24 ? (TFT_WIDTH - 24) / 6 : 1;
+  String lines[MAX_LINES];
+  String remaining = message;
+  uint8_t line_count = 0;
+
+  remaining.trim();
+  while (remaining.length() && line_count < MAX_LINES) {
+    int split = static_cast<int>(remaining.length());
+    if (remaining.length() > max_chars) {
+      split = remaining.lastIndexOf(' ', static_cast<unsigned int>(max_chars));
+      if (split <= 0)
+        split = static_cast<int>(max_chars);
+    }
+
+    lines[line_count] = remaining.substring(0, split);
+    lines[line_count].trim();
+    remaining = remaining.substring(split);
+    remaining.trim();
+    ++line_count;
+  }
+
+  if (remaining.length() && line_count > 0)
+    lines[line_count - 1] += F("...");
+  if (line_count == 0)
+    line_count = 1;
+
+  const int16_t first_y = (TFT_HEIGHT / 2) - ((line_count - 1) * 6);
+  for (uint8_t i = 0; i < line_count; ++i)
+    display_obj.showCenterText(lines[i].c_str(), first_y + (i * 12), false, 1);
+}
+#endif
+
+String MenuFunctions::promptJoinSSID(const AccessPoint& access_point) {
+  if (!isHiddenAccessPoint(access_point))
+    return access_point.essid;
+
+  #if defined(HAS_TOUCH)
+    char ssid_buf[33] = {0};
+    if (keyboardInput(ssid_buf, sizeof(ssid_buf), "Enter Hidden SSID"))
+      return String(ssid_buf);
+  #elif defined(HAS_MINI_KB)
+    const String previous_name = miniKbMenu.name;
+    miniKbMenu.name = "Enter Hidden SSID";
+    this->changeMenu(&miniKbMenu, true);
+    String entered_ssid = this->miniKeyboard(&miniKbMenu, false, false);
+    miniKbMenu.name = previous_name;
+    return entered_ssid;
+  #endif
+
+  return "";
+}
+
+void MenuFunctions::showWiFiProfileStatus(
+  const String& title,
+  const String& message,
+  bool success) {
+  wifiProfileStatusMenu.name = title;
+  wifiProfileStatusMenu.parentMenu = &wifiGeneralMenu;
+
+  #if defined(HAS_TOUCH)
+    display_obj.clearScreen();
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.tft.setTextWrap(false, false);
+    display_obj.tft.setTextSize(2);
+    display_obj.tft.setTextColor(success ? TFT_GREEN : TFT_RED, TFT_BLACK);
+    display_obj.showCenterText(title.c_str(), (TFT_HEIGHT / 3) - 12, false, 2);
+
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    showCenteredProfileStatusMessage(message);
+    display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    display_obj.showCenterText(
+      "Tap to continue", (TFT_HEIGHT * 3 / 4), false, 1);
+
+    waitForProfileStatusTouch();
+    this->changeMenu(wifiProfileStatusMenu.parentMenu, true);
+    return;
+  #endif
+
+  wifiProfileStatusMenu.list->clear();
+
+  this->addNodes(
+    &wifiProfileStatusMenu,
+    message.c_str(),
+    success ? TFTGREEN : TFTRED,
+    255,
+    [this]() {
+    this->changeMenu(wifiProfileStatusMenu.parentMenu, true);
+  });
+  this->changeMenu(&wifiProfileStatusMenu, true);
+}
+
+void MenuFunctions::buildWiFiChannelMenu() {
+  wifiChannelMenu.list->clear();
+  wifiChannelMenu.parentMenu = &wifiGeneralMenu;
+
+  this->addNodes(&wifiChannelMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(wifiChannelMenu.parentMenu, true);
+  });
+
+  uint8_t current_channel = wifi_scan_obj.set_channel;
+  wifi_second_chan_t secondary_channel = WIFI_SECOND_CHAN_NONE;
+  if (esp_wifi_get_channel(&current_channel, &secondary_channel) != ESP_OK)
+    current_channel = wifi_scan_obj.set_channel;
+
+  const bool channel_hop_enabled =
+    settings_obj.loadSetting<bool>("ChanHop");
+  this->addNodes(
+    &wifiChannelMenu,
+    "Unset Channel",
+    channel_hop_enabled ? TFTGREEN : TFTCYAN,
+    PACKET_MONITOR,
+    [this]() {
+      const bool was_enabled = settings_obj.loadSetting<bool>("ChanHop");
+      if (!was_enabled && !settings_obj.saveSetting<bool>("ChanHop", true)) {
+        this->showWiFiProfileStatus(
+          "Channel Error", "Could not enable channel hopping");
+        return;
+      }
+
+      wifi_scan_obj.channel_hop = true;
+      this->showWiFiProfileStatus(
+        "Channel Unset", "Channel hopping enabled.", true);
+    });
+
+  this->addNodes(
+    &wifiChannelMenu,
+    "2.4 GHz",
+    !channel_hop_enabled && (current_channel <= 14) ? TFTGREEN : TFTCYAN,
+    PACKET_MONITOR,
+    [this]() {
+      this->buildWiFiChannelListMenu(false);
+      this->changeMenu(&wifiChannelListMenu, true);
+    });
+
+  #ifdef HAS_DUAL_BAND
+    this->addNodes(
+      &wifiChannelMenu,
+      "5 GHz",
+      !channel_hop_enabled && (current_channel > 14) ? TFTGREEN : TFTCYAN,
+      PACKET_MONITOR,
+      [this]() {
+        this->buildWiFiChannelListMenu(true);
+        this->changeMenu(&wifiChannelListMenu, true);
+      });
+  #endif
+}
+
+void MenuFunctions::buildWiFiChannelListMenu(bool five_ghz) {
+  wifiChannelListMenu.list->clear();
+  wifiChannelListMenu.parentMenu = &wifiChannelMenu;
+  wifiChannelListMenu.name = five_ghz ? "5 GHz Channels" : "2.4 GHz Channels";
+
+  this->addNodes(&wifiChannelListMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(wifiChannelListMenu.parentMenu, true);
+  });
+
+  uint8_t current_channel = wifi_scan_obj.set_channel;
+  wifi_second_chan_t secondary_channel = WIFI_SECOND_CHAN_NONE;
+  if (esp_wifi_get_channel(&current_channel, &secondary_channel) != ESP_OK)
+    current_channel = wifi_scan_obj.set_channel;
+
+  const bool channel_hop_enabled =
+    settings_obj.loadSetting<bool>("ChanHop");
+
+  auto add_channel = [this, current_channel, channel_hop_enabled, five_ghz](uint8_t channel) {
+    #ifdef CONFIG_IDF_TARGET_ESP32C5
+      // The C5 driver rejects these entries even though they are present in
+      // the generic dual-band hopping table.
+      if ((channel == 14) || (channel == 144) || (channel > 165))
+        return;
+    #endif
+
+    if (five_ghz != (channel > 14))
+      return;
+
+    String label = String(F("Channel ")) + String(channel);
+    this->addNodes(
+      &wifiChannelListMenu,
+      label.c_str(),
+      !channel_hop_enabled && (channel == current_channel)
+        ? TFTGREEN
+        : TFTCYAN,
+      PACKET_MONITOR,
+      [this, channel]() {
+        uint8_t previous_channel = wifi_scan_obj.set_channel;
+        wifi_second_chan_t previous_secondary = WIFI_SECOND_CHAN_NONE;
+        if (esp_wifi_get_channel(&previous_channel, &previous_secondary) != ESP_OK)
+          previous_channel = wifi_scan_obj.set_channel;
+
+        if (!wifi_scan_obj.changeChannel(channel)) {
+          this->showWiFiProfileStatus(
+            "Channel Error", "Could not set the selected channel");
+          return;
+        }
+
+        const bool channel_hop_enabled =
+          settings_obj.loadSetting<bool>("ChanHop");
+        if (channel_hop_enabled &&
+            !settings_obj.saveSetting<bool>("ChanHop", false)) {
+          wifi_scan_obj.changeChannel(previous_channel, false);
+          this->showWiFiProfileStatus(
+            "Channel Error", "Could not disable channel hopping");
+          return;
+        }
+
+        wifi_scan_obj.channel_hop = false;
+        this->showWiFiProfileStatus(
+          "Channel Fixed",
+          String(F("Channel ")) + String(channel) +
+            F(" fixed. Channel hopping disabled."),
+          true);
+      });
+  };
+
+  #ifdef HAS_DUAL_BAND
+    for (int i = 0; i < DUAL_BAND_CHANNELS; i++)
+      add_channel(wifi_scan_obj.dual_band_channels[i]);
+  #else
+    if (!five_ghz) {
+      for (int channel = 1; channel <= MAX_CHANNEL; channel++)
+        add_channel(static_cast<uint8_t>(channel));
+    }
+  #endif
+}
+
+void MenuFunctions::buildForgetWiFiConfirmMenu(
+  uint32_t profile_id,
+  Menu* parent_menu) {
+  forgetWiFiConfirmMenu.name = "Forget WiFi?";
+  forgetWiFiConfirmMenu.parentMenu = parent_menu;
+  forgetWiFiConfirmMenu.list->clear();
+
+  this->addNodes(&forgetWiFiConfirmMenu, "No", TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(forgetWiFiConfirmMenu.parentMenu, true);
+  });
+
+  this->addNodes(&forgetWiFiConfirmMenu, "Yes, forget", TFTRED, CLEAR_ICO,
+    [this, profile_id]() {
+      const bool forgotten = profile_id == 0
+        ? settings_obj.saveWiFiCredentials("", "")
+        : wifi_profile_store.forget(profile_id);
+      if (forgotten)
+        this->showWiFiProfileStatus("WiFi Profile", "WiFi profile forgotten", true);
+      else
+        this->showWiFiProfileStatus(
+          "Profile Error",
+          profile_id == 0 ? String(F("Could not forget saved WiFi")) : wifi_profile_store.lastError());
+    });
+}
+
+void MenuFunctions::buildResetWiFiConfirmMenu() {
+  forgetWiFiConfirmMenu.name = "Reset Saved WiFi?";
+  forgetWiFiConfirmMenu.parentMenu = &wifiGeneralMenu;
+  forgetWiFiConfirmMenu.list->clear();
+
+  this->addNodes(&forgetWiFiConfirmMenu, "No", TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(forgetWiFiConfirmMenu.parentMenu, true);
+  });
+  this->addNodes(&forgetWiFiConfirmMenu, "Yes, reset", TFTRED, CLEAR_ICO, [this]() {
+    if (wifi_profile_store.reset())
+      this->showWiFiProfileStatus("Saved WiFi", "All WiFi profiles reset", true);
+    else
+      this->showWiFiProfileStatus("Profile Error", wifi_profile_store.lastError());
+  });
+}
+
+void MenuFunctions::buildWiFiProfilesMenu(bool forget_mode) {
+  wifiProfilesMenu.name = forget_mode ? "Forget Saved WiFi" : "Join Saved WiFi";
+  wifiProfilesMenu.parentMenu = &wifiGeneralMenu;
+  wifiProfilesMenu.list->clear();
+
+  this->addNodes(&wifiProfilesMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(wifiProfilesMenu.parentMenu, true);
+  });
+
+  const String legacy_ssid = settings_obj.loadSetting<String>("ClientSSID");
+  const String legacy_password = settings_obj.loadSetting<String>("ClientPW");
+  bool legacy_is_profile = false;
+  for (size_t i = 0; i < wifi_profile_store.count(); ++i) {
+    WiFiProfileInfo profile;
+    if (!wifi_profile_store.profileAt(i, profile))
+      continue;
+
+    const uint32_t profile_id = profile.id;
+    const String profile_ssid = profile.ssid;
+    const uint8_t profile_band = profile.band;
+    const String profile_label = formatWiFiProfileLabel(profile);
+    if (!legacy_is_profile && profile_ssid == legacy_ssid) {
+      WiFiProfileInfo stored_profile;
+      String stored_password;
+      legacy_is_profile = wifi_profile_store.loadCredentials(
+        profile_id,
+        stored_profile,
+        stored_password) &&
+        stored_profile.ssid == legacy_ssid &&
+        stored_password == legacy_password;
+      stored_password = "";
+    }
+
+    if (forget_mode) {
+      this->addNodes(&wifiProfilesMenu, profile_label.c_str(), TFTRED, CLEAR_ICO,
+        [this, profile_id]() {
+          this->buildForgetWiFiConfirmMenu(profile_id, &wifiProfilesMenu);
+          this->changeMenu(&forgetWiFiConfirmMenu, true);
+        });
+    }
+    else {
+      this->addNodes(&wifiProfilesMenu, profile_label.c_str(), TFTWHITE, 255,
+        [this, profile_id, profile_ssid, profile_band]() {
+          WiFiProfileInfo stored_profile;
+          String password;
+          if (!wifi_profile_store.loadCredentials(profile_id, stored_profile, password) ||
+              stored_profile.ssid != profile_ssid ||
+              stored_profile.band != profile_band) {
+            password = "";
+            this->showWiFiProfileStatus("Profile Error", "Saved WiFi is unavailable");
+            return;
+          }
+
+          wifi_scan_obj.joinWiFi(
+            stored_profile.ssid,
+            password,
+            true,
+            0,
+            nullptr,
+            stored_profile.band);
+          password = "";
+          this->changeMenu(&wifiGeneralMenu, true);
+        });
+    }
+  }
+
+  if (legacy_ssid.length() && !legacy_is_profile) {
+    const String legacy_label = String(F("[last] ")) + legacy_ssid;
+    if (forget_mode) {
+      this->addNodes(&wifiProfilesMenu, legacy_label.c_str(), TFTRED, CLEAR_ICO,
+        [this]() {
+          this->buildForgetWiFiConfirmMenu(0, &wifiProfilesMenu);
+          this->changeMenu(&forgetWiFiConfirmMenu, true);
+        });
+    }
+    else {
+      this->addNodes(&wifiProfilesMenu, legacy_label.c_str(), TFTWHITE, 255,
+        [this, legacy_ssid]() {
+          if (settings_obj.loadSetting<String>("ClientSSID") != legacy_ssid) {
+            this->showWiFiProfileStatus("Profile Error", "Last WiFi changed");
+            return;
+          }
+          String password = settings_obj.loadSetting<String>("ClientPW");
+          wifi_scan_obj.joinWiFi(legacy_ssid, password, true);
+          password = "";
+          this->changeMenu(&wifiGeneralMenu, true);
+        });
+    }
+  }
+}
+
 #ifdef HAS_MINI_SCREEN
 void MenuFunctions::drawMiniMenuButton(int b, int x, bool selected) {
   if (!current_menu || !current_menu->list || x < 0 || x >= current_menu->list->size())
@@ -184,9 +587,10 @@ void MenuFunctions::main(uint32_t currentTime)
 
       if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
         #ifdef HAS_SCREEN
-          this->setGraphScale(this->graphScaleCheckSmall(wifi_scan_obj.channel_activity));
+          const uint8_t *page_values = wifi_scan_obj.channel_activity + wifi_scan_obj.activityPageStart();
+          this->setGraphScale(this->graphScaleCheckSmall(page_values));
 
-          this->drawGraphSmall(wifi_scan_obj.channel_activity);
+          this->drawGraphSmall(page_values);
 
         #endif
       }
@@ -578,30 +982,11 @@ void MenuFunctions::main(uint32_t currentTime)
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_PROBE) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_DEAUTH) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN)) {
-            #ifndef HAS_DUAL_BAND
-              if (wifi_scan_obj.set_channel < 14)
-                wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
-              else
-                wifi_scan_obj.changeChannel(1);
-            #else
-              if (wifi_scan_obj.dual_band_channel_index < DUAL_BAND_CHANNELS - 1)
-                wifi_scan_obj.dual_band_channel_index++;
-              else
-                wifi_scan_obj.dual_band_channel_index = 0;
-
-              wifi_scan_obj.changeChannel(wifi_scan_obj.dual_band_channels[wifi_scan_obj.dual_band_channel_index]);
-            #endif
+            wifi_scan_obj.stepChannel(1);
           }
           else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
-            #ifndef HAS_DUAL_BAND
-              if (wifi_scan_obj.activity_page < MAX_CHANNEL / CHAN_PER_PAGE) {
-                wifi_scan_obj.activity_page++;
-              }
-            #else
-              if (wifi_scan_obj.activity_page < DUAL_BAND_CHANNELS / CHAN_PER_PAGE) {
-                wifi_scan_obj.activity_page++;
-              }
-            #endif
+            if (wifi_scan_obj.activity_page < wifi_scan_obj.activityPageCount())
+              wifi_scan_obj.activity_page++;
             wifi_scan_obj.drawChannelLine();
           }
         }
@@ -647,30 +1032,11 @@ void MenuFunctions::main(uint32_t currentTime)
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_PROBE) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_DEAUTH) ||
                   (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN)) {
-            #ifndef HAS_DUAL_BAND
-              if (wifi_scan_obj.set_channel > 1)
-                wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
-              else
-                wifi_scan_obj.changeChannel(14);
-            #else
-              if (wifi_scan_obj.dual_band_channel_index > 0)
-                wifi_scan_obj.dual_band_channel_index--;
-              else
-                wifi_scan_obj.dual_band_channel_index = DUAL_BAND_CHANNELS - 1;
-
-              wifi_scan_obj.changeChannel(wifi_scan_obj.dual_band_channels[wifi_scan_obj.dual_band_channel_index]);
-            #endif
+            wifi_scan_obj.stepChannel(-1);
           }
           else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
-            #ifndef HAS_DUAL_BAND
-              if (wifi_scan_obj.activity_page > 1) {
-                wifi_scan_obj.activity_page--;
-              }
-            #else
-              if (wifi_scan_obj.activity_page > 0) {
-                wifi_scan_obj.activity_page--;
-              }
-            #endif
+            if (wifi_scan_obj.activity_page > 1)
+              wifi_scan_obj.activity_page--;
             wifi_scan_obj.drawChannelLine();
           }
         }
@@ -735,30 +1101,11 @@ void MenuFunctions::main(uint32_t currentTime)
                       (wifi_scan_obj.currentScanMode == WIFI_SCAN_PROBE) ||
                       (wifi_scan_obj.currentScanMode == WIFI_SCAN_DEAUTH) ||
                       (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN)) {
-                #ifndef HAS_DUAL_BAND
-                  if (wifi_scan_obj.set_channel < 14)
-                    wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
-                  else
-                    wifi_scan_obj.changeChannel(1);
-                #else
-                  if (wifi_scan_obj.dual_band_channel_index < DUAL_BAND_CHANNELS - 1)
-                    wifi_scan_obj.dual_band_channel_index++;
-                  else
-                    wifi_scan_obj.dual_band_channel_index = 0;
-
-                  wifi_scan_obj.changeChannel(wifi_scan_obj.dual_band_channels[wifi_scan_obj.dual_band_channel_index]);
-                #endif
+            wifi_scan_obj.stepChannel(1);
               }
               else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
-                #ifndef HAS_DUAL_BAND
-                  if (wifi_scan_obj.activity_page < MAX_CHANNEL / CHAN_PER_PAGE) {
-                    wifi_scan_obj.activity_page++;
-                  }
-                #else
-                  if (wifi_scan_obj.activity_page < DUAL_BAND_CHANNELS / CHAN_PER_PAGE) {
-                    wifi_scan_obj.activity_page++;
-                  }
-                #endif
+                if (wifi_scan_obj.activity_page < wifi_scan_obj.activityPageCount())
+                  wifi_scan_obj.activity_page++;
                 wifi_scan_obj.drawChannelLine();
               }
             }
@@ -812,30 +1159,11 @@ void MenuFunctions::main(uint32_t currentTime)
                 (wifi_scan_obj.currentScanMode == WIFI_SCAN_PROBE) ||
                 (wifi_scan_obj.currentScanMode == WIFI_SCAN_DEAUTH) ||
                 (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN)) {
-          #ifndef HAS_DUAL_BAND
-            if (wifi_scan_obj.set_channel > 1)
-              wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
-            else
-              wifi_scan_obj.changeChannel(14);
-          #else
-            if (wifi_scan_obj.dual_band_channel_index > 0)
-              wifi_scan_obj.dual_band_channel_index--;
-            else
-              wifi_scan_obj.dual_band_channel_index = DUAL_BAND_CHANNELS - 1;
-
-            wifi_scan_obj.changeChannel(wifi_scan_obj.dual_band_channels[wifi_scan_obj.dual_band_channel_index]);
-          #endif
+            wifi_scan_obj.stepChannel(-1);
         }
         else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
-          #ifndef HAS_DUAL_BAND
-            if (wifi_scan_obj.activity_page > 1) {
-              wifi_scan_obj.activity_page--;
-            }
-          #else
-            if (wifi_scan_obj.activity_page > 0) {
-              wifi_scan_obj.activity_page--;
-            }
-          #endif
+          if (wifi_scan_obj.activity_page > 1)
+            wifi_scan_obj.activity_page--;
           wifi_scan_obj.drawChannelLine();
         }
       }
@@ -848,19 +1176,7 @@ void MenuFunctions::main(uint32_t currentTime)
       if (this->isKeyPressed('/')) {
       #endif
         if (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
-          #ifndef HAS_DUAL_BAND
-            if (wifi_scan_obj.set_channel < 14)
-              wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
-            else
-              wifi_scan_obj.changeChannel(1);
-          #else
-            if (wifi_scan_obj.dual_band_channel_index < DUAL_BAND_CHANNELS - 1)
-              wifi_scan_obj.dual_band_channel_index++;
-            else
-              wifi_scan_obj.dual_band_channel_index = 0;
-
-            wifi_scan_obj.changeChannel(wifi_scan_obj.dual_band_channels[wifi_scan_obj.dual_band_channel_index]);
-          #endif
+            wifi_scan_obj.stepChannel(1);
         }
       }
       #endif
@@ -872,19 +1188,7 @@ void MenuFunctions::main(uint32_t currentTime)
       if (this->isKeyPressed(',')) {
       #endif
         if (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
-          #ifndef HAS_DUAL_BAND
-            if (wifi_scan_obj.set_channel > 1)
-              wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
-            else
-              wifi_scan_obj.changeChannel(14);
-          #else
-            if (wifi_scan_obj.dual_band_channel_index > 0)
-              wifi_scan_obj.dual_band_channel_index--;
-            else
-              wifi_scan_obj.dual_band_channel_index = DUAL_BAND_CHANNELS - 1;
-
-            wifi_scan_obj.changeChannel(wifi_scan_obj.dual_band_channels[wifi_scan_obj.dual_band_channel_index]);
-          #endif
+            wifi_scan_obj.stepChannel(-1);
         }
       }
       #endif
@@ -1589,8 +1893,13 @@ void MenuFunctions::RunSetup()
     wardrivingMenu.list = new LinkedList<MenuNode>();
   #endif*/
   wifiGeneralMenu.list = new LinkedList<MenuNode>();
+  wifiChannelMenu.list = new LinkedList<MenuNode>();
+  wifiChannelListMenu.list = new LinkedList<MenuNode>();
   wifiAPMenu.list = new LinkedList<MenuNode>();
   wifiIPMenu.list = new LinkedList<MenuNode>();
+  wifiProfilesMenu.list = new LinkedList<MenuNode>();
+  forgetWiFiConfirmMenu.list = new LinkedList<MenuNode>();
+  wifiProfileStatusMenu.list = new LinkedList<MenuNode>();
   apInfoMenu.list = new LinkedList<MenuNode>();
   setMacMenu.list = new LinkedList<MenuNode>();
   genAPMacMenu.list = new LinkedList<MenuNode>();
@@ -1651,6 +1960,8 @@ void MenuFunctions::RunSetup()
   wifiScannerMenu.name = "Scanners";
   wifiAttackMenu.name = text_table1[21];
   wifiGeneralMenu.name = text_table1[22];
+  wifiChannelMenu.name = "Set Channel";
+  wifiChannelListMenu.name = "Channels";
   saveFileMenu.name = "Save/Load Files";
   saveSSIDsMenu.name = "Save SSIDs";
   loadSSIDsMenu.name = "Load SSIDs";
@@ -1666,6 +1977,9 @@ void MenuFunctions::RunSetup()
   clearAPsMenu.name = text_table1[29];
   wifiAPMenu.name = "Select";
   wifiIPMenu.name = "Active IPs";
+  wifiProfilesMenu.name = "Saved WiFi";
+  forgetWiFiConfirmMenu.name = "Forget WiFi?";
+  wifiProfileStatusMenu.name = "WiFi Profile";
   apInfoMenu.name = "AP Info";
   setMacMenu.name = "Set MACs";
   genAPMacMenu.name = "Generate AP MAC";
@@ -2022,7 +2336,8 @@ void MenuFunctions::RunSetup()
     // Get AP list ready
     for (int i = 0; i < access_points->size(); i++) {
       // This is the menu node
-      this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, 255, [this, i](){
+      String ap_label = formatAPMenuLabel(access_points->get(i));
+      this->addNodes(&wifiAPMenu, ap_label.c_str(), TFTCYAN, 255, [this, i](){
         if (evil_portal_obj.setAP(access_points->get(i).essid)) {
           AccessPoint new_ap = access_points->get(i);
           new_ap.selected = true;
@@ -2150,6 +2465,11 @@ void MenuFunctions::RunSetup()
   this->addNodes(&wifiGeneralMenu, text_table1[27], TFTSKYBLUE, GENERATE, [this]() {
     this->changeMenu(&generateSSIDsMenu, true);
     wifi_scan_obj.RunGenerateSSIDs();
+  });
+
+  this->addNodes(&wifiGeneralMenu, "Set Channel", TFTCYAN, PACKET_MONITOR, [this]() {
+    this->buildWiFiChannelMenu();
+    this->changeMenu(&wifiChannelMenu, true);
   });
 
 	//Add Select probe ssid
@@ -2318,7 +2638,8 @@ void MenuFunctions::RunSetup()
       // Populate the menu with buttons
       for (int i = 0; i < access_points->size(); i++) {
         // This is the menu node
-        this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, 255, [this, i](){
+        String ap_label = formatAPMenuLabel(access_points->get(i));
+        this->addNodes(&wifiAPMenu, ap_label.c_str(), TFTCYAN, 255, [this, i](){
         AccessPoint new_ap = access_points->get(i);
         new_ap.selected = !access_points->get(i).selected;
 
@@ -2345,7 +2666,8 @@ void MenuFunctions::RunSetup()
       // Populate the menu with buttons
       for (int i = 0; i < access_points->size(); i++) {
         // This is the menu node
-        this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, 255, [this, i](){
+        String ap_label = formatAPMenuLabel(access_points->get(i));
+        this->addNodes(&wifiAPMenu, ap_label.c_str(), TFTCYAN, 255, [this, i](){
           this->changeMenu(&apInfoMenu, true);
           wifi_scan_obj.RunAPInfo(i);
         });
@@ -2383,7 +2705,8 @@ void MenuFunctions::RunSetup()
 
       for (int i = 0; i < menu_limit; i++) {
         wifiStationMenu.list->clear();
-        this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, 255, [this, i](){
+        String ap_label = formatAPMenuLabel(access_points->get(i));
+        this->addNodes(&wifiAPMenu, ap_label.c_str(), TFTCYAN, 255, [this, i](){
 
           wifiStationMenu.list->clear();
 
@@ -2451,16 +2774,24 @@ void MenuFunctions::RunSetup()
       // Populate the menu with buttons
       for (int i = 0; i < access_points->size(); i++) {
         // This is the menu node
-        this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, 255, [this, i](){
+        String ap_label = formatAPMenuLabel(access_points->get(i));
+        this->addNodes(&wifiAPMenu, ap_label.c_str(), TFTCYAN, 255, [this, i](){
+          AccessPoint target_ap = access_points->get(i);
+          String join_ssid = this->promptJoinSSID(target_ap);
+          if (join_ssid == "") {
+            this->changeMenu(&wifiGeneralMenu, true);
+            return;
+          }
+
           // Join WiFi using mini keyboard
           #ifdef HAS_MINI_KB
             this->changeMenu(&miniKbMenu, true);
             String password = this->miniKeyboard(&miniKbMenu, true);
             if (password != "") {
-              Serial.println("Using SSID: " + (String)access_points->get(i).essid + " Password: " + (String)password);
+              Serial.println("Using SSID: " + join_ssid + " Password: <redacted>");
               wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
-              wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
-              wifi_scan_obj.joinWiFi(access_points->get(i).essid, password);
+              wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW);
+              wifi_scan_obj.joinWiFi(join_ssid, password, true, target_ap.channel, target_ap.bssid);
               this->changeMenu(current_menu, true);
             }
           #endif
@@ -2469,7 +2800,7 @@ void MenuFunctions::RunSetup()
           #ifdef HAS_TOUCH
             char passwordBuf[64] = {0};  // or prefill with existing SSID
             if (keyboardInput(passwordBuf, sizeof(passwordBuf), "Enter Password")) {
-              wifi_scan_obj.joinWiFi(access_points->get(i).essid, String(passwordBuf), true);
+              wifi_scan_obj.joinWiFi(join_ssid, String(passwordBuf), true, target_ap.channel, target_ap.bssid);
             }
 
             this->changeMenu(&wifiGeneralMenu, true);
@@ -2480,53 +2811,63 @@ void MenuFunctions::RunSetup()
     });
 
     this->addNodes(&wifiGeneralMenu, "Join Saved WiFi", TFTWHITE, KEYBOARD_ICO, [this](){
+      const WiFiProfileStoreState profile_state = wifi_profile_store.refresh();
+      if (profile_state == WiFiProfileStoreState::Ready) {
+        if (wifi_profile_store.count() > 0) {
+          this->buildWiFiProfilesMenu(false);
+          this->changeMenu(&wifiProfilesMenu, true);
+        }
+        else {
+          this->showWiFiProfileStatus("Saved WiFi", "No saved WiFi profiles");
+        }
+        return;
+      }
+
       String ssid = settings_obj.loadSetting<String>("ClientSSID");
       String pw = settings_obj.loadSetting<String>("ClientPW");
 
-      if ((ssid != "") && (pw != "")) {
-        wifi_scan_obj.joinWiFi(ssid, pw, false);
-        this->changeMenu(&wifiGeneralMenu, true);
+      if (profile_state != WiFiProfileStoreState::NoSD || !ssid.length()) {
+        pw = "";
+        this->showWiFiProfileStatus("Profile Error", wifi_profile_store.lastError());
+        return;
       }
-      else {
-        wifiAPMenu.parentMenu = &wifiGeneralMenu;
 
-        // Add the back button
-        wifiAPMenu.list->clear();
-          this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, 0, [this]() {
-          this->changeMenu(wifiAPMenu.parentMenu, true);
-        });
-
-        // Populate the menu with buttons
-        for (int i = 0; i < access_points->size(); i++) {
-          // This is the menu node
-          this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, 255, [this, i](){
-            // Join WiFi using mini keyboard
-            #ifdef HAS_MINI_KB
-              this->changeMenu(&miniKbMenu, true);
-              String password = this->miniKeyboard(&miniKbMenu, true);
-              if (password != "") {
-                Serial.println("Using SSID: " + (String)access_points->get(i).essid + " Password: " + (String)password);
-                wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
-                wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
-                wifi_scan_obj.joinWiFi(access_points->get(i).essid, password);
-                this->changeMenu(current_menu, true);
-              }
-            #endif
-
-            // Join WiFi using touch screen keyboard
-            #ifdef HAS_TOUCH
-              char passwordBuf[64] = {0};  // or prefill with existing SSID
-              if (keyboardInput(passwordBuf, sizeof(passwordBuf), "Enter Password")) {
-                wifi_scan_obj.joinWiFi(access_points->get(i).essid, String(passwordBuf), true);
-              }
-
-              this->changeMenu(&wifiGeneralMenu, true);
-            #endif
-          });
-        }
-        this->changeMenu(&wifiAPMenu, true);
-      }
+      wifi_scan_obj.joinWiFi(ssid, pw, true);
+      pw = "";
+      this->changeMenu(&wifiGeneralMenu, true);
     });
+
+    this->addNodes(&wifiGeneralMenu, "Forget Saved WiFi", TFTRED, CLEAR_ICO, [this]() {
+      const WiFiProfileStoreState profile_state = wifi_profile_store.refresh();
+      if (profile_state == WiFiProfileStoreState::Ready) {
+        if (wifi_profile_store.count() > 0) {
+          this->buildWiFiProfilesMenu(true);
+          this->changeMenu(&wifiProfilesMenu, true);
+          return;
+        }
+
+        const String legacy_ssid = settings_obj.loadSetting<String>("ClientSSID");
+        if (legacy_ssid.length()) {
+          this->buildForgetWiFiConfirmMenu(0, &wifiGeneralMenu);
+          this->changeMenu(&forgetWiFiConfirmMenu, true);
+        }
+        else {
+          this->showWiFiProfileStatus("Saved WiFi", "No saved WiFi profiles");
+        }
+        return;
+      }
+
+      this->showWiFiProfileStatus("Profile Error", wifi_profile_store.lastError());
+    });
+
+    #ifdef HAS_SD
+      if (sd_obj.supported) {
+        this->addNodes(&wifiGeneralMenu, "Reset Saved WiFi", TFTRED, CLEAR_ICO, [this]() {
+          this->buildResetWiFiConfirmMenu();
+          this->changeMenu(&forgetWiFiConfirmMenu, true);
+        });
+      }
+    #endif
 
     this->addNodes(&wifiGeneralMenu, "Start AP", TFTGREEN, KEYBOARD_ICO, [this](){
       ssidsMenu.parentMenu = &wifiGeneralMenu;
@@ -2546,7 +2887,7 @@ void MenuFunctions::RunSetup()
             this->changeMenu(&miniKbMenu, true);
             String password = this->miniKeyboard(&miniKbMenu, true);
             if (password != "") {
-              Serial.println("Using SSID: " + (String)ssids->get(i).essid + " Password: " + (String)password);
+              Serial.println("Using SSID: " + (String)ssids->get(i).essid + " Password: <redacted>");
               wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
               wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
               wifi_scan_obj.startWiFi(ssids->get(i).essid, password);
@@ -2558,7 +2899,7 @@ void MenuFunctions::RunSetup()
           #ifdef HAS_TOUCH
             char passwordBuf[64] = {0};  // or prefill with existing SSID
             if (keyboardInput(passwordBuf, sizeof(passwordBuf), "Enter Password")) {
-              Serial.println("Using SSID: " + (String)ssids->get(i).essid + " Password: " + String(passwordBuf));
+              Serial.println("Using SSID: " + (String)ssids->get(i).essid + " Password: <redacted>");
               wifi_scan_obj.startWiFi(ssids->get(i).essid, String(passwordBuf));
             }
 
@@ -2975,7 +3316,8 @@ void MenuFunctions::RunSetup()
       // Populate the menu with buttons
       for (int i = 0; i < access_points->size(); i++) {
         // This is the menu node
-        this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTLIME, 255, [this, i](){
+        String ap_label = formatAPMenuLabel(access_points->get(i));
+        this->addNodes(&wifiAPMenu, ap_label.c_str(), TFTLIME, 255, [this, i](){
           this->changeMenu(&genAPMacMenu, true);
           wifi_scan_obj.RunSetMac(access_points->get(i).bssid, true);
         });
@@ -3512,7 +3854,7 @@ void MenuFunctions::RunSetup()
 
 //#if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
 #ifdef HAS_MINI_KB
-  String MenuFunctions::miniKeyboard(Menu * targetMenu, bool do_pass) {
+  String MenuFunctions::miniKeyboard(Menu * targetMenu, bool do_pass, bool add_to_ssid_list) {
     // Prepare a char array and reset temp SSID string
     extern LinkedList<ssid>* ssids;
 
@@ -3680,7 +4022,7 @@ void MenuFunctions::RunSetup()
                   delay(1);
                 }
 
-                if (!do_pass) {
+                if (!do_pass && add_to_ssid_list) {
                 // If we have a string, add it to list of SSIDs
                   if (wifi_scan_obj.current_mini_kb_ssid != "") {
                     pressed = true;
@@ -3708,7 +4050,7 @@ void MenuFunctions::RunSetup()
               }
             }
 
-            if (!do_pass) {
+            if (!do_pass && add_to_ssid_list) {
               if (this->isKeyPressed('`')) {
                 this->changeMenu(targetMenu->parentMenu, true);
                 return wifi_scan_obj.current_mini_kb_ssid;
@@ -3885,7 +4227,7 @@ void MenuFunctions::RunSetup()
               display_obj.tft.println("U/D - Rem/Add Char");
               display_obj.tft.println("L/R - Prev/Nxt Char");
               #endif
-              if (!do_pass) {
+              if (!do_pass && add_to_ssid_list) {
                 #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
                   display_obj.tft.println("Enter - Save");
                   display_obj.tft.println("Esc - Exit");
@@ -4076,22 +4418,16 @@ void MenuFunctions::drawMaxLine(uint8_t value, uint16_t color) {
   display_obj.tft.println((String)value);
 }
 
-void MenuFunctions::drawGraphSmall(uint8_t *values) {
-  uint8_t maxValue = 0;
-  //(i + (CHAN_PER_PAGE * (this->activity_page - 1)))
-
+void MenuFunctions::drawGraphSmall(const uint8_t *values) {
   int bar_width = SCREEN_WIDTH / (CHAN_PER_PAGE * 2);
   //display_obj.tft.fillRect(0, TFT_HEIGHT / 2 + 1, SCREEN_WIDTH, (TFT_HEIGHT / 2) + 1, TFT_BLACK);
 
   #ifndef HAS_DUAL_BAND
     for (int i = 1; i < CHAN_PER_PAGE + 1; i++) {
-      int targ_val = i + (CHAN_PER_PAGE * (wifi_scan_obj.activity_page - 1)) - 1;
+      int targ_val = i - 1;
       int x_mult = (i * 2) - 1;
       int x_coord = (SCREEN_WIDTH / (CHAN_PER_PAGE * 2)) * (x_mult - 1);
 
-      if (values[targ_val] > maxValue) {
-        maxValue = values[targ_val];
-      }
 
       if (values[targ_val] * this->_graph_scale <= GRAPH_VERT_LIM) {
         display_obj.tft.fillRect(x_coord, SCREEN_HEIGHT / 2 + 1, bar_width, SCREEN_HEIGHT / 2 + 1, TFT_BLACK);
@@ -4102,13 +4438,10 @@ void MenuFunctions::drawGraphSmall(uint8_t *values) {
     }
   #else
     for (int i = 1; i < CHAN_PER_PAGE + 1; i++) {
-      int targ_val = i + (CHAN_PER_PAGE * (wifi_scan_obj.activity_page - 1)) - 1;
+      int targ_val = i - 1;
       int x_mult = (i * 2) - 1;
       int x_coord = (SCREEN_WIDTH / (CHAN_PER_PAGE * 2)) * (x_mult - 1);
 
-      if (values[targ_val] > maxValue) {
-        maxValue = values[targ_val];
-      }
 
       if (values[targ_val] * this->_graph_scale <= GRAPH_VERT_LIM) {
         display_obj.tft.fillRect(x_coord, SCREEN_HEIGHT / 2 + 1, bar_width + 3, SCREEN_HEIGHT / 2 + 1, TFT_BLACK);
@@ -4118,8 +4451,6 @@ void MenuFunctions::drawGraphSmall(uint8_t *values) {
       display_obj.tft.drawLine(x_coord - 2, SCREEN_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2), x_coord - 2, SCREEN_HEIGHT, TFT_WHITE);
     }
   #endif
-
-  this->drawMaxLine(maxValue, TFT_GREEN); // Draw max
 }
 
 void MenuFunctions::drawGraph(int16_t *values) {
@@ -4220,6 +4551,19 @@ void MenuFunctions::changeMenu(Menu* menu, bool simple_change) {
 	  backlightOn();
     #endif
   }
+  // Boolean settings can also be changed through the serial CLI. Refresh the
+  // menu snapshots before drawing so their colors always reflect the value
+  // that scans actually use.
+  if (menu == &settingsMenu) {
+    for (int i = 1; i < settingsMenu.list->size(); i++) {
+      MenuNode node = settingsMenu.list->get(i);
+      if ((node.icon == SETTINGS) && (node.color == TFTLIGHTGREY)) {
+        node.selected = settings_obj.loadSetting<bool>(node.name.c_str());
+        settingsMenu.list->set(i, node);
+      }
+    }
+  }
+
   current_menu = menu;
 
   current_menu->selected = 0;

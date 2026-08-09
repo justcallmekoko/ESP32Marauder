@@ -791,7 +791,7 @@ class WiFiScan
 
     String header_line = "WigleWifi-1.4,appRelease=" + (String)MARAUDER_VERSION + ",model=ESP32 Marauder,release=" + (String)MARAUDER_VERSION + ",device=ESP32 Marauder,display=SPI TFT,board=ESP32 Marauder,brand=JustCallMeKoko\nMAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\n";
 
-    uint8_t dual_band_channels[DUAL_BAND_CHANNELS] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 72, 76, 80, 84, 88, 92, 96, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, 169, 173, 177};
+    uint8_t dual_band_channels[DUAL_BAND_CHANNELS] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, 169, 173, 177};
 
     uint8_t oui_list[27][3] = {
     {0x58, 0x8E, 0x81},
@@ -977,6 +977,9 @@ class WiFiScan
     bool isMetaIdentifier(uint16_t id);
     bool isBlockedIdentifier(uint16_t id);
     uint32_t getCompleteEapol(int check_index = -1);
+    uint8_t activityPageCount() const;
+    uint8_t activityPageStart() const;
+    uint8_t activityPageEnd() const;
     void drawChannelLine();
     #ifdef HAS_SCREEN
       int8_t checkAnalyzerButtons(uint32_t currentTime);
@@ -1008,9 +1011,16 @@ class WiFiScan
     bool shutdownWiFi();
     bool shutdownBLE();
     bool scanning();
-    bool joinWiFi(String ssid, String password, bool gui = true);
+    bool joinWiFi(
+      String ssid,
+      String password,
+      bool gui = true,
+      int32_t channel = 0,
+      const uint8_t* bssid = nullptr,
+      uint8_t preferred_band = 0);
     void getMAC(bool get_sta, uint8_t* mac);
-    void changeChannel(int chan = -1);
+    bool changeChannel(int chan = -1, bool report_error = true);
+    bool stepChannel(int8_t direction, bool wrap = true);
     void RunAPInfo(uint16_t index, bool do_display = true);
     void RunInfo();
     void RunSetMac(uint8_t * mac, bool ap = true);

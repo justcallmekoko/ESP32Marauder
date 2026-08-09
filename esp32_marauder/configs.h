@@ -47,7 +47,7 @@
 
   #define TRACK_EVICT_SEC 90 // Seconds before marking tracked MAC as tombstone
 
-  #define DUAL_BAND_CHANNELS 51
+  #define DUAL_BAND_CHANNELS 42
 
   #define DISPLAY_BUFFER_LIMIT 20
 

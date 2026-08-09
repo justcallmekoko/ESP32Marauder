@@ -36,6 +36,7 @@ https://www.online-utility.org/image/convert/to/XBM
 #endif
 
 #include "settings.h"
+#include "WiFiProfileStore.h"
 #include "CommandLine.h"
 #include "lang_var.h"
 
@@ -337,14 +338,16 @@ void setup()
     #endif
   #endif
 
-  settings_obj.begin();
-
-  const char* type = settings_obj.getSettingType("wu");
-
-  if (type == nullptr || type[0] == '\0') {
-    Serial.println(F("Current settings format not supported. Installing new default settings..."));
-    settings_obj.createDefaultSettings(SPIFFS);
+  const bool settings_ready = settings_obj.begin();
+  if (settings_ready) {
+    const char* type = settings_obj.getSettingType("wu");
+    if (type == nullptr || type[0] == '\0') {
+      Serial.println(F("Current settings format not supported. Installing new default settings..."));
+      settings_obj.createDefaultSettings(SPIFFS);
+    }
   }
+  else
+    Serial.println(F("Could not load settings; existing data was left unchanged"));
 
   buffer_obj = Buffer();
 
@@ -355,6 +358,12 @@ void setup()
         Serial.println(F("SD Card NOT Supported"));
 
     #endif
+  #endif
+
+  #ifdef HAS_SD
+    wifi_profile_store.begin(sd_obj.supported);
+  #else
+    wifi_profile_store.begin(false);
   #endif
 
   wifi_scan_obj.RunSetup();

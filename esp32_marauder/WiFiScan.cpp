@@ -1,5 +1,6 @@
 #include "esp_random.h"
 #include "WiFiScan.h"
+#include "WiFiProfileStore.h"
 #include "lang_var.h"
 
 #ifdef HAS_PSRAM
@@ -1803,7 +1804,7 @@ void WiFiScan::RunSetup() {
   confirmed_multissid = new LinkedList<ConfirmedMultiSSID>();
   multissid_list_full_reported = false;
 
-  settings_obj.loadSetting<bool>("ChanHop");
+  this->channel_hop = settings_obj.loadSetting<bool>("ChanHop");
 
   File api_settings_file;
 
@@ -1850,7 +1851,7 @@ void WiFiScan::RunSetup() {
 
         if (settings_obj.saveSetting<bool>("wt", contents)) {
           sd_obj.removeFile("/wigle_api_token.txt");
-          Serial.println("Saved WiGLE API Token: " + contents);
+          Serial.println(F("Saved WiGLE API Token: <redacted>"));
         } else {
           Serial.println("Failed to save WiGLE API Token");
         }
@@ -1875,7 +1876,7 @@ void WiFiScan::RunSetup() {
 
         if (settings_obj.saveSetting<bool>(WDG_KEY_NAME, contents)) {
           sd_obj.removeFile("/wdg_key.txt");
-          Serial.println("Saved WDG API Token: " + contents);
+          Serial.println(F("Saved WDG API Token: <redacted>"));
         } else {
           Serial.println("Failed to save WDG API Token");
         }
@@ -2072,6 +2073,73 @@ void WiFiScan::setNetworkInfo() {
   this->subnet = WiFi.subnetMask();
 }
 
+#if defined(HAS_SCREEN) && defined(HAS_TOUCH)
+static void waitForFreshTouch() {
+  uint16_t touch_x = 0;
+  uint16_t touch_y = 0;
+
+  while (display_obj.updateTouch(&touch_x, &touch_y))
+    delay(10);
+  while (!display_obj.updateTouch(&touch_x, &touch_y))
+    delay(10);
+  while (display_obj.updateTouch(&touch_x, &touch_y))
+    delay(10);
+}
+
+static void showJoinResultAcknowledgement(
+  bool connected,
+  const String& ssid,
+  bool credentials_saved = true) {
+  display_obj.clearScreen();
+  display_obj.tft.setFreeFont(NULL);
+  display_obj.tft.setTextWrap(false, false);
+
+  if (connected) {
+    display_obj.tft.setCursor(0, TFT_HEIGHT / 3);
+    display_obj.tft.setTextSize(2);
+    display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+    display_obj.tft.println(F("WiFi connected"));
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    display_obj.tft.print(F("SSID: "));
+    display_obj.tft.println(ssid);
+    display_obj.tft.print(F("IP address: "));
+    display_obj.tft.println(WiFi.localIP());
+    display_obj.tft.print(F("Gateway: "));
+    display_obj.tft.println(WiFi.gatewayIP());
+    display_obj.tft.print(F("Netmask: "));
+    display_obj.tft.println(WiFi.subnetMask());
+    display_obj.tft.print(F("MAC: "));
+    display_obj.tft.println(WiFi.macAddress());
+    display_obj.tft.print(F("Channel: "));
+    display_obj.tft.println(WiFi.channel());
+    display_obj.tft.print(F("BSSID: "));
+    display_obj.tft.println(WiFi.BSSIDstr());
+    if (!credentials_saved) {
+      display_obj.tft.setTextColor(TFT_ORANGE, TFT_BLACK);
+      display_obj.tft.println(F("Credentials not fully saved"));
+    }
+    display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    display_obj.tft.println(F("Tap to continue"));
+  }
+  else {
+    display_obj.tft.setTextSize(2);
+    display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+    display_obj.showCenterText(
+      "Connection failed", (TFT_HEIGHT / 2) - 12, false, 2);
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    String ssid_line = String(F("SSID: ")) + ssid;
+    display_obj.showCenterText(
+      ssid_line.c_str(), (TFT_HEIGHT / 2) + 10, false, 1);
+    display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    display_obj.showCenterText(
+      "Tap to continue", (TFT_HEIGHT / 2) + 30, false, 1);
+  }
+  waitForFreshTouch();
+}
+#endif
+
 void WiFiScan::showNetworkInfo() {
   Serial.print(F("IP address: "));
   Serial.println(this->ip_addr);
@@ -2097,29 +2165,187 @@ void WiFiScan::showNetworkInfo() {
   #endif
 }
 
-bool WiFiScan::joinWiFi(String ssid, String password, bool gui) {
+bool WiFiScan::joinWiFi(
+  String ssid,
+  String password,
+  bool gui,
+  int32_t channel,
+  const uint8_t* bssid,
+  uint8_t preferred_band) {
   static const char * btns[] ={text16, ""};
   int count = 0;
-  
-  if ((WiFi.status() == WL_CONNECTED) && (ssid == connected_network) && (ssid != "")) {
+
+  uint8_t target_bssid[6] = {0};
+  bool has_bssid = false;
+  if (bssid != nullptr) {
+    memcpy(target_bssid, bssid, sizeof(target_bssid));
+    bool all_zero = true;
+    bool all_ff = true;
+    for (uint8_t octet : target_bssid) {
+      all_zero = all_zero && (octet == 0x00);
+      all_ff = all_ff && (octet == 0xFF);
+    }
+    has_bssid = !all_zero && !all_ff && ((target_bssid[0] & 0x01) == 0);
+  }
+
+  int32_t target_channel = (has_bssid && (channel > 0)) ? channel : 0;
+
+  auto band_for_channel = [](int32_t active_channel) -> uint8_t {
+    if (active_channel <= 0)
+      return 0;
+    return active_channel <= 14 ? 2 : 5;
+  };
+
+  auto band_mode_matches = [&]() -> bool {
+    #if defined(HAS_DUAL_BAND) && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 4, 2)
+      return WiFi.getBandMode() == WIFI_BAND_MODE_AUTO;
+    #else
+      return true;
+    #endif
+  };
+
+  auto connected_to_target = [&]() -> bool {
+    if ((WiFi.status() != WL_CONNECTED) ||
+        (ssid == "") ||
+        (WiFi.SSID() != ssid))
+      return false;
+
+    if (preferred_band != 0 && band_for_channel(WiFi.channel()) != preferred_band)
+      return false;
+
+    if (!band_mode_matches())
+      return false;
+
+    if (!has_bssid)
+      return true;
+
+    const uint8_t* current_bssid = WiFi.BSSID();
+    return (current_bssid != nullptr) &&
+           (memcmp(current_bssid, target_bssid, sizeof(target_bssid)) == 0);
+  };
+
+  auto remember_connection = [&]() -> bool {
+    const bool legacy_saved = settings_obj.saveWiFiCredentials(ssid, password);
+    const bool profile_saved = wifi_profile_store.remember(ssid, password, WiFi.channel());
+    const bool multi_profile_optional =
+      wifi_profile_store.state() == WiFiProfileStoreState::NoSD;
+
+    if (!legacy_saved || (!profile_saved && !multi_profile_optional))
+      Serial.println(F("Connected, but credentials were not fully saved"));
+    return legacy_saved && (profile_saved || multi_profile_optional);
+  };
+
+  if (connected_to_target()) {
+    this->connected_network = ssid;
     this->wifi_initialized = true;
     this->currentScanMode = WIFI_CONNECTED;
+    #if defined(HAS_SCREEN) && defined(HAS_TOUCH)
+      if (gui)
+        showJoinResultAcknowledgement(true, ssid);
+    #endif
     return true;
   }
   else if (WiFi.status() == WL_CONNECTED) {
     //Serial.println(F("Already connected. Disconnecting..."));
     WiFi.disconnect();
+    this->wifi_connected = false;
   }
 
   WiFi.disconnect(true);
+  this->wifi_connected = false;
   delay(100);
   WiFi.mode(WIFI_MODE_STA);
+
+  bool target_ready = preferred_band == 0 || preferred_band == 2 || preferred_band == 5;
+  const bool resolve_band_target = preferred_band != 0 && !has_bssid;
+  #if defined(HAS_DUAL_BAND) && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 4, 2)
+    if (target_ready)
+      target_ready = WiFi.setBandMode(WIFI_BAND_MODE_AUTO);
+
+    if (target_ready && resolve_band_target) {
+      const wifi_band_mode_t scan_band = preferred_band == 2
+        ? WIFI_BAND_MODE_2G_ONLY
+        : WIFI_BAND_MODE_5G_ONLY;
+      target_ready = WiFi.setBandMode(scan_band);
+
+      if (target_ready) {
+        #ifdef HAS_SCREEN
+          if (gui) {
+            display_obj.clearScreen();
+            display_obj.tft.setCursor(0, TFT_HEIGHT / 2);
+            display_obj.tft.setTextSize(1);
+            display_obj.tft.print(F("Finding saved WiFi..."));
+          }
+        #endif
+
+        const int16_t network_count = WiFi.scanNetworks(
+          false,
+          true,
+          false,
+          300,
+          0,
+          ssid.c_str(),
+          nullptr);
+        if (network_count < 0)
+          esp_wifi_scan_stop();
+
+        const int scan_result_count = network_count > 256 ? 256 : network_count;
+        int best_network = -1;
+        int32_t best_rssi = -1000;
+        for (int i = 0; i < scan_result_count; ++i) {
+          if (WiFi.SSID(i) != ssid ||
+              band_for_channel(WiFi.channel(i)) != preferred_band ||
+              WiFi.RSSI(i) <= best_rssi)
+            continue;
+          best_network = i;
+          best_rssi = WiFi.RSSI(i);
+        }
+
+        has_bssid = false;
+        target_channel = 0;
+        if (best_network >= 0 &&
+            WiFi.BSSID(best_network, target_bssid) != nullptr) {
+          bool all_zero = true;
+          bool all_ff = true;
+          for (uint8_t octet : target_bssid) {
+            all_zero = all_zero && (octet == 0x00);
+            all_ff = all_ff && (octet == 0xFF);
+          }
+          has_bssid = !all_zero && !all_ff && ((target_bssid[0] & 0x01) == 0);
+          target_channel = WiFi.channel(best_network);
+          target_ready = has_bssid;
+        }
+        else {
+          target_ready = false;
+        }
+        WiFi.scanDelete();
+      }
+
+      const bool auto_restored = WiFi.setBandMode(WIFI_BAND_MODE_AUTO);
+      target_ready = target_ready && auto_restored;
+    }
+  #else
+    if (preferred_band == 5)
+      target_ready = false;
+  #endif
+
+  if (!target_ready) {
+    Serial.println(F("Could not find saved WiFi in requested band"));
+    this->wifi_connected = false;
+    this->wifi_initialized = true;
+    this->StartScan(WIFI_SCAN_OFF, TFT_BLACK);
+    #if defined(HAS_SCREEN) && defined(HAS_TOUCH)
+      if (gui)
+        showJoinResultAcknowledgement(false, ssid);
+    #endif
+    return false;
+  }
 
   //esp_wifi_set_mode(WIFI_IF_STA);
 
   this->setMac();
     
-  WiFi.begin(ssid.c_str(), password.c_str());
+  WiFi.begin(ssid.c_str(), password.c_str(), target_channel, has_bssid ? target_bssid : nullptr);
 
   #ifdef HAS_SCREEN
     if (gui) {
@@ -2144,6 +2370,7 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui) {
     if (count == 20)
     {
       Serial.println(F("\nCould not connect to WiFi network"));
+      this->wifi_connected = false;
       #ifdef HAS_SCREEN
         if (gui) {
           display_obj.tft.println("\nFailed to connect");
@@ -2155,12 +2382,38 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui) {
       #ifdef HAS_SCREEN
         display_obj.tft.setTextWrap(false, false);
       #endif
+      #if defined(HAS_SCREEN) && defined(HAS_TOUCH)
+        if (gui)
+          showJoinResultAcknowledgement(false, ssid);
+      #endif
       return false;
     }
   }
+
+  if (!connected_to_target()) {
+    Serial.println(F("\nConnected WiFi target did not match selection"));
+    WiFi.disconnect(true);
+    this->wifi_connected = false;
+    #ifdef HAS_SCREEN
+      if (gui) {
+        display_obj.tft.println("\nFailed to connect");
+        delay(1000);
+      }
+    #endif
+    this->wifi_initialized = true;
+    this->StartScan(WIFI_SCAN_OFF, TFT_BLACK);
+    #ifdef HAS_SCREEN
+      display_obj.tft.setTextWrap(false, false);
+    #endif
+    #if defined(HAS_SCREEN) && defined(HAS_TOUCH)
+      if (gui)
+        showJoinResultAcknowledgement(false, ssid);
+    #endif
+    return false;
+  }
   this->connected_network = ssid;
   this->setNetworkInfo();
-  if (gui) 
+  if (gui)
     this->showNetworkInfo();
 
   this->wifi_initialized = true;
@@ -2171,8 +2424,12 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui) {
     #endif
   #endif
 
-  settings_obj.saveSetting<bool>("ClientSSID", ssid);
-  settings_obj.saveSetting<bool>("ClientPW", password);
+  const bool profile_saved = remember_connection();
+
+  #if defined(HAS_SCREEN) && defined(HAS_TOUCH)
+    if (gui)
+      showJoinResultAcknowledgement(true, ssid, profile_saved);
+  #endif
 
   return true;
 }
@@ -4473,10 +4730,6 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color) {
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
   esp_wifi_set_promiscuous_rx_cb(&wifiSnifferCallback);*/
-  #ifdef HAS_DUAL_BAND
-    dual_band_channel_index = 0;
-    set_channel = dual_band_channels[0];
-  #endif
   this->changeChannel(this->set_channel);
   //esp_wifi_set_channel(set_channel, WIFI_SECOND_CHAN_NONE);
   this->wifi_initialized = true;
@@ -9052,8 +9305,52 @@ void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6], u
 }*/
 
 void WiFiScan::sendAssociationSleep(const char* ESSID, uint8_t bssid[6], int channel, uint8_t mac[6]) {
-  WiFiScan::set_channel = channel;
-  this->changeChannel(channel);
+  uint8_t first_supported_channel = 0;
+  uint8_t supported_channel_count = 0;
+  uint8_t operating_class = 0;
+
+  if ((channel >= 1) && (channel <= 13)) {
+    first_supported_channel = 1;
+    supported_channel_count = 13;
+    operating_class = 0x51;
+  }
+  else if (channel == 14) {
+    first_supported_channel = 14;
+    supported_channel_count = 1;
+    operating_class = 0x52;
+  }
+  else if ((channel >= 36) && (channel <= 48) && (((channel - 36) % 4) == 0)) {
+    first_supported_channel = 36;
+    supported_channel_count = 4;
+    operating_class = 0x73;
+  }
+  else if ((channel >= 52) && (channel <= 64) && (((channel - 52) % 4) == 0)) {
+    first_supported_channel = 52;
+    supported_channel_count = 4;
+    operating_class = 0x76;
+  }
+  else if ((channel >= 100) && (channel <= 144) && (((channel - 100) % 4) == 0)) {
+    first_supported_channel = 100;
+    supported_channel_count = 12;
+    operating_class = 0x79;
+  }
+  else if ((channel >= 149) && (channel <= 161) && (((channel - 149) % 4) == 0)) {
+    first_supported_channel = 149;
+    supported_channel_count = 4;
+    operating_class = 0x7c;
+  }
+  else if ((channel >= 165) && (channel <= 177) && (((channel - 165) % 4) == 0)) {
+    first_supported_channel = 149;
+    supported_channel_count = 8;
+    operating_class = 0x7d;
+  }
+  else {
+    Serial.printf("Association frame rejected: unsupported channel %d\n", channel);
+    return;
+  }
+
+  if (!this->changeChannel(channel))
+    return;
   delay(1);
 
   static uint16_t sequence_number = 0;
@@ -9081,8 +9378,10 @@ void WiFiScan::sendAssociationSleep(const char* ESSID, uint8_t bssid[6], int cha
   association_packet[21] = bssid[5];
 
   /* Set Sequence Control */
-  association_packet[23] = (sequence_number >> 8) & 0xFF; // Sequence Number MSB
-  association_packet[22] = sequence_number & 0xFF;        // Sequence Number LSB
+  const uint16_t sequence_control =
+    static_cast<uint16_t>((sequence_number & 0x0fffU) << 4);
+  association_packet[22] = sequence_control & 0xFF;
+  association_packet[23] = (sequence_control >> 8) & 0xFF;
 
   /* SSID tag */
   association_packet[29] = (uint8_t)strlen((char *)ESSID); // SSID Length
@@ -9106,8 +9405,8 @@ void WiFiScan::sendAssociationSleep(const char* ESSID, uint8_t bssid[6], int cha
   /* Supported Channels tag */
   association_packet[offset++] = 0x24; // Supported Channels tag
   association_packet[offset++] = 0x02; // Length
-  association_packet[offset++] = 0x01; // First Channel
-  association_packet[offset++] = 0x0d; // Last Channel
+  association_packet[offset++] = first_supported_channel;
+  association_packet[offset++] = supported_channel_count;
 
   /* RSN tag */
   association_packet[offset++] = 0x30; // RSN tag
@@ -9135,28 +9434,9 @@ void WiFiScan::sendAssociationSleep(const char* ESSID, uint8_t bssid[6], int cha
 
   /* Supported Operating Classes tag */
   association_packet[offset++] = 0x3b; // Supported Operating Classes tag
-  association_packet[offset++] = 0x14; // Length
-  association_packet[offset++] = 0x51; // Current Operating Class 1 (2.4 GHz)
-  /* alternate Operating Class */
-  association_packet[offset++] = 0x86; // Operating Class 2 (5 GHz)
-  association_packet[offset++] = 0x85; // Operating Class 3 (6 GHz)
-  association_packet[offset++] = 0x84; // Operating Class 4 (60 GHz)
-  association_packet[offset++] = 0x83; // Operating Class 5 (60 GHz)
-  association_packet[offset++] = 0x81; // Operating Class 6 (60 GHz)
-  association_packet[offset++] = 0x7f; // Operating Class 7 (60 GHz)
-  association_packet[offset++] = 0x7e; // Operating Class 8 (60 GHz)
-  association_packet[offset++] = 0x7d; // Operating Class 9 (60 GHz)
-  association_packet[offset++] = 0x7c; // Operating Class 10 (60 GHz)
-  association_packet[offset++] = 0x7b; // Operating Class 11 (60 GHz)
-  association_packet[offset++] = 0x7a; // Operating Class 12 (60 GHz)
-  association_packet[offset++] = 0x79; // Operating Class 13 (60 GHz)
-  association_packet[offset++] = 0x78; // Operating Class 14 (60 GHz)
-  association_packet[offset++] = 0x77; // Operating Class 15 (60 GHz)
-  association_packet[offset++] = 0x76; // Operating Class 16 (60 GHz)
-  association_packet[offset++] = 0x75; // Operating Class 17 (60 GHz)
-  association_packet[offset++] = 0x74; // Operating Class 18 (60 GHz)
-  association_packet[offset++] = 0x73; // Operating Class 19 (60 GHz)
-  association_packet[offset++] = 0x51; // Operating Class 20 (2.4 GHz)
+  association_packet[offset++] = 0x02; // Current class plus supported class
+  association_packet[offset++] = operating_class;
+  association_packet[offset++] = operating_class;
 
   /* Vendor Specific tag */
   association_packet[offset++] = 0xdd; // Vendor Specific tag
@@ -9173,9 +9453,16 @@ void WiFiScan::sendAssociationSleep(const char* ESSID, uint8_t bssid[6], int cha
   association_packet[offset++] = 0x02;
 
   // Send packet
-  esp_wifi_80211_tx(WIFI_IF_AP, association_packet, offset, false);
-
-  packets_sent = packets_sent + 1;
+  const esp_err_t tx_result =
+    esp_wifi_80211_tx(WIFI_IF_AP, association_packet, offset, false);
+  if (tx_result == ESP_OK) {
+    packets_sent++;
+    sequence_number =
+      static_cast<uint16_t>((sequence_number + 1U) & 0x0fffU);
+  }
+  else {
+    Serial.printf("Association frame TX failed: %s\n", esp_err_to_name(tx_result));
+  }
 }
 
 
@@ -9843,42 +10130,26 @@ bool WiFiScan::filterActive() {
   
           // Channel - button pressed
           else if (b == CHAN_MINUS_INDEX) {
-            #ifndef HAS_DUAL_BAND
-            if (set_channel > 1) {
-              set_channel--;
-            #else
-            if (dual_band_channel_index > 0) {
-              dual_band_channel_index--;
-              set_channel = dual_band_channels[dual_band_channel_index];
-            #endif
+            if (this->stepChannel(-1, false)) {
               delay(70);
               display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
               display_obj.tftDrawXScaleButtons(x_scale);
               display_obj.tftDrawYScaleButtons(y_scale);
               display_obj.tftDrawChannelScaleButtons(set_channel);
               display_obj.tftDrawExitScaleButtons();
-              changeChannel();
               //break;
             }
           }
   
           // Channel + button pressed
           else if (b == CHAN_PLUS_INDEX) {
-            #ifndef HAS_DUAL_BAND
-            if (set_channel < MAX_CHANNEL) {
-              set_channel++;
-            #else
-            if (dual_band_channel_index < (DUAL_BAND_CHANNELS - 1)) {
-              dual_band_channel_index++;
-              set_channel = dual_band_channels[dual_band_channel_index];
-            #endif
+            if (this->stepChannel(1, false)) {
               delay(70);
               display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
               display_obj.tftDrawXScaleButtons(x_scale);
               display_obj.tftDrawYScaleButtons(y_scale);
               display_obj.tftDrawChannelScaleButtons(set_channel);
               display_obj.tftDrawExitScaleButtons();
-              changeChannel();
               //break;
             }
           }
@@ -9945,10 +10216,76 @@ bool WiFiScan::filterActive() {
   }
 #endif
 
-void WiFiScan::changeChannel(int chan) {
-  if (chan != -1)
-    this->set_channel = chan;
-  esp_wifi_set_channel(this->set_channel, WIFI_SECOND_CHAN_NONE);
+bool WiFiScan::changeChannel(int chan, bool report_error) {
+  const int requested_channel = (chan == -1) ? this->set_channel : chan;
+  uint8_t previous_channel = this->set_channel;
+  wifi_second_chan_t previous_secondary = WIFI_SECOND_CHAN_NONE;
+  const bool previous_channel_known =
+    esp_wifi_get_channel(&previous_channel, &previous_secondary) == ESP_OK;
+  int requested_index = -1;
+
+  #ifdef HAS_DUAL_BAND
+    for (int i = 0; i < DUAL_BAND_CHANNELS; i++) {
+      if (this->dual_band_channels[i] == requested_channel) {
+        requested_index = i;
+        break;
+      }
+    }
+  #else
+    if ((requested_channel >= 1) && (requested_channel <= MAX_CHANNEL))
+      requested_index = requested_channel - 1;
+  #endif
+
+  if (requested_index < 0) {
+    if (previous_channel_known) {
+      this->set_channel = previous_channel;
+      #ifdef HAS_DUAL_BAND
+        for (int i = 0; i < DUAL_BAND_CHANNELS; i++) {
+          if (this->dual_band_channels[i] == previous_channel) {
+            this->dual_band_channel_index = i;
+            break;
+          }
+        }
+      #endif
+    }
+    if (report_error)
+      Serial.printf("Channel %d rejected: unsupported channel\n", requested_channel);
+    return false;
+  }
+
+  const esp_err_t result = esp_wifi_set_channel(requested_channel, WIFI_SECOND_CHAN_NONE);
+  if ((result == ESP_ERR_WIFI_NOT_INIT) || (result == ESP_ERR_WIFI_NOT_STARTED)) {
+    // Keep a validated channel request while the radio is off. It will be
+    // applied by the next scan setup after Wi-Fi has started.
+    this->set_channel = requested_channel;
+    #ifdef HAS_DUAL_BAND
+      this->dual_band_channel_index = requested_index;
+    #endif
+    return true;
+  }
+
+  if (result != ESP_OK) {
+    if (previous_channel_known) {
+      this->set_channel = previous_channel;
+      #ifdef HAS_DUAL_BAND
+        for (int i = 0; i < DUAL_BAND_CHANNELS; i++) {
+          if (this->dual_band_channels[i] == previous_channel) {
+            this->dual_band_channel_index = i;
+            break;
+          }
+        }
+      #endif
+    }
+    if (report_error)
+      Serial.printf("Channel %d rejected: %s\n", requested_channel, esp_err_to_name(result));
+    return false;
+  }
+
+  this->set_channel = requested_channel;
+  #ifdef HAS_DUAL_BAND
+    this->dual_band_channel_index = requested_index;
+  #endif
+
   delay(1);
   #ifdef HAS_SCREEN
     if (this->currentScanMode == WIFI_SCAN_CHAN_ANALYZER) {
@@ -9959,110 +10296,170 @@ void WiFiScan::changeChannel(int chan) {
       #endif
     }
   #endif
+  return true;
+}
+
+bool WiFiScan::stepChannel(int8_t direction, bool wrap) {
+  if (direction == 0)
+    return true;
+
+  #ifdef HAS_DUAL_BAND
+    int candidate_index = this->dual_band_channel_index;
+    for (int attempt = 0; attempt < DUAL_BAND_CHANNELS; attempt++) {
+      candidate_index += (direction > 0) ? 1 : -1;
+      if (candidate_index >= DUAL_BAND_CHANNELS) {
+        if (!wrap)
+          return false;
+        candidate_index = 0;
+      }
+      else if (candidate_index < 0) {
+        if (!wrap)
+          return false;
+        candidate_index = DUAL_BAND_CHANNELS - 1;
+      }
+
+      if (this->changeChannel(this->dual_band_channels[candidate_index], false))
+        return true;
+    }
+  #else
+    int candidate = this->set_channel;
+    for (int attempt = 0; attempt < MAX_CHANNEL; attempt++) {
+      candidate += (direction > 0) ? 1 : -1;
+      if (candidate > MAX_CHANNEL) {
+        if (!wrap)
+          return false;
+        candidate = 1;
+      }
+      else if (candidate < 1) {
+        if (!wrap)
+          return false;
+        candidate = MAX_CHANNEL;
+      }
+
+      if (this->changeChannel(candidate, false))
+        return true;
+    }
+  #endif
+
+  return false;
+}
+
+uint8_t WiFiScan::activityPageCount() const {
+  #ifdef HAS_DUAL_BAND
+    const uint16_t channel_count = DUAL_BAND_CHANNELS;
+  #else
+    const uint16_t channel_count = MAX_CHANNEL;
+  #endif
+
+  return (channel_count + CHAN_PER_PAGE - 1) / CHAN_PER_PAGE;
+}
+
+uint8_t WiFiScan::activityPageStart() const {
+  #ifdef HAS_DUAL_BAND
+    const uint16_t channel_count = DUAL_BAND_CHANNELS;
+  #else
+    const uint16_t channel_count = MAX_CHANNEL;
+  #endif
+
+  uint8_t page = this->activity_page;
+  if (page < 1)
+    page = 1;
+  else if (page > this->activityPageCount())
+    page = this->activityPageCount();
+
+  uint16_t page_start = (page - 1) * CHAN_PER_PAGE;
+  // Keep the final page full so graph slots and scan dwell stay consistent.
+  if ((channel_count > CHAN_PER_PAGE) && (page_start + CHAN_PER_PAGE > channel_count))
+    page_start = channel_count - CHAN_PER_PAGE;
+  else if (channel_count <= CHAN_PER_PAGE)
+    page_start = 0;
+
+  return page_start;
+}
+
+uint8_t WiFiScan::activityPageEnd() const {
+  #ifdef HAS_DUAL_BAND
+    const uint16_t channel_count = DUAL_BAND_CHANNELS;
+  #else
+    const uint16_t channel_count = MAX_CHANNEL;
+  #endif
+
+  uint16_t page_end = this->activityPageStart() + CHAN_PER_PAGE;
+  if (page_end > channel_count)
+    page_end = channel_count;
+
+  return page_end;
 }
 
 // Function to cycle to the next channel
 void WiFiScan::channelHop(bool filtered, bool ranged) {
-  bool channel_match = false;
-  bool ap_selected = true;
-
-  int top_chan = 0;
-  int bot_chan = 0;
-
-  if ((!settings_obj.loadSetting<bool>("ChanHop")) &&
-      ((this->currentScanMode == WIFI_SCAN_AP) ||
-       (this->currentScanMode == WIFI_SCAN_PROBE) ||
-       (this->currentScanMode == WIFI_SCAN_DEAUTH) ||
-       (this->currentScanMode == WIFI_SCAN_EAPOL) ||
-       (this->currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
-       (this->currentScanMode == WIFI_SCAN_SIG_STREN) ||
-       (this->currentScanMode == WIFI_SCAN_PACKET_RATE) ||
-       (this->currentScanMode == BT_SCAN_FLOCK)))
+  if (!ranged && !settings_obj.loadSetting<bool>("ChanHop"))
     return;
 
-  if (!filtered) {
-    #ifndef HAS_DUAL_BAND
-      if (ranged) {
-        top_chan = activity_page * CHAN_PER_PAGE;
-        bot_chan = (activity_page * CHAN_PER_PAGE) - CHAN_PER_PAGE + 1;
+  bool has_selected_target = !filtered;
+  if (filtered) {
+    for (int i = 0; i < access_points->size(); i++) {
+      if (access_points->get(i).selected) {
+        has_selected_target = true;
+        break;
       }
-      else {
-        top_chan = MAX_CHANNEL;
-        bot_chan = 1;
-      }
-
-      this->set_channel = this->set_channel + 1;
-      if (this->set_channel > top_chan) {
-        this->set_channel = bot_chan;
-      }
-    #else
-      if (ranged) {
-        top_chan = activity_page * CHAN_PER_PAGE - 1;
-        bot_chan = (activity_page * CHAN_PER_PAGE) - CHAN_PER_PAGE;
-      }
-      else {
-        top_chan = DUAL_BAND_CHANNELS;
-        bot_chan = 0;
-      }
-
-      if (this->dual_band_channel_index >= top_chan)
-        this->dual_band_channel_index = bot_chan;
-      else
-        this->dual_band_channel_index++;
-      this->set_channel = this->dual_band_channels[this->dual_band_channel_index];
-    #endif
+    }
+    if (!has_selected_target)
+      return;
   }
-  else {
-    #ifndef HAS_DUAL_BAND
-      while ((!channel_match) && (ap_selected)) {
-        ap_selected = false;
 
-        // Pick channel like normal
-        this->set_channel = this->set_channel + 1;
-        if (this->set_channel > 14) {
-          this->set_channel = 1;
-        }
+  #ifdef HAS_DUAL_BAND
+    const int first_index = ranged ? this->activityPageStart() : 0;
+    const int last_index = ranged ? this->activityPageEnd() - 1 : DUAL_BAND_CHANNELS - 1;
+    int candidate_index = this->dual_band_channel_index;
+    if ((candidate_index < first_index) || (candidate_index > last_index))
+      candidate_index = last_index;
 
-        // Check if it matches a selected AP's channel
+    const int candidate_count = last_index - first_index + 1;
+    for (int attempt = 0; attempt < candidate_count; attempt++) {
+      candidate_index = (candidate_index >= last_index) ? first_index : candidate_index + 1;
+      const uint8_t candidate_channel = this->dual_band_channels[candidate_index];
+
+      bool channel_selected = !filtered;
+      if (filtered) {
         for (int i = 0; i < access_points->size(); i++) {
           AccessPoint access_point = access_points->get(i);
-          if (access_point.selected) {
-            ap_selected = true;
-            if (access_point.channel == this->set_channel) {
-              channel_match = true;
-              break;
-            }
+          if (access_point.selected && (access_point.channel == candidate_channel)) {
+            channel_selected = true;
+            break;
           }
         }
       }
-    #else
-      while ((!channel_match) && (ap_selected)) {
-        ap_selected = false;
 
-        // Pick channel like normal
-        if (this->dual_band_channel_index >= DUAL_BAND_CHANNELS)
-          this->dual_band_channel_index = 0;
-        else
-          this->dual_band_channel_index++;
-        this->set_channel = this->dual_band_channels[this->dual_band_channel_index];
+      if (channel_selected && this->changeChannel(candidate_channel, false))
+        return;
+    }
+  #else
+    const int first_channel = ranged ? this->activityPageStart() + 1 : 1;
+    const int last_channel = ranged ? this->activityPageEnd() : MAX_CHANNEL;
+    int candidate_channel = this->set_channel;
+    if ((candidate_channel < first_channel) || (candidate_channel > last_channel))
+      candidate_channel = last_channel;
 
-        // Check if it matches a selected AP's channel
+    const int candidate_count = last_channel - first_channel + 1;
+    for (int attempt = 0; attempt < candidate_count; attempt++) {
+      candidate_channel = (candidate_channel >= last_channel) ? first_channel : candidate_channel + 1;
+
+      bool channel_selected = !filtered;
+      if (filtered) {
         for (int i = 0; i < access_points->size(); i++) {
           AccessPoint access_point = access_points->get(i);
-          if (access_point.selected) {
-            ap_selected = true;
-            if (access_point.channel == this->set_channel) {
-              channel_match = true;
-              break;
-            }
+          if (access_point.selected && (access_point.channel == candidate_channel)) {
+            channel_selected = true;
+            break;
           }
         }
       }
-    #endif
-  }
 
-  this->changeChannel(this->set_channel);
-  delay(1);
+      if (channel_selected && this->changeChannel(candidate_channel, false))
+        return;
+    }
+  #endif
 }
 
 void WiFiScan::addAnalyzerValue(int16_t value, int rssi_avg, int16_t target_array[], int array_size) {
@@ -10102,46 +10499,20 @@ void WiFiScan::signalAnalyzerLoop(uint32_t tick) {
         return;
       }
       else if (b == CHAN_MINUS_INDEX) {
-        #ifndef HAS_DUAL_BAND
-          if (set_channel > 1) {
-            set_channel--;
-            display_obj.tftDrawChannelScaleButtons(set_channel, false);
-            display_obj.tftDrawExitScaleButtons(false);
-            changeChannel();
-            return;
-          }
-        #else
-          if (this->dual_band_channel_index > 0) {
-            this->dual_band_channel_index--;
-            this->set_channel = this->dual_band_channels[this->dual_band_channel_index];
-            display_obj.tftDrawChannelScaleButtons(this->set_channel, false);
-            display_obj.tftDrawExitScaleButtons(false);
-            changeChannel();
-            return;
-          }
-        #endif
+        if (this->stepChannel(-1, false)) {
+          display_obj.tftDrawChannelScaleButtons(this->set_channel, false);
+          display_obj.tftDrawExitScaleButtons(false);
+          return;
+        }
       }
 
       // Channel + button pressed
       else if (b == CHAN_PLUS_INDEX) {
-        #ifndef HAS_DUAL_BAND
-          if (set_channel < MAX_CHANNEL) {
-            set_channel++;
-            display_obj.tftDrawChannelScaleButtons(set_channel, false);
-            display_obj.tftDrawExitScaleButtons(false);
-            changeChannel();
-            return;
-          }
-        #else
-          if (this->dual_band_channel_index < DUAL_BAND_CHANNELS - 1) {
-            this->dual_band_channel_index++;
-            this->set_channel = this->dual_band_channels[this->dual_band_channel_index];
-            display_obj.tftDrawChannelScaleButtons(this->set_channel, false);
-            display_obj.tftDrawExitScaleButtons(false);
-            changeChannel();
-            return;
-          }
-        #endif
+        if (this->stepChannel(1, false)) {
+          display_obj.tftDrawChannelScaleButtons(this->set_channel, false);
+          display_obj.tftDrawExitScaleButtons(false);
+          return;
+        }
       }
 
       else if (b == CHAN_HOP_INDEX) {
@@ -10156,10 +10527,15 @@ void WiFiScan::signalAnalyzerLoop(uint32_t tick) {
 
 void WiFiScan::drawChannelLine() {
   #ifdef HAS_SCREEN
+    const int graph_area_top = SCREEN_HEIGHT / 2 + 1;
+    display_obj.tft.fillRect(0, graph_area_top, SCREEN_WIDTH, SCREEN_HEIGHT - graph_area_top, TFT_BLACK);
     display_obj.tft.fillRect(0, SCREEN_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2), SCREEN_WIDTH, (CHAR_WIDTH * 2) - 1, TFT_BLACK);
+    const uint8_t page_start = this->activityPageStart();
+    const uint8_t page_end = this->activityPageEnd();
     #ifndef HAS_DUAL_BAND
-      for (int i = 1; i < CHAN_PER_PAGE + 1; i++) {
-        int x_mult = (i * 2) - 1;
+      for (int channel_index = page_start; channel_index < page_end; channel_index++) {
+        int page_slot = channel_index - page_start;
+        int x_mult = ((page_slot + 1) * 2) - 1;
         int x_coord = (SCREEN_WIDTH / (CHAN_PER_PAGE * 2)) * (x_mult - 1);
         #ifdef HAS_FULL_SCREEN
           display_obj.tft.setTextSize(2);
@@ -10168,11 +10544,12 @@ void WiFiScan::drawChannelLine() {
         #endif
         display_obj.tft.setCursor(x_coord, SCREEN_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2));
         display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-        display_obj.tft.print((String)(i + (CHAN_PER_PAGE * (this->activity_page - 1))));
+        display_obj.tft.print((String)(channel_index + 1));
       }
     #else
-      for (int i = 1; i < CHAN_PER_PAGE + 1; i++) {
-        int x_mult = (i * 2) - 1;
+      for (int channel_index = page_start; channel_index < page_end; channel_index++) {
+        int page_slot = channel_index - page_start;
+        int x_mult = ((page_slot + 1) * 2) - 1;
         int x_coord = (SCREEN_WIDTH / (CHAN_PER_PAGE * 2)) * (x_mult - 1);
         //#ifdef HAS_FULL_SCREEN
         //  display_obj.tft.setTextSize(2);
@@ -10181,7 +10558,7 @@ void WiFiScan::drawChannelLine() {
         //#endif
         display_obj.tft.setCursor(x_coord, SCREEN_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2));
         display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-        display_obj.tft.print((String)this->dual_band_channels[(i + (CHAN_PER_PAGE * (this->activity_page - 1)) - 1)]);
+        display_obj.tft.print((String)this->dual_band_channels[channel_index]);
       }
     #endif
   #endif
@@ -10192,7 +10569,9 @@ void WiFiScan::channelActivityLoop(uint32_t tick) {
     if (tick - this->initTime >= BANNER_TIME * 50) {
       initTime = millis();
       Serial.println(F("--------------"));
-      for (int i = (activity_page * CHAN_PER_PAGE) - CHAN_PER_PAGE; i < activity_page * CHAN_PER_PAGE; i++) {
+      const uint8_t page_start = this->activityPageStart();
+      const uint8_t page_end = this->activityPageEnd();
+      for (int i = page_start; i < page_end; i++) {
         #ifndef HAS_DUAL_BAND
           Serial.println((String)(i+1) + ": " + (String)channel_activity[i]);
         #else
@@ -10241,7 +10620,7 @@ void WiFiScan::channelActivityLoop(uint32_t tick) {
             return;
           }
         #else
-          if (this->activity_page < DUAL_BAND_CHANNELS / CHAN_PER_PAGE) {
+          if (this->activity_page < this->activityPageCount()) {
             this->activity_page++;
             display_obj.tftDrawChannelScaleButtons(this->set_channel, false);
             display_obj.tftDrawExitScaleButtons(false);
@@ -10275,46 +10654,20 @@ void WiFiScan::channelActivityLoop(uint32_t tick) {
         return;
       }
       else if (b == CHAN_MINUS_INDEX) {
-        #ifndef HAS_DUAL_BAND
-          if (set_channel > 1) {
-            set_channel--;
-            display_obj.tftDrawChannelScaleButtons(set_channel, false);
-            display_obj.tftDrawExitScaleButtons(false);
-            changeChannel(set_channel);
-            return;
-          }
-        #else
-          if (this->dual_band_channel_index > 1) {
-            this->dual_band_channel_index--;
-            this->set_channel = this->dual_band_channels[this->dual_band_channel_index];
-            display_obj.tftDrawChannelScaleButtons(this->set_channel, false);
-            display_obj.tftDrawExitScaleButtons(false);
-            changeChannel(this->set_channel);
-            return;
-          }
-        #endif
+        if (this->stepChannel(-1, false)) {
+          display_obj.tftDrawChannelScaleButtons(this->set_channel, false);
+          display_obj.tftDrawExitScaleButtons(false);
+          return;
+        }
       }
 
       // Channel + button pressed
       else if (b == CHAN_PLUS_INDEX) {
-        #ifndef HAS_DUAL_BAND
-          if (set_channel < MAX_CHANNEL) {
-            set_channel++;
-            display_obj.tftDrawChannelScaleButtons(set_channel, false);
-            display_obj.tftDrawExitScaleButtons(false);
-            changeChannel(set_channel);
-            return;
-          }
-        #else
-          if (this->dual_band_channel_index < DUAL_BAND_CHANNELS - 1) {
-            this->dual_band_channel_index++;
-            this->set_channel = this->dual_band_channels[this->dual_band_channel_index];
-            display_obj.tftDrawChannelScaleButtons(this->set_channel, false);
-            display_obj.tftDrawExitScaleButtons(false);
-            changeChannel(this->set_channel);
-            return;
-          }
-        #endif
+        if (this->stepChannel(1, false)) {
+          display_obj.tftDrawChannelScaleButtons(this->set_channel, false);
+          display_obj.tftDrawExitScaleButtons(false);
+          return;
+        }
       }
     #endif
   #endif
@@ -10449,46 +10802,20 @@ void WiFiScan::packetRateLoop(uint32_t tick) {
       return;
     }
     else if (b == CHAN_MINUS_INDEX) {
-      #ifndef HAS_DUAL_BAND
-        if (set_channel > 1) {
-          set_channel--;
-          display_obj.tftDrawChannelScaleButtons(set_channel, false);
-          display_obj.tftDrawExitScaleButtons(false);
-          changeChannel(set_channel);
-          return;
-        }
-      #else
-        if (this->dual_band_channel_index > 0) {
-          this->dual_band_channel_index--;
-          this->set_channel = this->dual_band_channels[this->dual_band_channel_index];
-          display_obj.tftDrawChannelScaleButtons(this->set_channel, false);
-          display_obj.tftDrawExitScaleButtons(false);
-          changeChannel(this->set_channel);
-          return;
-        }
-      #endif
+      if (this->stepChannel(-1, false)) {
+        display_obj.tftDrawChannelScaleButtons(this->set_channel, false);
+        display_obj.tftDrawExitScaleButtons(false);
+        return;
+      }
     }
 
     // Channel + button pressed
     else if (b == CHAN_PLUS_INDEX) {
-      #ifndef HAS_DUAL_BAND
-        if (set_channel < MAX_CHANNEL) {
-          set_channel++;
-          display_obj.tftDrawChannelScaleButtons(set_channel, false);
-          display_obj.tftDrawExitScaleButtons(false);
-          changeChannel(set_channel);
-          return;
-        }
-      #else
-        if (this->dual_band_channel_index < DUAL_BAND_CHANNELS - 1) {
-          this->dual_band_channel_index++;
-          this->set_channel = this->dual_band_channels[this->dual_band_channel_index];
-          display_obj.tftDrawChannelScaleButtons(this->set_channel, false);
-          display_obj.tftDrawExitScaleButtons(false);
-          changeChannel(this->set_channel);
-          return;
-        }
-      #endif
+      if (this->stepChannel(1, false)) {
+        display_obj.tftDrawChannelScaleButtons(this->set_channel, false);
+        display_obj.tftDrawExitScaleButtons(false);
+        return;
+      }
     }
     else if (b == CHAN_HOP_INDEX) {
       settings_obj.toggleSetting("ChanHop");
