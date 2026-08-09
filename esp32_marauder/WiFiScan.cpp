@@ -242,7 +242,7 @@ extern "C" {
         AdvData_Raw[i++] = 0x00;  // TX Power level value
 
         // Manufacturer specific data based on your hex dump
-        AdvData_Raw[i++] = 0x05;  // Length of Manufacturer Specific Data section
+        AdvData_Raw[i++] = 0x09;  // Type + company ID + six manufacturer bytes
         AdvData_Raw[i++] = 0xFF;  // Manufacturer Specific Data type
         AdvData_Raw[i++] = 0xBA;  // LSB of Manufacturer ID (Flipper Zero: 0x0FBA)
         AdvData_Raw[i++] = 0x0F;  // MSB of Manufacturer ID
