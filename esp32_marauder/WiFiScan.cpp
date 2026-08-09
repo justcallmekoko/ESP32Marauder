@@ -8997,11 +8997,23 @@ void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6], u
       (bad_msg_replay_counter >> (56 - i * 8)) & 0xffU;
   }
 
+  // Reset every security-dependent field because this packet template is
+  // reused across calls.
+  eapol_packet_bad_msg1[34] = 0x00;
+  eapol_packet_bad_msg1[35] = 0x75;
+  eapol_packet_bad_msg1[38] = 0xCA;
+  eapol_packet_bad_msg1[39] = 0x00;
+  eapol_packet_bad_msg1[40] = 0x10;
+  eapol_packet_bad_msg1[129] = 0x00;
+  eapol_packet_bad_msg1[130] = 0x16;
+
   if(sec == WIFI_SECURITY_WPA3 || sec == WIFI_SECURITY_WPA3_ENTERPRISE || sec == WIFI_SECURITY_WAPI) {
     eapol_packet_bad_msg1[35] = 0x5f;     // Length 95 Bytes
     eapol_packet_bad_msg1[38] = 0xCB;     // Key‑Info (LSB)  Install|Ack|Pairwise, ver=3
     eapol_packet_bad_msg1[39] = 0x00;     // Key Length MSB
     eapol_packet_bad_msg1[40] = 0x00;     // Key Length LSB   (must be 0 with GCMP)
+    eapol_packet_bad_msg1[129] = 0x00;    // No Key Data in the shortened frame
+    eapol_packet_bad_msg1[130] = 0x00;
     frame_size = frame_size - 22;         // Adjust frame size for WPA3
   }
 
