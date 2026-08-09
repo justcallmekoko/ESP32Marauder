@@ -365,6 +365,61 @@ enum class MacSortMode : uint8_t {
   HIGH_RSSI
 };
 
+enum class SavedListType : uint8_t {
+  SSIDs,
+  APs,
+  AirTags
+};
+
+enum class SavedListArtifact : uint8_t {
+  Primary,
+  Backup,
+  Temporary
+};
+
+enum class SavedListSaveStatus : uint8_t {
+  Saved,
+  SavedCleanupPending,
+  InvalidName,
+  SDUnavailable,
+  TargetExists,
+  TargetChanged,
+  RecoveryRequired,
+  PathConflict,
+  CreateFailed,
+  WriteFailed,
+  VerificationFailed,
+  CommitFailed
+};
+
+struct SavedListTarget {
+  SavedListType type = SavedListType::SSIDs;
+  String logical_name;
+  String primary_path;
+  String temp_path;
+  String backup_path;
+};
+
+struct SavedListFileSnapshot {
+  bool valid = false;
+  size_t size = 0;
+  uint64_t fingerprint = 0;
+};
+
+struct SavedListSaveResult {
+  SavedListSaveStatus status = SavedListSaveStatus::InvalidName;
+  String target_path;
+  String message;
+  size_t item_count = 0;
+  size_t related_count = 0;
+  SavedListFileSnapshot target_snapshot;
+
+  bool succeeded() const {
+    return status == SavedListSaveStatus::Saved ||
+           status == SavedListSaveStatus::SavedCleanupPending;
+  }
+};
+
 class WiFiScan
 {
   private:
@@ -1019,12 +1074,40 @@ class WiFiScan
     void RunClearSSIDs();
     void RunClearAPs();
     void RunClearStations();
+    static bool BuildSavedListTarget(SavedListType type,
+                                     const String& logical_name,
+                                     SavedListTarget& target,
+                                     String& error_message);
+    static bool BuildSavedListTargetFromPath(
+      SavedListType type,
+      const String& selected_path,
+      SavedListTarget& target,
+      SavedListArtifact& artifact,
+      String& error_message);
+    SavedListSaveResult SaveSSIDListAs(
+      const String& logical_name,
+      bool replace_existing = false,
+      const SavedListFileSnapshot* expected_snapshot = nullptr);
+    SavedListSaveResult SaveAPListAs(
+      const String& logical_name,
+      bool replace_existing = false,
+      const SavedListFileSnapshot* expected_snapshot = nullptr);
+    SavedListSaveResult SaveATListAs(
+      const String& logical_name,
+      bool replace_existing = false,
+      const SavedListFileSnapshot* expected_snapshot = nullptr);
     void RunSaveSSIDList(bool save_as = true);
-    void RunLoadSSIDList();
+    bool RunLoadSSIDList(String path = "/SSIDs_0.log",
+                         bool show_status = true,
+                         bool allow_recovery = true);
     void RunSaveAPList(bool save_as = true);
-    void RunLoadAPList();
+    bool RunLoadAPList(String path = "/APs_0.log",
+                       bool show_status = true,
+                       bool allow_recovery = true);
     void RunSaveATList(bool save_as = true);
-    void RunLoadATList();
+    bool RunLoadATList(String path = "/Airtags_0.log",
+                       bool show_status = true,
+                       bool allow_recovery = true);
     void RunSetupGPSTracker(uint8_t scan_mode);
     void channelHop(bool filtered = false, bool ranged = false);
     uint8_t currentScanMode = 0;
