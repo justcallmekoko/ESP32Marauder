@@ -977,6 +977,9 @@ class WiFiScan
     bool isMetaIdentifier(uint16_t id);
     bool isBlockedIdentifier(uint16_t id);
     uint32_t getCompleteEapol(int check_index = -1);
+    uint8_t activityPageCount() const;
+    uint8_t activityPageStart() const;
+    uint8_t activityPageEnd() const;
     void drawChannelLine();
     #ifdef HAS_SCREEN
       int8_t checkAnalyzerButtons(uint32_t currentTime);

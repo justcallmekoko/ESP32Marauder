@@ -184,9 +184,10 @@ void MenuFunctions::main(uint32_t currentTime)
 
       if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
         #ifdef HAS_SCREEN
-          this->setGraphScale(this->graphScaleCheckSmall(wifi_scan_obj.channel_activity));
+          const uint8_t *page_values = wifi_scan_obj.channel_activity + wifi_scan_obj.activityPageStart();
+          this->setGraphScale(this->graphScaleCheckSmall(page_values));
 
-          this->drawGraphSmall(wifi_scan_obj.channel_activity);
+          this->drawGraphSmall(page_values);
 
         #endif
       }
@@ -593,15 +594,8 @@ void MenuFunctions::main(uint32_t currentTime)
             #endif
           }
           else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
-            #ifndef HAS_DUAL_BAND
-              if (wifi_scan_obj.activity_page < MAX_CHANNEL / CHAN_PER_PAGE) {
-                wifi_scan_obj.activity_page++;
-              }
-            #else
-              if (wifi_scan_obj.activity_page < DUAL_BAND_CHANNELS / CHAN_PER_PAGE) {
-                wifi_scan_obj.activity_page++;
-              }
-            #endif
+            if (wifi_scan_obj.activity_page < wifi_scan_obj.activityPageCount())
+              wifi_scan_obj.activity_page++;
             wifi_scan_obj.drawChannelLine();
           }
         }
@@ -662,15 +656,8 @@ void MenuFunctions::main(uint32_t currentTime)
             #endif
           }
           else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
-            #ifndef HAS_DUAL_BAND
-              if (wifi_scan_obj.activity_page > 1) {
-                wifi_scan_obj.activity_page--;
-              }
-            #else
-              if (wifi_scan_obj.activity_page > 0) {
-                wifi_scan_obj.activity_page--;
-              }
-            #endif
+            if (wifi_scan_obj.activity_page > 1)
+              wifi_scan_obj.activity_page--;
             wifi_scan_obj.drawChannelLine();
           }
         }
@@ -750,15 +737,8 @@ void MenuFunctions::main(uint32_t currentTime)
                 #endif
               }
               else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
-                #ifndef HAS_DUAL_BAND
-                  if (wifi_scan_obj.activity_page < MAX_CHANNEL / CHAN_PER_PAGE) {
-                    wifi_scan_obj.activity_page++;
-                  }
-                #else
-                  if (wifi_scan_obj.activity_page < DUAL_BAND_CHANNELS / CHAN_PER_PAGE) {
-                    wifi_scan_obj.activity_page++;
-                  }
-                #endif
+                if (wifi_scan_obj.activity_page < wifi_scan_obj.activityPageCount())
+                  wifi_scan_obj.activity_page++;
                 wifi_scan_obj.drawChannelLine();
               }
             }
@@ -827,15 +807,8 @@ void MenuFunctions::main(uint32_t currentTime)
           #endif
         }
         else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
-          #ifndef HAS_DUAL_BAND
-            if (wifi_scan_obj.activity_page > 1) {
-              wifi_scan_obj.activity_page--;
-            }
-          #else
-            if (wifi_scan_obj.activity_page > 0) {
-              wifi_scan_obj.activity_page--;
-            }
-          #endif
+          if (wifi_scan_obj.activity_page > 1)
+            wifi_scan_obj.activity_page--;
           wifi_scan_obj.drawChannelLine();
         }
       }
@@ -4076,22 +4049,16 @@ void MenuFunctions::drawMaxLine(uint8_t value, uint16_t color) {
   display_obj.tft.println((String)value);
 }
 
-void MenuFunctions::drawGraphSmall(uint8_t *values) {
-  uint8_t maxValue = 0;
-  //(i + (CHAN_PER_PAGE * (this->activity_page - 1)))
-
+void MenuFunctions::drawGraphSmall(const uint8_t *values) {
   int bar_width = SCREEN_WIDTH / (CHAN_PER_PAGE * 2);
   //display_obj.tft.fillRect(0, TFT_HEIGHT / 2 + 1, SCREEN_WIDTH, (TFT_HEIGHT / 2) + 1, TFT_BLACK);
 
   #ifndef HAS_DUAL_BAND
     for (int i = 1; i < CHAN_PER_PAGE + 1; i++) {
-      int targ_val = i + (CHAN_PER_PAGE * (wifi_scan_obj.activity_page - 1)) - 1;
+      int targ_val = i - 1;
       int x_mult = (i * 2) - 1;
       int x_coord = (SCREEN_WIDTH / (CHAN_PER_PAGE * 2)) * (x_mult - 1);
 
-      if (values[targ_val] > maxValue) {
-        maxValue = values[targ_val];
-      }
 
       if (values[targ_val] * this->_graph_scale <= GRAPH_VERT_LIM) {
         display_obj.tft.fillRect(x_coord, SCREEN_HEIGHT / 2 + 1, bar_width, SCREEN_HEIGHT / 2 + 1, TFT_BLACK);
@@ -4102,13 +4069,10 @@ void MenuFunctions::drawGraphSmall(uint8_t *values) {
     }
   #else
     for (int i = 1; i < CHAN_PER_PAGE + 1; i++) {
-      int targ_val = i + (CHAN_PER_PAGE * (wifi_scan_obj.activity_page - 1)) - 1;
+      int targ_val = i - 1;
       int x_mult = (i * 2) - 1;
       int x_coord = (SCREEN_WIDTH / (CHAN_PER_PAGE * 2)) * (x_mult - 1);
 
-      if (values[targ_val] > maxValue) {
-        maxValue = values[targ_val];
-      }
 
       if (values[targ_val] * this->_graph_scale <= GRAPH_VERT_LIM) {
         display_obj.tft.fillRect(x_coord, SCREEN_HEIGHT / 2 + 1, bar_width + 3, SCREEN_HEIGHT / 2 + 1, TFT_BLACK);
@@ -4118,8 +4082,6 @@ void MenuFunctions::drawGraphSmall(uint8_t *values) {
       display_obj.tft.drawLine(x_coord - 2, SCREEN_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2), x_coord - 2, SCREEN_HEIGHT, TFT_WHITE);
     }
   #endif
-
-  this->drawMaxLine(maxValue, TFT_GREEN); // Draw max
 }
 
 void MenuFunctions::drawGraph(int16_t *values) {
