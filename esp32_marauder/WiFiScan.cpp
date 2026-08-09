@@ -8157,8 +8157,10 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
               for (int i = 0; i < probe_req_ssids->size(); i++) {
                   ProbeReqSsid cur_probe_ssid = probe_req_ssids->get(i);
                   if (cur_probe_ssid.essid == probe_req_essid) {
-                      cur_probe_ssid.requests++;
-                probe_req_ssids->set(i, cur_probe_ssid);
+                      if (cur_probe_ssid.requests < UINT16_MAX) {
+                          cur_probe_ssid.requests++;
+                      }
+                      probe_req_ssids->set(i, cur_probe_ssid);
                       essidExist = true;
                       break;
                   }
