@@ -2587,6 +2587,8 @@ void MenuFunctions::RunSetup()
   this->addNodes(&wifiGeneralMenu, "Shutdown WiFi", TFTRED, 0, [this]() {
     WiFi.softAPdisconnect(true); // Also shut down the SoftAP if it is running
 	WiFi.disconnect(true);
+    // Synchronize teardown with the immediately redrawn status icon.
+    wifi_scan_obj.wifi_connected = false;
     delay(100);
     wifi_scan_obj.StartScan(WIFI_SCAN_OFF, TFT_RED);
     this->changeMenu(current_menu, true);
