@@ -1,4 +1,5 @@
 #include "Buffer.h"
+#include "PcapHeader.h"
 #include "lang_var.h"
 
 Buffer::Buffer(){
@@ -42,13 +43,9 @@ void Buffer::open(bool is_pcap){
   writing = true;
 
   if (is_pcap) {
-    write(uint32_t(0xa1b2c3d4)); // magic number
-    write(uint16_t(2)); // major version number
-    write(uint16_t(4)); // minor version number
-    write(int32_t(0)); // GMT to local correction
-    write(uint32_t(0)); // accuracy of timestamps
-    write(uint32_t(SNAP_LEN)); // max length of captured packets, in octets
-    write(uint32_t(105)); // data link type
+    uint8_t header[marauder::kPcapGlobalHeaderSize];
+    marauder::makePcapGlobalHeader(SNAP_LEN, header);
+    write(header, sizeof(header));
   }
 }
 
