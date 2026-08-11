@@ -46,6 +46,36 @@ void test_parse_mac_address_rejects_invalid_separator_and_hex() {
       marauder::parseMacAddress("00:11:22:33:44:GG", output));
 }
 
+void test_parse_mac_address_rejects_invalid_hex_in_each_octet() {
+  const size_t hex_offsets[] = {0, 1, 3, 4, 6, 7, 9, 10, 12, 13, 15, 16};
+  for (size_t index = 0; index < sizeof(hex_offsets) / sizeof(hex_offsets[0]); ++index) {
+    char text[] = "00:11:22:33:44:55";
+    uint8_t output[marauder::kMacAddressSize] = {};
+    text[hex_offsets[index]] = 'Z';
+    TEST_ASSERT_FALSE(marauder::parseMacAddress(text, output));
+  }
+}
+
+void test_parse_mac_address_rejects_invalid_separator_in_each_position() {
+  const size_t separator_offsets[] = {2, 5, 8, 11, 14};
+  for (size_t index = 0; index < sizeof(separator_offsets) / sizeof(separator_offsets[0]); ++index) {
+    char text[] = "00:11:22:33:44:55";
+    uint8_t output[marauder::kMacAddressSize] = {};
+    text[separator_offsets[index]] = '-';
+    TEST_ASSERT_FALSE(marauder::parseMacAddress(text, output));
+  }
+}
+
+void test_mac_address_boundary_values_round_trip() {
+  const uint8_t expected[marauder::kMacAddressSize] = {0x00, 0x0F, 0x10, 0x7F, 0x80, 0xFF};
+  uint8_t parsed[marauder::kMacAddressSize] = {};
+  char formatted[marauder::kMacAddressTextLength + 1] = {};
+  TEST_ASSERT_TRUE(marauder::formatMacAddress(expected, formatted));
+  TEST_ASSERT_EQUAL_STRING("00:0F:10:7F:80:FF", formatted);
+  TEST_ASSERT_TRUE(marauder::parseMacAddress(formatted, parsed));
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, parsed, marauder::kMacAddressSize);
+}
+
 void test_parse_failure_does_not_modify_output() {
   uint8_t output[marauder::kMacAddressSize] = {1, 2, 3, 4, 5, 6};
   const uint8_t expected[marauder::kMacAddressSize] = {1, 2, 3, 4, 5, 6};
@@ -82,6 +112,9 @@ int main() {
   RUN_TEST(test_parse_mac_address_accepts_uppercase_and_lowercase);
   RUN_TEST(test_parse_mac_address_rejects_invalid_length);
   RUN_TEST(test_parse_mac_address_rejects_invalid_separator_and_hex);
+  RUN_TEST(test_parse_mac_address_rejects_invalid_hex_in_each_octet);
+  RUN_TEST(test_parse_mac_address_rejects_invalid_separator_in_each_position);
+  RUN_TEST(test_mac_address_boundary_values_round_trip);
   RUN_TEST(test_parse_failure_does_not_modify_output);
   RUN_TEST(test_mac_address_round_trip);
   RUN_TEST(test_mac_address_helpers_reject_null_buffers);
