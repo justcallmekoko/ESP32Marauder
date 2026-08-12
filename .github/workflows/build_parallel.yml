@@ -292,6 +292,7 @@ jobs:
         with:
           name: "Marauder Release ${{ github.ref_name }}"
           tag_name: ${{ env.version_dot }}
+          target_commitish: ${{ github.sha }}
           generate_release_notes: false
           draft: true
           files: |
@@ -349,14 +350,19 @@ jobs:
         run: |
           test -n "$GH_TOKEN"
           RELEASE_ID=$(gh api "repos/${{ github.repository }}/releases/tags/${{ env.version_dot }}" --jq .id)
-          jq -n \
+          PAYLOAD=$(jq -n \
             --arg source_sha "${{ github.sha }}" \
             --arg release_tag "${{ env.version_dot }}" \
             --arg release_id "$RELEASE_ID" \
-            '{ref:"main",inputs:{mode:"release",source_sha:$source_sha,release_tag:$release_tag,release_id:$release_id}}' \
-            | gh api --method POST \
-                repos/justcallmekoko/TFT_eSPI_JCMK/actions/workflows/private-c5-build.yml/dispatches \
-                --input -
+            '{ref:"main",inputs:{mode:"release",source_sha:$source_sha,release_tag:$release_tag,release_id:$release_id}}')
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --header 'Accept: application/vnd.github+json' \
+            --header 'X-GitHub-Api-Version: 2022-11-28' \
+            --header 'Content-Type: application/json' \
+            --data "$PAYLOAD" \
+            'https://api.github.com/repos/justcallmekoko/TFT_eSPI_JCMK/actions/workflows/private-c5-build.yml/dispatches'
 
       - name: Wait for private Marauder v8 binary
         env:
