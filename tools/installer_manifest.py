@@ -71,6 +71,13 @@ def load_registry(path: Path) -> dict[str, Any]:
     targets = registry.get("targets")
     if not isinstance(targets, list) or not targets:
         raise ManifestError("Target registry must contain at least one target.")
+    private_build_flags = registry.get("privateBuildFlags", [])
+    if not isinstance(private_build_flags, list) or not all(
+        isinstance(flag, str) for flag in private_build_flags
+    ):
+        raise ManifestError("privateBuildFlags must be an array of build-flag strings.")
+    if len(private_build_flags) != len(set(private_build_flags)):
+        raise ManifestError("privateBuildFlags contains duplicates.")
 
     ids: set[str] = set()
     flags: set[str] = set()
@@ -92,6 +99,12 @@ def load_registry(path: Path) -> dict[str, Any]:
             if value in seen:
                 raise ManifestError(f"Duplicate {label}: {value}.")
             seen.add(value)
+
+    unknown_private_flags = set(private_build_flags) - flags
+    if unknown_private_flags:
+        raise ManifestError(
+            f"privateBuildFlags contains unknown targets: {sorted(unknown_private_flags)}."
+        )
 
     return registry
 
@@ -159,12 +172,14 @@ def load_normal_build_matrix(
 
     registry = load_registry(registry_path)
     registry_flags = {target["buildFlag"] for target in registry["targets"]}
+    private_flags = set(registry.get("privateBuildFlags", []))
+    public_registry_flags = registry_flags - private_flags
     matrix_flags = {board["flag"] for board in boards}
-    if matrix_flags != registry_flags:
+    if matrix_flags != public_registry_flags:
         raise ManifestError(
-            "Installer target registry does not match the normal build workflow; "
-            f"missing={sorted(matrix_flags - registry_flags)}, "
-            f"extra={sorted(registry_flags - matrix_flags)}."
+            "Public installer targets do not match the normal build workflow; "
+            f"unregistered={sorted(matrix_flags - public_registry_flags)}, "
+            f"missing={sorted(public_registry_flags - matrix_flags)}."
         )
     return boards
 

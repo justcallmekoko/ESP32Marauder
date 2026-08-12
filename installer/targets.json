@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "sourceWorkflow": ".github/workflows/build_parallel.yml",
+  "privateBuildFlags": ["MARAUDER_V8", "MARAUDER_MINI_V3", "DUAL_MINI_C5"],
   "targets": [
     {
       "id": "flipper-zero-wifi-dev-board",
@@ -197,6 +198,33 @@
       "aliases": ["Pancake Marauder V8"],
       "buildFlag": "MARAUDER_PANCAKE",
       "assetSuffix": "pancake",
+      "chipFamily": "ESP32-C5",
+      "esptoolChip": "esp32c5"
+    },
+    {
+      "id": "marauder-v8",
+      "displayName": "Marauder v8",
+      "aliases": [],
+      "buildFlag": "MARAUDER_V8",
+      "assetSuffix": "v8",
+      "chipFamily": "ESP32-C5",
+      "esptoolChip": "esp32c5"
+    },
+    {
+      "id": "marauder-mini-v3",
+      "displayName": "Marauder Mini v3",
+      "aliases": ["Mini v3"],
+      "buildFlag": "MARAUDER_MINI_V3",
+      "assetSuffix": "mini_v3",
+      "chipFamily": "ESP32-C5",
+      "esptoolChip": "esp32c5"
+    },
+    {
+      "id": "dual-c5-mini",
+      "displayName": "Dual C5 Mini",
+      "aliases": ["Dual Mini C5"],
+      "buildFlag": "DUAL_MINI_C5",
+      "assetSuffix": "dual_c5_mini",
       "chipFamily": "ESP32-C5",
       "esptoolChip": "esp32c5"
     }
