@@ -32,6 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
+      source_sha: ${{ steps.source.outputs.sha }}
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -40,6 +41,10 @@ jobs:
 
       - name: Validate target registry
         run: python3 tools/installer_manifest.py --validate-registry
+
+      - name: Record exact source commit
+        id: source
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Test manifest generation
         run: python3 -m unittest tools/test_installer_manifest.py -v
@@ -266,9 +271,58 @@ jobs:
           if-no-files-found: error
           retention-days: 5
 
+  private-c5:
+    name: Obtain private C5 installer targets
+    needs: prepare
+    if: ${{ github.event_name == 'release' && github.event.release.prerelease == false }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch exact-source private build
+        env:
+          GH_TOKEN: ${{ secrets.PRIVATE_TFT_BUILD_TOKEN }}
+        run: |
+          test -n "$GH_TOKEN"
+          jq -n \
+            --arg source_sha "${{ needs.prepare.outputs.source_sha }}" \
+            --arg release_tag "${{ github.event.release.tag_name }}" \
+            --arg release_id "${{ github.event.release.id }}" \
+            '{ref:"main",inputs:{mode:"installer",source_sha:$source_sha,release_tag:$release_tag,release_id:$release_id}}' \
+            | gh api --method POST \
+                repos/justcallmekoko/TFT_eSPI_JCMK/actions/workflows/private-c5-build.yml/dispatches \
+                --input -
+
+      - name: Wait for sanitized Marauder v8 target fragment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p private-targets
+          for attempt in $(seq 1 90); do
+            ASSETS=$(gh api "repos/${{ github.repository }}/releases/${{ github.event.release.id }}/assets" --jq '.[].name')
+            if grep -Fxq 'marauder-v8.installer.json' <<< "$ASSETS"; then
+              gh release download "${{ github.event.release.tag_name }}" \
+                --repo "${{ github.repository }}" \
+                --dir private-targets \
+                --pattern '*.installer.json'
+              test "$(find private-targets -maxdepth 1 -name '*.installer.json' | wc -l)" -eq 1
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Timed out waiting for the Marauder v8 installer fragment" >&2
+          exit 1
+
+      - name: Upload sanitized private fragments
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-private-c5-fragments
+          path: private-targets/*.installer.json
+          if-no-files-found: error
+          retention-days: 5
+
   combine:
     name: Combine authoritative installer manifest
-    needs: build
+    needs: [build, private-c5]
+    if: ${{ github.event_name == 'release' && github.event.release.prerelease == false }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
