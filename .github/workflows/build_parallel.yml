@@ -288,6 +288,7 @@ jobs:
           echo "version_dot=$VERSION_DOT" >> $GITHUB_ENV
           
       - name: Create Release
+        id: create_release
         uses: softprops/action-gh-release@v1
         with:
           name: "Marauder Release ${{ github.ref_name }}"
@@ -346,15 +347,12 @@ jobs:
 
       - name: Dispatch private Marauder v8 build
         env:
-          GH_TOKEN: ${{ github.token }}
           PRIVATE_TFT_BUILD_TOKEN: ${{ secrets.PRIVATE_TFT_BUILD_TOKEN }}
+          RELEASE_ID: ${{ steps.create_release.outputs.id }}
         run: |
-          test -n "$GH_TOKEN"
           test -n "$PRIVATE_TFT_BUILD_TOKEN"
-          RELEASE_ID=$(gh api --paginate --slurp \
-            "repos/${{ github.repository }}/releases?per_page=100" \
-            | jq -er --arg tag "${{ env.version_dot }}" \
-              '[.[][] | select(.tag_name == $tag)] | if length == 1 then .[0].id else error("expected exactly one release for tag " + $tag) end')
+          test -n "$RELEASE_ID"
+          [[ "$RELEASE_ID" =~ ^[0-9]+$ ]]
           echo "release_id=$RELEASE_ID" >> "$GITHUB_ENV"
           PAYLOAD=$(jq -n \
             --arg source_sha "${{ github.sha }}" \
