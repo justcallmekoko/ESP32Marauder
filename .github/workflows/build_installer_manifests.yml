@@ -282,14 +282,19 @@ jobs:
           GH_TOKEN: ${{ secrets.PRIVATE_TFT_BUILD_TOKEN }}
         run: |
           test -n "$GH_TOKEN"
-          jq -n \
+          PAYLOAD=$(jq -n \
             --arg source_sha "${{ needs.prepare.outputs.source_sha }}" \
             --arg release_tag "${{ github.event.release.tag_name }}" \
             --arg release_id "${{ github.event.release.id }}" \
-            '{ref:"main",inputs:{mode:"installer",source_sha:$source_sha,release_tag:$release_tag,release_id:$release_id}}' \
-            | gh api --method POST \
-                repos/justcallmekoko/TFT_eSPI_JCMK/actions/workflows/private-c5-build.yml/dispatches \
-                --input -
+            '{ref:"main",inputs:{mode:"installer",source_sha:$source_sha,release_tag:$release_tag,release_id:$release_id}}')
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --header 'Accept: application/vnd.github+json' \
+            --header 'X-GitHub-Api-Version: 2022-11-28' \
+            --header 'Content-Type: application/json' \
+            --data "$PAYLOAD" \
+            'https://api.github.com/repos/justcallmekoko/TFT_eSPI_JCMK/actions/workflows/private-c5-build.yml/dispatches'
 
       - name: Wait for sanitized Marauder v8 target fragment
         env:
