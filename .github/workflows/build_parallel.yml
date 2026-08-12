@@ -343,7 +343,7 @@ jobs:
             | AWOK V2 flipper (orange usb) | `_flipper.bin` |
             | AWOK V3 flipper (orange usb) | `_marauder_dev_board_pro.bin` |
 
-      - name: Dispatch private C5 display builds
+      - name: Dispatch private Marauder v8 build
         env:
           GH_TOKEN: ${{ secrets.PRIVATE_TFT_BUILD_TOKEN }}
         run: |
@@ -358,18 +358,16 @@ jobs:
                 repos/justcallmekoko/TFT_eSPI_JCMK/actions/workflows/private-c5-build.yml/dispatches \
                 --input -
 
-      - name: Wait for private C5 display binaries
+      - name: Wait for private Marauder v8 binary
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           for attempt in $(seq 1 60); do
             ASSETS=$(gh api "repos/${{ github.repository }}/releases/tags/${{ env.version_dot }}" --jq '.assets[].name')
-            if grep -Eq '_v8\.bin$' <<< "$ASSETS" \
-              && grep -Eq '_mini_v3\.bin$' <<< "$ASSETS" \
-              && grep -Eq '_dual_c5_mini\.bin$' <<< "$ASSETS"; then
+            if grep -Eq '_v8\.bin$' <<< "$ASSETS"; then
               exit 0
             fi
             sleep 10
           done
-          echo "Timed out waiting for all private C5 display binaries" >&2
+          echo "Timed out waiting for the private Marauder v8 binary" >&2
           exit 1

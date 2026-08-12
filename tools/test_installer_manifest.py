@@ -66,9 +66,9 @@ class InstallerManifestTests(unittest.TestCase):
         self.assertIn("set-build-path: true", installer_workflow)
         self.assertIn("--show-properties=expanded", installer_workflow)
         self.assertIn("github.event_name == 'release'", installer_workflow)
-        self.assertEqual(len(registry["targets"]), 25)
+        self.assertEqual(len(registry["targets"]), 23)
         self.assertEqual(len(boards), 22)
-        self.assertEqual(private_flags, {"MARAUDER_V8", "MARAUDER_MINI_V3", "DUAL_MINI_C5"})
+        self.assertEqual(private_flags, {"MARAUDER_V8"})
         self.assertEqual(registry_flags - private_flags, workflow_flags)
         self.assertEqual(
             len(registry_flags),
@@ -182,7 +182,7 @@ class InstallerManifestTests(unittest.TestCase):
             self.assertEqual(release["metadataStatus"], "authoritative")
             self.assertEqual(release["channel"], "stable")
             self.assertEqual(release["sourceCommit"], "a" * 40)
-            self.assertEqual(len(release["targets"]), 25)
+            self.assertEqual(len(release["targets"]), 23)
             self.assertIn("/" + "a" * 40 + "/", release["$schema"])
 
 

@@ -291,26 +291,24 @@ jobs:
                 repos/justcallmekoko/TFT_eSPI_JCMK/actions/workflows/private-c5-build.yml/dispatches \
                 --input -
 
-      - name: Wait for sanitized private target fragments
+      - name: Wait for sanitized Marauder v8 target fragment
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p private-targets
           for attempt in $(seq 1 90); do
             ASSETS=$(gh api "repos/${{ github.repository }}/releases/${{ github.event.release.id }}/assets" --jq '.[].name')
-            if grep -Fxq 'marauder-v8.installer.json' <<< "$ASSETS" \
-              && grep -Fxq 'marauder-mini-v3.installer.json' <<< "$ASSETS" \
-              && grep -Fxq 'dual-c5-mini.installer.json' <<< "$ASSETS"; then
+            if grep -Fxq 'marauder-v8.installer.json' <<< "$ASSETS"; then
               gh release download "${{ github.event.release.tag_name }}" \
                 --repo "${{ github.repository }}" \
                 --dir private-targets \
                 --pattern '*.installer.json'
-              test "$(find private-targets -maxdepth 1 -name '*.installer.json' | wc -l)" -eq 3
+              test "$(find private-targets -maxdepth 1 -name '*.installer.json' | wc -l)" -eq 1
               exit 0
             fi
             sleep 10
           done
-          echo "Timed out waiting for all private installer fragments" >&2
+          echo "Timed out waiting for the Marauder v8 installer fragment" >&2
           exit 1
 
       - name: Upload sanitized private fragments
