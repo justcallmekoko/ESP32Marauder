@@ -346,9 +346,11 @@ jobs:
 
       - name: Dispatch private Marauder v8 build
         env:
-          GH_TOKEN: ${{ secrets.PRIVATE_TFT_BUILD_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          PRIVATE_TFT_BUILD_TOKEN: ${{ secrets.PRIVATE_TFT_BUILD_TOKEN }}
         run: |
           test -n "$GH_TOKEN"
+          test -n "$PRIVATE_TFT_BUILD_TOKEN"
           RELEASE_ID=$(gh api --paginate --slurp \
             "repos/${{ github.repository }}/releases?per_page=100" \
             | jq -er --arg tag "${{ env.version_dot }}" \
@@ -361,7 +363,7 @@ jobs:
             '{ref:"main",inputs:{mode:"release",source_sha:$source_sha,release_tag:$release_tag,release_id:$release_id}}')
           curl --fail-with-body --silent --show-error \
             --request POST \
-            --header "Authorization: Bearer $GH_TOKEN" \
+            --header "Authorization: Bearer $PRIVATE_TFT_BUILD_TOKEN" \
             --header 'Accept: application/vnd.github+json' \
             --header 'X-GitHub-Api-Version: 2022-11-28' \
             --header 'Content-Type: application/json' \
