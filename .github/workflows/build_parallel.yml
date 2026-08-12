@@ -349,7 +349,11 @@ jobs:
           GH_TOKEN: ${{ secrets.PRIVATE_TFT_BUILD_TOKEN }}
         run: |
           test -n "$GH_TOKEN"
-          RELEASE_ID=$(gh api "repos/${{ github.repository }}/releases/tags/${{ env.version_dot }}" --jq .id)
+          RELEASE_ID=$(gh api --paginate --slurp \
+            "repos/${{ github.repository }}/releases?per_page=100" \
+            | jq -er --arg tag "${{ env.version_dot }}" \
+              '[.[][] | select(.tag_name == $tag)] | if length == 1 then .[0].id else error("expected exactly one release for tag " + $tag) end')
+          echo "release_id=$RELEASE_ID" >> "$GITHUB_ENV"
           PAYLOAD=$(jq -n \
             --arg source_sha "${{ github.sha }}" \
             --arg release_tag "${{ env.version_dot }}" \
@@ -369,7 +373,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           for attempt in $(seq 1 60); do
-            ASSETS=$(gh api "repos/${{ github.repository }}/releases/tags/${{ env.version_dot }}" --jq '.assets[].name')
+            ASSETS=$(gh api "repos/${{ github.repository }}/releases/${{ env.release_id }}" --jq '.assets[].name')
             if grep -Eq '_v8\.bin$' <<< "$ASSETS"; then
               exit 0
             fi
