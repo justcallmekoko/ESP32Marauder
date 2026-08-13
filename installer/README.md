@@ -1,6 +1,6 @@
 # Installer manifest
 
-`targets.json` is the canonical installer identity registry for all stable firmware build targets. It maps each build flag to a stable target ID, aliases, release asset suffix, browser-facing chip family, and esptool chip name. `privateBuildFlags` identifies Marauder v8, which is built only in the private TFT repository. Marauder Mini v3 and Dual C5 Mini will be added when their private TFT setup is available.
+`targets.json` is the canonical installer identity registry for all stable firmware build targets. It maps each build flag to a stable target ID, aliases, release asset suffix, browser-facing chip family, and esptool chip name. `privateBuildFlags` identifies Marauder v8, Marauder Mini v3, and Dual Mini C5, which are built only in the private TFT repository.
 
 The normal release workflow, `.github/workflows/build_parallel.yml`, remains unchanged and continues producing its existing downloadable application binaries. Installer automation lives only in the additive `.github/workflows/build_installer_manifests.yml` workflow.
 

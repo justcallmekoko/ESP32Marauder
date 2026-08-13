@@ -296,14 +296,16 @@ jobs:
             --data "$PAYLOAD" \
             'https://api.github.com/repos/justcallmekoko/TFT_eSPI_JCMK/actions/workflows/private-c5-build.yml/dispatches'
 
-      - name: Wait for sanitized Marauder v8 installer assets
+      - name: Wait for sanitized private C5 installer assets
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p private-targets
           for attempt in $(seq 1 90); do
             ASSETS=$(gh api "repos/${{ github.repository }}/releases/${{ github.event.release.id }}/assets" --jq '.[].name')
-            if grep -Fxq 'marauder-v8.installer.json' <<< "$ASSETS"; then
+            if grep -Fxq 'marauder-v8.installer.json' <<< "$ASSETS" && \
+               grep -Fxq 'marauder-mini-v3.installer.json' <<< "$ASSETS" && \
+               grep -Fxq 'dual-mini-c5.installer.json' <<< "$ASSETS"; then
               gh release download "${{ github.event.release.tag_name }}" \
                 --repo "${{ github.repository }}" \
                 --dir private-targets \
@@ -311,14 +313,14 @@ jobs:
               gh release download "${{ github.event.release.tag_name }}" \
                 --repo "${{ github.repository }}" \
                 --dir private-targets \
-                --pattern 'esp32_marauder_installer_*_v8*.bin'
-              test "$(find private-targets -maxdepth 1 -name '*.installer.json' | wc -l)" -eq 1
-              test "$(find private-targets -maxdepth 1 -name 'esp32_marauder_installer_*_v8*.bin' | wc -l)" -eq 4
+                --pattern 'esp32_marauder_installer_*.bin'
+              test "$(find private-targets -maxdepth 1 -name '*.installer.json' | wc -l)" -eq 3
+              test "$(find private-targets -maxdepth 1 -name 'esp32_marauder_installer_*.bin' | wc -l)" -eq 12
               exit 0
             fi
             sleep 10
           done
-          echo "Timed out waiting for the Marauder v8 installer fragment" >&2
+          echo "Timed out waiting for the private C5 installer fragments" >&2
           exit 1
 
       - name: Upload sanitized private installer assets
@@ -397,13 +399,13 @@ jobs:
           fail_on_unmatched_files: true
           files: release-assets/marauder-installer-assets.zip
 
-      - name: Remove temporary private v8 handoff assets
+      - name: Remove temporary private C5 handoff assets
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh api "repos/${{ github.repository }}/releases/${{ github.event.release.id }}/assets" \
             --paginate \
-            --jq '.[] | select(.name == "marauder-v8.installer.json" or (.name | startswith("esp32_marauder_installer_") and contains("_v8"))) | .id' |
+            --jq '.[] | select(.name == "marauder-v8.installer.json" or .name == "marauder-mini-v3.installer.json" or .name == "dual-mini-c5.installer.json" or (.name | startswith("esp32_marauder_installer_") and (contains("_v8") or contains("_mini_v3") or contains("_dual_mini_c5")))) | .id' |
           while read -r asset_id; do
             test -n "$asset_id"
             gh api --method DELETE "repos/${{ github.repository }}/releases/assets/$asset_id"
