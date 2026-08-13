@@ -66,6 +66,8 @@ class InstallerManifestTests(unittest.TestCase):
         self.assertIn("set-build-path: true", installer_workflow)
         self.assertIn("--show-properties=expanded", installer_workflow)
         self.assertIn("github.event_name == 'release'", installer_workflow)
+        self.assertIn('marauder-installer-assets.zip', installer_workflow)
+        self.assertNotIn('release-assets/*.bin\n', installer_workflow)
         self.assertEqual(len(registry["targets"]), 23)
         self.assertEqual(len(boards), 22)
         self.assertEqual(private_flags, {"MARAUDER_V8"})
