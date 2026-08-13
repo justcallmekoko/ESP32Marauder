@@ -296,7 +296,7 @@ jobs:
             --data "$PAYLOAD" \
             'https://api.github.com/repos/justcallmekoko/TFT_eSPI_JCMK/actions/workflows/private-c5-build.yml/dispatches'
 
-      - name: Wait for sanitized Marauder v8 target fragment
+      - name: Wait for sanitized Marauder v8 installer assets
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -308,7 +308,12 @@ jobs:
                 --repo "${{ github.repository }}" \
                 --dir private-targets \
                 --pattern '*.installer.json'
+              gh release download "${{ github.event.release.tag_name }}" \
+                --repo "${{ github.repository }}" \
+                --dir private-targets \
+                --pattern 'esp32_marauder_installer_*_v8*.bin'
               test "$(find private-targets -maxdepth 1 -name '*.installer.json' | wc -l)" -eq 1
+              test "$(find private-targets -maxdepth 1 -name 'esp32_marauder_installer_*_v8*.bin' | wc -l)" -eq 4
               exit 0
             fi
             sleep 10
@@ -316,11 +321,11 @@ jobs:
           echo "Timed out waiting for the Marauder v8 installer fragment" >&2
           exit 1
 
-      - name: Upload sanitized private fragments
+      - name: Upload sanitized private installer assets
         uses: actions/upload-artifact@v4
         with:
-          name: installer-private-c5-fragments
-          path: private-targets/*.installer.json
+          name: installer-private-c5-assets
+          path: private-targets
           if-no-files-found: error
           retention-days: 5
 
@@ -348,11 +353,26 @@ jobs:
             --input-dir release-assets \
             --output release-assets/firmware-manifest.json
 
+      - name: Package installer assets
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZIP_DEFLATED, ZipFile
+
+          assets = Path("release-assets")
+          members = sorted(assets.glob("*.bin")) + [assets / "firmware-manifest.json"]
+          if not members[-1].is_file() or not any(path.suffix == ".bin" for path in members):
+              raise SystemExit("Installer bundle inputs are incomplete")
+          with ZipFile(assets / "marauder-installer-assets.zip", "w", ZIP_DEFLATED) as archive:
+              for path in members:
+                  archive.write(path, path.name)
+          PY
+
       - name: Upload complete installer bundle
         uses: actions/upload-artifact@v4
         with:
           name: installer-release-bundle
-          path: release-assets
+          path: release-assets/marauder-installer-assets.zip
           if-no-files-found: error
           retention-days: 5
 
@@ -370,11 +390,21 @@ jobs:
           name: installer-release-bundle
           path: release-assets
 
-      - name: Attach additive installer assets
+      - name: Attach packaged installer assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.release.tag_name }}
           fail_on_unmatched_files: true
-          files: |
-            release-assets/*.bin
-            release-assets/firmware-manifest.json
+          files: release-assets/marauder-installer-assets.zip
+
+      - name: Remove temporary private v8 handoff assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${{ github.repository }}/releases/${{ github.event.release.id }}/assets" \
+            --paginate \
+            --jq '.[] | select(.name == "marauder-v8.installer.json" or (.name | startswith("esp32_marauder_installer_") and contains("_v8"))) | .id' |
+          while read -r asset_id; do
+            test -n "$asset_id"
+            gh api --method DELETE "repos/${{ github.repository }}/releases/assets/$asset_id"
+          done
