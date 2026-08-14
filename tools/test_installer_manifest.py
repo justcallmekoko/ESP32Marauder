@@ -57,6 +57,7 @@ class InstallerManifestTests(unittest.TestCase):
         boards = load_normal_build_matrix(NORMAL_WORKFLOW, REGISTRY)
         workflow_flags = {board["flag"] for board in boards}
         registry_flags = {target["buildFlag"] for target in registry["targets"]}
+        private_flags = set(registry["privateBuildFlags"])
         normal_workflow = NORMAL_WORKFLOW.read_text(encoding="utf-8")
         installer_workflow = INSTALLER_WORKFLOW.read_text(encoding="utf-8")
 
@@ -65,9 +66,15 @@ class InstallerManifestTests(unittest.TestCase):
         self.assertIn("set-build-path: true", installer_workflow)
         self.assertIn("--show-properties=expanded", installer_workflow)
         self.assertIn("github.event_name == 'release'", installer_workflow)
-        self.assertEqual(len(registry["targets"]), 22)
+        self.assertIn('marauder-installer-assets.zip', installer_workflow)
+        self.assertNotIn('release-assets/*.bin\n', installer_workflow)
+        self.assertEqual(len(registry["targets"]), 25)
         self.assertEqual(len(boards), 22)
-        self.assertEqual(registry_flags, workflow_flags)
+        self.assertEqual(
+            private_flags,
+            {"MARAUDER_V8", "MARAUDER_MINI_V3", "DUAL_MINI_C5"},
+        )
+        self.assertEqual(registry_flags - private_flags, workflow_flags)
         self.assertEqual(
             len(registry_flags),
             len(registry["targets"]),
@@ -180,7 +187,7 @@ class InstallerManifestTests(unittest.TestCase):
             self.assertEqual(release["metadataStatus"], "authoritative")
             self.assertEqual(release["channel"], "stable")
             self.assertEqual(release["sourceCommit"], "a" * 40)
-            self.assertEqual(len(release["targets"]), 22)
+            self.assertEqual(len(release["targets"]), 25)
             self.assertIn("/" + "a" * 40 + "/", release["$schema"])
 
 
