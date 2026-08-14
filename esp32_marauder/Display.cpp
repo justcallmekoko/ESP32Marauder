@@ -579,15 +579,15 @@ void Display::processAndPrintString(TFT_eSPI& tft, const String& originalString)
 
   int count = TFT_WIDTH / CHAR_WIDTH;
 
-  char buf[count + 1];
-  memset(buf, ' ', count);
-  buf[count] = '\0';
+  if (new_string.length() > count)
+    new_string.remove(count);
 
-  String spaces(buf);
+  while (new_string.length() < count)
+    new_string.concat(' ');
 
   // Set text color and print the string
   tft.setTextColor(text_color, background_color);
-  tft.print(new_string + spaces);
+  tft.print(new_string);
 }
 
 void Display::displayBuffer(bool do_clear)
