@@ -1,4 +1,5 @@
 #include "Display.h"
+#include "DisplayLine.h"
 #include "lang_var.h"
 
 #ifdef HAS_SCREEN
@@ -578,16 +579,12 @@ void Display::processAndPrintString(TFT_eSPI& tft, const String& originalString)
   }
 
   int count = TFT_WIDTH / CHAR_WIDTH;
-
-  char buf[count + 1];
-  memset(buf, ' ', count);
-  buf[count] = '\0';
-
-  String spaces(buf);
+  char line[(TFT_WIDTH / CHAR_WIDTH) + 1];
+  fitDisplayLine(line, sizeof(line), new_string.c_str()); // GCOVR_EXCL_LINE
 
   // Set text color and print the string
   tft.setTextColor(text_color, background_color);
-  tft.print(new_string + spaces);
+  tft.print(line);
 }
 
 void Display::displayBuffer(bool do_clear)
