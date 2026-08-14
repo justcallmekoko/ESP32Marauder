@@ -38,6 +38,9 @@ jobs:
       - name: Include all firmware sources in coverage
         run: python3 tools/whole_source_coverage.py coverage.xml
 
+      - name: Test coverage source discovery
+        run: python3 -m unittest discover -s tools -p 'test_*.py'
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@04b047e8bb82a0c002c8312c1c880fbc6a999d45
         with:

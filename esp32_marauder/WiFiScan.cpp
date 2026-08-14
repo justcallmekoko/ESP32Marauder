@@ -1,6 +1,7 @@
 #include "esp_random.h"
 #include "WiFiScan.h"
 #include "BeaconFrame.h"
+#include "WdgResponse.h"
 #include "lang_var.h"
 
 #ifdef HAS_PSRAM
@@ -10876,6 +10877,78 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
 }
 
 #ifdef HAS_DIRECT_UPLOAD
+  // GCOVR_EXCL_START -- host tests do not provide a TFT implementation.
+  #ifdef HAS_SCREEN
+  void WiFiScan::drawUploadProgress(const char* service, uint8_t percent, bool waiting) {
+    const uint8_t safePercent = min(percent, (uint8_t)100);
+    const uint16_t accent = waiting ? TFT_YELLOW : TFT_CYAN;
+    const int margin = 8;
+    const int barX = margin;
+    const int barW = TFT_WIDTH - (margin * 2);
+
+    if ((safePercent == 0) || waiting)
+      display_obj.tft.fillScreen(TFT_BLACK);
+
+    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+
+    #ifdef HAS_MINI_SCREEN
+      if ((safePercent == 0) || waiting) {
+        display_obj.tft.setTextSize(1);
+        display_obj.showCenterText(service, 10, true);
+        display_obj.tft.setTextColor(accent, TFT_BLACK);
+        display_obj.showCenterText(waiting ? "VERIFYING" : "UPLOADING", 28, true);
+      }
+
+      String percentText = String(safePercent) + "%";
+      display_obj.tft.fillRect(0, 46, TFT_WIDTH, 20, TFT_BLACK);
+      display_obj.tft.setTextSize(2);
+      display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      display_obj.showCenterText(percentText.c_str(), 48, false, 2);
+
+      const int barY = TFT_HEIGHT - 18;
+      display_obj.tft.drawRoundRect(barX, barY, barW, 10, 3, TFT_DARKGREY);
+      display_obj.tft.fillRect(barX + 2, barY + 2, barW - 4, 6, TFT_BLACK);
+      display_obj.tft.fillRoundRect(barX + 2, barY + 2,
+                                    ((barW - 4) * safePercent) / 100, 6, 2, accent);
+    #else
+      if ((safePercent == 0) || waiting) {
+        display_obj.tft.drawRoundRect(margin, margin, TFT_WIDTH - (margin * 2),
+                                      TFT_HEIGHT - (margin * 2), 10, TFT_DARKGREY);
+
+        display_obj.tft.setTextSize(2);
+        display_obj.tft.setTextColor(accent, TFT_BLACK);
+        display_obj.showCenterText(service, TFT_HEIGHT / 6, false, 2);
+
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+        display_obj.showCenterText(waiting ? "VERIFYING SERVER RESPONSE" : "SECURE LOG UPLOAD",
+                                   TFT_HEIGHT / 3, true);
+      }
+
+      const int packetY = TFT_HEIGHT / 2;
+      const int packetGap = max(12, TFT_WIDTH / 12);
+      const int packetStart = (TFT_WIDTH / 2) - packetGap;
+      for (uint8_t i = 0; i < 3; i++) {
+        const uint16_t packetColor = (i <= ((safePercent / 10) % 3)) ? accent : TFT_DARKGREY;
+        display_obj.tft.fillCircle(packetStart + (i * packetGap), packetY, 4, packetColor);
+      }
+
+      String percentText = String(safePercent) + "%";
+      display_obj.tft.fillRect(0, (TFT_HEIGHT * 3) / 5, TFT_WIDTH, 20, TFT_BLACK);
+      display_obj.tft.setTextSize(2);
+      display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      display_obj.showCenterText(percentText.c_str(), (TFT_HEIGHT * 3) / 5, false, 2);
+
+      const int barY = TFT_HEIGHT - 38;
+      display_obj.tft.drawRoundRect(barX, barY, barW, 16, 5, TFT_DARKGREY);
+      display_obj.tft.fillRect(barX + 3, barY + 3, barW - 6, 10, TFT_BLACK);
+      display_obj.tft.fillRoundRect(barX + 3, barY + 3,
+                                    ((barW - 6) * safePercent) / 100, 10, 3, accent);
+    #endif
+  }
+  #endif
+  // GCOVR_EXCL_STOP
+
   bool WiFiScan::sidecarExists(String filePath, String service) {
     return SD.exists(filePath + "." + service);
   }
@@ -10954,8 +11027,7 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
     bool gotAny = false;
 
     #ifdef HAS_SCREEN
-    display_obj.clearScreen();
-    display_obj.showCenterText("WDG Upload...", TFT_HEIGHT / 2, true);
+    this->drawUploadProgress("WDG WARS", 0); // GCOVR_EXCL_LINE
     #endif
     delay(100);
 
@@ -11035,7 +11107,6 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
     uint8_t buf[CHUNK];
     size_t totalSent = 0;
     uint8_t pct = 0;
-    String pctStr;
 
     while (fileToUpload.available()) {
       size_t n = fileToUpload.read(buf, CHUNK);
@@ -11043,14 +11114,7 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
       client->write(buf, n);
       pct = (totalSent * 100) / fileToUpload.size();
       #ifdef HAS_SCREEN
-      display_obj.tft.drawRect(0, (TFT_HEIGHT / 3) * 2, TFT_WIDTH, TFT_HEIGHT - (TFT_HEIGHT / 3) * 2, TFT_BLACK);
-      display_obj.tft.setCursor(0, (TFT_HEIGHT / 3) * 2);
-      #endif
-      pctStr = String(pct) + "%";
-      int bar_width = (TFT_WIDTH * pct) / 100;
-      #ifdef HAS_SCREEN
-      display_obj.tft.fillRect(0, (TFT_HEIGHT / 4) * 3, bar_width, 20, TFT_GREEN);
-      //display_obj.showCenterText(pctStr.c_str(), TFT_HEIGHT / 2, true);
+      this->drawUploadProgress("WDG WARS", pct); // GCOVR_EXCL_LINE
       #endif
     }
 
@@ -11061,7 +11125,7 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
     Serial.println("[WDG] Bytes sent: " + String(totalSent));
 
     #ifdef HAS_SCREEN
-      display_obj.showCenterText("Waiting for response...", (TFT_HEIGHT / 3) * 2, true);
+      this->drawUploadProgress("WDG WARS", 100, true); // GCOVR_EXCL_LINE
     #endif
 
     // Read response
@@ -11094,15 +11158,52 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
     // WDG Wars returns 200 on success
     bool ok = response.indexOf("202 Accepted") >= 0 ||
     response.indexOf("\"ok\":true") >= 0;
-    #ifdef HAS_SCREEN
-    display_obj.clearScreen();
-    display_obj.showCenterText(ok ? "WDG OK" : "WDG Failed", TFT_HEIGHT / 2, true);
-    #endif
-
-    if (!ok)
+    if (!ok) {
+      char errorReason[64];
+      if (!extractWdgErrorReason(response.c_str(), errorReason, sizeof(errorReason)))
+        strncpy(errorReason, "Server rejected upload", sizeof(errorReason));
+      errorReason[sizeof(errorReason) - 1] = '\0';
       Serial.println(response);
 
-    delay(1000);
+      #ifdef HAS_SCREEN
+        display_obj.clearScreen();
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+        display_obj.showCenterText("WDG Failed", TFT_HEIGHT / 3, true);
+
+        #ifdef HAS_MINI_SCREEN
+          String displayReason = String(errorReason).substring(0, STANDARD_FONT_CHAR_LIMIT);
+          display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+          display_obj.showCenterText(displayReason.c_str(), TFT_HEIGHT / 2, true);
+        #else
+          String displayReason = String(errorReason).substring(0, STANDARD_FONT_CHAR_LIMIT * 2);
+          int splitAt = displayReason.length();
+          if (splitAt > STANDARD_FONT_CHAR_LIMIT) {
+            splitAt = STANDARD_FONT_CHAR_LIMIT;
+            while (splitAt > 0 && displayReason.charAt(splitAt) != ' ')
+              splitAt--;
+            if (splitAt == 0)
+              splitAt = STANDARD_FONT_CHAR_LIMIT;
+          }
+          String firstLine = displayReason.substring(0, splitAt);
+          String secondLine = displayReason.substring(splitAt);
+          secondLine.trim();
+          display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+          display_obj.showCenterText(firstLine.c_str(), TFT_HEIGHT / 2, true);
+          if (!secondLine.isEmpty())
+            display_obj.showCenterText(secondLine.c_str(), TFT_HEIGHT / 2 + TEXT_HEIGHT, true);
+        #endif
+        delay(3000);
+      #else
+        delay(1000);
+      #endif
+    } else {
+      #ifdef HAS_SCREEN
+        display_obj.clearScreen();
+        display_obj.showCenterText("WDG OK", TFT_HEIGHT / 2, true);
+      #endif
+      delay(1000);
+    }
 
     return ok;
   }
@@ -11112,8 +11213,7 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
     bool gotAny = false;
 
     #ifdef HAS_SCREEN
-    display_obj.clearScreen();
-    display_obj.showCenterText("Wigle Upload...", TFT_HEIGHT / 2, true);
+    this->drawUploadProgress("WiGLE", 0); // GCOVR_EXCL_LINE
     #endif
 
     delay(100);
@@ -11225,8 +11325,6 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
 
     uint8_t percent_sent = 0;
 
-    String display_percent = "";
-
     size_t totalBytesSent = 0;
     while (fileToUpload.available()) {
       size_t bytesRead = fileToUpload.read(buffer, BUFFER_SIZE);
@@ -11235,15 +11333,8 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
       Serial.print(totalBytesSent);
       Serial.println(" bytes...");
       percent_sent = (totalBytesSent * 100) / fileToUpload.size();
-      int bar_width = (TFT_WIDTH * percent_sent) / 100;
       #ifdef HAS_SCREEN
-      display_obj.tft.drawRect(0, (TFT_HEIGHT / 3) * 2, TFT_WIDTH, TFT_HEIGHT, TFT_BLACK);
-      display_obj.tft.setCursor(0, (TFT_HEIGHT / 3) * 2);
-      #endif
-      //display_percent = (String)percent_sent + "%";
-      #ifdef HAS_SCREEN
-      display_obj.tft.fillRect(0, (TFT_HEIGHT / 4) * 3, bar_width, 20, TFT_GREEN);
-      //display_obj.showCenterText(display_percent.c_str(), TFT_HEIGHT / 2, true);
+      this->drawUploadProgress("WiGLE", percent_sent); // GCOVR_EXCL_LINE
       #endif
       client->write(buffer, bytesRead);
     }
@@ -11257,7 +11348,7 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
     Serial.println("Finished sending part2 and part3");
 
     #ifdef HAS_SCREEN
-      display_obj.showCenterText("Waiting for response...", (TFT_HEIGHT / 3) * 2, true);
+      this->drawUploadProgress("WiGLE", 100, true); // GCOVR_EXCL_LINE
     #endif
 
     fileToUpload.close();

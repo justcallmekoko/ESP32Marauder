@@ -24,8 +24,19 @@ def source_lines(path: Path) -> list[int]:
     baseline instead of being silently omitted.
     """
 
+    included_lines: list[int] = []
+    excluded = False
     with path.open(encoding="utf-8") as source:
-        return [number for number, line in enumerate(source, start=1) if line.strip()]
+        for number, line in enumerate(source, start=1):
+            if "GCOVR_EXCL_START" in line:
+                excluded = True
+                continue
+            if "GCOVR_EXCL_STOP" in line:
+                excluded = False
+                continue
+            if line.strip() and not excluded and "GCOVR_EXCL_LINE" not in line:
+                included_lines.append(number)
+    return included_lines
 
 
 def rate(covered: int, valid: int) -> str:
