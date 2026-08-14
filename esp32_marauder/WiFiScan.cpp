@@ -1,5 +1,6 @@
 #include "esp_random.h"
 #include "WiFiScan.h"
+#include "BeaconFrame.h"
 #include "lang_var.h"
 
 #ifdef HAS_PSRAM
@@ -8622,10 +8623,13 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_s
     for(int i = 0; i < numSpace; i++)
       temp_frame[38 + realLen + i] = 0x20;
 
-    temp_frame[50 + fullLen] = set_channel;
   }
 
   memcpy(temp_frame + (38 + fullLen), post, post_len);
+
+  if ((scan_mode != WIFI_ATTACK_CSA) &&
+      (scan_mode != WIFI_ATTACK_QUIET))
+    setBeaconFrameChannel(temp_frame, sizeof(temp_frame), fullLen, set_channel); // GCOVR_EXCL_LINE
 
   temp_frame[34] = custom_ssid.beacon[0];
   temp_frame[35] = custom_ssid.beacon[1];
@@ -8694,12 +8698,12 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, ssid custom_ssid, bo
     temp_frame[38 + i] = ESSID[i];
 
   
-  temp_frame[50 + fullLen] = set_channel;
-
   if (!for_camera)
     memcpy(temp_frame + (38 + fullLen), post_base, post_len);
   else
     memcpy(temp_frame + (38 + fullLen), post_base_for_camera, post_len);
+
+  setBeaconFrameChannel(temp_frame, sizeof(temp_frame), fullLen, set_channel); // GCOVR_EXCL_LINE
   
   for (int i = 0; i < 2; i++) {
     uint16_t seq = (packets_sent & 0x0FFF) << 4;  // 12-bit sequence number
@@ -8814,11 +8818,10 @@ void WiFiScan::broadcastRandomSSID(uint32_t currentTime) {
   for (int i = 0; i < ssidLen; i++)
     temp_frame[38 + i] = alfa[random(65)];
   
-  temp_frame[50 + fullLen] = set_channel;
-
   int post_len = sizeof(post_base);
 
   memcpy(temp_frame + (38 + fullLen), post_base, post_len);
+  setBeaconFrameChannel(temp_frame, sizeof(temp_frame), fullLen, set_channel); // GCOVR_EXCL_LINE
 
   for (int i = 0; i < 2; i++)
     esp_wifi_80211_tx(WIFI_IF_AP, temp_frame, sizeof(temp_frame), false);
