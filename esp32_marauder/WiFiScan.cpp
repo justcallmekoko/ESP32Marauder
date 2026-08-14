@@ -1,6 +1,7 @@
 #include "esp_random.h"
 #include "WiFiScan.h"
 #include "BeaconFrame.h"
+#include "WdgResponse.h"
 #include "lang_var.h"
 
 #ifdef HAS_PSRAM
@@ -11157,15 +11158,52 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
     // WDG Wars returns 200 on success
     bool ok = response.indexOf("202 Accepted") >= 0 ||
     response.indexOf("\"ok\":true") >= 0;
-    #ifdef HAS_SCREEN
-    display_obj.clearScreen();
-    display_obj.showCenterText(ok ? "WDG OK" : "WDG Failed", TFT_HEIGHT / 2, true);
-    #endif
-
-    if (!ok)
+    if (!ok) {
+      char errorReason[64];
+      if (!extractWdgErrorReason(response.c_str(), errorReason, sizeof(errorReason)))
+        strncpy(errorReason, "Server rejected upload", sizeof(errorReason));
+      errorReason[sizeof(errorReason) - 1] = '\0';
       Serial.println(response);
 
-    delay(1000);
+      #ifdef HAS_SCREEN
+        display_obj.clearScreen();
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+        display_obj.showCenterText("WDG Failed", TFT_HEIGHT / 3, true);
+
+        #ifdef HAS_MINI_SCREEN
+          String displayReason = String(errorReason).substring(0, STANDARD_FONT_CHAR_LIMIT);
+          display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+          display_obj.showCenterText(displayReason.c_str(), TFT_HEIGHT / 2, true);
+        #else
+          String displayReason = String(errorReason).substring(0, STANDARD_FONT_CHAR_LIMIT * 2);
+          int splitAt = displayReason.length();
+          if (splitAt > STANDARD_FONT_CHAR_LIMIT) {
+            splitAt = STANDARD_FONT_CHAR_LIMIT;
+            while (splitAt > 0 && displayReason.charAt(splitAt) != ' ')
+              splitAt--;
+            if (splitAt == 0)
+              splitAt = STANDARD_FONT_CHAR_LIMIT;
+          }
+          String firstLine = displayReason.substring(0, splitAt);
+          String secondLine = displayReason.substring(splitAt);
+          secondLine.trim();
+          display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+          display_obj.showCenterText(firstLine.c_str(), TFT_HEIGHT / 2, true);
+          if (!secondLine.isEmpty())
+            display_obj.showCenterText(secondLine.c_str(), TFT_HEIGHT / 2 + TEXT_HEIGHT, true);
+        #endif
+        delay(3000);
+      #else
+        delay(1000);
+      #endif
+    } else {
+      #ifdef HAS_SCREEN
+        display_obj.clearScreen();
+        display_obj.showCenterText("WDG OK", TFT_HEIGHT / 2, true);
+      #endif
+      delay(1000);
+    }
 
     return ok;
   }
