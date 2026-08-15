@@ -48,6 +48,10 @@ https://www.online-utility.org/image/convert/to/XBM
   #include "MenuFunctions.h"
 #endif
 
+#ifdef MARAUDER_CARDPUTER_ADV
+  #include "glass2.h"
+#endif
+
 #ifdef HAS_BUTTONS
   #include "Switches.h"
   
@@ -86,6 +90,29 @@ CommandLine cli_obj;
 #ifdef HAS_SCREEN
   Display display_obj;
   MenuFunctions menu_function_obj;
+#endif
+
+#ifdef MARAUDER_CARDPUTER_ADV
+  static uint32_t _g2NextUpdate = 0;
+
+  static const char* _g2ModeName(uint8_t mode) {
+    switch (mode) {
+      case WIFI_SCAN_OFF:            return "Idle";
+      case WIFI_SCAN_AP:             return "AP Scan";
+      case WIFI_SCAN_PROBE:          return "Probe Sniff";
+      case WIFI_SCAN_DEAUTH:         return "Deauth";
+      case WIFI_SCAN_EAPOL:          return "EAPOL Sniff";
+      case WIFI_SCAN_ACTIVE_EAPOL:   return "EAPOL Attack";
+      case WIFI_SCAN_EVIL_PORTAL:    return "Evil Portal";
+      case WIFI_SCAN_WAR_DRIVE:      return "Wardriving";
+      case WIFI_PACKET_MONITOR:      return "Pkt Monitor";
+      case WIFI_ATTACK_BEACON_SPAM:  return "Beacon Spam";
+      case WIFI_ATTACK_BEACON_LIST:  return "Beacon List";
+      case WIFI_SCAN_STATION:        return "Station Scan";
+      case WIFI_SCAN_CHAN_ANALYZER:  return "Chan Analyze";
+      default:                       return "Running";
+    }
+  }
 #endif
 
 #if defined(HAS_SD) && !defined(HAS_C5_SD)
@@ -411,7 +438,12 @@ void setup()
   menu_function_obj.changeMenu(menu_function_obj.current_menu);*/
 
   wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
-  
+
+  #ifdef MARAUDER_CARDPUTER_ADV
+    glass2Init();
+    glass2Show("Marauder", "Grove OLED ready", "CH: --", "");
+  #endif
+
   cli_obj.RunSetup();
 }
 
@@ -477,5 +509,16 @@ void loop()
     delay(1);
   #else
     delay(50);
+  #endif
+
+  #ifdef MARAUDER_CARDPUTER_ADV
+    if ((int32_t)(currentTime - _g2NextUpdate) >= 0) {
+      _g2NextUpdate = currentTime + 1000;
+      char l2[22], l3[22], l4[22];
+      snprintf(l2, sizeof(l2), "CH: %u", wifi_scan_obj.set_channel);
+      snprintf(l3, sizeof(l3), "Deauth: %lu", (unsigned long)wifi_scan_obj.deauth_frames);
+      snprintf(l4, sizeof(l4), "EAPOL:  %lu", (unsigned long)wifi_scan_obj.eapol_frames);
+      glass2Show(_g2ModeName(wifi_scan_obj.currentScanMode), l2, l3, l4);
+    }
   #endif
 }
