@@ -232,8 +232,10 @@
 
   #ifdef MARAUDER_REV_FEATHER
     //#define FLIPPER_ZERO_HAT
-    //#define HAS_BATTERY
+    #define HAS_BATTERY
+       #define HAS_MAX1704X
     //#define HAS_BT
+    #define HAS_PSRAM
     #define HAS_MINI_KB
     #define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
@@ -2505,8 +2507,9 @@
       #define SD_CS 4
     #endif
 
+    // SD from Adalogger daughter card
     #ifdef MARAUDER_REV_FEATHER
-      #define SD_CS 5
+      #define SD_CS 10
     #endif
 
     #ifdef MARAUDER_M5STICKC
