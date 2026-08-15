@@ -9965,6 +9965,53 @@ void WiFiScan::changeChannel(int chan) {
   #endif
 }
 
+uint8_t WiFiScan::activityPageCount() const {
+  #ifdef HAS_DUAL_BAND
+    const uint16_t channel_count = DUAL_BAND_CHANNELS;
+  #else
+    const uint16_t channel_count = MAX_CHANNEL;
+  #endif
+
+  return (channel_count + CHAN_PER_PAGE - 1) / CHAN_PER_PAGE;
+}
+
+uint8_t WiFiScan::activityPageStart() const {
+  #ifdef HAS_DUAL_BAND
+    const uint16_t channel_count = DUAL_BAND_CHANNELS;
+  #else
+    const uint16_t channel_count = MAX_CHANNEL;
+  #endif
+
+  uint8_t page = this->activity_page;
+  if (page < 1)
+    page = 1;
+  else if (page > this->activityPageCount())
+    page = this->activityPageCount();
+
+  uint16_t page_start = (page - 1) * CHAN_PER_PAGE;
+  // Keep the final page full so graph slots and scan dwell stay consistent.
+  if ((channel_count > CHAN_PER_PAGE) && (page_start + CHAN_PER_PAGE > channel_count))
+    page_start = channel_count - CHAN_PER_PAGE;
+  else if (channel_count <= CHAN_PER_PAGE)
+    page_start = 0;
+
+  return page_start;
+}
+
+uint8_t WiFiScan::activityPageEnd() const {
+  #ifdef HAS_DUAL_BAND
+    const uint16_t channel_count = DUAL_BAND_CHANNELS;
+  #else
+    const uint16_t channel_count = MAX_CHANNEL;
+  #endif
+
+  uint16_t page_end = this->activityPageStart() + CHAN_PER_PAGE;
+  if (page_end > channel_count)
+    page_end = channel_count;
+
+  return page_end;
+}
+
 // Function to cycle to the next channel
 void WiFiScan::channelHop(bool filtered, bool ranged) {
   bool channel_match = false;
@@ -9987,29 +10034,29 @@ void WiFiScan::channelHop(bool filtered, bool ranged) {
   if (!filtered) {
     #ifndef HAS_DUAL_BAND
       if (ranged) {
-        top_chan = activity_page * CHAN_PER_PAGE;
-        bot_chan = (activity_page * CHAN_PER_PAGE) - CHAN_PER_PAGE + 1;
+        bot_chan = this->activityPageStart() + 1;
+        top_chan = this->activityPageEnd();
       }
       else {
         top_chan = MAX_CHANNEL;
         bot_chan = 1;
       }
 
-      this->set_channel = this->set_channel + 1;
-      if (this->set_channel > top_chan) {
+      if ((this->set_channel < bot_chan) || (this->set_channel >= top_chan))
         this->set_channel = bot_chan;
-      }
+      else
+        this->set_channel++;
     #else
       if (ranged) {
-        top_chan = activity_page * CHAN_PER_PAGE - 1;
-        bot_chan = (activity_page * CHAN_PER_PAGE) - CHAN_PER_PAGE;
+        bot_chan = this->activityPageStart();
+        top_chan = this->activityPageEnd() - 1;
       }
       else {
-        top_chan = DUAL_BAND_CHANNELS;
+        top_chan = DUAL_BAND_CHANNELS - 1;
         bot_chan = 0;
       }
 
-      if (this->dual_band_channel_index >= top_chan)
+      if ((this->dual_band_channel_index < bot_chan) || (this->dual_band_channel_index >= top_chan))
         this->dual_band_channel_index = bot_chan;
       else
         this->dual_band_channel_index++;
@@ -10160,10 +10207,15 @@ void WiFiScan::signalAnalyzerLoop(uint32_t tick) {
 
 void WiFiScan::drawChannelLine() {
   #ifdef HAS_SCREEN
+    const int graph_area_top = SCREEN_HEIGHT / 2 + 1;
+    display_obj.tft.fillRect(0, graph_area_top, SCREEN_WIDTH, SCREEN_HEIGHT - graph_area_top, TFT_BLACK);
     display_obj.tft.fillRect(0, SCREEN_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2), SCREEN_WIDTH, (CHAR_WIDTH * 2) - 1, TFT_BLACK);
+    const uint8_t page_start = this->activityPageStart();
+    const uint8_t page_end = this->activityPageEnd();
     #ifndef HAS_DUAL_BAND
-      for (int i = 1; i < CHAN_PER_PAGE + 1; i++) {
-        int x_mult = (i * 2) - 1;
+      for (int channel_index = page_start; channel_index < page_end; channel_index++) {
+        int page_slot = channel_index - page_start;
+        int x_mult = ((page_slot + 1) * 2) - 1;
         int x_coord = (SCREEN_WIDTH / (CHAN_PER_PAGE * 2)) * (x_mult - 1);
         #ifdef HAS_FULL_SCREEN
           display_obj.tft.setTextSize(2);
@@ -10172,11 +10224,12 @@ void WiFiScan::drawChannelLine() {
         #endif
         display_obj.tft.setCursor(x_coord, SCREEN_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2));
         display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-        display_obj.tft.print((String)(i + (CHAN_PER_PAGE * (this->activity_page - 1))));
+        display_obj.tft.print((String)(channel_index + 1));
       }
     #else
-      for (int i = 1; i < CHAN_PER_PAGE + 1; i++) {
-        int x_mult = (i * 2) - 1;
+      for (int channel_index = page_start; channel_index < page_end; channel_index++) {
+        int page_slot = channel_index - page_start;
+        int x_mult = ((page_slot + 1) * 2) - 1;
         int x_coord = (SCREEN_WIDTH / (CHAN_PER_PAGE * 2)) * (x_mult - 1);
         //#ifdef HAS_FULL_SCREEN
         //  display_obj.tft.setTextSize(2);
@@ -10185,7 +10238,7 @@ void WiFiScan::drawChannelLine() {
         //#endif
         display_obj.tft.setCursor(x_coord, SCREEN_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2));
         display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-        display_obj.tft.print((String)this->dual_band_channels[(i + (CHAN_PER_PAGE * (this->activity_page - 1)) - 1)]);
+        display_obj.tft.print((String)this->dual_band_channels[channel_index]);
       }
     #endif
   #endif
@@ -10196,7 +10249,9 @@ void WiFiScan::channelActivityLoop(uint32_t tick) {
     if (tick - this->initTime >= BANNER_TIME * 50) {
       initTime = millis();
       Serial.println(F("--------------"));
-      for (int i = (activity_page * CHAN_PER_PAGE) - CHAN_PER_PAGE; i < activity_page * CHAN_PER_PAGE; i++) {
+      const uint8_t page_start = this->activityPageStart();
+      const uint8_t page_end = this->activityPageEnd();
+      for (int i = page_start; i < page_end; i++) {
         #ifndef HAS_DUAL_BAND
           Serial.println((String)(i+1) + ": " + (String)channel_activity[i]);
         #else
@@ -10245,7 +10300,7 @@ void WiFiScan::channelActivityLoop(uint32_t tick) {
             return;
           }
         #else
-          if (this->activity_page < DUAL_BAND_CHANNELS / CHAN_PER_PAGE) {
+          if (this->activity_page < this->activityPageCount()) {
             this->activity_page++;
             display_obj.tftDrawChannelScaleButtons(this->set_channel, false);
             display_obj.tftDrawExitScaleButtons(false);
