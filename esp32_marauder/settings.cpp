@@ -1,5 +1,14 @@
 #include "settings.h"
 
+namespace {
+bool isSensitiveSetting(const char* name) {
+  return name != nullptr &&
+         (strcmp(name, "ClientPW") == 0 ||
+          strcmp(name, "wt") == 0 ||
+          strcmp(name, WDG_KEY_NAME) == 0);
+}
+}
+
 // ---------------------------------------------------------------------------
 // _buildCache — called once after json_settings_string is loaded/updated.
 // Parses the JSON exactly once and fills every field of _cache.
@@ -397,9 +406,13 @@ void Settings::printJsonSettings(String json_string) {
 
   Serial.println("Settings\n----------------------------------------------");
   for (int i = 0; i < (int)json["Settings"].size(); i++) {
-    Serial.println("Name: " + json["Settings"][i]["name"].as<String>());
+    const char* name = json["Settings"][i]["name"] | "";
+    Serial.println("Name: " + String(name));
     Serial.println("Type: " + json["Settings"][i]["type"].as<String>());
-    Serial.println("Value: " + json["Settings"][i]["value"].as<String>() + "\n");
+    if (isSensitiveSetting(name))
+      Serial.println(F("Value: <redacted>\n"));
+    else
+      Serial.println("Value: " + json["Settings"][i]["value"].as<String>() + "\n");
   }
 }
 

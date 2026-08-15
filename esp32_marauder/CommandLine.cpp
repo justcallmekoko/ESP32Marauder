@@ -1,5 +1,30 @@
 #include "CommandLine.h"
 
+namespace {
+String redactCommandForLog(const String& input, LinkedList<String>& arguments) {
+  if ((arguments.size() == 0) || (arguments.get(0) != JOIN_CMD))
+    return input;
+
+  String logged_input;
+  bool redact_next = false;
+  for (int i = 0; i < arguments.size(); i++) {
+    if (i > 0)
+      logged_input += ' ';
+
+    const String argument = arguments.get(i);
+    if (redact_next) {
+      logged_input += F("<redacted>");
+      redact_next = false;
+    } else {
+      logged_input += argument;
+      redact_next = (argument == "-p");
+    }
+  }
+
+  return logged_input;
+}
+}
+
 // Brightness functions defined in esp32_marauder.ino
 #ifndef HAS_MINI_SCREEN
   extern void brightnessCycle();
@@ -213,14 +238,16 @@ void CommandLine::startScanFromCLI(int scan_mode, uint16_t color, const char* sc
 void CommandLine::runCommand(String input) {
   if (input == "") return;
 
-  if(wifi_scan_obj.scanning() && wifi_scan_obj.currentScanMode == WIFI_SCAN_GPS_NMEA){
-    if(input != STOPSCAN_CMD) return;    
-  }
-  else
-    Serial.println("#" + input);
+  const bool gps_nmea_active =
+    wifi_scan_obj.scanning() &&
+    (wifi_scan_obj.currentScanMode == WIFI_SCAN_GPS_NMEA);
+  if (gps_nmea_active && (input != STOPSCAN_CMD)) return;
 
   LinkedList<String> cmd_args = this->parseCommand(input, " ");
-  
+
+  if (!gps_nmea_active)
+    Serial.println("#" + redactCommandForLog(input, cmd_args));
+
   //// Admin commands
   // Help
   if (cmd_args.get(0) == HELP_CMD) {
@@ -1448,7 +1475,7 @@ void CommandLine::runCommand(String input) {
       int index = cmd_args.get(ap_sw + 1).toInt();
       String password = cmd_args.get(pw_sw + 1);
       AccessPoint access_point = access_points->get(index);
-      Serial.println("Using SSID: " + (String)access_point.essid + " Password: " + (String)password);
+      Serial.println("Using SSID: " + (String)access_point.essid + " Password: <redacted>");
       //wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
       //wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
       wifi_scan_obj.joinWiFi(access_point.essid, password, false);
