@@ -38,6 +38,20 @@ LinkedList<IPAddress>* ipList;
 LinkedList<ProbeReqSsid>* probe_req_ssids;
 LinkedList<BleDevice>* ble_devices;
 
+#ifdef HAS_SD
+static void reportUnavailableSD() {
+  Serial.println(F("Save failed: SD card unavailable"));
+  #ifdef HAS_SCREEN
+    display_obj.tft.setTextWrap(false);
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.tft.setCursor(0, 100);
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextColor(TFT_RED);
+    display_obj.tft.println(F("Save failed: SD unavailable"));
+  #endif
+}
+#endif
+
 extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3){
     if (arg == 31337)
       return 1;
@@ -3504,6 +3518,11 @@ void WiFiScan::RunLoadATList() {
 void WiFiScan::RunSaveATList(bool save_as) {
   #ifdef HAS_SD
     if (save_as) {
+      if (!sd_obj.supported) {
+        reportUnavailableSD();
+        return;
+      }
+
       sd_obj.removeFile(F("/Airtags_0.log"));
 
       this->startLog("Airtags");
@@ -3637,6 +3656,11 @@ void WiFiScan::RunLoadAPList() {
 void WiFiScan::RunSaveAPList(bool save_as) {
   #ifdef HAS_SD
     if (save_as) {
+      if (!sd_obj.supported) {
+        reportUnavailableSD();
+        return;
+      }
+
       sd_obj.removeFile(F("/APs_0.log"));
 
       this->startLog("APs");
@@ -3730,6 +3754,11 @@ void WiFiScan::RunLoadSSIDList() {
 void WiFiScan::RunSaveSSIDList(bool save_as) {
   #ifdef HAS_SD
     if (save_as) {
+      if (!sd_obj.supported) {
+        reportUnavailableSD();
+        return;
+      }
+
       sd_obj.removeFile(F("/SSIDs_0.log"));
 
       this->startLog("SSIDs");
