@@ -160,7 +160,7 @@ extern "C" {
 
         AdvData_Raw = new uint8_t[15];
 
-        uint8_t model = watch_models[rand() % 25].value;
+        uint8_t model = watch_models[rand() % WATCH_MODEL_COUNT].value;
         
         AdvData_Raw[i++] = 14; // Size
         AdvData_Raw[i++] = 0xFF; // AD Type (Manufacturer Specific)
@@ -244,7 +244,7 @@ extern "C" {
         AdvData_Raw[i++] = 0x00;  // TX Power level value
 
         // Manufacturer specific data based on your hex dump
-        AdvData_Raw[i++] = 0x05;  // Length of Manufacturer Specific Data section
+        AdvData_Raw[i++] = 0x09;  // Type + company ID + six manufacturer bytes
         AdvData_Raw[i++] = 0xFF;  // Manufacturer Specific Data type
         AdvData_Raw[i++] = 0xBA;  // LSB of Manufacturer ID (Flipper Zero: 0x0FBA)
         AdvData_Raw[i++] = 0x0F;  // MSB of Manufacturer ID
@@ -1896,7 +1896,7 @@ void WiFiScan::RunSetup() {
     mac_entry_state[i] = 0;
 
   #ifdef HAS_BT
-    watch_models = new WatchModel[17] {
+    watch_models = new WatchModel[WATCH_MODEL_COUNT] {
       {0x1A, "Fallback Watch"},
       {0x02, "Black Watch4 Classic 40m"},
       {0x03, "White Watch4 Classic 40m"},
