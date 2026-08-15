@@ -4,6 +4,72 @@
 #ifdef HAS_SCREEN
 
 extern const unsigned char menu_icons[][66];
+extern LinkedList<AccessPoint>* access_points;
+extern LinkedList<Station>* stations;
+extern LinkedList<AirTag>* airtags;
+extern LinkedList<ssid>* ssids;
+
+static String formatSavedListFileLabel(const String& file_name) {
+  constexpr size_t MAX_LABEL_LENGTH = 30;
+  constexpr size_t PREFIX_LENGTH = 17;
+  constexpr size_t SUFFIX_LENGTH = 10;
+
+  if (file_name.length() <= MAX_LABEL_LENGTH)
+    return file_name;
+
+  return file_name.substring(0, PREFIX_LENGTH) + F("...") +
+         file_name.substring(file_name.length() - SUFFIX_LENGTH);
+}
+
+static constexpr size_t MAX_SAVED_LIST_PICKER_FILES = 32;
+
+#if defined(HAS_TOUCH)
+static void waitForSavedListStatusTouch() {
+  uint16_t touch_x = 0;
+  uint16_t touch_y = 0;
+
+  while (display_obj.updateTouch(&touch_x, &touch_y))
+    delay(10);
+  while (!display_obj.updateTouch(&touch_x, &touch_y))
+    delay(10);
+  while (display_obj.updateTouch(&touch_x, &touch_y))
+    delay(10);
+}
+
+static void showCenteredSavedListStatusMessage(const String& message) {
+  constexpr uint8_t MAX_LINES = 6;
+  const size_t max_chars = TFT_WIDTH > 24 ? (TFT_WIDTH - 24) / 6 : 1;
+  String lines[MAX_LINES];
+  String remaining = message;
+  uint8_t line_count = 0;
+
+  remaining.trim();
+  while (remaining.length() && line_count < MAX_LINES) {
+    int split = static_cast<int>(remaining.length());
+    if (remaining.length() > max_chars) {
+      split = remaining.lastIndexOf(' ', static_cast<unsigned int>(max_chars));
+      if (split <= 0)
+        split = static_cast<int>(max_chars);
+    }
+
+    lines[line_count] = remaining.substring(0, split);
+    lines[line_count].trim();
+    remaining = remaining.substring(split);
+    remaining.trim();
+    ++line_count;
+  }
+
+  if (remaining.length() && line_count > 0)
+    lines[line_count - 1] += F("...");
+  if (line_count == 0)
+    line_count = 1;
+
+  const int16_t first_y = (TFT_HEIGHT / 2) - ((line_count - 1) * 6);
+  for (uint8_t index = 0; index < line_count; ++index)
+    display_obj.showCenterText(
+      lines[index].c_str(), first_y + (index * 12), false, 1);
+}
+#endif
 
 #ifdef HAS_MINI_SCREEN
 void MenuFunctions::drawMiniMenuButton(int b, int x, bool selected) {
@@ -1541,6 +1607,460 @@ bool MenuFunctions::isKeyPressed(char c)
   }
 #endif
 
+void MenuFunctions::showSavedListLoadStatus(Menu* picker,
+                                            SavedListKind kind,
+                                            const String& file_name,
+                                            bool success) {
+  savedListStatusMenu.name = success ? "Load Complete" : "Load Failed";
+  savedListStatusMenu.parentMenu = success ? &saveFileMenu : picker;
+
+  String message;
+  if (success) {
+    switch (kind) {
+      case SavedListKind::SSIDs:
+        message = String(F("SSIDs: ")) + (ssids ? ssids->size() : 0);
+        break;
+      case SavedListKind::APs:
+        message = String(F("APs: ")) +
+                  (access_points ? access_points->size() : 0) +
+                  String(F(" Stations: ")) +
+                  (stations ? stations->size() : 0);
+        break;
+      case SavedListKind::AirTags:
+        message = String(F("AirTags: ")) + (airtags ? airtags->size() : 0);
+        break;
+    }
+    message += String(F(" File: ")) + file_name;
+  }
+  else {
+    message = String(F("File: ")) + file_name + F(" could not be loaded");
+  }
+
+  #if defined(HAS_TOUCH)
+    display_obj.clearScreen();
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.tft.setTextWrap(false, false);
+    display_obj.tft.setTextSize(2);
+    display_obj.tft.setTextColor(success ? TFT_GREEN : TFT_RED, TFT_BLACK);
+    display_obj.showCenterText(
+      success ? "LOAD COMPLETE" : "LOAD FAILED",
+      (TFT_HEIGHT / 3) - 12,
+      false,
+      2);
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    showCenteredSavedListStatusMessage(message);
+    display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    display_obj.showCenterText(
+      "Tap to continue", (TFT_HEIGHT * 3 / 4), false, 1);
+    waitForSavedListStatusTouch();
+
+    if (success)
+      this->changeMenu(&saveFileMenu, true);
+    else {
+      this->buildSavedListPicker(picker, kind);
+      this->changeMenu(picker, true);
+    }
+    return;
+  #endif
+
+  savedListStatusMenu.list->clear();
+
+  this->addNodes(&savedListStatusMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(savedListStatusMenu.parentMenu, true);
+  });
+
+  const String label = formatSavedListFileLabel(message);
+  this->addNodes(
+    &savedListStatusMenu,
+    label.c_str(),
+    success ? TFTGREEN : TFTRED,
+    255,
+    [this]() {
+      this->changeMenu(savedListStatusMenu.parentMenu, true);
+    });
+
+  this->changeMenu(&savedListStatusMenu, true);
+}
+
+SavedListSaveResult MenuFunctions::saveSavedList(
+  SavedListKind kind,
+  const String& logical_name,
+  bool replace_existing,
+  const SavedListFileSnapshot* expected_snapshot) {
+  switch (kind) {
+    case SavedListKind::SSIDs:
+      return wifi_scan_obj.SaveSSIDListAs(
+        logical_name, replace_existing, expected_snapshot);
+    case SavedListKind::APs:
+      return wifi_scan_obj.SaveAPListAs(
+        logical_name, replace_existing, expected_snapshot);
+    case SavedListKind::AirTags:
+      return wifi_scan_obj.SaveATListAs(
+        logical_name, replace_existing, expected_snapshot);
+  }
+
+  SavedListSaveResult result;
+  result.status = SavedListSaveStatus::InvalidName;
+  result.message = F("Unknown saved-list type");
+  return result;
+}
+
+void MenuFunctions::showSavedListSaveStatus(
+  SavedListKind kind,
+  const SavedListSaveResult& result) {
+  const bool success = result.succeeded();
+  Serial.println(result.message);
+
+  String target = result.target_path;
+  if (target.startsWith("/"))
+    target.remove(0, 1);
+  String message;
+  if (success) {
+    switch (kind) {
+      case SavedListKind::SSIDs:
+        message = String(F("SSIDs: ")) + result.item_count;
+        break;
+      case SavedListKind::APs:
+        message = String(F("APs: ")) + result.item_count +
+                  F(" Stations: ") + result.related_count;
+        break;
+      case SavedListKind::AirTags:
+        message = String(F("AirTags: ")) + result.item_count;
+        break;
+    }
+    message += String(F(" File: ")) + target;
+    if (result.status == SavedListSaveStatus::SavedCleanupPending)
+      message += F(" Cleanup pending");
+  }
+  else {
+    message = result.message;
+    if (target.length() && message.indexOf(target) < 0)
+      message += String(F(" File: ")) + target;
+  }
+
+  #if defined(HAS_TOUCH)
+    display_obj.clearScreen();
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.tft.setTextWrap(false, false);
+    display_obj.tft.setTextSize(2);
+    const uint16_t status_color = success
+      ? (result.status == SavedListSaveStatus::SavedCleanupPending
+          ? TFT_ORANGE
+          : TFT_GREEN)
+      : TFT_RED;
+    display_obj.tft.setTextColor(status_color, TFT_BLACK);
+    display_obj.showCenterText(
+      success ? "SAVE COMPLETE" : "SAVE FAILED",
+      (TFT_HEIGHT / 3) - 12,
+      false,
+      2);
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    showCenteredSavedListStatusMessage(message);
+    display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    display_obj.showCenterText(
+      "Tap to continue", (TFT_HEIGHT * 3 / 4), false, 1);
+    waitForSavedListStatusTouch();
+    this->changeMenu(&saveFileMenu, true);
+    return;
+  #endif
+
+  savedListStatusMenu.name = success ? "Save Complete" : "Save Failed";
+  savedListStatusMenu.parentMenu = &saveFileMenu;
+  savedListStatusMenu.list->clear();
+  this->addNodes(
+    &savedListStatusMenu,
+    message.c_str(),
+    success ? TFTGREEN : TFTRED,
+    255,
+    [this]() {
+      this->changeMenu(&saveFileMenu, true);
+    });
+  this->changeMenu(&savedListStatusMenu, true);
+}
+
+void MenuFunctions::buildSavedListReplaceMenu(
+  SavedListKind kind,
+  const String& logical_name,
+  const String& target_path,
+  const SavedListFileSnapshot& target_snapshot) {
+  savedListReplaceMenu.name = "Replace file?";
+  savedListReplaceMenu.parentMenu = &saveFileMenu;
+  savedListReplaceMenu.list->clear();
+
+  this->addNodes(
+    &savedListReplaceMenu, "Cancel", TFTLIGHTGREY, 0, [this]() {
+      this->changeMenu(&saveFileMenu, true);
+    });
+
+  String file_name = target_path;
+  if (file_name.startsWith("/"))
+    file_name.remove(0, 1);
+  const String replace_label = formatSavedListFileLabel(
+    String(F("Replace ")) + file_name);
+  this->addNodes(
+    &savedListReplaceMenu,
+    replace_label.c_str(),
+    TFTRED,
+    CLEAR_ICO,
+    [this, kind, logical_name, target_snapshot]() {
+      const SavedListSaveResult result =
+        this->saveSavedList(kind, logical_name, true, &target_snapshot);
+      this->showSavedListSaveStatus(kind, result);
+    });
+
+  this->changeMenu(&savedListReplaceMenu, true);
+}
+
+void MenuFunctions::startSavedListSave(SavedListKind kind) {
+  #if defined(HAS_TOUCH)
+    char logical_name[49] = {0};
+    const char* title = "Save list as";
+    switch (kind) {
+      case SavedListKind::SSIDs:
+        title = "Save SSIDs as";
+        break;
+      case SavedListKind::APs:
+        title = "Save APs as";
+        break;
+      case SavedListKind::AirTags:
+        title = "Save Airtags as";
+        break;
+    }
+
+    if (!keyboardInput(logical_name, sizeof(logical_name), title)) {
+      memset(logical_name, 0, sizeof(logical_name));
+      this->changeMenu(&saveFileMenu, true);
+      return;
+    }
+
+    const String entered_name = logical_name;
+    memset(logical_name, 0, sizeof(logical_name));
+    const SavedListSaveResult result =
+      this->saveSavedList(kind, entered_name, false);
+    if (result.status == SavedListSaveStatus::TargetExists &&
+        result.target_snapshot.valid) {
+      this->buildSavedListReplaceMenu(
+        kind,
+        entered_name,
+        result.target_path,
+        result.target_snapshot);
+      return;
+    }
+    this->showSavedListSaveStatus(kind, result);
+    return;
+  #endif
+
+  switch (kind) {
+    case SavedListKind::SSIDs:
+      wifi_scan_obj.RunSaveSSIDList(true);
+      break;
+    case SavedListKind::APs:
+      wifi_scan_obj.RunSaveAPList(true);
+      break;
+    case SavedListKind::AirTags:
+      wifi_scan_obj.RunSaveATList(true);
+      break;
+  }
+  this->changeMenu(&saveFileMenu, true);
+}
+
+void MenuFunctions::buildSavedListPicker(Menu* picker, SavedListKind kind) {
+  picker->parentMenu = &saveFileMenu;
+  picker->list->clear();
+
+  const char* prefix = nullptr;
+  const char* empty_message = nullptr;
+  SavedListType saved_type = SavedListType::SSIDs;
+  bool temp_recoverable = false;
+  switch (kind) {
+    case SavedListKind::SSIDs:
+      picker->name = "Load SSIDs";
+      prefix = "SSIDs_";
+      empty_message = "No saved SSID files";
+      saved_type = SavedListType::SSIDs;
+      break;
+    case SavedListKind::APs:
+      picker->name = "Load APs";
+      prefix = "APs_";
+      empty_message = "No saved AP files";
+      saved_type = SavedListType::APs;
+      temp_recoverable = true;
+      break;
+    case SavedListKind::AirTags:
+      picker->name = "Load Airtags";
+      prefix = "Airtags_";
+      empty_message = "No saved AirTag files";
+      saved_type = SavedListType::AirTags;
+      temp_recoverable = true;
+      break;
+  }
+
+  this->addNodes(picker, text09, TFTLIGHTGREY, 0, [this, picker]() {
+    this->changeMenu(picker->parentMenu, true);
+  });
+
+  if (!sd_obj.supported) {
+    this->addNodes(picker, "SD card unavailable", TFTRED, 255, [this, picker]() {
+      this->changeMenu(picker->parentMenu, true);
+    });
+    return;
+  }
+
+  LinkedList<String> root_files;
+  bool truncated = false;
+  if (!sd_obj.listDirToLinkedList(&root_files,
+                                  "/",
+                                  ".log",
+                                  prefix,
+                                  MAX_SAVED_LIST_PICKER_FILES,
+                                  &truncated)) {
+    this->addNodes(picker, "Could not list SD files", TFTRED, 255, [this, picker]() {
+      this->changeMenu(picker->parentMenu, true);
+    });
+    return;
+  }
+
+  bool found = false;
+  size_t displayed_files = 0;
+  const size_t prefix_length = strlen(prefix);
+  for (int index = 0; index < root_files.size(); ++index) {
+    String file_name = root_files.get(index);
+    while (file_name.startsWith("/"))
+      file_name.remove(0, 1);
+
+    if ((file_name.indexOf('/') >= 0) || (file_name.indexOf('\\') >= 0) ||
+        !file_name.startsWith(prefix) || !file_name.endsWith(".log") ||
+        (file_name.length() <= prefix_length + 4))
+      continue;
+
+    found = true;
+    ++displayed_files;
+    const String file_path = String(F("/")) + file_name;
+    const String label = formatSavedListFileLabel(file_name);
+    this->addNodes(picker, label.c_str(), TFTCYAN, SD_UPDATE,
+      [this, picker, kind, file_path, file_name]() {
+        bool loaded = false;
+        switch (kind) {
+          case SavedListKind::SSIDs:
+            loaded = wifi_scan_obj.RunLoadSSIDList(
+              file_path, false, true);
+            break;
+          case SavedListKind::APs:
+            loaded = wifi_scan_obj.RunLoadAPList(
+              file_path, false, true);
+            break;
+          case SavedListKind::AirTags:
+            loaded = wifi_scan_obj.RunLoadATList(
+              file_path, false, true);
+            break;
+        }
+        this->showSavedListLoadStatus(picker, kind, file_name, loaded);
+      });
+  }
+
+  bool recovery_list_error = false;
+  auto add_recovery_files = [&](const char* extension,
+                                SavedListArtifact expected_artifact,
+                                bool enabled) {
+    if (!enabled)
+      return;
+    if (displayed_files >= MAX_SAVED_LIST_PICKER_FILES) {
+      truncated = true;
+      return;
+    }
+
+    LinkedList<String> recovery_files;
+    bool recovery_truncated = false;
+    const size_t remaining =
+      MAX_SAVED_LIST_PICKER_FILES - displayed_files;
+    if (!sd_obj.listDirToLinkedList(&recovery_files,
+                                    "/",
+                                    extension,
+                                    prefix,
+                                    remaining,
+                                    &recovery_truncated)) {
+      recovery_list_error = true;
+      return;
+    }
+    truncated = truncated || recovery_truncated;
+
+    for (int index = 0; index < recovery_files.size(); ++index) {
+      String file_name = recovery_files.get(index);
+      while (file_name.startsWith("/"))
+        file_name.remove(0, 1);
+      const String file_path = String(F("/")) + file_name;
+
+      SavedListTarget target;
+      SavedListArtifact artifact = SavedListArtifact::Primary;
+      String target_error;
+      if (!WiFiScan::BuildSavedListTargetFromPath(
+            saved_type,
+            file_path,
+            target,
+            artifact,
+            target_error) ||
+          (artifact != expected_artifact))
+        continue;
+
+      found = true;
+      ++displayed_files;
+      const bool primary_exists = SD.exists(target.primary_path.c_str());
+      const String label = formatSavedListFileLabel(
+        String(primary_exists ? F("Load ") : F("Recover ")) + file_name);
+      this->addNodes(
+        picker,
+        label.c_str(),
+        TFTORANGE,
+        SD_UPDATE,
+        [this, picker, kind, file_path, file_name]() {
+          bool loaded = false;
+          switch (kind) {
+            case SavedListKind::SSIDs:
+              loaded = wifi_scan_obj.RunLoadSSIDList(
+                file_path, false, true);
+              break;
+            case SavedListKind::APs:
+              loaded = wifi_scan_obj.RunLoadAPList(
+                file_path, false, true);
+              break;
+            case SavedListKind::AirTags:
+              loaded = wifi_scan_obj.RunLoadATList(
+                file_path, false, true);
+              break;
+          }
+          this->showSavedListLoadStatus(
+            picker, kind, file_name, loaded);
+        });
+    }
+  };
+
+  add_recovery_files(".bak", SavedListArtifact::Backup, true);
+  add_recovery_files(
+    ".tmp", SavedListArtifact::Temporary, temp_recoverable);
+
+  if (recovery_list_error) {
+    this->addNodes(
+      picker,
+      "Could not list recovery files",
+      TFTRED,
+      255,
+      [this, picker]() {
+        this->changeMenu(picker->parentMenu, true);
+      });
+  }
+
+  if (!found) {
+    this->addNodes(picker, empty_message, TFTRED, 255, [this, picker]() {
+      this->changeMenu(picker->parentMenu, true);
+    });
+  }
+  else if (truncated) {
+    this->addNodes(picker, "More files not shown", TFTRED, 255, []() {});
+  }
+}
+
 // Function to build the menus
 void MenuFunctions::RunSetup()
 {
@@ -1613,6 +2133,8 @@ void MenuFunctions::RunSetup()
   clearSSIDsMenu.list = new LinkedList<MenuNode>();
   clearAPsMenu.list = new LinkedList<MenuNode>();
   saveFileMenu.list = new LinkedList<MenuNode>();
+  savedListStatusMenu.list = new LinkedList<MenuNode>();
+  savedListReplaceMenu.list = new LinkedList<MenuNode>();
 
   #ifdef HAS_DIRECT_UPLOAD
     uploadLogsMenu.list = new LinkedList<MenuNode>();
@@ -1652,6 +2174,8 @@ void MenuFunctions::RunSetup()
   wifiAttackMenu.name = text_table1[21];
   wifiGeneralMenu.name = text_table1[22];
   saveFileMenu.name = "Save/Load Files";
+  savedListStatusMenu.name = "Load Result";
+  savedListReplaceMenu.name = "Replace file?";
   saveSSIDsMenu.name = "Save SSIDs";
   loadSSIDsMenu.name = "Load SSIDs";
   saveAPsMenu.name = "Save APs";
@@ -3335,28 +3859,25 @@ void MenuFunctions::RunSetup()
     this->changeMenu(saveFileMenu.parentMenu, true);
   });
   this->addNodes(&saveFileMenu, "Save SSIDs", TFTCYAN, SD_UPDATE, [this]() {
-    this->changeMenu(&saveSSIDsMenu, true);
-    wifi_scan_obj.RunSaveSSIDList(true);
+    this->startSavedListSave(SavedListKind::SSIDs);
   });
   this->addNodes(&saveFileMenu, "Load SSIDs", TFTSKYBLUE, SD_UPDATE, [this]() {
+    this->buildSavedListPicker(&loadSSIDsMenu, SavedListKind::SSIDs);
     this->changeMenu(&loadSSIDsMenu, true);
-    wifi_scan_obj.RunLoadSSIDList();
   });
   this->addNodes(&saveFileMenu, "Save APs", TFTNAVY, SD_UPDATE, [this]() {
-    this->changeMenu(&saveAPsMenu, true);
-    wifi_scan_obj.RunSaveAPList();
+    this->startSavedListSave(SavedListKind::APs);
   });
   this->addNodes(&saveFileMenu, "Load APs", TFTBLUE, SD_UPDATE, [this]() {
+    this->buildSavedListPicker(&loadAPsMenu, SavedListKind::APs);
     this->changeMenu(&loadAPsMenu, true);
-    wifi_scan_obj.RunLoadAPList();
   });
   this->addNodes(&saveFileMenu, "Save Airtags", TFTWHITE, SD_UPDATE, [this]() {
-    this->changeMenu(&saveAPsMenu, true);
-    wifi_scan_obj.RunSaveATList();
+    this->startSavedListSave(SavedListKind::AirTags);
   });
   this->addNodes(&saveFileMenu, "Load Airtags", TFTWHITE, SD_UPDATE, [this]() {
-    this->changeMenu(&loadAPsMenu, true);
-    wifi_scan_obj.RunLoadATList();
+    this->buildSavedListPicker(&loadATsMenu, SavedListKind::AirTags);
+    this->changeMenu(&loadATsMenu, true);
   });
 
   saveSSIDsMenu.parentMenu = &saveFileMenu;

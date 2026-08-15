@@ -129,6 +129,12 @@ class MenuFunctions
 {
   private:
 
+    enum class SavedListKind : uint8_t {
+      SSIDs,
+      APs,
+      AirTags
+    };
+
     String u_result = "";
 
 
@@ -182,6 +188,8 @@ class MenuFunctions
     Menu htmlMenu;
     Menu miniKbMenu;
     Menu saveFileMenu;
+    Menu savedListStatusMenu;
+    Menu savedListReplaceMenu;
     Menu genAPMacMenu;
     Menu cloneAPMacMenu;
     Menu setMacMenu;
@@ -210,6 +218,24 @@ class MenuFunctions
     void buildUploadFileMenu();
     void setupSDFileList(bool update = false);
     void buildSDFileMenu(bool update = false);
+    void buildSavedListPicker(Menu* picker, SavedListKind kind);
+    void showSavedListLoadStatus(Menu* picker,
+                                 SavedListKind kind,
+                                 const String& file_name,
+                                 bool success);
+    SavedListSaveResult saveSavedList(
+      SavedListKind kind,
+      const String& logical_name,
+      bool replace_existing,
+      const SavedListFileSnapshot* expected_snapshot = nullptr);
+    void startSavedListSave(SavedListKind kind);
+    void showSavedListSaveStatus(SavedListKind kind,
+                                 const SavedListSaveResult& result);
+    void buildSavedListReplaceMenu(
+      SavedListKind kind,
+      const String& logical_name,
+      const String& target_path,
+      const SavedListFileSnapshot& target_snapshot);
     void displayMenuButtons();
     uint16_t getColor(uint16_t color);
     void drawAvgLine(int16_t value);

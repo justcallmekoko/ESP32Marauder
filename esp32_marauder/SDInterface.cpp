@@ -1,6 +1,10 @@
 #include "SDInterface.h"
 #include "lang_var.h"
 
+namespace {
+  const size_t SD_FILE_LIST_HEAP_GUARD = 24576;
+}
+
 #ifdef HAS_C5_SD
   SDInterface::SDInterface(SPIClass* spi, int cs)
     : _spi(spi), _cs(cs) {}
@@ -107,30 +111,71 @@ bool SDInterface::removeFile(String file_path) {
     return false;
 }
 
-void SDInterface::listDirToLinkedList(LinkedList<String>* file_names, String str_dir, String ext) {
-  if (this->supported) {
-    File dir = SD.open(str_dir);
-    while (true)
-    {
-      File entry = dir.openNextFile();
-      if (!entry)
-      {
-        break;
-      }
+bool SDInterface::listDirToLinkedList(LinkedList<String>* file_names,
+                                      String str_dir,
+                                      String ext,
+                                      String prefix,
+                                      size_t max_results,
+                                      bool* truncated) {
+  if (file_names == nullptr)
+    return false;
 
-      if (entry.isDirectory())
-        continue;
+  if (truncated != nullptr)
+    *truncated = false;
+  file_names->clear();
+  if (!this->supported)
+    return false;
 
-      String file_name = entry.name();
-      if (ext != "") {
-        if (file_name.endsWith(ext)) {
-          file_names->add(file_name);
-        }
-      }
-      else
-        file_names->add(file_name);
-    }
+  File dir = SD.open(str_dir, FILE_READ);
+  if (!dir || !dir.isDirectory()) {
+    if (dir)
+      dir.close();
+    return false;
   }
+
+  while (true) {
+    File entry = dir.openNextFile();
+    if (!entry)
+      break;
+
+    if (entry.isDirectory()) {
+      entry.close();
+      continue;
+    }
+
+    const String file_name = entry.name();
+    String base_name = file_name;
+    while (base_name.startsWith("/"))
+      base_name.remove(0, 1);
+
+    const bool matches_extension = !ext.length() || base_name.endsWith(ext);
+    const bool matches_prefix = !prefix.length() || base_name.startsWith(prefix);
+    if (!matches_extension || !matches_prefix) {
+      entry.close();
+      continue;
+    }
+
+    if ((max_results != 0) &&
+        (static_cast<size_t>(file_names->size()) >= max_results)) {
+      if (truncated != nullptr)
+        *truncated = true;
+      entry.close();
+      continue;
+    }
+
+    // CustomLinkedList::add() cannot report allocation failure. Keep a
+    // conservative reserve so a large SD root cannot exhaust the device heap.
+    if (ESP.getFreeHeap() <= SD_FILE_LIST_HEAP_GUARD || !file_names->add(file_name)) {
+      entry.close();
+      dir.close();
+      file_names->clear();
+      return false;
+    }
+    entry.close();
+  }
+
+  dir.close();
+  return true;
 }
 
 void SDInterface::listDir(String str_dir){

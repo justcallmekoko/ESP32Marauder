@@ -3,6 +3,7 @@
 #include "BeaconFrame.h"
 #include "WdgResponse.h"
 #include "lang_var.h"
+#include <new>
 
 #ifdef HAS_PSRAM
   struct mac_addr* mac_history = nullptr;
@@ -37,6 +38,1684 @@ LinkedList<Flipper>* flippers;
 LinkedList<IPAddress>* ipList;
 LinkedList<ProbeReqSsid>* probe_req_ssids;
 LinkedList<BleDevice>* ble_devices;
+
+#ifdef HAS_SD
+namespace {
+  const char SSID_LIST_PATH[] = "/SSIDs_0.log";
+  const char SSID_LIST_TEMP_PATH[] = "/SSIDs_0.tmp";
+  const char SSID_LIST_BACKUP_PATH[] = "/SSIDs_0.bak";
+  const char AIRTAG_LIST_PATH[] = "/Airtags_0.log";
+  const char AIRTAG_LIST_TEMP_PATH[] = "/Airtags_0.tmp";
+  const char AIRTAG_LIST_BACKUP_PATH[] = "/Airtags_0.bak";
+  const char AP_LIST_PATH[] = "/APs_0.log";
+  const char AP_LIST_TEMP_PATH[] = "/APs_0.tmp";
+  const char AP_LIST_BACKUP_PATH[] = "/APs_0.bak";
+  const char AP_LIST_SERIAL_BEGIN[] = "[BUF/BEGIN]";
+  const char AP_LIST_SERIAL_CLOSE[] = "[BUF/CLOSE]";
+  const size_t AP_LIST_HEAP_GUARD = 16384;
+  const size_t AP_LIST_JSON_OVERHEAD = 512;
+  const size_t MAX_SAVED_SSID_ENTRIES = 256;
+  const size_t MAX_SAVED_SSID_FILE_SIZE = (MAX_SAVED_SSID_ENTRIES * 33) - 1;
+  const size_t MAX_SAVED_AIRTAG_FILE_SIZE = 10048;
+
+  void reportAPListStatus(const String& message) {
+    Serial.println(message);
+    #ifdef HAS_SCREEN
+      display_obj.tft.setTextWrap(false);
+      display_obj.tft.setFreeFont(NULL);
+      display_obj.tft.setCursor(0, 100);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextColor(TFT_CYAN);
+      display_obj.tft.println(message);
+    #endif
+  }
+
+  void reportSavedListLoadStatus(const String& message,
+                                 bool success,
+                                 bool show_status) {
+    Serial.println(message);
+    #ifdef HAS_SCREEN
+      if (show_status) {
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setFreeFont(NULL);
+        display_obj.tft.setCursor(0, 100);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(success ? TFT_GREEN : TFT_RED);
+        display_obj.tft.println(message);
+      }
+    #endif
+  }
+
+  void reportSavedListSaveStatus(const String& message, bool success) {
+    Serial.println(message);
+    #ifdef HAS_SCREEN
+      display_obj.tft.setTextWrap(true);
+      display_obj.tft.setFreeFont(NULL);
+      display_obj.tft.setCursor(0, 100);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextColor(success ? TFT_GREEN : TFT_RED);
+      display_obj.tft.println(message);
+      display_obj.tft.setTextWrap(false);
+    #endif
+  }
+
+  int8_t savedMacHexValue(char value) {
+    if ((value >= '0') && (value <= '9'))
+      return value - '0';
+    if ((value >= 'a') && (value <= 'f'))
+      return value - 'a' + 10;
+    if ((value >= 'A') && (value <= 'F'))
+      return value - 'A' + 10;
+    return -1;
+  }
+
+  bool parseSavedAirTagPayload(const char* value,
+                               size_t value_length,
+                               uint16_t expected_size,
+                               std::vector<uint8_t>& payload) {
+    if (value == nullptr)
+      return false;
+
+    if (expected_size == 0) {
+      payload.clear();
+      return value[0] == '\0';
+    }
+
+    const size_t expected_text_length = (static_cast<size_t>(expected_size) * 5) - 1;
+    if (value_length != expected_text_length)
+      return false;
+    if ((ESP.getFreeHeap() <= AP_LIST_HEAP_GUARD) ||
+        (expected_size > (ESP.getFreeHeap() - AP_LIST_HEAP_GUARD)))
+      return false;
+
+    payload.clear();
+    payload.reserve(expected_size);
+    for (uint16_t index = 0; index < expected_size; ++index) {
+      const size_t offset = static_cast<size_t>(index) * 5;
+      if ((value[offset] != '0') ||
+          ((value[offset + 1] != 'x') && (value[offset + 1] != 'X')))
+        return false;
+
+      const int8_t high = savedMacHexValue(value[offset + 2]);
+      const int8_t low = savedMacHexValue(value[offset + 3]);
+      if ((high < 0) || (low < 0))
+        return false;
+      if ((index + 1 < expected_size) && (value[offset + 4] != ' '))
+        return false;
+
+      payload.push_back(static_cast<uint8_t>((high << 4) | low));
+    }
+
+    return payload.size() == expected_size;
+  }
+
+  bool parseSavedMac(const char* value, uint8_t output[6]) {
+    if ((value == nullptr) || (strlen(value) != 17))
+      return false;
+
+    for (uint8_t i = 0; i < 6; i++) {
+      const uint8_t offset = i * 3;
+      const int8_t high = savedMacHexValue(value[offset]);
+      const int8_t low = savedMacHexValue(value[offset + 1]);
+      if ((high < 0) || (low < 0) || ((i < 5) && (value[offset + 2] != ':')))
+        return false;
+      output[i] = (high << 4) | low;
+    }
+
+    return true;
+  }
+
+  void deleteAPList(LinkedList<AccessPoint>* list) {
+    if (list == nullptr)
+      return;
+
+    for (int i = 0; i < list->size(); i++)
+      delete (*list)[i].stations;
+    delete list;
+  }
+
+  bool failAPListLoad(LinkedList<AccessPoint>*& loaded_access_points,
+                      LinkedList<Station>*& loaded_stations,
+                      String& error_message,
+                      const String& failure) {
+    error_message = failure;
+    deleteAPList(loaded_access_points);
+    delete loaded_stations;
+    loaded_access_points = nullptr;
+    loaded_stations = nullptr;
+    return false;
+  }
+
+  bool addAPListSize(size_t& total, size_t count, size_t item_size) {
+    if ((count != 0) && (item_size > ((SIZE_MAX - total) / count)))
+      return false;
+    total += count * item_size;
+    return true;
+  }
+
+  bool hasAPListHeap(size_t required) {
+    const size_t free_heap = ESP.getFreeHeap();
+    return (free_heap > AP_LIST_HEAP_GUARD) &&
+           (required <= (free_heap - AP_LIST_HEAP_GUARD));
+  }
+
+  bool copySavedString(String& destination, const char* value) {
+    if (value == nullptr)
+      return false;
+    const size_t length = strlen(value);
+    if ((length != 0) && !destination.reserve(length))
+      return false;
+    destination = value;
+    return destination.length() == length;
+  }
+
+  bool readSavedListToken(File& file, int& token) {
+    size_t whitespace_count = 0;
+    while (file.available()) {
+      token = file.read();
+      if ((token != ' ') && (token != '\t') &&
+          (token != '\r') && (token != '\n'))
+        return true;
+      whitespace_count++;
+      if ((whitespace_count & 0x03ff) == 0)
+        yield();
+    }
+
+    token = -1;
+    return false;
+  }
+
+  bool hasOnlySavedListTrailingWhitespace(File& file) {
+    size_t checked = 0;
+    while (file.available()) {
+      const int value = file.read();
+      if ((value != ' ') && (value != '\t') &&
+          (value != '\r') && (value != '\n'))
+        return false;
+      checked++;
+      if ((checked & 0x03ff) == 0)
+        yield();
+    }
+    return true;
+  }
+
+  bool scanSavedObject(File& file,
+                       size_t object_start,
+                       size_t& object_length,
+                       String& error_message) {
+    if (!file.seek(object_start)) {
+      error_message = F("Could not seek in AP list");
+      return false;
+    }
+
+    const size_t free_heap = ESP.getFreeHeap();
+    if (free_heap <= (AP_LIST_HEAP_GUARD + AP_LIST_JSON_OVERHEAD + 2)) {
+      error_message = F("Not enough memory to scan AP list entry");
+      return false;
+    }
+    const size_t maximum_object_length =
+      (free_heap - AP_LIST_HEAP_GUARD - AP_LIST_JSON_OVERHEAD - 2) / 2;
+
+    object_length = 0;
+    uint32_t object_depth = 0;
+    bool in_string = false;
+    bool escaped = false;
+    bool complete = false;
+
+    while (file.available()) {
+      const int value = file.read();
+      if (value < 0)
+        break;
+      object_length++;
+      if (object_length > maximum_object_length) {
+        error_message = F("AP list entry exceeds available memory");
+        return false;
+      }
+      if ((object_length & 0x03ff) == 0)
+        yield();
+
+      const char current = static_cast<char>(value);
+      if (in_string) {
+        if (escaped)
+          escaped = false;
+        else if (current == '\\')
+          escaped = true;
+        else if (current == '"')
+          in_string = false;
+        continue;
+      }
+
+      if (current == '"')
+        in_string = true;
+      else if (current == '{')
+        object_depth++;
+      else if (current == '}') {
+        if (object_depth == 0) {
+          error_message = F("Invalid AP list entry boundary");
+          return false;
+        }
+        object_depth--;
+        if (object_depth == 0) {
+          complete = true;
+          break;
+        }
+      }
+    }
+
+    if (!complete) {
+      error_message = F("Unterminated AP list entry");
+      return false;
+    }
+    if (!file.seek(object_start)) {
+      error_message = F("Could not rewind AP list entry");
+      return false;
+    }
+
+    return true;
+  }
+
+  bool processSavedAP(JsonObject obj,
+                      uint32_t ap_index,
+                      bool materialize,
+                      size_t& total_station_count,
+                      LinkedList<AccessPoint>*& loaded_access_points,
+                      LinkedList<Station>*& loaded_stations,
+                      String& error_message) {
+    auto fail = [&](const String& failure) {
+      return failAPListLoad(loaded_access_points, loaded_stations,
+                            error_message, failure);
+    };
+
+    if (!obj["bssid"].is<const char*>())
+      return fail(F("Invalid AP BSSID"));
+
+    const char* essid = "";
+    if (obj.containsKey("essid")) {
+      if (!obj["essid"].is<const char*>())
+        return fail(F("Invalid AP ESSID"));
+      essid = obj["essid"].as<const char*>();
+    }
+
+    const char* manufacturer = "Unknown";
+    if (obj.containsKey("man")) {
+      if (!obj["man"].is<const char*>())
+        return fail(F("Invalid AP manufacturer"));
+      manufacturer = obj["man"].as<const char*>();
+    }
+
+    if (obj.containsKey("channel") && !obj["channel"].is<uint8_t>())
+      return fail(F("Invalid AP channel"));
+    if (obj.containsKey("rssi") && !obj["rssi"].is<int8_t>())
+      return fail(F("Invalid AP RSSI"));
+    if (obj.containsKey("packets") && !obj["packets"].is<uint16_t>())
+      return fail(F("Invalid AP packet count"));
+    if (!obj.containsKey("packets") && obj.containsKey("packet") &&
+        !obj["packet"].is<uint16_t>())
+      return fail(F("Invalid AP packet count"));
+    if (obj.containsKey("sec") && !obj["sec"].is<uint8_t>())
+      return fail(F("Invalid AP security value"));
+    if (obj.containsKey("wps") && !obj["wps"].is<bool>())
+      return fail(F("Invalid AP WPS value"));
+    if (obj.containsKey("stations") && !obj["stations"].is<JsonArray>())
+      return fail(F("Invalid AP station list"));
+
+    JsonArray station_values;
+    if (obj.containsKey("stations"))
+      station_values = obj["stations"].as<JsonArray>();
+
+    const size_t station_count = station_values.isNull() ? 0 : station_values.size();
+    const size_t existing_stations = materialize
+      ? static_cast<size_t>(loaded_stations->size())
+      : total_station_count;
+    const size_t maximum_station_count = static_cast<size_t>(UINT16_MAX) + 1;
+    if ((existing_stations > maximum_station_count) ||
+        (station_count > (maximum_station_count - existing_stations)))
+      return fail(F("Too many AP station entries"));
+
+    if (!station_values.isNull()) {
+      for (JsonVariant station_value : station_values) {
+        uint8_t station_mac[6];
+        if (!station_value.is<const char*>() ||
+            !parseSavedMac(station_value.as<const char*>(), station_mac))
+          return fail(F("Invalid station MAC"));
+      }
+    }
+
+    uint8_t parsed_bssid[6];
+    if (!parseSavedMac(obj["bssid"].as<const char*>(), parsed_bssid))
+      return fail(F("Invalid AP BSSID"));
+
+    if (!materialize) {
+      total_station_count += station_count;
+      return true;
+    }
+
+    size_t required_heap = sizeof(LinkedList<uint16_t>) +
+                           sizeof(ListNode<AccessPoint>) + 1024;
+    if (!addAPListSize(required_heap, station_count, sizeof(ListNode<Station>)) ||
+        !addAPListSize(required_heap, station_count, sizeof(ListNode<uint16_t>)) ||
+        !addAPListSize(required_heap, strlen(essid) + strlen(manufacturer) + 2, 1) ||
+        !hasAPListHeap(required_heap))
+      return fail(F("Not enough memory for AP list entry"));
+
+    AccessPoint ap{};
+    memcpy(ap.bssid, parsed_bssid, sizeof(ap.bssid));
+
+    ap.stations = new (std::nothrow) LinkedList<uint16_t>();
+    if (ap.stations == nullptr)
+      return fail(F("Not enough memory for AP station list"));
+
+    ap.channel = obj.containsKey("channel") ? obj["channel"].as<uint8_t>() : 1;
+    ap.rssi = obj.containsKey("rssi") ? obj["rssi"].as<int8_t>() : -127;
+    if (obj.containsKey("packets"))
+      ap.packets = obj["packets"].as<uint16_t>();
+    else if (obj.containsKey("packet"))
+      ap.packets = obj["packet"].as<uint16_t>();
+    ap.sec = obj.containsKey("sec") ? obj["sec"].as<uint8_t>() : 0;
+    ap.wps = obj.containsKey("wps") ? obj["wps"].as<bool>() : false;
+    ap.selected = false;
+    ap.beacon[0] = 0;
+    ap.beacon[1] = 0;
+    ap.has_msg_1 = false;
+    ap.has_msg_2 = false;
+    ap.has_msg_3 = false;
+    ap.has_msg_4 = false;
+    ap.last_seen_ms = 0;
+
+    if (!loaded_access_points->add(ap)) {
+      delete ap.stations;
+      return fail(F("Could not add saved AP"));
+    }
+
+    AccessPoint& stored_ap = (*loaded_access_points)[loaded_access_points->size() - 1];
+    if (!copySavedString(stored_ap.essid, essid) ||
+        !copySavedString(stored_ap.man, manufacturer))
+      return fail(F("Not enough memory for AP strings"));
+
+    if (!station_values.isNull()) {
+      for (JsonVariant station_value : station_values) {
+        Station sta{};
+        parseSavedMac(station_value.as<const char*>(), sta.mac);
+        sta.selected = false;
+        sta.packets = 0;
+        sta.ap = static_cast<uint16_t>(ap_index);
+        if (!loaded_stations->add(sta))
+          return fail(F("Could not add saved station"));
+
+        const uint16_t station_index =
+          static_cast<uint16_t>(loaded_stations->size() - 1);
+        if (!stored_ap.stations->add(station_index))
+          return fail(F("Could not link saved station"));
+      }
+    }
+
+    total_station_count = static_cast<size_t>(loaded_stations->size());
+    return true;
+  }
+
+  bool writeAPListBytes(File& file, const char* data, size_t length, size_t& total_written) {
+    const size_t written = file.write(reinterpret_cast<const uint8_t*>(data), length);
+    if (written > (SIZE_MAX - total_written))
+      return false;
+    total_written += written;
+    return written == length;
+  }
+
+  bool loadAPListFile(const char* path,
+                      LinkedList<AccessPoint>*& loaded_access_points,
+                      LinkedList<Station>*& loaded_stations,
+                      String& error_message,
+                      bool materialize = true) {
+    loaded_access_points = nullptr;
+    loaded_stations = nullptr;
+
+    File file = SD.open(path, FILE_READ);
+    if (!file) {
+      error_message = String(F("Could not open ")) + path;
+      return false;
+    }
+
+    auto fail = [&](const String& failure) {
+      file.close();
+      return failAPListLoad(loaded_access_points, loaded_stations,
+                            error_message, failure);
+    };
+
+    if (file.size() == 0)
+      return fail(F("AP list is empty"));
+
+    int token = -1;
+    if (!readSavedListToken(file, token) || (token != '['))
+      return fail(F("Invalid AP list root"));
+
+    if (materialize) {
+      if (!hasAPListHeap(sizeof(LinkedList<AccessPoint>) +
+                         sizeof(LinkedList<Station>) + 1024))
+        return fail(F("Not enough memory for AP list"));
+
+      loaded_access_points = new (std::nothrow) LinkedList<AccessPoint>();
+      loaded_stations = new (std::nothrow) LinkedList<Station>();
+      if ((loaded_access_points == nullptr) || (loaded_stations == nullptr))
+        return fail(F("Not enough memory for AP list"));
+    }
+
+    if (!readSavedListToken(file, token))
+      return fail(F("Unterminated AP list"));
+
+    if (token == ']') {
+      if (readSavedListToken(file, token))
+        return fail(F("Trailing data after AP list"));
+      file.close();
+      return true;
+    }
+
+    uint32_t ap_index = 0;
+    size_t total_station_count = 0;
+    while (true) {
+      if (token != '{')
+        return fail(F("Invalid AP list entry"));
+      if (ap_index > UINT16_MAX)
+        return fail(F("Too many AP list entries"));
+
+      const size_t object_start = file.position() - 1;
+      size_t object_length = 0;
+      String scan_error;
+      if (!scanSavedObject(file, object_start, object_length, scan_error))
+        return fail(scan_error);
+      if ((object_length == 0) ||
+          (object_length > (SIZE_MAX - AP_LIST_JSON_OVERHEAD)) ||
+          (object_length == SIZE_MAX))
+        return fail(F("AP list entry is too large"));
+
+      const size_t json_capacity = object_length + AP_LIST_JSON_OVERHEAD;
+      size_t temporary_heap = json_capacity;
+      if (!addAPListSize(temporary_heap, object_length + 1, 1) ||
+          !hasAPListHeap(temporary_heap))
+        return fail(F("Not enough memory to parse AP list entry"));
+
+      char* json_data = static_cast<char*>(malloc(object_length + 1));
+      if (json_data == nullptr)
+        return fail(F("Not enough memory to read AP list entry"));
+
+      const size_t bytes_read = file.read(
+        reinterpret_cast<uint8_t*>(json_data), object_length);
+      if (bytes_read != object_length) {
+        free(json_data);
+        return fail(F("Could not read complete AP list entry"));
+      }
+      json_data[object_length] = '\0';
+
+      DynamicJsonDocument doc(json_capacity);
+      if (doc.capacity() == 0) {
+        free(json_data);
+        return fail(F("Not enough memory to parse AP list entry"));
+      }
+
+      const DeserializationError json_error =
+        deserializeJson(doc, json_data, object_length);
+      if (json_error || !doc.is<JsonObject>()) {
+        const String failure = json_error
+          ? String(F("Invalid AP list entry: ")) + json_error.c_str()
+          : String(F("Invalid AP list entry"));
+        free(json_data);
+        return fail(failure);
+      }
+
+      const bool processed = processSavedAP(doc.as<JsonObject>(), ap_index,
+                                            materialize, total_station_count,
+                                            loaded_access_points, loaded_stations,
+                                            error_message);
+      free(json_data);
+      if (!processed) {
+        file.close();
+        return false;
+      }
+      ap_index++;
+
+      if (!readSavedListToken(file, token))
+        return fail(F("Unterminated AP list"));
+      if (token == ']') {
+        if (readSavedListToken(file, token))
+          return fail(F("Trailing data after AP list"));
+        file.close();
+        return true;
+      }
+      if (token != ',')
+        return fail(F("Invalid AP list separator"));
+      if (!readSavedListToken(file, token))
+        return fail(F("Unterminated AP list"));
+      if (token == ']')
+        return fail(F("Trailing comma in AP list"));
+    }
+  }
+
+  bool validateAPListFile(const char* path, String& error_message) {
+    LinkedList<AccessPoint>* verified_access_points = nullptr;
+    LinkedList<Station>* verified_stations = nullptr;
+    if (!loadAPListFile(path, verified_access_points,
+                        verified_stations, error_message, false))
+      return false;
+
+    deleteAPList(verified_access_points);
+    delete verified_stations;
+    return true;
+  }
+
+  bool validateSavedSSIDValue(const String& value, String& error_message) {
+    if (value.length() == 0) {
+      error_message = F("SSID is empty");
+      return false;
+    }
+    if (value.length() > 32) {
+      error_message = F("SSID exceeds 32 bytes");
+      return false;
+    }
+
+    for (size_t index = 0; index < value.length(); ++index) {
+      const uint8_t byte_value = static_cast<uint8_t>(value[index]);
+      if ((byte_value < 0x20) || (byte_value == 0x7f)) {
+        error_message = F("SSID contains an unsupported control byte");
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool validateSSIDListFileAgainstCurrent(const char* path,
+                                          String& error_message) {
+    if (ssids == nullptr) {
+      error_message = F("SSID list is unavailable");
+      return false;
+    }
+    if (ssids->size() == 0) {
+      error_message = F("SSID list is empty");
+      return false;
+    }
+    if (static_cast<size_t>(ssids->size()) > MAX_SAVED_SSID_ENTRIES) {
+      error_message = F("too many SSIDs");
+      return false;
+    }
+
+    File file = SD.open(path, FILE_READ);
+    if (!file || file.isDirectory()) {
+      if (file)
+        file.close();
+      error_message = F("could not reopen saved SSID list");
+      return false;
+    }
+
+    auto fail = [&](const String& failure) {
+      error_message = failure;
+      file.close();
+      return false;
+    };
+
+    size_t expected_size = 0;
+    for (int index = 0; index < ssids->size(); ++index) {
+      const String& value = (*ssids)[index].essid;
+      if (!validateSavedSSIDValue(value, error_message)) {
+        file.close();
+        return false;
+      }
+      const size_t separator_size = (index + 1 < ssids->size()) ? 1 : 0;
+      if ((separator_size > (SIZE_MAX - expected_size)) ||
+          (value.length() > (SIZE_MAX - expected_size - separator_size)))
+        return fail(F("SSID list size overflow"));
+      expected_size += value.length() + separator_size;
+    }
+
+    if (file.size() != expected_size)
+      return fail(F("SSID list size mismatch"));
+
+    for (int index = 0; index < ssids->size(); ++index) {
+      const String& value = (*ssids)[index].essid;
+      for (size_t byte_index = 0; byte_index < value.length(); ++byte_index) {
+        const int read_value = file.read();
+        if ((read_value < 0) ||
+            (static_cast<uint8_t>(read_value) !=
+             static_cast<uint8_t>(value[byte_index])))
+          return fail(F("SSID list content mismatch"));
+      }
+      if (index + 1 < ssids->size()) {
+        if (file.read() != '\n')
+          return fail(F("SSID list separator mismatch"));
+      }
+    }
+
+    if (file.position() != file.size())
+      return fail(F("SSID list has trailing data"));
+    file.close();
+    return true;
+  }
+
+  bool buildSavedAirTagPayload(const AirTag& airtag,
+                               String& payload_text,
+                               String& error_message) {
+    if (airtag.payload.size() != airtag.payloadSize) {
+      error_message = F("AirTag payload size mismatch");
+      return false;
+    }
+    const size_t expected_length = airtag.payload.empty()
+      ? 0
+      : (airtag.payload.size() * 5) - 1;
+    if (expected_length > MAX_SAVED_AIRTAG_FILE_SIZE) {
+      error_message = F("AirTag payload is too large");
+      return false;
+    }
+    if ((expected_length != 0) && !hasAPListHeap(expected_length + 256)) {
+      error_message = F("not enough memory for AirTag payload");
+      return false;
+    }
+    payload_text = "";
+    if ((expected_length != 0) && !payload_text.reserve(expected_length)) {
+      error_message = F("not enough memory for AirTag payload");
+      return false;
+    }
+
+    static const char HEX_DIGITS[] = "0123456789abcdef";
+    for (size_t index = 0; index < airtag.payload.size(); ++index) {
+      const uint8_t byte_value = airtag.payload[index];
+      if (!payload_text.concat('0') ||
+          !payload_text.concat('x') ||
+          !payload_text.concat(HEX_DIGITS[byte_value >> 4]) ||
+          !payload_text.concat(HEX_DIGITS[byte_value & 0x0f]) ||
+          ((index + 1 < airtag.payload.size()) && !payload_text.concat(' '))) {
+        error_message = F("not enough memory for AirTag payload");
+        return false;
+      }
+    }
+
+    if (payload_text.length() != expected_length) {
+      error_message = F("AirTag payload encoding failed");
+      return false;
+    }
+    return true;
+  }
+
+  bool validateSavedAirTagValue(const AirTag& airtag,
+                                String& error_message) {
+    uint8_t parsed_mac[6];
+    if (!parseSavedMac(airtag.mac.c_str(), parsed_mac)) {
+      error_message = F("invalid AirTag MAC");
+      return false;
+    }
+
+    String payload_text;
+    return buildSavedAirTagPayload(airtag, payload_text, error_message);
+  }
+
+  bool validateAirTagListFileAgainstCurrent(const char* path,
+                                            String& error_message) {
+    if (airtags == nullptr) {
+      error_message = F("AirTag list is unavailable");
+      return false;
+    }
+
+    File file = SD.open(path, FILE_READ);
+    if (!file || file.isDirectory()) {
+      if (file)
+        file.close();
+      error_message = F("could not reopen saved AirTag list");
+      return false;
+    }
+    if ((file.size() == 0) || (file.size() > MAX_SAVED_AIRTAG_FILE_SIZE)) {
+      file.close();
+      error_message = F("saved AirTag list has an invalid size");
+      return false;
+    }
+
+    DynamicJsonDocument document(MAX_SAVED_AIRTAG_FILE_SIZE);
+    if (document.capacity() == 0) {
+      file.close();
+      error_message = F("not enough memory to verify AirTag list");
+      return false;
+    }
+    const DeserializationError json_error = deserializeJson(document, file);
+    const bool trailing_data_valid = !json_error &&
+      hasOnlySavedListTrailingWhitespace(file);
+    file.close();
+    if (json_error) {
+      error_message = String(F("saved AirTag JSON is invalid: ")) +
+                      json_error.c_str();
+      return false;
+    }
+    if (!trailing_data_valid) {
+      error_message = F("saved AirTag list has trailing data");
+      return false;
+    }
+    if (!document.is<JsonArray>()) {
+      error_message = F("saved AirTag root is invalid");
+      return false;
+    }
+
+    JsonArray array = document.as<JsonArray>();
+    if (array.size() != static_cast<size_t>(airtags->size())) {
+      error_message = F("saved AirTag count mismatch");
+      return false;
+    }
+
+    for (int index = 0; index < airtags->size(); ++index) {
+      JsonVariant value = array[index];
+      if (!value.is<JsonObject>()) {
+        error_message = F("saved AirTag entry is invalid");
+        return false;
+      }
+
+      JsonObject object = value.as<JsonObject>();
+      if (!object["mac"].is<const char*>() ||
+          !object["payload"].is<const char*>() ||
+          !object["payload_size"].is<uint16_t>()) {
+        error_message = F("saved AirTag fields are invalid");
+        return false;
+      }
+
+      const AirTag& expected = (*airtags)[index];
+      if (!validateSavedAirTagValue(expected, error_message))
+        return false;
+
+      uint8_t stored_mac[6];
+      uint8_t expected_mac[6];
+      if (!parseSavedMac(object["mac"].as<const char*>(), stored_mac) ||
+          !parseSavedMac(expected.mac.c_str(), expected_mac) ||
+          (memcmp(stored_mac, expected_mac, sizeof(stored_mac)) != 0)) {
+        error_message = F("saved AirTag MAC mismatch");
+        return false;
+      }
+
+      const uint16_t stored_size = object["payload_size"].as<uint16_t>();
+      const char* stored_payload_text = object["payload"].as<const char*>();
+      const size_t stored_payload_length = stored_payload_text == nullptr
+        ? 0
+        : strlen(stored_payload_text);
+      std::vector<uint8_t> stored_payload;
+      if (!parseSavedAirTagPayload(
+            stored_payload_text,
+            stored_payload_length,
+            stored_size,
+            stored_payload) ||
+          (stored_size != expected.payloadSize) ||
+          (stored_payload != expected.payload)) {
+        error_message = F("saved AirTag payload mismatch");
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool writeSSIDListFile(File& file,
+                         size_t& total_written,
+                         String& error_message) {
+    if (ssids == nullptr) {
+      error_message = F("SSID list is unavailable");
+      return false;
+    }
+    if (ssids->size() == 0) {
+      error_message = F("SSID list is empty");
+      return false;
+    }
+    if (static_cast<size_t>(ssids->size()) > MAX_SAVED_SSID_ENTRIES) {
+      error_message = F("too many SSIDs");
+      return false;
+    }
+
+    total_written = 0;
+    for (int index = 0; index < ssids->size(); ++index) {
+      const String& value = (*ssids)[index].essid;
+      if (!validateSavedSSIDValue(value, error_message))
+        return false;
+      if (!writeAPListBytes(file, value.c_str(), value.length(), total_written)) {
+        error_message = F("short SSID write");
+        return false;
+      }
+      if ((index + 1 < ssids->size()) &&
+          !writeAPListBytes(file, "\n", 1, total_written)) {
+        error_message = F("short SSID separator write");
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool writeAirTagListFile(File& file,
+                           size_t& total_written,
+                           String& error_message) {
+    if (airtags == nullptr) {
+      error_message = F("AirTag list is unavailable");
+      return false;
+    }
+
+    total_written = 0;
+    if (!writeAPListBytes(file, "[", 1, total_written)) {
+      error_message = F("short AirTag list write");
+      return false;
+    }
+
+    for (int index = 0; index < airtags->size(); ++index) {
+      const AirTag& airtag = (*airtags)[index];
+      uint8_t parsed_mac[6];
+      if (!parseSavedMac(airtag.mac.c_str(), parsed_mac)) {
+        error_message = F("invalid AirTag MAC");
+        return false;
+      }
+
+      String payload_text;
+      if (!buildSavedAirTagPayload(airtag, payload_text, error_message))
+        return false;
+
+      if ((index > 0) &&
+          !writeAPListBytes(file, ",", 1, total_written)) {
+        error_message = F("short AirTag separator write");
+        return false;
+      }
+
+      size_t json_capacity = JSON_OBJECT_SIZE(3) + 64;
+      if (!addAPListSize(json_capacity, 1, airtag.mac.length() + 1) ||
+          !addAPListSize(json_capacity, 1, payload_text.length() + 1) ||
+          !hasAPListHeap(json_capacity)) {
+        error_message = F("not enough memory for AirTag JSON");
+        return false;
+      }
+
+      DynamicJsonDocument document(json_capacity);
+      if (document.capacity() == 0) {
+        error_message = F("not enough memory for AirTag JSON");
+        return false;
+      }
+      JsonObject object = document.to<JsonObject>();
+      object["mac"] = airtag.mac;
+      object["payload"] = payload_text;
+      object["payload_size"] = airtag.payloadSize;
+      if (document.overflowed()) {
+        error_message = F("AirTag JSON overflow");
+        return false;
+      }
+
+      const size_t expected = measureJson(object);
+      const size_t written = serializeJson(object, file);
+      if ((expected == 0) || (written != expected) ||
+          (written > (SIZE_MAX - total_written))) {
+        error_message = F("short AirTag JSON write");
+        return false;
+      }
+      total_written += written;
+      if (total_written > MAX_SAVED_AIRTAG_FILE_SIZE) {
+        error_message = F("AirTag list is too large");
+        return false;
+      }
+    }
+
+    if (!writeAPListBytes(file, "]", 1, total_written)) {
+      error_message = F("short AirTag list write");
+      return false;
+    }
+    if (total_written > MAX_SAVED_AIRTAG_FILE_SIZE) {
+      error_message = F("AirTag list is too large");
+      return false;
+    }
+    return true;
+  }
+
+  bool writeAPListFile(File& file,
+                       size_t& total_written,
+                       String& error_message) {
+    if ((access_points == nullptr) || (stations == nullptr)) {
+      error_message = F("AP or station list is unavailable");
+      return false;
+    }
+
+    total_written = 0;
+    if (!writeAPListBytes(file, "[", 1, total_written)) {
+      error_message = F("short AP list write");
+      return false;
+    }
+
+    for (int index = 0; index < access_points->size(); ++index) {
+      const AccessPoint& ap = (*access_points)[index];
+      if (ap.stations == nullptr) {
+        error_message = F("invalid AP station links");
+        return false;
+      }
+
+      if ((index > 0) &&
+          !writeAPListBytes(file, ",", 1, total_written)) {
+        error_message = F("short AP separator write");
+        return false;
+      }
+
+      const size_t station_count = ap.stations->size();
+      size_t json_capacity = JSON_OBJECT_SIZE(9) + JSON_ARRAY_SIZE(station_count);
+      if (!addAPListSize(json_capacity, 1, ap.essid.length() + 1) ||
+          !addAPListSize(json_capacity, 1, ap.man.length() + 1) ||
+          !addAPListSize(json_capacity, station_count, 18) ||
+          !addAPListSize(json_capacity, 1, 64) ||
+          !hasAPListHeap(json_capacity)) {
+        error_message = F("not enough memory for AP JSON");
+        return false;
+      }
+
+      DynamicJsonDocument json_document(json_capacity);
+      if (json_document.capacity() == 0) {
+        error_message = F("not enough memory for AP JSON");
+        return false;
+      }
+
+      JsonObject json_ap = json_document.to<JsonObject>();
+      json_ap["essid"] = ap.essid;
+      json_ap["channel"] = ap.channel;
+      json_ap["bssid"] = macToString(ap.bssid);
+      json_ap["rssi"] = ap.rssi;
+      json_ap["packets"] = ap.packets;
+      json_ap["sec"] = ap.sec;
+      json_ap["wps"] = ap.wps;
+      json_ap["man"] = ap.man;
+      JsonArray station_array = json_ap.createNestedArray("stations");
+
+      for (int station = 0; station < ap.stations->size(); ++station) {
+        const uint16_t station_index = ap.stations->get(station);
+        if (station_index >= stations->size()) {
+          error_message = F("invalid station index");
+          return false;
+        }
+        if (!station_array.add(macToString(stations->get(station_index).mac))) {
+          error_message = F("not enough memory for AP stations");
+          return false;
+        }
+      }
+
+      if (json_document.overflowed()) {
+        error_message = F("AP JSON entry overflow");
+        return false;
+      }
+
+      const size_t expected = measureJson(json_ap);
+      const size_t written = serializeJson(json_ap, file);
+      if ((expected == 0) || (written != expected) ||
+          (written > (SIZE_MAX - total_written))) {
+        error_message = F("short AP JSON write");
+        return false;
+      }
+      total_written += written;
+    }
+
+    if (!writeAPListBytes(file, "]", 1, total_written)) {
+      error_message = F("short AP list write");
+      return false;
+    }
+    return true;
+  }
+
+  typedef bool (*SavedListValidator)(const char*, String&);
+
+  bool verifySavedListFile(const char* path,
+                           size_t expected_size,
+                           SavedListValidator validator,
+                           String& error_message) {
+    File file = SD.open(path, FILE_READ);
+    if (!file || file.isDirectory()) {
+      if (file)
+        file.close();
+      error_message = F("could not reopen saved list");
+      return false;
+    }
+    const bool size_matches = file.size() == expected_size;
+    file.close();
+    if (!size_matches) {
+      error_message = F("saved list size mismatch");
+      return false;
+    }
+    return validator(path, error_message);
+  }
+
+  bool restoreSavedListSnapshot(const char* temp_path,
+                                const char* primary_path,
+                                const char* backup_path,
+                                bool had_snapshot) {
+    if (had_snapshot && !SD.exists(backup_path))
+      return false;
+
+    const bool had_new_primary = SD.exists(primary_path);
+    if (had_new_primary) {
+      if (SD.exists(temp_path) || !SD.rename(primary_path, temp_path))
+        return false;
+    }
+
+    if (had_snapshot && !SD.rename(backup_path, primary_path)) {
+      if (had_new_primary && SD.exists(temp_path) && !SD.exists(primary_path))
+        SD.rename(temp_path, primary_path);
+      return false;
+    }
+    return true;
+  }
+
+  bool promoteRecoveredSavedListFile(const char* recovered_path,
+                                     const char* primary_path) {
+    if (SD.exists(primary_path)) {
+      Serial.println(F("Warning: recovered list loaded, but a primary now exists; both files were retained"));
+      return false;
+    }
+    if (!SD.rename(recovered_path, primary_path)) {
+      Serial.println(F("Warning: recovered list loaded, but disk recovery failed"));
+      return false;
+    }
+    return true;
+  }
+
+  bool cleanupSavedListArtifacts(const char* backup_path,
+                                  const char* temp_path) {
+    bool cleanup_complete = true;
+    if (SD.exists(backup_path) && !SD.remove(backup_path)) {
+      Serial.println(F("Warning: could not remove saved-list backup"));
+      cleanup_complete = false;
+    }
+    if (SD.exists(temp_path) && !SD.remove(temp_path)) {
+      Serial.println(F("Warning: could not remove saved-list temporary file"));
+      cleanup_complete = false;
+    }
+    return cleanup_complete;
+  }
+
+  bool inspectSavedListPath(const char* path,
+                            bool& exists,
+                            bool& regular_file) {
+    exists = SD.exists(path);
+    regular_file = false;
+    if (!exists)
+      return true;
+
+    File file = SD.open(path, FILE_READ);
+    if (!file)
+      return false;
+    regular_file = !file.isDirectory();
+    file.close();
+    return true;
+  }
+
+  bool captureSavedListFileSnapshot(
+    const char* path,
+    SavedListFileSnapshot& snapshot) {
+    snapshot = SavedListFileSnapshot{};
+    File file = SD.open(path, FILE_READ);
+    if (!file || file.isDirectory()) {
+      if (file)
+        file.close();
+      return false;
+    }
+
+    const size_t expected_size = file.size();
+    size_t total_read = 0;
+    uint64_t fingerprint = UINT64_C(14695981039346656037);
+    uint8_t buffer[128];
+    while (total_read < expected_size) {
+      const size_t remaining = expected_size - total_read;
+      const size_t request = remaining < sizeof(buffer)
+        ? remaining
+        : sizeof(buffer);
+      const size_t bytes_read = file.read(buffer, request);
+      if (bytes_read == 0)
+        break;
+      for (size_t index = 0; index < bytes_read; ++index) {
+        fingerprint ^= buffer[index];
+        fingerprint *= UINT64_C(1099511628211);
+      }
+      total_read += bytes_read;
+    }
+    file.close();
+    if (total_read != expected_size)
+      return false;
+
+    snapshot.valid = true;
+    snapshot.size = expected_size;
+    snapshot.fingerprint = fingerprint;
+    return true;
+  }
+
+  bool savedListSnapshotsMatch(const SavedListFileSnapshot& left,
+                               const SavedListFileSnapshot& right) {
+    return left.valid && right.valid &&
+           left.size == right.size &&
+           left.fingerprint == right.fingerprint;
+  }
+
+  bool preflightSavedListTarget(const SavedListTarget& target,
+                                bool replace_existing,
+                                const SavedListFileSnapshot* expected_snapshot,
+                                SavedListFileSnapshot& observed_snapshot,
+                                SavedListSaveStatus& status,
+                                String& error_message) {
+    observed_snapshot = SavedListFileSnapshot{};
+    bool exists = false;
+    bool regular_file = false;
+    if (!inspectSavedListPath(target.temp_path.c_str(),
+                              exists,
+                              regular_file)) {
+      status = SavedListSaveStatus::CommitFailed;
+      error_message = F("could not inspect temporary path");
+      return false;
+    }
+    if (exists) {
+      status = regular_file
+        ? SavedListSaveStatus::RecoveryRequired
+        : SavedListSaveStatus::PathConflict;
+      error_message = regular_file
+        ? String(F("temporary save already exists: ")) + target.temp_path
+        : String(F("directory uses temporary path: ")) + target.temp_path;
+      return false;
+    }
+
+    if (!inspectSavedListPath(target.backup_path.c_str(),
+                              exists,
+                              regular_file)) {
+      status = SavedListSaveStatus::CommitFailed;
+      error_message = F("could not inspect backup path");
+      return false;
+    }
+    if (exists) {
+      status = regular_file
+        ? SavedListSaveStatus::RecoveryRequired
+        : SavedListSaveStatus::PathConflict;
+      error_message = regular_file
+        ? String(F("backup already exists: ")) + target.backup_path
+        : String(F("directory uses backup path: ")) + target.backup_path;
+      return false;
+    }
+
+    if (!inspectSavedListPath(target.primary_path.c_str(),
+                              exists,
+                              regular_file)) {
+      status = SavedListSaveStatus::CommitFailed;
+      error_message = F("could not inspect target path");
+      return false;
+    }
+    if (exists && !regular_file) {
+      status = SavedListSaveStatus::PathConflict;
+      error_message = String(F("directory uses target path: ")) +
+                      target.primary_path;
+      return false;
+    }
+    if (exists &&
+        !captureSavedListFileSnapshot(target.primary_path.c_str(),
+                                      observed_snapshot)) {
+      status = SavedListSaveStatus::CommitFailed;
+      error_message = F("could not fingerprint existing target");
+      return false;
+    }
+    if (exists && !replace_existing) {
+      status = SavedListSaveStatus::TargetExists;
+      error_message = String(F("target already exists: ")) +
+                      target.primary_path;
+      return false;
+    }
+    if (replace_existing && expected_snapshot != nullptr) {
+      if (!exists ||
+          !savedListSnapshotsMatch(observed_snapshot,
+                                   *expected_snapshot)) {
+        status = SavedListSaveStatus::TargetChanged;
+        error_message = F("target changed after replace confirmation");
+        return false;
+      }
+    }
+    return true;
+  }
+
+  void removeFailedSavedListTemp(const SavedListTarget& target,
+                                 const __FlashStringHelper* warning) {
+    if (SD.exists(target.temp_path.c_str()) &&
+        !SD.remove(target.temp_path.c_str()))
+      Serial.println(warning);
+  }
+
+  bool installSavedListFile(const char* temp_path,
+                            const char* primary_path,
+                            const char* backup_path,
+                            size_t expected_size,
+                            SavedListValidator validator,
+                            bool replace_existing,
+                            const SavedListFileSnapshot* expected_snapshot,
+                            SavedListSaveStatus& status,
+                            String& error_message) {
+    error_message = "";
+    status = SavedListSaveStatus::CommitFailed;
+    String validation_error;
+    if (!verifySavedListFile(temp_path, expected_size, validator,
+                             validation_error)) {
+      status = SavedListSaveStatus::VerificationFailed;
+      error_message = String(F("temporary verification failed: ")) +
+                      validation_error;
+      return false;
+    }
+
+    const bool had_primary = SD.exists(primary_path);
+    const bool had_backup = SD.exists(backup_path);
+    if (had_backup) {
+      status = SavedListSaveStatus::RecoveryRequired;
+      error_message = F("backup exists; recovery required");
+      return false;
+    }
+    if (expected_snapshot != nullptr) {
+      SavedListFileSnapshot current_snapshot;
+      if (!had_primary ||
+          !captureSavedListFileSnapshot(primary_path, current_snapshot) ||
+          !savedListSnapshotsMatch(current_snapshot, *expected_snapshot)) {
+        status = SavedListSaveStatus::TargetChanged;
+        error_message = F("target changed after replace confirmation");
+        return false;
+      }
+    }
+    if (had_primary && !replace_existing) {
+      status = SavedListSaveStatus::TargetExists;
+      error_message = F("target appeared before commit; replace not authorized");
+      return false;
+    }
+    if (had_primary) {
+      bool primary_exists = false;
+      bool primary_is_file = false;
+      if (!inspectSavedListPath(primary_path,
+                                primary_exists,
+                                primary_is_file) ||
+          !primary_exists || !primary_is_file) {
+        error_message = F("could not verify existing target before replace");
+        return false;
+      }
+      if (!SD.rename(primary_path, backup_path)) {
+        error_message = F("could not preserve previous file");
+        return false;
+      }
+      if (expected_snapshot != nullptr) {
+        SavedListFileSnapshot moved_snapshot;
+        if (!captureSavedListFileSnapshot(backup_path, moved_snapshot) ||
+            !savedListSnapshotsMatch(moved_snapshot,
+                                     *expected_snapshot)) {
+          status = SavedListSaveStatus::TargetChanged;
+          if (!SD.exists(primary_path) &&
+              SD.rename(backup_path, primary_path)) {
+            error_message = F("target changed during replace; changed file restored");
+          }
+          else {
+            error_message = F("target changed during replace; changed file retained in backup");
+          }
+          return false;
+        }
+      }
+    }
+
+    const bool had_snapshot = had_primary || had_backup;
+    if (!SD.rename(temp_path, primary_path)) {
+      const bool rollback_ok =
+        restoreSavedListSnapshot(temp_path, primary_path,
+                                 backup_path, had_snapshot);
+      if (!had_snapshot)
+        error_message = F("could not install new file");
+      else if (rollback_ok)
+        error_message = F("could not install new file; previous file restored");
+      else
+        error_message = F("could not install new file; previous file remains in backup");
+      return false;
+    }
+
+    validation_error = "";
+    if (!verifySavedListFile(primary_path, expected_size, validator,
+                             validation_error)) {
+      status = SavedListSaveStatus::VerificationFailed;
+      const bool rollback_ok =
+        restoreSavedListSnapshot(temp_path, primary_path,
+                                 backup_path, had_snapshot);
+      if (!had_snapshot && rollback_ok)
+        error_message = String(F("final verification failed; new file rejected: ")) +
+                        validation_error;
+      else if (!had_snapshot)
+        error_message = String(F("final verification failed; new file could not be quarantined: ")) +
+                        validation_error;
+      else if (rollback_ok)
+        error_message = String(F("final verification failed; previous file restored: ")) +
+                        validation_error;
+      else
+        error_message = String(F("final verification failed; previous file remains in backup: ")) +
+                        validation_error;
+      return false;
+    }
+
+    if (had_snapshot && SD.exists(backup_path) && !SD.remove(backup_path)) {
+      status = SavedListSaveStatus::SavedCleanupPending;
+      error_message = F("new file verified but backup cleanup failed");
+      return true;
+    }
+    if (SD.exists(temp_path)) {
+      status = SavedListSaveStatus::SavedCleanupPending;
+      error_message = F("new file verified but temporary cleanup failed");
+      return true;
+    }
+    status = SavedListSaveStatus::Saved;
+    return true;
+  }
+
+  bool streamSavedListToSerial(const char* path, String& error_message) {
+    File file = SD.open(path, FILE_READ);
+    if (!file || file.isDirectory()) {
+      if (file)
+        file.close();
+      error_message = F("could not open saved list");
+      return false;
+    }
+
+    const size_t file_size = file.size();
+    const size_t begin_length = strlen(AP_LIST_SERIAL_BEGIN);
+    const size_t close_length = strlen(AP_LIST_SERIAL_CLOSE);
+    if ((file_size > (SIZE_MAX - begin_length)) ||
+        ((file_size + begin_length) > (SIZE_MAX - close_length))) {
+      file.close();
+      error_message = F("saved list is too large for serial export");
+      return false;
+    }
+
+    const size_t serial_size = begin_length + file_size + close_length;
+    if (!hasAPListHeap(serial_size)) {
+      file.close();
+      error_message = F("not enough memory for serial export");
+      return false;
+    }
+
+    uint8_t* serial_data = static_cast<uint8_t*>(malloc(serial_size));
+    if (serial_data == nullptr) {
+      file.close();
+      error_message = F("not enough memory for serial export");
+      return false;
+    }
+
+    memcpy(serial_data, AP_LIST_SERIAL_BEGIN, begin_length);
+    size_t total_read = 0;
+    while (total_read < file_size) {
+      const size_t bytes_read = file.read(
+        serial_data + begin_length + total_read, file_size - total_read);
+      if (bytes_read == 0)
+        break;
+      total_read += bytes_read;
+    }
+    file.close();
+    if (total_read != file_size) {
+      free(serial_data);
+      error_message = F("could not read complete saved list");
+      return false;
+    }
+
+    memcpy(serial_data + begin_length + file_size,
+           AP_LIST_SERIAL_CLOSE, close_length);
+    const size_t serial_written = Serial.write(serial_data, serial_size);
+    free(serial_data);
+    if (serial_written != serial_size) {
+      error_message = F("short serial write");
+      return false;
+    }
+    return true;
+  }
+
+  bool streamAPListToSerial(const char* path, String& error_message) {
+    File file = SD.open(path, FILE_READ);
+    if (!file) {
+      error_message = F("could not open saved AP list");
+      return false;
+    }
+
+    const size_t file_size = file.size();
+    const size_t begin_length = strlen(AP_LIST_SERIAL_BEGIN);
+    const size_t close_length = strlen(AP_LIST_SERIAL_CLOSE);
+    if ((file_size > (SIZE_MAX - begin_length)) ||
+        ((file_size + begin_length) > (SIZE_MAX - close_length))) {
+      file.close();
+      error_message = F("saved AP list is too large");
+      return false;
+    }
+
+    const size_t serial_size = begin_length + file_size + close_length;
+    if (!hasAPListHeap(serial_size)) {
+      file.close();
+      error_message = F("not enough memory for serial export");
+      return false;
+    }
+
+    uint8_t* serial_data = static_cast<uint8_t*>(malloc(serial_size));
+    if (serial_data == nullptr) {
+      file.close();
+      error_message = F("not enough memory for serial export");
+      return false;
+    }
+
+    memcpy(serial_data, AP_LIST_SERIAL_BEGIN, begin_length);
+    size_t total_read = 0;
+    while (total_read < file_size) {
+      const size_t bytes_read = file.read(serial_data + begin_length + total_read,
+                                          file_size - total_read);
+      if (bytes_read == 0)
+        break;
+      total_read += bytes_read;
+    }
+    file.close();
+
+    if (total_read != file_size) {
+      free(serial_data);
+      error_message = F("could not read complete saved AP list");
+      return false;
+    }
+
+    memcpy(serial_data + begin_length + file_size,
+           AP_LIST_SERIAL_CLOSE, close_length);
+    const size_t serial_written = Serial.write(serial_data, serial_size);
+    free(serial_data);
+    if (serial_written != serial_size) {
+      error_message = F("short serial write");
+      return false;
+    }
+
+    return true;
+  }
+}
+#endif
+
+namespace {
+  constexpr size_t MAX_SAVED_LIST_LOGICAL_NAME_LENGTH = 48;
+
+  SavedListSaveResult makeSavedListSaveResult(
+    const SavedListTarget& target,
+    SavedListSaveStatus status,
+    const String& message,
+    size_t item_count,
+    size_t related_count = 0,
+    const SavedListFileSnapshot* target_snapshot = nullptr) {
+    SavedListSaveResult result;
+    result.status = status;
+    result.target_path = target.primary_path;
+    result.message = message;
+    result.item_count = item_count;
+    result.related_count = related_count;
+    if (target_snapshot != nullptr)
+      result.target_snapshot = *target_snapshot;
+    return result;
+  }
+
+  size_t savedAPStationReferenceCount() {
+    if ((access_points == nullptr) || (stations == nullptr))
+      return 0;
+
+    size_t count = 0;
+    for (int index = 0; index < access_points->size(); ++index) {
+      const AccessPoint& ap = (*access_points)[index];
+      if (ap.stations == nullptr)
+        continue;
+      const size_t station_count = ap.stations->size();
+      if (station_count > (SIZE_MAX - count))
+        return SIZE_MAX;
+      count += station_count;
+    }
+    return count;
+  }
+}
+
+bool WiFiScan::BuildSavedListTarget(SavedListType type,
+                                    const String& logical_name,
+                                    SavedListTarget& target,
+                                    String& error_message) {
+  target = SavedListTarget();
+  error_message = "";
+
+  const size_t name_length = logical_name.length();
+  if (name_length == 0) {
+    error_message = F("list name is empty");
+    return false;
+  }
+  if (name_length > MAX_SAVED_LIST_LOGICAL_NAME_LENGTH) {
+    error_message = F("list name is too long");
+    return false;
+  }
+  if ((logical_name.charAt(0) == ' ') ||
+      (logical_name.charAt(name_length - 1) == ' ') ||
+      (logical_name.charAt(name_length - 1) == '.')) {
+    error_message = F("list name has invalid leading or trailing characters");
+    return false;
+  }
+  if ((logical_name == ".") || (logical_name == "..")) {
+    error_message = F("list name is not valid");
+    return false;
+  }
+
+  for (size_t index = 0; index < name_length; ++index) {
+    const uint8_t value = static_cast<uint8_t>(logical_name.charAt(index));
+    if ((value < 0x20) || (value > 0x7e) ||
+        (value == '/') || (value == '\\') || (value == '"') ||
+        (value == ':') || (value == '*') || (value == '?') ||
+        (value == '<') || (value == '>') || (value == '|')) {
+      error_message = F("list name contains unsupported characters");
+      return false;
+    }
+  }
+
+  String lower_name = logical_name;
+  if (lower_name.length() != name_length) {
+    error_message = F("not enough memory to validate list name");
+    return false;
+  }
+  lower_name.toLowerCase();
+  if (lower_name.startsWith("ssids_") ||
+      lower_name.startsWith("aps_") ||
+      lower_name.startsWith("airtags_") ||
+      lower_name.endsWith(".log") ||
+      lower_name.endsWith(".tmp") ||
+      lower_name.endsWith(".bak")) {
+    error_message = F("enter a name without list prefix or file extension");
+    return false;
+  }
+
+  const char* prefix = nullptr;
+  switch (type) {
+    case SavedListType::SSIDs:
+      prefix = "SSIDs_";
+      break;
+    case SavedListType::APs:
+      prefix = "APs_";
+      break;
+    case SavedListType::AirTags:
+      prefix = "Airtags_";
+      break;
+    default:
+      error_message = F("unknown saved-list type");
+      return false;
+  }
+
+  const size_t stem_length = 1 + strlen(prefix) + name_length;
+  String stem;
+  if (!stem.reserve(stem_length + 4)) {
+    error_message = F("not enough memory for saved-list path");
+    return false;
+  }
+  stem = F("/");
+  stem += prefix;
+  stem += logical_name;
+  if (stem.length() != stem_length) {
+    error_message = F("could not build saved-list path");
+    return false;
+  }
+
+  target.type = type;
+  target.logical_name = logical_name;
+  target.primary_path = stem + F(".log");
+  target.temp_path = stem + F(".tmp");
+  target.backup_path = stem + F(".bak");
+  const size_t path_length = stem_length + 4;
+  if ((target.logical_name.length() != name_length) ||
+      (target.primary_path.length() != path_length) ||
+      (target.temp_path.length() != path_length) ||
+      (target.backup_path.length() != path_length)) {
+    target = SavedListTarget();
+    error_message = F("not enough memory for saved-list target");
+    return false;
+  }
+  return true;
+}
+
+bool WiFiScan::BuildSavedListTargetFromPath(
+  SavedListType type,
+  const String& selected_path,
+  SavedListTarget& target,
+  SavedListArtifact& artifact,
+  String& error_message) {
+  target = SavedListTarget();
+  artifact = SavedListArtifact::Primary;
+  error_message = "";
+
+  const char* prefix = nullptr;
+  switch (type) {
+    case SavedListType::SSIDs:
+      prefix = "/SSIDs_";
+      break;
+    case SavedListType::APs:
+      prefix = "/APs_";
+      break;
+    case SavedListType::AirTags:
+      prefix = "/Airtags_";
+      break;
+    default:
+      error_message = F("unknown saved-list type");
+      return false;
+  }
+
+  const size_t prefix_length = strlen(prefix);
+  if (!selected_path.startsWith(prefix) ||
+      (selected_path.length() <= prefix_length + 4) ||
+      (selected_path.indexOf('/', 1) >= 0) ||
+      (selected_path.indexOf('\\') >= 0)) {
+    error_message = F("saved-list path is not canonical");
+    return false;
+  }
+
+  if (selected_path.endsWith(".log"))
+    artifact = SavedListArtifact::Primary;
+  else if (selected_path.endsWith(".bak"))
+    artifact = SavedListArtifact::Backup;
+  else if (selected_path.endsWith(".tmp"))
+    artifact = SavedListArtifact::Temporary;
+  else {
+    error_message = F("saved-list path has an unsupported extension");
+    return false;
+  }
+
+  const String logical_name = selected_path.substring(
+    prefix_length, selected_path.length() - 4);
+  if (!BuildSavedListTarget(type,
+                            logical_name,
+                            target,
+                            error_message))
+    return false;
+
+  const String& canonical_path = artifact == SavedListArtifact::Primary
+    ? target.primary_path
+    : (artifact == SavedListArtifact::Backup
+        ? target.backup_path
+        : target.temp_path);
+  if (selected_path != canonical_path) {
+    target = SavedListTarget();
+    error_message = F("saved-list path does not match its type");
+    return false;
+  }
+  return true;
+}
 
 extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3){
     if (arg == 31337)
@@ -3436,326 +5115,891 @@ void WiFiScan::RunPortScanAll(uint8_t scan_mode, uint16_t color) {
   initTime = millis();
 }
 
-void WiFiScan::RunLoadATList() {
+bool WiFiScan::RunLoadATList(String path,
+                             bool show_status,
+                             bool allow_recovery) {
   #ifdef HAS_SD
-    // Prepare to access the file
-    File file = sd_obj.getFile(F("/Airtags_0.log"));
-    if (!file) {
-      Serial.println(F("Could not open /Airtags_0.log"));
-      #ifdef HAS_SCREEN
-        display_obj.tft.setTextWrap(false);
-        display_obj.tft.setFreeFont(NULL);
-        display_obj.tft.setCursor(0, 100);
-        display_obj.tft.setTextSize(1);
-        display_obj.tft.setTextColor(TFT_CYAN);
-      
-        display_obj.tft.println(F("Could not open /Airtags_0.log"));
-      #endif
-      return;
+    if (!sd_obj.supported) {
+      reportSavedListLoadStatus(
+        F("AirTag list load failed: SD card unavailable"),
+        false,
+        show_status);
+      return false;
+    }
+    if (!path.length())
+      path = AIRTAG_LIST_PATH;
+
+    SavedListTarget target;
+    SavedListArtifact artifact = SavedListArtifact::Primary;
+    String target_error;
+    if (!BuildSavedListTargetFromPath(SavedListType::AirTags,
+                                      path,
+                                      target,
+                                      artifact,
+                                      target_error)) {
+      reportSavedListLoadStatus(
+        String(F("AirTag list load failed: ")) + target_error,
+        false,
+        show_status);
+      return false;
     }
 
-    // Prepare JSON
-    DynamicJsonDocument doc(10048);
-    DeserializationError error = deserializeJson(doc, file);
-    if (error) {
-      Serial.println(error.c_str());
-      file.close();
-      #ifdef HAS_SCREEN
-        display_obj.tft.setTextWrap(false);
-        display_obj.tft.setFreeFont(NULL);
-        display_obj.tft.setCursor(0, 100);
-        display_obj.tft.setTextSize(1);
-        display_obj.tft.setTextColor(TFT_CYAN);
-      
-        display_obj.tft.println(error.c_str());
-      #endif
-      return;
+    const bool use_primary_recovery =
+      allow_recovery && (artifact == SavedListArtifact::Primary);
+    const bool recovering_from_backup =
+      allow_recovery && (artifact == SavedListArtifact::Backup);
+    const bool recovering_from_temp =
+      allow_recovery && (artifact == SavedListArtifact::Temporary);
+
+    // Recovery is only attempted when the primary is absent. A transient OOM
+    // or parse failure must never replace an existing primary with older data.
+    if (use_primary_recovery && !SD.exists(target.primary_path.c_str())) {
+      const bool recovered =
+        (SD.exists(target.backup_path.c_str()) &&
+         this->RunLoadATList(target.backup_path, false, true)) ||
+        (SD.exists(target.temp_path.c_str()) &&
+         this->RunLoadATList(target.temp_path, false, true));
+      if (recovered) {
+        if (show_status)
+          reportSavedListLoadStatus(F("AirTag list recovery complete"),
+                                    true, true);
+        return true;
+      }
     }
+
+    auto fail = [&](const String& failure) {
+      reportSavedListLoadStatus(
+        String(F("AirTag list load failed: ")) + failure,
+        false,
+        show_status);
+      return false;
+    };
+
+    File file = SD.open(path, FILE_READ);
+    if (!file || file.isDirectory()) {
+      if (file)
+        file.close();
+      return fail(String(F("could not open ")) + path);
+    }
+    const size_t file_size = file.size();
+    if (file_size == 0) {
+      file.close();
+      return fail(F("file is empty"));
+    }
+    if (file_size > MAX_SAVED_AIRTAG_FILE_SIZE) {
+      file.close();
+      return fail(F("file is too large"));
+    }
+
+    DynamicJsonDocument doc(MAX_SAVED_AIRTAG_FILE_SIZE);
+    const DeserializationError error = deserializeJson(doc, file);
+    const bool trailing_data_valid = !error &&
+      hasOnlySavedListTrailingWhitespace(file);
+    file.close();
+    if (error)
+      return fail(String(F("invalid JSON: ")) + error.c_str());
+    if (!trailing_data_valid)
+      return fail(F("trailing data after list"));
+    if (!doc.is<JsonArray>())
+      return fail(F("invalid list root"));
 
     JsonArray array = doc.as<JsonArray>();
-    for (JsonObject obj : array) {
-      AirTag at;
-      at.mac = obj["mac"].as<String>();
-      at.payloadSize = obj["payload_size"];
-      at.payload = hexStringToByteArray(obj["payload"].as<String>());
-      at.selected = false;
-      airtags->add(at);
+    LinkedList<AirTag>* loaded_airtags = new (std::nothrow) LinkedList<AirTag>();
+    if (loaded_airtags == nullptr)
+      return fail(F("not enough memory"));
+
+    auto fail_loaded = [&](const String& failure) {
+      delete loaded_airtags;
+      return fail(failure);
+    };
+
+    for (JsonVariant value : array) {
+      if (!value.is<JsonObject>())
+        return fail_loaded(F("invalid entry"));
+
+      JsonObject object = value.as<JsonObject>();
+      if (!object["mac"].is<const char*>() ||
+          !object["payload"].is<const char*>() ||
+          !object["payload_size"].is<uint16_t>())
+        return fail_loaded(F("invalid entry fields"));
+
+      uint8_t parsed_mac[6];
+      const char* mac_value = object["mac"].as<const char*>();
+      if (!parseSavedMac(mac_value, parsed_mac))
+        return fail_loaded(F("invalid MAC"));
+
+      const uint16_t payload_size = object["payload_size"].as<uint16_t>();
+      const char* payload_text = object["payload"].as<const char*>();
+      const size_t payload_text_length = payload_text == nullptr
+        ? 0
+        : strlen(payload_text);
+      std::vector<uint8_t> payload;
+      if (!parseSavedAirTagPayload(
+            payload_text,
+            payload_text_length,
+            payload_size,
+            payload))
+        return fail_loaded(F("invalid payload"));
+
+      AirTag airtag{};
+      if (!airtag.mac.reserve(strlen(mac_value)))
+        return fail_loaded(F("not enough memory"));
+      airtag.mac = mac_value;
+      if (airtag.mac.length() != strlen(mac_value))
+        return fail_loaded(F("not enough memory"));
+      airtag.mac.toUpperCase();
+      airtag.payload.swap(payload);
+      airtag.payloadSize = payload_size;
+      airtag.selected = false;
+      airtag.rssi = -127;
+      airtag.last_seen = 0;
+      airtag.connectable = true;
+      if (!hasAPListHeap(sizeof(AirTag) + airtag.payload.size() + 256))
+        return fail_loaded(F("not enough memory"));
+      if (!loaded_airtags->add(airtag))
+        return fail_loaded(F("not enough memory"));
     }
 
-    file.close();
+    LinkedList<AirTag>* previous_airtags = airtags;
+    airtags = loaded_airtags;
+    delete previous_airtags;
 
-    //doc.clear();
+    bool cleanup_complete = true;
+    String success_message;
+    if (recovering_from_backup || recovering_from_temp) {
+      const bool disk_repaired = promoteRecoveredSavedListFile(
+        path.c_str(), target.primary_path.c_str());
+      cleanup_complete = disk_repaired &&
+        cleanupSavedListArtifacts(target.backup_path.c_str(),
+                                  target.temp_path.c_str());
+      success_message = String(F("Recovered Airtags from ")) +
+        (recovering_from_backup ? F("backup: ") : F("temporary file: ")) +
+        airtags->size();
+    }
+    else {
+      cleanup_complete = !use_primary_recovery ||
+        cleanupSavedListArtifacts(target.backup_path.c_str(),
+                                  target.temp_path.c_str());
+      success_message = String(F("Loaded Airtags: ")) + airtags->size();
+    }
+    if (!cleanup_complete)
+      success_message += F("; cleanup pending");
+    reportSavedListLoadStatus(success_message, true, show_status);
+    return true;
+  #else
+    (void)path;
+    (void)show_status;
+    (void)allow_recovery;
+    return false;
+  #endif
+}
 
-    #ifdef HAS_SCREEN
-      display_obj.tft.setTextWrap(false);
-      display_obj.tft.setFreeFont(NULL);
-      display_obj.tft.setCursor(0, 100);
-      display_obj.tft.setTextSize(1);
-      display_obj.tft.setTextColor(TFT_CYAN);
-    
-      display_obj.tft.print(F("Loaded Airtags: "));
-      display_obj.tft.println((String)airtags->size());
-    #endif
-    Serial.print(F("Loaded Airtags:"));
-    Serial.println((String)airtags->size());
+SavedListSaveResult WiFiScan::SaveATListAs(
+  const String& logical_name,
+  bool replace_existing,
+  const SavedListFileSnapshot* expected_snapshot) {
+  SavedListTarget target;
+  String error_message;
+  const size_t item_count = airtags == nullptr
+    ? 0
+    : static_cast<size_t>(airtags->size());
+  if (!BuildSavedListTarget(SavedListType::AirTags,
+                            logical_name,
+                            target,
+                            error_message)) {
+    return makeSavedListSaveResult(
+      target,
+      SavedListSaveStatus::InvalidName,
+      String(F("AirTag list save failed: ")) + error_message,
+      item_count);
+  }
+
+  #ifdef HAS_SD
+    if (!sd_obj.supported) {
+      return makeSavedListSaveResult(
+        target,
+        SavedListSaveStatus::SDUnavailable,
+        F("AirTag list save failed: SD card unavailable"),
+        item_count);
+    }
+
+    SavedListSaveStatus status = SavedListSaveStatus::CommitFailed;
+    SavedListFileSnapshot observed_snapshot;
+    if (!preflightSavedListTarget(target,
+                                  replace_existing,
+                                  expected_snapshot,
+                                  observed_snapshot,
+                                  status,
+                                  error_message)) {
+      return makeSavedListSaveResult(
+        target,
+        status,
+        String(F("AirTag list save failed: ")) + error_message,
+        item_count,
+        0,
+        &observed_snapshot);
+    }
+
+    File temp_file = SD.open(target.temp_path.c_str(), FILE_WRITE);
+    if (!temp_file) {
+      return makeSavedListSaveResult(
+        target,
+        SavedListSaveStatus::CreateFailed,
+        F("AirTag list save failed: could not create temporary file"),
+        item_count);
+    }
+
+    size_t total_written = 0;
+    const bool write_ok =
+      writeAirTagListFile(temp_file, total_written, error_message);
+    temp_file.flush();
+    temp_file.close();
+    if (!write_ok || error_message.length()) {
+      if (!error_message.length())
+        error_message = F("could not write complete AirTag list");
+      removeFailedSavedListTemp(
+        target,
+        F("Warning: could not remove failed AirTag temporary file"));
+      return makeSavedListSaveResult(
+        target,
+        SavedListSaveStatus::WriteFailed,
+        String(F("AirTag list save failed: ")) + error_message,
+        item_count);
+    }
+
+    if (!installSavedListFile(target.temp_path.c_str(),
+                              target.primary_path.c_str(),
+                              target.backup_path.c_str(),
+                              total_written,
+                              validateAirTagListFileAgainstCurrent,
+                              replace_existing,
+                              expected_snapshot,
+                              status,
+                              error_message)) {
+      if (status == SavedListSaveStatus::TargetExists)
+        captureSavedListFileSnapshot(
+          target.primary_path.c_str(), observed_snapshot);
+      removeFailedSavedListTemp(
+        target,
+        F("Warning: could not remove failed AirTag temporary file"));
+      return makeSavedListSaveResult(
+        target,
+        status,
+        String(F("AirTag list save failed: ")) + error_message,
+        item_count,
+        0,
+        &observed_snapshot);
+    }
+
+    if (save_serial) {
+      String serial_error;
+      if (!streamSavedListToSerial(target.primary_path.c_str(), serial_error))
+        Serial.println(String(F("AirTag list serial export failed: ")) +
+                       serial_error);
+    }
+
+    String success_message = String(F("Saved Airtags: ")) + item_count;
+    if (error_message.length())
+      success_message += String(F("; ")) + error_message;
+    return makeSavedListSaveResult(
+      target, status, success_message, item_count);
+  #else
+    return makeSavedListSaveResult(
+      target,
+      SavedListSaveStatus::SDUnavailable,
+      F("AirTag list save failed: SD support unavailable"),
+      item_count);
   #endif
 }
 
 void WiFiScan::RunSaveATList(bool save_as) {
+  if (!save_as)
+    return;
+  const SavedListSaveResult result = SaveATListAs("0", true);
   #ifdef HAS_SD
-    if (save_as) {
-      sd_obj.removeFile(F("/Airtags_0.log"));
-
-      this->startLog("Airtags");
-
-      DynamicJsonDocument jsonDocument(2048);
-
-      JsonArray jsonArray = jsonDocument.to<JsonArray>();
-      
-      for (int i = 0; i < airtags->size(); i++) {
-        const AirTag& at = airtags->get(i);
-        JsonObject jsonAt = jsonArray.createNestedObject();
-        jsonAt["mac"] = at.mac;
-        jsonAt["payload"] = byteArrayToHexString(at.payload);
-        jsonAt["payload_size"] = at.payloadSize;
-      }
-
-      String jsonString;
-      serializeJson(jsonArray, jsonString);
-
-      buffer_obj.append(jsonString);
-
-      #ifdef HAS_SCREEN
-        display_obj.tft.setTextWrap(false);
-        display_obj.tft.setFreeFont(NULL);
-        display_obj.tft.setCursor(0, 100);
-        display_obj.tft.setTextSize(1);
-        display_obj.tft.setTextColor(TFT_CYAN);
-      
-        display_obj.tft.print(F("Saved Airtags: "));
-        display_obj.tft.println((String)airtags->size());
-      #endif
-      Serial.print(F("Saved Airtags:"));
-      Serial.println((String)airtags->size());
-    }
+    reportSavedListSaveStatus(result.message, result.succeeded());
   #endif
 }
 
-void WiFiScan::RunLoadAPList() {
+bool WiFiScan::RunLoadAPList(String path,
+                             bool show_status,
+                             bool allow_recovery) {
   #ifdef HAS_SD
-    File file = sd_obj.getFile(F("/APs_0.log"));
-    if (!file) {
-      Serial.println(F("Could not open /APs_0.log"));
-      #ifdef HAS_SCREEN
-        display_obj.tft.setTextWrap(false);
-        display_obj.tft.setFreeFont(NULL);
-        display_obj.tft.setCursor(0, 100);
-        display_obj.tft.setTextSize(1);
-        display_obj.tft.setTextColor(TFT_CYAN);
-        display_obj.tft.println(F("Could not open /APs_0.log"));
-      #endif
-      return;
-    }
+    auto report_failure = [&](const String& failure) {
+      reportSavedListLoadStatus(
+        String(F("AP list load failed: ")) + failure,
+        false,
+        show_status);
+      return false;
+    };
 
-    DynamicJsonDocument doc(10048);
-    DeserializationError error = deserializeJson(doc, file);
-    if (error) {
-      Serial.println(error.c_str());
-      file.close();
-      #ifdef HAS_SCREEN
-        display_obj.tft.setTextWrap(false);
-        display_obj.tft.setFreeFont(NULL);
-        display_obj.tft.setCursor(0, 100);
-        display_obj.tft.setTextSize(1);
-        display_obj.tft.setTextColor(TFT_CYAN);
-        display_obj.tft.println(error.c_str());
-      #endif
-      return;
-    }
+    if (!sd_obj.supported)
+      return report_failure(F("SD card unavailable"));
+    if (!path.length())
+      path = AP_LIST_PATH;
 
-    JsonArray array = doc.as<JsonArray>();
-    for (JsonObject obj : array) {
-      AccessPoint ap;
+    SavedListTarget target;
+    SavedListArtifact artifact = SavedListArtifact::Primary;
+    String target_error;
+    if (!BuildSavedListTargetFromPath(SavedListType::APs,
+                                      path,
+                                      target,
+                                      artifact,
+                                      target_error))
+      return report_failure(target_error);
 
-      ap.essid   = obj.containsKey("essid")   ? obj["essid"].as<String>()      : "";
-      ap.channel = obj.containsKey("channel") ? obj["channel"].as<uint8_t>()   : 1;
-      ap.selected = false;
+    const bool use_primary_recovery =
+      allow_recovery && (artifact == SavedListArtifact::Primary);
+    LinkedList<AccessPoint>* loaded_access_points = nullptr;
+    LinkedList<Station>* loaded_stations = nullptr;
+    String primary_error;
+    const bool primary_file_existed =
+      use_primary_recovery && SD.exists(target.primary_path.c_str());
+    bool loaded_from_backup = artifact == SavedListArtifact::Backup;
+    bool loaded_from_temp = artifact == SavedListArtifact::Temporary;
 
-      if (obj.containsKey("bssid")) {
-        //parseBSSID(obj["bssid"], ap.bssid);
-        convertMacStringToUint8(obj["bssid"], ap.bssid);
-      } else {
-        memset(ap.bssid, 0, 6); // Zero BSSID if missing
+    if (!loadAPListFile(path.c_str(), loaded_access_points,
+                        loaded_stations, primary_error)) {
+      if (!use_primary_recovery)
+        return report_failure(primary_error);
+
+      String backup_error;
+      if (!SD.exists(target.backup_path.c_str()) ||
+          !loadAPListFile(target.backup_path.c_str(), loaded_access_points,
+                           loaded_stations, backup_error)) {
+        String failure = primary_error;
+        if (backup_error.length() != 0)
+          failure += String(F("; backup: ")) + backup_error;
+        return report_failure(failure);
       }
-      Serial.println("Got: " + ap.essid);
-
-      ap.stations = new LinkedList<uint16_t>();
-
-      JsonArray ap_stations = obj["stations"].as<JsonArray>();
-      uint16_t staions_index = stations->size();
-      uint16_t ap_index = access_points->size() +1;
-      for (JsonVariant station_mac : ap_stations) {
-        Station sta;
-          Serial.printf("  -> %s\n", station_mac.as<const char*>());
-          convertMacStringToUint8(station_mac, sta.mac);
-          sta.selected = false;
-          sta.packets = 0;
-          sta.ap = ap_index;
-          stations->add(sta);
-          ap.stations->add(staions_index++);
-      }
-
-      ap.rssi     = obj.containsKey("rssi")   ? obj["rssi"].as<int>()          : -127;
-      ap.packets  = obj.containsKey("packet") ? obj["packet"].as<uint32_t>()   : 0;
-      ap.sec      = obj.containsKey("sec")    ? obj["sec"].as<uint8_t>()       : 0;
-      ap.wps      = obj.containsKey("wps")    ? obj["wps"].as<bool>()          : false;
-      ap.man      = obj.containsKey("man")    ? obj["man"].as<String>()        : "Unknown";
-      ap.has_msg_1 = false;
-      ap.has_msg_2 = false;
-      ap.has_msg_3 = false;
-      ap.has_msg_4 = false;
-
-      access_points->add(ap);
+      loaded_from_backup = true;
+      loaded_from_temp = false;
     }
 
-    file.close();
+    if ((loaded_access_points == nullptr) || (loaded_stations == nullptr)) {
+      deleteAPList(loaded_access_points);
+      delete loaded_stations;
+      return report_failure(F("could not materialize list"));
+    }
 
-    #ifdef HAS_SCREEN
-      display_obj.tft.setTextWrap(false);
-      display_obj.tft.setFreeFont(NULL);
-      display_obj.tft.setCursor(0, 100);
-      display_obj.tft.setTextSize(1);
-      display_obj.tft.setTextColor(TFT_CYAN);
-      display_obj.tft.print(F("Loaded APs: "));
-      display_obj.tft.println((String)access_points->size());
-    #endif
-    Serial.print(F("Loaded APs:"));
-    Serial.println((String)access_points->size());
+    LinkedList<AccessPoint>* previous_access_points = access_points;
+    LinkedList<Station>* previous_stations = stations;
+    access_points = loaded_access_points;
+    stations = loaded_stations;
+    deleteAPList(previous_access_points);
+    delete previous_stations;
+
+    if (allow_recovery) {
+      if (loaded_from_backup || loaded_from_temp) {
+        const String& recovery_path = loaded_from_backup
+          ? target.backup_path
+          : target.temp_path;
+        const bool target_existed = use_primary_recovery
+          ? primary_file_existed
+          : SD.exists(target.primary_path.c_str());
+        if (!target_existed) {
+          if (!SD.rename(recovery_path.c_str(), target.primary_path.c_str()))
+            Serial.println(F("Warning: loaded AP recovery file could not be restored"));
+          else
+            cleanupSavedListArtifacts(target.backup_path.c_str(),
+                                      target.temp_path.c_str());
+        }
+        else {
+          Serial.println(F("Warning: primary AP list kept; valid recovery file retained"));
+        }
+      }
+      else {
+        cleanupSavedListArtifacts(target.backup_path.c_str(),
+                                  target.temp_path.c_str());
+      }
+    }
+
+    const String prefix = loaded_from_backup
+      ? String(F("Loaded APs from backup: "))
+      : (loaded_from_temp
+          ? String(F("Loaded APs from temporary save: "))
+          : String(F("Loaded APs: ")));
+    reportSavedListLoadStatus(
+      prefix + access_points->size(),
+      true,
+      show_status);
+    return true;
+  #else
+    (void)path;
+    (void)show_status;
+    (void)allow_recovery;
+    return false;
+  #endif
+}
+SavedListSaveResult WiFiScan::SaveAPListAs(
+  const String& logical_name,
+  bool replace_existing,
+  const SavedListFileSnapshot* expected_snapshot) {
+  SavedListTarget target;
+  String error_message;
+  const size_t item_count = access_points == nullptr
+    ? 0
+    : static_cast<size_t>(access_points->size());
+  const size_t related_count = savedAPStationReferenceCount();
+  if (!BuildSavedListTarget(SavedListType::APs,
+                            logical_name,
+                            target,
+                            error_message)) {
+    return makeSavedListSaveResult(
+      target,
+      SavedListSaveStatus::InvalidName,
+      String(F("AP list save failed: ")) + error_message,
+      item_count,
+      related_count);
+  }
+
+  #ifdef HAS_SD
+    if (!sd_obj.supported) {
+      return makeSavedListSaveResult(
+        target,
+        SavedListSaveStatus::SDUnavailable,
+        F("AP list save failed: SD card unavailable"),
+        item_count,
+        related_count);
+    }
+
+    SavedListSaveStatus status = SavedListSaveStatus::CommitFailed;
+    SavedListFileSnapshot observed_snapshot;
+    if (!preflightSavedListTarget(target,
+                                  replace_existing,
+                                  expected_snapshot,
+                                  observed_snapshot,
+                                  status,
+                                  error_message)) {
+      return makeSavedListSaveResult(
+        target,
+        status,
+        String(F("AP list save failed: ")) + error_message,
+        item_count,
+        related_count,
+        &observed_snapshot);
+    }
+
+    File temp_file = SD.open(target.temp_path.c_str(), FILE_WRITE);
+    if (!temp_file) {
+      return makeSavedListSaveResult(
+        target,
+        SavedListSaveStatus::CreateFailed,
+        F("AP list save failed: could not create temporary file"),
+        item_count,
+        related_count);
+    }
+
+    size_t total_written = 0;
+    const bool write_ok =
+      writeAPListFile(temp_file, total_written, error_message);
+    temp_file.flush();
+    temp_file.close();
+    if (!write_ok || error_message.length()) {
+      if (!error_message.length())
+        error_message = F("could not write complete AP list");
+      removeFailedSavedListTemp(
+        target,
+        F("Warning: could not remove failed AP list temporary file"));
+      return makeSavedListSaveResult(
+        target,
+        SavedListSaveStatus::WriteFailed,
+        String(F("AP list save failed: ")) + error_message,
+        item_count,
+        related_count);
+    }
+
+    if (!installSavedListFile(target.temp_path.c_str(),
+                              target.primary_path.c_str(),
+                              target.backup_path.c_str(),
+                              total_written,
+                              validateAPListFile,
+                              replace_existing,
+                              expected_snapshot,
+                              status,
+                              error_message)) {
+      if (status == SavedListSaveStatus::TargetExists)
+        captureSavedListFileSnapshot(
+          target.primary_path.c_str(), observed_snapshot);
+      removeFailedSavedListTemp(
+        target,
+        F("Warning: could not remove failed AP list temporary file"));
+      return makeSavedListSaveResult(
+        target,
+        status,
+        String(F("AP list save failed: ")) + error_message,
+        item_count,
+        related_count,
+        &observed_snapshot);
+    }
+
+    if (save_serial) {
+      String serial_error;
+      if (!streamAPListToSerial(target.primary_path.c_str(), serial_error))
+        Serial.println(String(F("AP list serial export failed: ")) +
+                       serial_error);
+    }
+
+    String success_message = String(F("Saved APs: ")) + item_count;
+    if (error_message.length())
+      success_message += String(F("; ")) + error_message;
+    return makeSavedListSaveResult(
+      target, status, success_message, item_count, related_count);
+  #else
+    return makeSavedListSaveResult(
+      target,
+      SavedListSaveStatus::SDUnavailable,
+      F("AP list save failed: SD support unavailable"),
+      item_count,
+      related_count);
   #endif
 }
 
 void WiFiScan::RunSaveAPList(bool save_as) {
+  if (!save_as)
+    return;
+  const SavedListSaveResult result = SaveAPListAs("0", true);
   #ifdef HAS_SD
-    if (save_as) {
-      sd_obj.removeFile(F("/APs_0.log"));
+    reportAPListStatus(result.message);
+  #endif
+}
+bool WiFiScan::RunLoadSSIDList(String path,
+                               bool show_status,
+                               bool allow_recovery) {
+  #ifdef HAS_SD
+    if (!sd_obj.supported) {
+      reportSavedListLoadStatus(
+        F("SSID list load failed: SD card unavailable"),
+        false,
+        show_status);
+      return false;
+    }
+    if (!path.length())
+      path = SSID_LIST_PATH;
 
-      this->startLog("APs");
+    SavedListTarget target;
+    SavedListArtifact artifact = SavedListArtifact::Primary;
+    String target_error;
+    if (!BuildSavedListTargetFromPath(
+          SavedListType::SSIDs,
+          path,
+          target,
+          artifact,
+          target_error)) {
+      reportSavedListLoadStatus(
+        String(F("SSID list load failed: ")) + target_error,
+        false,
+        show_status);
+      return false;
+    }
 
-      DynamicJsonDocument jsonDocument(2048);
+    // Line-oriented SSID files have no structural terminator with which a
+    // partially written temporary file could be proven complete.
+    if (artifact == SavedListArtifact::Temporary) {
+      reportSavedListLoadStatus(
+        F("SSID list load failed: temporary saves are not recoverable"),
+        false,
+        show_status);
+      return false;
+    }
 
-      JsonArray jsonArray = jsonDocument.to<JsonArray>();
-      
-      for (int i = 0; i < access_points->size(); i++) {
-        const AccessPoint& ap = access_points->get(i);
-        JsonObject jsonAp = jsonArray.createNestedObject();
-        jsonAp["essid"] = ap.essid;
-        jsonAp["channel"] = ap.channel;
+    const bool use_primary_recovery =
+      allow_recovery && (artifact == SavedListArtifact::Primary);
+    const bool recovering_from_backup =
+      allow_recovery && (artifact == SavedListArtifact::Backup);
 
-        jsonAp["bssid"] = macToString(ap.bssid);
-        jsonAp["rssi"] = ap.rssi;
-        jsonAp["packets"] = ap.packets;
-        jsonAp["sec"] = ap.sec;
-        jsonAp["wps"] = ap.wps;
-        jsonAp["man"] = ap.man;
-        JsonArray sta_array = jsonAp["stations"].to<JsonArray>();
+    if (use_primary_recovery &&
+        !SD.exists(target.primary_path.c_str()) &&
+        SD.exists(target.backup_path.c_str()) &&
+        this->RunLoadSSIDList(target.backup_path, false, true)) {
+      reportSavedListLoadStatus(
+        String(F("Recovered SSIDs from backup: ")) + target.primary_path,
+        true,
+        show_status);
+      return true;
+    }
 
-        uint16_t sta_inx;
-        for (int j = 0; j < ap.stations->size(); j++) {
-          uint8_t *sta_mac = stations->get(ap.stations->get(j)).mac;
-          sta_array.add(macToString(sta_mac));
+    auto fail = [&](const String& failure) {
+      reportSavedListLoadStatus(
+        String(F("SSID list load failed: ")) + failure,
+        false,
+        show_status);
+      return false;
+    };
 
-        }
+    File file = SD.open(path, FILE_READ);
+    if (!file || file.isDirectory()) {
+      if (file)
+        file.close();
+      return fail(String(F("could not open ")) + path);
+    }
+    const size_t file_size = file.size();
+    if (file_size == 0) {
+      file.close();
+      return fail(F("file is empty"));
+    }
+    if (file_size > MAX_SAVED_SSID_FILE_SIZE) {
+      file.close();
+      return fail(F("file is too large"));
+    }
+
+    LinkedList<ssid>* loaded_ssids = new (std::nothrow) LinkedList<ssid>();
+    if (loaded_ssids == nullptr) {
+      file.close();
+      return fail(F("not enough memory"));
+    }
+
+    auto fail_loaded = [&](const String& failure) {
+      file.close();
+      delete loaded_ssids;
+      return fail(failure);
+    };
+
+    String line;
+    if (!line.reserve(33))
+      return fail_loaded(F("not enough memory"));
+
+    auto append_line = [&](String& error_message) {
+      if (line.length() == 0) {
+        error_message = F("SSID is empty");
+        return false;
+      }
+      if (line.length() > 32) {
+        error_message = F("SSID exceeds 32 bytes");
+        return false;
+      }
+      if (static_cast<size_t>(loaded_ssids->size()) >= MAX_SAVED_SSID_ENTRIES) {
+        error_message = F("too many SSIDs");
+        return false;
+      }
+      if (!hasAPListHeap(sizeof(ssid) + line.length() + 256)) {
+        error_message = F("not enough memory");
+        return false;
       }
 
-      String jsonString;
-      serializeJson(jsonArray, jsonString);
+      ssid entry{};
+      if (!entry.essid.reserve(line.length())) {
+        error_message = F("not enough memory");
+        return false;
+      }
+      entry.essid = line;
+      if (entry.essid.length() != line.length()) {
+        error_message = F("not enough memory");
+        return false;
+      }
+      entry.channel = random(1, 15);
+      for (uint8_t index = 0; index < sizeof(entry.bssid); ++index)
+        entry.bssid[index] = random(256);
+      entry.selected = false;
+      if (!loaded_ssids->add(entry)) {
+        error_message = F("not enough memory");
+        return false;
+      }
+      line = "";
+      return true;
+    };
 
-      buffer_obj.append(jsonString);
+    bool pending_carriage_return = false;
+    String append_error;
+    while (file.available()) {
+      const int value = file.read();
+      if (value < 0)
+        return fail_loaded(F("could not read complete file"));
 
-      #ifdef HAS_SCREEN
-        display_obj.tft.setTextWrap(false);
-        display_obj.tft.setFreeFont(NULL);
-        display_obj.tft.setCursor(0, 100);
-        display_obj.tft.setTextSize(1);
-        display_obj.tft.setTextColor(TFT_CYAN);
-      
-        display_obj.tft.print(F("Saved APs: "));
-        display_obj.tft.println((String)access_points->size());
-      #endif
-      Serial.print(F("Saved APs:"));
-      Serial.println((String)access_points->size());
+      if (value == '\r') {
+        if (pending_carriage_return)
+          return fail_loaded(F("invalid line ending"));
+        pending_carriage_return = true;
+        continue;
+      }
+      if (pending_carriage_return) {
+        if (value != '\n')
+          return fail_loaded(F("invalid line ending"));
+        pending_carriage_return = false;
+        if (!append_line(append_error))
+          return fail_loaded(append_error);
+        continue;
+      }
+      if (value == '\n') {
+        if (!append_line(append_error))
+          return fail_loaded(append_error);
+        continue;
+      }
+      if ((value < 0x20) || (value == 0x7f) || (line.length() >= 32) ||
+          !line.concat(static_cast<char>(value)))
+        return fail_loaded(F("invalid or oversized SSID"));
     }
+
+    if (pending_carriage_return)
+      return fail_loaded(F("invalid line ending"));
+    if (file.position() != file_size)
+      return fail_loaded(F("could not read complete file"));
+    if (line.length() && !append_line(append_error))
+      return fail_loaded(append_error);
+    file.close();
+
+    if (loaded_ssids->size() == 0) {
+      delete loaded_ssids;
+      return fail(F("list is empty"));
+    }
+
+    LinkedList<ssid>* previous_ssids = ssids;
+    ssids = loaded_ssids;
+    delete previous_ssids;
+
+    bool cleanup_complete = true;
+    String success_message;
+    if (recovering_from_backup) {
+      const bool disk_repaired = promoteRecoveredSavedListFile(
+        path.c_str(), target.primary_path.c_str());
+      cleanup_complete = disk_repaired &&
+        cleanupSavedListArtifacts(target.backup_path.c_str(),
+                                  target.temp_path.c_str());
+      success_message = String(F("Recovered SSIDs from backup: ")) +
+                        ssids->size();
+    }
+    else {
+      cleanup_complete = !use_primary_recovery ||
+        cleanupSavedListArtifacts(target.backup_path.c_str(),
+                                  target.temp_path.c_str());
+      success_message = String(F("Loaded SSIDs: ")) + ssids->size();
+    }
+    if (!cleanup_complete)
+      success_message += F("; cleanup pending");
+    reportSavedListLoadStatus(success_message, true, show_status);
+    return true;
+  #else
+    (void)path;
+    (void)show_status;
+    (void)allow_recovery;
+    return false;
   #endif
 }
 
-void WiFiScan::RunLoadSSIDList() {
+SavedListSaveResult WiFiScan::SaveSSIDListAs(
+  const String& logical_name,
+  bool replace_existing,
+  const SavedListFileSnapshot* expected_snapshot) {
+  SavedListTarget target;
+  String error_message;
+  const size_t item_count = ssids == nullptr
+    ? 0
+    : static_cast<size_t>(ssids->size());
+  if (!BuildSavedListTarget(SavedListType::SSIDs,
+                            logical_name,
+                            target,
+                            error_message)) {
+    return makeSavedListSaveResult(
+      target,
+      SavedListSaveStatus::InvalidName,
+      String(F("SSID list save failed: ")) + error_message,
+      item_count);
+  }
+
   #ifdef HAS_SD
-    File log_file = sd_obj.getFile(F("/SSIDs_0.log"));
-    if (!log_file) {
-      Serial.println(F("Could not open /SSIDs_0.log"));
-      #ifdef HAS_SCREEN
-        display_obj.tft.setTextWrap(false);
-        display_obj.tft.setFreeFont(NULL);
-        display_obj.tft.setCursor(0, 100);
-        display_obj.tft.setTextSize(1);
-        display_obj.tft.setTextColor(TFT_CYAN);
-      
-        display_obj.tft.println(F("Could not open /SSIDs_0.log"));
-      #endif
-      return;
-    }
-    while (log_file.available()) {
-      String line = log_file.readStringUntil('\n'); // Read until newline character
-      this->addSSID(line);
+    if (!sd_obj.supported) {
+      return makeSavedListSaveResult(
+        target,
+        SavedListSaveStatus::SDUnavailable,
+        F("SSID list save failed: SD card unavailable"),
+        item_count);
     }
 
-    #ifdef HAS_SCREEN
-      display_obj.tft.setTextWrap(false);
-      display_obj.tft.setFreeFont(NULL);
-      display_obj.tft.setCursor(0, 100);
-      display_obj.tft.setTextSize(1);
-      display_obj.tft.setTextColor(TFT_CYAN);
-    
-      display_obj.tft.print(F("Loaded SSIDs: "));
-      display_obj.tft.println((String)ssids->size());
-    #endif
+    SavedListSaveStatus status = SavedListSaveStatus::CommitFailed;
+    SavedListFileSnapshot observed_snapshot;
+    if (!preflightSavedListTarget(target,
+                                  replace_existing,
+                                  expected_snapshot,
+                                  observed_snapshot,
+                                  status,
+                                  error_message)) {
+      return makeSavedListSaveResult(
+        target,
+        status,
+        String(F("SSID list save failed: ")) + error_message,
+        item_count,
+        0,
+        &observed_snapshot);
+    }
 
-    log_file.close();
+    File temp_file = SD.open(target.temp_path.c_str(), FILE_WRITE);
+    if (!temp_file) {
+      return makeSavedListSaveResult(
+        target,
+        SavedListSaveStatus::CreateFailed,
+        F("SSID list save failed: could not create temporary file"),
+        item_count);
+    }
 
-    Serial.print(F("Loaded SSIDs: "));
-    Serial.println((String)ssids->size());
+    size_t total_written = 0;
+    const bool write_ok =
+      writeSSIDListFile(temp_file, total_written, error_message);
+    temp_file.flush();
+    temp_file.close();
+    if (!write_ok || error_message.length()) {
+      if (!error_message.length())
+        error_message = F("could not write complete SSID list");
+      removeFailedSavedListTemp(
+        target,
+        F("Warning: could not remove failed SSID temporary file"));
+      return makeSavedListSaveResult(
+        target,
+        SavedListSaveStatus::WriteFailed,
+        String(F("SSID list save failed: ")) + error_message,
+        item_count);
+    }
+
+    if (!installSavedListFile(target.temp_path.c_str(),
+                              target.primary_path.c_str(),
+                              target.backup_path.c_str(),
+                              total_written,
+                              validateSSIDListFileAgainstCurrent,
+                              replace_existing,
+                              expected_snapshot,
+                              status,
+                              error_message)) {
+      if (status == SavedListSaveStatus::TargetExists)
+        captureSavedListFileSnapshot(
+          target.primary_path.c_str(), observed_snapshot);
+      removeFailedSavedListTemp(
+        target,
+        F("Warning: could not remove failed SSID temporary file"));
+      return makeSavedListSaveResult(
+        target,
+        status,
+        String(F("SSID list save failed: ")) + error_message,
+        item_count,
+        0,
+        &observed_snapshot);
+    }
+
+    if (save_serial) {
+      String serial_error;
+      if (!streamSavedListToSerial(target.primary_path.c_str(), serial_error))
+        Serial.println(String(F("SSID list serial export failed: ")) +
+                       serial_error);
+    }
+
+    String success_message = String(F("Saved SSIDs: ")) + item_count;
+    if (error_message.length())
+      success_message += String(F("; ")) + error_message;
+    return makeSavedListSaveResult(
+      target, status, success_message, item_count);
+  #else
+    return makeSavedListSaveResult(
+      target,
+      SavedListSaveStatus::SDUnavailable,
+      F("SSID list save failed: SD support unavailable"),
+      item_count);
   #endif
 }
 
 void WiFiScan::RunSaveSSIDList(bool save_as) {
+  if (!save_as)
+    return;
+  const SavedListSaveResult result = SaveSSIDListAs("0", true);
   #ifdef HAS_SD
-    if (save_as) {
-      sd_obj.removeFile(F("/SSIDs_0.log"));
-
-      this->startLog("SSIDs");
-
-      for (int i = 0; i < ssids->size(); i++) {
-        String targ_essid = ssids->get(i).essid;
-
-        if (i < ssids->size() - 1)
-          buffer_obj.append(targ_essid + "\n");
-        else
-          buffer_obj.append(targ_essid);
-      }
-
-      #ifdef HAS_SCREEN
-        display_obj.tft.setTextWrap(false);
-        display_obj.tft.setFreeFont(NULL);
-        display_obj.tft.setCursor(0, 100);
-        display_obj.tft.setTextSize(1);
-        display_obj.tft.setTextColor(TFT_CYAN);
-      
-        display_obj.tft.print(F("Saved SSIDs: "));
-        display_obj.tft.println((String)ssids->size());
-      #endif
-      Serial.print(F("Saved SSIDs: "));
-      Serial.println((String)ssids->size());
-    }
+    reportSavedListSaveStatus(result.message, result.succeeded());
   #endif
 }
 
