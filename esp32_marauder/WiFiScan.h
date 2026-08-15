@@ -691,6 +691,9 @@ class WiFiScan
     bool wdgwarsUpload(String filePath);
     void writeSidecar(String filePath, String service);
     bool sidecarExists(String filePath, String service); 
+    #ifdef HAS_SCREEN
+      void drawUploadProgress(const char* service, uint8_t percent, bool waiting = false);
+    #endif
 
     void runFoxHunt(uint32_t currentTime);
     void throwThatShitInACircle();
