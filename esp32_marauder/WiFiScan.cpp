@@ -4497,7 +4497,9 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color) {
     led_obj.setMode(MODE_SNIFF);
   #endif*/
 
-  this->send_deauth = settings_obj.loadSetting<bool>(text_table4[5]);
+  this->send_deauth =
+    (scan_mode == WIFI_SCAN_ACTIVE_EAPOL) ||
+    (scan_mode == WIFI_SCAN_ACTIVE_LIST_EAPOL);
   
   num_eapol = 0;
 
@@ -9614,6 +9616,15 @@ void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
   if (snifferPacket->rx_ctrl.rssi > wifi_scan_obj.max_rssi)
     wifi_scan_obj.max_rssi = snifferPacket->rx_ctrl.rssi;
 
+  bool filter = wifi_scan_obj.filterActive();
+
+  // Apply an active target filter before any frame is transmitted.
+  if (filter) {
+    if ((ap_index < 0) || (!access_points->get(ap_index).selected)) {
+      return;
+    }
+  }
+
   
   // Found beacon frame. Decide whether to deauth
   if (wifi_scan_obj.send_deauth) {
@@ -9642,16 +9653,6 @@ void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 
 
   }
-
-  bool filter = wifi_scan_obj.filterActive();
-
-  // Check for and apply filters
-  if (filter) {
-    if ((ap_index < 0) || (!access_points->get(ap_index).selected)) {
-      return;
-    }
-  }
-
   uint8_t handshake_msg = 0;
 
   int eapol_offset = -1;
