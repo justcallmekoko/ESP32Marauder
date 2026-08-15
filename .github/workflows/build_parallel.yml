@@ -274,6 +274,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [compile_sketch]
     if: ${{ github.event_name == 'workflow_dispatch' }}
+    permissions:
+      contents: write
     steps: 
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -286,10 +288,12 @@ jobs:
           echo "version_dot=$VERSION_DOT" >> $GITHUB_ENV
           
       - name: Create Release
+        id: create_release
         uses: softprops/action-gh-release@v1
         with:
           name: "Marauder Release ${{ github.ref_name }}"
           tag_name: ${{ env.version_dot }}
+          target_commitish: ${{ github.sha }}
           generate_release_notes: false
           draft: true
           files: |
@@ -325,6 +329,7 @@ jobs:
             | Kit | `_kit.bin` |
             | Mini | `_mini.bin` |
             | Mini v3 | `_mini_v3.bin` |
+            | Dual Mini C5 | `_dual_mini_c5.bin` |
             | Flipper Zero | `_flipper.bin` |
             | MutliBoard S3 | `_multiboardS3.bin` |
             | LDDB/NodeMCU/Wemos | `_lddb.bin` |
@@ -340,3 +345,42 @@ jobs:
             | AWOK V2/V3 screen (white usb) | `_v6_1.bin` |
             | AWOK V2 flipper (orange usb) | `_flipper.bin` |
             | AWOK V3 flipper (orange usb) | `_marauder_dev_board_pro.bin` |
+
+      - name: Dispatch private C5 builds
+        env:
+          PRIVATE_TFT_BUILD_TOKEN: ${{ secrets.PRIVATE_TFT_BUILD_TOKEN }}
+          RELEASE_ID: ${{ steps.create_release.outputs.id }}
+        run: |
+          test -n "$PRIVATE_TFT_BUILD_TOKEN"
+          test -n "$RELEASE_ID"
+          [[ "$RELEASE_ID" =~ ^[0-9]+$ ]]
+          echo "release_id=$RELEASE_ID" >> "$GITHUB_ENV"
+          PAYLOAD=$(jq -n \
+            --arg source_sha "${{ github.sha }}" \
+            --arg release_tag "${{ env.version_dot }}" \
+            --arg release_id "$RELEASE_ID" \
+            '{ref:"main",inputs:{mode:"release",source_sha:$source_sha,release_tag:$release_tag,release_id:$release_id}}')
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $PRIVATE_TFT_BUILD_TOKEN" \
+            --header 'Accept: application/vnd.github+json' \
+            --header 'X-GitHub-Api-Version: 2022-11-28' \
+            --header 'Content-Type: application/json' \
+            --data "$PAYLOAD" \
+            'https://api.github.com/repos/justcallmekoko/TFT_eSPI_JCMK/actions/workflows/private-c5-build.yml/dispatches'
+
+      - name: Wait for private C5 binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in $(seq 1 60); do
+            ASSETS=$(gh api "repos/${{ github.repository }}/releases/${{ env.release_id }}" --jq '.assets[].name')
+            if grep -Eq '_v8\.bin$' <<< "$ASSETS" && \
+               grep -Eq '_mini_v3\.bin$' <<< "$ASSETS" && \
+               grep -Eq '_dual_mini_c5\.bin$' <<< "$ASSETS"; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Timed out waiting for the private C5 binaries" >&2
+          exit 1

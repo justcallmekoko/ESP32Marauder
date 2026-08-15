@@ -1,0 +1,50 @@
+name: Firmware Unit Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: firmware-unit-tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-unit-tests:
+    name: Native Unity tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PLATFORMIO_SETTING_ENABLE_TELEMETRY: "No"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Install PlatformIO
+        run: |
+          python3 -m venv .venv
+          .venv/bin/python -m pip install --disable-pip-version-check platformio==6.1.19 gcovr==7.2
+
+      - name: Run firmware unit tests
+        run: .venv/bin/platformio test -e native
+
+      - name: Generate coverage report
+        run: .venv/bin/gcovr --root . --filter esp32_marauder --exclude test --cobertura coverage.xml
+
+      - name: Include all firmware sources in coverage
+        run: python3 tools/whole_source_coverage.py coverage.xml
+
+      - name: Test coverage source discovery
+        run: python3 -m unittest discover -s tools -p 'test_*.py'
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@04b047e8bb82a0c002c8312c1c880fbc6a999d45
+        with:
+          files: coverage.xml
+          flags: firmware-unit-tests
+          fail_ci_if_error: false
+          use_oidc: true

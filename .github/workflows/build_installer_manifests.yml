@@ -1,0 +1,412 @@
+name: Build Installer Manifests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/build_installer_manifests.yml"
+      - ".github/workflows/build_parallel.yml"
+      - "installer/**"
+      - "tools/installer_manifest.py"
+      - "tools/test_installer_manifest.py"
+  push:
+    branches:
+      - develop
+    paths:
+      - ".github/workflows/build_installer_manifests.yml"
+      - ".github/workflows/build_parallel.yml"
+      - "installer/**"
+      - "tools/installer_manifest.py"
+      - "tools/test_installer_manifest.py"
+  release:
+    types:
+      - published
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: Validate tooling and export normal build matrix
+    if: ${{ github.event_name != 'release' || github.event.release.prerelease == false }}
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      source_sha: ${{ steps.source.outputs.sha }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.sha }}
+
+      - name: Validate target registry
+        run: python3 tools/installer_manifest.py --validate-registry
+
+      - name: Record exact source commit
+        id: source
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Test manifest generation
+        run: python3 -m unittest tools/test_installer_manifest.py -v
+
+      - name: Export matrix from normal release workflow
+        id: matrix
+        run: |
+          MATRIX=$(python3 tools/installer_manifest.py --export-build-matrix)
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: installer ${{ matrix.board.name }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        board: ${{ fromJSON(needs.prepare.outputs.matrix).include }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.sha }}
+
+      - name: Record source commit
+        run: echo "SOURCE_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Install Arduino CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
+          echo "$GITHUB_WORKSPACE/bin" >> "$GITHUB_PATH"
+          export PATH="$PATH:$GITHUB_WORKSPACE/bin"
+          arduino-cli version
+
+      - name: Build TestFile with ESP32 v${{ matrix.board.idf_ver }}
+        uses: ArminJo/arduino-test-compile@v3.2.1
+        with:
+          sketch-names: TestFile.ino
+          arduino-board-fqbn: esp32:esp32:esp32s2
+          arduino-platform: esp32:esp32@${{ matrix.board.idf_ver }}
+          platform-url: https://github.com/espressif/arduino-esp32/releases/download/${{ matrix.board.idf_ver }}/package_esp32_dev_index.json
+
+      - name: Install ESP32Ping
+        uses: actions/checkout@v4
+        with:
+          repository: marian-craciunescu/ESP32Ping
+          ref: 1.6
+          path: CustomESP32Ping
+
+      - name: Install AsyncTCP
+        uses: actions/checkout@v4
+        with:
+          repository: ESP32Async/AsyncTCP
+          ref: v3.4.8
+          path: CustomAsyncTCP
+
+      - name: Install MicroNMEA
+        uses: actions/checkout@v4
+        with:
+          repository: stevemarple/MicroNMEA
+          ref: v2.0.6
+          path: CustomMicroNMEA
+
+      - name: Install ESPAsyncWebServer
+        uses: actions/checkout@v4
+        with:
+          repository: ESP32Async/ESPAsyncWebServer
+          ref: v3.8.1
+          path: CustomESPAsyncWebServer
+
+      - name: Install TFT_eSPI
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ matrix.board.tft_repo || 'Bodmer/TFT_eSPI' }}
+          ref: ${{ matrix.board.tft_ref || 'V2.5.34' }}
+          path: CustomTFT_eSPI
+
+      - name: Install XPT2046_Touchscreen
+        uses: actions/checkout@v4
+        with:
+          repository: PaulStoffregen/XPT2046_Touchscreen
+          ref: v1.4
+          path: CustomXPT2046_Touchscreen
+
+      - name: Install lv_arduino
+        uses: actions/checkout@v4
+        with:
+          repository: lvgl/lv_arduino
+          ref: 3.0.0
+          path: Customlv_arduino
+
+      - name: Install JPEGDecoder
+        uses: actions/checkout@v4
+        with:
+          repository: Bodmer/JPEGDecoder
+          ref: 1.8.0
+          path: CustomJPEGDecoder
+
+      - name: Install NimBLE-Arduino
+        uses: actions/checkout@v4
+        with:
+          repository: h2zero/NimBLE-Arduino
+          ref: ${{ matrix.board.nimble_ver }}
+          path: CustomNimBLE-Arduino
+
+      - name: Install Adafruit_NeoPixel
+        uses: actions/checkout@v4
+        with:
+          repository: adafruit/Adafruit_NeoPixel
+          ref: 1.12.0
+          path: CustomAdafruit_NeoPixel
+
+      - name: Install ArduinoJson
+        uses: actions/checkout@v4
+        with:
+          repository: bblanchon/ArduinoJson
+          ref: v6.18.2
+          path: CustomArduinoJson
+
+      - name: Install LinkedList
+        uses: actions/checkout@v4
+        with:
+          repository: ivanseidel/LinkedList
+          ref: v1.3.3
+          path: CustomLinkedList
+
+      - name: Install EspSoftwareSerial
+        uses: actions/checkout@v4
+        with:
+          repository: plerup/espsoftwareserial
+          ref: 8.1.0
+          path: CustomEspSoftwareSerial
+
+      - name: Install Adafruit_BusIO
+        uses: actions/checkout@v4
+        with:
+          repository: adafruit/Adafruit_BusIO
+          ref: 1.15.0
+          path: CustomAdafruit_BusIO
+
+      - name: Install Adafruit_MAX1704X
+        uses: actions/checkout@v4
+        with:
+          repository: adafruit/Adafruit_MAX1704X
+          ref: 1.0.2
+          path: CustomAdafruit_MAX1704X
+
+      - name: Install Adafruit_TCA8418
+        run: cp -r libraries/Adafruit_TCA8418 CustomAdafruit_TCA8418
+
+      - name: Configure TFT_eSPI
+        run: |
+          rm -f CustomTFT_eSPI/User_Setup_Select.h
+          cp User*.h CustomTFT_eSPI/
+          if [[ ${{ matrix.board.tft }} == true ]]; then
+            sed -i 's/^\/\/#include <${{ matrix.board.tft_file }}>/#include <${{ matrix.board.tft_file }}>/' CustomTFT_eSPI/User_Setup_Select.h
+          fi
+
+      - name: Install Esptool
+        run: pip install esptool
+
+      - name: Apply core compatibility flags
+        run: |
+          if [[ ${{ matrix.board.idf_ver }} == "2.0.11" ]]; then
+            for i in $(find /home/runner/.arduino15/packages/esp32/hardware/esp32/ -name "platform.txt"); do
+              sed -i 's/compiler.c.elf.libs.esp32c3=/compiler.c.elf.libs.esp32c3=-zmuldefs /' "$i"
+              sed -i 's/compiler.c.elf.libs.esp32s3=/compiler.c.elf.libs.esp32s3=-zmuldefs /' "$i"
+              sed -i 's/compiler.c.elf.libs.esp32s2=/compiler.c.elf.libs.esp32s2=-zmuldefs /' "$i"
+              sed -i 's/compiler.c.elf.libs.esp32=/compiler.c.elf.libs.esp32=-zmuldefs /' "$i"
+              sed -i 's/-fexceptions/-fno-exceptions/g' "$i"
+            done
+          fi
+
+          if [[ ${{ matrix.board.idf_ver }} == "3.3.4" ]]; then
+            for i in $(find /home/runner/.arduino15/packages/esp32/hardware/esp32/ -name "platform.txt"); do
+              sed -i 's/compiler.c.elf.extra_flags=/compiler.c.elf.extra_flags=-Wl,-zmuldefs /' "$i"
+            done
+            for f in $(find /home/runner/.arduino15/packages/esp32/tools/esp32-arduino-libs/ -name "cpp_flags"); do
+              sed -i 's/-fexceptions/-fno-exceptions/g' "$f"
+            done
+          fi
+
+      - name: Build Marauder for ${{ matrix.board.name }}
+        uses: ArminJo/arduino-test-compile@v3.3.0
+        with:
+          sketch-names: esp32_marauder.ino
+          arduino-board-fqbn: ${{ matrix.board.fbqn }}
+          set-build-path: true
+          extra-arduino-cli-args: "--warnings none --build-property compiler.cpp.extra_flags='-D${{ matrix.board.flag }}'"
+          arduino-platform: esp32:esp32@${{ matrix.board.idf_ver }}
+          platform-url: https://github.com/espressif/arduino-esp32/releases/download/${{ matrix.board.idf_ver }}/package_esp32_dev_index.json
+
+      - name: Generate authoritative installer assets
+        run: |
+          VERSION_DOT=$(grep '#define MARAUDER_VERSION' ./esp32_marauder/configs.h | sed -E 's/.*"v([^"]+)"/v\1/')
+          DATE=$(date +%Y%m%d)
+          BUILD_DIR=./esp32_marauder/build
+
+          if [[ "${{ github.event_name }}" == "release" && "$VERSION_DOT" != "${{ github.event.release.tag_name }}" ]]; then
+            echo "Release tag ${{ github.event.release.tag_name }} does not match firmware version $VERSION_DOT" >&2
+            exit 1
+          fi
+
+          arduino-cli compile \
+            --fqbn "${{ matrix.board.fbqn }}" \
+            --build-path "$BUILD_DIR" \
+            --show-properties=expanded \
+            ./esp32_marauder > "$BUILD_DIR/arduino-build-properties.txt"
+
+          python3 tools/installer_manifest.py \
+            --generate-target \
+            --build-flag "${{ matrix.board.flag }}" \
+            --build-dir "$BUILD_DIR" \
+            --version "$VERSION_DOT" \
+            --release-date "$DATE" \
+            --source-commit "$SOURCE_COMMIT" \
+            --output-dir release-assets
+
+      - name: Upload installer target artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.board.file_name }}
+          path: release-assets
+          if-no-files-found: error
+          retention-days: 5
+
+  private-c5:
+    name: Obtain private C5 installer targets
+    needs: prepare
+    if: ${{ github.event_name == 'release' && github.event.release.prerelease == false }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch exact-source private build
+        env:
+          GH_TOKEN: ${{ secrets.PRIVATE_TFT_BUILD_TOKEN }}
+        run: |
+          test -n "$GH_TOKEN"
+          PAYLOAD=$(jq -n \
+            --arg source_sha "${{ needs.prepare.outputs.source_sha }}" \
+            --arg release_tag "${{ github.event.release.tag_name }}" \
+            --arg release_id "${{ github.event.release.id }}" \
+            '{ref:"main",inputs:{mode:"installer",source_sha:$source_sha,release_tag:$release_tag,release_id:$release_id}}')
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --header 'Accept: application/vnd.github+json' \
+            --header 'X-GitHub-Api-Version: 2022-11-28' \
+            --header 'Content-Type: application/json' \
+            --data "$PAYLOAD" \
+            'https://api.github.com/repos/justcallmekoko/TFT_eSPI_JCMK/actions/workflows/private-c5-build.yml/dispatches'
+
+      - name: Wait for sanitized private C5 installer assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p private-targets
+          for attempt in $(seq 1 90); do
+            ASSETS=$(gh api "repos/${{ github.repository }}/releases/${{ github.event.release.id }}/assets" --jq '.[].name')
+            if grep -Fxq 'marauder-v8.installer.json' <<< "$ASSETS" && \
+               grep -Fxq 'marauder-mini-v3.installer.json' <<< "$ASSETS" && \
+               grep -Fxq 'dual-mini-c5.installer.json' <<< "$ASSETS"; then
+              gh release download "${{ github.event.release.tag_name }}" \
+                --repo "${{ github.repository }}" \
+                --dir private-targets \
+                --pattern '*.installer.json'
+              gh release download "${{ github.event.release.tag_name }}" \
+                --repo "${{ github.repository }}" \
+                --dir private-targets \
+                --pattern 'esp32_marauder_installer_*.bin'
+              test "$(find private-targets -maxdepth 1 -name '*.installer.json' | wc -l)" -eq 3
+              test "$(find private-targets -maxdepth 1 -name 'esp32_marauder_installer_*.bin' | wc -l)" -eq 12
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Timed out waiting for the private C5 installer fragments" >&2
+          exit 1
+
+      - name: Upload sanitized private installer assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-private-c5-assets
+          path: private-targets
+          if-no-files-found: error
+          retention-days: 5
+
+  combine:
+    name: Combine authoritative installer manifest
+    needs: [build, private-c5]
+    if: ${{ github.event_name == 'release' && github.event.release.prerelease == false }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.sha }}
+
+      - name: Download target artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Combine and validate release manifest
+        run: |
+          python3 tools/installer_manifest.py \
+            --combine \
+            --input-dir release-assets \
+            --output release-assets/firmware-manifest.json
+
+      - name: Package installer assets
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZIP_DEFLATED, ZipFile
+
+          assets = Path("release-assets")
+          members = sorted(assets.glob("*.bin")) + [assets / "firmware-manifest.json"]
+          if not members[-1].is_file() or not any(path.suffix == ".bin" for path in members):
+              raise SystemExit("Installer bundle inputs are incomplete")
+          with ZipFile(assets / "marauder-installer-assets.zip", "w", ZIP_DEFLATED) as archive:
+              for path in members:
+                  archive.write(path, path.name)
+          PY
+
+      - name: Upload complete installer bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-release-bundle
+          path: release-assets/marauder-installer-assets.zip
+          if-no-files-found: error
+          retention-days: 5
+
+  publish:
+    name: Attach installer assets to published stable release
+    needs: combine
+    if: ${{ github.event_name == 'release' && github.event.release.prerelease == false }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download complete installer bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: installer-release-bundle
+          path: release-assets
+
+      - name: Attach packaged installer assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          fail_on_unmatched_files: true
+          files: release-assets/marauder-installer-assets.zip
+
+      - name: Remove temporary private C5 handoff assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${{ github.repository }}/releases/${{ github.event.release.id }}/assets" \
+            --paginate \
+            --jq '.[] | select(.name == "marauder-v8.installer.json" or .name == "marauder-mini-v3.installer.json" or .name == "dual-mini-c5.installer.json" or (.name | startswith("esp32_marauder_installer_") and (contains("_v8") or contains("_mini_v3") or contains("_dual_mini_c5")))) | .id' |
+          while read -r asset_id; do
+            test -n "$asset_id"
+            gh api --method DELETE "repos/${{ github.repository }}/releases/assets/$asset_id"
+          done
