@@ -1045,9 +1045,12 @@ class WiFiScan
     void startGPX(const char* file_name);
 
     static WiFiEventId_t eventId;
+    static bool wifiEventHandlerRegistered;
     static String lastClientMAC;
     static String lastClientIP;
 
+    static void registerWiFiEventHandler();
+    static void unregisterWiFiEventHandler();
     static void onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info);
     static bool initMbedtls();
     static int mbedtls_entropy_source(void *data, unsigned char *output, size_t len);
