@@ -50,15 +50,15 @@ void flipperLED::sniffLED() {
 }
 
 void flipperLED::offLED() {
-  if (!settings_obj.loadSetting<bool>("EnableLED"))
-    return;
+  //if (!settings_obj.loadSetting<bool>("EnableLED"))
+  //  return;
     
   digitalWrite(B_PIN, HIGH);
   digitalWrite(G_PIN, HIGH);
   digitalWrite(R_PIN, HIGH);
 }
 
-void flipperLED::main() {
+void flipperLED::main(uint32_t currentTime) {
   // do nothing
 }
 

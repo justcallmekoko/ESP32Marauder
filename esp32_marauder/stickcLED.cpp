@@ -1,6 +1,7 @@
 #include "stickcLED.h"
 // NB M5Stick C Plus LED is active low, so digitalWrite() calls are inverted
 
+
 #ifdef MARAUDER_M5STICKCP2
     #define M5LED_ON HIGH
     #define M5LED_OFF LOW
@@ -16,12 +17,12 @@
 void stickcLED::RunSetup() {
     pinMode(STICKC_LED_PIN, OUTPUT);
 
-if (!settings_obj.loadSetting<bool>("EnableLED")) {
-    digitalWrite(STICKC_LED_PIN, M5LED_OFF);
-    return;
-}
+  if (!settings_obj.loadSetting<bool>("EnableLED")) {
+      digitalWrite(STICKC_LED_PIN, M5LED_OFF);
+      return;
+  }
 
-delay(50);
+  delay(50);
 
   digitalWrite(STICKC_LED_PIN, M5LED_ON);
   delay(500);
@@ -55,13 +56,13 @@ void stickcLED::sniffLED() {
 }
 
 void stickcLED::offLED() {
-  if (!settings_obj.loadSetting<bool>("EnableLED"))
-    return;
+  // if (!settings_obj.loadSetting<bool>("EnableLED"))
+  //   return;
   
   digitalWrite(STICKC_LED_PIN, M5LED_OFF);
 }
 
-void stickcLED::main() {
+void stickcLED::main(uint32_t currentTime) {
   // do nothing
 }
 
