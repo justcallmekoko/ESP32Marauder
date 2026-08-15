@@ -240,7 +240,7 @@ void setup()
     digitalWrite(ACT_LED_PIN, LOW);
   #endif
 
-  while(!Serial)
+  while(!Serial && millis() < 5000)
     delay(10);
 
   #ifdef HAS_C5_SD
