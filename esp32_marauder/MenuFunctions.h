@@ -9,7 +9,7 @@
   #include "Keyboard.h"
 #endif
 
-#ifdef HAS_TOUCH
+#if defined(HAS_TOUCH) || defined(HAS_SCREEN)
   #include "TouchKeyboard.h"
 #endif
 

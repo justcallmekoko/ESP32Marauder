@@ -14,7 +14,7 @@
 #include "SPIFFS.h"
 #include "Assets.h"
 
-#include <TFT_eSPI.h>
+#include "MarauderDisplayCompat.h"
 
 #ifdef HAS_CYD_TOUCH
   #include <XPT2046_Touchscreen.h>
@@ -82,12 +82,12 @@ class Display
     #ifdef SCREEN_BUFFER
       void scrollScreenBuffer(bool down = false);
     #endif
-    void processAndPrintString(TFT_eSPI& tft, const String& originalString);
+    void processAndPrintString(MarauderTFT& tft, const String& originalString);
 
   public:
     Display();
-    TFT_eSPI tft = TFT_eSPI();
-    TFT_eSPI_Button key[BUTTON_ARRAY_LEN + 4];
+    MarauderTFT tft = MarauderTFT();
+    MarauderButton key[BUTTON_ARRAY_LEN + 4];
     const String PROGMEM version_number = MARAUDER_VERSION;
 
     #ifdef HAS_CYD_TOUCH
