@@ -1,5 +1,8 @@
 #include "MenuFunctions.h"
 #include "lang_var.h"
+#ifdef HAS_IDF_3
+  #include "esp_task_wdt.h"
+#endif
 
 #ifdef HAS_SCREEN
 
@@ -979,7 +982,7 @@ void MenuFunctions::battery(bool initial)
 {
   #ifdef HAS_BATTERY
     uint16_t the_color;
-    if (battery_obj.i2c_supported)
+    if (battery_obj.supported)
     {
       // Could use int compare maybe idk
       if (((String)battery_obj.battery_level != "25") && ((String)battery_obj.battery_level != "0"))
@@ -1027,6 +1030,7 @@ void MenuFunctions::updateStatusBar()
   #endif
 
   uint16_t the_color; 
+  uint16_t other_color; 
 
   #ifdef HAS_GPS
     if (this->old_gps_sat_count != gps_obj.getNumSats()) {
@@ -1141,8 +1145,20 @@ void MenuFunctions::updateStatusBar()
     #endif
   #endif
 
+
   // Draw SD info
   #ifdef HAS_SD
+    other_color = STATUSBAR_COLOR; 
+
+    #if defined(MSC_SHARE)
+    if (MSC_Share_obj.msc_active)
+      the_color = TFT_YELLOW;
+    else if (MSC_Share_obj.msc_started) {
+        the_color = TFT_GREEN;
+        other_color = TFT_PINK;
+        // other_color = TFT_NAVY;
+    } else
+    #endif
     if (sd_obj.supported)
       the_color = TFT_GREEN;
     else
@@ -1154,13 +1170,13 @@ void MenuFunctions::updateStatusBar()
                                   menu_icons[STATUS_SD],
                                   16,
                                   16,
-                                  STATUSBAR_COLOR,
+                                  other_color,
                                   the_color);
     #endif
   #endif
 
   #ifdef HAS_MINI_SCREEN
-    display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR, true);
+    display_obj.tft.setTextColor(the_color, other_color, true);
     display_obj.tft.drawString("SD", TFT_WIDTH - 12, 0, 1);
   #endif
 
@@ -1628,12 +1644,19 @@ void MenuFunctions::RunSetup()
   saveATsMenu.list = new LinkedList<MenuNode>();
   loadATsMenu.list = new LinkedList<MenuNode>();
 
+  adminMenu.list = new LinkedList<MenuNode>();
+  adminSubMenu.list = new LinkedList<MenuNode>();
+
   evilPortalMenu.list = new LinkedList<MenuNode>();
   ssidsMenu.list = new LinkedList<MenuNode>();
 
   #ifdef HAS_GPS
     gpsPOIMenu.list = new LinkedList<MenuNode>();
   #endif
+
+
+  adminMenu.name = "Admin Tools";
+  adminSubMenu.name = "-";
 
   foxHuntMenu.list = new LinkedList<MenuNode>();
 
@@ -1658,6 +1681,8 @@ void MenuFunctions::RunSetup()
   loadAPsMenu.name = "Load APs";
   saveATsMenu.name = "Save Airtags";
   loadATsMenu.name = "Load Airtags";
+
+  bluetoothSnifferMenu.name = text_table1[23];
 
   bluetoothSnifferMenu.name = text_table1[23];
   bluetoothAttackMenu.name = "Bluetooth Attacks";
@@ -1723,6 +1748,15 @@ void MenuFunctions::RunSetup()
   this->addNodes(&mainMenu, text_table1[30], TFTLIGHTGREY, REBOOT, []() {
     ESP.restart();
   });
+  #ifdef POWER_HOLD_PIN
+    this->addNodes(&mainMenu, "Power Off", TFTLIGHTGREY, SHUTDOWN, []() {
+        shutdown();
+    });
+  #else
+    this->addNodes(&mainMenu, "Deep Sleep", TFTLIGHTGREY, SHUTDOWN, []() {
+        DeepSleep(0);
+      });
+  #endif
 
   // Build WiFi Menu
   wifiMenu.parentMenu = &mainMenu; // Main Menu is second menu parent
@@ -1736,7 +1770,7 @@ void MenuFunctions::RunSetup()
     this->changeMenu(&wifiScannerMenu, true);
   });
   /*#ifdef HAS_GPS
-    this->addNodes(&wifiMenu, "Wardriving", TFTGREEN, NULL, BEACON_SNIFF, [this]() {
+    this->addNodes(&wifiMenu, "Wardriving", TFTGREEN, BEACON_SNIFF, [this]() {
       this->changeMenu(&wardrivingMenu, true);
     });
   #endif*/
@@ -1953,7 +1987,7 @@ void MenuFunctions::RunSetup()
   // Build Wardriving menu
   #ifdef HAS_GPS
     /*wardrivingMenu.parentMenu = &wifiMenu; // Main Menu is second menu parent
-    this->addNodes(&wardrivingMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+    this->addNodes(&wardrivingMenu, text09, TFTLIGHTGREY, 0, [this]() {
       this->changeMenu(wardrivingMenu.parentMenu, true);
     });*/
     if (gps_obj.getGpsModuleStatus()) {
@@ -1966,7 +2000,7 @@ void MenuFunctions::RunSetup()
   #endif
   /*#ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
-      this->addNodes(&wardrivingMenu, "Station Wardrive", TFTORANGE, NULL, PROBE_SNIFF, [this]() {
+      this->addNodes(&wardrivingMenu, "Station Wardrive", TFTORANGE, PROBE_SNIFF, [this]() {
         display_obj.clearScreen();
         this->drawStatusBar();
         wifi_scan_obj.StartScan(WIFI_SCAN_STATION_WAR_DRIVE, TFT_ORANGE);
@@ -3342,6 +3376,7 @@ void MenuFunctions::RunSetup()
     this->changeMenu(&loadSSIDsMenu, true);
     wifi_scan_obj.RunLoadSSIDList();
   });
+
   this->addNodes(&saveFileMenu, "Save APs", TFTNAVY, SD_UPDATE, [this]() {
     this->changeMenu(&saveAPsMenu, true);
     wifi_scan_obj.RunSaveAPList();
@@ -3358,6 +3393,16 @@ void MenuFunctions::RunSetup()
     this->changeMenu(&loadAPsMenu, true);
     wifi_scan_obj.RunLoadATList();
   });
+  this->addNodes(&saveFileMenu, "Save All", TFTPINK, SD_UPDATE, [this]() {
+    this->changeMenu(&saveAPsMenu, true);
+    wifi_scan_obj.RunSaveAll();
+  });
+  this->addNodes(&saveFileMenu, "Load All", TFTPINK, SD_UPDATE, [this]() {
+    this->changeMenu(&loadAPsMenu, true);
+    wifi_scan_obj.RunLoadAll();
+  });
+
+
 
   saveSSIDsMenu.parentMenu = &saveFileMenu;
   this->addNodes(&saveSSIDsMenu, text09, TFTLIGHTGREY, 0, [this]() {
@@ -3388,6 +3433,173 @@ void MenuFunctions::RunSetup()
   this->addNodes(&loadATsMenu, text09, TFTLIGHTGREY, 0, [this]() {
     this->changeMenu(loadATsMenu.parentMenu, true);
   });
+
+  // Admin Menu
+  // TFT_GREENYELLOW
+  this->addNodes(&deviceMenu, "Admin Tools", TFTPINK, SD_UPDATE, [this]() {
+    this->changeMenu(&adminMenu, true);
+  });
+  adminMenu.parentMenu = &deviceMenu;
+
+  this->addNodes(&adminMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(adminMenu.parentMenu, true);
+  });
+#ifdef HAS_SD
+  this->addNodes(&adminMenu, "Rescan SD", TFTPINK, SD_UPDATE, [this]() {
+    this->changeMenu(&adminMenu, true);
+    sd_obj.initSD();
+  });
+  #if defined(MSC_SHARE)
+    adminSubMenu.parentMenu = &adminMenu;
+    this->addNodes(&adminSubMenu, text09, TFTLIGHTGREY, 0, [this]() {
+      this->changeMenu(adminSubMenu.parentMenu, true);
+    });
+
+    this->addNodes(&adminMenu, "Share SD", TFTCYAN, SD_UPDATE, [this]() {
+        this->changeMenu(&adminSubMenu, true);
+        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+        if (MSC_Share_obj.msc_started) {
+          display_obj.tft.drawCentreString("Share Already Running", TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+          Serial.println(F("Share Already Running"));
+          return;
+        }
+        MSC_Share_obj.RunSetup();
+        display_obj.tft.drawCentreString("USB Share Started", TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+        Serial.println(F("USB Share Started")); Serial.flush();
+    });
+
+    this->addNodes(&adminMenu, "Pause SD Share", TFTSKYBLUE, SD_UPDATE, [this]() {
+        this->changeMenu(&adminSubMenu, true);
+        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+        if (!MSC_Share_obj.msc_started) {
+          display_obj.tft.drawCentreString("Share Not Running", TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+          return;
+        }
+       #ifdef HAS_IDF_3
+         esp_task_wdt_config_t wdt_config = {
+           .timeout_ms = 15000,    //15 seconds instead of default 5
+           .idle_core_mask = 0,
+           .trigger_panic = false  // log but don't panic during MSC
+        };
+        esp_task_wdt_reconfigure(&wdt_config);
+        #endif
+
+        MSC_Share_obj.msc_pause();
+
+       #ifdef HAS_IDF_3
+        wdt_config.timeout_ms = 5000;
+        wdt_config.trigger_panic = true;
+        esp_task_wdt_reconfigure(&wdt_config);
+        #endif
+        display_obj.tft.drawCentreString("USB Share Pause", TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+        Serial.println(F("USB Share Paused")); Serial.flush();
+    });
+
+    this->addNodes(&adminMenu, "Resume SD Share", TFTSKYBLUE, SD_UPDATE, [this]() {
+        this->changeMenu(&adminSubMenu, true);
+        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+        if (!MSC_Share_obj.msc_started) {
+          display_obj.tft.drawCentreString("Share Not Running", TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+          return;
+        }
+        MSC_Share_obj.msc_start();
+        display_obj.tft.drawCentreString("USB Share Resume", TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+        Serial.println(F("USB Share UnPaused")); Serial.flush();
+    });
+
+    this->addNodes(&adminMenu, "Stop SD Share", TFTSKYBLUE, SD_UPDATE, [this]() {
+        this->changeMenu(&adminSubMenu, true);
+        display_obj.tft.setTextColor(TFT_SKYBLUE, TFT_BLACK);
+        if (!MSC_Share_obj.msc_started) {
+          display_obj.tft.drawCentreString("Share Not Running", TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+          return;
+        }
+
+       #ifdef HAS_IDF_3
+         esp_task_wdt_config_t wdt_config = {
+           .timeout_ms = 15000,    //15 seconds instead of default 5
+           .idle_core_mask = 0,
+           .trigger_panic = false  // log but don't panic during MSC
+        };
+        esp_task_wdt_reconfigure(&wdt_config);
+        #endif
+
+        MSC_Share_obj.ShareEnd();
+
+       #ifdef HAS_IDF_3
+        wdt_config.timeout_ms = 5000;
+        wdt_config.trigger_panic = true;
+        esp_task_wdt_reconfigure(&wdt_config);
+        #endif
+
+        display_obj.tft.drawCentreString("USB Share Stop", TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+    });
+
+  #endif // MSC_SHARE
+#endif // HAS_SD
+
+  #ifdef HAS_GPS
+    if ( !gps_obj.gps_enabled)
+      this->addNodes(&saveFileMenu, "Probe GPS", TFTSKYBLUE, SD_UPDATE, [this]() {
+        gps_obj.begin();
+      });
+  #endif //  HAS_GPS
+
+  #ifdef ADJ_CPUFREQ
+      this->addNodes(&adminMenu, "Reset CPU to 240Mhz", TFTGREEN, SETTINGS, [this]() {
+        this->changeMenu(&adminSubMenu, true);
+
+          Serial.println(F("Set CPU to 240Mhz"));
+          setCpuFrequencyMhz(240);
+          display_obj.tft.setTextColor(TFT_SKYBLUE, TFT_BLACK);
+          display_obj.tft.drawCentreString("Set CPU 240Mhz", TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+
+      });
+
+      this->addNodes(&adminMenu, "Throttle CPU 160Mhz", TFTGREENYEL, SETTINGS, [this]() {
+        this->changeMenu(&adminSubMenu, true);
+
+        Serial.println(F("Set CPU 160Mhz"));
+        setCpuFrequencyMhz(160); // 1. Throttle CPU Save Batt
+        display_obj.tft.setTextColor(TFT_SKYBLUE, TFT_BLACK);
+        display_obj.tft.drawCentreString("Set CPU 160Mhz", TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+
+        // Increase WDT
+        #ifdef HAS_IDF_3
+        esp_task_wdt_config_t wdt_config = {
+           .timeout_ms = 10000,    // 10  (default 5)
+           .idle_core_mask = 0,
+           .trigger_panic = false  // log but don't panic during MSC
+        };
+        esp_task_wdt_reconfigure(&wdt_config);
+        #endif
+
+      });
+
+      /*
+      this->addNodes(&adminMenu, "Throttle CPU 80Mhz", TFTGREENYEL, SETTINGS, [this]() {
+        this->changeMenu(&adminSubMenu, true);
+         Serial.println(F("Set CPU CpuFrequency 80Mhz"));
+         setCpuFrequencyMhz(80); // 1. Throttle CPU Save Batt
+        display_obj.tft.setTextColor(TFT_SKYBLUE, TFT_BLACK);
+        display_obj.tft.drawCentreString("Set CPU 80Mhz", TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+      });
+
+      this->addNodes(&adminMenu, "Throttle CPU 40Mhz", TFTLIME, SETTINGS, [this]() {
+        this->changeMenu(&adminSubMenu, true);
+         Serial.println(F("Set CPU CpuFrequency 40Mhz"));
+         setCpuFrequencyMhz(40); // 1. Throttle CPU Save Batt
+        display_obj.tft.setTextColor(TFT_SKYBLUE, TFT_BLACK);
+        display_obj.tft.drawCentreString("Set CPU 40Mhz", TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+      }); */
+
+  #endif  // ADJ_CPUFREQ
+    this->addNodes(&adminMenu, "Reset Reasion", TFTMAGENTA, SETTINGS, [this]() {
+      this->changeMenu(&adminSubMenu, true);
+        display_obj.tft.setTextColor(TFT_SKYBLUE, TFT_BLACK);
+        display_obj.tft.drawCentreString(resetReasonName(), TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+    });
+
 
   // GPS Menu
   #ifdef HAS_GPS
@@ -4189,9 +4401,12 @@ void MenuFunctions::renderGraphUI(uint8_t scan_mode) {
 uint16_t MenuFunctions::getColor(uint16_t color) {
   if (color == TFTWHITE) return TFT_WHITE;
   else if (color == TFTCYAN) return TFT_CYAN;
+  else if (color == TFTDARKCYAN) return TFT_DARKCYAN;
   else if (color == TFTBLUE) return TFT_BLUE;
   else if (color == TFTRED) return TFT_RED;
   else if (color == TFTGREEN) return TFT_GREEN;
+  else if (color == TFTGREENYEL) return TFT_GREENYELLOW;
+  else if (color == TFTPINK) return TFT_PINK;
   else if (color == TFTGREY) return TFT_LIGHTGREY;
   else if (color == TFTGRAY) return TFT_LIGHTGREY;
   else if (color == TFTMAGENTA) return TFT_MAGENTA;
@@ -4377,19 +4592,20 @@ void MenuFunctions::displayCurrentMenu(int start_index)
 // ============================================================
 #ifndef HAS_MINI_SCREEN
   void MenuFunctions::brightnessMode() {
-    extern void brightnessSave(uint8_t level);
-    extern uint8_t getBrightnessLevel();
 
-    const uint8_t levels[] = {26, 51, 77, 102, 128, 153, 179, 204, 230, 255};
-    const uint8_t numLevels = 10;
+    // From BackLight.cpp
+    extern void brightnessSave(uint8_t level);
+    extern void brightnessSet(uint8_t level);
+    extern uint8_t getBrightnessLevel();
+    extern const uint8_t BL_NUM_LEVELS;
+
     uint8_t level = getBrightnessLevel();
 
-    // LEDC write compatibility (2.x vs 3.x board package)
-    #if ESP_ARDUINO_VERSION_MAJOR >= 3
-      #define BL_PREVIEW(duty) ledcWrite(TFT_BL, (duty))
-    #else
-      #define BL_PREVIEW(duty) ledcWrite(0, (duty))
-    #endif
+    // Dont start with a Black screen
+    if (level == 0) {
+      level = 1;
+      brightnessSet(1);
+    }
 
     display_obj.tft.fillScreen(TFT_BLACK);
     display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
@@ -4404,12 +4620,13 @@ void MenuFunctions::displayCurrentMenu(int start_index)
     auto drawBar = [&]() {
       uint16_t barX = 30, barY = TFT_HEIGHT/2 - 25, barW = TFT_WIDTH - 60, barH = 30;
       display_obj.tft.drawRect(barX, barY, barW, barH, TFT_WHITE);
-      uint16_t fillW = (barW - 4) * (level + 1) / numLevels;
+      uint16_t fillW = (barW - 4) * (level + 1) / BL_NUM_LEVELS;
       display_obj.tft.fillRect(barX + 2, barY + 2, barW - 4, barH - 4, TFT_BLACK);
       display_obj.tft.fillRect(barX + 2, barY + 2, fillW, barH - 4, TFT_CYAN);
       display_obj.tft.fillRect(0, barY + barH + 5, TFT_WIDTH, 20, TFT_BLACK);
       display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-      String pct = String(levels[level] * 100 / 255) + "%";
+      // Serial.printf("%d / %d = %f\n", level, BL_NUM_LEVELS, ((level / (float) BL_NUM_LEVELS) * 100));
+      String pct = String((level / (float) BL_NUM_LEVELS) * 100) + "%";
       display_obj.tft.drawCentreString(pct, TFT_WIDTH/2, barY + barH + 8, 2);
     };
     drawBar();
@@ -4432,15 +4649,15 @@ void MenuFunctions::displayCurrentMenu(int start_index)
         while (display_obj.updateTouch(&tx, &ty)) delay(10);
 
         if (ty < zoneUp) {
-          if (level < numLevels - 1) {
+          if (level < BL_NUM_LEVELS) {
             level++;
-            BL_PREVIEW(levels[level]);
+            brightnessSet(level);
             drawBar();
           }
         } else if (ty >= zoneDown) {
           if (level > 0) {
             level--;
-            BL_PREVIEW(levels[level]);
+            brightnessSet(level);
             drawBar();
           }
         } else {
@@ -4453,10 +4670,10 @@ void MenuFunctions::displayCurrentMenu(int start_index)
       delay(30);
     }
 
-    #undef BL_PREVIEW
+    // #undef BL_PREVIEW
     this->changeMenu(current_menu, true);
   }
-#endif
+#endif // HAS_MINI_SCREEN
 
 #endif
 
