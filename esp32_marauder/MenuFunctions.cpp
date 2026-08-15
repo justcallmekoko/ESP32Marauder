@@ -5,6 +5,34 @@
 
 extern const unsigned char menu_icons[][66];
 
+#ifdef HAS_ILI9341
+static void showAddSSIDAcknowledgement() {
+  display_obj.clearScreen();
+  display_obj.tft.setFreeFont(NULL);
+  display_obj.tft.setTextWrap(false, false);
+  display_obj.tft.setTextSize(2);
+  display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+  display_obj.showCenterText("SSID added", (TFT_HEIGHT / 2) - 16, false, 2);
+  display_obj.tft.setTextSize(1);
+  display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+
+  #ifdef HAS_TOUCH
+    display_obj.showCenterText("Tap to continue", (TFT_HEIGHT / 2) + 16, false, 1);
+    uint16_t touch_x = 0;
+    uint16_t touch_y = 0;
+    while (display_obj.updateTouch(&touch_x, &touch_y))
+      delay(10);
+    while (!display_obj.updateTouch(&touch_x, &touch_y))
+      delay(10);
+    while (display_obj.updateTouch(&touch_x, &touch_y))
+      delay(10);
+  #else
+    display_obj.showCenterText("Returning...", (TFT_HEIGHT / 2) + 16, false, 1);
+    delay(1800);
+  #endif
+}
+#endif
+
 #ifdef HAS_MINI_SCREEN
 void MenuFunctions::drawMiniMenuButton(int b, int x, bool selected) {
   if (!current_menu || !current_menu->list || x < 0 || x >= current_menu->list->size())
@@ -2221,8 +2249,10 @@ void MenuFunctions::RunSetup()
       while (keep_going) {
         display_obj.clearScreen(); 
         if (keyboardInput(ssidBuf, sizeof(ssidBuf), "Enter SSID")) {
-          if (ssidBuf[0] != 0)
-            wifi_scan_obj.addSSID(String(ssidBuf));
+          if (ssidBuf[0] != 0 && wifi_scan_obj.addSSID(String(ssidBuf))) {
+            showAddSSIDAcknowledgement();
+            keep_going = false;
+          }
           for (int i = 0; i < 64; i++)
             ssidBuf[i] = NULL;
         }
@@ -2230,7 +2260,7 @@ void MenuFunctions::RunSetup()
           keep_going = false;
       }
 
-      this->changeMenu(current_menu);
+      this->changeMenu(&wifiGeneralMenu, true);
     });
   #endif
   #if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
