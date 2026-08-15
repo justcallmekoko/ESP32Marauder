@@ -17,3 +17,10 @@ void fitDisplayLine(char* output, size_t output_size, const char* input) {
 
   output[width] = '\0';
 }
+
+uint8_t resolveDisplayTextSize(bool small_print, uint8_t requested_size) {
+  if (small_print)
+    return 1;
+
+  return requested_size > 0 ? requested_size : 1;
+}
