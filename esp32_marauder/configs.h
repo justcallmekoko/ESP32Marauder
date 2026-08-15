@@ -351,6 +351,17 @@
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
     //#define HAS_CYD_TOUCH
+    #define HAS_GT911_TOUCH // 3248S035C capacitive variant; leave undefined for the 035R resistive variant
+    #ifdef HAS_GT911_TOUCH
+      // Own I2C pins - does NOT share the I2C_SDA/I2C_SCL bus defined
+      // elsewhere for this board (that one's gated under HAS_BATTERY,
+      // which this board doesn't set, and is for the temp sensor anyway).
+      // Values per community CYD Marauder port (Fr4nkFletcher), not yet
+      // confirmed against every 3248S035C board revision.
+      #define GT911_SDA 33
+      #define GT911_SCL 32
+      #define GT911_INT 21
+    #endif
     #define HAS_SEPARATE_SD
     #define HAS_CYD_PORTRAIT
     //#define HAS_NIMBLE_2
@@ -1599,7 +1610,7 @@
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
-      #define BUTTON_SCREEN_LIMIT 12
+      #define BUTTON_SCREEN_LIMIT 18 // was 12; (480-50)/23px_per_row = 18.7, so 18 rows still fits
       #define BUTTON_ARRAY_LEN BUTTON_SCREEN_LIMIT
       #define STATUS_BAR_WIDTH 16
       #define LVGL_TICK_PERIOD 6
@@ -2274,9 +2285,9 @@
 
   #if defined(MARAUDER_CYD_3_5_INCH)
     #define BANNER_TIME 100
-    
+
     #define COMMAND_PREFIX "!"
-    
+
     // Keypad start position, key sizes and spacing
     #define KEY_X 160 // Centre of key
     #define KEY_Y 50
