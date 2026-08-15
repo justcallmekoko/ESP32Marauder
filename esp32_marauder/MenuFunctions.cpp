@@ -1637,6 +1637,9 @@ void MenuFunctions::RunSetup()
 
   foxHuntMenu.list = new LinkedList<MenuNode>();
 
+  tailOptionsMenu.list = new LinkedList<MenuNode>();
+  tailIgnoreMacMenu.list = new LinkedList<MenuNode>();
+
   // Work menu names
   mainMenu.name = text_table1[6];
   wifiMenu.name = text_table1[7];
@@ -1699,6 +1702,8 @@ void MenuFunctions::RunSetup()
   #endif
 
   foxHuntMenu.name = "Fox Hunt";
+  tailOptionsMenu.name = "Tail Options";
+  tailIgnoreMacMenu.name = "Ignore MAC";
 
   // Build Main Menu
   mainMenu.parentMenu = NULL;
@@ -1943,6 +1948,82 @@ void MenuFunctions::RunSetup()
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_DETECT_FOLLOW, TFT_MAGENTA);
+  });
+  this->addNodes(&wifiSnifferMenu, "Tail Options", TFTMAGENTA, SCANNERS, [this]() {
+    tailOptionsMenu.list->clear();
+    tailOptionsMenu.parentMenu = &wifiSnifferMenu;
+
+    this->addNodes(&tailOptionsMenu, text09, TFTLIGHTGREY, 0, [this]() {
+      this->changeMenu(tailOptionsMenu.parentMenu, true);
+    });
+
+    this->addNodes(&tailOptionsMenu, "Start Tracking", TFTMAGENTA, SCANNERS, [this]() {
+      display_obj.clearScreen();
+      this->drawStatusBar();
+      wifi_scan_obj.StartScan(WIFI_SCAN_DETECT_FOLLOW, TFT_MAGENTA);
+    });
+
+    this->addNodes(&tailOptionsMenu, "Baseline Scan (30s)", TFTYELLOW, SCANNERS, [this]() {
+      display_obj.clearScreen();
+      this->drawStatusBar();
+      wifi_scan_obj.StartScan(WIFI_SCAN_DETECT_FOLLOW, TFT_MAGENTA);
+      wifi_scan_obj.startTailBaselineScan();
+    });
+
+    #ifdef HAS_GPS
+      this->addNodes(&tailOptionsMenu, "Add Safe Zone Here", TFTGREEN, SCANNERS, [this]() {
+        if (gps_obj.getFixStatus()) {
+          wifi_scan_obj.addSafeZone(gps_obj.getLatInt(), gps_obj.getLonInt(), TAIL_DEFAULT_ZONE_RADIUS_M);
+        } else {
+          Serial.println("Cannot add safe zone: no GPS fix");
+        }
+      });
+    #endif
+
+    this->addNodes(&tailOptionsMenu, "Ignore Tracked MAC...", TFTORANGE, SCANNERS, [this]() {
+      tailIgnoreMacMenu.list->clear();
+      tailIgnoreMacMenu.parentMenu = &tailOptionsMenu;
+
+      this->addNodes(&tailIgnoreMacMenu, text09, TFTLIGHTGREY, 0, [this]() {
+        this->changeMenu(tailIgnoreMacMenu.parentMenu, true);
+      });
+
+      for (uint32_t i = 0; i < mac_history_len_half; i++) {
+        if (WiFiScan::mac_entry_state[i] != VALID_ENTRY) continue;
+
+        MacEntry entry = WiFiScan::mac_entries[i];
+        if (entry.ignored) continue;
+
+        String tag = entry.following ? " FOLLOW" : (entry.tail_flag ? " TAIL" : "");
+        String node_name = (String)entry.rssi + " " + macToString(entry.mac) + tag;
+        uint8_t node_color = entry.following || entry.tail_flag ? TFTRED : TFTWHITE;
+
+        this->addNodes(&tailIgnoreMacMenu, node_name.c_str(), node_color, 255, [this, i]() {
+          wifi_scan_obj.addIgnoreMac(WiFiScan::mac_entries[i].mac);
+          this->changeMenu(&tailOptionsMenu, true);
+        });
+      }
+
+      this->changeMenu(&tailIgnoreMacMenu, true);
+    });
+
+    this->addNodes(&tailOptionsMenu, "Clear Ignore List", TFTRED, SCANNERS, [this]() {
+      wifi_scan_obj.clearIgnoreMacs();
+    });
+
+    #ifdef HAS_GPS
+      this->addNodes(&tailOptionsMenu, "Clear Safe Zones", TFTRED, SCANNERS, [this]() {
+        wifi_scan_obj.clearSafeZones();
+      });
+    #endif
+
+    this->addNodes(&tailOptionsMenu, "View Tail Report", TFTCYAN, SCANNERS, [this]() {
+      display_obj.clearScreen();
+      this->drawStatusBar();
+      wifi_scan_obj.renderTailReport();
+    });
+
+    this->changeMenu(&tailOptionsMenu, true);
   });
   this->addNodes(&wifiSnifferMenu, "SAE Commit", TFTLIME, EAPOL, [this]() {
     display_obj.clearScreen();

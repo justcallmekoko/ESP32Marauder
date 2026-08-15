@@ -84,6 +84,11 @@ const char PROGMEM ARP_SCAN_CMD[] = "arpscan";
 const char PROGMEM MAC_TRACK_CMD[] = "mactrack";
 const char PROGMEM SNIFF_SAE_CMD[] = "sniffsae";
 
+// MAC Monitor ignore list / safe zones
+const char PROGMEM TAIL_IGNORE_CMD[] = "tailignore";
+const char PROGMEM TAIL_ZONE_CMD[] = "tailzone";
+const char PROGMEM TAIL_REPORT_CMD[] = "tailreport";
+
 // WiFi attack
 const char PROGMEM ATTACK_CMD[] = "attack";
 const char PROGMEM ATTACK_TYPE_DEAUTH[] = "deauth";
@@ -161,6 +166,11 @@ const char PROGMEM HELP_PORT_SCAN_CMD[] = "portscan [-a -t <ip index>]/[-s <ssh/
 const char PROGMEM HELP_ARP_SCAN_CMD[] = "arpscan [-f]";
 const char PROGMEM HELP_MAC_TRACK_CMD[] = "mactrack";
 const char PROGMEM HELP_SNIFF_SAE_CMD[] = "sniffsae";
+
+// MAC Monitor ignore list / safe zones
+const char PROGMEM HELP_TAIL_IGNORE_CMD[] = "tailignore [-a -m <mac>]/[-r -m <mac>]/[-l]/[-c]/[-b]";
+const char PROGMEM HELP_TAIL_ZONE_CMD[] = "tailzone [-a [-r <radius_m>]]/[-c]";
+const char PROGMEM HELP_TAIL_REPORT_CMD[] = "tailreport";
 
 // WiFi attack
 const char PROGMEM HELP_ATTACK_CMD[] = "attack -t <quiet/csa/sae/beacon [-l/-r/-a]/deauth [-c]/[-s <src mac>] [-d <dst mac>]/probe/rickroll/badmsg [-c]/sleep [-c]>";
