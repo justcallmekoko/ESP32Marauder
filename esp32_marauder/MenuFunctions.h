@@ -182,6 +182,7 @@ class MenuFunctions
     Menu htmlMenu;
     Menu miniKbMenu;
     Menu saveFileMenu;
+    Menu clearConfirmMenu;
     Menu genAPMacMenu;
     Menu cloneAPMacMenu;
     Menu setMacMenu;
@@ -210,6 +211,7 @@ class MenuFunctions
     void buildUploadFileMenu();
     void setupSDFileList(bool update = false);
     void buildSDFileMenu(bool update = false);
+    void showClearConfirmation(const char* prompt, Menu* result_menu, std::function<void()> action);
     void displayMenuButtons();
     uint16_t getColor(uint16_t color);
     void drawAvgLine(int16_t value);
@@ -252,6 +254,7 @@ class MenuFunctions
     Menu* current_menu;
     Menu clearSSIDsMenu;
     Menu clearAPsMenu;
+    Menu clearStationsMenu;
     
     // Save Files Menu
     Menu saveSSIDsMenu;
