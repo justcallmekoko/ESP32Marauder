@@ -2099,6 +2099,24 @@ void WiFiScan::showNetworkInfo() {
   #endif
 }
 
+// Scan header: push network context through the scroll buffer (not a direct TFT
+// banner) so it scrolls with results instead of overlaying them, and no delay.
+void WiFiScan::showScanNetworkInfo() {
+  Serial.print(F("IP address: ")); Serial.println(this->ip_addr);
+  Serial.print(F("Gateway: ")); Serial.println(this->gateway);
+  Serial.print(F("Netmask: ")); Serial.println(this->subnet);
+  Serial.print(F("MAC: ")); Serial.println(WiFi.macAddress());
+  #ifdef HAS_SCREEN
+    // Header lines pushed through the scroll buffer (so they scroll with the
+    // results, no overlay), colored red via the RED_KEY line prefix.
+    display_obj.display_buffer->add(String(RED_KEY) + "Connected!");
+    display_obj.display_buffer->add(String(RED_KEY) + "IP address: " + this->ip_addr.toString());
+    display_obj.display_buffer->add(String(RED_KEY) + "Gateway: " + this->gateway.toString());
+    display_obj.display_buffer->add(String(RED_KEY) + "Netmask: " + this->subnet.toString());
+    display_obj.display_buffer->add(String(RED_KEY) + "MAC: " + WiFi.macAddress());
+  #endif
+}
+
 bool WiFiScan::joinWiFi(String ssid, String password, bool gui) {
   static const char * btns[] ={text16, ""};
   int count = 0;
@@ -3344,14 +3362,14 @@ void WiFiScan::RunPingScan(uint8_t scan_mode, uint16_t color) {
     #endif
     this->prepareScanStage(TFT_RED, TFT_BLACK);
   #endif
-  this->current_scan_ip = this->gateway;
+  this->current_scan_ip = getNetworkBase(this->ip_addr, this->subnet);
   //Serial.print(F("Cleared IPs: "));
   this->clearList(CLEAR_IPS);
   if (scan_mode == WIFI_PING_SCAN)
     Serial.println(F("Starting Ping Scan with..."));
   else if (scan_mode == WIFI_ARP_SCAN)
     Serial.println(F("Starting ARP Scan with..."));
-  this->showNetworkInfo();
+  this->showScanNetworkInfo();
 
   if (scan_mode == WIFI_PING_SCAN)
     buffer_obj.append(F("Starting Ping Scan with..."));
@@ -3424,10 +3442,10 @@ void WiFiScan::RunPortScanAll(uint8_t scan_mode, uint16_t color) {
       (scan_mode == WIFI_SCAN_HTTP) ||
       (scan_mode == WIFI_SCAN_HTTPS) ||
       (scan_mode == WIFI_SCAN_RDP))
-    this->current_scan_ip = this->gateway;
+    this->current_scan_ip = getNetworkBase(this->ip_addr, this->subnet);
 
   Serial.println(F("Starting Port Scan with..."));
-  this->showNetworkInfo();
+  this->showScanNetworkInfo();
 
   buffer_obj.append(F("Starting Port Scan with..."));
   this->writeNetworkInfo();
