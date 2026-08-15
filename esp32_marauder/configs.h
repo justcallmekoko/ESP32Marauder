@@ -917,6 +917,13 @@
       #define TOUCH_CS -1
       //#define SD_CS 1
 
+      #define I2C_SDA 21
+      #define I2C_SCL 22
+      #define I2C_INT 35
+      // J1 Grove connector
+      // GPIO32
+      // GPIO33
+
       #define SCREEN_BUFFER
 
       #define MAX_SCREEN_BUFFER 9
@@ -1961,7 +1968,7 @@
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
-      #define BUTTON_SCREEN_LIMIT 9
+      #define BUTTON_SCREEN_LIMIT 10
       #define BUTTON_ARRAY_LEN BUTTON_SCREEN_LIMIT
       #define STATUS_BAR_WIDTH (TFT_HEIGHT/16)
       #define LVGL_TICK_PERIOD 6
@@ -2817,7 +2824,7 @@
   #ifdef HAS_BATTERY
 
     #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2) 
-      #define I2C_SDA 33
+      #define I2C_SDA 21
       #define I2C_SCL 22
 
     #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_KIT)
@@ -3069,6 +3076,10 @@
       #define SD_MOSI TFT_MOSI
       #define SD_SCK  TFT_SCLK
     #endif
+  #endif
+
+  #ifdef CYD_SOUND
+    #define SOUND_PIN 26
   #endif
   //// END STUPID CYD STUFF
 
