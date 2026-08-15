@@ -654,7 +654,7 @@ void Display::showCenterText(const char* text, int y, bool small_pp, uint8_t tex
   // Centering already assumes either the 1x bitmap font or text_size scaling.
   // Apply that size here as well so callers never inherit a previous UI's
   // text scale (for example, the 2x upload percentage display).
-  const uint8_t effective_text_size = small_pp ? 1 : (text_size > 0 ? text_size : 1);
+  const uint8_t effective_text_size = resolveDisplayTextSize(small_pp, text_size);
   tft.setTextSize(effective_text_size);
 
   size_t len = strlen(text);
