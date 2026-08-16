@@ -302,7 +302,9 @@ jobs:
         run: |
           mkdir -p private-targets
           for attempt in $(seq 1 90); do
-            ASSETS=$(gh api "repos/${{ github.repository }}/releases/${{ github.event.release.id }}/assets" --jq '.[].name')
+            ASSETS=$(gh api "repos/${{ github.repository }}/releases/${{ github.event.release.id }}/assets" \
+              --paginate \
+              --jq '.[].name')
             if grep -Fxq 'marauder-v8.installer.json' <<< "$ASSETS" && \
                grep -Fxq 'marauder-mini-v3.installer.json' <<< "$ASSETS" && \
                grep -Fxq 'dual-mini-c5.installer.json' <<< "$ASSETS"; then
