@@ -396,6 +396,16 @@ def combine_manifests(registry_path: Path, input_dir: Path, output_path: Path) -
             f"Release target coverage mismatch; missing={missing}, extra={extra}."
         )
 
+    registry_by_id = {target["id"]: target for target in registry["targets"]}
+    for manifest in manifests:
+        target = manifest.get("target", {})
+        target_id = target.get("id")
+        identity = {key: target.get(key) for key in REQUIRED_TARGET_KEYS}
+        if identity != registry_by_id[target_id]:
+            raise ManifestError(
+                f"Release target identity does not match registry for {target_id}."
+            )
+
     versions = {manifest.get("version") for manifest in manifests}
     commits = {manifest.get("sourceCommit") for manifest in manifests}
     channels = {manifest.get("channel") for manifest in manifests}
