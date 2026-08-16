@@ -23,6 +23,12 @@ void test_exact_line_is_preserved() {
   TEST_ASSERT_EQUAL_STRING("123456", output);
 }
 
+void test_large_display_scan_line_preserves_full_mac_address() {
+  char output[41];
+  fitDisplayLine(output, sizeof(output), "AP AA:BB:CC:DD:EE:FF ch 11");
+  TEST_ASSERT_EQUAL_STRING("AP AA:BB:CC:DD:EE:FF ch 11              ", output);
+}
+
 void test_null_input_produces_blank_line() {
   char output[5];
   fitDisplayLine(output, sizeof(output), nullptr);
@@ -52,6 +58,7 @@ int main() {
   RUN_TEST(test_short_line_is_padded_to_visible_width);
   RUN_TEST(test_long_line_is_clipped_to_visible_width);
   RUN_TEST(test_exact_line_is_preserved);
+  RUN_TEST(test_large_display_scan_line_preserves_full_mac_address);
   RUN_TEST(test_null_input_produces_blank_line);
   RUN_TEST(test_zero_sized_output_is_ignored);
   RUN_TEST(test_small_print_always_uses_single_size);
