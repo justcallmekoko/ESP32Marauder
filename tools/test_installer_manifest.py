@@ -190,6 +190,31 @@ class InstallerManifestTests(unittest.TestCase):
             self.assertEqual(len(release["targets"]), 25)
             self.assertIn("/" + "a" * 40 + "/", release["$schema"])
 
+    def test_combiner_rejects_target_identity_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            build = self.make_fake_build(root)
+            output = root / "output"
+            registry = load_registry(REGISTRY)
+            for target in registry["targets"]:
+                generate_target_manifest(
+                    REGISTRY,
+                    target["buildFlag"],
+                    build,
+                    "v1.2.3",
+                    "20260731",
+                    "a" * 40,
+                    output,
+                )
+
+            drifted = output / "marauder-v8.installer.json"
+            manifest = json.loads(drifted.read_text(encoding="utf-8"))
+            manifest["target"]["aliases"] = ["v8"]
+            drifted.write_text(json.dumps(manifest), encoding="utf-8")
+
+            with self.assertRaisesRegex(ManifestError, "identity does not match registry"):
+                combine_manifests(REGISTRY, output, output / "firmware-manifest.json")
+
 
 if __name__ == "__main__":
     unittest.main()
