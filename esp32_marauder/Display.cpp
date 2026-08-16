@@ -578,8 +578,10 @@ void Display::processAndPrintString(TFT_eSPI& tft, const String& originalString)
     }
   }
 
-  int count = TFT_WIDTH / CHAR_WIDTH;
-  char line[(TFT_WIDTH / CHAR_WIDTH) + 1];
+  // Scan output uses the built-in 6-pixel font. CHAR_WIDTH describes larger
+  // menu/layout cells on full-size displays, so using it here cut their line
+  // capacity in half and truncated values such as MAC addresses.
+  char line[STANDARD_FONT_CHAR_LIMIT + 1];
   fitDisplayLine(line, sizeof(line), new_string.c_str()); // GCOVR_EXCL_LINE
 
   // Set text color and print the string
