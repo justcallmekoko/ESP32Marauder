@@ -1654,7 +1654,7 @@ void MenuFunctions::buildBluetoothFoxHuntMenu() {
       String label = String(ble_devices->get(i).rssi) + " " + ble_devices->get(i).name;
       this->addNodes(&wifiAPMenu, label.c_str(), rssiToMenuColor(ble_devices->get(i).rssi), 255, [this, i]() {
         const BleDevice& device = ble_devices->get(i);
-        wifi_scan_obj.setFoxHuntTarget(device.mac, device.name, device.rssi, 0, true);
+        wifi_scan_obj.setFoxHuntTarget(device.mac, device.name, device.rssi, 0, true, macToString(device.mac));
         display_obj.clearScreen();
         this->drawStatusBar();
         wifi_scan_obj.StartScan(BT_SCAN_FOX_HUNT, TFT_CYAN);
@@ -1672,7 +1672,7 @@ void MenuFunctions::buildBluetoothFoxHuntMenu() {
       this->addNodes(&wifiAPMenu, label.c_str(), rssiToMenuColor(airtags->get(i).rssi), 255, [this, i]() {
         uint8_t mac[6];
         convertMacStringToUint8(airtags->get(i).mac, mac);
-        wifi_scan_obj.setFoxHuntTarget(mac, airtags->get(i).mac, airtags->get(i).rssi, 0, true);
+        wifi_scan_obj.setFoxHuntTarget(mac, airtags->get(i).mac, airtags->get(i).rssi, 0, true, airtags->get(i).mac);
         display_obj.clearScreen();
         this->drawStatusBar();
         wifi_scan_obj.StartScan(BT_SCAN_FOX_HUNT, TFT_CYAN);
@@ -1691,7 +1691,7 @@ void MenuFunctions::buildBluetoothFoxHuntMenu() {
         uint8_t mac[6];
         convertMacStringToUint8(flippers->get(i).mac, mac);
         String name = flippers->get(i).name.length() ? flippers->get(i).name : flippers->get(i).mac;
-        wifi_scan_obj.setFoxHuntTarget(mac, name, -128, 0, true);
+        wifi_scan_obj.setFoxHuntTarget(mac, name, -128, 0, true, flippers->get(i).mac);
         display_obj.clearScreen();
         this->drawStatusBar();
         wifi_scan_obj.StartScan(BT_SCAN_FOX_HUNT, TFT_CYAN);

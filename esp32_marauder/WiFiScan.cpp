@@ -308,7 +308,7 @@ extern "C" {
           wifi_scan_obj.copyNimbleMac(advertisedDevice->getAddress(), mac_char);
 
           if (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT)
-            wifi_scan_obj.updateFoxHuntRssi(mac_char, rssi);
+            wifi_scan_obj.updateBluetoothFoxHuntRssi(mac_char, mac, rssi);
 
           if (wifi_scan_obj.bt_pending_clear)
             return;
@@ -1032,7 +1032,7 @@ extern "C" {
           wifi_scan_obj.copyNimbleMac(advertisedDevice->getAddress(), mac_char);
 
           if (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT)
-            wifi_scan_obj.updateFoxHuntRssi(mac_char, rssi);
+            wifi_scan_obj.updateBluetoothFoxHuntRssi(mac_char, mac, rssi);
           #ifdef HAS_NIMBLE_2
             const std::vector<unsigned char>& payLoad = advertisedDevice->getPayload();
             size_t len = payLoad.size();
@@ -8236,7 +8236,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
     const uint8_t address_offsets[] = {4, 10, 16};
     bool found = false;
     for (uint8_t offset : address_offsets) {
-      if (wifi_scan_obj.updateFoxHuntRssi(&snifferPacket->payload[offset], snifferPacket->rx_ctrl.rssi)) {
+      if (wifi_scan_obj.updateFoxHuntRssi(&snifferPacket->payload[offset], snifferPacket->rx_ctrl.rssi, snifferPacket->rx_ctrl.channel)) {
         found = true;
         break;
       }
@@ -11381,16 +11381,21 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
   }
 #endif
 
-void WiFiScan::setFoxHuntTarget(const uint8_t mac[6], const String& name, int8_t rssi, uint8_t channel, bool bluetooth) {
+void WiFiScan::setFoxHuntTarget(const uint8_t mac[6], const String& name, int8_t rssi, uint8_t channel, bool bluetooth, const String& advertised_address) {
   memcpy(this->fox_hunt_target.mac, mac, sizeof(this->fox_hunt_target.mac));
   this->fox_hunt_target.name = name;
   this->fox_hunt_target.rssi = rssi;
   this->fox_hunt_target.channel = channel;
   this->fox_hunt_target.bluetooth = bluetooth;
   this->fox_hunt_target.active = true;
+  this->fox_hunt_target.last_seen_ms = millis();
+  this->fox_hunt_target.advertised_address = advertised_address;
+  this->fox_hunt_target.advertised_address.toUpperCase();
+  if (!bluetooth && channel > 0)
+    this->set_channel = channel;
 }
 
-bool WiFiScan::updateFoxHuntRssi(const uint8_t mac[6], int8_t rssi) {
+bool WiFiScan::updateFoxHuntRssi(const uint8_t mac[6], int8_t rssi, uint8_t channel) {
   if (!this->fox_hunt_target.active)
     return false;
 
@@ -11400,6 +11405,27 @@ bool WiFiScan::updateFoxHuntRssi(const uint8_t mac[6], int8_t rssi) {
   }
 
   this->fox_hunt_target.rssi = rssi;
+  this->fox_hunt_target.last_seen_ms = millis();
+  if (!this->fox_hunt_target.bluetooth && channel > 0)
+    this->fox_hunt_target.channel = channel;
+  return true;
+}
+
+bool WiFiScan::updateBluetoothFoxHuntRssi(const uint8_t mac[6], const String& advertised_address, int8_t rssi) {
+  if (!this->fox_hunt_target.active || !this->fox_hunt_target.bluetooth)
+    return false;
+
+  if (this->updateFoxHuntRssi(mac, rssi))
+    return true;
+
+  String normalized_address = advertised_address;
+  normalized_address.toUpperCase();
+  if ((this->fox_hunt_target.advertised_address.length() == 0) ||
+      (normalized_address != this->fox_hunt_target.advertised_address))
+    return false;
+
+  this->fox_hunt_target.rssi = rssi;
+  this->fox_hunt_target.last_seen_ms = millis();
   return true;
 }
 
@@ -11488,7 +11514,19 @@ void WiFiScan::runFoxHunt(uint32_t currentTime) {
     #endif
 
     if ((currentScanMode == WIFI_SCAN_SIG_STREN) && this->fox_hunt_target.active) {
-          this->changeChannel(this->fox_hunt_target.channel);
+          if (millis() - this->fox_hunt_target.last_seen_ms > 1500) {
+            #ifdef HAS_DUAL_BAND
+              this->dual_band_channel_index = (this->dual_band_channel_index + 1) % DUAL_BAND_CHANNELS;
+              this->changeChannel(this->dual_band_channels[this->dual_band_channel_index]);
+            #else
+              uint8_t next_channel = this->set_channel + 1;
+              if (next_channel > MAX_CHANNEL)
+                next_channel = 1;
+              this->changeChannel(next_channel);
+            #endif
+          }
+          else
+            this->changeChannel(this->fox_hunt_target.channel);
 
           int targ_rssi = this->fox_hunt_target.rssi;
 

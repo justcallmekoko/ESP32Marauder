@@ -787,6 +787,8 @@ class WiFiScan
       uint8_t channel = 1;
       bool bluetooth = false;
       bool active = false;
+      uint32_t last_seen_ms = 0;
+      String advertised_address = "";
     };
 
     FoxHuntTarget fox_hunt_target;
@@ -990,8 +992,9 @@ class WiFiScan
     uint16_t rssiToColor(int8_t rssi);
     bool isMetaIdentifier(uint16_t id);
     bool isBlockedIdentifier(uint16_t id);
-    void setFoxHuntTarget(const uint8_t mac[6], const String& name, int8_t rssi, uint8_t channel, bool bluetooth);
-    bool updateFoxHuntRssi(const uint8_t mac[6], int8_t rssi);
+    void setFoxHuntTarget(const uint8_t mac[6], const String& name, int8_t rssi, uint8_t channel, bool bluetooth, const String& advertised_address = "");
+    bool updateFoxHuntRssi(const uint8_t mac[6], int8_t rssi, uint8_t channel = 0);
+    bool updateBluetoothFoxHuntRssi(const uint8_t mac[6], const String& advertised_address, int8_t rssi);
     size_t getPineScanCount() const;
     String getPineScanLabel(size_t index) const;
     bool selectPineScanFoxTarget(size_t index);
