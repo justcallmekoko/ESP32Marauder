@@ -130,15 +130,15 @@ class MenuFunctions
 {
   private:
 
-    enum class FoxTargetList : uint8_t {
-      WIFI_AP,
-      STATION_AP,
-      STATION,
-      PINEAPPLE,
-      MULTISSID,
-      BLE_DEVICE,
-      FINDMY,
-      FLIPPER,
+    enum class FoxHuntListKind : uint8_t {
+      AP_TARGETS,
+      APS_WITH_STATIONS,
+      STATION_TARGETS,
+      PINEAPPLE_TARGETS,
+      MULTISSID_TARGETS,
+      BLE_TARGETS,
+      FINDMY_TARGETS,
+      FLIPPER_TARGETS,
     };
 
     String u_result = "";
@@ -153,7 +153,7 @@ class MenuFunctions
 
     void buildWiFiFoxHuntMenu();
     void buildBluetoothFoxHuntMenu();
-    void buildFoxTargetList(FoxTargetList type, int context_ap = -1);
+    void buildFoxTargetList(FoxHuntListKind type, int context_ap = -1);
     void buildFoxSortMenu();
     void buildFoxFilterMenu();
     const char* foxSortLabel() const;
@@ -161,7 +161,7 @@ class MenuFunctions
     bool foxListSupportsRecent() const;
     bool foxListSupportsBand() const;
 
-    FoxTargetList fox_target_list = FoxTargetList::WIFI_AP;
+    FoxHuntListKind fox_target_list = FoxHuntListKind::AP_TARGETS;
     int fox_target_context_ap = -1;
     TargetSortMode fox_sort_mode = TargetSortMode::SIGNAL_DESC;
     TargetFilterMode fox_filter_mode = TargetFilterMode::ALL;
