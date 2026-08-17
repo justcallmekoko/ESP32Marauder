@@ -780,6 +780,19 @@ class WiFiScan
 
 
   public:
+    struct FoxHuntTarget {
+      uint8_t mac[6] = {};
+      String name = "";
+      int8_t rssi = -128;
+      uint8_t channel = 1;
+      bool bluetooth = false;
+      bool active = false;
+      uint32_t last_seen_ms = 0;
+      String advertised_address = "";
+    };
+
+    FoxHuntTarget fox_hunt_target;
+
     volatile bool bt_cb_busy = false;
     volatile bool bt_pending_clear = false;
 
@@ -979,6 +992,15 @@ class WiFiScan
     uint16_t rssiToColor(int8_t rssi);
     bool isMetaIdentifier(uint16_t id);
     bool isBlockedIdentifier(uint16_t id);
+    void setFoxHuntTarget(const uint8_t mac[6], const String& name, int8_t rssi, uint8_t channel, bool bluetooth, const String& advertised_address = "");
+    bool updateFoxHuntRssi(const uint8_t mac[6], int8_t rssi, uint8_t channel = 0);
+    bool updateBluetoothFoxHuntRssi(const uint8_t mac[6], const String& advertised_address, int8_t rssi);
+    size_t getPineScanCount() const;
+    String getPineScanLabel(size_t index) const;
+    bool selectPineScanFoxTarget(size_t index);
+    size_t getMultiSSIDCount() const;
+    String getMultiSSIDLabel(size_t index) const;
+    bool selectMultiSSIDFoxTarget(size_t index);
     uint32_t getCompleteEapol(int check_index = -1);
     void drawChannelLine();
     #ifdef HAS_SCREEN

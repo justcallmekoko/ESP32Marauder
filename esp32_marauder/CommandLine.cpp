@@ -276,6 +276,9 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_LIST_AP_CMD_E);
     Serial.println(HELP_LIST_AP_CMD_F);
     Serial.println(HELP_LIST_AP_CMD_G);
+    Serial.println(HELP_LIST_AP_CMD_H);
+    Serial.println(HELP_LIST_AP_CMD_I);
+    Serial.println(HELP_LIST_AP_CMD_J);
     Serial.println(HELP_SEL_CMD_A);
     Serial.println(HELP_SSID_CMD_A);
     Serial.println(HELP_SSID_CMD_B);
@@ -590,28 +593,79 @@ void CommandLine::runCommand(String input) {
     if (cmd_args.get(0) == SIGSTREN_CMD) {
       int bt_sw = this->argSearch(&cmd_args, "-b");
       int wf_sw = this->argSearch(&cmd_args, "-w");
-      if (wf_sw > -1) {
+      int st_sw = this->argSearch(&cmd_args, "-s");
+      int at_sw = this->argSearch(&cmd_args, "-t");
+      int fl_sw = this->argSearch(&cmd_args, "-f");
+      int pn_sw = this->argSearch(&cmd_args, "-p");
+      int ms_sw = this->argSearch(&cmd_args, "-m");
+      if ((wf_sw > -1) && this->checkValueExists(&cmd_args, wf_sw)) {
         int targ_index = cmd_args.get(wf_sw + 1).toInt();
-        if (targ_index < access_points->size()) {
-          for (int i = 0; i < access_points->size(); i++) {
-            AccessPoint access_point = access_points->get(i);
-            access_point.selected = (i == targ_index);
-            access_points->set(i, access_point);
-          }
+        if ((targ_index >= 0) && (targ_index < access_points->size())) {
+          const AccessPoint& target = access_points->get(targ_index);
+          wifi_scan_obj.setFoxHuntTarget(target.bssid, target.essid, target.rssi, target.channel, false);
           this->startScanFromCLI(WIFI_SCAN_SIG_STREN, TFT_GREEN, "Fox Hunt");
         }
       }
-      else if (bt_sw > -1) {
-        int targ_index = cmd_args.get(bt_sw + 1).toInt();
-        if (targ_index < ble_devices->size()) {
-          for (int i = 0; i < ble_devices->size(); i++) {
-            BleDevice ble_device = ble_devices->get(i);
-            ble_device.selected = (i == targ_index);
-            ble_devices->set(i, ble_device);
+      else if ((st_sw > -1) && this->checkValueExists(&cmd_args, st_sw + 1)) {
+        int ap_index = cmd_args.get(st_sw + 1).toInt();
+        int station_index = cmd_args.get(st_sw + 2).toInt();
+        if ((ap_index >= 0) && (ap_index < access_points->size()) &&
+            (station_index >= 0) && (station_index < stations->size())) {
+          const AccessPoint& target_ap = access_points->get(ap_index);
+          bool belongs_to_ap = false;
+          for (int i = 0; i < target_ap.stations->size(); i++) {
+            if (target_ap.stations->get(i) == station_index) {
+              belongs_to_ap = true;
+              break;
+            }
           }
+          if (belongs_to_ap) {
+            const Station& target = stations->get(station_index);
+            wifi_scan_obj.setFoxHuntTarget(target.mac, macToString(target.mac), -128, target_ap.channel, false);
+            this->startScanFromCLI(WIFI_SCAN_SIG_STREN, TFT_GREEN, "Station Fox Hunt");
+          }
+        }
+      }
+      else if ((bt_sw > -1) && this->checkValueExists(&cmd_args, bt_sw)) {
+        int targ_index = cmd_args.get(bt_sw + 1).toInt();
+        if ((targ_index >= 0) && (targ_index < ble_devices->size())) {
+          const BleDevice& target = ble_devices->get(targ_index);
+          wifi_scan_obj.setFoxHuntTarget(target.mac, target.name, target.rssi, 0, true, macToString(target.mac));
           this->startScanFromCLI(BT_SCAN_FOX_HUNT, TFT_CYAN, "Bluetooth Fox Hunt");
         }
       }
+      else if ((at_sw > -1) && this->checkValueExists(&cmd_args, at_sw)) {
+        int targ_index = cmd_args.get(at_sw + 1).toInt();
+        if ((targ_index >= 0) && (targ_index < airtags->size())) {
+          const AirTag& target = airtags->get(targ_index);
+          uint8_t mac[6];
+          convertMacStringToUint8(target.mac, mac);
+          wifi_scan_obj.setFoxHuntTarget(mac, target.mac, target.rssi, 0, true, target.mac);
+          this->startScanFromCLI(BT_SCAN_FOX_HUNT, TFT_CYAN, "FindMy Fox Hunt");
+        }
+      }
+      else if ((fl_sw > -1) && this->checkValueExists(&cmd_args, fl_sw)) {
+        int targ_index = cmd_args.get(fl_sw + 1).toInt();
+        if ((targ_index >= 0) && (targ_index < flippers->size())) {
+          const Flipper& target = flippers->get(targ_index);
+          uint8_t mac[6];
+          convertMacStringToUint8(target.mac, mac);
+          wifi_scan_obj.setFoxHuntTarget(mac, target.name.length() ? target.name : target.mac, -128, 0, true, target.mac);
+          this->startScanFromCLI(BT_SCAN_FOX_HUNT, TFT_CYAN, "Flipper Zero Fox Hunt");
+        }
+      }
+      else if ((pn_sw > -1) && this->checkValueExists(&cmd_args, pn_sw)) {
+        int targ_index = cmd_args.get(pn_sw + 1).toInt();
+        if ((targ_index >= 0) && wifi_scan_obj.selectPineScanFoxTarget(targ_index))
+          this->startScanFromCLI(WIFI_SCAN_SIG_STREN, TFT_GREEN, "WiFi Pineapple Fox Hunt");
+      }
+      else if ((ms_sw > -1) && this->checkValueExists(&cmd_args, ms_sw)) {
+        int targ_index = cmd_args.get(ms_sw + 1).toInt();
+        if ((targ_index >= 0) && wifi_scan_obj.selectMultiSSIDFoxTarget(targ_index))
+          this->startScanFromCLI(WIFI_SCAN_SIG_STREN, TFT_GREEN, "MultiSSID Fox Hunt");
+      }
+      else
+        Serial.println(HELP_SIGSTREN_CMD);
     }
     // Packet count
     else if (cmd_args.get(0) == PACKET_COUNT_CMD) {
@@ -1350,6 +1404,9 @@ void CommandLine::runCommand(String input) {
     int ip_sw = this->argSearch(&cmd_args, "-i");
     int pr_sw = this->argSearch(&cmd_args, "-p");
     int bt_sw = this->argSearch(&cmd_args, "-b");
+    int fl_sw = this->argSearch(&cmd_args, "-f");
+    int pn_sw = this->argSearch(&cmd_args, "-x");
+    int ms_sw = this->argSearch(&cmd_args, "-m");
 
     // List APs
     if (ap_sw != -1) {
@@ -1369,6 +1426,19 @@ void CommandLine::runCommand(String input) {
         BleDevice ble_device = ble_devices->get(i);
         Serial.println("[" + (String)i + "][RSSI:" + (String)ble_device.rssi + "] " + ble_device.name);
       }
+    }
+    else if (fl_sw != -1) {
+      for (int i = 0; i < flippers->size(); i++) {
+        Serial.println("[" + (String)i + "]MAC: " + flippers->get(i).mac + " " + flippers->get(i).name);
+      }
+    }
+    else if (pn_sw != -1) {
+      for (size_t i = 0; i < wifi_scan_obj.getPineScanCount(); i++)
+        Serial.println("[" + (String)i + "] " + wifi_scan_obj.getPineScanLabel(i));
+    }
+    else if (ms_sw != -1) {
+      for (size_t i = 0; i < wifi_scan_obj.getMultiSSIDCount(); i++)
+        Serial.println("[" + (String)i + "] " + wifi_scan_obj.getMultiSSIDLabel(i));
     }
     // List IPs
     else if (ip_sw != -1) {

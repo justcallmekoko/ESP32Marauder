@@ -1,5 +1,6 @@
 #include "esp_random.h"
 #include "WiFiScan.h"
+#include "FoxHuntTarget.h"
 #include "BeaconFrame.h"
 #include "WdgResponse.h"
 #include "lang_var.h"
@@ -306,6 +307,9 @@ extern "C" {
           String mac = advertisedDevice->getAddress().toString().c_str();
           unsigned char mac_char[6];
           wifi_scan_obj.copyNimbleMac(advertisedDevice->getAddress(), mac_char);
+
+          if (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT)
+            wifi_scan_obj.updateBluetoothFoxHuntRssi(mac_char, mac, rssi);
 
           if (wifi_scan_obj.bt_pending_clear)
             return;
@@ -1027,6 +1031,9 @@ extern "C" {
           String mac = advertisedDevice->getAddress().toString().c_str();
           unsigned char mac_char[6];
           wifi_scan_obj.copyNimbleMac(advertisedDevice->getAddress(), mac_char);
+
+          if (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT)
+            wifi_scan_obj.updateBluetoothFoxHuntRssi(mac_char, mac, rssi);
           #ifdef HAS_NIMBLE_2
             const std::vector<unsigned char>& payLoad = advertisedDevice->getPayload();
             size_t len = payLoad.size();
@@ -8223,48 +8230,22 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
     buffer_obj.append(snifferPacket, len);
   }
   else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN) {
-    bool found = false;
-    uint8_t targ_index = 0;
-    AccessPoint targ_ap;
+    if (!wifi_scan_obj.fox_hunt_target.active || len < 22)
+      return;
 
-    // Check list of APs
-    for (int i = 0; i < access_points->size(); i++) {
-      AccessPoint access_point = access_points->get(i);
-      if (access_point.selected) {
-        uint8_t addr[] = {snifferPacket->payload[10],
-                          snifferPacket->payload[11],
-                          snifferPacket->payload[12],
-                          snifferPacket->payload[13],
-                          snifferPacket->payload[14],
-                          snifferPacket->payload[15]};
-        // Compare AP bssid to ssid of recvd packet
-        for (int x = 0; x < 6; x++) {
-          if (addr[x] != access_point.bssid[x]) {
-            found = false;
-            break;
-          }
-          else
-            found = true;
-        }
-        if (found) {
-          targ_ap = access_point;
-          targ_index = i;
-          break;
-        }
+    // A target can be the transmitter, receiver, or BSSID depending on frame direction.
+    const uint8_t address_offsets[] = {4, 10, 16};
+    bool found = false;
+    for (uint8_t offset : address_offsets) {
+      if (wifi_scan_obj.updateFoxHuntRssi(&snifferPacket->payload[offset], snifferPacket->rx_ctrl.rssi, snifferPacket->rx_ctrl.channel)) {
+        found = true;
+        break;
       }
     }
     if (!found)
       return;
 
-    if ((targ_ap.rssi + 1 < snifferPacket->rx_ctrl.rssi) || (snifferPacket->rx_ctrl.rssi + 1 < targ_ap.rssi)) {
-      targ_ap.rssi = snifferPacket->rx_ctrl.rssi;
-      access_points->set(targ_index, targ_ap);
-
-      Serial.println((String)targ_ap.essid + " RSSI: " + (String)targ_ap.rssi);
-    }
-    else
-      return;
-
+    Serial.println(wifi_scan_obj.fox_hunt_target.name + " RSSI: " + String(wifi_scan_obj.fox_hunt_target.rssi));
     buffer_obj.append(snifferPacket, len);
   }
   else if (wifi_scan_obj.currentScanMode == BT_SCAN_FLOCK) {
@@ -11401,6 +11382,90 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
   }
 #endif
 
+void WiFiScan::setFoxHuntTarget(const uint8_t mac[6], const String& name, int8_t rssi, uint8_t channel, bool bluetooth, const String& advertised_address) {
+  memcpy(this->fox_hunt_target.mac, mac, sizeof(this->fox_hunt_target.mac));
+  this->fox_hunt_target.name = name;
+  this->fox_hunt_target.rssi = rssi;
+  this->fox_hunt_target.channel = channel;
+  this->fox_hunt_target.bluetooth = bluetooth;
+  this->fox_hunt_target.active = true;
+  this->fox_hunt_target.last_seen_ms = millis();
+  this->fox_hunt_target.advertised_address = advertised_address;
+  this->fox_hunt_target.advertised_address.toUpperCase();
+  if (marauder::foxHuntShouldUpdateChannel(bluetooth, channel))
+    this->set_channel = channel;
+}
+
+bool WiFiScan::updateFoxHuntRssi(const uint8_t mac[6], int8_t rssi, uint8_t channel) {
+  if (!this->fox_hunt_target.active)
+    return false;
+
+  if (!marauder::foxHuntMacMatches(this->fox_hunt_target.mac, mac))
+    return false;
+
+  this->fox_hunt_target.rssi = rssi;
+  this->fox_hunt_target.last_seen_ms = millis();
+  if (marauder::foxHuntShouldUpdateChannel(this->fox_hunt_target.bluetooth, channel))
+    this->fox_hunt_target.channel = channel;
+  return true;
+}
+
+bool WiFiScan::updateBluetoothFoxHuntRssi(const uint8_t mac[6], const String& advertised_address, int8_t rssi) {
+  if (!this->fox_hunt_target.active || !this->fox_hunt_target.bluetooth)
+    return false;
+
+  if (this->updateFoxHuntRssi(mac, rssi))
+    return true;
+
+  String normalized_address = advertised_address;
+  normalized_address.toUpperCase();
+  if ((this->fox_hunt_target.advertised_address.length() == 0) ||
+      (normalized_address != this->fox_hunt_target.advertised_address))
+    return false;
+
+  this->fox_hunt_target.rssi = rssi;
+  this->fox_hunt_target.last_seen_ms = millis();
+  return true;
+}
+
+size_t WiFiScan::getPineScanCount() const {
+  return this->confirmed_pinescan->size();
+}
+
+String WiFiScan::getPineScanLabel(size_t index) const {
+  if (index >= this->confirmed_pinescan->size())
+    return "";
+  const ConfirmedPineScan& target = this->confirmed_pinescan->get(index);
+  return String(target.rssi) + " " + target.essid;
+}
+
+bool WiFiScan::selectPineScanFoxTarget(size_t index) {
+  if (index >= this->confirmed_pinescan->size())
+    return false;
+  const ConfirmedPineScan& target = this->confirmed_pinescan->get(index);
+  this->setFoxHuntTarget(target.mac, target.essid, target.rssi, target.channel, false);
+  return true;
+}
+
+size_t WiFiScan::getMultiSSIDCount() const {
+  return this->confirmed_multissid->size();
+}
+
+String WiFiScan::getMultiSSIDLabel(size_t index) const {
+  if (index >= this->confirmed_multissid->size())
+    return "";
+  const ConfirmedMultiSSID& target = this->confirmed_multissid->get(index);
+  return String(target.rssi) + " " + target.essid;
+}
+
+bool WiFiScan::selectMultiSSIDFoxTarget(size_t index) {
+  if (index >= this->confirmed_multissid->size())
+    return false;
+  const ConfirmedMultiSSID& target = this->confirmed_multissid->get(index);
+  this->setFoxHuntTarget(target.mac, target.essid, target.rssi, target.channel, false);
+  return true;
+}
+
 void WiFiScan::runFoxHunt(uint32_t currentTime) {
   #ifdef HAS_SCREEN
     if (currentTime - this->last_ui_update >= 100)
@@ -11411,10 +11476,8 @@ void WiFiScan::runFoxHunt(uint32_t currentTime) {
     display_obj.tft.fillRect(0, (TFT_HEIGHT / 3), TFT_WIDTH, TFT_HEIGHT / 3, TFT_BLACK);
 
     #ifdef HAS_BT
-      if (currentScanMode == BT_SCAN_FOX_HUNT) {
-        for (int i = 0; i < ble_devices->size(); i++) {
-          if (ble_devices->get(i).selected) {
-            int targ_rssi = ble_devices->get(i).rssi;
+      if ((currentScanMode == BT_SCAN_FOX_HUNT) && this->fox_hunt_target.active) {
+            int targ_rssi = this->fox_hunt_target.rssi;
 
             #ifdef HAS_MINI_SCREEN
               display_obj.tft.setTextSize(1);
@@ -11425,9 +11488,9 @@ void WiFiScan::runFoxHunt(uint32_t currentTime) {
             display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
 
             #ifdef HAS_MINI_SCREEN
-              display_obj.showCenterText(ble_devices->get(i).name.c_str(), (TFT_HEIGHT / 4), true);
+              display_obj.showCenterText(this->fox_hunt_target.name.c_str(), (TFT_HEIGHT / 4), true);
             #else
-              display_obj.showCenterText(ble_devices->get(i).name.c_str(), (TFT_HEIGHT / 4), false, 2);
+              display_obj.showCenterText(this->fox_hunt_target.name.c_str(), (TFT_HEIGHT / 4), false, 2);
             #endif
 
             #ifdef HAS_MINI_SCREEN
@@ -11446,17 +11509,23 @@ void WiFiScan::runFoxHunt(uint32_t currentTime) {
 
             display_obj.tft.fillRect(0, (TFT_HEIGHT / 4) * 3, rssiToBarWidth(targ_rssi), 20, rssiToColorScaled(targ_rssi));
             display_obj.tft.fillRect(rssiToBarWidth(targ_rssi), (TFT_HEIGHT / 4) * 3, TFT_WIDTH, 20, TFT_BLACK);
-          }
-        }
       }
     #endif
 
-    if (currentScanMode == WIFI_SCAN_SIG_STREN) {
-      for (int i = 0; i < access_points->size(); i++) {
-        if (access_points->get(i).selected) {
-          this->changeChannel(access_points->get(i).channel);
+    if ((currentScanMode == WIFI_SCAN_SIG_STREN) && this->fox_hunt_target.active) {
+          if (marauder::foxHuntTargetIsStale(currentTime, this->fox_hunt_target.last_seen_ms, 1500)) {
+            #ifdef HAS_DUAL_BAND
+              this->dual_band_channel_index = (this->dual_band_channel_index + 1) % DUAL_BAND_CHANNELS;
+              this->changeChannel(this->dual_band_channels[this->dual_band_channel_index]);
+            #else
+              uint8_t next_channel = marauder::foxHuntNextChannel(this->set_channel, MAX_CHANNEL);
+              this->changeChannel(next_channel);
+            #endif
+          }
+          else
+            this->changeChannel(this->fox_hunt_target.channel);
 
-          int targ_rssi = access_points->get(i).rssi;
+          int targ_rssi = this->fox_hunt_target.rssi;
 
           #ifdef HAS_MINI_SCREEN
             display_obj.tft.setTextSize(1);
@@ -11467,9 +11536,9 @@ void WiFiScan::runFoxHunt(uint32_t currentTime) {
           display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
 
           #ifdef HAS_MINI_SCREEN
-            display_obj.showCenterText(access_points->get(i).essid.c_str(), (TFT_HEIGHT / 4), true);
+            display_obj.showCenterText(this->fox_hunt_target.name.c_str(), (TFT_HEIGHT / 4), true);
           #else
-            display_obj.showCenterText(access_points->get(i).essid.c_str(), (TFT_HEIGHT / 4), false, 2);
+            display_obj.showCenterText(this->fox_hunt_target.name.c_str(), (TFT_HEIGHT / 4), false, 2);
           #endif
 
           #ifdef HAS_MINI_SCREEN
@@ -11488,8 +11557,6 @@ void WiFiScan::runFoxHunt(uint32_t currentTime) {
 
           display_obj.tft.fillRect(0, (TFT_HEIGHT / 4) * 3, rssiToBarWidth(targ_rssi), 20, rssiToColorScaled(targ_rssi));
           display_obj.tft.fillRect(rssiToBarWidth(targ_rssi), (TFT_HEIGHT / 4) * 3, TFT_WIDTH, 20, TFT_BLACK);
-        }
-      }
     }
   #endif
 }
