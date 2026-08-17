@@ -43,6 +43,7 @@ https://www.online-utility.org/image/convert/to/XBM
   #include "BatteryInterface.h"
 #endif
 
+
 #ifdef HAS_SCREEN
   #include "Display.h"
   #include "MenuFunctions.h"
@@ -69,11 +70,18 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #endif
 
+
 WiFiScan wifi_scan_obj;
 EvilPortal evil_portal_obj;
 Buffer buffer_obj;
 Settings settings_obj;
 CommandLine cli_obj;
+
+#ifdef HAS_SCREEN
+  extern void brightnessInit();
+  extern void backlightOff();
+  extern void backlightOn();
+#endif
 
 #ifdef HAS_GPS
   GpsInterface gps_obj;
@@ -110,110 +118,81 @@ const String PROGMEM version_number = MARAUDER_VERSION;
 
 uint32_t currentTime  = 0;
 
-// PWM Brightness Control
-#ifdef HAS_SCREEN
-  #include <Preferences.h>
-  #define BL_CHANNEL 0
-  #define BL_FREQ 5000
-  #define BL_RESOLUTION 8
-  const uint8_t BL_LEVELS[] = {26, 51, 77, 102, 128, 153, 179, 204, 230, 255};
-  const uint8_t BL_NUM_LEVELS = 10;
-  uint8_t bl_level_idx = 9; // default full brightness
-  Preferences bl_prefs;
-#endif
+#if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
 
-// Helper macros for LEDC API compatibility (2.x vs 3.x board package)
-#ifdef HAS_SCREEN
-  #ifndef HAS_MINI_SCREEN
-    #if ESP_ARDUINO_VERSION_MAJOR >= 3
-      #define BL_SETUP()       ledcAttach(TFT_BL, BL_FREQ, BL_RESOLUTION)
-      #define BL_SET(duty)     ledcWrite(TFT_BL, (duty))
-    #else
-      #define BL_SETUP()       do { ledcSetup(BL_CHANNEL, BL_FREQ, BL_RESOLUTION); ledcAttachPin(TFT_BL, BL_CHANNEL); } while(0)
-      #define BL_SET(duty)     ledcWrite(BL_CHANNEL, (duty))
-    #endif
-  #endif
-#endif
+  void DeepSleep(int8_t wakeup_but = -1) {
 
-#ifndef HAS_MINI_SCREEN
-  void brightnessInit() {
-    #ifdef HAS_SCREEN
-      BL_SETUP();
-      bl_prefs.begin("backlight", false);
-      bl_level_idx = bl_prefs.getUChar("level", 9);
-      if (bl_level_idx >= BL_NUM_LEVELS) bl_level_idx = 9;
-      BL_SET(BL_LEVELS[bl_level_idx]);
-    #endif
-  }
+    // 1. Disconnect from the network gracefully
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    esp_wifi_stop();
 
-  void brightnessCycle() {
-    #ifdef HAS_SCREEN
-      bl_level_idx = (bl_level_idx + 1) % BL_NUM_LEVELS;
-      BL_SET(BL_LEVELS[bl_level_idx]);
-      bl_prefs.putUChar("level", bl_level_idx);
-      Serial.print(F("[Brightness] Level "));
-      Serial.print(bl_level_idx + 1);
-      Serial.print(F("/"));
-      Serial.print(BL_NUM_LEVELS);
-      Serial.print(F(" ("));
-      Serial.print(BL_LEVELS[bl_level_idx] * 100 / 255);
-      Serial.println(F("%)"));
+    #ifdef HAS_BT
+      // This handles stopping and deinitializing BT gracefully
+      // esp_bluedroid_disable();
+      esp_bt_controller_disable();
+      esp_bt_controller_deinit();
     #endif
-  }
 
-  uint8_t getBrightnessLevel() {
-    #ifdef HAS_SCREEN
-      return bl_level_idx;
-    #else
-      return 0;
-    #endif
-  }
+    // Should we isolate  pins with external pull-up resistors
+    // to minimize current consumption.
+    // #ifdef I2C_SDA
+    //   rtc_gpio_isolate(I2C_SDA);
+    //   rtc_gpio_isolate(I2C_SCL);
+    // #endif
 
-  void brightnessSave(uint8_t level) {
-    #ifdef HAS_SCREEN
-      if (level >= BL_NUM_LEVELS) level = BL_NUM_LEVELS - 1;
-      bl_level_idx = level;
-      BL_SET(BL_LEVELS[bl_level_idx]);
-      bl_prefs.putUChar("level", bl_level_idx);
-    #endif
-  }
-
-  void backlightOn() {
-    #ifdef HAS_SCREEN
-      BL_SET(BL_LEVELS[bl_level_idx]);
-    #endif
-  }
-
-  void backlightOff() {
-    #ifdef HAS_SCREEN
-      BL_SET(0);
-    #endif
-  }
-#else
-  void backlightOn() {
-    #ifdef HAS_SCREEN
-      #if defined(MARAUDER_MINI) || defined(MARAUDER_MINI_V3)
-        digitalWrite(TFT_BL, LOW);
-      #endif
+    // Code specific to the classic ESP32 (e.g., WROOM-32) goes here
+    // #ifdef CONFIG_IDF_TARGET_ESP32
+    // rtc_gpio_isolate(GPIO_NUM_12);
+    // 18 19 5 23 10 33 32 16 17 20 
+    esp_sleep_config_gpio_isolate();
     
-      #if !defined(MARAUDER_MINI) && !defined(MARAUDER_MINI_V3)
-        digitalWrite(TFT_BL, HIGH);
-      #endif
+    if (wakeup_but >= 0) {
+      gpio_hold_dis((gpio_num_t) wakeup_but);
+      pinMode(wakeup_but, INPUT_PULLUP);
+
+    // Configure the wake-up source: wake up when GPIO 0 goes LOW (button press)
+    #if SOC_PM_SUPPORT_EXT_WAKEUP
+	// For classic ESP32 which supports EXT0 (e.g., ESP32)
+        esp_sleep_enable_ext0_wakeup((gpio_num_t)wakeup_but, 0); // 0 means LOW
+    #elif SOC_PM_SUPPORT_GPIO_WAKEUP
+       // For newer chips that use generic GPIO wakeup (e.g., ESP32-C3, ESP32-S3)
+      esp_deep_sleep_enable_gpio_wakeup((1ULL << wakeup_but), ESP_GPIO_WAKEUP_GPIO_LOW);
+    #else
+      #warning "Unsupported sleep/wakeup architecture on this chip"
     #endif
+
+
+    }
+
+    Serial.println("Going to sleep now...");
+    Serial.flush();
+    delay(100); // Give serial monitor time to flush
+
+    // Enter deep sleep
+    esp_deep_sleep_start();
   }
 
-  void backlightOff() {
-    #ifdef HAS_SCREEN
-      #if defined(MARAUDER_MINI) || defined(MARAUDER_MINI_V3)
-        digitalWrite(TFT_BL, HIGH);
-      #endif
-    
-      #if !defined(MARAUDER_MINI) && !defined(MARAUDER_MINI_V3)
-        digitalWrite(TFT_BL, LOW);
-      #endif
+  void shutdown() {
+    #ifdef POWER_HOLD_PIN
+        // T-HMI
+        //  if on battery, can be turn off with the PWR_ON_PIN/POWER_HOLD_PIN if on battery
+        Serial.println("Set POWER_HOLD_PIN:  LOW");
+        Serial.flush();
+        digitalWrite(POWER_HOLD_PIN, LOW);
+
+        //  if plugged in we use DEEPSLEEP instead
+        delay(500);
+        Serial.println("DeepSleep");
+        DeepSleep();
+    #else
+        DeepSleep(0);
     #endif
   }
-#endif
+// #endif  // SHUTDOWN
+
+#endif  // SHUTDOWN
+
 
 #ifdef HAS_C5_SD
   SPIClass sharedSPI(SPI);
@@ -222,10 +201,31 @@ uint32_t currentTime  = 0;
 
 void setup()
 {
+
+
+  // https://github.com/Xinyuan-LilyGO/T-HMI/issues/34
+  // T-HMI : latch power on if on battery
+  // Prevent StickCP2 from turning off when disconnect USB cable
+  #ifdef POWER_HOLD_PIN  
+    pinMode(POWER_HOLD_PIN, OUTPUT);
+    digitalWrite(POWER_HOLD_PIN, HIGH);
+  #endif
+
+  #ifdef PWR_EN_PIN  // Enable power to peripherals
+    pinMode(PWR_EN_PIN, OUTPUT);
+    digitalWrite(PWR_EN_PIN, HIGH);
+  #endif
+
   randomSeed(esp_random());
   
   #ifndef DEVELOPER
     esp_log_level_set("*", ESP_LOG_NONE);
+  #endif
+  #ifdef ARDUINO_USB_MODE
+    Serial.println("ARDUINO_USB_MODE = " + (String)ARDUINO_USB_MODE);
+  #endif
+  #ifdef ARDUINO_USB_CDC_ON_BOOT
+    Serial.println("ARDUINO_USB_CDC_ON_BOOT = " + (String)ARDUINO_USB_CDC_ON_BOOT);
   #endif
   
   #ifndef HAS_IDF_3
@@ -240,8 +240,32 @@ void setup()
     digitalWrite(ACT_LED_PIN, LOW);
   #endif
 
+  #if defined(TFT_BL)
+    pinMode(TFT_BL, OUTPUT);
+    digitalWrite(TFT_BL, HIGH); // ???
+  #endif
+
+
+#if defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT == 1
+  while(!Serial && millis() < 2000) {
+    delay(500);
+  }
+#else
   while(!Serial)
-    delay(10);
+      delay(10);
+#endif
+
+  #ifdef ENABLE_PM
+    log_d("Setting up power saving");
+    // 1. Define the power management settings
+    esp_pm_config_t pm_config = {
+      .max_freq_mhz = 240,        // Max CPU frequency in MHz (e.g., 240, 160, 80)
+      .min_freq_mhz = 160,         // Min CPU frequency in MHz (XTAL frequency)
+      .light_sleep_enable = true  // true to automatically enter Light-sleep on idle
+    };
+    // 2. Apply the configuration
+    ESP_ERROR_CHECK(esp_pm_configure(&pm_config));
+  #endif
 
   #ifdef HAS_C5_SD
     sharedSPI.begin(SD_SCK, SD_MISO, SD_MOSI);
@@ -257,24 +281,25 @@ void setup()
     pinMode(TFT_BL, OUTPUT);
   #endif
   
-  backlightOff();
+  #ifdef HAS_SCREEN
+    backlightOff();
+  #endif
+
   #if BATTERY_ANALOG_ON == 1
     pinMode(BATTERY_PIN, OUTPUT);
     pinMode(CHARGING_PIN, INPUT);
   #endif
   
   // Preset SPI CS pins to avoid bus conflicts
-  #ifdef HAS_SCREEN
+  #if defined(HAS_SCREEN) && defined(TFT_CS)
     digitalWrite(TFT_CS, HIGH);
   #endif
   
-  #if defined(HAS_SD) && !defined(HAS_C5_SD)
+  #if defined(HAS_SD) && defined(SD_CS) && !defined(HAS_C5_SD)
     pinMode(SD_CS, OUTPUT);
-
     delay(10);
   
     digitalWrite(SD_CS, HIGH);
-
     delay(10);
   #endif
 
@@ -284,6 +309,16 @@ void setup()
   //  delay(10);
 
   Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
+  #ifdef ESP_ARDUINO_VERSION_STR
+    Serial.print("Arduino ESP32 Core Version: ");
+    Serial.println(ESP_ARDUINO_VERSION_STR);
+  #elif defined(ESP_ARDUINO_VERSION)
+    Serial.printf("Arduino Core Major: %d, Minor: %d, Patch: %d\n", 
+	    ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
+  #endif
+
+
+
 
   #ifdef HAS_PSRAM
     if (!psramInit()) {
@@ -305,8 +340,7 @@ void setup()
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
   #endif
 
-  // Init PWM brightness AFTER display init (so ledcAttach overrides TFT_eSPI's pinMode)
-  #ifndef HAS_MINI_SCREEN
+  #if defined(HAS_SCREEN) && !defined(HAS_MINI_SCREEN)
     brightnessInit();
     backlightOff();
   #endif
@@ -324,7 +358,9 @@ void setup()
   #endif
 
 
-  backlightOn(); // Need this
+  #ifdef HAS_SCREEN
+    backlightOn(); // Need this
+  #endif
 
   #ifdef HAS_SCREEN
     // Do some stealth mode stuff
@@ -413,6 +449,8 @@ void setup()
   wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
   
   cli_obj.RunSetup();
+
+
 }
 
 
