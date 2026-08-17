@@ -1546,160 +1546,241 @@ bool MenuFunctions::isKeyPressed(char c)
   }
 #endif
 
+const char* MenuFunctions::foxSortLabel() const {
+  switch (fox_sort_mode) {
+    case TargetSortMode::SIGNAL_DESC: return "Signal v";
+    case TargetSortMode::NAME_ASC: return "Name A-Z";
+    case TargetSortMode::CHANNEL_ASC: return "Channel 1-177";
+  }
+  return "Signal v";
+}
+
+const char* MenuFunctions::foxFilterLabel() const {
+  switch (fox_filter_mode) {
+    case TargetFilterMode::ALL: return "All";
+    case TargetFilterMode::RECENT_30S: return "Seen <30s";
+    case TargetFilterMode::BAND_24_GHZ: return "2.4 GHz";
+    case TargetFilterMode::BAND_5_GHZ: return "5 GHz";
+  }
+  return "All";
+}
+
+bool MenuFunctions::foxListSupportsRecent() const {
+  return fox_target_list == FoxHuntListKind::AP_TARGETS ||
+         fox_target_list == FoxHuntListKind::APS_WITH_STATIONS ||
+         fox_target_list == FoxHuntListKind::FINDMY_TARGETS;
+}
+
+bool MenuFunctions::foxListSupportsBand() const {
+  return fox_target_list == FoxHuntListKind::AP_TARGETS ||
+         fox_target_list == FoxHuntListKind::APS_WITH_STATIONS ||
+         fox_target_list == FoxHuntListKind::STATION_TARGETS ||
+         fox_target_list == FoxHuntListKind::PINEAPPLE_TARGETS ||
+         fox_target_list == FoxHuntListKind::MULTISSID_TARGETS;
+}
+
+void MenuFunctions::buildFoxSortMenu() {
+  foxSortMenu.list->clear();
+  foxSortMenu.parentMenu = current_menu;
+  this->addNodes(&foxSortMenu, text09, TFTLIGHTGREY, 0, [this]() { this->changeMenu(foxSortMenu.parentMenu, true); });
+  this->addNodes(&foxSortMenu, "Signal: Strongest", TFTCYAN, 255, [this]() {
+    fox_sort_mode = TargetSortMode::SIGNAL_DESC;
+    buildFoxTargetList(fox_target_list, fox_target_context_ap);
+  });
+  this->addNodes(&foxSortMenu, "Name/MAC: A-Z", TFTCYAN, 255, [this]() {
+    fox_sort_mode = TargetSortMode::NAME_ASC;
+    buildFoxTargetList(fox_target_list, fox_target_context_ap);
+  });
+  if (foxListSupportsBand()) {
+    this->addNodes(&foxSortMenu, "Channel: Low-High", TFTCYAN, 255, [this]() {
+      fox_sort_mode = TargetSortMode::CHANNEL_ASC;
+      buildFoxTargetList(fox_target_list, fox_target_context_ap);
+    });
+  }
+  this->changeMenu(&foxSortMenu, true);
+}
+
+void MenuFunctions::buildFoxFilterMenu() {
+  foxFilterMenu.list->clear();
+  foxFilterMenu.parentMenu = current_menu;
+  this->addNodes(&foxFilterMenu, text09, TFTLIGHTGREY, 0, [this]() { this->changeMenu(foxFilterMenu.parentMenu, true); });
+  this->addNodes(&foxFilterMenu, "All", TFTGREEN, 255, [this]() {
+    fox_filter_mode = TargetFilterMode::ALL;
+    buildFoxTargetList(fox_target_list, fox_target_context_ap);
+  });
+  if (foxListSupportsRecent()) {
+    this->addNodes(&foxFilterMenu, "Seen in 30 Seconds", TFTGREEN, 255, [this]() {
+      fox_filter_mode = TargetFilterMode::RECENT_30S;
+      buildFoxTargetList(fox_target_list, fox_target_context_ap);
+    });
+  }
+  if (foxListSupportsBand()) {
+    this->addNodes(&foxFilterMenu, "2.4 GHz", TFTGREEN, 255, [this]() {
+      fox_filter_mode = TargetFilterMode::BAND_24_GHZ;
+      buildFoxTargetList(fox_target_list, fox_target_context_ap);
+    });
+    #ifdef HAS_DUAL_BAND
+      this->addNodes(&foxFilterMenu, "5 GHz", TFTGREEN, 255, [this]() {
+        fox_filter_mode = TargetFilterMode::BAND_5_GHZ;
+        buildFoxTargetList(fox_target_list, fox_target_context_ap);
+      });
+    #endif
+  }
+  this->changeMenu(&foxFilterMenu, true);
+}
+
+void MenuFunctions::buildFoxTargetList(FoxHuntListKind type, int context_ap) {
+  fox_target_list = type;
+  fox_target_context_ap = context_ap;
+  if (!foxListSupportsRecent() && fox_filter_mode == TargetFilterMode::RECENT_30S)
+    fox_filter_mode = TargetFilterMode::ALL;
+  if (!foxListSupportsBand() && (fox_filter_mode == TargetFilterMode::BAND_24_GHZ || fox_filter_mode == TargetFilterMode::BAND_5_GHZ))
+    fox_filter_mode = TargetFilterMode::ALL;
+  if (!foxListSupportsBand() && fox_sort_mode == TargetSortMode::CHANNEL_ASC)
+    fox_sort_mode = TargetSortMode::SIGNAL_DESC;
+
+  Menu* menu = type == FoxHuntListKind::STATION_TARGETS ? &wifiStationMenu : &wifiAPMenu;
+  menu->list->clear();
+  menu->parentMenu = type == FoxHuntListKind::STATION_TARGETS ? &wifiAPMenu : &foxHuntMenu;
+  this->addNodes(menu, text09, TFTLIGHTGREY, 0, [this, menu]() { this->changeMenu(menu->parentMenu, true); });
+  String sort_row = "Sort: " + String(foxSortLabel());
+  this->addNodes(menu, sort_row.c_str(), TFTCYAN, 255, [this]() { buildFoxSortMenu(); });
+  String filter_row = "Filter: " + String(foxFilterLabel());
+  this->addNodes(menu, filter_row.c_str(), TFTGREEN, 255, [this]() { buildFoxFilterMenu(); });
+  this->addNodes(menu, "Refresh List", TFTYELLOW, 255, [this]() { buildFoxTargetList(fox_target_list, fox_target_context_ap); });
+
+  std::vector<TargetListItem> items;
+  auto add_item = [&items](size_t index, int16_t rssi, uint8_t channel, uint32_t last_seen, const String& name) {
+    TargetListItem item = {index, rssi, channel, last_seen, {}};
+    strncpy(item.name, name.c_str(), sizeof(item.name) - 1);
+    items.push_back(item);
+  };
+
+  if (type == FoxHuntListKind::AP_TARGETS || type == FoxHuntListKind::APS_WITH_STATIONS) {
+    for (int i = 0; i < access_points->size(); i++) {
+      const AccessPoint& ap = access_points->get(i);
+      if (type == FoxHuntListKind::APS_WITH_STATIONS && ap.stations->size() == 0)
+        continue;
+      add_item(i, ap.rssi, ap.channel, ap.last_seen_ms, ap.essid.length() ? ap.essid : macToString(ap.bssid));
+    }
+  } else if (type == FoxHuntListKind::STATION_TARGETS && context_ap >= 0 && context_ap < access_points->size()) {
+    const AccessPoint& ap = access_points->get(context_ap);
+    for (int x = 0; x < ap.stations->size(); x++) {
+      int station_index = ap.stations->get(x);
+      add_item(station_index, -128, ap.channel, 0, macToString(stations->get(station_index).mac));
+    }
+  } else if (type == FoxHuntListKind::PINEAPPLE_TARGETS) {
+    for (size_t i = 0; i < wifi_scan_obj.getPineScanCount(); i++)
+      add_item(i, wifi_scan_obj.getPineScanRssi(i), wifi_scan_obj.getPineScanChannel(i), 0, wifi_scan_obj.getPineScanLabel(i));
+  } else if (type == FoxHuntListKind::MULTISSID_TARGETS) {
+    for (size_t i = 0; i < wifi_scan_obj.getMultiSSIDCount(); i++)
+      add_item(i, wifi_scan_obj.getMultiSSIDRssi(i), wifi_scan_obj.getMultiSSIDChannel(i), 0, wifi_scan_obj.getMultiSSIDLabel(i));
+  } else if (type == FoxHuntListKind::BLE_TARGETS) {
+    for (int i = 0; i < ble_devices->size(); i++)
+      add_item(i, ble_devices->get(i).rssi, 0, 0, ble_devices->get(i).name.length() ? ble_devices->get(i).name : macToString(ble_devices->get(i).mac));
+  } else if (type == FoxHuntListKind::FINDMY_TARGETS) {
+    for (int i = 0; i < airtags->size(); i++)
+      add_item(i, airtags->get(i).rssi, 0, airtags->get(i).last_seen, airtags->get(i).mac);
+  } else if (type == FoxHuntListKind::FLIPPER_TARGETS) {
+    for (int i = 0; i < flippers->size(); i++)
+      add_item(i, -128, 0, 0, flippers->get(i).name.length() ? flippers->get(i).name : flippers->get(i).mac);
+  }
+
+  std::vector<TargetListItem> filtered;
+  uint32_t now = millis();
+  for (const TargetListItem& item : items) {
+    if (targetListItemMatchesFilter(item, fox_filter_mode, now))
+      filtered.push_back(item);
+  }
+  sortTargetList(filtered, fox_sort_mode);
+
+  for (const TargetListItem& item : filtered) {
+    int index = item.source_index;
+    String label;
+    uint16_t color = TFTCYAN;
+    if (type == FoxHuntListKind::AP_TARGETS) {
+      const AccessPoint& ap = access_points->get(index);
+      label = String(ap.rssi) + " " + ap.essid;
+      color = rssiToMenuColor(ap.rssi);
+    } else if (type == FoxHuntListKind::APS_WITH_STATIONS) {
+      const AccessPoint& ap = access_points->get(index);
+      label = ap.essid + " (" + String(ap.stations->size()) + ")";
+      color = TFTMAGENTA;
+    } else if (type == FoxHuntListKind::STATION_TARGETS) {
+      label = macToString(stations->get(index).mac);
+      color = TFTMAGENTA;
+    } else if (type == FoxHuntListKind::PINEAPPLE_TARGETS) {
+      label = wifi_scan_obj.getPineScanLabel(index);
+      color = TFTYELLOW;
+    } else if (type == FoxHuntListKind::MULTISSID_TARGETS) {
+      label = wifi_scan_obj.getMultiSSIDLabel(index);
+      color = TFTORANGE;
+    } else if (type == FoxHuntListKind::BLE_TARGETS) {
+      label = String(ble_devices->get(index).rssi) + " " + ble_devices->get(index).name;
+      color = rssiToMenuColor(ble_devices->get(index).rssi);
+    } else if (type == FoxHuntListKind::FINDMY_TARGETS) {
+      label = String(airtags->get(index).rssi) + " " + airtags->get(index).mac;
+      color = TFTWHITE;
+    } else {
+      label = flippers->get(index).name.length() ? flippers->get(index).name : flippers->get(index).mac;
+      color = TFTORANGE;
+    }
+
+    this->addNodes(menu, label.c_str(), color, 255, [this, type, context_ap, index]() {
+      if (type == FoxHuntListKind::APS_WITH_STATIONS) {
+        buildFoxTargetList(FoxHuntListKind::STATION_TARGETS, index);
+        return;
+      }
+      if (type == FoxHuntListKind::PINEAPPLE_TARGETS) {
+        if (!wifi_scan_obj.selectPineScanFoxTarget(index)) return;
+      } else if (type == FoxHuntListKind::MULTISSID_TARGETS) {
+        if (!wifi_scan_obj.selectMultiSSIDFoxTarget(index)) return;
+      } else if (type == FoxHuntListKind::AP_TARGETS) {
+        const AccessPoint& ap = access_points->get(index);
+        wifi_scan_obj.setFoxHuntTarget(ap.bssid, ap.essid, ap.rssi, ap.channel, false);
+      } else if (type == FoxHuntListKind::STATION_TARGETS) {
+        const AccessPoint& ap = access_points->get(context_ap);
+        const Station& station = stations->get(index);
+        wifi_scan_obj.setFoxHuntTarget(station.mac, macToString(station.mac), -128, ap.channel, false);
+      } else if (type == FoxHuntListKind::BLE_TARGETS) {
+        const BleDevice& device = ble_devices->get(index);
+        wifi_scan_obj.setFoxHuntTarget(device.mac, device.name, device.rssi, 0, true, macToString(device.mac));
+      } else if (type == FoxHuntListKind::FINDMY_TARGETS) {
+        uint8_t mac[6];
+        convertMacStringToUint8(airtags->get(index).mac, mac);
+        wifi_scan_obj.setFoxHuntTarget(mac, airtags->get(index).mac, airtags->get(index).rssi, 0, true, airtags->get(index).mac);
+      } else if (type == FoxHuntListKind::FLIPPER_TARGETS) {
+        uint8_t mac[6];
+        convertMacStringToUint8(flippers->get(index).mac, mac);
+        String name = flippers->get(index).name.length() ? flippers->get(index).name : flippers->get(index).mac;
+        wifi_scan_obj.setFoxHuntTarget(mac, name, -128, 0, true, flippers->get(index).mac);
+      }
+      display_obj.clearScreen();
+      this->drawStatusBar();
+      wifi_scan_obj.StartScan(type == FoxHuntListKind::BLE_TARGETS || type == FoxHuntListKind::FINDMY_TARGETS || type == FoxHuntListKind::FLIPPER_TARGETS ? BT_SCAN_FOX_HUNT : WIFI_SCAN_SIG_STREN, TFT_CYAN);
+    });
+  }
+  this->changeMenu(menu, true);
+}
+
 void MenuFunctions::buildWiFiFoxHuntMenu() {
   foxHuntMenu.list->clear();
   foxHuntMenu.parentMenu = &wifiSnifferMenu;
-  this->addNodes(&foxHuntMenu, text09, TFTLIGHTGREY, 0, [this]() {
-    this->changeMenu(foxHuntMenu.parentMenu, true);
-  });
-
-  this->addNodes(&foxHuntMenu, "APs", TFTLIME, WIFI, [this]() {
-    wifiAPMenu.list->clear();
-    wifiAPMenu.parentMenu = &foxHuntMenu;
-    this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, 0, [this]() { this->changeMenu(wifiAPMenu.parentMenu, true); });
-    for (int i = 0; i < access_points->size(); i++) {
-      String label = String(access_points->get(i).rssi) + " " + access_points->get(i).essid;
-      this->addNodes(&wifiAPMenu, label.c_str(), rssiToMenuColor(access_points->get(i).rssi), 255, [this, i]() {
-        const AccessPoint& ap = access_points->get(i);
-        wifi_scan_obj.setFoxHuntTarget(ap.bssid, ap.essid, ap.rssi, ap.channel, false);
-        display_obj.clearScreen();
-        this->drawStatusBar();
-        wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_CYAN);
-      });
-    }
-    this->changeMenu(&wifiAPMenu, true);
-  });
-
-  this->addNodes(&foxHuntMenu, "Stations", TFTMAGENTA, WIFI, [this]() {
-    wifiAPMenu.list->clear();
-    wifiAPMenu.parentMenu = &foxHuntMenu;
-    this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, 0, [this]() { this->changeMenu(wifiAPMenu.parentMenu, true); });
-    for (int i = 0; i < access_points->size(); i++) {
-      if (access_points->get(i).stations->size() == 0)
-        continue;
-      String label = access_points->get(i).essid + " (" + String(access_points->get(i).stations->size()) + ")";
-      this->addNodes(&wifiAPMenu, label.c_str(), TFTMAGENTA, 255, [this, i]() {
-        wifiStationMenu.list->clear();
-        wifiStationMenu.parentMenu = &wifiAPMenu;
-        this->addNodes(&wifiStationMenu, text09, TFTLIGHTGREY, 0, [this]() { this->changeMenu(wifiStationMenu.parentMenu, true); });
-        const AccessPoint& ap = access_points->get(i);
-        for (int x = 0; x < ap.stations->size(); x++) {
-          int station_index = ap.stations->get(x);
-          String station_name = macToString(stations->get(station_index).mac);
-          this->addNodes(&wifiStationMenu, station_name.c_str(), TFTMAGENTA, 255, [this, i, station_index]() {
-            const AccessPoint& station_ap = access_points->get(i);
-            const Station& station = stations->get(station_index);
-            String name = macToString(station.mac);
-            wifi_scan_obj.setFoxHuntTarget(station.mac, name, -128, station_ap.channel, false);
-            display_obj.clearScreen();
-            this->drawStatusBar();
-            wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_CYAN);
-          });
-        }
-        this->changeMenu(&wifiStationMenu, true);
-      });
-    }
-    this->changeMenu(&wifiAPMenu, true);
-  });
-
-  this->addNodes(&foxHuntMenu, "WiFi Pineapples", TFTYELLOW, PINESCAN_SNIFF, [this]() {
-    wifiAPMenu.list->clear();
-    wifiAPMenu.parentMenu = &foxHuntMenu;
-    this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, 0, [this]() { this->changeMenu(wifiAPMenu.parentMenu, true); });
-    for (size_t i = 0; i < wifi_scan_obj.getPineScanCount(); i++) {
-      String label = wifi_scan_obj.getPineScanLabel(i);
-      this->addNodes(&wifiAPMenu, label.c_str(), TFTYELLOW, 255, [this, i]() {
-        if (wifi_scan_obj.selectPineScanFoxTarget(i)) {
-          display_obj.clearScreen();
-          this->drawStatusBar();
-          wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_CYAN);
-        }
-      });
-    }
-    this->changeMenu(&wifiAPMenu, true);
-  });
-
-  this->addNodes(&foxHuntMenu, "MultiSSID", TFTORANGE, MULTISSID_SNIFF, [this]() {
-    wifiAPMenu.list->clear();
-    wifiAPMenu.parentMenu = &foxHuntMenu;
-    this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, 0, [this]() { this->changeMenu(wifiAPMenu.parentMenu, true); });
-    for (size_t i = 0; i < wifi_scan_obj.getMultiSSIDCount(); i++) {
-      String label = wifi_scan_obj.getMultiSSIDLabel(i);
-      this->addNodes(&wifiAPMenu, label.c_str(), TFTORANGE, 255, [this, i]() {
-        if (wifi_scan_obj.selectMultiSSIDFoxTarget(i)) {
-          display_obj.clearScreen();
-          this->drawStatusBar();
-          wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_CYAN);
-        }
-      });
-    }
-    this->changeMenu(&wifiAPMenu, true);
-  });
-
+  this->addNodes(&foxHuntMenu, text09, TFTLIGHTGREY, 0, [this]() { this->changeMenu(foxHuntMenu.parentMenu, true); });
+  this->addNodes(&foxHuntMenu, "APs", TFTLIME, WIFI, [this]() { buildFoxTargetList(FoxHuntListKind::AP_TARGETS); });
+  this->addNodes(&foxHuntMenu, "Stations", TFTMAGENTA, WIFI, [this]() { buildFoxTargetList(FoxHuntListKind::APS_WITH_STATIONS); });
+  this->addNodes(&foxHuntMenu, "WiFi Pineapples", TFTYELLOW, PINESCAN_SNIFF, [this]() { buildFoxTargetList(FoxHuntListKind::PINEAPPLE_TARGETS); });
+  this->addNodes(&foxHuntMenu, "MultiSSID", TFTORANGE, MULTISSID_SNIFF, [this]() { buildFoxTargetList(FoxHuntListKind::MULTISSID_TARGETS); });
   this->changeMenu(&foxHuntMenu, true);
 }
 
 void MenuFunctions::buildBluetoothFoxHuntMenu() {
   foxHuntMenu.list->clear();
   foxHuntMenu.parentMenu = &bluetoothSnifferMenu;
-  this->addNodes(&foxHuntMenu, text09, TFTLIGHTGREY, 0, [this]() {
-    this->changeMenu(foxHuntMenu.parentMenu, true);
-  });
-
-  this->addNodes(&foxHuntMenu, "BLE Devices", TFTCYAN, BLUETOOTH, [this]() {
-    wifiAPMenu.list->clear();
-    wifiAPMenu.parentMenu = &foxHuntMenu;
-    this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, 0, [this]() { this->changeMenu(wifiAPMenu.parentMenu, true); });
-    for (int i = 0; i < ble_devices->size(); i++) {
-      String label = String(ble_devices->get(i).rssi) + " " + ble_devices->get(i).name;
-      this->addNodes(&wifiAPMenu, label.c_str(), rssiToMenuColor(ble_devices->get(i).rssi), 255, [this, i]() {
-        const BleDevice& device = ble_devices->get(i);
-        wifi_scan_obj.setFoxHuntTarget(device.mac, device.name, device.rssi, 0, true, macToString(device.mac));
-        display_obj.clearScreen();
-        this->drawStatusBar();
-        wifi_scan_obj.StartScan(BT_SCAN_FOX_HUNT, TFT_CYAN);
-      });
-    }
-    this->changeMenu(&wifiAPMenu, true);
-  });
-
-  this->addNodes(&foxHuntMenu, "FindMy", TFTWHITE, BLUETOOTH, [this]() {
-    wifiAPMenu.list->clear();
-    wifiAPMenu.parentMenu = &foxHuntMenu;
-    this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, 0, [this]() { this->changeMenu(wifiAPMenu.parentMenu, true); });
-    for (int i = 0; i < airtags->size(); i++) {
-      String label = String(airtags->get(i).rssi) + " " + airtags->get(i).mac;
-      this->addNodes(&wifiAPMenu, label.c_str(), rssiToMenuColor(airtags->get(i).rssi), 255, [this, i]() {
-        uint8_t mac[6];
-        convertMacStringToUint8(airtags->get(i).mac, mac);
-        wifi_scan_obj.setFoxHuntTarget(mac, airtags->get(i).mac, airtags->get(i).rssi, 0, true, airtags->get(i).mac);
-        display_obj.clearScreen();
-        this->drawStatusBar();
-        wifi_scan_obj.StartScan(BT_SCAN_FOX_HUNT, TFT_CYAN);
-      });
-    }
-    this->changeMenu(&wifiAPMenu, true);
-  });
-
-  this->addNodes(&foxHuntMenu, "Flipper Zero", TFTORANGE, FLIPPER, [this]() {
-    wifiAPMenu.list->clear();
-    wifiAPMenu.parentMenu = &foxHuntMenu;
-    this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, 0, [this]() { this->changeMenu(wifiAPMenu.parentMenu, true); });
-    for (int i = 0; i < flippers->size(); i++) {
-      String label = flippers->get(i).name.length() ? flippers->get(i).name : flippers->get(i).mac;
-      this->addNodes(&wifiAPMenu, label.c_str(), TFTORANGE, 255, [this, i]() {
-        uint8_t mac[6];
-        convertMacStringToUint8(flippers->get(i).mac, mac);
-        String name = flippers->get(i).name.length() ? flippers->get(i).name : flippers->get(i).mac;
-        wifi_scan_obj.setFoxHuntTarget(mac, name, -128, 0, true, flippers->get(i).mac);
-        display_obj.clearScreen();
-        this->drawStatusBar();
-        wifi_scan_obj.StartScan(BT_SCAN_FOX_HUNT, TFT_CYAN);
-      });
-    }
-    this->changeMenu(&wifiAPMenu, true);
-  });
-
+  this->addNodes(&foxHuntMenu, text09, TFTLIGHTGREY, 0, [this]() { this->changeMenu(foxHuntMenu.parentMenu, true); });
+  this->addNodes(&foxHuntMenu, "BLE Devices", TFTCYAN, BLUETOOTH, [this]() { buildFoxTargetList(FoxHuntListKind::BLE_TARGETS); });
+  this->addNodes(&foxHuntMenu, "FindMy", TFTWHITE, BLUETOOTH, [this]() { buildFoxTargetList(FoxHuntListKind::FINDMY_TARGETS); });
+  this->addNodes(&foxHuntMenu, "Flipper Zero", TFTORANGE, FLIPPER, [this]() { buildFoxTargetList(FoxHuntListKind::FLIPPER_TARGETS); });
   this->changeMenu(&foxHuntMenu, true);
 }
 
@@ -1757,6 +1838,8 @@ void MenuFunctions::RunSetup()
   setMacMenu.list = new LinkedList<MenuNode>();
   genAPMacMenu.list = new LinkedList<MenuNode>();
   wifiStationMenu.list = new LinkedList<MenuNode>();
+  foxSortMenu.list = new LinkedList<MenuNode>();
+  foxFilterMenu.list = new LinkedList<MenuNode>();
   selectProbeSSIDsMenu.list = new LinkedList<MenuNode>();
 
   // WiFi HTML menu stuff

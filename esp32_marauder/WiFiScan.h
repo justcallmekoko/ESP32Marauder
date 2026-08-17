@@ -997,9 +997,13 @@ class WiFiScan
     bool updateBluetoothFoxHuntRssi(const uint8_t mac[6], const String& advertised_address, int8_t rssi);
     size_t getPineScanCount() const;
     String getPineScanLabel(size_t index) const;
+    int8_t getPineScanRssi(size_t index) const;
+    uint8_t getPineScanChannel(size_t index) const;
     bool selectPineScanFoxTarget(size_t index);
     size_t getMultiSSIDCount() const;
     String getMultiSSIDLabel(size_t index) const;
+    int8_t getMultiSSIDRssi(size_t index) const;
+    uint8_t getMultiSSIDChannel(size_t index) const;
     bool selectMultiSSIDFoxTarget(size_t index);
     uint32_t getCompleteEapol(int check_index = -1);
     void drawChannelLine();
