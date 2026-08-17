@@ -151,10 +151,9 @@
 #define WIFI_HOSTSPOT 69 // Nice
 #define BT_SCAN_AIRTAG_MON 70
 #define WIFI_SCAN_CHAN_ACT 71
-#define BT_SCAN_FLOCK 72
+#define WIFI_SCAN_FLOCK 72
 #define BT_SCAN_SIMPLE 73
 #define BT_SCAN_SIMPLE_TWO 74
-#define BT_SCAN_FLOCK_WARDRIVE 75
 #define WIFI_SCAN_DETECT_FOLLOW 76
 #define WIFI_SCAN_SAE_COMMIT 77
 #define WIFI_ATTACK_SAE_COMMIT 78
@@ -728,6 +727,15 @@ class WiFiScan
     void openPoiFile();
     void closePoiFile();
 
+    File flockFile;
+    String flockFileName = "";
+    bool flockFileOpen = false;
+    uint8_t flockMacHistory[64][6] = {};
+    uint8_t flockMacCount = 0;
+    void resetFlockLog();
+    bool rememberFlockMac(const uint8_t mac[6]);
+    void logWardriveFlock(const uint8_t mac[6], int8_t rssi, uint8_t channel);
+
     void executeWarDrive();
     void executeBLESpam(EBLEPayloadType type);
     void startWardriverWiFi();
@@ -809,7 +817,7 @@ class WiFiScan
 
     uint8_t dual_band_channels[DUAL_BAND_CHANNELS] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 72, 76, 80, 84, 88, 92, 96, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, 169, 173, 177};
 
-    uint8_t oui_list[27][3] = {
+    uint8_t oui_list[40][3] = {
     {0x58, 0x8E, 0x81},
     {0xCC, 0xCC, 0xCC},
     {0xEC, 0x1B, 0xBD},
@@ -836,7 +844,20 @@ class WiFiScan
     {0x00, 0xF4, 0x8D},
     {0xD0, 0x39, 0x57},
     {0xE8, 0xD0, 0xFC},
-    {0xB4, 0x1E, 0x52}
+    {0xB4, 0x1E, 0x52},
+    {0xB8, 0x35, 0x32},
+    {0xC0, 0x35, 0x32},
+    {0x24, 0xB2, 0xB9},
+    {0xE0, 0x4F, 0x43},
+    {0xB8, 0x1E, 0xA4},
+    {0x70, 0x08, 0x94},
+    {0x3C, 0x71, 0xBF},
+    {0x58, 0x00, 0xE3},
+    {0x5C, 0x93, 0xA2},
+    {0x64, 0x6E, 0x69},
+    {0x48, 0x27, 0xEA},
+    {0xA4, 0xCF, 0x12},
+    {0x82, 0x6B, 0xF2}
     };
 
     uint8_t dual_band_channel_index = 0;
@@ -879,14 +900,6 @@ class WiFiScan
     bool save_pcap = false;
     bool ep_deauth = false;
     bool ble_scanning = false;
-
-    char* flock_ssid[5] = {
-      "flock",
-      "penguin",
-      "pigvision",
-      "fs ext battery",
-      "Flock"
-    };
 
     #ifdef HAS_DUAL_BAND
       uint8_t channel_activity[DUAL_BAND_CHANNELS] = {};
@@ -986,8 +999,8 @@ class WiFiScan
     bool uploadFile(String filePath, bool retry = false, uint8_t upload_type = WIGLE_UPLOAD);
     String checkEmptyProbe(String essid);
     bool checkFlockOUI(const uint8_t mac[6]);
+    bool probeReqMatchesFlock(const uint8_t* frame, size_t frame_len, const uint8_t src_mac[6]);
     bool startWiFi(String ssid, String password, bool gui = true);
-    bool isFlockCamera(const uint8_t* payload, size_t len, const String& name, String* serial_out);
     int seenBLEDevice(BleDevice ble_device);
     uint16_t rssiToColor(int8_t rssi);
     bool isMetaIdentifier(uint16_t id);
