@@ -1,6 +1,7 @@
 #include "esp_random.h"
 #include "WiFiScan.h"
 #include "FoxHuntTarget.h"
+#include "FlockDetector.h"
 #include "BeaconFrame.h"
 #include "WdgResponse.h"
 #include "lang_var.h"
@@ -664,22 +665,6 @@ extern "C" {
 
                   wifi_scan_obj.bt_frames++;
 
-                  #ifndef HAS_NIMBLE_2
-                    uint8_t* payLoad = advertisedDevice->getPayload();
-                    size_t len = advertisedDevice->getPayloadLength();
-                  #else
-                    const std::vector<unsigned char>& payloadVec = advertisedDevice->getPayload();
-                    const uint8_t* payLoad = payloadVec.data();
-                    size_t len = payloadVec.size();
-                  #endif
-
-                  String name = advertisedDevice->getName().c_str();
-
-                  String serial;
-
-                  // Final decision on marking as Flock Penguin battery
-                  if ((wifi_scan_obj.isFlockCamera(payLoad, len, name, &serial)) || (wifi_scan_obj.checkFlockOUI(mac_char)))
-                    wifi_scan_obj.flock_devices++;
                 }
               }
             #endif
@@ -702,170 +687,6 @@ extern "C" {
               wifi_scan_obj.analyzer_frames_recvd = 0;
               wifi_scan_obj.analyzer_name_string = display_string;
               wifi_scan_obj.analyzer_name_update = true;
-            }
-          }
-          else if (wifi_scan_obj.currentScanMode == BT_SCAN_FLOCK) {
-            #ifndef HAS_NIMBLE_2
-              uint8_t* payLoad = advertisedDevice->getPayload();
-              size_t len = advertisedDevice->getPayloadLength();
-            #else
-              const std::vector<unsigned char>& payLoad = advertisedDevice->getPayload();
-              size_t len = payLoad.size();
-            #endif
-
-            bool hasXuntongMfg = false;
-            size_t mfgIndex = 0;  // index of 0xFF (AD type)
-
-            // Look for Company ID XUNTONG (0x09C8),
-            for (size_t i = 1; i + 3 < len; i++) {
-              if (payLoad[i] == 0xFF &&      // AD type: Manufacturer Specific
-                  payLoad[i + 1] == 0xC8 &&
-                  payLoad[i + 2] == 0x09) {
-                hasXuntongMfg = true;
-                mfgIndex = i;
-                break;
-              }
-            }
-
-            String name = advertisedDevice->getName().c_str();
-
-            // Check for old penguin name
-            bool penguin = false;
-
-            if (name.length() > 0) {
-              // Old firmware: "Penguin-XXXXXXXXXX"
-              if (name.startsWith("Penguin-") && name.length() == 18) {
-                bool allDigits = true;
-                for (int i = 8; i < name.length(); i++) {
-                  char c = name.charAt(i);
-                  if (c < '0' || c > '9') {
-                    allDigits = false;
-                    break;
-                  }
-                }
-                if (allDigits) {
-                  penguin = true;
-                }
-              }
-
-              // Legacy name: "FS Ext Battery"
-              if (name == "FS Ext Battery") {
-                penguin = true;
-              }
-
-              // New firmware: "NNNNNNNNNN" (10 digits)
-              if (name.length() == 10) {
-                bool allDigits = true;
-                for (int i = 0; i < name.length(); i++) {
-                  char c = name.charAt(i);
-                  if (c < '0' || c > '9') {
-                    allDigits = false;
-                    break;
-                  }
-                }
-                if (allDigits) {
-                  penguin = true;
-                }
-              }
-            }
-
-            // Try to extract serial number from the XUNTONG manufacturer data
-            String serial = "";
-
-            if (hasXuntongMfg && mfgIndex > 0) {
-              uint8_t adLen = payLoad[mfgIndex - 1];         // length byte for this AD structure
-              size_t adStart = mfgIndex - 1;
-              size_t adEnd = adStart + adLen;                // exclusive end index
-
-              if (adEnd > len) {
-                adEnd = len;
-              }
-
-              size_t vendorStart = mfgIndex + 3;
-              if (vendorStart < adEnd) {
-                bool started = false;
-
-                for (size_t k = vendorStart; k < adEnd; k++) {
-                  char c = (char)payLoad[k];
-
-                  if (!started) {
-                    if (c == 'T' && (k + 1) < adEnd && (char)payLoad[k + 1] == 'N') {
-                      started = true;
-                      serial += 'T';
-                      serial += 'N';
-                      k++;
-                    }
-                  } else {
-                    // Once started, append digits (skip separators; stop on anything else)
-                    if (c >= '0' && c <= '9') {
-                      serial += c;
-                    } else if (c == ' ' || c == '#' || c == '-') {
-                      continue;
-                    } else {
-                      break;
-                    }
-                  }
-                }
-              }
-            }
-
-            // Final decision on marking as Flock Penguin battery
-            if ((hasXuntongMfg && (penguin || name.length() == 0)) || (wifi_scan_obj.checkFlockOUI(mac_char))) {
-              String mac = advertisedDevice->getAddress().toString().c_str();
-              mac.toUpperCase();
-              int rssi = advertisedDevice->getRSSI();
-
-              Serial.println(rssi);
-              Serial.print(F(" "));
-              Serial.println(mac);
-              Serial.print(F("  Name: "));
-              Serial.println(name);
-              Serial.print(F("  Serial: "));
-              Serial.println(serial.length() ? serial : "N/A");
-
-              //Serial.print(F("  Payload: "));
-              //for (size_t i = 0; i < len; i++) {
-              //  Serial.printf("%02X ", payLoad[i]);
-              //}
-              //Serial.println();
-              //Serial.println();
-
-              #ifdef HAS_SCREEN
-                String display_string = "";
-                display_string.concat(CYAN_KEY);
-                display_string.concat(String(rssi));
-                display_string.concat(" ");
-                if (serial.length()) {
-                  display_string.concat(serial);
-                  display_string.concat(" ");
-                }
-
-                if (name.length() == 0) {
-                  display_string.concat(" MAC:");
-                  display_string.concat(mac);
-                }
-                else {
-                  display_string.concat(" ");
-                  display_string.concat(name);
-                }
-
-                uint8_t temp_len = display_string.length();
-                for (uint8_t i = 0; i < 40 - temp_len; i++) {
-                  display_string.concat(" ");
-                }
-
-                if (!display_obj.printing) {
-                  display_obj.loading = true;
-                  display_obj.display_buffer->add(display_string);
-                  display_obj.loading = false;
-                }
-              #endif
-
-              wifi_scan_obj.flock_devices++;
-
-              // To-do:
-              // track in a list like AirTag / Flipper, if you want
-              // (struct FlockBattery { String mac; String name; String serial; int rssi; uint32_t last_seen; }; etc.)
             }
           }
           else if (wifi_scan_obj.currentScanMode == BT_SCAN_SIMPLE) {
@@ -1408,22 +1229,6 @@ extern "C" {
                     
                   wifi_scan_obj.save_mac(mac_char);
 
-                  #ifndef HAS_NIMBLE_2
-                    uint8_t* payLoad = advertisedDevice->getPayload();
-                    size_t len = advertisedDevice->getPayloadLength();
-                  #else
-                    const std::vector<unsigned char>& payloadVec = advertisedDevice->getPayload();
-                    const uint8_t* payLoad = payloadVec.data();
-                    size_t len = payloadVec.size();
-                  #endif
-
-                  String serial;
-
-                  // Final decision on marking as Flock Penguin battery
-                  if ((wifi_scan_obj.isFlockCamera(payLoad, len, name, &serial)) || (wifi_scan_obj.checkFlockOUI(mac_char))) {
-                    wifi_scan_obj.flock_devices++;
-                  }
-
                   wifi_scan_obj.bt_frames++;
                 }
               }
@@ -1447,61 +1252,6 @@ extern "C" {
               wifi_scan_obj.analyzer_frames_recvd = 0;
               wifi_scan_obj.analyzer_name_string = display_string;
               wifi_scan_obj.analyzer_name_update = true;
-            }
-          }
-          else if (wifi_scan_obj.currentScanMode == BT_SCAN_FLOCK) {
-            #ifndef HAS_NIMBLE_2
-              uint8_t* payLoad = advertisedDevice->getPayload();
-              size_t len = advertisedDevice->getPayloadLength();
-            #else
-              const std::vector<unsigned char>& payloadVec = advertisedDevice->getPayload();
-              const uint8_t* payLoad = payloadVec.data();
-              size_t len = payloadVec.size();
-            #endif
-
-            String serial;
-
-            // Final decision on marking as Flock Penguin battery
-            if ((wifi_scan_obj.isFlockCamera(payLoad, len, name, &serial)) || (wifi_scan_obj.checkFlockOUI(mac_char))) {
-              mac.toUpperCase();
-
-              Serial.print((String)rssi + " " + mac + "\n Name: " + name + "\n Serial: ");
-              Serial.println(serial.length() ? serial : "N/A");
-
-              #ifdef HAS_SCREEN
-                String display_string = "";
-                display_string.concat(CYAN_KEY);
-                display_string.concat(String(rssi));
-                display_string.concat(" ");
-                if (serial.length()) {
-                  display_string.concat(serial);
-                  display_string.concat(" ");
-                }
-
-                if (name.length() == 0) {
-                  display_string.concat(" MAC:");
-                  display_string.concat(mac);
-                }
-                else {
-                  display_string.concat(" ");
-                  display_string.concat(name);
-                }
-
-                uint8_t temp_len = display_string.length();
-                for (uint8_t i = 0; i < 40 - temp_len; i++) {
-                  display_string.concat(" ");
-                }
-
-                if (!display_obj.printing) {
-                  display_obj.loading = true;
-                  display_obj.display_buffer->add(display_string);
-                  display_obj.loading = false;
-                }
-              #endif
-
-              // To-do:
-              // track in a list like AirTag / Flipper, if you want
-              // (struct FlockBattery { String mac; String name; String serial; int rssi; uint32_t last_seen; }; etc.)
             }
           }
           else if (wifi_scan_obj.currentScanMode == BT_SCAN_SKIMMERS) {
@@ -1669,119 +1419,6 @@ int WiFiScan::seenBLEDevice(BleDevice ble_device) {
     }
   }
   return -1;
-}
-
-bool WiFiScan::isFlockCamera(const uint8_t* payload, size_t len, const String& name, String* serial_out) {
-  if (payload == nullptr || len < 4) {
-    return false;
-  }
-
-  bool hasXuntongMfg = false;
-  size_t mfgIndex = 0;
-
-  // Find XUNTONG manufacturer data (0xFF, 0xC8, 0x09)
-  for (size_t i = 1; i + 2 < len; i++) {
-    if (payload[i] == 0xFF &&
-        payload[i + 1] == 0xC8 &&
-        payload[i + 2] == 0x09) {
-      hasXuntongMfg = true;
-      mfgIndex = i;
-      break;
-    }
-  }
-
-  if (!hasXuntongMfg) {
-    return false;
-  }
-
-  // --- Penguin name detection ---
-  bool penguin = false;
-
-  if (name.length() > 0) {
-
-    // "Penguin-XXXXXXXXXX"
-    if (name.startsWith("Penguin-") && name.length() == 18) {
-      bool allDigits = true;
-      for (int i = 8; i < name.length(); i++) {
-        char c = name.charAt(i);
-        if (c < '0' || c > '9') {
-          allDigits = false;
-          break;
-        }
-      }
-      if (allDigits) penguin = true;
-    }
-
-    // "FS Ext Battery"
-    if (name == "FS Ext Battery") {
-      penguin = true;
-    }
-
-    // "NNNNNNNNNN"
-    if (name.length() == 10) {
-      bool allDigits = true;
-      for (int i = 0; i < name.length(); i++) {
-        char c = name.charAt(i);
-        if (c < '0' || c > '9') {
-          allDigits = false;
-          break;
-        }
-      }
-      if (allDigits) penguin = true;
-    }
-  }
-
-  bool isFlock = (penguin || name.length() == 0);
-
-  if (!isFlock) {
-    return false;
-  }
-
-  // --- Serial extraction ---
-  if (serial_out != nullptr) {
-    *serial_out = "";
-
-    if (mfgIndex > 0) {
-      uint8_t adLen = payload[mfgIndex - 1];
-      size_t adStart = mfgIndex - 1;
-      size_t adEnd = adStart + adLen;
-
-      if (adEnd > len) {
-        adEnd = len;
-      }
-
-      size_t vendorStart = mfgIndex + 3;
-
-      if (vendorStart < adEnd) {
-        bool started = false;
-
-        for (size_t k = vendorStart; k < adEnd; k++) {
-          char c = (char)payload[k];
-
-          if (!started) {
-            if (c == 'T' &&
-                (k + 1) < adEnd &&
-                (char)payload[k + 1] == 'N') {
-              started = true;
-              *serial_out += 'T';
-              *serial_out += 'N';
-              k++;
-            }
-          } else {
-            if (c >= '0' && c <= '9') {
-              *serial_out += c;
-            } else if (c == ' ' || c == '#' || c == '-') {
-              continue;
-            } else {
-              break;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  return true;
 }
 
 void WiFiScan::RunSetup() {
@@ -2280,6 +1917,8 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
 
   if (scan_mode == WIFI_SCAN_PROBE)
     RunProbeScan(scan_mode, color);
+  else if (scan_mode == WIFI_SCAN_FLOCK)
+    RunProbeScan(scan_mode, color);
   else if ((scan_mode == WIFI_SCAN_SAE_COMMIT) || (scan_mode == WIFI_ATTACK_SAE_COMMIT))
     RunSAEScan(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_DETECT_FOLLOW) {
@@ -2366,13 +2005,9 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
           (scan_mode == BT_SCAN_AIRTAG) ||
           (scan_mode == BT_SCAN_AIRTAG_MON) ||
           (scan_mode == BT_SCAN_FLIPPER) ||
-          (scan_mode == BT_SCAN_FLOCK) ||
           (scan_mode == BT_SCAN_ANALYZER) ||
           (scan_mode == BT_SCAN_SIMPLE) ||
           (scan_mode == BT_SCAN_SIMPLE_TWO)) {
-    if (scan_mode == BT_SCAN_FLOCK)
-      this->RunProbeScan(scan_mode, color);
-
     #ifdef HAS_BT
       RunBluetoothScan(scan_mode, color);
     #endif
@@ -2687,7 +2322,7 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
   (currentScanMode == WIFI_SCAN_CHAN_ACT) ||
   (currentScanMode == WIFI_SCAN_PACKET_RATE) ||
   (currentScanMode == WIFI_CONNECTED) ||
-  (currentScanMode == BT_SCAN_FLOCK) ||
+  (currentScanMode == WIFI_SCAN_FLOCK) ||
   (currentScanMode == WIFI_SCAN_DETECT_FOLLOW) ||
   (currentScanMode == LV_JOIN_WIFI) ||
   (this->wifi_initialized))
@@ -2754,7 +2389,6 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
   (currentScanMode == BT_SCAN_AIRTAG) ||
   (currentScanMode == BT_SCAN_AIRTAG_MON) ||
   (currentScanMode == BT_SCAN_FLIPPER) ||
-  (currentScanMode == BT_SCAN_FLOCK) ||
   (currentScanMode == BT_ATTACK_FINDMY_LIVE) ||
   (currentScanMode == BT_ATTACK_SOUR_APPLE) ||
   (currentScanMode == BT_ATTACK_APPLE_JUICE) ||
@@ -5776,6 +5410,59 @@ void WiFiScan::closePoiFile() {
   #endif
 }
 
+void WiFiScan::resetFlockLog() {
+  flockFileName = "";
+  flockFileOpen = false;
+  flockMacCount = 0;
+  memset(flockMacHistory, 0, sizeof(flockMacHistory));
+}
+
+bool WiFiScan::rememberFlockMac(const uint8_t mac[6]) {
+  for (uint8_t i = 0; i < flockMacCount; i++) {
+    if (memcmp(flockMacHistory[i], mac, 6) == 0)
+      return false;
+  }
+  if (flockMacCount >= sizeof(flockMacHistory) / sizeof(flockMacHistory[0]))
+    return false;
+  memcpy(flockMacHistory[flockMacCount++], mac, 6);
+  return true;
+}
+
+void WiFiScan::logWardriveFlock(const uint8_t mac[6], int8_t rssi, uint8_t channel) {
+  #ifdef HAS_GPS
+    if (!gps_obj.getGpsModuleStatus() || !gps_obj.getFixStatus())
+      return;
+
+    String line = macToString(mac) + "," + gps_obj.getDatetime() + "," +
+      String(channel) + "," + String(rssi) + "," + gps_obj.getLat() + "," +
+      gps_obj.getLon() + "," + gps_obj.getAlt() + "," + gps_obj.getAccuracy() +
+      ",probe-ie-oui\n";
+    Serial.print("Flock | " + line);
+
+    #ifdef HAS_SD
+      if (!flockFileOpen) {
+        int file_index = 0;
+        do {
+          flockFileName = "/wardrive_flock_" + String(file_index++) + ".log";
+        } while (SD.exists(flockFileName));
+        flockFile = SD.open(flockFileName, FILE_WRITE);
+        if (flockFile) {
+          flockFile.print("MAC,FirstSeen,Channel,RSSI,Latitude,Longitude,AltitudeMeters,AccuracyMeters,Method\n");
+          flockFile.close();
+          flockFileOpen = true;
+        }
+      }
+      if (flockFileOpen) {
+        flockFile = SD.open(flockFileName, FILE_APPEND);
+        if (flockFile) {
+          flockFile.print(line);
+          flockFile.close();
+        }
+      }
+    #endif
+  #endif
+}
+
 void WiFiScan::tagPOI(const char* label) {
   #if defined(HAS_GPS) && defined(HAS_SD)
     if (currentScanMode != WIFI_SCAN_WAR_DRIVE && currentScanMode != WIFI_SCAN_STATION_WAR_DRIVE) {
@@ -6009,6 +5696,7 @@ void WiFiScan::RunBeaconScan(uint8_t scan_mode, uint16_t color) {
         startLog("wardrive");
         buffer_obj.append(this->header_line);
         this->openPoiFile();
+        this->resetFlockLog();
       } else {
         return;
       }
@@ -6213,10 +5901,12 @@ void WiFiScan::throwThatShitInACircle() {
 void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color) {
   if (scan_mode == WIFI_SCAN_PROBE)
     probe_req_ssids->clear();
+  else if (scan_mode == WIFI_SCAN_FLOCK)
+    resetFlockLog();
 
   if (scan_mode == WIFI_SCAN_PROBE)
     startPcap("probe");
-  else if (scan_mode == BT_SCAN_FLOCK)
+  else if (scan_mode == WIFI_SCAN_FLOCK)
     startPcap("flock");
   else if (scan_mode == WIFI_SCAN_DETECT_FOLLOW)
     startPcap("mac_track");
@@ -6237,7 +5927,7 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color) {
     #endif
     #ifdef HAS_ILI9341
       if ((scan_mode != WIFI_SCAN_PROBE) &&
-          (scan_mode != BT_SCAN_FLOCK))
+          (scan_mode != WIFI_SCAN_FLOCK))
         display_obj.touchToExit();
     #endif
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
@@ -6254,12 +5944,7 @@ void WiFiScan::RunProbeScan(uint8_t scan_mode, uint16_t color) {
     esp_wifi_set_country(&country);
     esp_event_loop_create_default();
   #endif
-  if (scan_mode != BT_SCAN_FLOCK)
-    this->setWiFiMode(WIFI_MODE_NULL, beaconSnifferCallback);
-  else {
-    this->throwThatShitInACircle();
-    this->setWiFiMode(WIFI_MODE_AP, beaconSnifferCallback);
-  }
+  this->setWiFiMode(WIFI_MODE_NULL, beaconSnifferCallback);
   this->changeChannel(this->set_channel);
   this->wifi_initialized = true;
   initTime = millis();
@@ -6350,8 +6035,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
       display_obj.print_delay_2 = 20;
     #endif
 
-    if ((scan_mode == BT_SCAN_FLOCK) ||
-        (scan_mode == WIFI_SCAN_WAR_DRIVE) ||
+    if ((scan_mode == WIFI_SCAN_WAR_DRIVE) ||
         (scan_mode == WIFI_SCAN_DETECT_FOLLOW) ||
         (scan_mode == BT_SCAN_SIMPLE) ||
         (scan_mode == BT_SCAN_SIMPLE_TWO) ||
@@ -6372,7 +6056,6 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
         (scan_mode == BT_SCAN_AIRTAG) ||
         (scan_mode == BT_SCAN_AIRTAG_MON) ||
         (scan_mode == BT_SCAN_FLIPPER) ||
-        (scan_mode == BT_SCAN_FLOCK) ||
         (scan_mode == BT_SCAN_SIMPLE) ||
         (scan_mode == BT_SCAN_SIMPLE_TWO))
     {
@@ -6391,8 +6074,6 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
             display_obj.tft.drawCentreString("FindMy Monitor",TFT_WIDTH / 2,16,2);
           else if (scan_mode == BT_SCAN_FLIPPER)
             display_obj.tft.drawCentreString("Flipper Sniff", TFT_WIDTH / 2, 16, 2);
-          else if (scan_mode == BT_SCAN_FLOCK)
-            display_obj.tft.drawCentreString("Flock Sniff", TFT_WIDTH / 2, 16, 2);
           else if (scan_mode == BT_SCAN_SIMPLE)
             display_obj.tft.drawCentreString("Simple Sniff", TFT_WIDTH / 2, 16, 2);
           else if (scan_mode == BT_SCAN_SIMPLE_TWO)
@@ -6400,8 +6081,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
           else if (scan_mode == BT_SCAN_RAYBAN)
             display_obj.tft.drawCentreString("Meta Detect",TFT_WIDTH / 2, 16, 2);
           #ifdef HAS_ILI9341
-            if (scan_mode != BT_SCAN_FLOCK)
-              display_obj.touchToExit();
+            display_obj.touchToExit();
           #endif
         #endif
         display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
@@ -6423,7 +6103,6 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
       }
       else if ((scan_mode == BT_SCAN_FLIPPER) ||
                 (scan_mode == BT_SCAN_RAYBAN) ||
-                (scan_mode == BT_SCAN_FLOCK) ||
                 (scan_mode == BT_SCAN_SIMPLE) ||
                 (scan_mode == BT_SCAN_AIRTAG) ||
                 (scan_mode == BT_SCAN_AIRTAG_MON) ||
@@ -6465,8 +6144,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
           display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
           display_obj.tft.drawCentreString("Bluetooth Analyzer", TFT_WIDTH / 2, 16, 2);
           #ifdef HAS_ILI9341
-            if (scan_mode != BT_SCAN_FLOCK)
-              display_obj.touchToExit();
+            display_obj.touchToExit();
           #endif
         #endif
         display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
@@ -6493,7 +6171,6 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
     if ((scan_mode == BT_SCAN_RAYBAN) ||
         (scan_mode == WIFI_SCAN_WAR_DRIVE) ||
         (scan_mode == BT_SCAN_ANALYZER) ||
-        (scan_mode == BT_SCAN_FLOCK) ||
         (scan_mode == BT_SCAN_SIMPLE) ||
         (scan_mode == BT_SCAN_SIMPLE_TWO))
       pBLEScan->setDuplicateFilter(false);
@@ -8023,6 +7700,10 @@ bool WiFiScan::checkFlockOUI(const uint8_t mac[6]) {
   return false;
 }
 
+bool WiFiScan::probeReqMatchesFlock(const uint8_t* frame, size_t frame_len, const uint8_t src_mac[6]) {
+  return checkFlockOUI(src_mac) && flockProbeRequestMatches(frame, frame_len);
+}
+
 String WiFiScan::checkEmptyProbe(String essid) {
   if (essid == "")
     return "<hidden>";
@@ -8248,148 +7929,38 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
     Serial.println(wifi_scan_obj.fox_hunt_target.name + " RSSI: " + String(wifi_scan_obj.fox_hunt_target.rssi));
     buffer_obj.append(snifferPacket, len);
   }
-  else if (wifi_scan_obj.currentScanMode == BT_SCAN_FLOCK) {
-    if (type == WIFI_PKT_MGMT) {
-      bool do_write = false;
+  else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_FLOCK) {
+    if (type != WIFI_PKT_MGMT || len < 26 ||
+        !wifi_scan_obj.probeReqMatchesFlock(snifferPacket->payload, len, src_addr))
+      return;
 
-      len -= 4;
-      if (snifferPacket->payload[0] == 0x40) {
-        String probe_req_essid;
-
-        for (int i = 0; i < snifferPacket->payload[25]; i++)
-          probe_req_essid.concat((char)snifferPacket->payload[26 + i]);
-
-        // Check name in probe req
-        for (int i = 0; i < sizeof(flock_ssid)/sizeof(wifi_scan_obj.flock_ssid[0]); i++) {
-          if (strcasestr(probe_req_essid.c_str(), wifi_scan_obj.flock_ssid[i]))
-            do_write = true;
-        }
-
-        probe_req_essid = wifi_scan_obj.checkEmptyProbe(probe_req_essid);
-
-        // Check OUIs
-        if ((wifi_scan_obj.checkFlockOUI(src_addr)) && (!do_write))
-          do_write = true;
-
-        if (do_write) {
-          #ifdef HAS_SCREEN
-            display_string.concat(MAGENTA_KEY);
-            display_string.concat((String)snifferPacket->rx_ctrl.rssi);
-            display_string.concat(" ");
-            display_string.concat(addr);
-            display_string.concat(" -> ");
-            display_string.concat(probe_req_essid);
-
-            int temp_len = display_string.length();
-
-            for (int i = 0; i < 40; i++)
-            {
-              display_string.concat(" ");
-            }
-
-            if (!display_obj.printing) {
-              display_obj.loading = true;
-              display_obj.display_buffer->add(display_string);
-              display_obj.loading = false;
-            }
-          #endif
-
-          Serial.println(display_string);
-
-          buffer_obj.append(snifferPacket, len);
-          return;
-        }
+    if (!wifi_scan_obj.rememberFlockMac(src_addr))
+      return;
+    wifi_scan_obj.flock_devices++;
+    #ifdef HAS_SCREEN
+      display_string.concat(MAGENTA_KEY);
+      display_string.concat(String(snifferPacket->rx_ctrl.rssi));
+      display_string.concat(" ");
+      display_string.concat(addr);
+      display_string.concat(" Flock");
+      for (int i = display_string.length(); i < 40; i++)
+        display_string.concat(" ");
+      if (!display_obj.printing) {
+        display_obj.loading = true;
+        display_obj.display_buffer->add(display_string);
+        display_obj.loading = false;
       }
-
-      else if (snifferPacket->payload[0] == 0x80) {
-        if (snifferPacket->payload[37] > 0) {
-          for (int i = 0; i < snifferPacket->payload[37]; i++)
-            essid.concat((char)snifferPacket->payload[i + 38]);
-
-          //Serial.println(essid);
-
-          for (int i = 0; i < sizeof(flock_ssid)/sizeof(wifi_scan_obj.flock_ssid[0]); i++) {
-            if (strcasestr(essid.c_str(), wifi_scan_obj.flock_ssid[i])) {
-
-              #ifdef HAS_SCREEN
-                display_string.concat(GREEN_KEY);
-                display_string.concat((String)snifferPacket->rx_ctrl.rssi);
-                display_string.concat(" ");
-                display_string.concat(addr);
-                display_string.concat(" -> ");
-                display_string.concat(essid);
-
-                int temp_len = display_string.length();
-
-                for (int i = 0; i < 40; i++)
-                {
-                  display_string.concat(" ");
-                }
-
-                if (!display_obj.printing) {
-                  display_obj.loading = true;
-                  display_obj.display_buffer->add(display_string);
-                  display_obj.loading = false;
-                }
-              #endif
-
-              Serial.println(display_string);
-
-              buffer_obj.append(snifferPacket, len);
-              break;
-            }
-          }
-        }
-      }
-    }
+    #endif
+    Serial.println(display_string);
+    buffer_obj.append(snifferPacket, len > 4 ? len - 4 : len);
   }
   else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_WAR_DRIVE) {
-    if (type == WIFI_PKT_MGMT) {
-      bool do_write = false;
-      len -= 4;
-      if (snifferPacket->payload[0] == 0x40) {
-        String probe_req_essid;
-
-        for (int i = 0; i < snifferPacket->payload[25]; i++)
-          probe_req_essid.concat((char)snifferPacket->payload[26 + i]);
-
-        // Check Probe Request Names
-        for (int i = 0; i < sizeof(flock_ssid)/sizeof(wifi_scan_obj.flock_ssid[0]); i++) {
-          if (strcasestr(probe_req_essid.c_str(), wifi_scan_obj.flock_ssid[i])) {
-            do_write = true;
-            break;
-          }
-        }
-
-        // Check OUIs
-        if ((wifi_scan_obj.checkFlockOUI(src_addr)) && (!do_write)) {
-          do_write = true;
-        }
-
-        if ((do_write) && (!wifi_scan_obj.seen_mac(src_addr))) {
-          wifi_scan_obj.save_mac(src_addr);
-          #ifdef HAS_GPS
-            wifi_scan_obj.flock_devices++;
-            String wardrive_line =
-              macToString(src_addr) + "," +
-              "Flock," +
-              wifi_scan_obj.security_int_to_string(WIFI_AUTH_WPA2_PSK) + "," +
-              gps_obj.getDatetime() + "," +
-              (String)wifi_scan_obj.set_channel + "," +
-              (String)snifferPacket->rx_ctrl.rssi + "," +
-              gps_obj.getLat() + "," +
-              gps_obj.getLon() + "," +
-              gps_obj.getAlt() + "," +
-              gps_obj.getAccuracy() + ",WIFI\n";
-
-            Serial.print((String)wifi_scan_obj.mac_history_cursor + " | " + wardrive_line);
-
-            if (gps_obj.getFixStatus()) {
-              buffer_obj.append(wardrive_line);
-            }
-          #endif
-        }
-      }
+    if (type == WIFI_PKT_MGMT && len >= 26 &&
+        wifi_scan_obj.probeReqMatchesFlock(snifferPacket->payload, len, src_addr) &&
+        wifi_scan_obj.rememberFlockMac(src_addr)) {
+      wifi_scan_obj.flock_devices++;
+      wifi_scan_obj.logWardriveFlock(src_addr, snifferPacket->rx_ctrl.rssi,
+                                    snifferPacket->rx_ctrl.channel);
     }
   }
   else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_DETECT_FOLLOW) {
@@ -9962,7 +9533,7 @@ void WiFiScan::channelHop(bool filtered, bool ranged) {
        (this->currentScanMode == WIFI_SCAN_RAW_CAPTURE) ||
        (this->currentScanMode == WIFI_SCAN_SIG_STREN) ||
        (this->currentScanMode == WIFI_SCAN_PACKET_RATE) ||
-       (this->currentScanMode == BT_SCAN_FLOCK)))
+       (this->currentScanMode == WIFI_SCAN_FLOCK)))
     return;
 
   if (!filtered) {
@@ -11621,8 +11192,16 @@ void WiFiScan::main(uint32_t currentTime)
       this->updateTrackerUI();
     }
   }
-  else if ((currentScanMode == BT_SCAN_FLOCK) ||
-          (currentScanMode == BT_SCAN_FLIPPER) ||
+  else if (currentScanMode == WIFI_SCAN_FLOCK) {
+    if (currentTime - initTime >= this->channel_hop_delay * HOP_DELAY) {
+      initTime = millis();
+      this->channelHop();
+    }
+    #ifdef HAS_ILI9341
+      this->signalAnalyzerLoop(currentTime);
+    #endif
+  }
+  else if ((currentScanMode == BT_SCAN_FLIPPER) ||
           (currentScanMode == BT_SCAN_AIRTAG) ||
           (currentScanMode == BT_SCAN_RAYBAN)) {
 
@@ -11649,19 +11228,6 @@ void WiFiScan::main(uint32_t currentTime)
             return;
           }
         }
-      #endif
-      if (currentScanMode == BT_SCAN_FLOCK) {
-        this->channelHop();
-        uint8_t ap_mac[6];
-        esp_read_mac(ap_mac, ESP_MAC_WIFI_STA);
-        broadcastCustomBeacon(currentTime, {"Flock", this->set_channel, {ap_mac[0], ap_mac[1], ap_mac[2], ap_mac[3], ap_mac[4], ap_mac[5]}, false}, true);
-        //broadcastSetSSID(currentTime, "Flock", 1, true);
-      }
-    }
-
-    if (currentScanMode == BT_SCAN_FLOCK) {
-      #ifdef HAS_ILI9341
-        this->signalAnalyzerLoop(currentTime);
       #endif
     }
   }
