@@ -11439,6 +11439,14 @@ String WiFiScan::getPineScanLabel(size_t index) const {
   return String(target.rssi) + " " + target.essid;
 }
 
+int8_t WiFiScan::getPineScanRssi(size_t index) const {
+  return index < this->confirmed_pinescan->size() ? this->confirmed_pinescan->get(index).rssi : -128;
+}
+
+uint8_t WiFiScan::getPineScanChannel(size_t index) const {
+  return index < this->confirmed_pinescan->size() ? this->confirmed_pinescan->get(index).channel : 0;
+}
+
 bool WiFiScan::selectPineScanFoxTarget(size_t index) {
   if (index >= this->confirmed_pinescan->size())
     return false;
@@ -11456,6 +11464,14 @@ String WiFiScan::getMultiSSIDLabel(size_t index) const {
     return "";
   const ConfirmedMultiSSID& target = this->confirmed_multissid->get(index);
   return String(target.rssi) + " " + target.essid;
+}
+
+int8_t WiFiScan::getMultiSSIDRssi(size_t index) const {
+  return index < this->confirmed_multissid->size() ? this->confirmed_multissid->get(index).rssi : -128;
+}
+
+uint8_t WiFiScan::getMultiSSIDChannel(size_t index) const {
+  return index < this->confirmed_multissid->size() ? this->confirmed_multissid->get(index).channel : 0;
 }
 
 bool WiFiScan::selectMultiSSIDFoxTarget(size_t index) {
