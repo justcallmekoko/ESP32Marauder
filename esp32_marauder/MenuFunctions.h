@@ -139,6 +139,9 @@ class MenuFunctions
     uint8_t old_gps_sat_count = 0;
     uint8_t max_graph_value = 0;
 
+    void buildWiFiFoxHuntMenu();
+    void buildBluetoothFoxHuntMenu();
+
     // Main menu stuff
     Menu mainMenu;
 

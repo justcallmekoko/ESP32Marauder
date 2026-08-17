@@ -4,6 +4,11 @@
 #ifdef HAS_SCREEN
 
 extern const unsigned char menu_icons[][66];
+extern LinkedList<AccessPoint>* access_points;
+extern LinkedList<Station>* stations;
+extern LinkedList<AirTag>* airtags;
+extern LinkedList<Flipper>* flippers;
+extern LinkedList<BleDevice>* ble_devices;
 
 #ifdef HAS_MINI_SCREEN
 void MenuFunctions::drawMiniMenuButton(int b, int x, bool selected) {
@@ -1541,6 +1546,163 @@ bool MenuFunctions::isKeyPressed(char c)
   }
 #endif
 
+void MenuFunctions::buildWiFiFoxHuntMenu() {
+  foxHuntMenu.list->clear();
+  foxHuntMenu.parentMenu = &wifiSnifferMenu;
+  this->addNodes(&foxHuntMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(foxHuntMenu.parentMenu, true);
+  });
+
+  this->addNodes(&foxHuntMenu, "APs", TFTLIME, WIFI, [this]() {
+    wifiAPMenu.list->clear();
+    wifiAPMenu.parentMenu = &foxHuntMenu;
+    this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, 0, [this]() { this->changeMenu(wifiAPMenu.parentMenu, true); });
+    for (int i = 0; i < access_points->size(); i++) {
+      String label = String(access_points->get(i).rssi) + " " + access_points->get(i).essid;
+      this->addNodes(&wifiAPMenu, label.c_str(), rssiToMenuColor(access_points->get(i).rssi), 255, [this, i]() {
+        const AccessPoint& ap = access_points->get(i);
+        wifi_scan_obj.setFoxHuntTarget(ap.bssid, ap.essid, ap.rssi, ap.channel, false);
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_CYAN);
+      });
+    }
+    this->changeMenu(&wifiAPMenu, true);
+  });
+
+  this->addNodes(&foxHuntMenu, "Stations", TFTMAGENTA, WIFI, [this]() {
+    wifiAPMenu.list->clear();
+    wifiAPMenu.parentMenu = &foxHuntMenu;
+    this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, 0, [this]() { this->changeMenu(wifiAPMenu.parentMenu, true); });
+    for (int i = 0; i < access_points->size(); i++) {
+      if (access_points->get(i).stations->size() == 0)
+        continue;
+      String label = access_points->get(i).essid + " (" + String(access_points->get(i).stations->size()) + ")";
+      this->addNodes(&wifiAPMenu, label.c_str(), TFTMAGENTA, 255, [this, i]() {
+        wifiStationMenu.list->clear();
+        wifiStationMenu.parentMenu = &wifiAPMenu;
+        this->addNodes(&wifiStationMenu, text09, TFTLIGHTGREY, 0, [this]() { this->changeMenu(wifiStationMenu.parentMenu, true); });
+        const AccessPoint& ap = access_points->get(i);
+        for (int x = 0; x < ap.stations->size(); x++) {
+          int station_index = ap.stations->get(x);
+          String station_name = macToString(stations->get(station_index).mac);
+          this->addNodes(&wifiStationMenu, station_name.c_str(), TFTMAGENTA, 255, [this, i, station_index]() {
+            const AccessPoint& station_ap = access_points->get(i);
+            const Station& station = stations->get(station_index);
+            String name = macToString(station.mac);
+            wifi_scan_obj.setFoxHuntTarget(station.mac, name, -128, station_ap.channel, false);
+            display_obj.clearScreen();
+            this->drawStatusBar();
+            wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_CYAN);
+          });
+        }
+        this->changeMenu(&wifiStationMenu, true);
+      });
+    }
+    this->changeMenu(&wifiAPMenu, true);
+  });
+
+  this->addNodes(&foxHuntMenu, "WiFi Pineapples", TFTYELLOW, PINESCAN_SNIFF, [this]() {
+    wifiAPMenu.list->clear();
+    wifiAPMenu.parentMenu = &foxHuntMenu;
+    this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, 0, [this]() { this->changeMenu(wifiAPMenu.parentMenu, true); });
+    for (size_t i = 0; i < wifi_scan_obj.getPineScanCount(); i++) {
+      String label = wifi_scan_obj.getPineScanLabel(i);
+      this->addNodes(&wifiAPMenu, label.c_str(), TFTYELLOW, 255, [this, i]() {
+        if (wifi_scan_obj.selectPineScanFoxTarget(i)) {
+          display_obj.clearScreen();
+          this->drawStatusBar();
+          wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_CYAN);
+        }
+      });
+    }
+    this->changeMenu(&wifiAPMenu, true);
+  });
+
+  this->addNodes(&foxHuntMenu, "MultiSSID", TFTORANGE, MULTISSID_SNIFF, [this]() {
+    wifiAPMenu.list->clear();
+    wifiAPMenu.parentMenu = &foxHuntMenu;
+    this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, 0, [this]() { this->changeMenu(wifiAPMenu.parentMenu, true); });
+    for (size_t i = 0; i < wifi_scan_obj.getMultiSSIDCount(); i++) {
+      String label = wifi_scan_obj.getMultiSSIDLabel(i);
+      this->addNodes(&wifiAPMenu, label.c_str(), TFTORANGE, 255, [this, i]() {
+        if (wifi_scan_obj.selectMultiSSIDFoxTarget(i)) {
+          display_obj.clearScreen();
+          this->drawStatusBar();
+          wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_CYAN);
+        }
+      });
+    }
+    this->changeMenu(&wifiAPMenu, true);
+  });
+
+  this->changeMenu(&foxHuntMenu, true);
+}
+
+void MenuFunctions::buildBluetoothFoxHuntMenu() {
+  foxHuntMenu.list->clear();
+  foxHuntMenu.parentMenu = &bluetoothSnifferMenu;
+  this->addNodes(&foxHuntMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(foxHuntMenu.parentMenu, true);
+  });
+
+  this->addNodes(&foxHuntMenu, "BLE Devices", TFTCYAN, BLUETOOTH, [this]() {
+    wifiAPMenu.list->clear();
+    wifiAPMenu.parentMenu = &foxHuntMenu;
+    this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, 0, [this]() { this->changeMenu(wifiAPMenu.parentMenu, true); });
+    for (int i = 0; i < ble_devices->size(); i++) {
+      String label = String(ble_devices->get(i).rssi) + " " + ble_devices->get(i).name;
+      this->addNodes(&wifiAPMenu, label.c_str(), rssiToMenuColor(ble_devices->get(i).rssi), 255, [this, i]() {
+        const BleDevice& device = ble_devices->get(i);
+        wifi_scan_obj.setFoxHuntTarget(device.mac, device.name, device.rssi, 0, true);
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(BT_SCAN_FOX_HUNT, TFT_CYAN);
+      });
+    }
+    this->changeMenu(&wifiAPMenu, true);
+  });
+
+  this->addNodes(&foxHuntMenu, "FindMy", TFTWHITE, BLUETOOTH, [this]() {
+    wifiAPMenu.list->clear();
+    wifiAPMenu.parentMenu = &foxHuntMenu;
+    this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, 0, [this]() { this->changeMenu(wifiAPMenu.parentMenu, true); });
+    for (int i = 0; i < airtags->size(); i++) {
+      String label = String(airtags->get(i).rssi) + " " + airtags->get(i).mac;
+      this->addNodes(&wifiAPMenu, label.c_str(), rssiToMenuColor(airtags->get(i).rssi), 255, [this, i]() {
+        uint8_t mac[6];
+        convertMacStringToUint8(airtags->get(i).mac, mac);
+        wifi_scan_obj.setFoxHuntTarget(mac, airtags->get(i).mac, airtags->get(i).rssi, 0, true);
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(BT_SCAN_FOX_HUNT, TFT_CYAN);
+      });
+    }
+    this->changeMenu(&wifiAPMenu, true);
+  });
+
+  this->addNodes(&foxHuntMenu, "Flipper Zero", TFTORANGE, FLIPPER, [this]() {
+    wifiAPMenu.list->clear();
+    wifiAPMenu.parentMenu = &foxHuntMenu;
+    this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, 0, [this]() { this->changeMenu(wifiAPMenu.parentMenu, true); });
+    for (int i = 0; i < flippers->size(); i++) {
+      String label = flippers->get(i).name.length() ? flippers->get(i).name : flippers->get(i).mac;
+      this->addNodes(&wifiAPMenu, label.c_str(), TFTORANGE, 255, [this, i]() {
+        uint8_t mac[6];
+        convertMacStringToUint8(flippers->get(i).mac, mac);
+        String name = flippers->get(i).name.length() ? flippers->get(i).name : flippers->get(i).mac;
+        wifi_scan_obj.setFoxHuntTarget(mac, name, -128, 0, true);
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(BT_SCAN_FOX_HUNT, TFT_CYAN);
+      });
+    }
+    this->changeMenu(&wifiAPMenu, true);
+  });
+
+  this->changeMenu(&foxHuntMenu, true);
+}
+
 // Function to build the menus
 void MenuFunctions::RunSetup()
 {
@@ -1914,30 +2076,7 @@ void MenuFunctions::RunSetup()
     wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_CYAN);
   });*/
   this->addNodes(&wifiSnifferMenu, "Fox Hunt", TFTCYAN, SCANNERS, [this]() {
-    foxHuntMenu.list->clear();
-
-    // Bluetooth Fox Hunt Menu
-    foxHuntMenu.parentMenu = &wifiSnifferMenu; // Second Menu is third menu parent
-    this->addNodes(&foxHuntMenu, text09, TFTLIGHTGREY, 0, [this]() {
-      this->changeMenu(foxHuntMenu.parentMenu, true);
-    });
-    
-    for (int i = 0; i < access_points->size(); i++) {
-      AccessPoint access_point = access_points->get(i);
-      access_point.selected = false;
-      access_points->set(i, access_point);
-      uint8_t node_color = rssiToMenuColor(access_points->get(i).rssi);
-      String node_name = String(access_points->get(i).rssi) + " " + access_points->get(i).essid;
-      this->addNodes(&foxHuntMenu, node_name.c_str(), node_color, 255, [this, i](){
-        AccessPoint access_point = access_points->get(i);
-        access_point.selected = true;
-        access_points->set(i, access_point);
-        display_obj.clearScreen();
-        this->drawStatusBar();
-        wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_CYAN);
-      });
-    }
-    this->changeMenu(&foxHuntMenu, true);
+    this->buildWiFiFoxHuntMenu();
   });
   this->addNodes(&wifiSnifferMenu, "MAC Monitor", TFTMAGENTA, SCANNERS, [this]() {
     display_obj.clearScreen();
@@ -3086,30 +3225,7 @@ void MenuFunctions::RunSetup()
     wifi_scan_obj.StartScan(BT_SCAN_RAYBAN, TFT_CYAN);
   });
   this->addNodes(&bluetoothSnifferMenu, "Fox Hunt", TFTCYAN, SCANNERS, [this]() {
-    foxHuntMenu.list->clear();
-
-    // Bluetooth Fox Hunt Menu
-    foxHuntMenu.parentMenu = &bluetoothSnifferMenu; // Second Menu is third menu parent
-    this->addNodes(&foxHuntMenu, text09, TFTLIGHTGREY, 0, [this]() {
-      this->changeMenu(foxHuntMenu.parentMenu, true);
-    });
-    
-    for (int i = 0; i < ble_devices->size(); i++) {
-      BleDevice ble_device = ble_devices->get(i);
-      ble_device.selected = false;
-      ble_devices->set(i, ble_device);
-      uint8_t node_color = rssiToMenuColor(ble_devices->get(i).rssi);
-      String node_name = String(ble_devices->get(i).rssi) + " " + ble_devices->get(i).name;
-      this->addNodes(&foxHuntMenu, node_name.c_str(), node_color, 255, [this, i](){
-        BleDevice ble_device = ble_devices->get(i);
-        ble_device.selected = true;
-        ble_devices->set(i, ble_device);
-        display_obj.clearScreen();
-        this->drawStatusBar();
-        wifi_scan_obj.StartScan(BT_SCAN_FOX_HUNT, TFT_CYAN);
-      });
-    }
-    this->changeMenu(&foxHuntMenu, true);
+    this->buildBluetoothFoxHuntMenu();
   });
 
   // Bluetooth Attack menu
