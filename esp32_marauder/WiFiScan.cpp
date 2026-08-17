@@ -1,5 +1,6 @@
 #include "esp_random.h"
 #include "WiFiScan.h"
+#include "FoxHuntTarget.h"
 #include "BeaconFrame.h"
 #include "WdgResponse.h"
 #include "lang_var.h"
@@ -11391,7 +11392,7 @@ void WiFiScan::setFoxHuntTarget(const uint8_t mac[6], const String& name, int8_t
   this->fox_hunt_target.last_seen_ms = millis();
   this->fox_hunt_target.advertised_address = advertised_address;
   this->fox_hunt_target.advertised_address.toUpperCase();
-  if (!bluetooth && channel > 0)
+  if (marauder::foxHuntShouldUpdateChannel(bluetooth, channel))
     this->set_channel = channel;
 }
 
@@ -11399,14 +11400,12 @@ bool WiFiScan::updateFoxHuntRssi(const uint8_t mac[6], int8_t rssi, uint8_t chan
   if (!this->fox_hunt_target.active)
     return false;
 
-  for (uint8_t i = 0; i < 6; i++) {
-    if (this->fox_hunt_target.mac[i] != mac[i])
-      return false;
-  }
+  if (!marauder::foxHuntMacMatches(this->fox_hunt_target.mac, mac))
+    return false;
 
   this->fox_hunt_target.rssi = rssi;
   this->fox_hunt_target.last_seen_ms = millis();
-  if (!this->fox_hunt_target.bluetooth && channel > 0)
+  if (marauder::foxHuntShouldUpdateChannel(this->fox_hunt_target.bluetooth, channel))
     this->fox_hunt_target.channel = channel;
   return true;
 }
@@ -11514,14 +11513,12 @@ void WiFiScan::runFoxHunt(uint32_t currentTime) {
     #endif
 
     if ((currentScanMode == WIFI_SCAN_SIG_STREN) && this->fox_hunt_target.active) {
-          if (millis() - this->fox_hunt_target.last_seen_ms > 1500) {
+          if (marauder::foxHuntTargetIsStale(currentTime, this->fox_hunt_target.last_seen_ms, 1500)) {
             #ifdef HAS_DUAL_BAND
               this->dual_band_channel_index = (this->dual_band_channel_index + 1) % DUAL_BAND_CHANNELS;
               this->changeChannel(this->dual_band_channels[this->dual_band_channel_index]);
             #else
-              uint8_t next_channel = this->set_channel + 1;
-              if (next_channel > MAX_CHANNEL)
-                next_channel = 1;
+              uint8_t next_channel = marauder::foxHuntNextChannel(this->set_channel, MAX_CHANNEL);
               this->changeChannel(next_channel);
             #endif
           }
