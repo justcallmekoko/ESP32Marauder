@@ -51,10 +51,10 @@ bool ReconMission::start(ReconMode mode, const String& requested_name) {
   pending_flush = 0;
   state.reset();
   if (active_mode == ReconMode::WIFI) {
-    state.consume(ReconSource::WIFI_AP, access_points ? access_points->size() : 0);
-    state.consume(ReconSource::WIFI_STATION, stations ? stations->size() : 0);
+    state.consume(ReconSource::AP_LIST, access_points ? access_points->size() : 0);
+    state.consume(ReconSource::STATION_LIST, stations ? stations->size() : 0);
   } else {
-    state.consume(ReconSource::BLE, ble_devices ? ble_devices->size() : 0);
+    state.consume(ReconSource::BLE_LIST, ble_devices ? ble_devices->size() : 0);
   }
   memcpy(latest_device, "none", 5);
   memcpy(file_name, "RAM only", 9);
@@ -120,7 +120,7 @@ void ReconMission::observeLists() {
   if (!running) return;
   if (active_mode == ReconMode::WIFI) {
     if (access_points) {
-      const ReconRange range = state.consume(ReconSource::WIFI_AP, access_points->size());
+      const ReconRange range = state.consume(ReconSource::AP_LIST, access_points->size());
       for (size_t index = range.begin; index < range.end; index++) {
         const AccessPoint& ap = access_points->get(index);
         writeObservation("ap", ap.bssid, ap.rssi, ap.channel);
@@ -128,7 +128,7 @@ void ReconMission::observeLists() {
       }
     }
     if (stations) {
-      const ReconRange range = state.consume(ReconSource::WIFI_STATION, stations->size());
+      const ReconRange range = state.consume(ReconSource::STATION_LIST, stations->size());
       for (size_t index = range.begin; index < range.end; index++) {
         const Station& station = stations->get(index);
         uint8_t channel = 0;
@@ -142,7 +142,7 @@ void ReconMission::observeLists() {
   } else {
     #ifdef HAS_BT
       if (ble_devices) {
-        const ReconRange range = state.consume(ReconSource::BLE, ble_devices->size());
+        const ReconRange range = state.consume(ReconSource::BLE_LIST, ble_devices->size());
         for (size_t index = range.begin; index < range.end; index++) {
           const BleDevice& device = ble_devices->get(index);
           writeObservation("ble", device.mac, device.rssi, 0);
