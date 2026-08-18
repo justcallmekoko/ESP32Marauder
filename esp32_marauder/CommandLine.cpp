@@ -355,14 +355,14 @@ void CommandLine::runCommand(String input) {
         const String name = cmd_args.size() > 3 ? cmd_args.get(3) : "mission";
         if (mode == "wifi") {
           wifi_scan_obj.StartScan(WIFI_SCAN_AP_STA, TFT_MAGENTA);
-          if (recon_obj.start(ReconMode::WIFI, name)) {
+          if (recon_obj.start(ReconMode::WIFI_RECON, name)) {
             recon_obj.printStatus(Serial);
           }
         }
         else if (mode == "ble") {
           #ifdef HAS_BT
             wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_CYAN);
-            if (recon_obj.start(ReconMode::BLE, name)) {
+            if (recon_obj.start(ReconMode::BLE_RECON, name)) {
               recon_obj.printStatus(Serial);
             }
           #else

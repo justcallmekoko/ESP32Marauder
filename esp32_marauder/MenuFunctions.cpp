@@ -1791,7 +1791,7 @@ void MenuFunctions::buildReconMenu() {
   });
 
   String state = recon_obj.active() ? "ACTIVE " : "STOPPED ";
-  state += recon_obj.mode() == ReconMode::WIFI ? "WiFi" : "BLE";
+  state += recon_obj.mode() == ReconMode::WIFI_RECON ? "WiFi" : "BLE";
   this->addNodes(&reconMenu, state.c_str(), recon_obj.active() ? TFTGREEN : TFTLIGHTGREY,
                  STATUS_SD, [this]() { this->buildReconMenu(); });
 
@@ -1814,7 +1814,7 @@ void MenuFunctions::buildReconMenu() {
       display_obj.clearScreen();
       this->drawStatusBar();
       wifi_scan_obj.StartScan(WIFI_SCAN_AP_STA, TFT_MAGENTA);
-      if (recon_obj.start(ReconMode::WIFI)) {
+      if (recon_obj.start(ReconMode::WIFI_RECON)) {
         return;
       }
       wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
@@ -1824,7 +1824,7 @@ void MenuFunctions::buildReconMenu() {
         display_obj.clearScreen();
         this->drawStatusBar();
         wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_CYAN);
-        if (recon_obj.start(ReconMode::BLE)) {
+        if (recon_obj.start(ReconMode::BLE_RECON)) {
           return;
         }
         wifi_scan_obj.StartScan(WIFI_SCAN_OFF);

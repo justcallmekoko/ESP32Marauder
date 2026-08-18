@@ -11,7 +11,7 @@
   #include <FS.h>
 #endif
 
-enum class ReconMode : uint8_t { WIFI, BLE };
+enum class ReconMode : uint8_t { WIFI_RECON, BLE_RECON };
 
 class ReconMission {
  public:
@@ -36,7 +36,7 @@ class ReconMission {
 
   ReconMissionState state;
   bool running = false;
-  ReconMode active_mode = ReconMode::WIFI;
+  ReconMode active_mode = ReconMode::WIFI_RECON;
   uint32_t started_at = 0;
   uint32_t last_sample = 0;
   uint32_t ap_count = 0;

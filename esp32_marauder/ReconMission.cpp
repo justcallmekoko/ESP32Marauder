@@ -50,7 +50,7 @@ bool ReconMission::start(ReconMode mode, const String& requested_name) {
   ap_count = station_count = ble_count = 0;
   pending_flush = 0;
   state.reset();
-  if (active_mode == ReconMode::WIFI) {
+  if (active_mode == ReconMode::WIFI_RECON) {
     state.consume(ReconSource::AP_LIST, access_points ? access_points->size() : 0);
     state.consume(ReconSource::STATION_LIST, stations ? stations->size() : 0);
   } else {
@@ -118,7 +118,7 @@ void ReconMission::writeObservation(const char* type, const uint8_t mac[6], int 
 
 void ReconMission::observeLists() {
   if (!running) return;
-  if (active_mode == ReconMode::WIFI) {
+  if (active_mode == ReconMode::WIFI_RECON) {
     if (access_points) {
       const ReconRange range = state.consume(ReconSource::AP_LIST, access_points->size());
       for (size_t index = range.begin; index < range.end; index++) {
@@ -168,7 +168,7 @@ void ReconMission::printStatus(Stream& output) const {
   output.print(F("Recon: "));
   output.println(running ? F("active") : F("stopped"));
   output.print(F("Mode: "));
-  output.println(active_mode == ReconMode::WIFI ? F("WiFi") : F("BLE"));
+  output.println(active_mode == ReconMode::WIFI_RECON ? F("WiFi") : F("BLE"));
   output.print(F("AP/STA/BLE: "));
   output.print(ap_count);
   output.print('/');
