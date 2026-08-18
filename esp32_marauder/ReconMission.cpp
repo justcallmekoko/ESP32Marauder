@@ -76,6 +76,9 @@ bool ReconMission::start(ReconMode mode) {
   probe_queue.reset();
   repeat_queue.reset();
   repeat_gate.reset();
+  memset(ui_events, 0, sizeof(ui_events));
+  ui_event_head = 0;
+  sweep_step = 0;
 
   buffer_obj.setDirectory(NULL);
   #ifdef HAS_SD
@@ -151,6 +154,7 @@ void ReconMission::writeObservation(char type, const uint8_t mac[6], int rssi,
   else if (type == 's') station_count++;
   else if (type == 'b') ble_count++;
   else repeat_count++;
+  recordUiEvent(type, mac);
 
   ReconLogRecord record = {};
   record.elapsed_ms = millis() - started_at;
@@ -193,6 +197,9 @@ void ReconMission::queueProbe(const uint8_t mac[6], int8_t rssi, uint8_t channel
 
 void ReconMission::writeProbe(const ReconProbeEvent& event) {
   probe_count++;
+  char label[13] = {};
+  memcpy(label, event.name, min(event.name_length, static_cast<uint8_t>(sizeof(label) - 1)));
+  recordUiEvent('p', event.mac, label);
   #ifdef HAS_SD
     if (!probe_file) return;
     ReconProbeRecord record = {};
@@ -214,6 +221,17 @@ void ReconMission::writeProbe(const ReconProbeEvent& event) {
       probe_pending_flush = 0;
     }
   #endif
+}
+
+void ReconMission::recordUiEvent(char type, const uint8_t mac[6], const char* label) {
+  UiEvent& event = ui_events[ui_event_head++ % 4];
+  memcpy(event.mac, mac, sizeof(event.mac));
+  event.type = type;
+  event.label[0] = '\0';
+  if (label) {
+    strncpy(event.label, label, sizeof(event.label) - 1);
+    event.label[sizeof(event.label) - 1] = '\0';
+  }
 }
 
 void ReconMission::queueRepeat(char type, const uint8_t mac[6], int8_t rssi,
@@ -329,6 +347,122 @@ void ReconMission::drawDashboard(uint32_t current_time) {
     display_obj.tft.setTextSize(1);
     display_obj.tft.setTextColor(TFT_BLACK, color);
     display_obj.tft.drawCentreString(status, (TFT_WIDTH / 2) + 4, 20, 1);
+    while (display_obj.display_buffer->size()) display_obj.display_buffer->shift();
+    #ifdef SCREEN_BUFFER
+      while (display_obj.screen_buffer->size()) display_obj.screen_buffer->shift();
+    #endif
+
+    const int16_t body_top = 48;
+    display_obj.tft.fillRect(0, body_top, TFT_WIDTH, TFT_HEIGHT - body_top, TFT_BLACK);
+    #if TFT_HEIGHT < 160
+      const int16_t radar_x = 32;
+      const int16_t radar_y = body_top + 37;
+      const int16_t radar_radius = 25;
+    #elif TFT_WIDTH < 200
+      const int16_t radar_x = TFT_WIDTH / 2;
+      const int16_t radar_y = body_top + 48;
+      const int16_t radar_radius = 38;
+    #else
+      const int16_t radar_x = 52;
+      const int16_t radar_y = body_top + 52;
+      const int16_t radar_radius = 42;
+    #endif
+    display_obj.tft.drawCircle(radar_x, radar_y, radar_radius, TFT_DARKGREY);
+    display_obj.tft.drawCircle(radar_x, radar_y, radar_radius / 2, TFT_DARKGREY);
+    display_obj.tft.drawLine(radar_x - radar_radius, radar_y,
+                             radar_x + radar_radius, radar_y, TFT_DARKGREY);
+    display_obj.tft.drawLine(radar_x, radar_y - radar_radius,
+                             radar_x, radar_y + radar_radius, TFT_DARKGREY);
+    static const int8_t sweep_x[8] = {8, 6, 0, -6, -8, -6, 0, 6};
+    static const int8_t sweep_y[8] = {0, 6, 8, 6, 0, -6, -8, -6};
+    const uint8_t sweep = sweep_step++ & 7;
+    display_obj.tft.drawLine(radar_x, radar_y,
+      radar_x + (sweep_x[sweep] * radar_radius) / 8,
+      radar_y + (sweep_y[sweep] * radar_radius) / 8,
+      active_mode == ReconMode::WIFI_RECON ? TFT_MAGENTA : TFT_CYAN);
+
+    for (uint8_t index = 0; index < 4; index++) {
+      const UiEvent& event = ui_events[index];
+      if (!event.type) continue;
+      const uint8_t direction = event.mac[5] & 7;
+      const int16_t distance = 8 + event.mac[4] % (radar_radius - 10);
+      const int16_t x = radar_x + (sweep_x[direction] * distance) / 8;
+      const int16_t y = radar_y + (sweep_y[direction] * distance) / 8;
+      uint16_t dot_color = TFT_CYAN;
+      if (event.type == 'a') dot_color = TFT_GREEN;
+      else if (event.type == 'p') dot_color = TFT_YELLOW;
+      else if (event.type == 'A' || event.type == 'S') dot_color = TFT_MAGENTA;
+      display_obj.tft.fillCircle(x, y, 2, dot_color);
+    }
+
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    char line[34];
+    #if TFT_HEIGHT < 160
+      const int16_t stats_x = 64;
+      if (active_mode == ReconMode::WIFI_RECON)
+        snprintf(line, sizeof(line), "AP %-4lu STA %-4lu", (unsigned long)ap_count,
+                 (unsigned long)station_count);
+      else
+        snprintf(line, sizeof(line), "BLE %-5lu", (unsigned long)ble_count);
+      display_obj.tft.drawString(line, stats_x, body_top + 8, 1);
+      if (active_mode == ReconMode::WIFI_RECON)
+        snprintf(line, sizeof(line), "PROBE %-3lu UPD %-3lu", (unsigned long)probe_count,
+                 (unsigned long)repeat_count);
+      else
+        snprintf(line, sizeof(line), "PASSIVE SCAN");
+      display_obj.tft.drawString(line, stats_x, body_top + 22, 1);
+    #elif TFT_WIDTH < 200
+      if (active_mode == ReconMode::WIFI_RECON)
+        snprintf(line, sizeof(line), "AP %lu  STA %lu", (unsigned long)ap_count,
+                 (unsigned long)station_count);
+      else
+        snprintf(line, sizeof(line), "BLE DEVICES %lu", (unsigned long)ble_count);
+      display_obj.tft.drawCentreString(line, TFT_WIDTH / 2, body_top + 96, 1);
+      if (active_mode == ReconMode::WIFI_RECON)
+        snprintf(line, sizeof(line), "PROBE %lu  UPDATE %lu", (unsigned long)probe_count,
+                 (unsigned long)repeat_count);
+      else
+        snprintf(line, sizeof(line), "PASSIVE SCAN");
+      display_obj.tft.drawCentreString(line, TFT_WIDTH / 2, body_top + 110, 1);
+    #else
+      const int16_t stats_x = 108;
+      display_obj.tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
+      display_obj.tft.drawString("LIVE ACTIVITY", stats_x, body_top + 9, 1);
+      display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      if (active_mode == ReconMode::WIFI_RECON) {
+        snprintf(line, sizeof(line), "AP       %lu", (unsigned long)ap_count);
+        display_obj.tft.drawString(line, stats_x, body_top + 28, 1);
+        snprintf(line, sizeof(line), "STATION  %lu", (unsigned long)station_count);
+        display_obj.tft.drawString(line, stats_x, body_top + 42, 1);
+        snprintf(line, sizeof(line), "PROBE    %lu", (unsigned long)probe_count);
+        display_obj.tft.drawString(line, stats_x, body_top + 56, 1);
+        snprintf(line, sizeof(line), "UPDATE   %lu", (unsigned long)repeat_count);
+        display_obj.tft.drawString(line, stats_x, body_top + 70, 1);
+      } else {
+        snprintf(line, sizeof(line), "BLE DEVICE  %lu", (unsigned long)ble_count);
+        display_obj.tft.drawString(line, stats_x, body_top + 35, 1);
+        display_obj.tft.drawString("PASSIVE SCAN", stats_x, body_top + 55, 1);
+      }
+    #endif
+
+    #if TFT_HEIGHT >= 160
+      const int16_t event_y = TFT_HEIGHT - 34;
+      display_obj.tft.drawFastHLine(6, event_y - 5, TFT_WIDTH - 12, TFT_DARKGREY);
+      const UiEvent& latest = ui_events[(ui_event_head + 3) % 4];
+      if (latest.type) {
+        if (latest.type == 'p') snprintf(line, sizeof(line), "PROBE  %s", latest.label);
+        else snprintf(line, sizeof(line), "%s %02X:%02X:%02X",
+          (latest.type == 'a') ? "NEW AP " : (latest.type == 's') ? "NEW STA" :
+          (latest.type == 'b') ? "NEW BLE" : "UPDATE ",
+          latest.mac[3], latest.mac[4], latest.mac[5]);
+        display_obj.tft.setTextColor(latest.type == 'p' ? TFT_YELLOW : TFT_CYAN, TFT_BLACK);
+        display_obj.tft.drawString(line, 8, event_y, 1);
+      } else {
+        display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
+        display_obj.tft.drawString("Waiting for activity...", 8, event_y, 1);
+      }
+    #endif
     display_obj.tft.setTextColor(active_mode == ReconMode::WIFI_RECON ? TFT_GREEN : TFT_CYAN,
                                  TFT_BLACK);
   #else

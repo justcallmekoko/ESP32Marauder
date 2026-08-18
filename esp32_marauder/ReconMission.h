@@ -33,6 +33,7 @@ class ReconMission {
   void writeProbe(const ReconProbeEvent& event);
   void writeManifest(bool complete);
   void drawDashboard(uint32_t current_time);
+  void recordUiEvent(char type, const uint8_t mac[6], const char* label = nullptr);
 
   ReconMissionState state;
   bool running = false;
@@ -50,6 +51,13 @@ class ReconMission {
   ReconProbeQueue probe_queue;
   ReconRepeatQueue repeat_queue;
   ReconRepeatGate repeat_gate;
+  struct UiEvent {
+    uint8_t mac[6];
+    char label[13];
+    char type;
+  } ui_events[4] = {};
+  uint8_t ui_event_head = 0;
+  uint8_t sweep_step = 0;
   #ifdef HAS_SD
     File log_file;
     File probe_file;
