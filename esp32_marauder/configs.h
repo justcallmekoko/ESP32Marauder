@@ -4,6 +4,13 @@
 
   #define configs_h
 
+  // ESP32-C5 GCC supports -Oz, which trades a small amount of throughput for
+  // materially lower flash use. Keep this scoped to the space-constrained v8;
+  // older ESP32 toolchains do not recognize the option.
+  #if defined(MARAUDER_V8) && (__GNUC__ >= 12)
+    #pragma GCC optimize("Oz")
+  #endif
+
   #define POLISH_POTATO
 
   //#define DEVELOPER
