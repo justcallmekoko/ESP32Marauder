@@ -41,10 +41,10 @@ bool ReconMission::start(ReconMode mode) {
   #ifdef HAS_SD
     if (sd_obj.supported) {
       char file_name[32];
-      snprintf(file_name, sizeof(file_name), "/recon_%lu.csv",
+      snprintf(file_name, sizeof(file_name), "/r_%lu.csv",
                static_cast<unsigned long>(started_at));
       log_file = SD.open(file_name, FILE_WRITE);
-      if (log_file) log_file.println(F("ms,type,mac,rssi,ch,lat_e6,lon_e6"));
+      if (log_file) log_file.println(F("ms,t,m,r,c,lat,lon"));
     }
   #endif
 

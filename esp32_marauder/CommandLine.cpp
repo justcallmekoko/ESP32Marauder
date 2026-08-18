@@ -336,12 +336,12 @@ void CommandLine::runCommand(String input) {
   }
   else if (cmd_args.get(0) == RECON_CMD) {
     if (cmd_args.size() < 2 || cmd_args.get(1) == "status") {
-      Serial.println(recon_obj.active() ? F("Recon active") : F("Recon stopped"));
+      Serial.println(recon_obj.active() ? F("active") : F("stopped"));
     }
     else if (cmd_args.get(1) == "stop") {
       recon_obj.stop();
       wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
-      Serial.println(F("Recon stopped"));
+      Serial.println(F("stopped"));
     }
     else if (cmd_args.get(1) == "start") {
       if (wifi_scan_obj.scanning()) {
@@ -355,14 +355,14 @@ void CommandLine::runCommand(String input) {
         if (mode == "wifi") {
           wifi_scan_obj.StartScan(WIFI_SCAN_AP_STA, TFT_MAGENTA);
           if (recon_obj.start(ReconMode::WIFI_RECON)) {
-            Serial.println(F("Recon active"));
+            Serial.println(F("active"));
           }
         }
         else if (mode == "ble") {
           #ifdef HAS_BT
             wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_CYAN);
             if (recon_obj.start(ReconMode::BLE_RECON)) {
-              Serial.println(F("Recon active"));
+              Serial.println(F("active"));
             }
           #else
             Serial.println(F("Bluetooth not supported on this target"));

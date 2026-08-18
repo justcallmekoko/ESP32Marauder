@@ -1923,7 +1923,7 @@ void MenuFunctions::RunSetup()
 
   // Work menu names
   mainMenu.name = text_table1[6];
-  reconMenu.name = "Recon Mission";
+  reconMenu.name = "Recon";
   wifiMenu.name = text_table1[7];
   deviceMenu.name = text_table1[9];
   failedUpdateMenu.name = text_table1[11];
@@ -1988,7 +1988,7 @@ void MenuFunctions::RunSetup()
   // Build Main Menu
   mainMenu.parentMenu = NULL;
   reconMenu.parentMenu = &mainMenu;
-  this->addNodes(&mainMenu, "Recon Mission", TFTMAGENTA, GENERAL_APPS, [this]() {
+  this->addNodes(&mainMenu, "Recon", TFTMAGENTA, GENERAL_APPS, [this]() {
     this->buildReconMenu();
   });
   this->addNodes(&mainMenu, text_table1[7], TFTGREEN, WIFI, [this]() {
