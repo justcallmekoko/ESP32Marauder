@@ -1,6 +1,10 @@
 #include "ReconMission.h"
 
+#include "Buffer.h"
 #include "WiFiScan.h"
+#ifdef HAS_SCREEN
+  #include "Display.h"
+#endif
 #ifdef HAS_GPS
   #include "GpsInterface.h"
 #endif
@@ -12,6 +16,10 @@ extern LinkedList<AccessPoint>* access_points;
 extern LinkedList<Station>* stations;
 extern LinkedList<BleDevice>* ble_devices;
 extern WiFiScan wifi_scan_obj;
+extern Buffer buffer_obj;
+#ifdef HAS_SCREEN
+  extern Display display_obj;
+#endif
 #ifdef HAS_GPS
   extern GpsInterface gps_obj;
 #endif
@@ -38,11 +46,30 @@ struct __attribute__((packed)) ReconLogRecord {
 bool ReconMission::start(ReconMode mode) {
   if (running || wifi_scan_obj.scanning()) return false;
   active_mode = mode;
-  wifi_scan_obj.StartScan(active_mode == ReconMode::WIFI_RECON ? WIFI_SCAN_AP_STA : BT_SCAN_ALL,
-                          active_mode == ReconMode::WIFI_RECON ? TFT_MAGENTA : TFT_CYAN);
   started_at = millis();
   last_sample = 0;
+  last_dashboard = 0;
   pending_flush = 0;
+  ap_count = 0;
+  station_count = 0;
+  ble_count = 0;
+
+  buffer_obj.setDirectory(NULL);
+  #ifdef HAS_SD
+    session_dir[0] = '\0';
+    if (sd_obj.supported) {
+      SD.mkdir("/recon");
+      for (uint16_t index = 0; index < 10000; index++) {
+        snprintf(session_dir, sizeof(session_dir), "/recon/m%04u", index);
+        if (!SD.exists(session_dir) && SD.mkdir(session_dir)) break;
+        session_dir[0] = '\0';
+      }
+      if (session_dir[0]) buffer_obj.setDirectory(session_dir);
+    }
+  #endif
+
+  wifi_scan_obj.StartScan(active_mode == ReconMode::WIFI_RECON ? WIFI_SCAN_AP_STA : BT_SCAN_ALL,
+                          active_mode == ReconMode::WIFI_RECON ? TFT_MAGENTA : TFT_CYAN);
   state.reset();
   if (active_mode == ReconMode::WIFI_RECON) {
     state.consume(ReconSource::AP_LIST, access_points ? access_points->size() : 0);
@@ -52,10 +79,9 @@ bool ReconMission::start(ReconMode mode) {
   }
 
   #ifdef HAS_SD
-    if (sd_obj.supported) {
-      char file_name[32];
-      snprintf(file_name, sizeof(file_name), "/r_%lu.rlog",
-               static_cast<unsigned long>(started_at));
+    if (session_dir[0]) {
+      char file_name[36];
+      snprintf(file_name, sizeof(file_name), "%s/obs.rlog", session_dir);
       log_file = SD.open(file_name, FILE_WRITE);
       if (log_file) {
         const ReconLogHeader header;
@@ -65,6 +91,8 @@ bool ReconMission::start(ReconMode mode) {
   #endif
 
   running = true;
+  writeManifest(false);
+  drawDashboard(started_at);
   return true;
 }
 
@@ -77,11 +105,17 @@ void ReconMission::stop() {
       log_file.close();
     }
   #endif
+  writeManifest(true);
+  buffer_obj.setDirectory(NULL);
   running = false;
 }
 
 void ReconMission::writeObservation(char type, const uint8_t mac[6], int rssi,
                                     uint8_t channel) {
+  if (type == 'a') ap_count++;
+  else if (type == 's') station_count++;
+  else if (type == 'b') ble_count++;
+
   ReconLogRecord record = {};
   record.elapsed_ms = millis() - started_at;
   record.rssi = static_cast<int8_t>(rssi);
@@ -103,6 +137,74 @@ void ReconMission::writeObservation(char type, const uint8_t mac[6], int rssi,
         pending_flush = 0;
       }
     }
+  #endif
+}
+
+void ReconMission::writeManifest(bool complete) {
+  #ifdef HAS_SD
+    if (!session_dir[0]) return;
+    char path[40];
+    snprintf(path, sizeof(path), "%s/session.json", session_dir);
+    SD.remove(path);
+    File manifest = SD.open(path, FILE_WRITE);
+    if (!manifest) return;
+    bool gps_fix = false;
+    #ifdef HAS_GPS
+      gps_fix = gps_obj.getFixStatus();
+    #endif
+    const String capture = active_mode == ReconMode::WIFI_RECON
+                             ? buffer_obj.getFileName() : "";
+    manifest.printf(
+      "{\"schema\":1,\"state\":\"%s\",\"mode\":\"%s\",\"start_ms\":%lu,"
+      "\"duration_ms\":%lu,\"ap\":%lu,\"station\":%lu,\"ble\":%lu,"
+      "\"gps_fix\":%s,\"observations\":\"obs.rlog\",\"capture\":\"%s\"}\n",
+      complete ? "complete" : "active",
+      active_mode == ReconMode::WIFI_RECON ? "wifi" : "ble",
+      static_cast<unsigned long>(started_at),
+      static_cast<unsigned long>(complete ? millis() - started_at : 0),
+      static_cast<unsigned long>(ap_count),
+      static_cast<unsigned long>(station_count),
+      static_cast<unsigned long>(ble_count),
+      gps_fix ? "true" : "false", capture.c_str());
+    manifest.close();
+  #else
+    (void)complete;
+  #endif
+}
+
+void ReconMission::drawDashboard(uint32_t current_time) {
+  #ifdef HAS_SCREEN
+    if (last_dashboard && current_time - last_dashboard < 1000) return;
+    last_dashboard = current_time;
+    const uint32_t seconds = (current_time - started_at) / 1000;
+    bool gps_fix = false;
+    #ifdef HAS_GPS
+      gps_fix = gps_obj.getFixStatus();
+    #endif
+    char status[40];
+    if (active_mode == ReconMode::WIFI_RECON) {
+      snprintf(status, sizeof(status), "REC W %lu:%02lu A%lu S%lu G%c",
+               static_cast<unsigned long>(seconds / 60),
+               static_cast<unsigned long>(seconds % 60),
+               static_cast<unsigned long>(ap_count),
+               static_cast<unsigned long>(station_count), gps_fix ? '+' : '-');
+    } else {
+      snprintf(status, sizeof(status), "REC B %lu:%02lu D%lu G%c",
+               static_cast<unsigned long>(seconds / 60),
+               static_cast<unsigned long>(seconds % 60),
+               static_cast<unsigned long>(ble_count), gps_fix ? '+' : '-');
+    }
+    const uint16_t color = active_mode == ReconMode::WIFI_RECON ? TFT_MAGENTA : TFT_CYAN;
+    display_obj.tft.fillRect(0, 16, TFT_WIDTH, 16, color);
+    display_obj.tft.fillCircle(7, 24, 3, TFT_RED);
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextColor(TFT_BLACK, color);
+    display_obj.tft.drawCentreString(status, (TFT_WIDTH / 2) + 4, 20, 1);
+    display_obj.tft.setTextColor(active_mode == ReconMode::WIFI_RECON ? TFT_GREEN : TFT_CYAN,
+                                 TFT_BLACK);
+  #else
+    (void)current_time;
   #endif
 }
 
@@ -149,4 +251,5 @@ void ReconMission::main(uint32_t current_time) {
   if (current_time - last_sample < 500) return;
   last_sample = current_time;
   observeLists();
+  drawDashboard(current_time);
 }
