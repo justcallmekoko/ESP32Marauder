@@ -140,7 +140,3 @@ void ReconMission::main(uint32_t current_time) {
   last_sample = current_time;
   observeLists();
 }
-
-void ReconMission::printStatus(Stream& output) const {
-  output.println(running ? F("Recon active") : F("Recon stopped"));
-}

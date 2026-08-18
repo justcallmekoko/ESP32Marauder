@@ -23,7 +23,6 @@ class ReconMission {
   uint32_t apCount() const { return ap_count; }
   uint32_t stationCount() const { return station_count; }
   uint32_t bleCount() const { return ble_count; }
-  void printStatus(Stream& output) const;
 
  private:
   void observeLists();
