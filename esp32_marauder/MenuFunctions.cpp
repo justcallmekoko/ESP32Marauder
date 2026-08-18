@@ -1791,7 +1791,7 @@ void MenuFunctions::buildReconMenu() {
   });
 
   if (!recon_obj.active()) {
-    this->addNodes(&reconMenu, "Start WiFi Mission", TFTGREEN, WIFI, [this]() {
+    this->addNodes(&reconMenu, "Start WiFi", TFTGREEN, WIFI, [this]() {
       display_obj.clearScreen();
       this->drawStatusBar();
       wifi_scan_obj.StartScan(WIFI_SCAN_AP_STA, TFT_MAGENTA);
@@ -1801,7 +1801,7 @@ void MenuFunctions::buildReconMenu() {
       wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
     });
     #ifdef HAS_BT
-      this->addNodes(&reconMenu, "Start BLE Mission", TFTCYAN, BLUETOOTH, [this]() {
+      this->addNodes(&reconMenu, "Start BLE", TFTCYAN, BLUETOOTH, [this]() {
         display_obj.clearScreen();
         this->drawStatusBar();
         wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_CYAN);
@@ -1812,7 +1812,7 @@ void MenuFunctions::buildReconMenu() {
       });
     #endif
   } else {
-    this->addNodes(&reconMenu, "Stop Mission", TFTRED, CLEAR_ICO, [this]() {
+    this->addNodes(&reconMenu, "Stop Recon", TFTRED, CLEAR_ICO, [this]() {
       wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
       recon_obj.stop();
       this->buildReconMenu();

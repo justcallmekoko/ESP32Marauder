@@ -45,7 +45,7 @@ bool ReconMission::start(ReconMode mode) {
       snprintf(file_name, sizeof(file_name), "/recon_%lu.csv",
                static_cast<unsigned long>(started_at));
       log_file = SD.open(file_name, FILE_WRITE);
-      if (log_file) log_file.println(F("elapsed_ms,type,mac,rssi,channel,lat_e6,lon_e6"));
+      if (log_file) log_file.println(F("ms,type,mac,rssi,ch,lat_e6,lon_e6"));
     }
   #endif
 
@@ -142,12 +142,5 @@ void ReconMission::main(uint32_t current_time) {
 }
 
 void ReconMission::printStatus(Stream& output) const {
-  output.print(running ? F("Recon active ") : F("Recon stopped "));
-  output.print(active_mode == ReconMode::WIFI_RECON ? F("WiFi ") : F("BLE "));
-  output.print(ap_count);
-  output.print('/');
-  output.print(station_count);
-  output.print('/');
-  output.print(ble_count);
-  output.println();
+  output.println(running ? F("Recon active") : F("Recon stopped"));
 }
