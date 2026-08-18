@@ -18,6 +18,7 @@
 #define BATTERY_ANALOG_ON 0
 
 #include "WiFiScan.h"
+#include "TargetListSort.h"
 #include "BatteryInterface.h"
 #include "SDInterface.h"
 #include "settings.h"
@@ -129,6 +130,17 @@ class MenuFunctions
 {
   private:
 
+    enum class FoxHuntListKind : uint8_t {
+      AP_TARGETS,
+      APS_WITH_STATIONS,
+      STATION_TARGETS,
+      PINEAPPLE_TARGETS,
+      MULTISSID_TARGETS,
+      BLE_TARGETS,
+      FINDMY_TARGETS,
+      FLIPPER_TARGETS,
+    };
+
     String u_result = "";
 
 
@@ -138,6 +150,21 @@ class MenuFunctions
     uint8_t mini_kb_index = 0;
     uint8_t old_gps_sat_count = 0;
     uint8_t max_graph_value = 0;
+
+    void buildWiFiFoxHuntMenu();
+    void buildBluetoothFoxHuntMenu();
+    void buildFoxTargetList(FoxHuntListKind type, int context_ap = -1);
+    void buildFoxSortMenu();
+    void buildFoxFilterMenu();
+    const char* foxSortLabel() const;
+    const char* foxFilterLabel() const;
+    bool foxListSupportsRecent() const;
+    bool foxListSupportsBand() const;
+
+    FoxHuntListKind fox_target_list = FoxHuntListKind::AP_TARGETS;
+    int fox_target_context_ap = -1;
+    TargetSortMode fox_sort_mode = TargetSortMode::SIGNAL_DESC;
+    TargetFilterMode fox_filter_mode = TargetFilterMode::ALL;
 
     // Main menu stuff
     Menu mainMenu;
@@ -197,6 +224,8 @@ class MenuFunctions
     Menu evilPortalMenu;
 
     Menu foxHuntMenu;
+    Menu foxSortMenu;
+    Menu foxFilterMenu;
 
     #ifdef HAS_DIRECT_UPLOAD
       Menu deleteAllMenu;
