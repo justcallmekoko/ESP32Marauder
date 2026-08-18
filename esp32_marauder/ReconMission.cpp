@@ -56,7 +56,6 @@ bool ReconMission::start(ReconMode mode, const String& requested_name) {
   } else {
     state.consume(ReconSource::BLE_LIST, ble_devices ? ble_devices->size() : 0);
   }
-  memcpy(latest_device, "none", 5);
   memcpy(file_name, "RAM only", 9);
 
   #ifdef HAS_SD
@@ -85,13 +84,10 @@ void ReconMission::stop() {
   running = false;
 }
 
-uint32_t ReconMission::elapsedSeconds() const {
-  return running ? (millis() - started_at) / 1000 : 0;
-}
-
 void ReconMission::writeObservation(const char* type, const uint8_t mac[6], int rssi,
                                     uint8_t channel) {
-  formatMac(mac, latest_device);
+  char mac_text[18];
+  formatMac(mac, mac_text);
   int32_t lat = 0;
   int32_t lon = 0;
   #ifdef HAS_GPS
@@ -105,7 +101,7 @@ void ReconMission::writeObservation(const char* type, const uint8_t mac[6], int 
     if (log_file) {
       char line[112];
       snprintf(line, sizeof(line), "%lu,%s,%s,%d,%u,%ld,%ld",
-               static_cast<unsigned long>(millis() - started_at), type, latest_device, rssi,
+               static_cast<unsigned long>(millis() - started_at), type, mac_text, rssi,
                channel, static_cast<long>(lat), static_cast<long>(lon));
       log_file.println(line);
       if (++pending_flush >= 16) {
@@ -175,8 +171,6 @@ void ReconMission::printStatus(Stream& output) const {
   output.print(station_count);
   output.print('/');
   output.println(ble_count);
-  output.print(F("Latest: "));
-  output.println(latest_device);
   output.print(F("Log: "));
   output.println(file_name);
 }

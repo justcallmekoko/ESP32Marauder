@@ -1790,23 +1790,9 @@ void MenuFunctions::buildReconMenu() {
     this->changeMenu(reconMenu.parentMenu, true);
   });
 
-  String state = recon_obj.active() ? "ACTIVE " : "STOPPED ";
-  state += recon_obj.mode() == ReconMode::WIFI_RECON ? "WiFi" : "BLE";
-  this->addNodes(&reconMenu, state.c_str(), recon_obj.active() ? TFTGREEN : TFTLIGHTGREY,
-                 STATUS_SD, [this]() { this->buildReconMenu(); });
-
-  String totals = "AP ";
-  totals += recon_obj.apCount();
-  totals += "  STA ";
-  totals += recon_obj.stationCount();
-  totals += "  BLE ";
-  totals += recon_obj.bleCount();
-  this->addNodes(&reconMenu, totals.c_str(), TFTCYAN, SCANNERS,
-                 [this]() { this->buildReconMenu(); });
-
-  String latest = "Latest ";
-  latest += recon_obj.latestDevice();
-  this->addNodes(&reconMenu, latest.c_str(), TFTMAGENTA, BEACON_LIST,
+  this->addNodes(&reconMenu,
+                 recon_obj.active() ? "Mission Active" : "Mission Stopped",
+                 recon_obj.active() ? TFTGREEN : TFTLIGHTGREY, STATUS_SD,
                  [this]() { this->buildReconMenu(); });
 
   if (!recon_obj.active()) {
