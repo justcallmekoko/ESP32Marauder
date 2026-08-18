@@ -8,7 +8,7 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from tools.recon_report import ReconReportError, convert, read_observations, read_probes
+from tools.recon_report import ReconReportError, convert, read_observations, read_probes, read_relationships
 
 
 class ReconReportTests(unittest.TestCase):
@@ -62,6 +62,8 @@ class ReconReportTests(unittest.TestCase):
             b"Marauder".ljust(24, b"\0"),
         )
         (mission / "probes.rlog").write_bytes(b"PRB1" + probe)
+        relation = struct.pack("<6s6s", bytes.fromhex("AABBCCDDEEFF"), bytes.fromhex("001122334455"))
+        (mission / "relations.rlog").write_bytes(b"REL1" + relation)
         return mission
 
     def test_decodes_packed_records(self) -> None:
@@ -83,6 +85,16 @@ class ReconReportTests(unittest.TestCase):
             self.assertEqual(probes[0].event, "probe")
             self.assertEqual(probes[0].mac, "AA:BB:CC:DD:EE:FF")
 
+    def test_decodes_and_deduplicates_relationships(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            mission = self.make_mission(Path(temporary))
+            relation = (mission / "relations.rlog").read_bytes()[4:]
+            (mission / "relations.rlog").write_bytes(b"REL1" + relation + relation)
+            relationships = read_relationships(mission / "relations.rlog")
+            self.assertEqual(len(relationships), 1)
+            self.assertEqual(relationships[0].source, "AA:BB:CC:DD:EE:FF")
+            self.assertEqual(relationships[0].target, "00:11:22:33:44:55")
+
     def test_generates_portable_report_and_zip(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             mission = self.make_mission(Path(temporary))
@@ -97,6 +109,10 @@ class ReconReportTests(unittest.TestCase):
             report = (output / "index.html").read_text(encoding="utf-8")
             self.assertIn("RECON MISSION", report)
             self.assertIn("GPS SIGHTING PLOT", report)
+            self.assertIn("MISSION REPLAY", report)
+            self.assertIn("OBSERVED RELATIONSHIPS", report)
+            payload = json.loads((output / "mission.json").read_text(encoding="utf-8"))
+            self.assertEqual(len(payload["relationships"]), 2)
             archive = mission / "m0042-report.zip"
             self.assertTrue(archive.is_file())
             with zipfile.ZipFile(archive) as bundle:

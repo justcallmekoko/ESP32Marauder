@@ -57,6 +57,15 @@ struct __attribute__((packed)) ReconProbeRecord {
   char name[RECON_PROBE_NAME_MAX];
 };
 
+struct __attribute__((packed)) ReconRelationshipHeader {
+  char magic[4] = {'R', 'E', 'L', '1'};
+};
+
+struct __attribute__((packed)) ReconRelationshipRecord {
+  uint8_t station[6];
+  uint8_t access_point[6];
+};
+
 portMUX_TYPE probe_queue_mux = portMUX_INITIALIZER_UNLOCKED;
 }  // namespace
 
@@ -119,6 +128,12 @@ bool ReconMission::start(ReconMode mode) {
         const ReconProbeHeader header;
         probe_file.write(reinterpret_cast<const uint8_t*>(&header), sizeof(header));
       }
+      snprintf(file_name, sizeof(file_name), "%s/relations.rlog", session_dir);
+      relationship_file = SD.open(file_name, FILE_WRITE);
+      if (relationship_file) {
+        const ReconRelationshipHeader header;
+        relationship_file.write(reinterpret_cast<const uint8_t*>(&header), sizeof(header));
+      }
     }
   #endif
 
@@ -142,10 +157,28 @@ void ReconMission::stop() {
       probe_file.flush();
       probe_file.close();
     }
+    if (relationship_file) {
+      relationship_file.flush();
+      relationship_file.close();
+    }
   #endif
   writeManifest(true);
   buffer_obj.setDirectory(NULL);
   running = false;
+}
+
+void ReconMission::writeRelationship(const uint8_t station[6],
+                                      const uint8_t access_point[6]) {
+  #ifdef HAS_SD
+    if (!relationship_file) return;
+    ReconRelationshipRecord record;
+    memcpy(record.station, station, sizeof(record.station));
+    memcpy(record.access_point, access_point, sizeof(record.access_point));
+    relationship_file.write(reinterpret_cast<const uint8_t*>(&record), sizeof(record));
+  #else
+    (void)station;
+    (void)access_point;
+  #endif
 }
 
 void ReconMission::writeObservation(char type, const uint8_t mac[6], int rssi,
@@ -236,7 +269,7 @@ void ReconMission::recordUiEvent(char type, const uint8_t mac[6], const char* la
 
 void ReconMission::queueRepeat(char type, const uint8_t mac[6], int8_t rssi,
                                uint8_t channel) {
-  if (!running || active_mode != ReconMode::WIFI_RECON) return;
+  if (!running || (type == 'B') != (active_mode == ReconMode::BLE_RECON)) return;
   portENTER_CRITICAL(&probe_queue_mux);
   if (repeat_gate.accept(mac, rssi, millis())) {
     ReconRepeatEvent event = {};
@@ -289,7 +322,8 @@ void ReconMission::writeManifest(bool complete) {
       "{\"schema\":1,\"state\":\"%s\",\"mode\":\"%s\",\"start_ms\":%lu,"
       "\"duration_ms\":%lu,\"ap\":%lu,\"station\":%lu,\"ble\":%lu,"
       "\"probe\":%lu,\"repeat\":%lu,\"dropped\":%u,\"gps_fix\":%s,"
-      "\"observations\":\"obs.rlog\",\"probes\":\"probes.rlog\",\"capture\":\"%s\"}\n",
+      "\"observations\":\"obs.rlog\",\"probes\":\"probes.rlog\","
+      "\"relationships\":\"relations.rlog\",\"capture\":\"%s\"}\n",
       complete ? "complete" : "active",
       active_mode == ReconMode::WIFI_RECON ? "wifi" : "ble",
       static_cast<unsigned long>(started_at),
@@ -335,10 +369,11 @@ void ReconMission::drawDashboard(uint32_t current_time) {
                  static_cast<unsigned long>(repeat_count), gps_fix ? '+' : '-');
       #endif
     } else {
-      snprintf(status, sizeof(status), "REC B %lu:%02lu D%lu G%c",
+      snprintf(status, sizeof(status), "REC B %lu:%02lu D%lu U%lu G%c",
                static_cast<unsigned long>(seconds / 60),
                static_cast<unsigned long>(seconds % 60),
-               static_cast<unsigned long>(ble_count), gps_fix ? '+' : '-');
+               static_cast<unsigned long>(ble_count),
+               static_cast<unsigned long>(repeat_count), gps_fix ? '+' : '-');
     }
     const uint16_t color = active_mode == ReconMode::WIFI_RECON ? TFT_MAGENTA : TFT_CYAN;
     display_obj.tft.fillRect(0, 16, TFT_WIDTH, 16, color);
@@ -391,7 +426,7 @@ void ReconMission::drawDashboard(uint32_t current_time) {
       uint16_t dot_color = TFT_CYAN;
       if (event.type == 'a') dot_color = TFT_GREEN;
       else if (event.type == 'p') dot_color = TFT_YELLOW;
-      else if (event.type == 'A' || event.type == 'S') dot_color = TFT_MAGENTA;
+      else if (event.type == 'A' || event.type == 'S' || event.type == 'B') dot_color = TFT_MAGENTA;
       display_obj.tft.fillCircle(x, y, 2, dot_color);
     }
 
@@ -410,7 +445,7 @@ void ReconMission::drawDashboard(uint32_t current_time) {
         snprintf(line, sizeof(line), "PROBE %-3lu UPD %-3lu", (unsigned long)probe_count,
                  (unsigned long)repeat_count);
       else
-        snprintf(line, sizeof(line), "PASSIVE SCAN");
+        snprintf(line, sizeof(line), "UPDATE %-3lu", (unsigned long)repeat_count);
       display_obj.tft.drawString(line, stats_x, body_top + 22, 1);
     #elif TFT_WIDTH < 200
       if (active_mode == ReconMode::WIFI_RECON)
@@ -423,7 +458,7 @@ void ReconMission::drawDashboard(uint32_t current_time) {
         snprintf(line, sizeof(line), "PROBE %lu  UPDATE %lu", (unsigned long)probe_count,
                  (unsigned long)repeat_count);
       else
-        snprintf(line, sizeof(line), "PASSIVE SCAN");
+        snprintf(line, sizeof(line), "UPDATE %lu", (unsigned long)repeat_count);
       display_obj.tft.drawCentreString(line, TFT_WIDTH / 2, body_top + 110, 1);
     #else
       const int16_t stats_x = 108;
@@ -442,7 +477,8 @@ void ReconMission::drawDashboard(uint32_t current_time) {
       } else {
         snprintf(line, sizeof(line), "BLE DEVICE  %lu", (unsigned long)ble_count);
         display_obj.tft.drawString(line, stats_x, body_top + 35, 1);
-        display_obj.tft.drawString("PASSIVE SCAN", stats_x, body_top + 55, 1);
+        snprintf(line, sizeof(line), "UPDATE      %lu", (unsigned long)repeat_count);
+        display_obj.tft.drawString(line, stats_x, body_top + 55, 1);
       }
     #endif
 
@@ -486,7 +522,9 @@ void ReconMission::observeLists() {
         const Station& station = stations->get(index);
         uint8_t channel = 0;
         if (access_points && station.ap < access_points->size()) {
-          channel = access_points->get(station.ap).channel;
+          const AccessPoint& ap = access_points->get(station.ap);
+          channel = ap.channel;
+          writeRelationship(station.mac, ap.bssid);
         }
         writeObservation('s', station.mac, -128, channel);
       }

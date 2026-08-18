@@ -31,6 +31,7 @@ class ReconMission {
   void drainRepeatQueue();
   void writeObservation(char type, const uint8_t mac[6], int rssi, uint8_t channel);
   void writeProbe(const ReconProbeEvent& event);
+  void writeRelationship(const uint8_t station[6], const uint8_t access_point[6]);
   void writeManifest(bool complete);
   void drawDashboard(uint32_t current_time);
   void recordUiEvent(char type, const uint8_t mac[6], const char* label = nullptr);
@@ -61,6 +62,7 @@ class ReconMission {
   #ifdef HAS_SD
     File log_file;
     File probe_file;
+    File relationship_file;
     char session_dir[20] = {};
   #endif
 };
