@@ -1784,44 +1784,6 @@ void MenuFunctions::buildBluetoothFoxHuntMenu() {
   this->changeMenu(&foxHuntMenu, true);
 }
 
-void MenuFunctions::buildReconMenu() {
-  reconMenu.list->clear();
-  this->addNodes(&reconMenu, text09, TFTLIGHTGREY, 0, [this]() {
-    this->changeMenu(reconMenu.parentMenu, true);
-  });
-
-  if (!recon_obj.active()) {
-    this->addNodes(&reconMenu, "Start WiFi", TFTGREEN, WIFI, [this]() {
-      display_obj.clearScreen();
-      this->drawStatusBar();
-      wifi_scan_obj.StartScan(WIFI_SCAN_AP_STA, TFT_MAGENTA);
-      if (recon_obj.start(ReconMode::WIFI_RECON)) {
-        return;
-      }
-      wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
-    });
-    #ifdef HAS_BT
-      this->addNodes(&reconMenu, "Start BLE", TFTCYAN, BLUETOOTH, [this]() {
-        display_obj.clearScreen();
-        this->drawStatusBar();
-        wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_CYAN);
-        if (recon_obj.start(ReconMode::BLE_RECON)) {
-          return;
-        }
-        wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
-      });
-    #endif
-  } else {
-    this->addNodes(&reconMenu, "Stop Recon", TFTRED, CLEAR_ICO, [this]() {
-      wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
-      recon_obj.stop();
-      this->buildReconMenu();
-    });
-  }
-
-  this->changeMenu(&reconMenu, true);
-}
-
 // Function to build the menus
 void MenuFunctions::RunSetup()
 {
@@ -1988,8 +1950,23 @@ void MenuFunctions::RunSetup()
   // Build Main Menu
   mainMenu.parentMenu = NULL;
   reconMenu.parentMenu = &mainMenu;
+  this->addNodes(&reconMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(&mainMenu, true);
+  });
+  this->addNodes(&reconMenu, "Start WiFi", TFTGREEN, WIFI, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    recon_obj.start(ReconMode::WIFI_RECON);
+  });
+  #ifdef HAS_BT
+    this->addNodes(&reconMenu, "Start BLE", TFTCYAN, BLUETOOTH, [this]() {
+      display_obj.clearScreen();
+      this->drawStatusBar();
+      recon_obj.start(ReconMode::BLE_RECON);
+    });
+  #endif
   this->addNodes(&mainMenu, "Recon", TFTMAGENTA, GENERAL_APPS, [this]() {
-    this->buildReconMenu();
+    this->changeMenu(&reconMenu, true);
   });
   this->addNodes(&mainMenu, text_table1[7], TFTGREEN, WIFI, [this]() {
     this->changeMenu(&wifiMenu, true);

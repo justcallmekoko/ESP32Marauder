@@ -343,35 +343,20 @@ void CommandLine::runCommand(String input) {
       wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
       Serial.println(F("stopped"));
     }
-    else if (cmd_args.get(1) == "start") {
+    else {
       if (wifi_scan_obj.scanning()) {
         Serial.println(F("Stop the current scan before starting Recon"));
       }
-      else if (cmd_args.size() < 3) {
-        Serial.println(HELP_RECON_CMD);
+      else if (cmd_args.get(1) == "wifi") {
+        if (recon_obj.start(ReconMode::WIFI_RECON)) Serial.println(F("active"));
       }
-      else {
-        const String mode = cmd_args.get(2);
-        if (mode == "wifi") {
-          wifi_scan_obj.StartScan(WIFI_SCAN_AP_STA, TFT_MAGENTA);
-          if (recon_obj.start(ReconMode::WIFI_RECON)) {
-            Serial.println(F("active"));
-          }
+      #ifdef HAS_BT
+        else if (cmd_args.get(1) == "ble") {
+          if (recon_obj.start(ReconMode::BLE_RECON)) Serial.println(F("active"));
         }
-        else if (mode == "ble") {
-          #ifdef HAS_BT
-            wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_CYAN);
-            if (recon_obj.start(ReconMode::BLE_RECON)) {
-              Serial.println(F("active"));
-            }
-          #else
-            Serial.println(F("Bluetooth not supported on this target"));
-          #endif
-        }
-        else Serial.println(HELP_RECON_CMD);
-      }
+      #endif
+      else Serial.println(HELP_RECON_CMD);
     }
-    else Serial.println(HELP_RECON_CMD);
   }
   else if (cmd_args.get(0) == GPS_DATA_CMD) {
     #ifdef HAS_GPS

@@ -36,8 +36,10 @@ struct __attribute__((packed)) ReconLogRecord {
 }  // namespace
 
 bool ReconMission::start(ReconMode mode) {
-  if (running) return false;
+  if (running || wifi_scan_obj.scanning()) return false;
   active_mode = mode;
+  wifi_scan_obj.StartScan(active_mode == ReconMode::WIFI_RECON ? WIFI_SCAN_AP_STA : BT_SCAN_ALL,
+                          active_mode == ReconMode::WIFI_RECON ? TFT_MAGENTA : TFT_CYAN);
   started_at = millis();
   last_sample = 0;
   pending_flush = 0;

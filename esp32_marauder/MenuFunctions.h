@@ -155,7 +155,6 @@ class MenuFunctions
 
     void buildWiFiFoxHuntMenu();
     void buildBluetoothFoxHuntMenu();
-    void buildReconMenu();
     void buildFoxTargetList(FoxHuntListKind type, int context_ap = -1);
     void buildFoxSortMenu();
     void buildFoxFilterMenu();
