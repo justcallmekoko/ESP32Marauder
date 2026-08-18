@@ -23,7 +23,6 @@ class ReconMission {
   uint32_t apCount() const { return ap_count; }
   uint32_t stationCount() const { return station_count; }
   uint32_t bleCount() const { return ble_count; }
-  const char* fileName() const { return file_name; }
   void printStatus(Stream& output) const;
 
  private:
@@ -40,7 +39,6 @@ class ReconMission {
   uint32_t station_count = 0;
   uint32_t ble_count = 0;
   uint8_t pending_flush = 0;
-  char file_name[48] = "RAM only";
   #ifdef HAS_SD
     File log_file;
   #endif

@@ -38,15 +38,14 @@ bool ReconMission::start(ReconMode mode) {
   } else {
     state.consume(ReconSource::BLE_LIST, ble_devices ? ble_devices->size() : 0);
   }
-  memcpy(file_name, "RAM only", 9);
 
   #ifdef HAS_SD
     if (sd_obj.supported) {
+      char file_name[32];
       snprintf(file_name, sizeof(file_name), "/recon_%lu.csv",
                static_cast<unsigned long>(started_at));
       log_file = SD.open(file_name, FILE_WRITE);
       if (log_file) log_file.println(F("elapsed_ms,type,mac,rssi,channel,lat_e6,lon_e6"));
-      else memcpy(file_name, "RAM only", 9);
     }
   #endif
 
@@ -150,6 +149,5 @@ void ReconMission::printStatus(Stream& output) const {
   output.print(station_count);
   output.print('/');
   output.print(ble_count);
-  output.print(' ');
-  output.println(file_name);
+  output.println();
 }

@@ -1790,11 +1790,6 @@ void MenuFunctions::buildReconMenu() {
     this->changeMenu(reconMenu.parentMenu, true);
   });
 
-  this->addNodes(&reconMenu,
-                 recon_obj.active() ? "Mission Active" : "Mission Stopped",
-                 recon_obj.active() ? TFTGREEN : TFTLIGHTGREY, STATUS_SD,
-                 [this]() { this->buildReconMenu(); });
-
   if (!recon_obj.active()) {
     this->addNodes(&reconMenu, "Start WiFi Mission", TFTGREEN, WIFI, [this]() {
       display_obj.clearScreen();
