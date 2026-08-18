@@ -29,7 +29,6 @@ bool ReconMission::start(ReconMode mode) {
   active_mode = mode;
   started_at = millis();
   last_sample = 0;
-  ap_count = station_count = ble_count = 0;
   pending_flush = 0;
   state.reset();
   if (active_mode == ReconMode::WIFI_RECON) {
@@ -65,7 +64,7 @@ void ReconMission::stop() {
   running = false;
 }
 
-void ReconMission::writeObservation(const char* type, const uint8_t mac[6], int rssi,
+void ReconMission::writeObservation(char type, const uint8_t mac[6], int rssi,
                                     uint8_t channel) {
   char mac_text[18];
   formatMac(mac, mac_text);
@@ -81,7 +80,7 @@ void ReconMission::writeObservation(const char* type, const uint8_t mac[6], int 
   #ifdef HAS_SD
     if (log_file) {
       char line[112];
-      snprintf(line, sizeof(line), "%lu,%s,%s,%d,%u,%ld,%ld",
+      snprintf(line, sizeof(line), "%lu,%c,%s,%d,%u,%ld,%ld",
                static_cast<unsigned long>(millis() - started_at), type, mac_text, rssi,
                channel, static_cast<long>(lat), static_cast<long>(lon));
       log_file.println(line);
@@ -100,8 +99,7 @@ void ReconMission::observeLists() {
       const ReconRange range = state.consume(ReconSource::AP_LIST, access_points->size());
       for (size_t index = range.begin; index < range.end; index++) {
         const AccessPoint& ap = access_points->get(index);
-        writeObservation("ap", ap.bssid, ap.rssi, ap.channel);
-        ap_count++;
+        writeObservation('a', ap.bssid, ap.rssi, ap.channel);
       }
     }
     if (stations) {
@@ -112,8 +110,7 @@ void ReconMission::observeLists() {
         if (access_points && station.ap < access_points->size()) {
           channel = access_points->get(station.ap).channel;
         }
-        writeObservation("station", station.mac, -128, channel);
-        station_count++;
+        writeObservation('s', station.mac, -128, channel);
       }
     }
   } else {
@@ -122,8 +119,7 @@ void ReconMission::observeLists() {
         const ReconRange range = state.consume(ReconSource::BLE_LIST, ble_devices->size());
         for (size_t index = range.begin; index < range.end; index++) {
           const BleDevice& device = ble_devices->get(index);
-          writeObservation("ble", device.mac, device.rssi, 0);
-          ble_count++;
+          writeObservation('b', device.mac, device.rssi, 0);
         }
       }
     #endif
