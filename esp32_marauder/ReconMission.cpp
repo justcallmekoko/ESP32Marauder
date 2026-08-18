@@ -1,0 +1,182 @@
+#include "ReconMission.h"
+
+#include "WiFiScan.h"
+#ifdef HAS_GPS
+  #include "GpsInterface.h"
+#endif
+#ifdef HAS_SD
+  #include "SDInterface.h"
+#endif
+
+extern LinkedList<AccessPoint>* access_points;
+extern LinkedList<Station>* stations;
+extern LinkedList<BleDevice>* ble_devices;
+extern WiFiScan wifi_scan_obj;
+#ifdef HAS_GPS
+  extern GpsInterface gps_obj;
+#endif
+#ifdef HAS_SD
+  extern SDInterface sd_obj;
+#endif
+
+void ReconMission::sanitizeName(const String& requested_name) {
+  const String source = requested_name.length() ? requested_name : "mission";
+  size_t written = 0;
+  for (size_t index = 0; index < source.length() && written < sizeof(mission_name) - 1; index++) {
+    const char value = source.charAt(index);
+    if ((value >= 'a' && value <= 'z') || (value >= 'A' && value <= 'Z') ||
+        (value >= '0' && value <= '9') || value == '-' || value == '_') {
+      mission_name[written++] = value;
+    }
+  }
+  if (written == 0) {
+    memcpy(mission_name, "mission", 8);
+    return;
+  }
+  mission_name[written] = '\0';
+}
+
+void ReconMission::formatMac(const uint8_t mac[6], char output[18]) {
+  snprintf(output, 18, "%02X:%02X:%02X:%02X:%02X:%02X",
+           mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+}
+
+bool ReconMission::start(ReconMode mode, const String& requested_name) {
+  if (running) return false;
+  sanitizeName(requested_name);
+  active_mode = mode;
+  started_at = millis();
+  last_sample = 0;
+  ap_count = station_count = ble_count = 0;
+  pending_flush = 0;
+  state.reset();
+  if (active_mode == ReconMode::WIFI) {
+    state.consume(ReconSource::WIFI_AP, access_points ? access_points->size() : 0);
+    state.consume(ReconSource::WIFI_STATION, stations ? stations->size() : 0);
+  } else {
+    state.consume(ReconSource::BLE, ble_devices ? ble_devices->size() : 0);
+  }
+  memcpy(latest_device, "none", 5);
+  memcpy(file_name, "RAM only", 9);
+
+  #ifdef HAS_SD
+    if (sd_obj.supported) {
+      snprintf(file_name, sizeof(file_name), "/recon_%s_%lu.csv", mission_name,
+               static_cast<unsigned long>(started_at));
+      log_file = SD.open(file_name, FILE_WRITE);
+      if (log_file) log_file.println(F("elapsed_ms,type,mac,rssi,channel,lat_e6,lon_e6"));
+      else memcpy(file_name, "RAM only", 9);
+    }
+  #endif
+
+  running = true;
+  return true;
+}
+
+void ReconMission::stop() {
+  if (!running) return;
+  observeLists();
+  #ifdef HAS_SD
+    if (log_file) {
+      log_file.flush();
+      log_file.close();
+    }
+  #endif
+  running = false;
+}
+
+uint32_t ReconMission::elapsedSeconds() const {
+  return running ? (millis() - started_at) / 1000 : 0;
+}
+
+void ReconMission::writeObservation(const char* type, const uint8_t mac[6], int rssi,
+                                    uint8_t channel) {
+  formatMac(mac, latest_device);
+  int32_t lat = 0;
+  int32_t lon = 0;
+  #ifdef HAS_GPS
+    if (gps_obj.getFixStatus()) {
+      lat = gps_obj.getLatInt();
+      lon = gps_obj.getLonInt();
+    }
+  #endif
+
+  #ifdef HAS_SD
+    if (log_file) {
+      char line[112];
+      snprintf(line, sizeof(line), "%lu,%s,%s,%d,%u,%ld,%ld",
+               static_cast<unsigned long>(millis() - started_at), type, latest_device, rssi,
+               channel, static_cast<long>(lat), static_cast<long>(lon));
+      log_file.println(line);
+      if (++pending_flush >= 16) {
+        log_file.flush();
+        pending_flush = 0;
+      }
+    }
+  #endif
+}
+
+void ReconMission::observeLists() {
+  if (!running) return;
+  if (active_mode == ReconMode::WIFI) {
+    if (access_points) {
+      const ReconRange range = state.consume(ReconSource::WIFI_AP, access_points->size());
+      for (size_t index = range.begin; index < range.end; index++) {
+        const AccessPoint& ap = access_points->get(index);
+        writeObservation("ap", ap.bssid, ap.rssi, ap.channel);
+        ap_count++;
+      }
+    }
+    if (stations) {
+      const ReconRange range = state.consume(ReconSource::WIFI_STATION, stations->size());
+      for (size_t index = range.begin; index < range.end; index++) {
+        const Station& station = stations->get(index);
+        uint8_t channel = 0;
+        if (access_points && station.ap < access_points->size()) {
+          channel = access_points->get(station.ap).channel;
+        }
+        writeObservation("station", station.mac, -128, channel);
+        station_count++;
+      }
+    }
+  } else {
+    #ifdef HAS_BT
+      if (ble_devices) {
+        const ReconRange range = state.consume(ReconSource::BLE, ble_devices->size());
+        for (size_t index = range.begin; index < range.end; index++) {
+          const BleDevice& device = ble_devices->get(index);
+          writeObservation("ble", device.mac, device.rssi, 0);
+          ble_count++;
+        }
+      }
+    #endif
+  }
+}
+
+void ReconMission::main(uint32_t current_time) {
+  if (!running) return;
+  if (!wifi_scan_obj.scanning()) {
+    stop();
+    return;
+  }
+  if (current_time - last_sample < 500) return;
+  last_sample = current_time;
+  observeLists();
+}
+
+void ReconMission::printStatus(Stream& output) const {
+  output.print(F("Recon: "));
+  output.println(running ? F("active") : F("stopped"));
+  output.print(F("Mode: "));
+  output.println(active_mode == ReconMode::WIFI ? F("WiFi") : F("BLE"));
+  output.print(F("AP/STA/BLE: "));
+  output.print(ap_count);
+  output.print('/');
+  output.print(station_count);
+  output.print('/');
+  output.println(ble_count);
+  output.print(F("Latest: "));
+  output.println(latest_device);
+  output.print(F("Log: "));
+  output.println(file_name);
+}

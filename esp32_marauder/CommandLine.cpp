@@ -237,6 +237,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_NMEA_CMD);
     Serial.println(HELP_GPS_POI_CMD);
     Serial.println(HELP_GPS_TRACKER_CMD);
+    Serial.println(HELP_RECON_CMD);
     
     // WiFi sniff/scan
     Serial.println(HELP_EVIL_PORTAL_CMD);
@@ -318,6 +319,7 @@ void CommandLine::runCommand(String input) {
     }
 
     wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+    recon_obj.stop();
 
     if(old_scan_mode == WIFI_SCAN_GPS_NMEA)
       Serial.println(F("END OF NMEA STREAM"));
@@ -331,6 +333,46 @@ void CommandLine::runCommand(String input) {
       display_obj.init();
       menu_function_obj.changeMenu(menu_function_obj.current_menu);
     #endif
+  }
+  else if (cmd_args.get(0) == RECON_CMD) {
+    if (cmd_args.size() < 2 || cmd_args.get(1) == "status") {
+      recon_obj.printStatus(Serial);
+    }
+    else if (cmd_args.get(1) == "stop") {
+      recon_obj.stop();
+      wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+      recon_obj.printStatus(Serial);
+    }
+    else if (cmd_args.get(1) == "start") {
+      if (wifi_scan_obj.scanning()) {
+        Serial.println(F("Stop the current scan before starting Recon"));
+      }
+      else if (cmd_args.size() < 3) {
+        Serial.println(HELP_RECON_CMD);
+      }
+      else {
+        const String mode = cmd_args.get(2);
+        const String name = cmd_args.size() > 3 ? cmd_args.get(3) : "mission";
+        if (mode == "wifi") {
+          wifi_scan_obj.StartScan(WIFI_SCAN_AP_STA, TFT_MAGENTA);
+          if (recon_obj.start(ReconMode::WIFI, name)) {
+            recon_obj.printStatus(Serial);
+          }
+        }
+        else if (mode == "ble") {
+          #ifdef HAS_BT
+            wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_CYAN);
+            if (recon_obj.start(ReconMode::BLE, name)) {
+              recon_obj.printStatus(Serial);
+            }
+          #else
+            Serial.println(F("Bluetooth not supported on this target"));
+          #endif
+        }
+        else Serial.println(HELP_RECON_CMD);
+      }
+    }
+    else Serial.println(HELP_RECON_CMD);
   }
   else if (cmd_args.get(0) == GPS_DATA_CMD) {
     #ifdef HAS_GPS

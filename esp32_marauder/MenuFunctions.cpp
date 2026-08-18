@@ -1784,6 +1784,63 @@ void MenuFunctions::buildBluetoothFoxHuntMenu() {
   this->changeMenu(&foxHuntMenu, true);
 }
 
+void MenuFunctions::buildReconMenu() {
+  reconMenu.list->clear();
+  this->addNodes(&reconMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(reconMenu.parentMenu, true);
+  });
+
+  String state = recon_obj.active() ? "ACTIVE " : "STOPPED ";
+  state += recon_obj.mode() == ReconMode::WIFI ? "WiFi" : "BLE";
+  this->addNodes(&reconMenu, state.c_str(), recon_obj.active() ? TFTGREEN : TFTLIGHTGREY,
+                 STATUS_SD, [this]() { this->buildReconMenu(); });
+
+  String totals = "AP ";
+  totals += recon_obj.apCount();
+  totals += "  STA ";
+  totals += recon_obj.stationCount();
+  totals += "  BLE ";
+  totals += recon_obj.bleCount();
+  this->addNodes(&reconMenu, totals.c_str(), TFTCYAN, SCANNERS,
+                 [this]() { this->buildReconMenu(); });
+
+  String latest = "Latest ";
+  latest += recon_obj.latestDevice();
+  this->addNodes(&reconMenu, latest.c_str(), TFTMAGENTA, BEACON_LIST,
+                 [this]() { this->buildReconMenu(); });
+
+  if (!recon_obj.active()) {
+    this->addNodes(&reconMenu, "Start WiFi Mission", TFTGREEN, WIFI, [this]() {
+      display_obj.clearScreen();
+      this->drawStatusBar();
+      wifi_scan_obj.StartScan(WIFI_SCAN_AP_STA, TFT_MAGENTA);
+      if (recon_obj.start(ReconMode::WIFI)) {
+        return;
+      }
+      wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+    });
+    #ifdef HAS_BT
+      this->addNodes(&reconMenu, "Start BLE Mission", TFTCYAN, BLUETOOTH, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_CYAN);
+        if (recon_obj.start(ReconMode::BLE)) {
+          return;
+        }
+        wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+      });
+    #endif
+  } else {
+    this->addNodes(&reconMenu, "Stop Mission", TFTRED, CLEAR_ICO, [this]() {
+      wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+      recon_obj.stop();
+      this->buildReconMenu();
+    });
+  }
+
+  this->changeMenu(&reconMenu, true);
+}
+
 // Function to build the menus
 void MenuFunctions::RunSetup()
 {
@@ -1803,6 +1860,7 @@ void MenuFunctions::RunSetup()
    
   // root menu stuff
   mainMenu.list = new LinkedList<MenuNode>(); // Get list in first menu ready
+  reconMenu.list = new LinkedList<MenuNode>();
 
   // Main menu stuff
   wifiMenu.list = new LinkedList<MenuNode>(); // Get list in second menu ready
@@ -1884,6 +1942,7 @@ void MenuFunctions::RunSetup()
 
   // Work menu names
   mainMenu.name = text_table1[6];
+  reconMenu.name = "Recon Mission";
   wifiMenu.name = text_table1[7];
   deviceMenu.name = text_table1[9];
   failedUpdateMenu.name = text_table1[11];
@@ -1947,6 +2006,10 @@ void MenuFunctions::RunSetup()
 
   // Build Main Menu
   mainMenu.parentMenu = NULL;
+  reconMenu.parentMenu = &mainMenu;
+  this->addNodes(&mainMenu, "Recon Mission", TFTMAGENTA, GENERAL_APPS, [this]() {
+    this->buildReconMenu();
+  });
   this->addNodes(&mainMenu, text_table1[7], TFTGREEN, WIFI, [this]() {
     this->changeMenu(&wifiMenu, true);
   });

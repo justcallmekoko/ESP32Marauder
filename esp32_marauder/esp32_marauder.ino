@@ -37,6 +37,7 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #include "settings.h"
 #include "CommandLine.h"
+#include "ReconMission.h"
 #include "lang_var.h"
 
 #ifdef HAS_BATTERY
@@ -74,6 +75,7 @@ EvilPortal evil_portal_obj;
 Buffer buffer_obj;
 Settings settings_obj;
 CommandLine cli_obj;
+ReconMission recon_obj;
 
 #ifdef HAS_GPS
   GpsInterface gps_obj;
@@ -446,6 +448,7 @@ void loop()
   // Update all of our objects
   cli_obj.main(currentTime);
   wifi_scan_obj.main(currentTime);
+  recon_obj.main(currentTime);
 
   #ifdef HAS_GPS
     gps_obj.main();
