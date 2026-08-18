@@ -3,7 +3,10 @@
 #include "FoxHuntTarget.h"
 #include "BeaconFrame.h"
 #include "WdgResponse.h"
+#include "ReconMission.h"
 #include "lang_var.h"
+
+extern ReconMission recon_obj;
 
 #ifdef HAS_PSRAM
   struct mac_addr* mac_history = nullptr;
@@ -580,6 +583,7 @@ extern "C" {
               }
 
               ble_devices->add(ble_device);
+              recon_obj.observe('b', ble_device.mac, ble_device.rssi, 0);
 
               #ifndef HAS_MINI_SCREEN
                 display_string.concat(text_table4[0]);
@@ -1277,6 +1281,7 @@ extern "C" {
               }
 
               ble_devices->add(ble_device);
+              recon_obj.observe('b', ble_device.mac, ble_device.rssi, 0);
 
               #ifndef HAS_MINI_SCREEN
                 display_string.concat(text_table4[0]);
@@ -6744,6 +6749,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
           ap.man = "";
 
           access_points->add(ap);
+          recon_obj.observe('a', ap.bssid, ap.rssi, ap.channel);
         }
 
         Serial.println();
@@ -6847,6 +6853,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
                     0};
 
       stations->add(sta);
+      recon_obj.observe('s', sta.mac, -128, access_points->get(ap_index).channel);
     }
 
     // Print findings to serial

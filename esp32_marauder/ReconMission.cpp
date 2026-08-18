@@ -41,15 +41,7 @@ bool ReconMission::start(ReconMode mode) {
   wifi_scan_obj.StartScan(active_mode == ReconMode::WIFI_RECON ? WIFI_SCAN_AP_STA : BT_SCAN_ALL,
                           active_mode == ReconMode::WIFI_RECON ? TFT_MAGENTA : TFT_CYAN);
   started_at = millis();
-  last_sample = 0;
   pending_flush = 0;
-  state.reset();
-  if (active_mode == ReconMode::WIFI_RECON) {
-    state.consume(ReconSource::AP_LIST, access_points ? access_points->size() : 0);
-    state.consume(ReconSource::STATION_LIST, stations ? stations->size() : 0);
-  } else {
-    state.consume(ReconSource::BLE_LIST, ble_devices ? ble_devices->size() : 0);
-  }
 
   #ifdef HAS_SD
     if (sd_obj.supported) {
@@ -70,7 +62,6 @@ bool ReconMission::start(ReconMode mode) {
 
 void ReconMission::stop() {
   if (!running) return;
-  observeLists();
   #ifdef HAS_SD
     if (log_file) {
       log_file.flush();
@@ -78,6 +69,12 @@ void ReconMission::stop() {
     }
   #endif
   running = false;
+}
+
+void ReconMission::observe(char type, const uint8_t mac[6], int rssi, uint8_t channel) {
+  if (!running) return;
+  if ((type == 'b') != (active_mode == ReconMode::BLE_RECON)) return;
+  writeObservation(type, mac, rssi, channel);
 }
 
 void ReconMission::writeObservation(char type, const uint8_t mac[6], int rssi,
@@ -106,47 +103,8 @@ void ReconMission::writeObservation(char type, const uint8_t mac[6], int rssi,
   #endif
 }
 
-void ReconMission::observeLists() {
-  if (!running) return;
-  if (active_mode == ReconMode::WIFI_RECON) {
-    if (access_points) {
-      const ReconRange range = state.consume(ReconSource::AP_LIST, access_points->size());
-      for (size_t index = range.begin; index < range.end; index++) {
-        const AccessPoint& ap = access_points->get(index);
-        writeObservation('a', ap.bssid, ap.rssi, ap.channel);
-      }
-    }
-    if (stations) {
-      const ReconRange range = state.consume(ReconSource::STATION_LIST, stations->size());
-      for (size_t index = range.begin; index < range.end; index++) {
-        const Station& station = stations->get(index);
-        uint8_t channel = 0;
-        if (access_points && station.ap < access_points->size()) {
-          channel = access_points->get(station.ap).channel;
-        }
-        writeObservation('s', station.mac, -128, channel);
-      }
-    }
-  } else {
-    #ifdef HAS_BT
-      if (ble_devices) {
-        const ReconRange range = state.consume(ReconSource::BLE_LIST, ble_devices->size());
-        for (size_t index = range.begin; index < range.end; index++) {
-          const BleDevice& device = ble_devices->get(index);
-          writeObservation('b', device.mac, device.rssi, 0);
-        }
-      }
-    #endif
-  }
-}
-
 void ReconMission::main(uint32_t current_time) {
+  (void)current_time;
   if (!running) return;
-  if (!wifi_scan_obj.scanning()) {
-    stop();
-    return;
-  }
-  if (current_time - last_sample < 500) return;
-  last_sample = current_time;
-  observeLists();
+  if (!wifi_scan_obj.scanning()) stop();
 }
