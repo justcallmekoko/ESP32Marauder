@@ -15,7 +15,7 @@ enum class ReconMode : uint8_t { WIFI_RECON, BLE_RECON };
 
 class ReconMission {
  public:
-  bool start(ReconMode mode, const String& requested_name = "");
+  bool start(ReconMode mode);
   void stop();
   void main(uint32_t current_time);
   bool active() const { return running; }
@@ -29,7 +29,6 @@ class ReconMission {
  private:
   void observeLists();
   void writeObservation(const char* type, const uint8_t mac[6], int rssi, uint8_t channel);
-  void sanitizeName(const String& requested_name);
   static void formatMac(const uint8_t mac[6], char output[18]);
 
   ReconMissionState state;
@@ -41,7 +40,6 @@ class ReconMission {
   uint32_t station_count = 0;
   uint32_t ble_count = 0;
   uint8_t pending_flush = 0;
-  char mission_name[17] = "mission";
   char file_name[48] = "RAM only";
   #ifdef HAS_SD
     File log_file;

@@ -19,31 +19,13 @@ extern WiFiScan wifi_scan_obj;
   extern SDInterface sd_obj;
 #endif
 
-void ReconMission::sanitizeName(const String& requested_name) {
-  const String source = requested_name.length() ? requested_name : "mission";
-  size_t written = 0;
-  for (size_t index = 0; index < source.length() && written < sizeof(mission_name) - 1; index++) {
-    const char value = source.charAt(index);
-    if ((value >= 'a' && value <= 'z') || (value >= 'A' && value <= 'Z') ||
-        (value >= '0' && value <= '9') || value == '-' || value == '_') {
-      mission_name[written++] = value;
-    }
-  }
-  if (written == 0) {
-    memcpy(mission_name, "mission", 8);
-    return;
-  }
-  mission_name[written] = '\0';
-}
-
 void ReconMission::formatMac(const uint8_t mac[6], char output[18]) {
   snprintf(output, 18, "%02X:%02X:%02X:%02X:%02X:%02X",
            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 }
 
-bool ReconMission::start(ReconMode mode, const String& requested_name) {
+bool ReconMission::start(ReconMode mode) {
   if (running) return false;
-  sanitizeName(requested_name);
   active_mode = mode;
   started_at = millis();
   last_sample = 0;
@@ -60,7 +42,7 @@ bool ReconMission::start(ReconMode mode, const String& requested_name) {
 
   #ifdef HAS_SD
     if (sd_obj.supported) {
-      snprintf(file_name, sizeof(file_name), "/recon_%s_%lu.csv", mission_name,
+      snprintf(file_name, sizeof(file_name), "/recon_%lu.csv",
                static_cast<unsigned long>(started_at));
       log_file = SD.open(file_name, FILE_WRITE);
       if (log_file) log_file.println(F("elapsed_ms,type,mac,rssi,channel,lat_e6,lon_e6"));
@@ -161,16 +143,13 @@ void ReconMission::main(uint32_t current_time) {
 }
 
 void ReconMission::printStatus(Stream& output) const {
-  output.print(F("Recon: "));
-  output.println(running ? F("active") : F("stopped"));
-  output.print(F("Mode: "));
-  output.println(active_mode == ReconMode::WIFI_RECON ? F("WiFi") : F("BLE"));
-  output.print(F("AP/STA/BLE: "));
+  output.print(running ? F("Recon active ") : F("Recon stopped "));
+  output.print(active_mode == ReconMode::WIFI_RECON ? F("WiFi ") : F("BLE "));
   output.print(ap_count);
   output.print('/');
   output.print(station_count);
   output.print('/');
-  output.println(ble_count);
-  output.print(F("Log: "));
+  output.print(ble_count);
+  output.print(' ');
   output.println(file_name);
 }
