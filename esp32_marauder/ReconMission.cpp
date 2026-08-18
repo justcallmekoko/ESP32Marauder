@@ -19,10 +19,21 @@ extern WiFiScan wifi_scan_obj;
   extern SDInterface sd_obj;
 #endif
 
-void ReconMission::formatMac(const uint8_t mac[6], char output[18]) {
-  snprintf(output, 18, "%02X:%02X:%02X:%02X:%02X:%02X",
-           mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-}
+namespace {
+struct __attribute__((packed)) ReconLogHeader {
+  char magic[4] = {'R', 'C', 'N', '1'};
+};
+
+struct __attribute__((packed)) ReconLogRecord {
+  uint32_t elapsed_ms;
+  int32_t latitude;
+  int32_t longitude;
+  uint8_t mac[6];
+  int8_t rssi;
+  uint8_t channel;
+  char type;
+};
+}  // namespace
 
 bool ReconMission::start(ReconMode mode) {
   if (running) return false;
@@ -41,10 +52,13 @@ bool ReconMission::start(ReconMode mode) {
   #ifdef HAS_SD
     if (sd_obj.supported) {
       char file_name[32];
-      snprintf(file_name, sizeof(file_name), "/r_%lu.csv",
+      snprintf(file_name, sizeof(file_name), "/r_%lu.rlog",
                static_cast<unsigned long>(started_at));
       log_file = SD.open(file_name, FILE_WRITE);
-      if (log_file) log_file.println(F("ms,t,m,r,c,lat,lon"));
+      if (log_file) {
+        const ReconLogHeader header;
+        log_file.write(reinterpret_cast<const uint8_t*>(&header), sizeof(header));
+      }
     }
   #endif
 
@@ -66,24 +80,22 @@ void ReconMission::stop() {
 
 void ReconMission::writeObservation(char type, const uint8_t mac[6], int rssi,
                                     uint8_t channel) {
-  char mac_text[18];
-  formatMac(mac, mac_text);
-  int32_t lat = 0;
-  int32_t lon = 0;
+  ReconLogRecord record = {};
+  record.elapsed_ms = millis() - started_at;
+  record.rssi = static_cast<int8_t>(rssi);
+  record.channel = channel;
+  record.type = type;
+  memcpy(record.mac, mac, sizeof(record.mac));
   #ifdef HAS_GPS
     if (gps_obj.getFixStatus()) {
-      lat = gps_obj.getLatInt();
-      lon = gps_obj.getLonInt();
+      record.latitude = gps_obj.getLatInt();
+      record.longitude = gps_obj.getLonInt();
     }
   #endif
 
   #ifdef HAS_SD
     if (log_file) {
-      char line[112];
-      snprintf(line, sizeof(line), "%lu,%c,%s,%d,%u,%ld,%ld",
-               static_cast<unsigned long>(millis() - started_at), type, mac_text, rssi,
-               channel, static_cast<long>(lat), static_cast<long>(lon));
-      log_file.println(line);
+      log_file.write(reinterpret_cast<const uint8_t*>(&record), sizeof(record));
       if (++pending_flush >= 16) {
         log_file.flush();
         pending_flush = 0;

@@ -24,7 +24,6 @@ class ReconMission {
  private:
   void observeLists();
   void writeObservation(char type, const uint8_t mac[6], int rssi, uint8_t channel);
-  static void formatMac(const uint8_t mac[6], char output[18]);
 
   ReconMissionState state;
   bool running = false;
