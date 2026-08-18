@@ -4,6 +4,7 @@
 #define ReconMission_h
 
 #include "configs.h"
+#include "ReconProbeQueue.h"
 #include "ReconMissionState.h"
 
 #include <Arduino.h>
@@ -18,12 +19,18 @@ class ReconMission {
   bool start(ReconMode mode);
   void stop();
   void main(uint32_t current_time);
+  void queueProbe(const uint8_t mac[6], int8_t rssi, uint8_t channel,
+                  const uint8_t* name, uint8_t name_length);
+  void queueRepeat(char type, const uint8_t mac[6], int8_t rssi, uint8_t channel);
   bool active() const { return running; }
   ReconMode mode() const { return active_mode; }
 
  private:
   void observeLists();
+  void drainProbeQueue();
+  void drainRepeatQueue();
   void writeObservation(char type, const uint8_t mac[6], int rssi, uint8_t channel);
+  void writeProbe(const ReconProbeEvent& event);
   void writeManifest(bool complete);
   void drawDashboard(uint32_t current_time);
 
@@ -36,9 +43,16 @@ class ReconMission {
   uint32_t ap_count = 0;
   uint32_t station_count = 0;
   uint32_t ble_count = 0;
+  uint32_t probe_count = 0;
+  uint32_t repeat_count = 0;
   uint8_t pending_flush = 0;
+  uint8_t probe_pending_flush = 0;
+  ReconProbeQueue probe_queue;
+  ReconRepeatQueue repeat_queue;
+  ReconRepeatGate repeat_gate;
   #ifdef HAS_SD
     File log_file;
+    File probe_file;
     char session_dir[20] = {};
   #endif
 };

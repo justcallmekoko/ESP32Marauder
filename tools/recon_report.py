@@ -14,6 +14,8 @@ from pathlib import Path
 
 MAGIC = b"RCN1"
 RECORD = struct.Struct("<Iii6sbBc")
+PROBE_MAGIC = b"PRB1"
+PROBE_RECORD = struct.Struct("<Iii6sbBB24s")
 TYPE_NAMES = {"a": "access-point", "s": "station", "b": "ble"}
 
 
@@ -30,6 +32,8 @@ class Observation:
     rssi: int
     channel: int
     type: str
+    event: str
+    ssid: str | None
 
 
 def read_observations(path: Path) -> list[Observation]:
@@ -44,7 +48,8 @@ def read_observations(path: Path) -> list[Observation]:
     for values in RECORD.iter_unpack(payload):
         elapsed, latitude, longitude, mac, rssi, channel, raw_type = values
         kind = raw_type.decode("ascii", errors="replace")
-        if kind not in TYPE_NAMES:
+        base_kind = kind.lower()
+        if base_kind not in TYPE_NAMES:
             raise ReconReportError(f"Unknown observation type {kind!r}")
         has_position = latitude != 0 or longitude != 0
         observations.append(
@@ -55,10 +60,41 @@ def read_observations(path: Path) -> list[Observation]:
                 mac=":".join(f"{octet:02X}" for octet in mac),
                 rssi=rssi,
                 channel=channel,
-                type=TYPE_NAMES[kind],
+                type=TYPE_NAMES[base_kind],
+                event="repeat" if kind.isupper() else "new",
+                ssid=None,
             )
         )
     return observations
+
+
+def read_probes(path: Path) -> list[Observation]:
+    data = path.read_bytes()
+    if not data.startswith(PROBE_MAGIC):
+        raise ReconReportError(f"{path} is not a PRB1 probe log")
+    payload = data[len(PROBE_MAGIC) :]
+    if len(payload) % PROBE_RECORD.size:
+        raise ReconReportError(f"{path} ends with an incomplete probe")
+    probes = []
+    for values in PROBE_RECORD.iter_unpack(payload):
+        elapsed, latitude, longitude, mac, rssi, channel, length, raw_name = values
+        if length > len(raw_name):
+            raise ReconReportError("Probe name length exceeds record capacity")
+        has_position = latitude != 0 or longitude != 0
+        probes.append(
+            Observation(
+                elapsed_ms=elapsed,
+                latitude=latitude / 10_000_000 if has_position else None,
+                longitude=longitude / 10_000_000 if has_position else None,
+                mac=":".join(f"{octet:02X}" for octet in mac),
+                rssi=rssi,
+                channel=channel,
+                type="probe-request",
+                event="probe",
+                ssid=raw_name[:length].decode("utf-8", errors="replace"),
+            )
+        )
+    return probes
 
 
 def load_mission(directory: Path) -> tuple[dict, list[Observation]]:
@@ -72,7 +108,12 @@ def load_mission(directory: Path) -> tuple[dict, list[Observation]]:
         raise ReconReportError(f"Invalid session.json: {error}") from error
     if manifest.get("schema") != 1:
         raise ReconReportError("Unsupported Recon manifest schema")
-    return manifest, read_observations(log_path)
+    observations = read_observations(log_path)
+    probe_path = directory / manifest.get("probes", "probes.rlog")
+    if probe_path.is_file():
+        observations.extend(read_probes(probe_path))
+        observations.sort(key=lambda item: item.elapsed_ms)
+    return manifest, observations
 
 
 def write_csv(path: Path, observations: list[Observation]) -> None:
@@ -113,16 +154,19 @@ def _route_points(observations: list[Observation]) -> str:
 def write_html(path: Path, manifest: dict, observations: list[Observation]) -> None:
     counts = {name: 0 for name in TYPE_NAMES.values()}
     for item in observations:
-        counts[item.type] += 1
+        if item.event == "new":
+            counts[item.type] += 1
+    probe_count = sum(item.event == "probe" for item in observations)
+    repeat_count = sum(item.event == "repeat" for item in observations)
     duration = int(manifest.get("duration_ms", 0)) // 1000
     rows = "".join(
         "<tr>"
-        f"<td>{item.elapsed_ms / 1000:.1f}s</td><td>{html.escape(item.type)}</td>"
-        f"<td>{item.mac}</td><td>{item.rssi}</td><td>{item.channel or '-'}</td>"
+        f"<td>{item.elapsed_ms / 1000:.1f}s</td><td>{html.escape(item.event)}</td><td>{html.escape(item.type)}</td>"
+        f"<td>{item.mac}</td><td>{html.escape(item.ssid or '-')}</td><td>{item.rssi}</td><td>{item.channel or '-'}</td>"
         f"<td>{item.latitude:.6f}, {item.longitude:.6f}</td></tr>" if item.latitude is not None else
         "<tr>"
-        f"<td>{item.elapsed_ms / 1000:.1f}s</td><td>{html.escape(item.type)}</td>"
-        f"<td>{item.mac}</td><td>{item.rssi}</td><td>{item.channel or '-'}</td><td>-</td></tr>"
+        f"<td>{item.elapsed_ms / 1000:.1f}s</td><td>{html.escape(item.event)}</td><td>{html.escape(item.type)}</td>"
+        f"<td>{item.mac}</td><td>{html.escape(item.ssid or '-')}</td><td>{item.rssi}</td><td>{item.channel or '-'}</td><td>-</td></tr>"
         for item in observations
     )
     document = f"""<!doctype html>
@@ -141,9 +185,11 @@ main{{max-width:1100px;margin:auto;padding:28px}} h1{{letter-spacing:.12em;margi
 <div class="card"><div class="value">{counts['access-point']}</div><div class="label">Access points</div></div>
 <div class="card"><div class="value">{counts['station']}</div><div class="label">Stations</div></div>
 <div class="card"><div class="value">{counts['ble']}</div><div class="label">BLE devices</div></div>
+<div class="card"><div class="value">{probe_count}</div><div class="label">Probe requests</div></div>
+<div class="card"><div class="value">{repeat_count}</div><div class="label">Changed / returned</div></div>
 <div class="card"><div class="value">{duration // 60}:{duration % 60:02d}</div><div class="label">Duration</div></div></section>
 <section class="panel"><h2>GPS SIGHTING PLOT</h2>{_route_points(observations)}</section>
-<section class="panel"><h2>OBSERVATION TIMELINE</h2><table><thead><tr><th>Elapsed</th><th>Type</th><th>MAC</th><th>RSSI</th><th>Channel</th><th>Position</th></tr></thead><tbody>{rows}</tbody></table></section>
+<section class="panel"><h2>OBSERVATION TIMELINE</h2><table><thead><tr><th>Elapsed</th><th>Event</th><th>Type</th><th>MAC</th><th>SSID</th><th>RSSI</th><th>Channel</th><th>Position</th></tr></thead><tbody>{rows}</tbody></table></section>
 </main></body></html>"""
     path.write_text(document, encoding="utf-8")
 

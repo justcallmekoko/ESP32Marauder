@@ -8,7 +8,7 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from tools.recon_report import ReconReportError, convert, read_observations
+from tools.recon_report import ReconReportError, convert, read_observations, read_probes
 
 
 class ReconReportTests(unittest.TestCase):
@@ -50,6 +50,18 @@ class ReconReportTests(unittest.TestCase):
             ),
         ]
         (mission / "obs.rlog").write_bytes(b"RCN1" + b"".join(records))
+        probe = struct.pack(
+            "<Iii6sbBB24s",
+            2000,
+            389000100,
+            -770000100,
+            bytes.fromhex("AABBCCDDEEFF"),
+            -55,
+            6,
+            8,
+            b"Marauder".ljust(24, b"\0"),
+        )
+        (mission / "probes.rlog").write_bytes(b"PRB1" + probe)
         return mission
 
     def test_decodes_packed_records(self) -> None:
@@ -60,7 +72,16 @@ class ReconReportTests(unittest.TestCase):
             self.assertEqual(observations[0].mac, "00:11:22:33:44:55")
             self.assertEqual(observations[0].latitude, 38.9)
             self.assertEqual(observations[0].type, "access-point")
+            self.assertEqual(observations[0].event, "new")
             self.assertIsNone(observations[1].latitude)
+
+    def test_decodes_probe_names_and_source(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            mission = self.make_mission(Path(temporary))
+            probes = read_probes(mission / "probes.rlog")
+            self.assertEqual(probes[0].ssid, "Marauder")
+            self.assertEqual(probes[0].event, "probe")
+            self.assertEqual(probes[0].mac, "AA:BB:CC:DD:EE:FF")
 
     def test_generates_portable_report_and_zip(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -72,7 +93,7 @@ class ReconReportTests(unittest.TestCase):
             )
             with (output / "observations.csv").open(encoding="utf-8") as source:
                 rows = list(csv.DictReader(source))
-            self.assertEqual(rows[1]["type"], "station")
+            self.assertEqual(rows[1]["type"], "probe-request")
             report = (output / "index.html").read_text(encoding="utf-8")
             self.assertIn("RECON MISSION", report)
             self.assertIn("GPS SIGHTING PLOT", report)
