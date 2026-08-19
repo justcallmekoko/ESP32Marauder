@@ -87,7 +87,6 @@ bool ReconMission::start(ReconMode mode) {
   repeat_gate.reset();
   memset(ui_events, 0, sizeof(ui_events));
   ui_event_head = 0;
-  sweep_step = 0;
 
   buffer_obj.setDirectory(NULL);
   #ifdef HAS_SD
@@ -187,7 +186,7 @@ void ReconMission::writeObservation(char type, const uint8_t mac[6], int rssi,
   else if (type == 's') station_count++;
   else if (type == 'b') ble_count++;
   else repeat_count++;
-  recordUiEvent(type, mac);
+  recordUiEvent(type, mac, static_cast<int8_t>(rssi));
 
   ReconLogRecord record = {};
   record.elapsed_ms = millis() - started_at;
@@ -232,7 +231,7 @@ void ReconMission::writeProbe(const ReconProbeEvent& event) {
   probe_count++;
   char label[13] = {};
   memcpy(label, event.name, min(event.name_length, static_cast<uint8_t>(sizeof(label) - 1)));
-  recordUiEvent('p', event.mac, label);
+  recordUiEvent('p', event.mac, event.rssi, label);
   #ifdef HAS_SD
     if (!probe_file) return;
     ReconProbeRecord record = {};
@@ -256,10 +255,12 @@ void ReconMission::writeProbe(const ReconProbeEvent& event) {
   #endif
 }
 
-void ReconMission::recordUiEvent(char type, const uint8_t mac[6], const char* label) {
+void ReconMission::recordUiEvent(char type, const uint8_t mac[6], int8_t rssi,
+                                 const char* label) {
   UiEvent& event = ui_events[ui_event_head++ % 4];
   memcpy(event.mac, mac, sizeof(event.mac));
   event.type = type;
+  event.rssi = rssi;
   event.label[0] = '\0';
   if (label) {
     strncpy(event.label, label, sizeof(event.label) - 1);
@@ -390,44 +391,46 @@ void ReconMission::drawDashboard(uint32_t current_time) {
     const int16_t body_top = 48;
     display_obj.tft.fillRect(0, body_top, TFT_WIDTH, TFT_HEIGHT - body_top, TFT_BLACK);
     #if TFT_HEIGHT < 160
-      const int16_t radar_x = 32;
-      const int16_t radar_y = body_top + 37;
-      const int16_t radar_radius = 25;
+      const int16_t meter_x = 7;
+      const int16_t meter_y = body_top + 10;
+      const int16_t meter_width = 50;
+      const int16_t meter_height = 54;
     #elif TFT_WIDTH < 200
-      const int16_t radar_x = TFT_WIDTH / 2;
-      const int16_t radar_y = body_top + 48;
-      const int16_t radar_radius = 38;
+      const int16_t meter_x = (TFT_WIDTH - 76) / 2;
+      const int16_t meter_y = body_top + 10;
+      const int16_t meter_width = 76;
+      const int16_t meter_height = 76;
     #else
-      const int16_t radar_x = 52;
-      const int16_t radar_y = body_top + 52;
-      const int16_t radar_radius = 42;
+      const int16_t meter_x = 10;
+      const int16_t meter_y = body_top + 10;
+      const int16_t meter_width = 84;
+      const int16_t meter_height = 84;
     #endif
-    display_obj.tft.drawCircle(radar_x, radar_y, radar_radius, TFT_DARKGREY);
-    display_obj.tft.drawCircle(radar_x, radar_y, radar_radius / 2, TFT_DARKGREY);
-    display_obj.tft.drawLine(radar_x - radar_radius, radar_y,
-                             radar_x + radar_radius, radar_y, TFT_DARKGREY);
-    display_obj.tft.drawLine(radar_x, radar_y - radar_radius,
-                             radar_x, radar_y + radar_radius, TFT_DARKGREY);
-    static const int8_t sweep_x[8] = {8, 6, 0, -6, -8, -6, 0, 6};
-    static const int8_t sweep_y[8] = {0, 6, 8, 6, 0, -6, -8, -6};
-    const uint8_t sweep = sweep_step++ & 7;
-    display_obj.tft.drawLine(radar_x, radar_y,
-      radar_x + (sweep_x[sweep] * radar_radius) / 8,
-      radar_y + (sweep_y[sweep] * radar_radius) / 8,
-      active_mode == ReconMode::WIFI_RECON ? TFT_MAGENTA : TFT_CYAN);
-
+    display_obj.tft.drawRect(meter_x, meter_y, meter_width, meter_height, TFT_DARKGREY);
+    display_obj.tft.drawFastHLine(meter_x + 1, meter_y + meter_height / 3,
+                                  meter_width - 2, TFT_DARKGREY);
+    display_obj.tft.drawFastHLine(meter_x + 1, meter_y + (meter_height * 2) / 3,
+                                  meter_width - 2, TFT_DARKGREY);
+    const int16_t slot_width = (meter_width - 6) / 4;
+    const int16_t baseline = meter_y + meter_height - 3;
     for (uint8_t index = 0; index < 4; index++) {
-      const UiEvent& event = ui_events[index];
+      const UiEvent& event = ui_events[(ui_event_head + index) % 4];
       if (!event.type) continue;
-      const uint8_t direction = event.mac[5] & 7;
-      const int16_t distance = 8 + event.mac[4] % (radar_radius - 10);
-      const int16_t x = radar_x + (sweep_x[direction] * distance) / 8;
-      const int16_t y = radar_y + (sweep_y[direction] * distance) / 8;
-      uint16_t dot_color = TFT_CYAN;
-      if (event.type == 'a') dot_color = TFT_GREEN;
-      else if (event.type == 'p') dot_color = TFT_YELLOW;
-      else if (event.type == 'A' || event.type == 'S' || event.type == 'B') dot_color = TFT_MAGENTA;
-      display_obj.tft.fillCircle(x, y, 2, dot_color);
+      uint16_t bar_color = TFT_CYAN;
+      if (event.type == 'a') bar_color = TFT_GREEN;
+      else if (event.type == 'p') bar_color = TFT_YELLOW;
+      else if (event.type == 'A' || event.type == 'S' || event.type == 'B')
+        bar_color = TFT_MAGENTA;
+      const uint8_t level = reconRssiLevel(event.rssi);
+      const int16_t x = meter_x + 3 + index * slot_width;
+      const int16_t bar_width = slot_width - 3 > 3 ? slot_width - 3 : 3;
+      if (level) {
+        const int16_t scaled_height = (meter_height - 7) * level / 8;
+        const int16_t bar_height = scaled_height > 2 ? scaled_height : 2;
+        display_obj.tft.fillRect(x, baseline - bar_height, bar_width, bar_height, bar_color);
+      } else {
+        display_obj.tft.drawRect(x, baseline - 3, bar_width, 3, TFT_DARKGREY);
+      }
     }
 
     display_obj.tft.setTextSize(1);

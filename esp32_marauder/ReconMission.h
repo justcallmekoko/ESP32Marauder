@@ -34,7 +34,8 @@ class ReconMission {
   void writeRelationship(const uint8_t station[6], const uint8_t access_point[6]);
   void writeManifest(bool complete);
   void drawDashboard(uint32_t current_time);
-  void recordUiEvent(char type, const uint8_t mac[6], const char* label = nullptr);
+  void recordUiEvent(char type, const uint8_t mac[6], int8_t rssi,
+                     const char* label = nullptr);
 
   ReconMissionState state;
   bool running = false;
@@ -56,9 +57,9 @@ class ReconMission {
     uint8_t mac[6];
     char label[13];
     char type;
+    int8_t rssi;
   } ui_events[4] = {};
   uint8_t ui_event_head = 0;
-  uint8_t sweep_step = 0;
   #ifdef HAS_SD
     File log_file;
     File probe_file;

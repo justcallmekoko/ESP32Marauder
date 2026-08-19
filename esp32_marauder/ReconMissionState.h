@@ -10,6 +10,13 @@ struct ReconRange {
   size_t end;
 };
 
+inline uint8_t reconRssiLevel(int8_t rssi) {
+  if (rssi <= -127) return 0;
+  if (rssi <= -100) return 1;
+  if (rssi >= -30) return 8;
+  return static_cast<uint8_t>(1 + ((rssi + 100) * 7) / 70);
+}
+
 class ReconMissionState {
  public:
   void reset() {
