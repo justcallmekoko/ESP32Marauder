@@ -22,7 +22,6 @@ class TDongleDisplay {
   int last_channel = -1;
   int last_mode = -1;
 
-  const char* modeLabel(uint8_t mode) const;
   void drawValue(uint8_t row, const char* label, int value, uint16_t color);
 };
 
