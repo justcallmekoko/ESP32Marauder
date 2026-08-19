@@ -389,9 +389,6 @@ class WiFiScan
       WiFiClientSecure *client = new WiFiClientSecure();
     #endif
   
-    byte x_scale = 1; //scale of graph x axis, controlled by touchscreen buttons
-    byte y_scale = 1;
-
     #if defined(HAS_SCREEN) && defined(HAS_ILI9341)
       static const uint16_t PACKET_MONITOR_HISTORY_LEN = WIDTH_1 - 48;
       uint8_t packet_monitor_beacons[PACKET_MONITOR_HISTORY_LEN] = {};

@@ -4413,18 +4413,8 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color) {
       
         delay(10);
       
-        if (scan_mode == WIFI_PACKET_MONITOR) {
-          this->drawPacketMonitorControls();
-          this->drawPacketMonitorGraphs();
-        }
-        else {
-          display_obj.tftDrawGraphObjects(x_scale); //draw graph objects
-          display_obj.tftDrawColorKey();
-          display_obj.tftDrawXScaleButtons(x_scale);
-          display_obj.tftDrawYScaleButtons(y_scale);
-          display_obj.tftDrawChannelScaleButtons(set_channel);
-          display_obj.tftDrawExitScaleButtons();
-        }
+        this->drawPacketMonitorControls();
+        this->drawPacketMonitorGraphs();
       #endif
     }
     else {
@@ -9794,9 +9784,9 @@ bool WiFiScan::filterActive() {
                                           const char *label) {
       const int16_t graph_left = WIDTH_1 - PACKET_MONITOR_HISTORY_LEN;
       const int16_t graph_height = bottom - top - 2;
-      const uint16_t visible_samples = min((uint16_t)(PACKET_MONITOR_HISTORY_LEN / x_scale),
-                                           PACKET_MONITOR_HISTORY_LEN);
-      const uint16_t first_sample = PACKET_MONITOR_HISTORY_LEN - visible_samples;
+      uint8_t max_value = 1;
+      for (uint16_t i = 0; i < PACKET_MONITOR_HISTORY_LEN; i++)
+        max_value = max(max_value, values[i]);
 
       display_obj.tft.fillRect(0, top, WIDTH_1, bottom - top + 1, TFT_BLACK);
       display_obj.tft.setTextColor(color, TFT_BLACK);
@@ -9805,10 +9795,9 @@ bool WiFiScan::filterActive() {
       display_obj.tft.print(label);
       display_obj.tft.drawFastHLine(graph_left, bottom, PACKET_MONITOR_HISTORY_LEN, TFT_DARKGREY);
 
-      for (uint16_t i = 0; i < visible_samples; i++) {
-        const uint16_t sample = first_sample + i;
-        const int16_t x = graph_left + (i * x_scale);
-        const int16_t height = min((int)values[sample] * y_scale * 3, (int)graph_height);
+      for (uint16_t i = 0; i < PACKET_MONITOR_HISTORY_LEN; i++) {
+        const int16_t x = graph_left + i;
+        const int16_t height = ((uint16_t)values[i] * graph_height) / max_value;
         if (height > 0)
           display_obj.tft.drawFastVLine(x, bottom - height, height, color);
       }
@@ -9827,8 +9816,6 @@ bool WiFiScan::filterActive() {
 
     void WiFiScan::drawPacketMonitorControls() {
       display_obj.tft.fillRect(0, 0, WIDTH_1, 28, TFT_BLACK);
-      display_obj.tftDrawXScaleButtons(x_scale);
-      display_obj.tftDrawYScaleButtons(y_scale);
       display_obj.tftDrawChannelScaleButtons(set_channel);
       display_obj.tftDrawExitScaleButtons();
     }
@@ -9838,23 +9825,7 @@ bool WiFiScan::filterActive() {
   void WiFiScan::packetMonitorMain(uint32_t currentTime) {
     const int8_t b = this->checkAnalyzerButtons(currentTime);
 
-    if ((b == X_MINUS_INDEX) && (x_scale > 1)) {
-      x_scale--;
-      this->drawPacketMonitorControls();
-    }
-    else if ((b == X_PLUS_INDEX) && (x_scale < 6)) {
-      x_scale++;
-      this->drawPacketMonitorControls();
-    }
-    else if ((b == Y_MINUS_INDEX) && (y_scale > 1)) {
-      y_scale--;
-      this->drawPacketMonitorControls();
-    }
-    else if ((b == Y_PLUS_INDEX) && (y_scale < 9)) {
-      y_scale++;
-      this->drawPacketMonitorControls();
-    }
-    else if (b == CHAN_MINUS_INDEX) {
+    if (b == CHAN_MINUS_INDEX) {
       #ifndef HAS_DUAL_BAND
         if (set_channel > 1)
           set_channel--;
