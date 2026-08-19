@@ -802,6 +802,10 @@ class WiFiScan
 
     bool send_deauth = false;
 
+    size_t retainedAccessPointCount() const;
+    size_t retainedStationCount() const;
+    size_t retainedBleDeviceCount() const;
+
     bool channel_hop = false;
     uint8_t connected_devices = 0;
 
