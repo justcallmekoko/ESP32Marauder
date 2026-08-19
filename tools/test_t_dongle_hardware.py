@@ -41,7 +41,11 @@ class TDongleHardwareTests(unittest.TestCase):
         self.assertIn("APA102<5, 4> t_dongle_led", header)
         self.assertIn("last_t_dongle_mode", header)
 
-        for workflow_name in ("build_parallel.yml", "nightly_build.yml"):
+        for workflow_name in (
+            "build_parallel.yml",
+            "nightly_build.yml",
+            "build_installer_manifests.yml",
+        ):
             workflow = (ROOT / ".github" / "workflows" / workflow_name).read_text()
             install_step = re.search(
                 r"- name: Install APA102 for LilyGo T-Dongle C5(?P<body>.*?)(?=\n\s+- name:)",
