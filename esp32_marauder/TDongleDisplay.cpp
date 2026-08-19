@@ -7,11 +7,12 @@
 namespace {
 constexpr uint32_t kRefreshMs = 500;
 constexpr uint8_t kRowHeight = 13;
+constexpr uint8_t kBacklightPin = 0;
 }
 
 void TDongleDisplay::begin() {
-  pinMode(TFT_BL, OUTPUT);
-  digitalWrite(TFT_BL, HIGH);
+  pinMode(kBacklightPin, OUTPUT);
+  digitalWrite(kBacklightPin, HIGH);
   tft.init();
   tft.setRotation(1);
   tft.fillScreen(TFT_BLACK);
@@ -28,7 +29,7 @@ void TDongleDisplay::drawValue(uint8_t row, const char* label, int value, uint16
   tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
   tft.drawString(label, 2, y + 2);
   tft.setTextColor(color, TFT_BLACK);
-  tft.drawRightString(String(value), tft.width() - 2, y + 2);
+  tft.drawRightString(String(value), tft.width() - 2, y + 2, 1);
 }
 
 const char* TDongleDisplay::modeLabel(uint8_t mode) const {
@@ -65,7 +66,7 @@ void TDongleDisplay::update(uint32_t now, const WiFiScan& scan) {
     tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
     tft.drawString("Mode", 2, y + 2);
     tft.setTextColor(TFT_ORANGE, TFT_BLACK);
-    tft.drawRightString(modeLabel(scan.currentScanMode), tft.width() - 2, y + 2);
+    tft.drawRightString(modeLabel(scan.currentScanMode), tft.width() - 2, y + 2, 1);
   }
 
   last_ap_count = ap_count;
