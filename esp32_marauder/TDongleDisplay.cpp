@@ -3,6 +3,7 @@
 #ifdef HAS_T_DONGLE_DISPLAY
 
 #include "WiFiScan.h"
+#include "TDongleStats.h"
 
 namespace {
 constexpr uint32_t kRefreshMs = 500;
@@ -32,21 +33,6 @@ void TDongleDisplay::drawValue(uint8_t row, const char* label, int value, uint16
   tft.drawRightString(String(value), tft.width() - 2, y + 2, 1);
 }
 
-const char* TDongleDisplay::modeLabel(uint8_t mode) const {
-  switch (mode) {
-    case WIFI_SCAN_OFF: return "IDLE";
-    case WIFI_SCAN_AP: return "WIFI AP";
-    case WIFI_SCAN_STATION: return "WIFI STA";
-    case WIFI_SCAN_AP_STA: return "AP+STA";
-    case WIFI_SCAN_ALL: return "WIFI ALL";
-    case WIFI_SCAN_WAR_DRIVE: return "WARDRIVE";
-    case BT_SCAN_ALL: return "BLE ALL";
-    case BT_SCAN_WAR_DRIVE:
-    case BT_SCAN_WAR_DRIVE_CONT: return "BLE DRIVE";
-    default: return "ACTIVE";
-  }
-}
-
 void TDongleDisplay::update(uint32_t now, const WiFiScan& scan) {
   if (now - last_update < kRefreshMs) return;
   last_update = now;
@@ -66,7 +52,7 @@ void TDongleDisplay::update(uint32_t now, const WiFiScan& scan) {
     tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
     tft.drawString("Mode", 2, y + 2);
     tft.setTextColor(TFT_ORANGE, TFT_BLACK);
-    tft.drawRightString(modeLabel(scan.currentScanMode), tft.width() - 2, y + 2, 1);
+    tft.drawRightString(TDongleStats::modeLabel(scan.currentScanMode), tft.width() - 2, y + 2, 1);
   }
 
   last_ap_count = ap_count;
