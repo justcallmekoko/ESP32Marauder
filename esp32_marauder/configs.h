@@ -30,6 +30,7 @@
   //#define MARAUDER_CYD_GUITION // ESP32-2432S024 GUITION
   //#define MARAUDER_CYD_3_5_INCH
   //#define MARAUDER_C5
+  //#define MARAUDER_T_DONGLE_C5
   //#define MARAUDER_CARDPUTER
   //#define MARAUDER_CARDPUTER_ADV
   //#define MARAUDER_V8
@@ -102,6 +103,8 @@
     #define HARDWARE_NAME "XIAO ESP32 S3"
   #elif defined(MARAUDER_C5)
     #define HARDWARE_NAME "ESP32-C5 DevKit"
+  #elif defined(MARAUDER_T_DONGLE_C5)
+    #define HARDWARE_NAME "LilyGo T-Dongle C5"
   #elif defined(MARAUDER_V8)
     #define HARDWARE_NAME "Marauder v8"
   #elif defined(MARAUDER_PANCAKE)
@@ -509,6 +512,19 @@
     #define HAS_DUAL_BAND
     //#define HAS_PSRAM
     //#define HAS_TEMP_SENSOR
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3
+    #define HAS_DIRECT_UPLOAD
+  #endif
+
+  #ifdef MARAUDER_T_DONGLE_C5
+    #define HAS_BT
+    #define HAS_T_DONGLE_DISPLAY
+    #define HAS_C5_SD
+    #define HAS_SD
+    #define USE_SD
+    #define HAS_DUAL_BAND
+    #define HAS_PSRAM
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     #define HAS_DIRECT_UPLOAD
@@ -2541,8 +2557,10 @@
       #define SD_CS 3
     #endif
 
-    #ifdef MARAUDER_C5
+    #if defined(MARAUDER_C5)
       #define SD_CS 10
+    #elif defined(MARAUDER_T_DONGLE_C5)
+      #define SD_CS 23
     #endif
 
     #ifdef MARAUDER_V8
@@ -2658,6 +2676,8 @@
   #elif defined(XIAO_ESP32_S3)
     #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_C5)
+    #define MEM_LOWER_LIM 10000
+  #elif defined(MARAUDER_T_DONGLE_C5)
     #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_V8)
     #define MEM_LOWER_LIM 10000
@@ -3010,9 +3030,13 @@
       #define SD_SCK       18
     #endif
 
-    #ifdef MARAUDER_C5
+    #if defined(MARAUDER_C5)
       #define SD_MISO 2
       #define SD_MOSI 7
+      #define SD_SCK  6
+    #elif defined(MARAUDER_T_DONGLE_C5)
+      #define SD_MISO 7
+      #define SD_MOSI 2
       #define SD_SCK  6
     #endif
 
