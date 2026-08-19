@@ -93,7 +93,11 @@ void LedInterface::writeApa102Color(uint8_t red, uint8_t green, uint8_t blue) {
   writeApa102Byte(blue);
   writeApa102Byte(green);
   writeApa102Byte(red);
-  for (uint8_t i = 0; i < 4; ++i) writeApa102Byte(0xFF);
+  // One LED latches after its color frame.  A legacy four-byte 0xFF end frame
+  // is interpreted as additional full-white data by this board's APA102/SK9822
+  // and leaves the LED white after the requested color is shown.
+  digitalWrite(5, LOW);
+  digitalWrite(4, LOW);
   interrupts();
 }
 #endif

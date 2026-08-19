@@ -521,6 +521,7 @@
     #define HAS_BT
     #define HAS_T_DONGLE_DISPLAY
     #define HAS_T_DONGLE_LED
+    #define HAS_GPS
     #define HAS_C5_SD
     #define HAS_SD
     #define USE_SD
@@ -2811,6 +2812,10 @@
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 6
       #define GPS_RX 9
+    #elif defined(MARAUDER_T_DONGLE_C5)
+      #define GPS_SERIAL_INDEX 1
+      #define GPS_TX 12 // External GPS TX -> T-Dongle UART0 RX
+      #define GPS_RX 11 // External GPS RX -> T-Dongle UART0 TX
     #elif defined(MARAUDER_C5)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 14
