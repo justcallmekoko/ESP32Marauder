@@ -389,18 +389,21 @@ class WiFiScan
       WiFiClientSecure *client = new WiFiClientSecure();
     #endif
   
-    int x_pos; //position along the graph x axis
-    float y_pos_x; //current graph y axis position of X value
-    float y_pos_x_old = 120; //old y axis position of X value
-    float y_pos_y; //current graph y axis position of Y value
-    float y_pos_y_old = 120; //old y axis position of Y value
-    float y_pos_z; //current graph y axis position of Z value
-    float y_pos_z_old = 120; //old y axis position of Z value
-    int midway = 0;
     byte x_scale = 1; //scale of graph x axis, controlled by touchscreen buttons
     byte y_scale = 1;
 
-    bool do_break = false;
+    #if defined(HAS_SCREEN) && defined(HAS_ILI9341)
+      static const uint16_t PACKET_MONITOR_HISTORY_LEN = WIDTH_1 - 48;
+      uint8_t packet_monitor_beacons[PACKET_MONITOR_HISTORY_LEN] = {};
+      uint8_t packet_monitor_deauths[PACKET_MONITOR_HISTORY_LEN] = {};
+      uint8_t packet_monitor_probes[PACKET_MONITOR_HISTORY_LEN] = {};
+      void resetPacketMonitorGraph();
+      void samplePacketMonitorGraph();
+      void drawPacketMonitorGraph(const uint8_t *values, int16_t top, int16_t bottom,
+                                  uint16_t color, const char *label);
+      void drawPacketMonitorGraphs();
+      void drawPacketMonitorControls();
+    #endif
 
     bool wsl_bypass_enabled = false;
 
