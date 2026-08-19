@@ -10908,7 +10908,11 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
     String sidecarPath = filePath + "." + service;
     File f = SD.open(sidecarPath, FILE_WRITE);
     if (f) {
-      f.println("uploaded=" + gps_obj.getDatetime());
+      #ifdef HAS_GPS
+        f.println("uploaded=" + gps_obj.getDatetime());
+      #else
+        f.println("uploaded_uptime_ms=" + String(millis()));
+      #endif
       f.close();
       Serial.println("[UPLOAD] Sidecar written: " + sidecarPath);
     } else {
