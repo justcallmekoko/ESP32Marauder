@@ -99,13 +99,6 @@ void LedInterface::writeApa102Color(uint8_t red, uint8_t green, uint8_t blue) {
   this->t_dongle_led.startFrame();
   this->t_dongle_led.sendColor(red, green, blue, brightness);
   this->t_dongle_led.endFrame(1);
-
-  // The LED bit-bangs the display's MOSI/MISO pins and replaces their GPIO
-  // matrix routing. Restore the shared hardware-SPI bus before the next TFT
-  // or SD transaction; reinitializing the TFT itself would clear the panel.
-  SPI.end();
-  SPI.begin(T_DONGLE_SPI_SCLK_PIN, T_DONGLE_SPI_MISO_PIN,
-            T_DONGLE_SPI_MOSI_PIN, -1);
 }
 #endif
 

@@ -11,7 +11,6 @@
 #endif
 #ifdef HAS_T_DONGLE_LED
   #include <APA102.h>
-  #include <SPI.h>
 #endif
 
 #define Pixels 1

@@ -37,17 +37,12 @@ class TDongleHardwareTests(unittest.TestCase):
         self.assertIn("t_dongle_led.sendColor(red, green, blue, brightness)", writer)
         self.assertIn("t_dongle_led.endFrame(1)", writer)
         self.assertIn("? 10 : 0", writer)
-        self.assertIn("SPI.end()", writer)
-        self.assertIn(
-            "SPI.begin(T_DONGLE_SPI_SCLK_PIN, T_DONGLE_SPI_MISO_PIN,",
-            writer,
-        )
+        self.assertNotIn("SPI.begin", writer)
 
         header = (ROOT / "esp32_marauder" / "LedInterface.h").read_text()
         guarded_include = re.search(
             r"#ifdef HAS_T_DONGLE_LED\s+"
             r"#include <APA102.h>\s+"
-            r"#include <SPI.h>\s+"
             r"#endif",
             header,
         )
@@ -63,6 +58,11 @@ class TDongleHardwareTests(unittest.TestCase):
 
         display_header = (ROOT / "esp32_marauder" / "TDongleDisplay.h").read_text()
         self.assertIn("bool update(uint32_t now, const WiFiScan& scan);", display_header)
+
+        display_source = (ROOT / "esp32_marauder" / "TDongleDisplay.cpp").read_text()
+        restore_index = display_source.index("SPI.begin(T_DONGLE_SPI_SCLK_PIN")
+        draw_index = display_source.index('drawValue(0, "WiFi AP"')
+        self.assertLess(restore_index, draw_index)
 
         for workflow_name in (
             "build_parallel.yml",

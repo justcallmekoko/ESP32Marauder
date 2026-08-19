@@ -4,6 +4,7 @@
 
 #include "WiFiScan.h"
 #include "TDongleStats.h"
+#include <SPI.h>
 
 namespace {
 constexpr uint32_t kRefreshMs = 500;
@@ -43,25 +44,40 @@ bool TDongleDisplay::update(uint32_t now, const WiFiScan& scan) {
   const int ap_count = static_cast<int>(scan.retainedAccessPointCount());
   const int station_count = static_cast<int>(scan.retainedStationCount());
   const int ble_count = static_cast<int>(scan.retainedBleDeviceCount());
+  const bool ap_changed = ap_count != last_ap_count;
+  const bool station_changed = station_count != last_station_count;
+  const bool ble_changed = ble_count != last_ble_count;
+  const bool channel_changed = scan.set_channel != last_channel;
+  const bool mode_changed = scan.currentScanMode != last_mode;
 
-  if (ap_count != last_ap_count) {
+  if (!(ap_changed || station_changed || ble_changed || channel_changed || mode_changed)) {
+    return false;
+  }
+
+  // LED updates bit-bang the TFT's MOSI/MISO pins. Reclaim the shared bus only
+  // when a redraw is required, then let the caller write the LED state last.
+  SPI.end();
+  SPI.begin(T_DONGLE_SPI_SCLK_PIN, T_DONGLE_SPI_MISO_PIN,
+            T_DONGLE_SPI_MOSI_PIN, -1);
+
+  if (ap_changed) {
     drawValue(0, "WiFi AP", ap_count, TFT_GREEN);
     drew = true;
   }
-  if (station_count != last_station_count) {
+  if (station_changed) {
     drawValue(1, "Stations", station_count, TFT_CYAN);
     drew = true;
   }
-  if (ble_count != last_ble_count) {
+  if (ble_changed) {
     drawValue(2, "BLE", ble_count, TFT_MAGENTA);
     drew = true;
   }
-  if (scan.set_channel != last_channel) {
+  if (channel_changed) {
     drawValue(3, "Channel", scan.set_channel, TFT_YELLOW);
     drew = true;
   }
 
-  if (scan.currentScanMode != last_mode) {
+  if (mode_changed) {
     const int y = 14 + (4 * kRowHeight);
     tft.fillRect(0, y, tft.width(), kRowHeight, TFT_BLACK);
     tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
