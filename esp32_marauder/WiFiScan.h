@@ -390,7 +390,7 @@ class WiFiScan
     #endif
   
     #if defined(HAS_SCREEN) && defined(HAS_ILI9341)
-      static const uint16_t PACKET_MONITOR_HISTORY_LEN = WIDTH_1 - 48;
+      static const uint16_t PACKET_MONITOR_HISTORY_LEN = SCREEN_WIDTH - 48;
       uint8_t packet_monitor_beacons[PACKET_MONITOR_HISTORY_LEN] = {};
       uint8_t packet_monitor_deauths[PACKET_MONITOR_HISTORY_LEN] = {};
       uint8_t packet_monitor_probes[PACKET_MONITOR_HISTORY_LEN] = {};

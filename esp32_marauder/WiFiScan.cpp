@@ -4390,27 +4390,20 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color) {
         (scan_mode != WIFI_SCAN_CHAN_ACT)) {
       #ifdef HAS_SCREEN
         display_obj.init();
-        #ifdef HAS_CAP_TOUCH
-          display_obj.tft.setRotation(3); // Pancake: landscape-3
-        #else
-          display_obj.tft.setRotation(1);
-        #endif
+        display_obj.tft.setRotation(SCREEN_ORIENTATION);
         display_obj.tft.fillScreen(TFT_BLACK);
       #endif
     
       #ifdef HAS_SCREEN
         #ifndef HAS_CYD_TOUCH
-          display_obj.setCalData(true);
+          display_obj.setCalData(false);
         #else
-          //display_obj.touchscreen.setRotation(1);
+          //display_obj.touchscreen.setRotation(SCREEN_ORIENTATION);
         #endif
       
         //display_obj.tft.setFreeFont(1);
         display_obj.tft.setFreeFont(NULL);
         display_obj.tft.setTextSize(1);
-        display_obj.tft.fillRect(127, 0, WIDTH_1 - 127, 28, TFT_BLACK); // Buttons
-        display_obj.tft.fillRect(12, 0, 90, 32, TFT_BLACK); // color key
-      
         delay(10);
       
         this->drawPacketMonitorControls();
@@ -9782,13 +9775,13 @@ bool WiFiScan::filterActive() {
     void WiFiScan::drawPacketMonitorGraph(const uint8_t *values, int16_t top,
                                           int16_t bottom, uint16_t color,
                                           const char *label) {
-      const int16_t graph_left = WIDTH_1 - PACKET_MONITOR_HISTORY_LEN;
+      const int16_t graph_left = SCREEN_WIDTH - PACKET_MONITOR_HISTORY_LEN;
       const int16_t graph_height = bottom - top - 2;
       uint8_t max_value = 1;
       for (uint16_t i = 0; i < PACKET_MONITOR_HISTORY_LEN; i++)
         max_value = max(max_value, values[i]);
 
-      display_obj.tft.fillRect(0, top, WIDTH_1, bottom - top + 1, TFT_BLACK);
+      display_obj.tft.fillRect(0, top, SCREEN_WIDTH, bottom - top + 1, TFT_BLACK);
       display_obj.tft.setTextColor(color, TFT_BLACK);
       display_obj.tft.setTextSize(1);
       display_obj.tft.setCursor(2, top + ((bottom - top - 8) / 2));
@@ -9804,20 +9797,22 @@ bool WiFiScan::filterActive() {
     }
 
     void WiFiScan::drawPacketMonitorGraphs() {
-      const int16_t graph_top = 29;
-      const int16_t lane_height = (HEIGHT_1 - graph_top) / 3;
+      const int16_t graph_top = 64;
+      const int16_t lane_height = (SCREEN_HEIGHT - graph_top) / 3;
       drawPacketMonitorGraph(packet_monitor_beacons, graph_top,
                              graph_top + lane_height - 1, TFT_GREEN, "BCN");
       drawPacketMonitorGraph(packet_monitor_deauths, graph_top + lane_height,
                              graph_top + (lane_height * 2) - 1, TFT_RED, "DEA");
       drawPacketMonitorGraph(packet_monitor_probes, graph_top + (lane_height * 2),
-                             HEIGHT_1 - 1, TFT_BLUE, "PRB");
+                             SCREEN_HEIGHT - 1, TFT_BLUE, "PRB");
     }
 
     void WiFiScan::drawPacketMonitorControls() {
-      display_obj.tft.fillRect(0, 0, WIDTH_1, 28, TFT_BLACK);
-      display_obj.tftDrawChannelScaleButtons(set_channel);
-      display_obj.tftDrawExitScaleButtons();
+      display_obj.tft.fillRect(0, 0, SCREEN_WIDTH, 64, TFT_BLACK);
+      display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      display_obj.tft.drawCentreString(text_table1[45], SCREEN_WIDTH / 2, 0, 2);
+      display_obj.tftDrawChannelScaleButtons(set_channel, false);
+      display_obj.tftDrawExitScaleButtons(false);
     }
   #endif
 
