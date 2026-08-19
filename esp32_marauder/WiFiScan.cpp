@@ -9809,6 +9809,8 @@ bool WiFiScan::filterActive() {
         if (height > 0)
           display_obj.tft.fillRect(x, bottom - height, PACKET_MONITOR_COLUMN_WIDTH,
                                    height, color);
+        display_obj.tft.drawFastVLine(x + PACKET_MONITOR_COLUMN_WIDTH - 1,
+                                      plot_top, graph_height, TFT_NAVY);
       }
     }
 
@@ -9831,7 +9833,7 @@ bool WiFiScan::filterActive() {
       display_obj.tftDrawExitScaleButtons(false);
       display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
       display_obj.tft.drawCentreString(String("CH ") + set_channel,
-                                       SCREEN_WIDTH - 68, 37, 1);
+                                       SCREEN_WIDTH / 2, 18, 1);
     }
   #endif
 
@@ -9879,7 +9881,7 @@ bool WiFiScan::filterActive() {
       return;
     }
 
-    if (currentTime - initTime >= GRAPH_REFRESH) {
+    if (currentTime - initTime >= PACKET_MONITOR_REFRESH_MS) {
       initTime = currentTime;
       this->samplePacketMonitorGraph();
       this->drawPacketMonitorGraphs();
