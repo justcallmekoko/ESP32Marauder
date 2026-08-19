@@ -35,6 +35,11 @@ class LedInterface {
     void ledOff();
     void attackLed();
     void sniffLed();
+
+    #ifdef HAS_T_DONGLE_LED
+      void writeApa102Byte(uint8_t value);
+      void writeApa102Color(uint8_t red, uint8_t green, uint8_t blue);
+    #endif
   
   public:
     LedInterface();

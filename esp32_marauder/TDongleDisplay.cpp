@@ -14,14 +14,16 @@ constexpr uint8_t kBacklightPin = 0;
 void TDongleDisplay::begin() {
   pinMode(kBacklightPin, OUTPUT);
   digitalWrite(kBacklightPin, HIGH);
+  delay(500);
   tft.init();
-  tft.setRotation(1);
+  tft.setRotation(3);
   tft.fillScreen(TFT_BLACK);
   tft.setTextFont(1);
   tft.setTextSize(1);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   tft.drawString("MARAUDER CLI", 2, 1);
   tft.drawFastHLine(0, 11, tft.width(), TFT_DARKGREY);
+  digitalWrite(kBacklightPin, LOW);
 }
 
 void TDongleDisplay::drawValue(uint8_t row, const char* label, int value, uint16_t color) {

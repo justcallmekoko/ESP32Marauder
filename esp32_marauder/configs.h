@@ -520,6 +520,7 @@
   #ifdef MARAUDER_T_DONGLE_C5
     #define HAS_BT
     #define HAS_T_DONGLE_DISPLAY
+    #define HAS_T_DONGLE_LED
     #define HAS_C5_SD
     #define HAS_SD
     #define USE_SD

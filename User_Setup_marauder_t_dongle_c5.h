@@ -12,7 +12,7 @@
 #define TFT_DC    3
 #define TFT_RST   1
 #define TFT_BL    0
-#define TFT_BACKLIGHT_ON HIGH
+#define TFT_BACKLIGHT_ON LOW
 
 #define LOAD_GLCD
 #define SPI_FREQUENCY 27000000

@@ -23,6 +23,14 @@ void LedInterface::RunSetup() {
     strip.show();
   #endif
 
+  #ifdef HAS_T_DONGLE_LED
+    pinMode(4, OUTPUT);
+    pinMode(5, OUTPUT);
+    digitalWrite(4, LOW);
+    digitalWrite(5, LOW);
+    this->writeApa102Color(0, 0, 0);
+  #endif
+
   this->initTime = millis();
 }
 
@@ -63,7 +71,32 @@ void LedInterface::setColor(int r, int g, int b) {
     strip.setPixelColor(0, strip.Color(r, g, b));
     strip.show();
   #endif
+  #ifdef HAS_T_DONGLE_LED
+    this->writeApa102Color(static_cast<uint8_t>(r), static_cast<uint8_t>(g),
+                          static_cast<uint8_t>(b));
+  #endif
 }
+
+#ifdef HAS_T_DONGLE_LED
+void LedInterface::writeApa102Byte(uint8_t value) {
+  for (int bit = 7; bit >= 0; --bit) {
+    digitalWrite(5, (value >> bit) & 0x01);
+    digitalWrite(4, HIGH);
+    digitalWrite(4, LOW);
+  }
+}
+
+void LedInterface::writeApa102Color(uint8_t red, uint8_t green, uint8_t blue) {
+  noInterrupts();
+  for (uint8_t i = 0; i < 4; ++i) writeApa102Byte(0x00);
+  writeApa102Byte(0xE8);
+  writeApa102Byte(blue);
+  writeApa102Byte(green);
+  writeApa102Byte(red);
+  for (uint8_t i = 0; i < 4; ++i) writeApa102Byte(0xFF);
+  interrupts();
+}
+#endif
 
 void LedInterface::sniffLed() {
   this->setColor(0, 0, 255);
@@ -103,4 +136,5 @@ uint32_t LedInterface::Wheel(byte WheelPos) {
     WheelPos -= 170;
     return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
   #endif
+  return 0;
 }
