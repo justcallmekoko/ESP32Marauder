@@ -184,6 +184,15 @@
       "esptoolChip": "esp32c5"
     },
     {
+      "id": "lilygo-t-dongle-c5",
+      "displayName": "LilyGo T-Dongle C5",
+      "aliases": ["T-Dongle C5", "T Dongle C5"],
+      "buildFlag": "MARAUDER_T_DONGLE_C5",
+      "assetSuffix": "t_dongle_c5",
+      "chipFamily": "ESP32-C5",
+      "esptoolChip": "esp32c5"
+    },
+    {
       "id": "m5-nano-c6",
       "displayName": "M5 Nano C6",
       "aliases": ["M5NanoC6"],
