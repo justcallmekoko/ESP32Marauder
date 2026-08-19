@@ -31,8 +31,8 @@ class ReconReportTests(unittest.TestCase):
             struct.pack(
                 "<Iii6sbBc",
                 1500,
-                389000000,
-                -770000000,
+                38856850,
+                -77225850,
                 bytes.fromhex("001122334455"),
                 -42,
                 6,
@@ -53,8 +53,8 @@ class ReconReportTests(unittest.TestCase):
         probe = struct.pack(
             "<Iii6sbBB24s",
             2000,
-            389000100,
-            -770000100,
+            38856860,
+            -77225860,
             bytes.fromhex("AABBCCDDEEFF"),
             -55,
             6,
@@ -72,7 +72,8 @@ class ReconReportTests(unittest.TestCase):
             observations = read_observations(mission / "obs.rlog")
             self.assertEqual(len(observations), 2)
             self.assertEqual(observations[0].mac, "00:11:22:33:44:55")
-            self.assertEqual(observations[0].latitude, 38.9)
+            self.assertEqual(observations[0].latitude, 38.85685)
+            self.assertEqual(observations[0].longitude, -77.22585)
             self.assertEqual(observations[0].type, "access-point")
             self.assertEqual(observations[0].event, "new")
             self.assertIsNone(observations[1].latitude)
@@ -84,6 +85,8 @@ class ReconReportTests(unittest.TestCase):
             self.assertEqual(probes[0].ssid, "Marauder")
             self.assertEqual(probes[0].event, "probe")
             self.assertEqual(probes[0].mac, "AA:BB:CC:DD:EE:FF")
+            self.assertEqual(probes[0].latitude, 38.85686)
+            self.assertEqual(probes[0].longitude, -77.22586)
 
     def test_decodes_and_deduplicates_relationships(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -111,6 +114,7 @@ class ReconReportTests(unittest.TestCase):
             self.assertIn("GPS SIGHTING PLOT", report)
             self.assertIn("MISSION REPLAY", report)
             self.assertIn("OBSERVED RELATIONSHIPS", report)
+            self.assertIn("38.856850, -77.225850", report)
             payload = json.loads((output / "mission.json").read_text(encoding="utf-8"))
             self.assertEqual(len(payload["relationships"]), 2)
             archive = mission / "m0042-report.zip"

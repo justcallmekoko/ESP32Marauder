@@ -19,6 +19,7 @@ PROBE_RECORD = struct.Struct("<Iii6sbBB24s")
 RELATIONSHIP_MAGIC = b"REL1"
 RELATIONSHIP_RECORD = struct.Struct("<6s6s")
 TYPE_NAMES = {"a": "access-point", "s": "station", "b": "ble"}
+GPS_COORDINATE_SCALE = 1_000_000
 
 
 class ReconReportError(ValueError):
@@ -69,8 +70,8 @@ def read_observations(path: Path) -> list[Observation]:
         observations.append(
             Observation(
                 elapsed_ms=elapsed,
-                latitude=latitude / 10_000_000 if has_position else None,
-                longitude=longitude / 10_000_000 if has_position else None,
+                latitude=latitude / GPS_COORDINATE_SCALE if has_position else None,
+                longitude=longitude / GPS_COORDINATE_SCALE if has_position else None,
                 mac=_mac(mac),
                 rssi=rssi,
                 channel=channel,
@@ -98,8 +99,8 @@ def read_probes(path: Path) -> list[Observation]:
         probes.append(
             Observation(
                 elapsed_ms=elapsed,
-                latitude=latitude / 10_000_000 if has_position else None,
-                longitude=longitude / 10_000_000 if has_position else None,
+                latitude=latitude / GPS_COORDINATE_SCALE if has_position else None,
+                longitude=longitude / GPS_COORDINATE_SCALE if has_position else None,
                 mac=_mac(mac),
                 rssi=rssi,
                 channel=channel,
