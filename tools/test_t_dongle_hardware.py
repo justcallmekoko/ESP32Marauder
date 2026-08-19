@@ -13,6 +13,11 @@ class TDongleHardwareTests(unittest.TestCase):
             r"#ifdef MARAUDER_T_DONGLE_C5(?P<body>.*?)#endif", configs, re.S
         ).group("body")
         self.assertIn("#define HAS_GPS", feature_block)
+        self.assertIn("#define T_DONGLE_LED_DATA_PIN 2", feature_block)
+        self.assertIn("#define T_DONGLE_LED_CLOCK_PIN 7", feature_block)
+        self.assertIn("#define T_DONGLE_SPI_SCLK_PIN 6", feature_block)
+        self.assertIn("#define T_DONGLE_SPI_MISO_PIN 7", feature_block)
+        self.assertIn("#define T_DONGLE_SPI_MOSI_PIN 2", feature_block)
 
         gps_block = next(
             body for body in re.findall(
@@ -32,13 +37,25 @@ class TDongleHardwareTests(unittest.TestCase):
         self.assertIn("t_dongle_led.sendColor(red, green, blue, brightness)", writer)
         self.assertIn("t_dongle_led.endFrame(1)", writer)
         self.assertIn("? 10 : 0", writer)
+        self.assertIn("SPI.end()", writer)
+        self.assertIn(
+            "SPI.begin(T_DONGLE_SPI_SCLK_PIN, T_DONGLE_SPI_MISO_PIN,",
+            writer,
+        )
 
         header = (ROOT / "esp32_marauder" / "LedInterface.h").read_text()
         guarded_include = re.search(
-            r"#ifdef HAS_T_DONGLE_LED\s+#include <APA102.h>\s+#endif", header
+            r"#ifdef HAS_T_DONGLE_LED\s+"
+            r"#include <APA102.h>\s+"
+            r"#include <SPI.h>\s+"
+            r"#endif",
+            header,
         )
         self.assertIsNotNone(guarded_include)
-        self.assertIn("APA102<2, 7> t_dongle_led", header)
+        self.assertIn(
+            "APA102<T_DONGLE_LED_DATA_PIN, T_DONGLE_LED_CLOCK_PIN> t_dongle_led",
+            header,
+        )
         self.assertIn("last_t_dongle_mode", header)
 
         sketch = (ROOT / "esp32_marauder" / "esp32_marauder.ino").read_text()

@@ -11,6 +11,7 @@
 #endif
 #ifdef HAS_T_DONGLE_LED
   #include <APA102.h>
+  #include <SPI.h>
 #endif
 
 #define Pixels 1
@@ -28,7 +29,7 @@ class LedInterface {
 
     #ifdef HAS_T_DONGLE_LED
       uint8_t last_t_dongle_mode = 0xFF;
-      APA102<2, 7> t_dongle_led;
+      APA102<T_DONGLE_LED_DATA_PIN, T_DONGLE_LED_CLOCK_PIN> t_dongle_led;
     #endif
 
     int current_fade_itter = 1;

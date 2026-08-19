@@ -24,8 +24,8 @@ void LedInterface::RunSetup() {
   #endif
 
   #ifdef HAS_T_DONGLE_LED
-    pinMode(2, OUTPUT);
-    pinMode(7, OUTPUT);
+    pinMode(T_DONGLE_LED_DATA_PIN, OUTPUT);
+    pinMode(T_DONGLE_LED_CLOCK_PIN, OUTPUT);
     this->writeApa102Color(0, 0, 0);
   #endif
 
@@ -99,6 +99,13 @@ void LedInterface::writeApa102Color(uint8_t red, uint8_t green, uint8_t blue) {
   this->t_dongle_led.startFrame();
   this->t_dongle_led.sendColor(red, green, blue, brightness);
   this->t_dongle_led.endFrame(1);
+
+  // The LED bit-bangs the display's MOSI/MISO pins and replaces their GPIO
+  // matrix routing. Restore the shared hardware-SPI bus before the next TFT
+  // or SD transaction; reinitializing the TFT itself would clear the panel.
+  SPI.end();
+  SPI.begin(T_DONGLE_SPI_SCLK_PIN, T_DONGLE_SPI_MISO_PIN,
+            T_DONGLE_SPI_MOSI_PIN, -1);
 }
 #endif
 
