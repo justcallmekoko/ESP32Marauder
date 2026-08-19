@@ -9,6 +9,9 @@
 #ifdef HAS_NEOPIXEL_LED
   #include <Adafruit_NeoPixel.h>
 #endif
+#ifdef HAS_T_DONGLE_LED
+  #include <APA102.h>
+#endif
 
 #define Pixels 1
 
@@ -25,6 +28,7 @@ class LedInterface {
 
     #ifdef HAS_T_DONGLE_LED
       uint8_t last_t_dongle_mode = 0xFF;
+      APA102<5, 4> t_dongle_led;
     #endif
 
     int current_fade_itter = 1;
@@ -41,7 +45,6 @@ class LedInterface {
     void sniffLed();
 
     #ifdef HAS_T_DONGLE_LED
-      void writeApa102Byte(uint8_t value);
       void writeApa102Color(uint8_t red, uint8_t green, uint8_t blue);
     #endif
   

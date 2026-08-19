@@ -26,8 +26,6 @@ void LedInterface::RunSetup() {
   #ifdef HAS_T_DONGLE_LED
     pinMode(4, OUTPUT);
     pinMode(5, OUTPUT);
-    digitalWrite(4, LOW);
-    digitalWrite(5, LOW);
     this->writeApa102Color(0, 0, 0);
   #endif
 
@@ -87,28 +85,11 @@ void LedInterface::setColor(int r, int g, int b) {
 }
 
 #ifdef HAS_T_DONGLE_LED
-void LedInterface::writeApa102Byte(uint8_t value) {
-  for (int bit = 7; bit >= 0; --bit) {
-    digitalWrite(5, (value >> bit) & 0x01);
-    digitalWrite(4, HIGH);
-    digitalWrite(4, LOW);
-  }
-}
-
 void LedInterface::writeApa102Color(uint8_t red, uint8_t green, uint8_t blue) {
-  const uint8_t brightness = (red || green || blue) ? 8 : 0;
-  noInterrupts();
-  for (uint8_t i = 0; i < 4; ++i) writeApa102Byte(0x00);
-  writeApa102Byte(0xE0 | brightness);
-  writeApa102Byte(blue);
-  writeApa102Byte(green);
-  writeApa102Byte(red);
-  // One LED latches after its color frame.  A legacy four-byte 0xFF end frame
-  // is interpreted as additional full-white data by this board's APA102/SK9822
-  // and leaves the LED white after the requested color is shown.
-  digitalWrite(5, LOW);
-  digitalWrite(4, LOW);
-  interrupts();
+  const uint8_t brightness = (red || green || blue) ? 10 : 0;
+  this->t_dongle_led.startFrame();
+  this->t_dongle_led.sendColor(red, green, blue, brightness);
+  this->t_dongle_led.endFrame(1);
 }
 #endif
 

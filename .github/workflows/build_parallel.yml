@@ -149,6 +149,14 @@ jobs:
           ref: 1.12.0
           path: CustomAdafruit_NeoPixel
 
+      - name: Install APA102 for LilyGo T-Dongle C5
+        if: matrix.board.flag == 'MARAUDER_T_DONGLE_C5'
+        uses: actions/checkout@v4
+        with:
+          repository: pololu/apa102-arduino
+          ref: 3.0.0
+          path: CustomAPA102
+
       - name: Install ArduinoJson
         uses: actions/checkout@v2
         with:
