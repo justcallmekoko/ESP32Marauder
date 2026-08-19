@@ -9760,39 +9760,55 @@ bool WiFiScan::filterActive() {
     }
 
     void WiFiScan::samplePacketMonitorGraph() {
-      memmove(packet_monitor_beacons, packet_monitor_beacons + 1, sizeof(packet_monitor_beacons) - 1);
-      memmove(packet_monitor_deauths, packet_monitor_deauths + 1, sizeof(packet_monitor_deauths) - 1);
-      memmove(packet_monitor_probes, packet_monitor_probes + 1, sizeof(packet_monitor_probes) - 1);
+      memmove(packet_monitor_beacons, packet_monitor_beacons + 1,
+              sizeof(packet_monitor_beacons) - sizeof(packet_monitor_beacons[0]));
+      memmove(packet_monitor_deauths, packet_monitor_deauths + 1,
+              sizeof(packet_monitor_deauths) - sizeof(packet_monitor_deauths[0]));
+      memmove(packet_monitor_probes, packet_monitor_probes + 1,
+              sizeof(packet_monitor_probes) - sizeof(packet_monitor_probes[0]));
 
-      packet_monitor_beacons[PACKET_MONITOR_HISTORY_LEN - 1] = min(num_beacon, 255);
-      packet_monitor_deauths[PACKET_MONITOR_HISTORY_LEN - 1] = min(num_deauth, 255);
-      packet_monitor_probes[PACKET_MONITOR_HISTORY_LEN - 1] = min(num_probe, 255);
+      packet_monitor_beacons[PACKET_MONITOR_HISTORY_LEN - 1] = min(num_beacon, 65535);
+      packet_monitor_deauths[PACKET_MONITOR_HISTORY_LEN - 1] = min(num_deauth, 65535);
+      packet_monitor_probes[PACKET_MONITOR_HISTORY_LEN - 1] = min(num_probe, 65535);
       num_beacon = 0;
       num_deauth = 0;
       num_probe = 0;
     }
 
-    void WiFiScan::drawPacketMonitorGraph(const uint8_t *values, int16_t top,
+    void WiFiScan::drawPacketMonitorGraph(const uint16_t *values, int16_t top,
                                           int16_t bottom, uint16_t color,
                                           const char *label) {
-      const int16_t graph_left = SCREEN_WIDTH - PACKET_MONITOR_HISTORY_LEN;
-      const int16_t graph_height = bottom - top - 2;
-      uint8_t max_value = 1;
+      const int16_t plot_top = top + 12;
+      const int16_t graph_height = bottom - plot_top;
+      uint16_t max_value = 1;
       for (uint16_t i = 0; i < PACKET_MONITOR_HISTORY_LEN; i++)
         max_value = max(max_value, values[i]);
 
       display_obj.tft.fillRect(0, top, SCREEN_WIDTH, bottom - top + 1, TFT_BLACK);
       display_obj.tft.setTextColor(color, TFT_BLACK);
       display_obj.tft.setTextSize(1);
-      display_obj.tft.setCursor(2, top + ((bottom - top - 8) / 2));
+      display_obj.tft.setCursor(2, top + 2);
       display_obj.tft.print(label);
-      display_obj.tft.drawFastHLine(graph_left, bottom, PACKET_MONITOR_HISTORY_LEN, TFT_DARKGREY);
+
+      const int16_t half_y = bottom - (graph_height / 2);
+      display_obj.tft.drawFastHLine(PACKET_MONITOR_GRAPH_LEFT, plot_top,
+                                    SCREEN_WIDTH - PACKET_MONITOR_GRAPH_LEFT, TFT_DARKGREY);
+      display_obj.tft.drawFastHLine(PACKET_MONITOR_GRAPH_LEFT, half_y,
+                                    SCREEN_WIDTH - PACKET_MONITOR_GRAPH_LEFT, TFT_DARKGREY);
+      display_obj.tft.drawFastHLine(PACKET_MONITOR_GRAPH_LEFT, bottom,
+                                    SCREEN_WIDTH - PACKET_MONITOR_GRAPH_LEFT, TFT_DARKGREY);
+      display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
+      display_obj.tft.setCursor(2, plot_top);
+      display_obj.tft.print(max_value);
+      display_obj.tft.setCursor(2, half_y - 4);
+      display_obj.tft.print((max_value + 1) / 2);
 
       for (uint16_t i = 0; i < PACKET_MONITOR_HISTORY_LEN; i++) {
-        const int16_t x = graph_left + i;
-        const int16_t height = ((uint16_t)values[i] * graph_height) / max_value;
+        const int16_t x = PACKET_MONITOR_GRAPH_LEFT + (i * PACKET_MONITOR_COLUMN_WIDTH);
+        const int16_t height = ((uint32_t)values[i] * graph_height) / max_value;
         if (height > 0)
-          display_obj.tft.drawFastVLine(x, bottom - height, height, color);
+          display_obj.tft.fillRect(x, bottom - height, PACKET_MONITOR_COLUMN_WIDTH,
+                                   height, color);
       }
     }
 
@@ -9813,6 +9829,9 @@ bool WiFiScan::filterActive() {
       display_obj.tft.drawCentreString(text_table1[45], SCREEN_WIDTH / 2, 0, 2);
       display_obj.tftDrawChannelScaleButtons(set_channel, false);
       display_obj.tftDrawExitScaleButtons(false);
+      display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      display_obj.tft.drawCentreString(String("CH ") + set_channel,
+                                       SCREEN_WIDTH - 68, 37, 1);
     }
   #endif
 

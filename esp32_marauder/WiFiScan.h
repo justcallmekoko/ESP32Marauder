@@ -390,13 +390,16 @@ class WiFiScan
     #endif
   
     #if defined(HAS_SCREEN) && defined(HAS_ILI9341)
-      static const uint16_t PACKET_MONITOR_HISTORY_LEN = SCREEN_WIDTH - 48;
-      uint8_t packet_monitor_beacons[PACKET_MONITOR_HISTORY_LEN] = {};
-      uint8_t packet_monitor_deauths[PACKET_MONITOR_HISTORY_LEN] = {};
-      uint8_t packet_monitor_probes[PACKET_MONITOR_HISTORY_LEN] = {};
+      static const uint8_t PACKET_MONITOR_COLUMN_WIDTH = 8;
+      static const uint8_t PACKET_MONITOR_GRAPH_LEFT = 32;
+      static const uint16_t PACKET_MONITOR_HISTORY_LEN =
+          (SCREEN_WIDTH - PACKET_MONITOR_GRAPH_LEFT) / PACKET_MONITOR_COLUMN_WIDTH;
+      uint16_t packet_monitor_beacons[PACKET_MONITOR_HISTORY_LEN] = {};
+      uint16_t packet_monitor_deauths[PACKET_MONITOR_HISTORY_LEN] = {};
+      uint16_t packet_monitor_probes[PACKET_MONITOR_HISTORY_LEN] = {};
       void resetPacketMonitorGraph();
       void samplePacketMonitorGraph();
-      void drawPacketMonitorGraph(const uint8_t *values, int16_t top, int16_t bottom,
+      void drawPacketMonitorGraph(const uint16_t *values, int16_t top, int16_t bottom,
                                   uint16_t color, const char *label);
       void drawPacketMonitorGraphs();
       void drawPacketMonitorControls();
