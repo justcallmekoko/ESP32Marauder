@@ -9796,7 +9796,7 @@ bool WiFiScan::filterActive() {
       display_obj.tft.drawFastHLine(PACKET_MONITOR_GRAPH_LEFT, half_y,
                                     SCREEN_WIDTH - PACKET_MONITOR_GRAPH_LEFT, TFT_DARKGREY);
       display_obj.tft.drawFastHLine(PACKET_MONITOR_GRAPH_LEFT, bottom,
-                                    SCREEN_WIDTH - PACKET_MONITOR_GRAPH_LEFT, TFT_DARKGREY);
+                                    SCREEN_WIDTH - PACKET_MONITOR_GRAPH_LEFT, TFT_LIGHTGREY);
       display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
       display_obj.tft.setCursor(2, plot_top);
       display_obj.tft.print(max_value);
@@ -9809,8 +9809,6 @@ bool WiFiScan::filterActive() {
         if (height > 0)
           display_obj.tft.fillRect(x, bottom - height, PACKET_MONITOR_COLUMN_WIDTH,
                                    height, color);
-        display_obj.tft.drawFastVLine(x + PACKET_MONITOR_COLUMN_WIDTH - 1,
-                                      plot_top, graph_height, TFT_NAVY);
       }
     }
 
