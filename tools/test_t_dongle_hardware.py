@@ -29,8 +29,13 @@ class TDongleHardwareTests(unittest.TestCase):
             r"void LedInterface::writeApa102Color\(.*?\n\}", source, re.S
         ).group(0)
         self.assertNotIn("writeApa102Byte(0xFF)", writer)
+        self.assertIn("? 8 : 0", writer)
+        self.assertIn("writeApa102Byte(0xE0 | brightness)", writer)
         self.assertIn("digitalWrite(5, LOW)", writer)
         self.assertIn("digitalWrite(4, LOW)", writer)
+
+        header = (ROOT / "esp32_marauder" / "LedInterface.h").read_text()
+        self.assertIn("last_t_dongle_mode", header)
 
 
 if __name__ == "__main__":

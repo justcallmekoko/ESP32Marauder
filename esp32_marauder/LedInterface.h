@@ -23,6 +23,10 @@ class LedInterface {
   private:
     uint32_t initTime = 0;
 
+    #ifdef HAS_T_DONGLE_LED
+      uint8_t last_t_dongle_mode = 0xFF;
+    #endif
+
     int current_fade_itter = 1;
     int wheel_pos = 255;
     int wheel_speed = 1; // lower = slower

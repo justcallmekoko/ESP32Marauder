@@ -35,22 +35,31 @@ void LedInterface::RunSetup() {
 }
 
 void LedInterface::main(uint32_t currentTime) {
-  if ((!settings_obj.loadSetting<bool>("EnableLED")) ||
-      (this->current_mode == MODE_OFF)) {
+  uint8_t mode_to_render = settings_obj.loadSetting<bool>("EnableLED")
+                             ? this->current_mode : MODE_OFF;
+
+  #ifdef HAS_T_DONGLE_LED
+    // Only clock a frame when the state changes.  Continuously sending idle
+    // frames can make some APA102-compatible parts fall back to white.
+    if (mode_to_render == this->last_t_dongle_mode) return;
+    this->last_t_dongle_mode = mode_to_render;
+  #endif
+
+  if (mode_to_render == MODE_OFF) {
     this->ledOff();
     return;
   }
 
-  else if (this->current_mode == MODE_RAINBOW) {
+  else if (mode_to_render == MODE_RAINBOW) {
     this->rainbow();
   }
-  else if (this->current_mode == MODE_ATTACK) {
+  else if (mode_to_render == MODE_ATTACK) {
     this->attackLed();
   }
-  else if (this->current_mode == MODE_SNIFF) {
+  else if (mode_to_render == MODE_SNIFF) {
     this->sniffLed();
   }
-  else if (this->current_mode == MODE_CUSTOM) {
+  else if (mode_to_render == MODE_CUSTOM) {
     return;
   }
   else {
@@ -87,9 +96,10 @@ void LedInterface::writeApa102Byte(uint8_t value) {
 }
 
 void LedInterface::writeApa102Color(uint8_t red, uint8_t green, uint8_t blue) {
+  const uint8_t brightness = (red || green || blue) ? 8 : 0;
   noInterrupts();
   for (uint8_t i = 0; i < 4; ++i) writeApa102Byte(0x00);
-  writeApa102Byte(0xE8);
+  writeApa102Byte(0xE0 | brightness);
   writeApa102Byte(blue);
   writeApa102Byte(green);
   writeApa102Byte(red);
