@@ -4379,41 +4379,35 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color) {
   if (scan_mode == WIFI_PACKET_MONITOR)
     startPcap("packet_monitor");
 
+  #if defined(HAS_SCREEN) && defined(HAS_ILI9341)
+    if (scan_mode == WIFI_PACKET_MONITOR)
+      this->resetPacketMonitorGraph();
+  #endif
+
   #ifdef HAS_ILI9341
     if ((scan_mode != WIFI_SCAN_PACKET_RATE) &&
         (scan_mode != WIFI_SCAN_CHAN_ANALYZER) &&
         (scan_mode != WIFI_SCAN_CHAN_ACT)) {
       #ifdef HAS_SCREEN
         display_obj.init();
-        #ifdef HAS_CAP_TOUCH
-          display_obj.tft.setRotation(3); // Pancake: landscape-3
-        #else
-          display_obj.tft.setRotation(1);
-        #endif
+        display_obj.tft.setRotation(SCREEN_ORIENTATION);
         display_obj.tft.fillScreen(TFT_BLACK);
       #endif
     
       #ifdef HAS_SCREEN
         #ifndef HAS_CYD_TOUCH
-          display_obj.setCalData(true);
+          display_obj.setCalData(false);
         #else
-          //display_obj.touchscreen.setRotation(1);
+          //display_obj.touchscreen.setRotation(SCREEN_ORIENTATION);
         #endif
       
         //display_obj.tft.setFreeFont(1);
         display_obj.tft.setFreeFont(NULL);
         display_obj.tft.setTextSize(1);
-        display_obj.tft.fillRect(127, 0, WIDTH_1 - 127, 28, TFT_BLACK); // Buttons
-        display_obj.tft.fillRect(12, 0, 90, 32, TFT_BLACK); // color key
-      
         delay(10);
       
-        display_obj.tftDrawGraphObjects(x_scale); //draw graph objects
-        display_obj.tftDrawColorKey();
-        display_obj.tftDrawXScaleButtons(x_scale);
-        display_obj.tftDrawYScaleButtons(y_scale);
-        display_obj.tftDrawChannelScaleButtons(set_channel);
-        display_obj.tftDrawExitScaleButtons();
+        this->drawPacketMonitorControls();
+        this->drawPacketMonitorGraphs();
       #endif
     }
     else {
@@ -9754,180 +9748,144 @@ bool WiFiScan::filterActive() {
 #endif
 
 #ifdef HAS_SCREEN
-
-  void WiFiScan::packetMonitorMain(uint32_t currentTime) {
-    
-    
-    for (x_pos = (11 + x_scale); x_pos <= WIDTH_1; x_pos = x_pos)
-    {
-      currentTime = millis();
-      do_break = false;
-      
-      y_pos_x = 0;
-      y_pos_y = 0;
-      y_pos_z = 0;
-
-      int8_t b = this->checkAnalyzerButtons(currentTime);
-          
-          // X - button pressed
-          if (b == X_MINUS_INDEX) {
-            if (x_scale > 1) {
-              x_scale--;
-              delay(70);
-              display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
-              display_obj.tftDrawXScaleButtons(x_scale);
-              display_obj.tftDrawYScaleButtons(y_scale);
-              display_obj.tftDrawChannelScaleButtons(set_channel);
-              display_obj.tftDrawExitScaleButtons();
-              //break;
-            }
-          }
-          // X + button pressed
-          else if (b == X_PLUS_INDEX) {
-            if (x_scale < 6) {
-              x_scale++;
-              delay(70);
-              display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
-              display_obj.tftDrawXScaleButtons(x_scale);
-              display_obj.tftDrawYScaleButtons(y_scale);
-              display_obj.tftDrawChannelScaleButtons(set_channel);
-              display_obj.tftDrawExitScaleButtons();
-              //break;
-            }
-          }
-  
-          // Y - button pressed
-          else if (b == Y_MINUS_INDEX) {
-            if (y_scale > 1) {
-              y_scale--;
-              delay(70);
-              display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
-              display_obj.tftDrawXScaleButtons(x_scale);
-              display_obj.tftDrawYScaleButtons(y_scale);
-              display_obj.tftDrawChannelScaleButtons(set_channel);
-              display_obj.tftDrawExitScaleButtons();
-              //updateMidway();
-              //break;
-            }
-          }
-  
-          // Y + button pressed
-          else if (b == Y_PLUS_INDEX) {
-            if (y_scale < 9) {
-              y_scale++;
-              delay(70);
-              display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
-              display_obj.tftDrawXScaleButtons(x_scale);
-              display_obj.tftDrawYScaleButtons(y_scale);
-              display_obj.tftDrawChannelScaleButtons(set_channel);
-              display_obj.tftDrawExitScaleButtons();
-              //updateMidway();
-              //break;
-            }
-          }
-  
-          // Channel - button pressed
-          else if (b == CHAN_MINUS_INDEX) {
-            #ifndef HAS_DUAL_BAND
-            if (set_channel > 1) {
-              set_channel--;
-            #else
-            if (dual_band_channel_index > 0) {
-              dual_band_channel_index--;
-              set_channel = dual_band_channels[dual_band_channel_index];
-            #endif
-              delay(70);
-              display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
-              display_obj.tftDrawXScaleButtons(x_scale);
-              display_obj.tftDrawYScaleButtons(y_scale);
-              display_obj.tftDrawChannelScaleButtons(set_channel);
-              display_obj.tftDrawExitScaleButtons();
-              changeChannel();
-              //break;
-            }
-          }
-  
-          // Channel + button pressed
-          else if (b == CHAN_PLUS_INDEX) {
-            #ifndef HAS_DUAL_BAND
-            if (set_channel < MAX_CHANNEL) {
-              set_channel++;
-            #else
-            if (dual_band_channel_index < (DUAL_BAND_CHANNELS - 1)) {
-              dual_band_channel_index++;
-              set_channel = dual_band_channels[dual_band_channel_index];
-            #endif
-              delay(70);
-              display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
-              display_obj.tftDrawXScaleButtons(x_scale);
-              display_obj.tftDrawYScaleButtons(y_scale);
-              display_obj.tftDrawChannelScaleButtons(set_channel);
-              display_obj.tftDrawExitScaleButtons();
-              changeChannel();
-              //break;
-            }
-          }
-          else if (b == EXIT_BUTTON_INDEX) {
-            this->StartScan(WIFI_SCAN_OFF);
-            this->orient_display = true;
-            return;
-          }
-      //  }
-      //}
-  
-      if (currentTime - initTime >= GRAPH_REFRESH) {
-        x_pos += x_scale;
-        initTime = millis();
-        y_pos_x = ((-num_beacon * (y_scale * 3)) + (HEIGHT_1 - 2)); // GREEN
-        y_pos_y = ((-num_deauth * (y_scale * 3)) + (HEIGHT_1 - 2)); // RED
-        y_pos_z = ((-num_probe * (y_scale * 3)) + (HEIGHT_1 - 2)); // BLUE
-    
-        num_beacon = 0;
-        num_probe = 0;
-        num_deauth = 0;
-        
-        //CODE FOR PLOTTING CONTINUOUS LINES!!!!!!!!!!!!
-        //Plot "X" value
-        display_obj.tft.drawLine(x_pos - x_scale, y_pos_x_old, x_pos, y_pos_x, TFT_GREEN);
-        //Plot "Z" value
-        display_obj.tft.drawLine(x_pos - x_scale, y_pos_z_old, x_pos, y_pos_z, TFT_BLUE);
-        //Plot "Y" value
-        display_obj.tft.drawLine(x_pos - x_scale, y_pos_y_old, x_pos, y_pos_y, TFT_RED);
-        
-        //Draw preceding black 'boxes' to erase old plot lines, !!!WEIRD CODE TO COMPENSATE FOR BUTTONS AND COLOR KEY SO 'ERASER' DOESN'T ERASE BUTTONS AND COLOR KEY!!!
-        if ((x_pos <= 90) || ((x_pos >= 117) && (x_pos <= WIDTH_1))) //above x axis
-          display_obj.tft.fillRect(x_pos+1, 28, 10, PKT_HALF - 27, TFT_BLACK); //compensate for buttons!
-        else
-          display_obj.tft.fillRect(x_pos+1, 0, 10, PKT_HALF + 1, TFT_BLACK); //don't compensate for buttons!
-
-        if (x_pos < 0) // below x axis
-          display_obj.tft.fillRect(x_pos+1, PKT_HALF + 1, 10, PKT_HALF - 32, TFT_CYAN);
-        else
-          display_obj.tft.fillRect(x_pos+1, PKT_HALF + 1, 10, PKT_HALF - 2, TFT_BLACK);
-        
-        
-        if ( (y_pos_x == PKT_HALF) || (y_pos_y == PKT_HALF) || (y_pos_z == PKT_HALF) )
-          display_obj.tft.drawFastHLine(10, PKT_HALF, PKT_AXIS_W, TFT_WHITE); // x axis
-         
-        y_pos_x_old = y_pos_x; //set old y pos values to current y pos values 
-        y_pos_y_old = y_pos_y;
-        y_pos_z_old = y_pos_z;
-    
-        //delay(50);
-      }
-     
+  #ifdef HAS_ILI9341
+    void WiFiScan::resetPacketMonitorGraph() {
+      memset(packet_monitor_beacons, 0, sizeof(packet_monitor_beacons));
+      memset(packet_monitor_deauths, 0, sizeof(packet_monitor_deauths));
+      memset(packet_monitor_probes, 0, sizeof(packet_monitor_probes));
+      num_beacon = 0;
+      num_deauth = 0;
+      num_probe = 0;
+      initTime = millis();
     }
-    
-    display_obj.tft.fillRect(127, 0, WIDTH_1 - 127, 28, TFT_BLACK); //erase XY buttons and any lines behind them
-    display_obj.tft.fillRect(12, 0, 90, 32, TFT_BLACK); // key
-    
-    display_obj.tftDrawXScaleButtons(x_scale); //re-draw stuff
-    display_obj.tftDrawYScaleButtons(y_scale);
-    display_obj.tftDrawChannelScaleButtons(set_channel);
-    display_obj.tftDrawExitScaleButtons();
-    display_obj.tftDrawColorKey();
-    display_obj.tftDrawGraphObjects(x_scale);
+
+    void WiFiScan::samplePacketMonitorGraph() {
+      memmove(packet_monitor_beacons, packet_monitor_beacons + 1,
+              sizeof(packet_monitor_beacons) - sizeof(packet_monitor_beacons[0]));
+      memmove(packet_monitor_deauths, packet_monitor_deauths + 1,
+              sizeof(packet_monitor_deauths) - sizeof(packet_monitor_deauths[0]));
+      memmove(packet_monitor_probes, packet_monitor_probes + 1,
+              sizeof(packet_monitor_probes) - sizeof(packet_monitor_probes[0]));
+
+      packet_monitor_beacons[PACKET_MONITOR_HISTORY_LEN - 1] = min(num_beacon, 65535);
+      packet_monitor_deauths[PACKET_MONITOR_HISTORY_LEN - 1] = min(num_deauth, 65535);
+      packet_monitor_probes[PACKET_MONITOR_HISTORY_LEN - 1] = min(num_probe, 65535);
+      num_beacon = 0;
+      num_deauth = 0;
+      num_probe = 0;
+    }
+
+    void WiFiScan::drawPacketMonitorGraph(const uint16_t *values, int16_t top,
+                                          int16_t bottom, uint16_t color,
+                                          const char *label) {
+      const int16_t plot_top = top + 12;
+      const int16_t graph_height = bottom - plot_top;
+      uint16_t max_value = 1;
+      for (uint16_t i = 0; i < PACKET_MONITOR_HISTORY_LEN; i++)
+        max_value = max(max_value, values[i]);
+
+      display_obj.tft.fillRect(0, top, SCREEN_WIDTH, bottom - top + 1, TFT_BLACK);
+      display_obj.tft.setTextColor(color, TFT_BLACK);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setCursor(2, top + 2);
+      display_obj.tft.print(label);
+
+      const int16_t half_y = bottom - (graph_height / 2);
+      display_obj.tft.drawFastHLine(PACKET_MONITOR_GRAPH_LEFT, plot_top,
+                                    SCREEN_WIDTH - PACKET_MONITOR_GRAPH_LEFT, TFT_DARKGREY);
+      display_obj.tft.drawFastHLine(PACKET_MONITOR_GRAPH_LEFT, half_y,
+                                    SCREEN_WIDTH - PACKET_MONITOR_GRAPH_LEFT, TFT_DARKGREY);
+      display_obj.tft.drawFastHLine(PACKET_MONITOR_GRAPH_LEFT, bottom,
+                                    SCREEN_WIDTH - PACKET_MONITOR_GRAPH_LEFT, TFT_LIGHTGREY);
+      display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
+      display_obj.tft.setCursor(2, plot_top);
+      display_obj.tft.print(max_value);
+      display_obj.tft.setCursor(2, half_y - 4);
+      display_obj.tft.print((max_value + 1) / 2);
+
+      for (uint16_t i = 0; i < PACKET_MONITOR_HISTORY_LEN; i++) {
+        const int16_t x = PACKET_MONITOR_GRAPH_LEFT + (i * PACKET_MONITOR_COLUMN_WIDTH);
+        const int16_t height = ((uint32_t)values[i] * graph_height) / max_value;
+        if (height > 0)
+          display_obj.tft.fillRect(x, bottom - height, PACKET_MONITOR_COLUMN_WIDTH,
+                                   height, color);
+      }
+    }
+
+    void WiFiScan::drawPacketMonitorGraphs() {
+      const int16_t graph_top = 64;
+      const int16_t lane_height = (SCREEN_HEIGHT - graph_top) / 3;
+      drawPacketMonitorGraph(packet_monitor_beacons, graph_top,
+                             graph_top + lane_height - 1, TFT_GREEN, "BCN");
+      drawPacketMonitorGraph(packet_monitor_deauths, graph_top + lane_height,
+                             graph_top + (lane_height * 2) - 1, TFT_RED, "DEA");
+      drawPacketMonitorGraph(packet_monitor_probes, graph_top + (lane_height * 2),
+                             SCREEN_HEIGHT - 1, TFT_BLUE, "PRB");
+    }
+
+    void WiFiScan::drawPacketMonitorControls() {
+      display_obj.tft.fillRect(0, 0, SCREEN_WIDTH, 64, TFT_BLACK);
+      display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      display_obj.tft.drawCentreString(text_table1[45], SCREEN_WIDTH / 2, 0, 2);
+      display_obj.tftDrawChannelScaleButtons(set_channel, false);
+      display_obj.tftDrawExitScaleButtons(false);
+      display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      display_obj.tft.drawCentreString(String("CH ") + set_channel,
+                                       SCREEN_WIDTH / 2, 18, 1);
+    }
+  #endif
+
+  #ifdef HAS_ILI9341
+  void WiFiScan::packetMonitorMain(uint32_t currentTime) {
+    const int8_t b = this->checkAnalyzerButtons(currentTime);
+
+    if (b == CHAN_MINUS_INDEX) {
+      #ifndef HAS_DUAL_BAND
+        if (set_channel > 1)
+          set_channel--;
+        else
+          return;
+      #else
+        if (dual_band_channel_index > 0) {
+          dual_band_channel_index--;
+          set_channel = dual_band_channels[dual_band_channel_index];
+        }
+        else
+          return;
+      #endif
+      changeChannel();
+      this->drawPacketMonitorControls();
+    }
+    else if (b == CHAN_PLUS_INDEX) {
+      #ifndef HAS_DUAL_BAND
+        if (set_channel < MAX_CHANNEL)
+          set_channel++;
+        else
+          return;
+      #else
+        if (dual_band_channel_index < (DUAL_BAND_CHANNELS - 1)) {
+          dual_band_channel_index++;
+          set_channel = dual_band_channels[dual_band_channel_index];
+        }
+        else
+          return;
+      #endif
+      changeChannel();
+      this->drawPacketMonitorControls();
+    }
+    else if (b == EXIT_BUTTON_INDEX) {
+      this->StartScan(WIFI_SCAN_OFF);
+      this->orient_display = true;
+      return;
+    }
+
+    if (currentTime - initTime >= PACKET_MONITOR_REFRESH_MS) {
+      initTime = currentTime;
+      this->samplePacketMonitorGraph();
+      this->drawPacketMonitorGraphs();
+    }
   }
+  #endif
 #endif
 
 void WiFiScan::changeChannel(int chan) {
