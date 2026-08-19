@@ -460,7 +460,10 @@ void loop()
   wifi_scan_obj.main(currentTime);
 
   #ifdef HAS_T_DONGLE_DISPLAY
-    t_dongle_display.update(currentTime, wifi_scan_obj);
+    const bool t_dongle_display_drew = t_dongle_display.update(currentTime, wifi_scan_obj);
+    #if defined(HAS_T_DONGLE_LED)
+      if (t_dongle_display_drew) led_obj.refresh();
+    #endif
   #endif
 
   #ifdef HAS_GPS

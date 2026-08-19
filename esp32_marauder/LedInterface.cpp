@@ -24,8 +24,8 @@ void LedInterface::RunSetup() {
   #endif
 
   #ifdef HAS_T_DONGLE_LED
-    pinMode(4, OUTPUT);
-    pinMode(5, OUTPUT);
+    pinMode(2, OUTPUT);
+    pinMode(7, OUTPUT);
     this->writeApa102Color(0, 0, 0);
   #endif
 
@@ -72,6 +72,15 @@ void LedInterface::setMode(uint8_t new_mode) {
 uint8_t LedInterface::getMode() {
   return this->current_mode;
 }
+
+#ifdef HAS_T_DONGLE_LED
+void LedInterface::refresh() {
+  // GPIO2 is shared with the display MOSI line. Re-send the intended LED
+  // frame after display traffic, even when the Marauder mode did not change.
+  this->last_t_dongle_mode = 0xFF;
+  this->main(millis());
+}
+#endif
 
 void LedInterface::setColor(int r, int g, int b) {
   #ifdef HAS_NEOPIXEL_LED

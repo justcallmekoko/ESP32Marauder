@@ -38,8 +38,14 @@ class TDongleHardwareTests(unittest.TestCase):
             r"#ifdef HAS_T_DONGLE_LED\s+#include <APA102.h>\s+#endif", header
         )
         self.assertIsNotNone(guarded_include)
-        self.assertIn("APA102<5, 4> t_dongle_led", header)
+        self.assertIn("APA102<2, 7> t_dongle_led", header)
         self.assertIn("last_t_dongle_mode", header)
+
+        sketch = (ROOT / "esp32_marauder" / "esp32_marauder.ino").read_text()
+        self.assertIn("if (t_dongle_display_drew) led_obj.refresh();", sketch)
+
+        display_header = (ROOT / "esp32_marauder" / "TDongleDisplay.h").read_text()
+        self.assertIn("bool update(uint32_t now, const WiFiScan& scan);", display_header)
 
         for workflow_name in (
             "build_parallel.yml",

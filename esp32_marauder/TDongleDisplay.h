@@ -11,7 +11,7 @@ class WiFiScan;
 class TDongleDisplay {
  public:
   void begin();
-  void update(uint32_t now, const WiFiScan& scan);
+  bool update(uint32_t now, const WiFiScan& scan);
 
  private:
   TFT_eSPI tft;

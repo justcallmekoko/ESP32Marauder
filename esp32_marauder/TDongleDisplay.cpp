@@ -35,18 +35,31 @@ void TDongleDisplay::drawValue(uint8_t row, const char* label, int value, uint16
   tft.drawRightString(String(value), tft.width() - 2, y + 2, 1);
 }
 
-void TDongleDisplay::update(uint32_t now, const WiFiScan& scan) {
-  if (now - last_update < kRefreshMs) return;
+bool TDongleDisplay::update(uint32_t now, const WiFiScan& scan) {
+  if (now - last_update < kRefreshMs) return false;
   last_update = now;
+  bool drew = false;
 
   const int ap_count = static_cast<int>(scan.retainedAccessPointCount());
   const int station_count = static_cast<int>(scan.retainedStationCount());
   const int ble_count = static_cast<int>(scan.retainedBleDeviceCount());
 
-  if (ap_count != last_ap_count) drawValue(0, "WiFi AP", ap_count, TFT_GREEN);
-  if (station_count != last_station_count) drawValue(1, "Stations", station_count, TFT_CYAN);
-  if (ble_count != last_ble_count) drawValue(2, "BLE", ble_count, TFT_MAGENTA);
-  if (scan.set_channel != last_channel) drawValue(3, "Channel", scan.set_channel, TFT_YELLOW);
+  if (ap_count != last_ap_count) {
+    drawValue(0, "WiFi AP", ap_count, TFT_GREEN);
+    drew = true;
+  }
+  if (station_count != last_station_count) {
+    drawValue(1, "Stations", station_count, TFT_CYAN);
+    drew = true;
+  }
+  if (ble_count != last_ble_count) {
+    drawValue(2, "BLE", ble_count, TFT_MAGENTA);
+    drew = true;
+  }
+  if (scan.set_channel != last_channel) {
+    drawValue(3, "Channel", scan.set_channel, TFT_YELLOW);
+    drew = true;
+  }
 
   if (scan.currentScanMode != last_mode) {
     const int y = 14 + (4 * kRowHeight);
@@ -55,6 +68,7 @@ void TDongleDisplay::update(uint32_t now, const WiFiScan& scan) {
     tft.drawString("Mode", 2, y + 2);
     tft.setTextColor(TFT_ORANGE, TFT_BLACK);
     tft.drawRightString(TDongleStats::modeLabel(scan.currentScanMode), tft.width() - 2, y + 2, 1);
+    drew = true;
   }
 
   last_ap_count = ap_count;
@@ -62,6 +76,7 @@ void TDongleDisplay::update(uint32_t now, const WiFiScan& scan) {
   last_ble_count = ble_count;
   last_channel = scan.set_channel;
   last_mode = scan.currentScanMode;
+  return drew;
 }
 
 #endif

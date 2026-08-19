@@ -28,7 +28,7 @@ class LedInterface {
 
     #ifdef HAS_T_DONGLE_LED
       uint8_t last_t_dongle_mode = 0xFF;
-      APA102<5, 4> t_dongle_led;
+      APA102<2, 7> t_dongle_led;
     #endif
 
     int current_fade_itter = 1;
@@ -53,6 +53,10 @@ class LedInterface {
 
     void RunSetup();
     void main(uint32_t currentTime);
+
+    #ifdef HAS_T_DONGLE_LED
+      void refresh();
+    #endif
 
     void setMode(uint8_t);
     void setColor(int r, int g, int b);
