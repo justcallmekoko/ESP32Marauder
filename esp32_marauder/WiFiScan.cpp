@@ -1,5 +1,6 @@
 #include "esp_random.h"
 #include "WiFiScan.h"
+#include "ReconMission.h"
 #include "FoxHuntTarget.h"
 #include "BeaconFrame.h"
 #include "WdgResponse.h"
@@ -38,6 +39,7 @@ LinkedList<Flipper>* flippers;
 LinkedList<IPAddress>* ipList;
 LinkedList<ProbeReqSsid>* probe_req_ssids;
 LinkedList<BleDevice>* ble_devices;
+extern ReconMission recon_obj;
 
 extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3){
     if (arg == 31337)
@@ -566,6 +568,7 @@ extern "C" {
               int device_match_check = wifi_scan_obj.seenBLEDevice(ble_device);
 
               if (device_match_check >= 0) {
+                recon_obj.queueRepeat('B', ble_device.mac, ble_device.rssi, 0);
                 ble_device.selected = ble_devices->get(device_match_check).selected;
                 ble_device.name = ble_devices->get(device_match_check).name;
                 memcpy(ble_device.mac, ble_devices->get(device_match_check).mac, sizeof(mac_char));
@@ -1263,6 +1266,7 @@ extern "C" {
               int device_match_check = wifi_scan_obj.seenBLEDevice(ble_device);
 
               if (device_match_check >= 0) {
+                recon_obj.queueRepeat('B', ble_device.mac, ble_device.rssi, 0);
                 ble_device.selected = ble_devices->get(device_match_check).selected;
                 ble_device.name = ble_devices->get(device_match_check).name;
                 memcpy(ble_device.mac, ble_devices->get(device_match_check).mac, sizeof(mac_char));
@@ -6609,6 +6613,16 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
   {
     len -= 4;
 
+    if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA) &&
+        (snifferPacket->payload[0] == 0x40) && (len > 26)) {
+      const uint8_t name_length = snifferPacket->payload[25];
+      if (name_length && (26 + name_length <= len)) {
+        recon_obj.queueProbe(&snifferPacket->payload[10], snifferPacket->rx_ctrl.rssi,
+                             snifferPacket->rx_ctrl.channel,
+                             &snifferPacket->payload[26], name_length);
+      }
+    }
+
     // If we dont the buffer size is not 0, don't write or else we get CORRUPT_HEAP
     #ifdef HAS_SCREEN
       int buf = display_obj.display_buffer->size();
@@ -6651,6 +6665,12 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
       #endif
 
       int in_list = wifi_scan_obj.checkMatchAP(addr);
+
+      if (in_list >= 0) {
+        recon_obj.queueRepeat('A', &snifferPacket->payload[10],
+                              snifferPacket->rx_ctrl.rssi,
+                              snifferPacket->rx_ctrl.channel);
+      }
 
       if (in_list < 0) {
       
@@ -6831,6 +6851,11 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
     getMAC(dst_addr, snifferPacket->payload, 4);
 
     // Check if dest is broadcast
+    if (in_list) {
+      recon_obj.queueRepeat('S', &snifferPacket->payload[frame_offset],
+                            snifferPacket->rx_ctrl.rssi,
+                            snifferPacket->rx_ctrl.channel);
+    }
     if ((in_list) || (strcmp(dst_addr, "ff:ff:ff:ff:ff:ff") == 0))
       return;
     
@@ -6844,7 +6869,8 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
                     snifferPacket->payload[frame_offset + 4],
                     snifferPacket->payload[frame_offset + 5]},
                     false,
-                    0};
+                    0,
+                    static_cast<uint16_t>(ap_index)};
 
       stations->add(sta);
     }

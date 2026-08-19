@@ -220,6 +220,7 @@ void MenuFunctions::main(uint32_t currentTime)
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_SLEEP_TARGETED) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_MIMIC) &&
 	  (wifi_scan_obj.currentScanMode != WIFI_ATTACK_FUNNY_BEACON) &&
+      (!recon_obj.active()) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_RICK_ROLL))
     display_obj.displayBuffer();
 
@@ -4679,6 +4680,5 @@ void MenuFunctions::displayCurrentMenu(int start_index)
 #endif
 
 #endif
-
 
 
