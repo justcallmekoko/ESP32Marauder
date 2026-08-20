@@ -143,6 +143,10 @@ void MenuFunctions::main(uint32_t currentTime)
     this->updateKeyboard();
   #endif
 
+  #ifdef MARAUDER_TEMBED_CC1101
+    this->updateEncoder();
+  #endif
+
   // Some function exited and we need to go back to normal
   if (display_obj.exit_draw) {
     if (wifi_scan_obj.currentScanMode != WIFI_CONNECTED)
@@ -693,11 +697,13 @@ void MenuFunctions::main(uint32_t currentTime)
     // Don't do this for touch screens
     #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_CYD_MICRO) || defined(MARAUDER_CYD_GUITION) || defined(MARAUDER_CYD_2USB) || defined(MARAUDER_CYD_3_5_INCH))
       #if !defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
-        #if (U_BTN >= 0 || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV))
+        #if (U_BTN >= 0 || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(MARAUDER_TEMBED_CC1101))
           #if (U_BTN >= 0)
             if (u_btn.justPressed()) {
           #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
             if (this->isKeyPressed(';')) {
+          #elif defined(MARAUDER_TEMBED_CC1101)
+            if (this->encoderUp()) {
           #endif
               if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
                   (wifi_scan_obj.currentScanMode == WIFI_CONNECTED) ||
@@ -765,11 +771,13 @@ void MenuFunctions::main(uint32_t currentTime)
         #endif
       #endif
 
-      #if (D_BTN >= 0 || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV))
+      #if (D_BTN >= 0 || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(MARAUDER_TEMBED_CC1101))
       #if (D_BTN >= 0)
       if (d_btn.justPressed()){
       #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
       if (this->isKeyPressed('.')){
+      #elif defined(MARAUDER_TEMBED_CC1101)
+      if (this->encoderDown()){
       #endif
         if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
             (wifi_scan_obj.currentScanMode == WIFI_CONNECTED) ||
@@ -1493,6 +1501,56 @@ bool MenuFunctions::isKeyPressed(char c)
     delay(200);
 
   return pressed;
+}
+#endif
+
+#ifdef MARAUDER_TEMBED_CC1101
+// Rotary encoder (quadrature). ENCODER_INA=4, ENCODER_INB=5 (T-Embed utilities.h).
+// 4 state transitions per detent -> one menu step per detent.
+#define TEMBED_ENC_A 4
+#define TEMBED_ENC_B 5
+#define TEMBED_ENC_STEPS_PER_DETENT 4
+
+void MenuFunctions::updateEncoder()
+{
+  if (!this->_enc_init) {
+    pinMode(TEMBED_ENC_A, INPUT_PULLUP);
+    pinMode(TEMBED_ENC_B, INPUT_PULLUP);
+    int a = digitalRead(TEMBED_ENC_A);
+    int b = digitalRead(TEMBED_ENC_B);
+    this->_enc_lastEncoded = (a << 1) | b;
+    this->_enc_init = true;
+  }
+
+  int MSB = digitalRead(TEMBED_ENC_A);
+  int LSB = digitalRead(TEMBED_ENC_B);
+  int encoded = (MSB << 1) | LSB;
+  int sum = (this->_enc_lastEncoded << 2) | encoded;
+
+  if (sum == 0b1101 || sum == 0b0100 || sum == 0b0010 || sum == 0b1011)
+    this->_enc_value++;
+  else if (sum == 0b1110 || sum == 0b0111 || sum == 0b0001 || sum == 0b1000)
+    this->_enc_value--;
+
+  this->_enc_lastEncoded = encoded;
+}
+
+bool MenuFunctions::encoderUp()
+{
+  if (this->_enc_value - this->_enc_lastDetent >= TEMBED_ENC_STEPS_PER_DETENT) {
+    this->_enc_lastDetent += TEMBED_ENC_STEPS_PER_DETENT;
+    return true;
+  }
+  return false;
+}
+
+bool MenuFunctions::encoderDown()
+{
+  if (this->_enc_value - this->_enc_lastDetent <= -TEMBED_ENC_STEPS_PER_DETENT) {
+    this->_enc_lastDetent -= TEMBED_ENC_STEPS_PER_DETENT;
+    return true;
+  }
+  return false;
 }
 #endif
 

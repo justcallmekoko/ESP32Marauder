@@ -32,6 +32,7 @@
   //#define MARAUDER_C5
   //#define MARAUDER_CARDPUTER
   //#define MARAUDER_CARDPUTER_ADV
+  //#define MARAUDER_TEMBED_CC1101
   //#define MARAUDER_V8
   //#define MARAUDER_PANCAKE
   //#define MARAUDER_MINI_V3
@@ -62,6 +63,8 @@
     #define HARDWARE_NAME "M5Stick-C Plus"
   #elif defined(MARAUDER_M5STICKCP2)
     #define HARDWARE_NAME "M5Stick-C Plus2"
+  #elif defined(MARAUDER_TEMBED_CC1101)
+    #define HARDWARE_NAME "T-Embed CC1101"
   #elif defined(MARAUDER_CARDPUTER)
     #define HARDWARE_NAME "M5 Cardputer"
   #elif defined(MARAUDER_CARDPUTER_ADV)
@@ -143,6 +146,15 @@
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
     #define HAS_DIRECT_UPLOAD
+  #endif
+
+  #if defined(MARAUDER_TEMBED_CC1101)
+    #define HAS_BT
+    #define HAS_BUTTONS      // center button (encoder press) uses the Switches path
+    #define HAS_SCREEN
+    #define HAS_MINI_SCREEN
+    #define HAS_SD
+    #define USE_SD
   #endif
 
   #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
@@ -1127,6 +1139,77 @@
     
       #define STATUSBAR_COLOR 0x4A49
 
+    #endif
+
+    #ifdef MARAUDER_TEMBED_CC1101
+      // --- Buttons (rotary encoder) ---
+      #define L_BTN -1
+      #define C_BTN 0        // encoder push (ENCODER_KEY)
+      #define U_BTN -1       // up/down come from the encoder, see MenuFunctions
+      #define R_BTN -1
+      #define D_BTN -1
+      #define HAS_C
+      #define L_PULL true
+      #define C_PULL true
+      #define U_PULL true
+      #define R_PULL true
+      #define D_PULL true
+      #define SD_CS 13
+
+      // --- ST7789 170x320 display, landscape (modeled on Cardputer) ---
+      #define CHAN_PER_PAGE 14
+      #define SCREEN_CHAR_WIDTH 40
+      #define TFT_MOSI 9
+      #define TFT_SCLK 11
+      #define TFT_CS 41
+      #define TFT_DC 16
+      #define TFT_RST -1
+      #define TFT_BL 21
+
+      #define SCREEN_BUFFER
+      #define MAX_SCREEN_BUFFER 21
+      #define BANNER_TEXT_SIZE 2
+
+      #ifndef TFT_WIDTH
+        #define TFT_WIDTH 170
+      #endif
+      #ifndef TFT_HEIGHT
+        #define TFT_HEIGHT 320
+      #endif
+
+      #define EXT_BUTTON_WIDTH 0
+      #define SCREEN_ORIENTATION 3        // landscape, rotated 180 (USB at bottom)
+
+      #define CHAR_WIDTH 6
+      #define SCREEN_WIDTH TFT_HEIGHT     // 320 in landscape
+      #define SCREEN_HEIGHT TFT_WIDTH     // 170 in landscape
+      #define GRAPH_VERT_LIM SCREEN_HEIGHT/2 - 1
+      #define HEIGHT_1 TFT_WIDTH
+      #define WIDTH_1 TFT_WIDTH
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6)
+      #define TEXT_HEIGHT (TFT_HEIGHT/10)
+      #define BOT_FIXED_AREA 0
+      #define TOP_FIXED_AREA 48
+      #define YMAX TFT_HEIGHT
+      #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
+      #define MENU_FONT &FreeMono9pt7b
+      #define BUTTON_SCREEN_LIMIT 6
+      #define BUTTON_ARRAY_LEN 100
+      #define STATUS_BAR_WIDTH (SCREEN_HEIGHT/16)
+      #define LVGL_TICK_PERIOD 6
+      #define FRAME_X 100
+      #define FRAME_Y 64
+      #define FRAME_W 120
+      #define FRAME_H 50
+      #define REDBUTTON_X FRAME_X
+      #define REDBUTTON_Y FRAME_Y
+      #define REDBUTTON_W (FRAME_W/2)
+      #define REDBUTTON_H FRAME_H
+      #define GREENBUTTON_X (REDBUTTON_X + REDBUTTON_W)
+      #define GREENBUTTON_Y FRAME_Y
+      #define GREENBUTTON_W (FRAME_W/2)
+      #define GREENBUTTON_H FRAME_H
+      #define STATUSBAR_COLOR 0x4A49
     #endif
 
     #ifdef MARAUDER_V4
@@ -2140,9 +2223,25 @@
   //// END DISPLAY DEFINITIONS
 
   //// MENU DEFINITIONS
+  #ifdef MARAUDER_TEMBED_CC1101
+    #define BANNER_TIME 100
+    #define COMMAND_PREFIX "!"
+    // On-screen keyboard (Cardputer values; could be tuned for the 170-wide panel)
+    #define KEY_X 120
+    #define KEY_Y 50
+    #define KEY_W 240
+    #define KEY_H 22
+    #define KEY_SPACING_X 0
+    #define KEY_SPACING_Y 1
+    #define KEY_TEXTSIZE 1
+    #define ICON_W 22
+    #define ICON_H 22
+    #define BUTTON_PADDING 22
+  #endif
+
   #ifdef MARAUDER_V4
     #define BANNER_TIME 100
-    
+
     #define COMMAND_PREFIX "!"
     
     // Keypad start position, key sizes and spacing
