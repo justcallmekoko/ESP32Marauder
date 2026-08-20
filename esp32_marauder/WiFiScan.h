@@ -716,6 +716,7 @@ class WiFiScan
     bool singleARP(IPAddress ip_addr);
     void pingScan(uint8_t scan_mode = WIFI_PING_SCAN);
     void portScan(uint8_t scan_mode = WIFI_PORT_SCAN_ALL, uint16_t targ_port = 22);
+    IPAddress advanceScanIP();
     bool isHostAlive(IPAddress ip);
     bool checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout = 100);
     String extractManufacturer(const uint8_t* payload);
@@ -930,6 +931,7 @@ class WiFiScan
     IPAddress subnet;
 
     IPAddress current_scan_ip;
+    IPAddress last_scan_ip;
 
     uint16_t current_scan_port = 1;
 
