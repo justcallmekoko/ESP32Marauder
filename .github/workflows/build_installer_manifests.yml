@@ -235,6 +235,10 @@ jobs:
             done
           fi
 
+      - name: Configure LilyGo T-Dongle C5 partition table
+        if: matrix.board.flag == 'MARAUDER_T_DONGLE_C5'
+        run: cp installer/partitions/t_dongle_c5.csv esp32_marauder/partitions.csv
+
       - name: Build Marauder for ${{ matrix.board.name }}
         uses: ArminJo/arduino-test-compile@v3.3.0
         with:
