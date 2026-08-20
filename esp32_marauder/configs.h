@@ -522,7 +522,7 @@
     #define HAS_T_DONGLE_DISPLAY
     #define HAS_T_DONGLE_LED
     #define T_DONGLE_LED_DATA_PIN 2
-    #define T_DONGLE_LED_CLOCK_PIN 7
+    #define T_DONGLE_LED_CLOCK_PIN 6
     #define T_DONGLE_SPI_SCLK_PIN 6
     #define T_DONGLE_SPI_MISO_PIN 7
     #define T_DONGLE_SPI_MOSI_PIN 2

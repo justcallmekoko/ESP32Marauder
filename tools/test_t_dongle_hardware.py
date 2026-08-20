@@ -14,7 +14,7 @@ class TDongleHardwareTests(unittest.TestCase):
         ).group("body")
         self.assertIn("#define HAS_GPS", feature_block)
         self.assertIn("#define T_DONGLE_LED_DATA_PIN 2", feature_block)
-        self.assertIn("#define T_DONGLE_LED_CLOCK_PIN 7", feature_block)
+        self.assertIn("#define T_DONGLE_LED_CLOCK_PIN 6", feature_block)
         self.assertIn("#define T_DONGLE_SPI_SCLK_PIN 6", feature_block)
         self.assertIn("#define T_DONGLE_SPI_MISO_PIN 7", feature_block)
         self.assertIn("#define T_DONGLE_SPI_MOSI_PIN 2", feature_block)
