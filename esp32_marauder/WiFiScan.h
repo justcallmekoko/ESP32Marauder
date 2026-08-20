@@ -64,7 +64,7 @@
   #include "xiaoLED.h"
 #elif defined(MARAUDER_M5STICKC)
   #include "stickcLED.h"
-#elif defined(HAS_NEOPIXEL_LED)
+#elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
   #include "LedInterface.h"
 #endif
 
@@ -245,7 +245,7 @@ extern Settings settings_obj;
   extern xiaoLED xiao_led;
 #elif defined(MARAUDER_M5STICKC)
   extern stickcLED stickc_led;
-#elif defined(HAS_NEOPIXEL_LED)
+#elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
   extern LedInterface led_obj;
 #endif
 
@@ -801,6 +801,10 @@ class WiFiScan
     volatile bool bt_pending_clear = false;
 
     bool send_deauth = false;
+
+    size_t retainedAccessPointCount() const;
+    size_t retainedStationCount() const;
+    size_t retainedBleDeviceCount() const;
 
     bool channel_hop = false;
     uint8_t connected_devices = 0;

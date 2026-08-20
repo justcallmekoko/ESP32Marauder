@@ -100,6 +100,7 @@ jobs:
           - { name: "M5Cardputer",                   flag: "MARAUDER_CARDPUTER",       fbqn: "esp32:esp32:esp32s3:PartitionScheme=min_spiffs,FlashSize=8M,PSRAM=disabled",                    file_name: "m5cardputer",             tft: true,  tft_file: "User_Setup_marauder_m5cardputer.h",  build_dir: "esp32s3",                    addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
           - { name: "M5Cardputer ADV",               flag: "MARAUDER_CARDPUTER_ADV",   fbqn: "esp32:esp32:esp32s3:PartitionScheme=min_spiffs,FlashSize=8M,PSRAM=disabled",                    file_name: "m5cardputer_adv",         tft: true,  tft_file: "User_Setup_marauder_m5cardputer_adv.h",  build_dir: "esp32s3",                addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
           - { name: "ESP32-C5-DevKitC-1",            flag: "MARAUDER_C5",              fbqn: "esp32:esp32:esp32c5:FlashSize=8M,PartitionScheme=min_spiffs,PSRAM=enabled",                     file_name: "esp32c5devkitc1",         tft: false, tft_file: "",                                   build_dir: "esp32c5",                    addr: "0x2000",   idf_ver: "3.3.4",    nimble_ver: "2.3.8",   esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "LilyGo T-Dongle C5",            flag: "MARAUDER_T_DONGLE_C5",     fbqn: "esp32:esp32:esp32c5:CDCOnBoot=cdc,FlashMode=qio,FlashSize=16M,PartitionScheme=custom,PSRAM=enabled", file_name: "t_dongle_c5", tft: true, tft_file: "User_Setup_marauder_t_dongle_c5.h", tft_repo: "H4W9/TFT_eSPI", tft_ref: "ESP32-C5", build_dir: "esp32c5", addr: "0x2000", idf_ver: "3.3.4", nimble_ver: "2.3.8", esp_async: "bigbrodude6119/ESPAsyncWebServer", esp_async_ver: "master" }
           - { name: "M5NanoC6",                      flag: "MARAUDER_M5_NANO_C6",      fbqn: "esp32:esp32:esp32c6:CDCOnBoot=cdc,PartitionScheme=min_spiffs",                                  file_name: "m5nanoc6",                tft: false, tft_file: "",                                   build_dir: "esp32c6",                    addr: "0x2000",   idf_ver: "3.3.4",    nimble_ver: "2.3.8",   esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
           
     steps:
@@ -162,8 +163,8 @@ jobs:
       - name: Install TFT_eSPI
         uses: actions/checkout@v2
         with:
-          repository: Bodmer/TFT_eSPI
-          ref: V2.5.34
+          repository: ${{ matrix.board.tft_repo || 'Bodmer/TFT_eSPI' }}
+          ref: ${{ matrix.board.tft_ref || 'V2.5.34' }}
           path: CustomTFT_eSPI
           
       - name: Install XPT2046_Touchscreen
@@ -200,6 +201,14 @@ jobs:
           repository: adafruit/Adafruit_NeoPixel
           ref: 1.12.0
           path: CustomAdafruit_NeoPixel
+
+      - name: Install APA102 for LilyGo T-Dongle C5
+        if: matrix.board.flag == 'MARAUDER_T_DONGLE_C5'
+        uses: actions/checkout@v4
+        with:
+          repository: pololu/apa102-arduino
+          ref: 3.0.0
+          path: CustomAPA102
 
       - name: Install ArduinoJson
         uses: actions/checkout@v2
@@ -431,4 +440,3 @@ jobs:
             | AWOK V2/V3 screen (white usb) | `_v6_1.bin` |
             | AWOK V2 flipper (orange usb) | `_flipper.bin` |
             | AWOK V3 flipper (orange usb) | `_marauder_dev_board_pro.bin` |
-

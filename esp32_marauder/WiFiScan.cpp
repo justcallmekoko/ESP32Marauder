@@ -39,6 +39,18 @@ LinkedList<IPAddress>* ipList;
 LinkedList<ProbeReqSsid>* probe_req_ssids;
 LinkedList<BleDevice>* ble_devices;
 
+size_t WiFiScan::retainedAccessPointCount() const {
+  return access_points == nullptr ? 0 : access_points->size();
+}
+
+size_t WiFiScan::retainedStationCount() const {
+  return stations == nullptr ? 0 : stations->size();
+}
+
+size_t WiFiScan::retainedBleDeviceCount() const {
+  return ble_devices == nullptr ? 0 : ble_devices->size();
+}
+
 extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3){
     if (arg == 31337)
       return 1;
@@ -2451,7 +2463,7 @@ void WiFiScan::setLEDMode(int mode) {
       xiao_led.attackLED();
     #elif defined(MARAUDER_M5STICKC)
       stickc_led.attackLED();
-    #elif defined(HAS_NEOPIXEL_LED)
+    #elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
       led_obj.setMode(MODE_ATTACK);
     #endif
   } else if (mode == MODE_SNIFF) {
@@ -2461,7 +2473,7 @@ void WiFiScan::setLEDMode(int mode) {
       xiao_led.sniffLED();
     #elif defined(MARAUDER_M5STICKC)
       stickc_led.sniffLED();
-    #elif defined(HAS_NEOPIXEL_LED)
+    #elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
       led_obj.setMode(MODE_SNIFF);
     #endif
   } else if (mode == MODE_OFF) {
@@ -2471,7 +2483,7 @@ void WiFiScan::setLEDMode(int mode) {
       xiao_led.offLED();
     #elif defined(MARAUDER_M5STICKC)
       stickc_led.offLED();
-    #elif defined(HAS_NEOPIXEL_LED)
+    #elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
       led_obj.setMode(MODE_OFF);
     #endif
   }
@@ -10896,7 +10908,11 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
     String sidecarPath = filePath + "." + service;
     File f = SD.open(sidecarPath, FILE_WRITE);
     if (f) {
-      f.println("uploaded=" + gps_obj.getDatetime());
+      #ifdef HAS_GPS
+        f.println("uploaded=" + gps_obj.getDatetime());
+      #else
+        f.println("uploaded_uptime_ms=" + String(millis()));
+      #endif
       f.close();
       Serial.println("[UPLOAD] Sidecar written: " + sidecarPath);
     } else {
