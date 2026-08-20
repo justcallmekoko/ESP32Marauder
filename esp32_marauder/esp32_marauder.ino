@@ -460,10 +460,7 @@ void loop()
   wifi_scan_obj.main(currentTime);
 
   #ifdef HAS_T_DONGLE_DISPLAY
-    const bool t_dongle_display_drew = t_dongle_display.update(currentTime, wifi_scan_obj);
-    #if defined(HAS_T_DONGLE_LED)
-      if (t_dongle_display_drew) led_obj.refresh();
-    #endif
+    t_dongle_display.update(currentTime, wifi_scan_obj);
   #endif
 
   #ifdef HAS_GPS
@@ -488,7 +485,11 @@ void loop()
     xiao_led.main();
   #elif defined(MARAUDER_M5STICKC)
     stickc_led.main();
-  #elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
+  #elif defined(HAS_T_DONGLE_LED)
+    // The LED shares GPIO2/GPIO7 with the display/SD bus. Always make it the
+    // final writer so later SPI activity cannot leave it latched white.
+    led_obj.refresh();
+  #elif defined(HAS_NEOPIXEL_LED)
     led_obj.main(currentTime);
   #endif
 

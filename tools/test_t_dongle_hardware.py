@@ -54,7 +54,14 @@ class TDongleHardwareTests(unittest.TestCase):
         self.assertIn("last_t_dongle_mode", header)
 
         sketch = (ROOT / "esp32_marauder" / "esp32_marauder.ino").read_text()
-        self.assertIn("if (t_dongle_display_drew) led_obj.refresh();", sketch)
+        final_writer = re.search(
+            r"#elif defined\(HAS_T_DONGLE_LED\)(?P<body>.*?)"
+            r"#elif defined\(HAS_NEOPIXEL_LED\)",
+            sketch,
+            re.S,
+        ).group("body")
+        self.assertIn("led_obj.refresh();", final_writer)
+        self.assertLess(sketch.index("buffer_obj.save();"), sketch.index(final_writer))
 
         display_header = (ROOT / "esp32_marauder" / "TDongleDisplay.h").read_text()
         self.assertIn("bool update(uint32_t now, const WiFiScan& scan);", display_header)
