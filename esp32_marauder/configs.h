@@ -30,6 +30,7 @@
   //#define MARAUDER_CYD_GUITION // ESP32-2432S024 GUITION
   //#define MARAUDER_CYD_3_5_INCH
   //#define MARAUDER_C5
+  //#define MARAUDER_T_DONGLE_C5
   //#define MARAUDER_CARDPUTER
   //#define MARAUDER_CARDPUTER_ADV
   //#define MARAUDER_V8
@@ -41,7 +42,7 @@
 
   #define JSON_SETTING_SIZE 2048
 
-#define MARAUDER_VERSION "v1.14.3"
+#define MARAUDER_VERSION "v1.15.0"
 
   #define GRAPH_REFRESH   100
 
@@ -102,6 +103,8 @@
     #define HARDWARE_NAME "XIAO ESP32 S3"
   #elif defined(MARAUDER_C5)
     #define HARDWARE_NAME "ESP32-C5 DevKit"
+  #elif defined(MARAUDER_T_DONGLE_C5)
+    #define HARDWARE_NAME "LilyGo T-Dongle C5"
   #elif defined(MARAUDER_V8)
     #define HARDWARE_NAME "Marauder v8"
   #elif defined(MARAUDER_PANCAKE)
@@ -509,6 +512,26 @@
     #define HAS_DUAL_BAND
     //#define HAS_PSRAM
     //#define HAS_TEMP_SENSOR
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3
+    #define HAS_DIRECT_UPLOAD
+  #endif
+
+  #ifdef MARAUDER_T_DONGLE_C5
+    #define HAS_BT
+    #define HAS_T_DONGLE_DISPLAY
+    #define HAS_T_DONGLE_LED
+    #define T_DONGLE_LED_DATA_PIN 2
+    #define T_DONGLE_LED_CLOCK_PIN 6
+    #define T_DONGLE_SPI_SCLK_PIN 6
+    #define T_DONGLE_SPI_MISO_PIN 7
+    #define T_DONGLE_SPI_MOSI_PIN 2
+    #define HAS_GPS
+    #define HAS_C5_SD
+    #define HAS_SD
+    #define USE_SD
+    #define HAS_DUAL_BAND
+    #define HAS_PSRAM
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     #define HAS_DIRECT_UPLOAD
@@ -2541,8 +2564,10 @@
       #define SD_CS 3
     #endif
 
-    #ifdef MARAUDER_C5
+    #if defined(MARAUDER_C5)
       #define SD_CS 10
+    #elif defined(MARAUDER_T_DONGLE_C5)
+      #define SD_CS 23
     #endif
 
     #ifdef MARAUDER_V8
@@ -2658,6 +2683,8 @@
   #elif defined(XIAO_ESP32_S3)
     #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_C5)
+    #define MEM_LOWER_LIM 10000
+  #elif defined(MARAUDER_T_DONGLE_C5)
     #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_V8)
     #define MEM_LOWER_LIM 10000
@@ -2790,6 +2817,10 @@
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 6
       #define GPS_RX 9
+    #elif defined(MARAUDER_T_DONGLE_C5)
+      #define GPS_SERIAL_INDEX 1
+      #define GPS_TX 12 // External GPS TX -> T-Dongle UART0 RX
+      #define GPS_RX 11 // External GPS RX -> T-Dongle UART0 TX
     #elif defined(MARAUDER_C5)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 14
@@ -3010,9 +3041,13 @@
       #define SD_SCK       18
     #endif
 
-    #ifdef MARAUDER_C5
+    #if defined(MARAUDER_C5)
       #define SD_MISO 2
       #define SD_MOSI 7
+      #define SD_SCK  6
+    #elif defined(MARAUDER_T_DONGLE_C5)
+      #define SD_MISO 7
+      #define SD_MOSI 2
       #define SD_SCK  6
     #endif
 

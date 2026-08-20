@@ -64,7 +64,7 @@
   #include "xiaoLED.h"
 #elif defined(MARAUDER_M5STICKC)
   #include "stickcLED.h"
-#elif defined(HAS_NEOPIXEL_LED)
+#elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
   #include "LedInterface.h"
 #endif
 
@@ -245,7 +245,7 @@ extern Settings settings_obj;
   extern xiaoLED xiao_led;
 #elif defined(MARAUDER_M5STICKC)
   extern stickcLED stickc_led;
-#elif defined(HAS_NEOPIXEL_LED)
+#elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
   extern LedInterface led_obj;
 #endif
 
@@ -389,18 +389,22 @@ class WiFiScan
       WiFiClientSecure *client = new WiFiClientSecure();
     #endif
   
-    int x_pos; //position along the graph x axis
-    float y_pos_x; //current graph y axis position of X value
-    float y_pos_x_old = 120; //old y axis position of X value
-    float y_pos_y; //current graph y axis position of Y value
-    float y_pos_y_old = 120; //old y axis position of Y value
-    float y_pos_z; //current graph y axis position of Z value
-    float y_pos_z_old = 120; //old y axis position of Z value
-    int midway = 0;
-    byte x_scale = 1; //scale of graph x axis, controlled by touchscreen buttons
-    byte y_scale = 1;
-
-    bool do_break = false;
+    #if defined(HAS_SCREEN) && defined(HAS_ILI9341)
+      static const uint8_t PACKET_MONITOR_COLUMN_WIDTH = 4;
+      static const uint8_t PACKET_MONITOR_GRAPH_LEFT = 32;
+      static const uint16_t PACKET_MONITOR_REFRESH_MS = 200;
+      static const uint16_t PACKET_MONITOR_HISTORY_LEN =
+          (SCREEN_WIDTH - PACKET_MONITOR_GRAPH_LEFT) / PACKET_MONITOR_COLUMN_WIDTH;
+      uint16_t packet_monitor_beacons[PACKET_MONITOR_HISTORY_LEN] = {};
+      uint16_t packet_monitor_deauths[PACKET_MONITOR_HISTORY_LEN] = {};
+      uint16_t packet_monitor_probes[PACKET_MONITOR_HISTORY_LEN] = {};
+      void resetPacketMonitorGraph();
+      void samplePacketMonitorGraph();
+      void drawPacketMonitorGraph(const uint16_t *values, int16_t top, int16_t bottom,
+                                  uint16_t color, const char *label);
+      void drawPacketMonitorGraphs();
+      void drawPacketMonitorControls();
+    #endif
 
     bool wsl_bypass_enabled = false;
 
@@ -780,10 +784,27 @@ class WiFiScan
 
 
   public:
+    struct FoxHuntTarget {
+      uint8_t mac[6] = {};
+      String name = "";
+      int8_t rssi = -128;
+      uint8_t channel = 1;
+      bool bluetooth = false;
+      bool active = false;
+      uint32_t last_seen_ms = 0;
+      String advertised_address = "";
+    };
+
+    FoxHuntTarget fox_hunt_target;
+
     volatile bool bt_cb_busy = false;
     volatile bool bt_pending_clear = false;
 
     bool send_deauth = false;
+
+    size_t retainedAccessPointCount() const;
+    size_t retainedStationCount() const;
+    size_t retainedBleDeviceCount() const;
 
     bool channel_hop = false;
     uint8_t connected_devices = 0;
@@ -979,6 +1000,19 @@ class WiFiScan
     uint16_t rssiToColor(int8_t rssi);
     bool isMetaIdentifier(uint16_t id);
     bool isBlockedIdentifier(uint16_t id);
+    void setFoxHuntTarget(const uint8_t mac[6], const String& name, int8_t rssi, uint8_t channel, bool bluetooth, const String& advertised_address = "");
+    bool updateFoxHuntRssi(const uint8_t mac[6], int8_t rssi, uint8_t channel = 0);
+    bool updateBluetoothFoxHuntRssi(const uint8_t mac[6], const String& advertised_address, int8_t rssi);
+    size_t getPineScanCount() const;
+    String getPineScanLabel(size_t index) const;
+    int8_t getPineScanRssi(size_t index) const;
+    uint8_t getPineScanChannel(size_t index) const;
+    bool selectPineScanFoxTarget(size_t index);
+    size_t getMultiSSIDCount() const;
+    String getMultiSSIDLabel(size_t index) const;
+    int8_t getMultiSSIDRssi(size_t index) const;
+    uint8_t getMultiSSIDChannel(size_t index) const;
+    bool selectMultiSSIDFoxTarget(size_t index);
     uint32_t getCompleteEapol(int check_index = -1);
     void drawChannelLine();
     #ifdef HAS_SCREEN
