@@ -84,6 +84,20 @@ class TDongleHardwareTests(unittest.TestCase):
             ).group("body")
             self.assertIn("if: matrix.board.flag == 'MARAUDER_T_DONGLE_C5'", install_step)
             self.assertIn("repository: pololu/apa102-arduino", install_step)
+            partition_step = re.search(
+                r"- name: Configure LilyGo T-Dongle C5 partition table"
+                r"(?P<body>.*?)(?=\n\s+- name:)",
+                workflow,
+                re.S,
+            ).group("body")
+            self.assertIn("if: matrix.board.flag == 'MARAUDER_T_DONGLE_C5'", partition_step)
+            self.assertIn(
+                "cp installer/partitions/t_dongle_c5.csv esp32_marauder/partitions.csv",
+                partition_step,
+            )
+
+        self.assertFalse((ROOT / "esp32_marauder" / "partitions.csv").exists())
+        self.assertTrue((ROOT / "installer" / "partitions" / "t_dongle_c5.csv").is_file())
 
 
 if __name__ == "__main__":
