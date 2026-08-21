@@ -2997,14 +2997,11 @@
   //// PCAP BUFFER STUFF
   
   #ifdef HAS_PSRAM
-    #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
-    #define SNAP_LEN 1 * 4096 // max len of each recieved packet
-  //#elif !defined(HAS_ILI9341)
-  //  #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
-  //  #define SNAP_LEN 4096 // max len of each recieved packet
+    #define BUF_SIZE 64 * 1024
+    #define SNAP_LEN 4096
   #else
-    #define BUF_SIZE 3 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
-    #define SNAP_LEN 2324 // max len of each recieved packet
+    #define BUF_SIZE 32 * 1024 // Increased to 32KB thanks to headless RAM savings
+    #define SNAP_LEN 4096
   #endif
 
   //// PCAP BUFFER STUFF

@@ -3321,6 +3321,7 @@ void WiFiScan::setWiFiMode(wifi_mode_t mode, wifi_promiscuous_cb_t cb) {
   esp_wifi_set_mode(mode);
   esp_wifi_start();
   this->setMac();
+  esp_wifi_set_max_tx_power(82); // Maximum RF power output (+19.5 dBm)
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_filter(&filt);
   esp_wifi_set_promiscuous_rx_cb(cb);

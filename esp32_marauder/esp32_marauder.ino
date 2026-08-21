@@ -44,6 +44,7 @@ void setup()
   #endif
 
   Serial.begin(921600);
+  Serial.setTimeout(50);
 
   while (!Serial && millis() < 2000)
     delay(10);
