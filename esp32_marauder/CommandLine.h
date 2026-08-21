@@ -178,16 +178,16 @@ const char PROGMEM HELP_ADD_CMD_B[] = "add -c -b <mac> -ap <ap_index>";
 const char PROGMEM HELP_UPLOAD_CMD[] = "upload -d <wdg/wigle/both>";
 
 // Bluetooth sniff/scan
-const char PROGMEM HELP_BT_SNIFF_CMD[] = "sniffbt [-t] <airtag/flipper/flock/meta>";
+const char PROGMEM HELP_BT_SNIFF_CMD[] = "sniffbt [-t] <airtag/flipper/flock/meta> [-d <seconds>]";
 const char PROGMEM HELP_BT_FINDMY_CMD[] = "findmy -t <index>";
 const char PROGMEM HELP_BT_SPAM_CMD[] = "blespam -t <sourapple/applejuice/google/samsung/windows/flipper/all> [-d <seconds>]";
 const char PROGMEM HELP_BT_SPOOFAT_CMD[] = "spoofat -t <index>";
-//const char PROGMEM HELP_BT_SOUR_APPLE_CMD[] = "sourapple";
-//const char PROGMEM HELP_BT_SWIFTPAIR_SPAM_CMD[] = "swiftpair";
-//const char PROGMEM HELP_BT_SAMSUNG_SPAM_CMD[] = "samsungblespam";
-//onst char PROGMEM HELP_BT_SPAM_ALL_CMD[] = "btspamall";
-//const char PROGMEM HELP_BT_WARDRIVE_CMD[] = "btwardrive";
-const char PROGMEM HELP_BT_SKIM_CMD[] = "sniffskim";
+const char PROGMEM HELP_BT_SKIM_CMD[] = "sniffskim [-d <seconds>]";
+
+const char PROGMEM SYSINFO_CMD[] = "sysinfo";
+const char PROGMEM HELP_SYSINFO_CMD[] = "sysinfo [-j]";
+const char PROGMEM JSON_CMD[] = "json";
+const char PROGMEM HELP_JSON_CMD[] = "json [on/off]";
 
 const char PROGMEM BRIGHTNESS_CMD[] = "brightness";
 const char PROGMEM HELP_BRIGHTNESS_CMD[] = "brightness [-c cycle] [-s <0-9>]";
@@ -213,32 +213,17 @@ class CommandLine {
 
     const char* ascii_art =
     "\r\n"
-    "              @@@@@@                        \r\n"
-    "              @@@@@@@@                      \r\n"
-    "              @@@@@@@@@@@                   \r\n"
-    "             @@@@@@  @@@@@@                 \r\n"
-    "          @@@@@@@      @@@@@@@              \r\n"
-    "        @@@@@@            @@@@@@            \r\n"
-    "     @@@@@@@                @@@@@@@         \r\n"
-    "   @@@@@@                      @@@@@@       \r\n"
-    "@@@@@@@              @@@@@@@@@@@@@@@@       \r\n"
-    "@@@@@                 @@@@@@@@@@@@@@@       \r\n"
-    "@@@@@                   @@@@@@@             \r\n"
-    "@@@@@                      @@@@@@           \r\n"
-    "@@@@@@                       @@@@@@@        \r\n"
-    "  @@@@@@                        @@@@@@@@@@@@\r\n"
-    "    @@@@@@@                          @@@@@@ \r\n"
-    "       @@@@@@                     @@@@@@    \r\n"
-    "         @@@@@@@                @@@@@@      \r\n"
-    "            @@@@@@           @@@@@@         \r\n"
-    "              @@@@@@@      @@@@@@           \r\n"
-    "                 @@@@@@ @@@@@@              \r\n"
-    "                   @@@@@@@@@                \r\n"
-    "                      @@@@@@                \r\n"
-    "                        @@@@                \r\n"
+    "  __  __                               _           \r\n"
+    " |  \\/  | __ _ _ __ __ _ _   _  __| | ___ _ __     \r\n"
+    " | |\\/| |/ _` | '__/ _` | | | |/ _` |/ _ \\ '__|    \r\n"
+    " | |  | | (_| | | | (_| | |_| | (_| |  __/ |       \r\n"
+    " |_|  |_|\\__,_|_|  \\__,_|\\__,_|\\__,_|\\___|_|       \r\n"
+    "                                                   \r\n"
+    "     MARAUDER CUSTOM HEADLESS EDITION BY SANAK3    \r\n"
     "\r\n";
         
   public:
+    bool json_output = false;
 
     void RunSetup();
     void main(uint32_t currentTime);

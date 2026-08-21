@@ -43,19 +43,10 @@ void setup()
     esp_spiram_init();
   #endif
 
-  Serial.begin(115200);
+  Serial.begin(921600);
 
   while (!Serial && millis() < 2000)
     delay(10);
-
-  Serial.println();
-  Serial.println(F("========================================"));
-  Serial.println(F("    ESP32 Marauder (Headless CLI)      "));
-  Serial.println("    Version: " + (String)MARAUDER_VERSION);
-  Serial.println("    ESP-IDF: " + String(esp_get_idf_version()));
-  Serial.println(F("    Type 'help' for available commands  "));
-  Serial.println(F("========================================"));
-  Serial.println();
 
   #ifdef HAS_PSRAM
     if (!psramInit()) {

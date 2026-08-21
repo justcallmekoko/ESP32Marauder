@@ -9,11 +9,12 @@
 void CommandLine::RunSetup() {
   Serial.println(this->ascii_art);
 
-  Serial.println(F("\n\n--------------------------------\n"));
-  Serial.println(F("         ESP32 Marauder      \n"));
-  Serial.println("            " + version_number + "\n");
-  Serial.println(F("       By: justcallmekoko\n"));
-  Serial.println(F("--------------------------------\n\n"));
+  Serial.println(F("\n========================================================="));
+  Serial.println(F("       MARAUDER CUSTOM HEADLESS EDITION BY SANAK3        "));
+  Serial.println("            Version: " + version_number + " | Baud: 921600");
+  Serial.println("            ESP-IDF: " + String(esp_get_idf_version()));
+  Serial.println(F("=========================================================\n"));
+  Serial.println(F("Type 'help' for available commands, or 'sysinfo' for stats.\n"));
   
   Serial.print("> ");
 }
@@ -232,6 +233,8 @@ void CommandLine::runCommand(String input) {
   // Help
   if (cmd_args.get(0) == HELP_CMD) {
     Serial.println(HELP_HEAD);
+    Serial.println(HELP_SYSINFO_CMD);
+    Serial.println(HELP_JSON_CMD);
     Serial.println(HELP_CH_CMD);
     Serial.println(HELP_SETTINGS_CMD);
     Serial.println(HELP_CLEARAP_CMD_A);
@@ -310,6 +313,65 @@ void CommandLine::runCommand(String input) {
     #endif
     Serial.println(HELP_BRIGHTNESS_CMD);
     Serial.println(HELP_FOOT);
+    return;
+  }
+
+  // System Diagnostics / Telemetry
+  if (cmd_args.get(0) == SYSINFO_CMD) {
+    bool as_json = this->json_output || (this->argSearch(&cmd_args, "-j") != -1);
+    uint32_t free_heap = ESP.getFreeHeap();
+    uint32_t min_free_heap = ESP.getMinFreeHeap();
+    uint32_t uptime_sec = millis() / 1000;
+    uint32_t cpu_freq = ESP.getCpuFreqMHz();
+    uint32_t flash_size = ESP.getFlashChipSize();
+
+    if (as_json) {
+      Serial.print(F("{\"type\":\"sysinfo\",\"uptime_sec\":"));
+      Serial.print(uptime_sec);
+      Serial.print(F(",\"free_heap\":"));
+      Serial.print(free_heap);
+      Serial.print(F(",\"min_free_heap\":"));
+      Serial.print(min_free_heap);
+      Serial.print(F(",\"cpu_mhz\":"));
+      Serial.print(cpu_freq);
+      Serial.print(F(",\"flash_size\":"));
+      Serial.print(flash_size);
+      Serial.print(F(",\"version\":\""));
+      Serial.print(MARAUDER_VERSION);
+      Serial.print(F("\",\"idf\":\""));
+      Serial.print(esp_get_idf_version());
+      Serial.print(F("\",\"scan_mode\":"));
+      Serial.print(wifi_scan_obj.currentScanMode);
+      Serial.println(F("}"));
+    } else {
+      Serial.println(F("\n--- [ System Telemetry ] ---"));
+      Serial.println("Marauder: Custom Headless Edition by Sanak3 (" + (String)MARAUDER_VERSION + ")");
+      Serial.println("ESP-IDF:  " + String(esp_get_idf_version()));
+      Serial.println("Uptime:   " + String(uptime_sec) + "s (" + String(uptime_sec / 60) + "m)");
+      Serial.println("CPU Freq: " + String(cpu_freq) + " MHz");
+      Serial.println("Flash:    " + String(flash_size / (1024 * 1024)) + " MB");
+      Serial.println("Heap:     " + String(free_heap) + " bytes free (Min: " + String(min_free_heap) + " bytes)");
+      Serial.println("Status:   " + String(wifi_scan_obj.scanning() ? "Active (Mode " + String(wifi_scan_obj.currentScanMode) + ")" : "Idle"));
+      Serial.println(F("----------------------------\n"));
+    }
+    return;
+  }
+
+  // JSON mode toggle
+  if (cmd_args.get(0) == JSON_CMD) {
+    if (cmd_args.size() > 1) {
+      String mode = cmd_args.get(1);
+      if (mode == "on" || mode == "true" || mode == "1") {
+        this->json_output = true;
+        Serial.println(F("{\"json_mode\": true}"));
+      } else {
+        this->json_output = false;
+        Serial.println(F("JSON mode: disabled"));
+      }
+    } else {
+      this->json_output = !this->json_output;
+      Serial.println(this->json_output ? F("{\"json_mode\": true}") : F("JSON mode: disabled"));
+    }
     return;
   }
 
@@ -595,6 +657,15 @@ void CommandLine::runCommand(String input) {
   if (!wifi_scan_obj.scanning()) {
     // Dump pcap/log to serial too, valid for all scan/attack commands
     wifi_scan_obj.save_serial = this->argSearch(&cmd_args, "-serial") != -1;
+
+    // Global duration parser (-d <seconds>) for all scan/attack/sniff commands
+    int duration_sw = this->argSearch(&cmd_args, "-d");
+    if (duration_sw != -1 && this->checkValueExists(&cmd_args, duration_sw)) {
+      int sec = cmd_args.get(duration_sw + 1).toInt();
+      wifi_scan_obj.attack_duration = (sec > 0) ? (sec * 1000) : 0;
+    } else {
+      wifi_scan_obj.attack_duration = 0; // 0 = indefinite
+    }
 
     // Signal strength scan
     if (cmd_args.get(0) == SIGSTREN_CMD) {
@@ -1408,6 +1479,67 @@ void CommandLine::runCommand(String input) {
     int fl_sw = this->argSearch(&cmd_args, "-f");
     int pn_sw = this->argSearch(&cmd_args, "-x");
     int ms_sw = this->argSearch(&cmd_args, "-m");
+
+    bool as_json = this->json_output || (this->argSearch(&cmd_args, "-j") != -1);
+    if (as_json) {
+      if (ap_sw != -1) {
+        Serial.print(F("{\"type\":\"aps\",\"count\":"));
+        Serial.print(access_points->size());
+        Serial.print(F(",\"items\":["));
+        for (int i = 0; i < access_points->size(); i++) {
+          AccessPoint ap = access_points->get(i);
+          if (i > 0) Serial.print(F(","));
+          Serial.print(F("{\"id\":"));
+          Serial.print(i);
+          Serial.print(F(",\"ssid\":\""));
+          Serial.print(ap.essid);
+          Serial.print(F("\",\"ch\":"));
+          Serial.print(ap.channel);
+          Serial.print(F(",\"rssi\":"));
+          Serial.print(ap.rssi);
+          Serial.print(F(",\"selected\":"));
+          Serial.print(ap.selected ? F("true") : F("false"));
+          Serial.print(F("}"));
+        }
+        Serial.println(F("]}"));
+        return;
+      }
+      else if (bt_sw != -1) {
+        Serial.print(F("{\"type\":\"ble\",\"count\":"));
+        Serial.print(ble_devices->size());
+        Serial.print(F(",\"items\":["));
+        for (int i = 0; i < ble_devices->size(); i++) {
+          BleDevice d = ble_devices->get(i);
+          if (i > 0) Serial.print(F(","));
+          Serial.print(F("{\"id\":"));
+          Serial.print(i);
+          Serial.print(F(",\"name\":\""));
+          Serial.print(d.name);
+          Serial.print(F("\",\"rssi\":"));
+          Serial.print(d.rssi);
+          Serial.print(F("}"));
+        }
+        Serial.println(F("]}"));
+        return;
+      }
+      else if (ss_sw != -1) {
+        Serial.print(F("{\"type\":\"ssids\",\"count\":"));
+        Serial.print(ssids->size());
+        Serial.print(F(",\"items\":["));
+        for (int i = 0; i < ssids->size(); i++) {
+          if (i > 0) Serial.print(F(","));
+          Serial.print(F("{\"id\":"));
+          Serial.print(i);
+          Serial.print(F(",\"ssid\":\""));
+          Serial.print(ssids->get(i).essid);
+          Serial.print(F("\",\"selected\":"));
+          Serial.print(ssids->get(i).selected ? F("true") : F("false"));
+          Serial.print(F("}"));
+        }
+        Serial.println(F("]}"));
+        return;
+      }
+    }
 
     // List APs
     if (ap_sw != -1) {

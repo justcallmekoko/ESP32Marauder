@@ -210,9 +210,6 @@
 
 extern EvilPortal evil_portal_obj;
 
-#ifdef HAS_SCREEN
-  extern Display display_obj;
-#endif
 #ifdef HAS_SD
   extern SDInterface sd_obj;
 #endif
@@ -220,19 +217,7 @@ extern EvilPortal evil_portal_obj;
   extern GpsInterface gps_obj;
 #endif
 extern Buffer buffer_obj;
-#ifdef HAS_BATTERY
-  extern BatteryInterface battery_obj;
-#endif
 extern Settings settings_obj;
-#ifdef HAS_FLIPPER_LED
-  extern flipperLED flipper_led;
-#elif defined(XIAO_ESP32_S3)
-  extern xiaoLED xiao_led;
-#elif defined(MARAUDER_M5STICKC)
-  extern stickcLED stickc_led;
-#elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
-  extern LedInterface led_obj;
-#endif
 
 esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx, const void *buffer, int len, bool en_sys_seq);
 
