@@ -5,26 +5,11 @@
 
 #include "configs.h"
 
-#ifdef HAS_SCREEN
-  #include "MenuFunctions.h"
-  #include "Display.h"
-#endif 
-
 #include "WiFiScan.h"
 //#include "Web.h"
 #ifdef HAS_SD
   #include "SDInterface.h"
 #endif
-#include "settings.h"
-#if defined(HAS_NEOPIXEL_LED)
-  #include "LedInterface.h"
-#endif
-
-#ifdef HAS_SCREEN
-  extern MenuFunctions menu_function_obj;
-  extern Display display_obj;
-#endif
-
 extern WiFiScan wifi_scan_obj;
 //extern Web web_obj;
 #ifdef HAS_SD
@@ -195,7 +180,7 @@ const char PROGMEM HELP_UPLOAD_CMD[] = "upload -d <wdg/wigle/both>";
 // Bluetooth sniff/scan
 const char PROGMEM HELP_BT_SNIFF_CMD[] = "sniffbt [-t] <airtag/flipper/flock/meta>";
 const char PROGMEM HELP_BT_FINDMY_CMD[] = "findmy -t <index>";
-const char PROGMEM HELP_BT_SPAM_CMD[] = "blespam -t <sourapple/applejuice/google/samsung/windows/flipper/all>";
+const char PROGMEM HELP_BT_SPAM_CMD[] = "blespam -t <sourapple/applejuice/google/samsung/windows/flipper/all> [-d <seconds>]";
 const char PROGMEM HELP_BT_SPOOFAT_CMD[] = "spoofat -t <index>";
 //const char PROGMEM HELP_BT_SOUR_APPLE_CMD[] = "sourapple";
 //const char PROGMEM HELP_BT_SWIFTPAIR_SPAM_CMD[] = "swiftpair";

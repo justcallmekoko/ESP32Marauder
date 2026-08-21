@@ -2453,6 +2453,7 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
   }
 
   this->currentScanMode = scan_mode;
+  this->attack_start_time = millis();
 }
 
 void WiFiScan::setLEDMode(int mode) {
@@ -5237,140 +5238,54 @@ void WiFiScan::initializeFindMyScan() {
 
 void WiFiScan::executeBLESpam(EBLEPayloadType type) {
   #ifdef HAS_BT
-    uint32_t now_time = millis();
-    uint8_t macAddr[6];
-    generateRandomMac(macAddr);
-
-    if (type == Apple2) {
-      this->setBaseMacAddress(macAddr);
+    if (!this->ble_initialized || pAdvertising == nullptr) {
       NimBLEDevice::init("");
       #ifdef HAS_NIMBLE_2
         if (!NimBLEDevice::setPower(20))
           Serial.println("Failed to set NimBLE output power");
       #endif
       NimBLEServer *pServer = NimBLEDevice::createServer();
-
       pAdvertising = pServer->getAdvertising();
-
-      delay(10);
-
-      NimBLEAdvertisementData advertisementData = this->GetUniversalAdvertisementData(Apple);
-      pAdvertising->setAdvertisementData(advertisementData);
-
       #ifdef HAS_NIMBLE_2
-        pAdvertising->setConnectableMode((random(2) == 0) ? BLE_GAP_CONN_MODE_NON : BLE_GAP_CONN_MODE_UND);
-        pAdvertising->setDiscoverableMode(random(3));
         pAdvertising->setMinInterval(0x20);
         pAdvertising->setMaxInterval(0x20);
         pAdvertising->setPreferredParams(0x20, 0x20);
       #else
-        pAdvertising->setMaxInterval(0x20);
         pAdvertising->setMinInterval(0x20);
+        pAdvertising->setMaxInterval(0x20);
         pAdvertising->setMinPreferred(0x20);
         pAdvertising->setMaxPreferred(0x20);
       #endif
-
-      pAdvertising->start();
-      delay(500);
-      pAdvertising->stop();
-
-      delay(10);
-
-      NimBLEDevice::deinit();
+      this->ble_initialized = true;
     }
-    else if (type == Apple) {
-      if ((now_time - this->last_sour_apple_update > 1000) || (this->last_sour_apple_update == 0) || (!this->ble_initialized)) {
-        this->setBaseMacAddress(macAddr);
 
-        NimBLEDevice::init("");
-        #ifdef HAS_NIMBLE_2
-          if (!NimBLEDevice::setPower(20))
-            Serial.println("Failed to set NimBLE output power");
-        #endif
-        NimBLEServer *pServer = NimBLEDevice::createServer();
+    uint8_t macAddr[6];
+    generateRandomMac(macAddr);
 
-        pAdvertising = pServer->getAdvertising();
-
-        delay(40);
-
-        NimBLEAdvertisementData advertisementData = this->GetUniversalAdvertisementData(Apple);
-        pAdvertising->setAdvertisementData(advertisementData);
-
-        this->ble_initialized = true;
-      }
-
-      pAdvertising->start();
-      delay(60);
-      pAdvertising->stop();
-
-      if ((now_time - this->last_sour_apple_update > 1000) || (this->last_sour_apple_update == 0)) {
-        this->last_sour_apple_update = now_time;
-        NimBLEDevice::deinit();
-        this->ble_initialized = false;
-      }
-    }
-    else if (type == Airtag) {
+    if (type == Airtag) {
       for (int i = 0; i < airtags->size(); i++) {
         AirTag airtag = airtags->get(i);
         if (airtag.selected) {
           convertMacStringToUint8(airtag.mac, macAddr);
-
           macAddr[5] -= 2;
-
-          // Do this because ESP32 BT addr is Base MAC + 2
-          
           this->setBaseMacAddress(macAddr);
 
-          NimBLEDevice::init("");
-
-          #ifdef HAS_NIMBLE_2
-            if (!NimBLEDevice::setPower(20))
-              Serial.println("Failed to set NimBLE output power");
-          #endif
-
-          NimBLEServer *pServer = NimBLEDevice::createServer();
-
-          pAdvertising = pServer->getAdvertising();
-
-          //NimBLEAdvertisementData advertisementData = getSwiftAdvertisementData();
           NimBLEAdvertisementData advertisementData = this->GetUniversalAdvertisementData(Airtag);
+          if (pAdvertising->isAdvertising()) pAdvertising->stop();
           pAdvertising->setAdvertisementData(advertisementData);
           pAdvertising->start();
-          delay(10);
-          pAdvertising->stop();
-
-          //#ifndef HAS_DUAL_BAND
-            NimBLEDevice::deinit();
-          //#endif
-
+          delay(20);
           break;
         }
       }
     }
-    else if ((type == Microsoft) ||
-             (type == Google) ||
-             (type == Samsung) ||
-             (type == FlipperZero)) {
+    else {
       this->setBaseMacAddress(macAddr);
-
-      NimBLEDevice::init("");
-
-      #ifdef HAS_NIMBLE_2
-        if (!NimBLEDevice::setPower(20))
-          Serial.println("Failed to set NimBLE output power");
-      #endif
-
-      NimBLEServer *pServer = NimBLEDevice::createServer();
-
-      pAdvertising = pServer->getAdvertising();
-
-      NimBLEAdvertisementData advertisementData = this->GetUniversalAdvertisementData(type);
+      NimBLEAdvertisementData advertisementData = this->GetUniversalAdvertisementData(type == Apple2 ? Apple : type);
+      if (pAdvertising->isAdvertising()) pAdvertising->stop();
       pAdvertising->setAdvertisementData(advertisementData);
       pAdvertising->start();
-      delay(10);
-      pAdvertising->stop();
-
-      NimBLEDevice::deinit();
+      delay(type == Apple2 ? 80 : 25);
     }
   #endif
 }
@@ -6298,8 +6213,20 @@ void WiFiScan::RunSourApple(uint8_t scan_mode, uint16_t color) {
         Serial.println("Failed to set NimBLE output power");
     #endif
     NimBLEServer *pServer = NimBLEDevice::createServer();
-
     pAdvertising = pServer->getAdvertising();
+
+    #ifdef HAS_NIMBLE_2
+      pAdvertising->setMinInterval(0x20);
+      pAdvertising->setMaxInterval(0x20);
+      pAdvertising->setPreferredParams(0x20, 0x20);
+    #else
+      pAdvertising->setMinInterval(0x20);
+      pAdvertising->setMaxInterval(0x20);
+      pAdvertising->setMinPreferred(0x20);
+      pAdvertising->setMaxPreferred(0x20);
+    #endif
+
+    this->ble_initialized = true;
 
     #ifdef HAS_SCREEN
       this->setupScanDisplayArea(TFT_BLACK, color);
@@ -6321,6 +6248,28 @@ void WiFiScan::RunSourApple(uint8_t scan_mode, uint16_t color) {
 
 void WiFiScan::RunSwiftpairSpam(uint8_t scan_mode, uint16_t color) {
   #ifdef HAS_BT
+    NimBLEDevice::init("");
+
+    #ifdef HAS_NIMBLE_2
+      if (!NimBLEDevice::setPower(20))
+        Serial.println("Failed to set NimBLE output power");
+    #endif
+    NimBLEServer *pServer = NimBLEDevice::createServer();
+    pAdvertising = pServer->getAdvertising();
+
+    #ifdef HAS_NIMBLE_2
+      pAdvertising->setMinInterval(0x20);
+      pAdvertising->setMaxInterval(0x20);
+      pAdvertising->setPreferredParams(0x20, 0x20);
+    #else
+      pAdvertising->setMinInterval(0x20);
+      pAdvertising->setMaxInterval(0x20);
+      pAdvertising->setMinPreferred(0x20);
+      pAdvertising->setMaxPreferred(0x20);
+    #endif
+
+    this->ble_initialized = true;
+
     #ifdef HAS_SCREEN
       this->setupScanDisplayArea(TFT_BLACK, color);
       #ifdef HAS_FULL_SCREEN
@@ -11554,6 +11503,12 @@ void WiFiScan::runFoxHunt(uint32_t currentTime) {
 // Function for updating scan status
 void WiFiScan::main(uint32_t currentTime)
 {
+  if (currentScanMode != WIFI_SCAN_OFF && this->attack_duration > 0 && (currentTime - this->attack_start_time >= this->attack_duration)) {
+    Serial.println(F("\n[!] Attack/scan duration reached. Stopping..."));
+    this->StopScan(this->currentScanMode);
+    return;
+  }
+
   // WiFi operations
   if ((currentScanMode == WIFI_SCAN_PROBE) ||
   (currentScanMode == WIFI_SCAN_AP) ||

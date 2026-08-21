@@ -43,30 +43,15 @@
 #if defined(HAS_BT) && !defined(HAS_NIMBLE_2)
   #include "esp_bt.h"
 #endif
-#ifdef HAS_SCREEN
-  #include "Display.h"
-#endif
 #ifdef HAS_SD
   #include "SDInterface.h"
 #endif
 #include "Buffer.h"
-#ifdef HAS_BATTERY
-  #include "BatteryInterface.h"
-#endif
 #ifdef HAS_GPS
   #include "GpsInterface.h"
 #endif
 #include "settings.h"
 #include "Assets.h"
-#ifdef HAS_FLIPPER_LED
-  #include "flipperLED.h"
-#elif defined(XIAO_ESP32_S3)
-  #include "xiaoLED.h"
-#elif defined(MARAUDER_M5STICKC)
-  #include "stickcLED.h"
-#elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
-  #include "LedInterface.h"
-#endif
 
 #ifdef HAS_DIRECT_UPLOAD
   #include <WiFiClientSecure.h>
@@ -799,6 +784,9 @@ class WiFiScan
 
     volatile bool bt_cb_busy = false;
     volatile bool bt_pending_clear = false;
+
+    uint32_t attack_duration = 0; // 0 = indefinite, in milliseconds
+    uint32_t attack_start_time = 0;
 
     bool send_deauth = false;
 

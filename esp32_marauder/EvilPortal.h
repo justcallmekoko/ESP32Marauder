@@ -10,19 +10,12 @@
 
 #include "configs.h"
 #include "settings.h"
-#ifdef HAS_SCREEN
-  #include "Display.h"
-  #include <LinkedList.h>
-#endif
 #include "SDInterface.h"
 #include "Buffer.h"
 #include "lang_var.h"
 
 extern Settings settings_obj;
 extern SDInterface sd_obj;
-#ifdef HAS_SCREEN
-  extern Display display_obj;
-#endif
 extern Buffer buffer_obj; 
 
 #define WAITING 0

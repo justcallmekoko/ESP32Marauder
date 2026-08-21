@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ExternalStorageConfigurationManager" enabled="true" />
+  <component name="PlatformIOSettings">
+    <option name="linkedExternalProjectsSettings">
+      <PlatformioProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+      </PlatformioProjectSettings>
+    </option>
+  </component>
+  <component name="PlatformIOWorkspace" PROJECT_DIR="$PROJECT_DIR$" />
+</project>

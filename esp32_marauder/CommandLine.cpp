@@ -199,8 +199,15 @@ void CommandLine::filterAccessPoints(String filter) {
 }
 
 void CommandLine::startScanFromCLI(int scan_mode, uint16_t color, const char* scan_name) {
-  Serial.print(F("Starting"));
+  Serial.print(F("Starting "));
   Serial.print(scan_name);
+  if (wifi_scan_obj.attack_duration > 0) {
+    Serial.print(F(" for "));
+    Serial.print(wifi_scan_obj.attack_duration / 1000);
+    Serial.print(F(" seconds"));
+  } else {
+    Serial.print(F(" (indefinite)"));
+  }
   Serial.print(F(". Stop with "));
   Serial.println(STOPSCAN_CMD);
   #ifdef HAS_SCREEN
@@ -1172,41 +1179,35 @@ void CommandLine::runCommand(String input) {
       if (bt_type_sw != -1) {
         String bt_type = cmd_args.get(bt_type_sw + 1);
 
+        int duration_sw = this->argSearch(&cmd_args, "-d");
+        if (duration_sw != -1) {
+          int sec = cmd_args.get(duration_sw + 1).toInt();
+          wifi_scan_obj.attack_duration = (sec > 0) ? (sec * 1000) : 0;
+        } else {
+          wifi_scan_obj.attack_duration = 0; // 0 = indefinite
+        }
+
         #ifdef HAS_BT
           if (bt_type == "sourapple") {
-            #ifdef HAS_BT
-              this->startScanFromCLI(BT_ATTACK_SOUR_APPLE, TFT_GREEN, "Sour Apple attack");
-            #endif
+            this->startScanFromCLI(BT_ATTACK_SOUR_APPLE, TFT_GREEN, "Sour Apple attack");
           }
           else if (bt_type == "applejuice") {
-            #ifdef HAS_BT
-              this->startScanFromCLI(BT_ATTACK_APPLE_JUICE, TFT_GREEN, "Apple Juice attack");
-            #endif
+            this->startScanFromCLI(BT_ATTACK_APPLE_JUICE, TFT_GREEN, "Apple Juice attack");
           }
           else if (bt_type == "windows") {
-            #ifdef HAS_BT
-              this->startScanFromCLI(BT_ATTACK_SWIFTPAIR_SPAM, TFT_CYAN, "Swiftpair Spam attack");
-            #endif
+            this->startScanFromCLI(BT_ATTACK_SWIFTPAIR_SPAM, TFT_CYAN, "Swiftpair Spam attack");
           }
           else if (bt_type == "samsung") {
-            #ifdef HAS_BT
-              this->startScanFromCLI(BT_ATTACK_SAMSUNG_SPAM, TFT_CYAN, "Samsung Spam attack");
-            #endif
+            this->startScanFromCLI(BT_ATTACK_SAMSUNG_SPAM, TFT_CYAN, "Samsung Spam attack");
           }
           else if (bt_type == "google") {
-            #ifdef HAS_BT
-              this->startScanFromCLI(BT_ATTACK_GOOGLE_SPAM, TFT_CYAN, "Google Spam attack");
-            #endif
+            this->startScanFromCLI(BT_ATTACK_GOOGLE_SPAM, TFT_CYAN, "Google Spam attack");
           }
           else if (bt_type == "flipper") {
-            #ifdef HAS_BT
-              this->startScanFromCLI(BT_ATTACK_FLIPPER_SPAM, TFT_ORANGE, "Flipper Spam attack");
-            #endif
+            this->startScanFromCLI(BT_ATTACK_FLIPPER_SPAM, TFT_ORANGE, "Flipper Spam attack");
           }
           else if (bt_type == "all") {
-            #ifdef HAS_BT
-              this->startScanFromCLI(BT_ATTACK_SPAM_ALL, TFT_MAGENTA, "BT Spam All attack");
-            #endif
+            this->startScanFromCLI(BT_ATTACK_SPAM_ALL, TFT_MAGENTA, "BT Spam All attack");
           }
         #else
           Serial.println(F("Bluetooth not supported"));

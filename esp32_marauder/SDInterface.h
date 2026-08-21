@@ -14,9 +14,6 @@
   #include "SPI.h"
 #endif
 #include "Buffer.h"
-#ifdef HAS_SCREEN
-  #include "Display.h"
-#endif
 #include <Update.h>
 
 #include "esp_ota_ops.h"
@@ -25,9 +22,6 @@
 
 extern Buffer buffer_obj;
 extern Settings settings_obj;
-#ifdef HAS_SCREEN
-  extern Display display_obj;
-#endif
 
 #ifdef KIT
   #define SD_DET 4

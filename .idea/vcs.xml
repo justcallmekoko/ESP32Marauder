@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/esp32_marauder/libraries/Adafruit_NeoPixel" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/esp32_marauder/libraries/ArduinoJson" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/esp32_marauder/libraries/JPEGDecoder" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/esp32_marauder/libraries/LinkedList" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/esp32_marauder/libraries/NimBLE-Arduino" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/esp32_marauder/libraries/SwitchLib" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/esp32_marauder/libraries/TFT_eSPI" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/esp32_marauder/libraries/lv_arduino" vcs="Git" />
+  </component>
+</project>
