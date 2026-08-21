@@ -9,3 +9,4 @@ esp32_marauder/.vscode/settings.json
 __pycache__/
 *.pyc
 .DS_Store
+.idea/

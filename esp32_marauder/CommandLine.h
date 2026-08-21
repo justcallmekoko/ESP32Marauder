@@ -16,9 +16,6 @@ extern WiFiScan wifi_scan_obj;
   extern SDInterface sd_obj;
 #endif
 extern Settings settings_obj;
-#if defined(HAS_NEOPIXEL_LED)
-  extern LedInterface led_obj;
-#endif
 extern LinkedList<AccessPoint>* access_points;
 extern LinkedList<BleDevice>* ble_devices;
 extern LinkedList<AirTag>* airtags;
