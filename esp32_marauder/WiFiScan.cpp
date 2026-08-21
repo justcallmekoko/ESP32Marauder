@@ -2093,7 +2093,7 @@ void WiFiScan::setNetworkInfo() {
   this->subnet = WiFi.subnetMask();
 }
 
-void WiFiScan::showNetworkInfo() {
+void WiFiScan::showNetworkInfo(bool show_display) {
   Serial.print(F("IP address: "));
   Serial.println(this->ip_addr);
   Serial.print(F("Gateway: "));
@@ -2104,6 +2104,7 @@ void WiFiScan::showNetworkInfo() {
   Serial.println(WiFi.macAddress());
 
   #ifdef HAS_SCREEN
+  if (show_display) {
     display_obj.tft.println("\nConnected!");
     display_obj.tft.print("IP address: ");
     display_obj.tft.println(this->ip_addr);
@@ -2115,6 +2116,48 @@ void WiFiScan::showNetworkInfo() {
     display_obj.tft.println(WiFi.macAddress());
     display_obj.tft.println("Returning...");
     delay(2000);
+  }
+  #endif
+}
+
+void WiFiScan::resetNetworkScanDisplay(const String& target_line, const String& status_line) {
+  this->network_scan_result_count = 0;
+
+  #ifdef HAS_SCREEN
+    // Scanner output uses the shared scrolling renderer. Reset its retained
+    // rows and the TFT content so connection-dialog text cannot leak through.
+    display_obj.display_buffer->clear();
+    #ifdef SCREEN_BUFFER
+      display_obj.screen_buffer->clear();
+    #endif
+    uint16_t content_top = TFT_HEIGHT / 6;
+    #ifdef HAS_TOUCH
+      content_top = (TFT_HEIGHT / 6) * 1.3;
+    #endif
+    #ifdef MARAUDER_PANCAKE
+      content_top = display_obj.TOP_FIXED_AREA_2;
+    #endif
+    display_obj.tft.fillRect(0, content_top, TFT_WIDTH, TFT_HEIGHT - content_top, TFT_BLACK);
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextWrap(false);
+    display_obj.display_buffer->add(String(WHITE_KEY) + target_line);
+    display_obj.display_buffer->add(String(CYAN_KEY) + status_line);
+  #endif
+}
+
+void WiFiScan::addNetworkScanDisplayResult(const String& result_line) {
+  this->network_scan_result_count++;
+  #ifdef HAS_SCREEN
+    display_obj.display_buffer->add(String(GREEN_KEY) + result_line);
+  #endif
+}
+
+void WiFiScan::finishNetworkScanDisplay(const String& result_label) {
+  #ifdef HAS_SCREEN
+    display_obj.display_buffer->add(
+      String(CYAN_KEY) + "Done - " + String(this->network_scan_result_count) + " " + result_label
+    );
   #endif
 }
 
@@ -3371,7 +3414,11 @@ void WiFiScan::RunPingScan(uint8_t scan_mode, uint16_t color) {
     Serial.println(F("Starting Ping Scan with..."));
   else if (scan_mode == WIFI_ARP_SCAN)
     Serial.println(F("Starting ARP Scan with..."));
-  this->showNetworkInfo();
+  this->showNetworkInfo(false);
+  this->resetNetworkScanDisplay(
+    String("Local ") + this->ip_addr.toString(),
+    scan_mode == WIFI_PING_SCAN ? "Scanning live hosts..." : "Scanning ARP neighbors..."
+  );
 
   if (scan_mode == WIFI_PING_SCAN)
     buffer_obj.append(F("Starting Ping Scan with..."));
@@ -3449,7 +3496,26 @@ void WiFiScan::RunPortScanAll(uint8_t scan_mode, uint16_t color) {
   }
 
   Serial.println(F("Starting Port Scan with..."));
-  this->showNetworkInfo();
+  this->showNetworkInfo(false);
+
+  String scan_target;
+  String scan_status;
+  if (scan_mode == WIFI_PORT_SCAN_ALL) {
+    scan_target = String("Target ") + this->current_scan_ip.toString();
+    scan_status = "Scanning ports 1-65535...";
+  }
+  else {
+    const uint16_t service_port =
+      scan_mode == WIFI_SCAN_SSH ? 22 :
+      scan_mode == WIFI_SCAN_TELNET ? 23 :
+      scan_mode == WIFI_SCAN_SMTP ? 25 :
+      scan_mode == WIFI_SCAN_DNS ? 53 :
+      scan_mode == WIFI_SCAN_HTTP ? 80 :
+      scan_mode == WIFI_SCAN_HTTPS ? 443 : 3389;
+    scan_target = String("Local ") + this->ip_addr.toString();
+    scan_status = String("Scanning service port ") + String(service_port) + "...";
+  }
+  this->resetNetworkScanDisplay(scan_target, scan_status);
 
   buffer_obj.append(F("Starting Port Scan with..."));
   this->writeNetworkInfo();
@@ -10631,7 +10697,6 @@ IPAddress WiFiScan::advanceScanIP() {
 #endif
 
 void WiFiScan::pingScan(uint8_t scan_mode) {
-  String display_string = "";
   String output_line = "";
 
   if (scan_mode == WIFI_PING_SCAN) {
@@ -10642,16 +10707,8 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
       if ((this->current_scan_ip != IPAddress(0, 0, 0, 0)) &&
           this->isHostAlive(this->current_scan_ip)) {
         output_line = this->current_scan_ip.toString();
-        display_string.concat(output_line);
-        uint8_t temp_len = display_string.length();
-        for (uint8_t i = 0; i < 40 - temp_len; i++)
-        {
-          display_string.concat(" ");
-        }
         ipList->add(this->current_scan_ip);
-        #ifdef HAS_SCREEN
-          display_obj.display_buffer->add(display_string);
-        #endif
+        this->addNetworkScanDisplayResult(String("UP ") + output_line);
         buffer_obj.append(output_line + "\n");
         Serial.println(output_line);
       }
@@ -10659,9 +10716,7 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
     else {
       if (!this->scan_complete) {
         this->scan_complete = true;
-        #ifdef HAS_SCREEN
-          display_obj.display_buffer->add("Scan complete");
-        #endif
+        this->finishNetworkScanDisplay("hosts up");
       }
     }
   }
@@ -10699,16 +10754,13 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
     else {
       if (!this->scan_complete) {
         this->scan_complete = true;
-        #ifdef HAS_SCREEN
-          display_obj.display_buffer->add("Scan complete");
-        #endif
+        this->finishNetworkScanDisplay("hosts open");
       }
     }
   }
 }
 
 void WiFiScan::portScan(uint8_t scan_mode, uint16_t targ_port) {
-  String display_string = "";
   if (scan_mode == WIFI_PORT_SCAN_ALL) {
     if (this->current_scan_port < MAX_PORT) {
       this->current_scan_port = getNextPort(this->current_scan_port);
@@ -10720,15 +10772,7 @@ void WiFiScan::portScan(uint8_t scan_mode, uint16_t targ_port) {
       }
       if (this->checkHostPort(this->current_scan_ip, this->current_scan_port, 100)) {
         String output_line = this->current_scan_ip.toString() + ": " + (String)this->current_scan_port;
-        display_string.concat(output_line);
-        uint8_t temp_len = display_string.length();
-        for (uint8_t i = 0; i < 40 - temp_len; i++)
-        {
-          display_string.concat(" ");
-        }
-        #ifdef HAS_SCREEN
-          display_obj.display_buffer->add(display_string);
-        #endif
+        this->addNetworkScanDisplayResult(String("OPEN ") + output_line);
         Serial.println(output_line);
         buffer_obj.append(output_line + "\n");
       }
@@ -10736,9 +10780,7 @@ void WiFiScan::portScan(uint8_t scan_mode, uint16_t targ_port) {
     else {
       if (!this->scan_complete) {
         this->scan_complete = true;
-        #ifdef HAS_SCREEN
-          display_obj.display_buffer->add("Scan complete");
-        #endif
+        this->finishNetworkScanDisplay("ports open");
       }
     }
   }
@@ -10746,15 +10788,7 @@ void WiFiScan::portScan(uint8_t scan_mode, uint16_t targ_port) {
   else {
     if (this->checkHostPort(this->current_scan_ip, targ_port, 100)) {
       String output_line = this->current_scan_ip.toString() + ": " + (String)targ_port;
-      display_string.concat(output_line);
-      uint8_t temp_len = display_string.length();
-      for (uint8_t i = 0; i < 40 - temp_len; i++)
-      {
-        display_string.concat(" ");
-      }
-      #ifdef HAS_SCREEN
-        display_obj.display_buffer->add(display_string);
-      #endif
+      this->addNetworkScanDisplayResult(String("OPEN ") + output_line);
       Serial.println(output_line);
       buffer_obj.append(output_line + "\n");
     }

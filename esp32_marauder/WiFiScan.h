@@ -709,7 +709,10 @@ class WiFiScan
     void writeNetworkInfo();
     void setupScanDisplayArea(uint16_t background, uint16_t color);
     void updateTrackerUI();
-    void showNetworkInfo();
+    void showNetworkInfo(bool show_display = true);
+    void resetNetworkScanDisplay(const String& target_line, const String& status_line);
+    void addNetworkScanDisplayResult(const String& result_line);
+    void finishNetworkScanDisplay(const String& result_label);
     void setNetworkInfo();
     void fullARP();
     bool readARP(IPAddress targ_ip);
@@ -934,6 +937,7 @@ class WiFiScan
     IPAddress last_scan_ip;
 
     uint16_t current_scan_port = 1;
+    uint16_t network_scan_result_count = 0;
 
     String dst_mac = "ff:ff:ff:ff:ff:ff";
     byte src_mac[6] = {};
