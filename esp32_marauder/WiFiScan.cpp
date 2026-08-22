@@ -10572,6 +10572,33 @@ static struct netif* getStationLwipNetif() {
   #endif
 }
 
+static bool findStationARP(struct netif* station, const ip4_addr_t* ip) {
+  const ip4_addr_t* resolved_ip = nullptr;
+  struct eth_addr* resolved_mac = nullptr;
+
+  #ifdef HAS_IDF_3
+    LOCK_TCPIP_CORE();
+  #endif
+  const bool found = etharp_find_addr(station, ip, &resolved_mac, &resolved_ip) >= 0;
+  #ifdef HAS_IDF_3
+    UNLOCK_TCPIP_CORE();
+  #endif
+
+  return found;
+}
+
+static err_t requestStationARP(struct netif* station, const ip4_addr_t* ip) {
+  #ifdef HAS_IDF_3
+    LOCK_TCPIP_CORE();
+  #endif
+  const err_t result = etharp_request(station, ip);
+  #ifdef HAS_IDF_3
+    UNLOCK_TCPIP_CORE();
+  #endif
+
+  return result;
+}
+
   bool WiFiScan::readARP(IPAddress targ_ip) {
     // Convert IPAddress to ip4_addr_t using IP4_ADDR
     ip4_addr_t test_ip;
@@ -10581,14 +10608,7 @@ static struct netif* getStationLwipNetif() {
     if (netif_interface == nullptr)
       return false;
 
-    const ip4_addr_t* ipaddr_ret = NULL;
-    struct eth_addr* eth_ret = NULL;
-
-    if (etharp_find_addr(netif_interface, &test_ip, &eth_ret, &ipaddr_ret) >= 0) {
-      return true;
-    }
-
-    return false;
+    return findStationARP(netif_interface, &test_ip);
   }
 
   bool WiFiScan::singleARP(IPAddress ip_addr) {
@@ -10603,7 +10623,7 @@ static struct netif* getStationLwipNetif() {
               ip_addr[2],
               ip_addr[3]);
 
-    etharp_request(netif_interface, &lwip_ip);
+    requestStationARP(netif_interface, &lwip_ip);
 
     delay(250);
 
@@ -10632,7 +10652,7 @@ static struct netif* getStationLwipNetif() {
               this->current_scan_ip[2],
               this->current_scan_ip[3]);
 
-      etharp_request(netif_interface, &lwip_ip);
+      requestStationARP(netif_interface, &lwip_ip);
 
       delay(100);
 

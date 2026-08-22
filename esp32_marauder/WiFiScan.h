@@ -35,6 +35,7 @@
 #include <lwip/etharp.h>
 #include <lwip/ip_addr.h>
 #include <lwip/netif.h>
+#include <lwip/tcpip.h>
 #ifdef HAS_IDF_3
   #include "esp_netif.h"
   #include "esp_netif_net_stack.h"
