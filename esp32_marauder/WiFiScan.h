@@ -717,6 +717,7 @@ class WiFiScan
     void finishNetworkScanDisplay(const String& result_label);
     void setNetworkInfo();
     void fullARP();
+    void recordARPResult(IPAddress ip_addr);
     inline __attribute__((always_inline)) bool singleARP(IPAddress ip_addr);
     void pingScan(uint8_t scan_mode = WIFI_PING_SCAN);
     void portScan(uint8_t scan_mode = WIFI_PORT_SCAN_ALL, uint16_t targ_port = 22);

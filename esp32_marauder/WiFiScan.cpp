@@ -10618,10 +10618,15 @@ static void requestStationARP(struct netif* station, const ip4_addr_t* ip) {
     return findStationARP(netif_interface, &lwip_ip);
   }
 
-  void WiFiScan::fullARP() {
-    String display_string = "";
-    String output_line = "";
+  void WiFiScan::recordARPResult(IPAddress ip_addr) {
+    ipList->add(ip_addr);
+    String output_line = ip_addr.toString();
+    this->addNetworkScanDisplayResult(String("UP ") + output_line);
+    buffer_obj.append(output_line + "\n");
+    Serial.println(output_line);
+  }
 
+  void WiFiScan::fullARP() {
     struct netif* netif_interface = getStationLwipNetif();
     if (netif_interface == nullptr)
       return;
@@ -10650,22 +10655,8 @@ static void requestStationARP(struct netif* station, const ip4_addr_t* ip) {
 
         for (int i = 9; i >= 0; i--) {
           IPAddress check_ip = getPrevIP(this->current_scan_ip, this->subnet, i);
-          display_string = "";
-          output_line = "";
           if (findStationARP(netif_interface, check_ip)) {
-            ipList->add(check_ip);
-            output_line = check_ip.toString();
-            display_string.concat(output_line);
-            uint8_t temp_len = display_string.length();
-            for (uint8_t i = 0; i < 40 - temp_len; i++)
-            {
-              display_string.concat(" ");
-            }
-            #ifdef HAS_SCREEN
-              display_obj.display_buffer->add(display_string);
-            #endif
-            buffer_obj.append(output_line + "\n");
-            Serial.println(output_line);
+            this->recordARPResult(check_ip);
           }
         }
       }
@@ -10677,22 +10668,8 @@ static void requestStationARP(struct netif* station, const ip4_addr_t* ip) {
         delay(250);
 
         IPAddress check_ip = getPrevIP(this->last_scan_ip, this->subnet, i - 1);
-        display_string = "";
-        output_line = "";
         if (findStationARP(netif_interface, check_ip)) {
-          ipList->add(check_ip);
-          output_line = check_ip.toString();
-          display_string.concat(output_line);
-          uint8_t temp_len = display_string.length();
-          for (uint8_t i = 0; i < 40 - temp_len; i++)
-          {
-            display_string.concat(" ");
-          }
-          #ifdef HAS_SCREEN
-            display_obj.display_buffer->add(display_string);
-          #endif
-          buffer_obj.append(output_line + "\n");
-          Serial.println(output_line);
+          this->recordARPResult(check_ip);
         }
       }
       this->arp_count = 0;
