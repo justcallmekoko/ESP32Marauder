@@ -231,6 +231,9 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_REBOOT_CMD);
     Serial.println(HELP_UPDATE_CMD_A);
     Serial.println(HELP_LS_CMD);
+    #ifdef HAS_SD
+      Serial.println(HELP_BACKUP_SPIFFS_CMD);
+    #endif
     Serial.println(HELP_LED_CMD);
     Serial.println(HELP_GPS_DATA_CMD);
     Serial.println(HELP_GPS_CMD);
@@ -459,6 +462,22 @@ void CommandLine::runCommand(String input) {
     #ifdef HAS_SD
       if (cmd_args.size() > 1)
         sd_obj.listDir(cmd_args.get(1));
+    #endif
+  }
+  else if (cmd_args.get(0) == BACKUP_SPIFFS_CMD) {
+    #ifdef HAS_SD
+      size_t files_copied = 0;
+      size_t bytes_copied = 0;
+      String error;
+      if (sd_obj.backupSPIFFS(files_copied, bytes_copied, error)) {
+        Serial.println("SPIFFS backup complete: " + (String)files_copied +
+                       " files, " + (String)bytes_copied + " bytes -> /spiffs");
+      }
+      else {
+        Serial.println("SPIFFS backup failed: " + error);
+      }
+    #else
+      Serial.println(F("SD Card NOT Supported"));
     #endif
   }
 
