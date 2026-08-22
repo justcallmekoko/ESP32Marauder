@@ -10587,6 +10587,12 @@ static bool findStationARP(struct netif* station, const ip4_addr_t* ip) {
   return found;
 }
 
+static bool findStationARP(struct netif* station, IPAddress ip) {
+  ip4_addr_t lwip_ip;
+  IP4_ADDR(&lwip_ip, ip[0], ip[1], ip[2], ip[3]);
+  return findStationARP(station, &lwip_ip);
+}
+
 static void requestStationARP(struct netif* station, const ip4_addr_t* ip) {
   #ifdef HAS_IDF_3
     LOCK_TCPIP_CORE();
@@ -10596,18 +10602,6 @@ static void requestStationARP(struct netif* station, const ip4_addr_t* ip) {
     UNLOCK_TCPIP_CORE();
   #endif
 }
-
-  bool WiFiScan::readARP(IPAddress targ_ip) {
-    // Convert IPAddress to ip4_addr_t using IP4_ADDR
-    ip4_addr_t test_ip;
-    IP4_ADDR(&test_ip, targ_ip[0], targ_ip[1], targ_ip[2], targ_ip[3]);
-
-    struct netif* netif_interface = getStationLwipNetif();
-    if (netif_interface == nullptr)
-      return false;
-
-    return findStationARP(netif_interface, &test_ip);
-  }
 
   inline __attribute__((always_inline)) bool WiFiScan::singleARP(IPAddress ip_addr) {
     struct netif* netif_interface = getStationLwipNetif();
@@ -10661,7 +10655,7 @@ static void requestStationARP(struct netif* station, const ip4_addr_t* ip) {
           IPAddress check_ip = getPrevIP(this->current_scan_ip, this->subnet, i);
           display_string = "";
           output_line = "";
-          if (this->readARP(check_ip)) {
+          if (findStationARP(netif_interface, check_ip)) {
             ipList->add(check_ip);
             output_line = check_ip.toString();
             display_string.concat(output_line);
@@ -10688,7 +10682,7 @@ static void requestStationARP(struct netif* station, const ip4_addr_t* ip) {
         IPAddress check_ip = getPrevIP(this->last_scan_ip, this->subnet, i - 1);
         display_string = "";
         output_line = "";
-        if (this->readARP(check_ip)) {
+        if (findStationARP(netif_interface, check_ip)) {
           ipList->add(check_ip);
           output_line = check_ip.toString();
           display_string.concat(output_line);
