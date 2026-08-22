@@ -1289,11 +1289,11 @@ void CommandLine::runCommand(String input) {
       this->startScanFromCLI(WIFI_PING_SCAN, TFT_GREEN, "Ping Scan");
     }
 
-    #ifndef HAS_DUAL_BAND
-      if (cmd_args.get(0) == ARP_SCAN_CMD) {
-        this->startScanFromCLI(WIFI_ARP_SCAN, TFT_CYAN, "ARP Scan");
-      }
-    #endif
+    // GCOVR_EXCL_START -- command dispatch requires the firmware CLI runtime.
+    if (cmd_args.get(0) == ARP_SCAN_CMD) {
+      this->startScanFromCLI(WIFI_ARP_SCAN, TFT_CYAN, "ARP Scan");
+    }
+    // GCOVR_EXCL_STOP
 
     // GPS POI
     if (cmd_args.get(0) == GPS_POI_CMD) {

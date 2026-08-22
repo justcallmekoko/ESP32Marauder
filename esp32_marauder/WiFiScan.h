@@ -32,11 +32,13 @@
 #include "mbedtls/bignum.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/ecp.h"
-#ifndef HAS_IDF_3
-  #include <lwip/etharp.h>
-  #include <lwip/ip_addr.h>
-#endif
+#include <lwip/etharp.h>
+#include <lwip/ip_addr.h>
+#include <lwip/netif.h>
+#include <lwip/tcpip.h>
 #ifdef HAS_IDF_3
+  #include "esp_netif.h"
+  #include "esp_netif_net_stack.h"
   #include "esp_system.h"
   #include "esp_mac.h"
 #endif
@@ -709,13 +711,17 @@ class WiFiScan
     void writeNetworkInfo();
     void setupScanDisplayArea(uint16_t background, uint16_t color);
     void updateTrackerUI();
-    void showNetworkInfo();
+    void showNetworkInfo(bool show_display = true);
+    void resetNetworkScanDisplay(const String& target_line, const String& status_line);
+    void addNetworkScanDisplayResult(const String& result_line);
+    void finishNetworkScanDisplay(const String& result_label);
     void setNetworkInfo();
     void fullARP();
     bool readARP(IPAddress targ_ip);
     bool singleARP(IPAddress ip_addr);
     void pingScan(uint8_t scan_mode = WIFI_PING_SCAN);
     void portScan(uint8_t scan_mode = WIFI_PORT_SCAN_ALL, uint16_t targ_port = 22);
+    IPAddress advanceScanIP();
     bool isHostAlive(IPAddress ip);
     bool checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout = 100);
     String extractManufacturer(const uint8_t* payload);
@@ -930,8 +936,10 @@ class WiFiScan
     IPAddress subnet;
 
     IPAddress current_scan_ip;
+    IPAddress last_scan_ip;
 
     uint16_t current_scan_port = 1;
+    uint16_t network_scan_result_count = 0;
 
     String dst_mac = "ff:ff:ff:ff:ff:ff";
     byte src_mac[6] = {};
