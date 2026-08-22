@@ -10558,11 +10558,8 @@ IPAddress WiFiScan::advanceScanIP() {
 // GCOVR_EXCL_START -- ARP discovery requires a live lwIP station interface.
 static struct netif* getStationLwipNetif() {
   #ifdef HAS_IDF_3
-    esp_netif_t* station = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
-    if (station == nullptr)
-      return nullptr;
-
-    return static_cast<struct netif*>(esp_netif_get_netif_impl(station));
+    return static_cast<struct netif*>(
+      esp_netif_get_netif_impl(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF")));
   #else
     void* station = nullptr;
     if (tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &station) != ESP_OK)
@@ -10756,7 +10753,6 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
         return;
       }
       if (this->singleARP(this->current_scan_ip)) {
-        Serial.println(this->current_scan_ip);
         this->portScan(scan_mode, targ_port);
       }
     }
