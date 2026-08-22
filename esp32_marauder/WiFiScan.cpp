@@ -2330,6 +2330,12 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
     RunMultiSSIDScan(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_DEAUTH)
     RunDeauthScan(scan_mode, color);
+  else if (scan_mode == WIFI_SCAN_WIDS) {
+    this->wids_last_check_ms = millis();
+    this->wids_deauth_count = 0;
+    this->wids_disassoc_count = 0;
+    this->setWiFiMode(WIFI_MODE_NULL, widsSnifferCallback);
+  }
   else if (scan_mode == WIFI_PACKET_MONITOR) {
     #ifdef HAS_SCREEN
       RunPacketMonitor(scan_mode, color);
@@ -6692,6 +6698,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
           ap.rssi = snifferPacket->rx_ctrl.rssi;
 
           ap.sec = security_type;
+          ap.mfp = wifi_scan_obj.getMfpType(snifferPacket->payload, len);
 
           ap.wps = wps;
 
@@ -7032,6 +7039,51 @@ uint8_t WiFiScan::getSecurityType(const uint8_t* beacon, uint16_t len) {
     if (capab & 0x0010) return WIFI_SECURITY_WEP;
 
     return WIFI_SECURITY_OPEN;
+}
+
+uint8_t WiFiScan::getMfpType(const uint8_t* beacon, uint16_t len) {
+  if (beacon == nullptr || len < 36) return 0;
+
+  const uint8_t* ies = beacon + 36;
+  uint16_t ies_len = len - 36;
+  uint16_t i = 0;
+
+  while (i + 2 <= ies_len) {
+    uint8_t tag_id = ies[i];
+    uint8_t tag_len = ies[i + 1];
+    if (i + 2 + tag_len > ies_len) break;
+
+    const uint8_t* tag_data = ies + i + 2;
+
+    // RSN IE (Tag 48)
+    if (tag_id == 48) {
+      if (tag_len < 10) return 0;
+      uint16_t offset = 6; // skip version(2) + group cipher(4)
+
+      if (offset + 2 > tag_len) return 0;
+      uint16_t pw_count = tag_data[offset] | ((uint16_t)tag_data[offset + 1] << 8);
+      offset += 2 + (pw_count * 4);
+
+      if (offset + 2 > tag_len) return 0;
+      uint16_t akm_count = tag_data[offset] | ((uint16_t)tag_data[offset + 1] << 8);
+      offset += 2 + (akm_count * 4);
+
+      // RSN Capabilities (2 bytes)
+      if (offset + 2 <= tag_len) {
+        uint8_t rsn_cap_byte0 = tag_data[offset];
+        if (rsn_cap_byte0 & 0x80) {
+          return 2; // MFPR (Management Frame Protection Required)
+        } else if (rsn_cap_byte0 & 0x40) {
+          return 1; // MFPC (Management Frame Protection Capable / Optional)
+        }
+      }
+      return 0;
+    }
+
+    i += 2 + tag_len;
+  }
+
+  return 0;
 }
 
 void WiFiScan::processPwnagotchiBeacon(const uint8_t* frame, int length) {
@@ -9517,6 +9569,7 @@ void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
         ap.beacon[0] = snifferPacket->payload[34];
         ap.beacon[1] = snifferPacket->payload[35];
         ap.sec = security_type;
+        ap.mfp = wifi_scan_obj.getMfpType(snifferPacket->payload, len);
         ap.wps = false;
         ap.packets = 0;
         access_points->add(ap);
@@ -9654,10 +9707,171 @@ void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
         }
       }
     }
+
+    // Smart PMKID extraction from EAPOL Key Data
+    if (eapol_offset + 99 <= len) {
+      uint16_t key_data_len = ((uint16_t)snifferPacket->payload[eapol_offset + 97] << 8) |
+                               snifferPacket->payload[eapol_offset + 98];
+      if (key_data_len >= 22 && eapol_offset + 99 + key_data_len <= len) {
+        const uint8_t* kde_ptr = &snifferPacket->payload[eapol_offset + 99];
+        uint16_t kde_remain = key_data_len;
+        while (kde_remain >= 6) {
+          uint8_t kde_type = kde_ptr[0];
+          uint8_t kde_len = kde_ptr[1];
+          if (kde_len < 4 || kde_remain < (uint16_t)(2 + kde_len)) break;
+
+          // RSN KDE: Type 0xdd, OUI 00:0F:AC, DataType 0x04 (PMKID KDE)
+          if (kde_type == 0xdd && kde_ptr[2] == 0x00 && kde_ptr[3] == 0x0f &&
+              kde_ptr[4] == 0xac && kde_ptr[5] == 0x04 && kde_len >= 20) {
+            const uint8_t* pmkid = kde_ptr + 6;
+
+            char pmkid_hex[33];
+            for (int k = 0; k < 16; k++) {
+              sprintf(&pmkid_hex[k * 2], "%02x", pmkid[k]);
+            }
+            pmkid_hex[32] = '\0';
+
+            char ap_mac_hex[13];
+            snprintf(ap_mac_hex, sizeof(ap_mac_hex), "%02x%02x%02x%02x%02x%02x",
+                     snifferPacket->payload[10], snifferPacket->payload[11], snifferPacket->payload[12],
+                     snifferPacket->payload[13], snifferPacket->payload[14], snifferPacket->payload[15]);
+
+            char sta_mac_hex[13];
+            snprintf(sta_mac_hex, sizeof(sta_mac_hex), "%02x%02x%02x%02x%02x%02x",
+                     snifferPacket->payload[4], snifferPacket->payload[5], snifferPacket->payload[6],
+                     snifferPacket->payload[7], snifferPacket->payload[8], snifferPacket->payload[9]);
+
+            String target_ssid = "";
+            if (ap_index >= 0) {
+              target_ssid = access_points->get(ap_index).essid;
+            }
+            String ssid_hex = "";
+            for (int s = 0; s < target_ssid.length(); s++) {
+              char hex_byte[3];
+              sprintf(hex_byte, "%02x", (uint8_t)target_ssid.charAt(s));
+              ssid_hex += hex_byte;
+            }
+
+            String hashcat_line = "WPA*01*" + String(pmkid_hex) + "*" + String(ap_mac_hex) + "*" +
+                                  String(sta_mac_hex) + "*" + ssid_hex + "***";
+
+            if (cli_obj.json_output) {
+              Serial.print(F("{\"type\":\"pmkid_captured\",\"pmkid\":\""));
+              Serial.print(pmkid_hex);
+              Serial.print(F("\",\"ap_mac\":\""));
+              Serial.print(ap_mac_hex);
+              Serial.print(F("\",\"sta_mac\":\""));
+              Serial.print(sta_mac_hex);
+              Serial.print(F("\",\"ssid\":\""));
+              Serial.print(target_ssid);
+              Serial.print(F("\",\"hashcat\":\""));
+              Serial.print(hashcat_line);
+              Serial.println(F("\"}"));
+            } else {
+              Serial.println(F("\n[+] [PMKID CAPTURED!]"));
+              Serial.print(F("    PMKID:   ")); Serial.println(pmkid_hex);
+              Serial.print(F("    AP MAC:  ")); Serial.println(ap_mac_hex);
+              Serial.print(F("    STA MAC: ")); Serial.println(sta_mac_hex);
+              Serial.print(F("    SSID:    ")); Serial.println(target_ssid);
+              Serial.print(F("    Hashcat: ")); Serial.println(hashcat_line);
+            }
+            break;
+          }
+          kde_remain -= (2 + kde_len);
+          kde_ptr += (2 + kde_len);
+        }
+      }
+    }
   }
 
   if ((is_eapol) || (is_beacon))
     buffer_obj.append(snifferPacket, len);
+}
+
+void WiFiScan::widsSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) {
+  extern WiFiScan wifi_scan_obj;
+  wifi_promiscuous_pkt_t *snifferPacket = (wifi_promiscuous_pkt_t*)buf;
+  int len = snifferPacket->rx_ctrl.sig_len;
+
+  uint32_t now = millis();
+  if (now - wifi_scan_obj.wids_last_check_ms >= 1000) {
+    if (wifi_scan_obj.wids_deauth_count >= wifi_scan_obj.wids_deauth_threshold) {
+      if (cli_obj.json_output) {
+        Serial.print(F("{\"type\":\"wids_alert\",\"alert\":\"deauth_flood\",\"rate\":"));
+        Serial.print(wifi_scan_obj.wids_deauth_count);
+        Serial.print(F(",\"channel\":"));
+        Serial.print(wifi_scan_obj.set_channel);
+        Serial.println(F("}"));
+      } else {
+        Serial.print(F("\n[!] [WIDS ALERT] Deauth Flooding attack detected! Rate: "));
+        Serial.print(wifi_scan_obj.wids_deauth_count);
+        Serial.print(F(" frames/sec on Channel "));
+        Serial.println(wifi_scan_obj.set_channel);
+      }
+    }
+    wifi_scan_obj.wids_deauth_count = 0;
+    wifi_scan_obj.wids_disassoc_count = 0;
+    wifi_scan_obj.wids_last_check_ms = now;
+  }
+
+  if (type == WIFI_PKT_MGMT) {
+    uint8_t frame_type = snifferPacket->payload[0];
+
+    // Deauth frame (0xC0) or Disassociation (0xA0)
+    if (frame_type == 0xC0) {
+      wifi_scan_obj.wids_deauth_count++;
+      return;
+    } else if (frame_type == 0xA0) {
+      wifi_scan_obj.wids_disassoc_count++;
+      return;
+    }
+
+    // Beacon frame (0x80) - Evil Twin / Rogue AP detection
+    if (frame_type == 0x80 && len >= 38) {
+      char bssid_str[18] = "00:00:00:00:00:00";
+      getMAC(bssid_str, snifferPacket->payload, 10);
+      uint8_t ssid_len = snifferPacket->payload[37];
+      if (ssid_len > 0 && ssid_len <= 32 && (38 + ssid_len <= len)) {
+        char current_ssid[33];
+        memcpy(current_ssid, &snifferPacket->payload[38], ssid_len);
+        current_ssid[ssid_len] = '\0';
+
+        // Check against known APs in access_points list
+        for (int i = 0; i < access_points->size(); i++) {
+          AccessPoint ap = access_points->get(i);
+          if (ap.essid == current_ssid) {
+            char known_bssid[18];
+            snprintf(known_bssid, sizeof(known_bssid), "%02X:%02X:%02X:%02X:%02X:%02X",
+                     ap.bssid[0], ap.bssid[1], ap.bssid[2], ap.bssid[3], ap.bssid[4], ap.bssid[5]);
+            if (strcmp(known_bssid, bssid_str) != 0) {
+              if (cli_obj.json_output) {
+                Serial.print(F("{\"type\":\"wids_alert\",\"alert\":\"evil_twin\",\"ssid\":\""));
+                Serial.print(current_ssid);
+                Serial.print(F("\",\"legit_bssid\":\""));
+                Serial.print(known_bssid);
+                Serial.print(F("\",\"rogue_bssid\":\""));
+                Serial.print(bssid_str);
+                Serial.print(F("\",\"rssi\":"));
+                Serial.print(snifferPacket->rx_ctrl.rssi);
+                Serial.println(F("}"));
+              } else {
+                Serial.print(F("\n[!] [WIDS ALERT] Evil Twin / Rogue AP detected for SSID '"));
+                Serial.print(current_ssid);
+                Serial.print(F("'! Known BSSID: "));
+                Serial.print(known_bssid);
+                Serial.print(F(" | Rogue BSSID: "));
+                Serial.print(bssid_str);
+                Serial.print(F(" | RSSI: "));
+                Serial.print(snifferPacket->rx_ctrl.rssi);
+                Serial.println(F(" dBm"));
+              }
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 bool WiFiScan::filterActive() {

@@ -261,6 +261,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_SNIFF_DEAUTH_CMD);
     Serial.println(HELP_SNIFF_PMKID_CMD);
     Serial.println(HELP_SNIFF_SAE_CMD);
+    Serial.println(HELP_WIDS_CMD);
     Serial.println(HELP_STOPSCAN_CMD);
     #ifdef HAS_GPS
       Serial.println(HELP_WARDRIVE_CMD);
@@ -910,12 +911,36 @@ void CommandLine::runCommand(String input) {
     // MAC Tracking
     else if (cmd_args.get(0) == MAC_TRACK_CMD) {
       this->startScanFromCLI(WIFI_SCAN_DETECT_FOLLOW, TFT_MAGENTA, "MAC Tracker");
-      /*Serial.println(STOPSCAN_CMD);
-      #ifdef HAS_SCREEN
-        display_obj.clearScreen();
-        menu_function_obj.drawStatusBar();
-      #endif
-      wifi_scan_obj.StartScan(WIFI_SCAN_DETECT_FOLLOW, TFT_MAGENTA);*/
+    }
+    // WIDS Sentinel (Wireless Intrusion Detection System)
+    else if (cmd_args.get(0) == WIDS_CMD) {
+      int ch_sw = this->argSearch(&cmd_args, "-c");
+      int th_sw = this->argSearch(&cmd_args, "-t");
+
+      if (ch_sw != -1 && this->checkValueExists(&cmd_args, ch_sw)) {
+        wifi_scan_obj.set_channel = cmd_args.get(ch_sw + 1).toInt();
+        wifi_scan_obj.changeChannel();
+      }
+
+      if (th_sw != -1 && this->checkValueExists(&cmd_args, th_sw)) {
+        wifi_scan_obj.wids_deauth_threshold = cmd_args.get(th_sw + 1).toInt();
+      } else {
+        wifi_scan_obj.wids_deauth_threshold = 15;
+      }
+
+      if (this->json_output) {
+        Serial.print(F("{\"type\":\"wids_start\",\"status\":\"running\",\"channel\":"));
+        Serial.print(wifi_scan_obj.set_channel);
+        Serial.print(F(",\"deauth_threshold\":"));
+        Serial.print(wifi_scan_obj.wids_deauth_threshold);
+        Serial.println(F("}"));
+      } else {
+        Serial.println(F("\n================ [ WIDS SENTINEL ACTIVE ] ================"));
+        Serial.println("Monitoring channel " + (String)wifi_scan_obj.set_channel + " for Deauth Flooding (> " +
+                       (String)wifi_scan_obj.wids_deauth_threshold + " frames/sec) & Rogue AP / Evil Twins.");
+        Serial.println("Stop with " + (String)STOPSCAN_CMD + "\n");
+      }
+      wifi_scan_obj.StartScan(WIFI_SCAN_WIDS, TFT_RED);
     }
 
 
@@ -1463,15 +1488,31 @@ void CommandLine::runCommand(String input) {
         for (int i = 0; i < access_points->size(); i++) {
           AccessPoint ap = access_points->get(i);
           if (i > 0) Serial.print(F(","));
+          char bssid_buf[18];
+          snprintf(bssid_buf, sizeof(bssid_buf), "%02X:%02X:%02X:%02X:%02X:%02X",
+                   ap.bssid[0], ap.bssid[1], ap.bssid[2], ap.bssid[3], ap.bssid[4], ap.bssid[5]);
+          const char* mfp_str = (ap.mfp == 2) ? "required" : (ap.mfp == 1 ? "optional" : "none");
+          const char* sec_str = (ap.sec == WIFI_SECURITY_WPA3 || ap.sec == WIFI_SECURITY_WPA3_ENTERPRISE) ? "WPA3" :
+                                (ap.sec == WIFI_SECURITY_WPA2 || ap.sec == WIFI_SECURITY_WPA2_ENTERPRISE) ? "WPA2" :
+                                (ap.sec == WIFI_SECURITY_WPA_WPA2_MIXED) ? "WPA/WPA2" :
+                                (ap.sec == WIFI_SECURITY_WPA) ? "WPA" :
+                                (ap.sec == WIFI_SECURITY_WEP) ? "WEP" : "Open";
+
           Serial.print(F("{\"id\":"));
           Serial.print(i);
-          Serial.print(F(",\"ssid\":\""));
+          Serial.print(F(",\"bssid\":\""));
+          Serial.print(bssid_buf);
+          Serial.print(F("\",\"ssid\":\""));
           Serial.print(ap.essid);
           Serial.print(F("\",\"ch\":"));
           Serial.print(ap.channel);
           Serial.print(F(",\"rssi\":"));
           Serial.print(ap.rssi);
-          Serial.print(F(",\"selected\":"));
+          Serial.print(F(",\"sec\":\""));
+          Serial.print(sec_str);
+          Serial.print(F("\",\"mfp\":\""));
+          Serial.print(mfp_str);
+          Serial.print(F("\",\"selected\":"));
           Serial.print(ap.selected ? F("true") : F("false"));
           Serial.print(F("}"));
         }
@@ -1519,12 +1560,27 @@ void CommandLine::runCommand(String input) {
     if (ap_sw != -1) {
       for (int i = 0; i < access_points->size(); i++) {
         AccessPoint access_point = access_points->get(i);
+        char bssid_buf[18];
+        snprintf(bssid_buf, sizeof(bssid_buf), "%02X:%02X:%02X:%02X:%02X:%02X",
+                 access_point.bssid[0], access_point.bssid[1], access_point.bssid[2],
+                 access_point.bssid[3], access_point.bssid[4], access_point.bssid[5]);
+        const char* mfp_label = (access_point.mfp == 2) ? "[MFP:Req]" :
+                                (access_point.mfp == 1) ? "[MFP:Opt]" : "[MFP:None]";
+        const char* sec_label = (access_point.sec == WIFI_SECURITY_WPA3 || access_point.sec == WIFI_SECURITY_WPA3_ENTERPRISE) ? "WPA3" :
+                                (access_point.sec == WIFI_SECURITY_WPA2 || access_point.sec == WIFI_SECURITY_WPA2_ENTERPRISE) ? "WPA2" :
+                                (access_point.sec == WIFI_SECURITY_WPA_WPA2_MIXED) ? "WPA/WPA2" :
+                                (access_point.sec == WIFI_SECURITY_WPA) ? "WPA" :
+                                (access_point.sec == WIFI_SECURITY_WEP) ? "WEP" : "Open";
+
+        Serial.print("[" + (String)i + "][CH:" + (String)access_point.channel + "] " +
+                     (String)bssid_buf + " " + access_point.essid + " (" + (String)sec_label + " " + (String)mfp_label + ") " +
+                     (String)access_point.rssi + " dBm");
         if (access_point.selected) {
-          Serial.println("[" + (String)i + "][CH:" + (String)access_point.channel + "] " + access_point.essid + " " + (String)access_point.rssi + " (selected)");
+          Serial.println(F(" (selected)"));
           count_selected += 1;
         } 
         else
-          Serial.println("[" + (String)i + "][CH:" + (String)access_point.channel + "] " + access_point.essid + " " + (String)access_point.rssi);
+          Serial.println();
       }
       this->showCounts(count_selected);
     }

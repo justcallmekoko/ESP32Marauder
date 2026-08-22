@@ -56,6 +56,7 @@ struct AccessPoint {
   LinkedList<uint16_t>* stations;
   uint16_t packets;
   uint8_t sec;
+  uint8_t mfp; // 0 = None, 1 = Optional (MFPC), 2 = Required (MFPR)
   bool wps;
   String man;
   bool has_msg_1;

@@ -38,13 +38,11 @@ void Buffer::open(bool is_pcap){
   bufSizeA = 0;
   bufSizeB = 0;
 
-  bufSizeB = 0;
-
   writing = true;
 
   if (is_pcap) {
     uint8_t header[marauder::kPcapGlobalHeaderSize];
-    marauder::makePcapGlobalHeader(SNAP_LEN, header);
+    marauder::makePcapGlobalHeader(SNAP_LEN, header, true);
     write(header, sizeof(header));
   }
 }
@@ -85,26 +83,63 @@ void Buffer::gpxOpen(const char* file_name, fs::FS* fs, bool serial) {
   openFile(file_name, fs, serial, false, true);
 }
 
+void Buffer::addPacket(const uint8_t* rt, uint32_t rt_len, const uint8_t* payload, uint32_t payload_len) {
+  if (!writing || payload == nullptr || payload_len == 0) return;
+
+  uint32_t total_wire_len = rt_len + payload_len;
+  uint32_t total_pcap_rec_len = 16 + total_wire_len; // 16-byte PCAP packet header
+
+  // Ping-pong buffer switch without blocking
+  if (useA) {
+    if (bufSizeA + total_pcap_rec_len >= BUF_SIZE) {
+      if (bufSizeB == 0) {
+        useA = false;
+      } else {
+        return; // Buffers saturated, drop single packet rather than stalling WiFi driver
+      }
+    }
+  } else {
+    if (bufSizeB + total_pcap_rec_len >= BUF_SIZE) {
+      if (bufSizeA == 0) {
+        useA = true;
+      } else {
+        return;
+      }
+    }
+  }
+
+  uint32_t microSeconds = micros();
+  uint32_t seconds = (microSeconds / 1000) / 1000;
+  microSeconds -= seconds * 1000 * 1000;
+
+  write(seconds);
+  write(microSeconds);
+  write(total_wire_len);
+  write(total_wire_len);
+
+  if (rt_len > 0 && rt != nullptr) {
+    write(rt, rt_len);
+  }
+  write(payload, payload_len);
+}
+
 void Buffer::add(const uint8_t* buf, uint32_t len, bool is_pcap){
-  // buffer is full -> drop packet
+  if (!writing || buf == nullptr || len == 0) return;
+
   if((useA && bufSizeA + len >= BUF_SIZE && bufSizeB > 0) || (!useA && bufSizeB + len >= BUF_SIZE && bufSizeA > 0)){
-    //Serial.print(";"); 
     return;
   }
   
   if(useA && bufSizeA + len + 16 >= BUF_SIZE && bufSizeB == 0){
     useA = false;
-    //Serial.println("\nswitched to buffer B");
   }
   else if(!useA && bufSizeB + len + 16 >= BUF_SIZE && bufSizeA == 0){
     useA = true;
-    //Serial.println("\nswitched to buffer A");
   }
 
-  uint32_t microSeconds = micros(); // e.g. 45200400 => 45s 200ms 400us
-  uint32_t seconds = (microSeconds/1000)/1000; // e.g. 45200400/1000/1000 = 45200 / 1000 = 45s
-
-  microSeconds -= seconds*1000*1000; // e.g. 45200400 - 45*1000*1000 = 45200400 - 45000000 = 400us (because we only need the offset)
+  uint32_t microSeconds = micros();
+  uint32_t seconds = (microSeconds/1000)/1000;
+  microSeconds -= seconds*1000*1000;
   
   if (is_pcap) {
     write(seconds); // ts_sec
@@ -118,8 +153,11 @@ void Buffer::add(const uint8_t* buf, uint32_t len, bool is_pcap){
 
 void Buffer::append(wifi_promiscuous_pkt_t *packet, int len) {
   bool save_packet = settings_obj.loadSetting<bool>(text_table4[7]);
-  if (save_packet) {
-    add(packet->payload, len, true);
+  if (save_packet && packet != nullptr) {
+    uint8_t rt_header[marauder::kRadiotapHeaderSize];
+    marauder::makeRadiotapHeader(packet->rx_ctrl.rssi, packet->rx_ctrl.channel,
+                                 packet->rx_ctrl.rate, rt_header);
+    addPacket(rt_header, sizeof(rt_header), packet->payload, len);
   }
 }
 
@@ -156,15 +194,18 @@ void Buffer::write(uint16_t n){
 }
 
 void Buffer::write(const uint8_t* buf, uint32_t len){
-  if(!writing) return;
-  while(saving) delay(10);
+  if(!writing || buf == nullptr || len == 0) return;
   
   if(useA){
-    memcpy(&bufA[bufSizeA], buf, len);
-    bufSizeA += len;
+    if (bufSizeA + len <= BUF_SIZE) {
+      memcpy(&bufA[bufSizeA], buf, len);
+      bufSizeA += len;
+    }
   }else{
-    memcpy(&bufB[bufSizeB], buf, len);
-    bufSizeB += len;
+    if (bufSizeB + len <= BUF_SIZE) {
+      memcpy(&bufB[bufSizeB], buf, len);
+      bufSizeB += len;
+    }
   }
 }
 
@@ -194,54 +235,35 @@ void Buffer::saveFs(){
   file.close();
 }
 
-void Buffer::saveSerial() {
-  // Saves to main console UART, user-facing app will ignore these markers
-  // Uses / and ] in markers as they are illegal characters for SSIDs
+void Buffer::saveSerialBuffer(const uint8_t* data, uint32_t len) {
+  if (data == nullptr || len == 0) return;
+
   const char* mark_begin = "[BUF/BEGIN]";
   const size_t mark_begin_len = strlen(mark_begin);
   const char* mark_close = "[BUF/CLOSE]";
   const size_t mark_close_len = strlen(mark_close);
 
-  // Additional buffer and memcpy's so that a single Serial.write() is called
-  // This is necessary so that other console output isn't mixed into buffer stream
-  uint8_t* buf = (uint8_t*)malloc(mark_begin_len + bufSizeA + bufSizeB + mark_close_len);
-  uint8_t* it = buf;
-  memcpy(it, mark_begin, mark_begin_len);
-  it += mark_begin_len;
+  Serial.write((const uint8_t*)mark_begin, mark_begin_len);
+  Serial.write(data, len);
+  Serial.write((const uint8_t*)mark_close, mark_close_len);
+}
 
+void Buffer::saveSerial() {
   if(useA){
-    if(bufSizeB > 0){
-      memcpy(it, bufB, bufSizeB);
-      it += bufSizeB;
-    }
-    if(bufSizeA > 0){
-      memcpy(it, bufA, bufSizeA);
-      it += bufSizeA;
-    }
+    if(bufSizeB > 0) saveSerialBuffer(bufB, bufSizeB);
+    if(bufSizeA > 0) saveSerialBuffer(bufA, bufSizeA);
   } else {
-    if(bufSizeA > 0){
-      memcpy(it, bufA, bufSizeA);
-      it += bufSizeA;
-    }
-    if(bufSizeB > 0){
-      memcpy(it, bufB, bufSizeB);
-      it += bufSizeB;
-    }
+    if(bufSizeA > 0) saveSerialBuffer(bufA, bufSizeA);
+    if(bufSizeB > 0) saveSerialBuffer(bufB, bufSizeB);
   }
-
-  memcpy(it, mark_close, mark_close_len);
-  it += mark_close_len;
-  Serial.write(buf, it - buf);
-  free(buf);
 }
 
 void Buffer::save() {
-  saving = true;
-
   if((bufSizeA + bufSizeB) == 0){
-    saving = false;
     return;
   }
+
+  saving = true;
 
   if(this->fs) saveFs();
   if(this->serial) saveSerial();

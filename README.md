@@ -129,13 +129,19 @@ Type 'help' for available commands, or 'sysinfo' for stats.
   select -a <id>             # Select target AP by index
   ```
 
-* **Packet Capturing (Sniffing & PCAP Stream)**:
+* **Packet Capturing & Wireless Auditing (Red Team / Pentest)**:
   ```bash
-  sniffraw [-d <seconds>]    # Raw PCAP capture stream over Serial (921600 baud)
-  sniffbeacon [-d <seconds>] # Sniff Beacon frames
-  sniffprobe [-d <seconds>]  # Sniff Probe Requests
-  sniffdeauth [-d <seconds>] # Sniff Deauthentication frames
-  sniffpwn [-d <seconds>]    # Detect Pwnagotchi beacons
+  sniffpmkid [-c <channel>][-d] # Sniff PMKID & EAPOL with direct Hashcat 22000 output (WPA*01*...)
+  sniffraw [-d <seconds>]       # Raw 802.11 PCAP with Radiotap Headers (RSSI & Channel in Wireshark)
+  sniffbeacon [-d <seconds>]    # Sniff Beacon frames
+  sniffprobe [-d <seconds>]     # Sniff Probe Requests
+  sniffdeauth [-d <seconds>]    # Sniff Deauthentication frames
+  sniffpwn [-d <seconds>]       # Detect Pwnagotchi beacons
+  ```
+
+* **Wireless Intrusion Detection System & Forensics (Blue Team / Defense)**:
+  ```bash
+  wids [-c <channel>][-t <th>]  # WIDS Sentinel: Detect Deauth Flooding (> 15 f/s) and Evil Twin / Rogue APs
   ```
 
 * **Wi-Fi Attacks and Packet Generation**:
@@ -153,6 +159,7 @@ Type 'help' for available commands, or 'sysinfo' for stats.
 
 * `sysinfo [-j]`: Display CPU frequency, free RAM heap, uptime, and firmware telemetry (or in JSON format with `-j`).
 * `json [on/off]`: Toggle persistent structured JSON output for automated scripting.
+* `list -a [-j]`: List discovered APs with BSSID, Security, RSSI, and 802.11w MFP status (`[MFP:Req]`, `[MFP:Opt]`, `[MFP:None]`).
 * `help`: Display complete command list and syntax.
 * `channel <1-14>`: Set Wi-Fi channel manually.
 * `settings`: View and modify persistent configuration in SPIFFS.

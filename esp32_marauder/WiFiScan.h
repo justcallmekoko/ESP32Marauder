@@ -151,6 +151,7 @@
 #define BT_SCAN_FOX_HUNT 84
 #define BT_FINDMY_SOUND 85
 #define BT_ATTACK_FINDMY_LIVE 86
+#define WIFI_SCAN_WIDS 87
 
 #define WIFI_ATTACK_FUNNY_BEACON 99 
 
@@ -691,6 +692,7 @@ class WiFiScan
     String extractManufacturer(const uint8_t* payload);
     int checkMatchAP(char addr[], bool update_ap = true);
     uint8_t getSecurityType(const uint8_t* beacon, uint16_t len);
+    uint8_t getMfpType(const uint8_t* beacon, uint16_t len);
     void addAnalyzerValue(int16_t value, int rssi_avg, int16_t target_array[], int array_size);
     bool mac_cmp(struct mac_addr addr1, struct mac_addr addr2);
     bool mac_cmp(uint8_t addr1[6], uint8_t addr2[6]);
@@ -1064,10 +1066,16 @@ class WiFiScan
     static inline uint16_t le16(const uint8_t *p);
     static void getMAC(char *addr, uint8_t* data, uint16_t offset);
     static void getMAC(uint8_t* mac, const uint8_t* data, uint16_t offset);
+    uint32_t wids_deauth_threshold = 15;
+    uint32_t wids_last_check_ms = 0;
+    uint32_t wids_deauth_count = 0;
+    uint32_t wids_disassoc_count = 0;
+
     static void beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type);
     static void eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
+    static void widsSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     static void pineScanSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type); // Pineapple
     static int extractPineScanChannel(const uint8_t* payload, int len); // Pineapple
     static void multiSSIDSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type); // MultiSSID

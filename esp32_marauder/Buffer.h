@@ -31,12 +31,14 @@ class Buffer {
     void open(bool is_pcap);
     void openFile(const char* file_name, fs::FS* fs, bool serial, bool is_pcap, bool is_gpx = false);
     void add(const uint8_t* buf, uint32_t len, bool is_pcap);
+    void addPacket(const uint8_t* rt, uint32_t rt_len, const uint8_t* payload, uint32_t payload_len);
     void write(int32_t n);
     void write(uint32_t n);
     void write(uint16_t n);
     void write(const uint8_t* buf, uint32_t len);
     void saveFs();
     void saveSerial();
+    void saveSerialBuffer(const uint8_t* data, uint32_t len);
     
     uint8_t* bufA;
     uint8_t* bufB;
