@@ -32,11 +32,13 @@
 #include "mbedtls/bignum.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/ecp.h"
-#ifndef HAS_IDF_3
-  #include <lwip/etharp.h>
-  #include <lwip/ip_addr.h>
-#endif
+#include <lwip/etharp.h>
+#include <lwip/ip_addr.h>
+#include <lwip/netif.h>
+#include <lwip/tcpip.h>
 #ifdef HAS_IDF_3
+  #include "esp_netif.h"
+  #include "esp_netif_net_stack.h"
   #include "esp_system.h"
   #include "esp_mac.h"
 #endif

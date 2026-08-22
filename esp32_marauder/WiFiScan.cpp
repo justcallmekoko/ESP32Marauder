@@ -10555,40 +10555,65 @@ IPAddress WiFiScan::advanceScanIP() {
   return this->current_scan_ip;
 }
 
-#ifndef HAS_IDF_3
+// GCOVR_EXCL_START -- ARP discovery requires a live lwIP station interface.
+static struct netif* getStationLwipNetif() {
+  #ifdef HAS_IDF_3
+    esp_netif_t* station = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+    if (station == nullptr)
+      return nullptr;
+
+    return static_cast<struct netif*>(esp_netif_get_netif_impl(station));
+  #else
+    void* station = nullptr;
+    if (tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &station) != ESP_OK)
+      return nullptr;
+
+    return static_cast<struct netif*>(station);
+  #endif
+}
+
+static bool findStationARP(struct netif* station, const ip4_addr_t* ip) {
+  const ip4_addr_t* resolved_ip = nullptr;
+  struct eth_addr* resolved_mac = nullptr;
+
+  #ifdef HAS_IDF_3
+    LOCK_TCPIP_CORE();
+  #endif
+  const bool found = etharp_find_addr(station, ip, &resolved_mac, &resolved_ip) >= 0;
+  #ifdef HAS_IDF_3
+    UNLOCK_TCPIP_CORE();
+  #endif
+
+  return found;
+}
+
+static err_t requestStationARP(struct netif* station, const ip4_addr_t* ip) {
+  #ifdef HAS_IDF_3
+    LOCK_TCPIP_CORE();
+  #endif
+  const err_t result = etharp_request(station, ip);
+  #ifdef HAS_IDF_3
+    UNLOCK_TCPIP_CORE();
+  #endif
+
+  return result;
+}
+
   bool WiFiScan::readARP(IPAddress targ_ip) {
-    // Convert IPAddress to ip4_addr_t using IP4_ADDR
     ip4_addr_t test_ip;
     IP4_ADDR(&test_ip, targ_ip[0], targ_ip[1], targ_ip[2], targ_ip[3]);
 
-    // Get the netif interface for STA mode
-    //void* netif = NULL;
-    //tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
-    //struct netif* netif_interface = (struct netif*)netif;
+    struct netif* netif_interface = getStationLwipNetif();
+    if (netif_interface == nullptr)
+      return false;
 
-    const ip4_addr_t* ipaddr_ret = NULL;
-    struct eth_addr* eth_ret = NULL;
-
-    // Use actual interface instead of NULL
-    if (etharp_find_addr(NULL, &test_ip, &eth_ret, &ipaddr_ret) >= 0) {
-      return true;
-    }
-
-    return false;
+    return findStationARP(netif_interface, &test_ip);
   }
 
   bool WiFiScan::singleARP(IPAddress ip_addr) {
-
-    #ifndef HAS_IDF_3
-      void* netif = NULL;
-      tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
-      struct netif* netif_interface = (struct netif*)netif;
-    #else
-      struct netif* netif_interface = (struct netif*)esp_netif_get_netif_impl(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"));
-      //esp_netif_t* netif_interface = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
-      //struct netif* netif_interface = (struct netif*)netif;
-      //struct netif* netif_interface = esp_netif_get_netif_impl(*netif);
-    #endif
+    struct netif* netif_interface = getStationLwipNetif();
+    if (netif_interface == nullptr)
+      return false;
 
     ip4_addr_t lwip_ip;
     IP4_ADDR(&lwip_ip,
@@ -10597,7 +10622,7 @@ IPAddress WiFiScan::advanceScanIP() {
               ip_addr[2],
               ip_addr[3]);
 
-    etharp_request(netif_interface, &lwip_ip);
+    requestStationARP(netif_interface, &lwip_ip);
 
     delay(250);
 
@@ -10611,16 +10636,9 @@ IPAddress WiFiScan::advanceScanIP() {
     String display_string = "";
     String output_line = "";
 
-    #ifndef HAS_IDF_3
-      void* netif = NULL;
-      tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
-      struct netif* netif_interface = (struct netif*)netif;
-    #else
-      struct netif* netif_interface = (struct netif*)esp_netif_get_netif_impl(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"));
-      //esp_netif_t* netif_interface = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
-      //struct netif* netif_interface = (struct netif*)netif;
-      //struct netif* netif_interface = esp_netif_get_netif_impl(*netif);
-    #endif
+    struct netif* netif_interface = getStationLwipNetif();
+    if (netif_interface == nullptr)
+      return;
 
     //this->arp_count = 0;
 
@@ -10633,7 +10651,7 @@ IPAddress WiFiScan::advanceScanIP() {
               this->current_scan_ip[2],
               this->current_scan_ip[3]);
 
-      etharp_request(netif_interface, &lwip_ip);
+      requestStationARP(netif_interface, &lwip_ip);
 
       delay(100);
 
@@ -10700,7 +10718,7 @@ IPAddress WiFiScan::advanceScanIP() {
       }
     }
   }
-#endif
+// GCOVR_EXCL_STOP
 
 void WiFiScan::pingScan(uint8_t scan_mode) {
   String output_line = "";
@@ -10743,16 +10761,13 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
     else if (scan_mode == WIFI_SCAN_RDP)
       targ_port = 3389;
 
+    // GCOVR_EXCL_START -- service discovery requires a live lwIP station interface.
     if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
       this->advanceScanIP();
       if (this->current_scan_ip == IPAddress(0, 0, 0, 0)) {
         return;
       }
-      #ifndef HAS_IDF_3
-        if (this->singleARP(this->current_scan_ip)) {
-      #else
-        if (this->isHostAlive(this->current_scan_ip)) {
-      #endif
+      if (this->singleARP(this->current_scan_ip)) {
         Serial.println(this->current_scan_ip);
         this->portScan(scan_mode, targ_port);
       }
@@ -10763,6 +10778,7 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
         this->finishNetworkScanDisplay("hosts open"); // GCOVR_EXCL_LINE
       }
     }
+    // GCOVR_EXCL_STOP
   }
 }
 
@@ -11717,9 +11733,7 @@ void WiFiScan::main(uint32_t currentTime)
     this->pingScan();
   }
   else if (currentScanMode == WIFI_ARP_SCAN) {
-    #ifndef HAS_IDF_3
-      this->fullARP();
-    #endif
+    this->fullARP(); // GCOVR_EXCL_LINE -- requires a live lwIP station interface.
   }
   else if (currentScanMode == WIFI_PORT_SCAN_ALL) {
     this->portScan(WIFI_PORT_SCAN_ALL);
