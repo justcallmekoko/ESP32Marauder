@@ -10767,11 +10767,7 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
       if (this->current_scan_ip == IPAddress(0, 0, 0, 0)) {
         return;
       }
-      #ifndef HAS_IDF_3
-        if (this->singleARP(this->current_scan_ip)) {
-      #else
-        if (this->isHostAlive(this->current_scan_ip)) {
-      #endif
+      if (this->singleARP(this->current_scan_ip)) {
         Serial.println(this->current_scan_ip);
         this->portScan(scan_mode, targ_port);
       }
