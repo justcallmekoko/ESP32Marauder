@@ -10555,21 +10555,22 @@ IPAddress WiFiScan::advanceScanIP() {
   return this->current_scan_ip;
 }
 
-  static struct netif* getStationLwipNetif() {
-    #ifdef HAS_IDF_3
-      esp_netif_t* station = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
-      if (station == nullptr)
-        return nullptr;
+// GCOVR_EXCL_START -- ARP discovery requires a live lwIP station interface.
+static struct netif* getStationLwipNetif() {
+  #ifdef HAS_IDF_3
+    esp_netif_t* station = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+    if (station == nullptr)
+      return nullptr;
 
-      return static_cast<struct netif*>(esp_netif_get_netif_impl(station));
-    #else
-      void* station = nullptr;
-      if (tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &station) != ESP_OK)
-        return nullptr;
+    return static_cast<struct netif*>(esp_netif_get_netif_impl(station));
+  #else
+    void* station = nullptr;
+    if (tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &station) != ESP_OK)
+      return nullptr;
 
-      return static_cast<struct netif*>(station);
-    #endif
-  }
+    return static_cast<struct netif*>(station);
+  #endif
+}
 
   bool WiFiScan::readARP(IPAddress targ_ip) {
     // Convert IPAddress to ip4_addr_t using IP4_ADDR
@@ -10698,6 +10699,8 @@ IPAddress WiFiScan::advanceScanIP() {
       }
     }
   }
+// GCOVR_EXCL_STOP
+
 void WiFiScan::pingScan(uint8_t scan_mode) {
   String output_line = "";
 
@@ -11713,7 +11716,7 @@ void WiFiScan::main(uint32_t currentTime)
     this->pingScan();
   }
   else if (currentScanMode == WIFI_ARP_SCAN) {
-    this->fullARP();
+    this->fullARP(); // GCOVR_EXCL_LINE -- requires a live lwIP station interface.
   }
   else if (currentScanMode == WIFI_PORT_SCAN_ALL) {
     this->portScan(WIFI_PORT_SCAN_ALL);
