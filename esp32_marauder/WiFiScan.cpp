@@ -10587,16 +10587,14 @@ static bool findStationARP(struct netif* station, const ip4_addr_t* ip) {
   return found;
 }
 
-static err_t requestStationARP(struct netif* station, const ip4_addr_t* ip) {
+static void requestStationARP(struct netif* station, const ip4_addr_t* ip) {
   #ifdef HAS_IDF_3
     LOCK_TCPIP_CORE();
   #endif
-  const err_t result = etharp_request(station, ip);
+  etharp_request(station, ip);
   #ifdef HAS_IDF_3
     UNLOCK_TCPIP_CORE();
   #endif
-
-  return result;
 }
 
   bool WiFiScan::readARP(IPAddress targ_ip) {
@@ -10611,7 +10609,7 @@ static err_t requestStationARP(struct netif* station, const ip4_addr_t* ip) {
     return findStationARP(netif_interface, &test_ip);
   }
 
-  bool WiFiScan::singleARP(IPAddress ip_addr) {
+  inline __attribute__((always_inline)) bool WiFiScan::singleARP(IPAddress ip_addr) {
     struct netif* netif_interface = getStationLwipNetif();
     if (netif_interface == nullptr)
       return false;
