@@ -10555,22 +10555,35 @@ IPAddress WiFiScan::advanceScanIP() {
   return this->current_scan_ip;
 }
 
-#ifndef HAS_IDF_3
+  static struct netif* getStationLwipNetif() {
+    #ifdef HAS_IDF_3
+      esp_netif_t* station = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+      if (station == nullptr)
+        return nullptr;
+
+      return static_cast<struct netif*>(esp_netif_get_netif_impl(station));
+    #else
+      void* station = nullptr;
+      if (tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &station) != ESP_OK)
+        return nullptr;
+
+      return static_cast<struct netif*>(station);
+    #endif
+  }
+
   bool WiFiScan::readARP(IPAddress targ_ip) {
     // Convert IPAddress to ip4_addr_t using IP4_ADDR
     ip4_addr_t test_ip;
     IP4_ADDR(&test_ip, targ_ip[0], targ_ip[1], targ_ip[2], targ_ip[3]);
 
-    // Get the netif interface for STA mode
-    //void* netif = NULL;
-    //tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
-    //struct netif* netif_interface = (struct netif*)netif;
+    struct netif* netif_interface = getStationLwipNetif();
+    if (netif_interface == nullptr)
+      return false;
 
     const ip4_addr_t* ipaddr_ret = NULL;
     struct eth_addr* eth_ret = NULL;
 
-    // Use actual interface instead of NULL
-    if (etharp_find_addr(NULL, &test_ip, &eth_ret, &ipaddr_ret) >= 0) {
+    if (etharp_find_addr(netif_interface, &test_ip, &eth_ret, &ipaddr_ret) >= 0) {
       return true;
     }
 
@@ -10578,17 +10591,9 @@ IPAddress WiFiScan::advanceScanIP() {
   }
 
   bool WiFiScan::singleARP(IPAddress ip_addr) {
-
-    #ifndef HAS_IDF_3
-      void* netif = NULL;
-      tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
-      struct netif* netif_interface = (struct netif*)netif;
-    #else
-      struct netif* netif_interface = (struct netif*)esp_netif_get_netif_impl(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"));
-      //esp_netif_t* netif_interface = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
-      //struct netif* netif_interface = (struct netif*)netif;
-      //struct netif* netif_interface = esp_netif_get_netif_impl(*netif);
-    #endif
+    struct netif* netif_interface = getStationLwipNetif();
+    if (netif_interface == nullptr)
+      return false;
 
     ip4_addr_t lwip_ip;
     IP4_ADDR(&lwip_ip,
@@ -10611,16 +10616,9 @@ IPAddress WiFiScan::advanceScanIP() {
     String display_string = "";
     String output_line = "";
 
-    #ifndef HAS_IDF_3
-      void* netif = NULL;
-      tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
-      struct netif* netif_interface = (struct netif*)netif;
-    #else
-      struct netif* netif_interface = (struct netif*)esp_netif_get_netif_impl(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"));
-      //esp_netif_t* netif_interface = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
-      //struct netif* netif_interface = (struct netif*)netif;
-      //struct netif* netif_interface = esp_netif_get_netif_impl(*netif);
-    #endif
+    struct netif* netif_interface = getStationLwipNetif();
+    if (netif_interface == nullptr)
+      return;
 
     //this->arp_count = 0;
 
@@ -10700,8 +10698,6 @@ IPAddress WiFiScan::advanceScanIP() {
       }
     }
   }
-#endif
-
 void WiFiScan::pingScan(uint8_t scan_mode) {
   String output_line = "";
 
@@ -11717,9 +11713,7 @@ void WiFiScan::main(uint32_t currentTime)
     this->pingScan();
   }
   else if (currentScanMode == WIFI_ARP_SCAN) {
-    #ifndef HAS_IDF_3
-      this->fullARP();
-    #endif
+    this->fullARP();
   }
   else if (currentScanMode == WIFI_PORT_SCAN_ALL) {
     this->portScan(WIFI_PORT_SCAN_ALL);
