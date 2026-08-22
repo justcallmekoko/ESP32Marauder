@@ -10,6 +10,7 @@
   #include "FS.h"
 #endif
 #include "SD.h"
+#include "SPIFFS.h"
 #ifdef HAS_C5_SD
   #include "SPI.h"
 #endif
@@ -68,6 +69,7 @@ class SDInterface {
     void runUpdate(String file_name = "");
     void performUpdate(Stream &updateSource, size_t updateSize);
     bool removeFile(String file_path);
+    bool backupSPIFFS(size_t& files_copied, size_t& bytes_copied, String& error);
 };
 
 #endif
