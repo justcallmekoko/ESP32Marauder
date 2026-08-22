@@ -1,6 +1,7 @@
 #include "SDInterface.h"
 #include "lang_var.h"
 
+// GCOVR_EXCL_START -- requires mounted SPIFFS and SD filesystems.
 namespace {
   bool ensureDirectory(fs::FS& fs, const String& path) {
     if (path.length() == 0 || path == "/" || fs.exists(path))
@@ -124,6 +125,7 @@ namespace {
     return true;
   }
 }
+// GCOVR_EXCL_STOP
 
 #ifdef HAS_C5_SD
   SDInterface::SDInterface(SPIClass* spi, int cs)
@@ -231,6 +233,7 @@ bool SDInterface::removeFile(String file_path) {
     return false;
 }
 
+// GCOVR_EXCL_START -- requires mounted SPIFFS and SD filesystems.
 bool SDInterface::backupSPIFFS(size_t& files_copied, size_t& bytes_copied, String& error) {
   files_copied = 0;
   bytes_copied = 0;
@@ -271,6 +274,7 @@ bool SDInterface::backupSPIFFS(size_t& files_copied, size_t& bytes_copied, Strin
   removeTree(SD, previous_path);
   return true;
 }
+// GCOVR_EXCL_STOP
 
 void SDInterface::listDirToLinkedList(LinkedList<String>* file_names, String str_dir, String ext) {
   if (this->supported) {

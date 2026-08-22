@@ -3487,6 +3487,7 @@ void MenuFunctions::RunSetup()
         this->changeMenu(&sdDeleteMenu, true);
       });
 
+      // GCOVR_EXCL_START -- requires mounted SPIFFS, SD, and a hardware display.
       this->addNodes(&deviceMenu, "Backup SPIFFS", TFTGREEN, SD_UPDATE, [this]() {
         display_obj.clearScreen();
         display_obj.tft.setTextWrap(true);
@@ -3512,6 +3513,7 @@ void MenuFunctions::RunSetup()
         delay(2500);
         this->changeMenu(&deviceMenu, true);
       });
+      // GCOVR_EXCL_STOP
     }
   #endif
 
@@ -4684,5 +4686,4 @@ void MenuFunctions::displayCurrentMenu(int start_index)
 #endif
 
 #endif
-
 

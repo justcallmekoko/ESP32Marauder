@@ -231,9 +231,11 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_REBOOT_CMD);
     Serial.println(HELP_UPDATE_CMD_A);
     Serial.println(HELP_LS_CMD);
+    // GCOVR_EXCL_START -- hardware-only command help entry.
     #ifdef HAS_SD
       Serial.println(HELP_BACKUP_SPIFFS_CMD);
     #endif
+    // GCOVR_EXCL_STOP
     Serial.println(HELP_LED_CMD);
     Serial.println(HELP_GPS_DATA_CMD);
     Serial.println(HELP_GPS_CMD);
@@ -464,6 +466,7 @@ void CommandLine::runCommand(String input) {
         sd_obj.listDir(cmd_args.get(1));
     #endif
   }
+  // GCOVR_EXCL_START -- requires mounted SPIFFS and SD filesystems.
   else if (cmd_args.get(0) == BACKUP_SPIFFS_CMD) {
     #ifdef HAS_SD
       size_t files_copied = 0;
@@ -480,6 +483,7 @@ void CommandLine::runCommand(String input) {
       Serial.println(F("SD Card NOT Supported"));
     #endif
   }
+  // GCOVR_EXCL_STOP
 
   // Channel command
   else if (cmd_args.get(0) == CH_CMD) {
