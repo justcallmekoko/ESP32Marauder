@@ -10724,6 +10724,7 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
     else if (scan_mode == WIFI_SCAN_RDP)
       targ_port = 3389;
 
+    // GCOVR_EXCL_START -- service discovery requires a live lwIP station interface.
     if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
       if ((this->advanceScanIP() != IPAddress(0, 0, 0, 0)) &&
           this->singleARP(this->current_scan_ip)) {
@@ -10736,6 +10737,7 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
         this->finishNetworkScanDisplay("hosts open"); // GCOVR_EXCL_LINE
       }
     }
+    // GCOVR_EXCL_STOP
   }
 }
 
