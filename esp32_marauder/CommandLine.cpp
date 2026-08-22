@@ -1289,11 +1289,9 @@ void CommandLine::runCommand(String input) {
       this->startScanFromCLI(WIFI_PING_SCAN, TFT_GREEN, "Ping Scan");
     }
 
-    #ifndef HAS_DUAL_BAND
-      if (cmd_args.get(0) == ARP_SCAN_CMD) {
-        this->startScanFromCLI(WIFI_ARP_SCAN, TFT_CYAN, "ARP Scan");
-      }
-    #endif
+    if (cmd_args.get(0) == ARP_SCAN_CMD) {
+      this->startScanFromCLI(WIFI_ARP_SCAN, TFT_CYAN, "ARP Scan");
+    }
 
     // GPS POI
     if (cmd_args.get(0) == GPS_POI_CMD) {
