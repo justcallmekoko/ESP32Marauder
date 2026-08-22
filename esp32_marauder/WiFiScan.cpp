@@ -10626,11 +10626,7 @@ static err_t requestStationARP(struct netif* station, const ip4_addr_t* ip) {
     requestStationARP(netif_interface, &lwip_ip);
 
     delay(250);
-
-    if (this->readARP(ip_addr))
-      return true;
-
-    return false;
+    return findStationARP(netif_interface, &lwip_ip);
   }
 
   void WiFiScan::fullARP() {
