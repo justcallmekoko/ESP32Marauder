@@ -42,6 +42,32 @@ namespace {
     return fs.rmdir(path);
   }
 
+  bool clearDirectoryContents(fs::FS& fs, const String& path) {
+    File directory = fs.open(path);
+    if (!directory || !directory.isDirectory()) {
+      directory.close();
+      return false;
+    }
+
+    File child = directory.openNextFile();
+    while (child) {
+      String child_path = child.path();
+      child.close();
+      if (!removeTree(fs, child_path)) {
+        directory.close();
+        return false;
+      }
+      child = directory.openNextFile();
+    }
+
+    directory.close();
+    return true;
+  }
+
+  String joinPath(const String& base, const String& child) {
+    return base == "/" ? "/" + child : base + "/" + child;
+  }
+
   bool copyTree(
     fs::FS& source,
     const String& source_path,
@@ -53,7 +79,7 @@ namespace {
   ) {
     File source_node = source.open(source_path);
     if (!source_node) {
-      error = "Could not open SPIFFS path " + source_path;
+      error = "Could not open source path " + source_path;
       return false;
     }
 
@@ -61,7 +87,7 @@ namespace {
       int slash = destination_path.lastIndexOf('/');
       if (slash > 0 && !ensureDirectory(destination, destination_path.substring(0, slash))) {
         source_node.close();
-        error = "Could not create SD backup directory";
+        error = "Could not create destination directory";
         return false;
       }
 
@@ -110,7 +136,7 @@ namespace {
         source,
         child_source_path,
         destination,
-        destination_path + "/" + child_name,
+        joinPath(destination_path, child_name),
         files_copied,
         bytes_copied,
         error
@@ -273,6 +299,61 @@ bool SDInterface::backupSPIFFS(size_t& files_copied, size_t& bytes_copied, Strin
 
   removeTree(SD, previous_path);
   return true;
+}
+
+bool SDInterface::restoreSPIFFS(size_t& files_copied, size_t& bytes_copied, String& error) {
+  files_copied = 0;
+  bytes_copied = 0;
+  error = "";
+
+  if (!this->supported) {
+    error = "SD card not detected";
+    return false;
+  }
+
+  const String backup_path = "/spiffs";
+  const String rollback_path = "/spiffs.restore-rollback";
+  File backup = SD.open(backup_path);
+  bool valid_backup = backup && backup.isDirectory();
+  backup.close();
+  if (!valid_backup) {
+    error = "SD:/spiffs backup not found";
+    return false;
+  }
+
+  if (!removeTree(SD, rollback_path)) {
+    error = "Could not clear old restore rollback";
+    return false;
+  }
+
+  size_t rollback_files = 0;
+  size_t rollback_bytes = 0;
+  String rollback_error;
+  if (!copyTree(SPIFFS, "/", SD, rollback_path, rollback_files, rollback_bytes, rollback_error)) {
+    removeTree(SD, rollback_path);
+    error = "Could not preserve current SPIFFS: " + rollback_error;
+    return false;
+  }
+
+  bool cleared = clearDirectoryContents(SPIFFS, "/");
+  if (cleared && copyTree(SD, backup_path, SPIFFS, "/", files_copied, bytes_copied, error)) {
+    removeTree(SD, rollback_path);
+    return true;
+  }
+
+  String restore_error = cleared ? error : "Could not clear SPIFFS before restore";
+  clearDirectoryContents(SPIFFS, "/");
+  size_t recovered_files = 0;
+  size_t recovered_bytes = 0;
+  String recovery_error;
+  if (copyTree(SD, rollback_path, SPIFFS, "/", recovered_files, recovered_bytes, recovery_error)) {
+    removeTree(SD, rollback_path);
+    error = "Restore failed; original SPIFFS recovered: " + restore_error;
+  }
+  else {
+    error = "Restore and rollback failed: " + restore_error + "; " + recovery_error;
+  }
+  return false;
 }
 // GCOVR_EXCL_STOP
 

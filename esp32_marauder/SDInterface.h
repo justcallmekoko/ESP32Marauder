@@ -70,6 +70,7 @@ class SDInterface {
     void performUpdate(Stream &updateSource, size_t updateSize);
     bool removeFile(String file_path);
     bool backupSPIFFS(size_t& files_copied, size_t& bytes_copied, String& error);
+    bool restoreSPIFFS(size_t& files_copied, size_t& bytes_copied, String& error);
 };
 
 #endif
