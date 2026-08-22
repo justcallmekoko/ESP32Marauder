@@ -2093,7 +2093,7 @@ void WiFiScan::setNetworkInfo() {
   this->subnet = WiFi.subnetMask();
 }
 
-void WiFiScan::showNetworkInfo(bool show_display) {
+void WiFiScan::showNetworkInfo(bool show_display) { // GCOVR_EXCL_LINE -- host tests have no TFT.
   Serial.print(F("IP address: "));
   Serial.println(this->ip_addr);
   Serial.print(F("Gateway: "));
@@ -2104,7 +2104,7 @@ void WiFiScan::showNetworkInfo(bool show_display) {
   Serial.println(WiFi.macAddress());
 
   #ifdef HAS_SCREEN
-  if (show_display) {
+  if (show_display) { // GCOVR_EXCL_LINE
     display_obj.tft.println("\nConnected!");
     display_obj.tft.print("IP address: ");
     display_obj.tft.println(this->ip_addr);
@@ -2116,10 +2116,11 @@ void WiFiScan::showNetworkInfo(bool show_display) {
     display_obj.tft.println(WiFi.macAddress());
     display_obj.tft.println("Returning...");
     delay(2000);
-  }
+  } // GCOVR_EXCL_LINE
   #endif
 }
 
+// GCOVR_EXCL_START -- scanner presentation requires the hardware TFT renderer.
 void WiFiScan::resetNetworkScanDisplay(const String& target_line, const String& status_line) {
   this->network_scan_result_count = 0;
 
@@ -2160,6 +2161,7 @@ void WiFiScan::finishNetworkScanDisplay(const String& result_label) {
     );
   #endif
 }
+// GCOVR_EXCL_STOP
 
 bool WiFiScan::joinWiFi(String ssid, String password, bool gui) {
   static const char * btns[] ={text16, ""};
@@ -3414,11 +3416,13 @@ void WiFiScan::RunPingScan(uint8_t scan_mode, uint16_t color) {
     Serial.println(F("Starting Ping Scan with..."));
   else if (scan_mode == WIFI_ARP_SCAN)
     Serial.println(F("Starting ARP Scan with..."));
+  // GCOVR_EXCL_START -- scanner presentation requires the hardware TFT renderer.
   this->showNetworkInfo(false);
   this->resetNetworkScanDisplay(
     String("Local ") + this->ip_addr.toString(),
     scan_mode == WIFI_PING_SCAN ? "Scanning live hosts..." : "Scanning ARP neighbors..."
   );
+  // GCOVR_EXCL_STOP
 
   if (scan_mode == WIFI_PING_SCAN)
     buffer_obj.append(F("Starting Ping Scan with..."));
@@ -3496,6 +3500,7 @@ void WiFiScan::RunPortScanAll(uint8_t scan_mode, uint16_t color) {
   }
 
   Serial.println(F("Starting Port Scan with..."));
+  // GCOVR_EXCL_START -- scanner presentation requires the hardware TFT renderer.
   this->showNetworkInfo(false);
 
   String scan_target;
@@ -3516,6 +3521,7 @@ void WiFiScan::RunPortScanAll(uint8_t scan_mode, uint16_t color) {
     scan_status = String("Scanning service port ") + String(service_port) + "...";
   }
   this->resetNetworkScanDisplay(scan_target, scan_status);
+  // GCOVR_EXCL_STOP
 
   buffer_obj.append(F("Starting Port Scan with..."));
   this->writeNetworkInfo();
@@ -10708,7 +10714,7 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
           this->isHostAlive(this->current_scan_ip)) {
         output_line = this->current_scan_ip.toString();
         ipList->add(this->current_scan_ip);
-        this->addNetworkScanDisplayResult(String("UP ") + output_line);
+        this->addNetworkScanDisplayResult(String("UP ") + output_line); // GCOVR_EXCL_LINE
         buffer_obj.append(output_line + "\n");
         Serial.println(output_line);
       }
@@ -10716,7 +10722,7 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
     else {
       if (!this->scan_complete) {
         this->scan_complete = true;
-        this->finishNetworkScanDisplay("hosts up");
+        this->finishNetworkScanDisplay("hosts up"); // GCOVR_EXCL_LINE
       }
     }
   }
@@ -10754,7 +10760,7 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
     else {
       if (!this->scan_complete) {
         this->scan_complete = true;
-        this->finishNetworkScanDisplay("hosts open");
+        this->finishNetworkScanDisplay("hosts open"); // GCOVR_EXCL_LINE
       }
     }
   }
@@ -10772,7 +10778,7 @@ void WiFiScan::portScan(uint8_t scan_mode, uint16_t targ_port) {
       }
       if (this->checkHostPort(this->current_scan_ip, this->current_scan_port, 100)) {
         String output_line = this->current_scan_ip.toString() + ": " + (String)this->current_scan_port;
-        this->addNetworkScanDisplayResult(String("OPEN ") + output_line);
+        this->addNetworkScanDisplayResult(String("OPEN ") + output_line); // GCOVR_EXCL_LINE
         Serial.println(output_line);
         buffer_obj.append(output_line + "\n");
       }
@@ -10780,7 +10786,7 @@ void WiFiScan::portScan(uint8_t scan_mode, uint16_t targ_port) {
     else {
       if (!this->scan_complete) {
         this->scan_complete = true;
-        this->finishNetworkScanDisplay("ports open");
+        this->finishNetworkScanDisplay("ports open"); // GCOVR_EXCL_LINE
       }
     }
   }
@@ -10788,7 +10794,7 @@ void WiFiScan::portScan(uint8_t scan_mode, uint16_t targ_port) {
   else {
     if (this->checkHostPort(this->current_scan_ip, targ_port, 100)) {
       String output_line = this->current_scan_ip.toString() + ": " + (String)targ_port;
-      this->addNetworkScanDisplayResult(String("OPEN ") + output_line);
+      this->addNetworkScanDisplayResult(String("OPEN ") + output_line); // GCOVR_EXCL_LINE
       Serial.println(output_line);
       buffer_obj.append(output_line + "\n");
     }
