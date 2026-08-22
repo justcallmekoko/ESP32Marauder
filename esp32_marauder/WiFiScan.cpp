@@ -39,6 +39,18 @@ LinkedList<IPAddress>* ipList;
 LinkedList<ProbeReqSsid>* probe_req_ssids;
 LinkedList<BleDevice>* ble_devices;
 
+size_t WiFiScan::retainedAccessPointCount() const {
+  return access_points == nullptr ? 0 : access_points->size();
+}
+
+size_t WiFiScan::retainedStationCount() const {
+  return stations == nullptr ? 0 : stations->size();
+}
+
+size_t WiFiScan::retainedBleDeviceCount() const {
+  return ble_devices == nullptr ? 0 : ble_devices->size();
+}
+
 extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3){
     if (arg == 31337)
       return 1;
@@ -2081,7 +2093,7 @@ void WiFiScan::setNetworkInfo() {
   this->subnet = WiFi.subnetMask();
 }
 
-void WiFiScan::showNetworkInfo() {
+void WiFiScan::showNetworkInfo(bool show_display) { // GCOVR_EXCL_LINE -- host tests have no TFT.
   Serial.print(F("IP address: "));
   Serial.println(this->ip_addr);
   Serial.print(F("Gateway: "));
@@ -2092,6 +2104,7 @@ void WiFiScan::showNetworkInfo() {
   Serial.println(WiFi.macAddress());
 
   #ifdef HAS_SCREEN
+  if (show_display) { // GCOVR_EXCL_LINE
     display_obj.tft.println("\nConnected!");
     display_obj.tft.print("IP address: ");
     display_obj.tft.println(this->ip_addr);
@@ -2103,8 +2116,52 @@ void WiFiScan::showNetworkInfo() {
     display_obj.tft.println(WiFi.macAddress());
     display_obj.tft.println("Returning...");
     delay(2000);
+  } // GCOVR_EXCL_LINE
   #endif
 }
+
+// GCOVR_EXCL_START -- scanner presentation requires the hardware TFT renderer.
+void WiFiScan::resetNetworkScanDisplay(const String& target_line, const String& status_line) {
+  this->network_scan_result_count = 0;
+
+  #ifdef HAS_SCREEN
+    // Scanner output uses the shared scrolling renderer. Reset its retained
+    // rows and the TFT content so connection-dialog text cannot leak through.
+    display_obj.display_buffer->clear();
+    #ifdef SCREEN_BUFFER
+      display_obj.screen_buffer->clear();
+    #endif
+    uint16_t content_top = TFT_HEIGHT / 6;
+    #ifdef HAS_TOUCH
+      content_top = (TFT_HEIGHT / 6) * 1.3;
+    #endif
+    #ifdef MARAUDER_PANCAKE
+      content_top = display_obj.TOP_FIXED_AREA_2;
+    #endif
+    display_obj.tft.fillRect(0, content_top, TFT_WIDTH, TFT_HEIGHT - content_top, TFT_BLACK);
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextWrap(false);
+    display_obj.display_buffer->add(String(WHITE_KEY) + target_line);
+    display_obj.display_buffer->add(String(CYAN_KEY) + status_line);
+  #endif
+}
+
+void WiFiScan::addNetworkScanDisplayResult(const String& result_line) {
+  this->network_scan_result_count++;
+  #ifdef HAS_SCREEN
+    display_obj.display_buffer->add(String(GREEN_KEY) + result_line);
+  #endif
+}
+
+void WiFiScan::finishNetworkScanDisplay(const String& result_label) {
+  #ifdef HAS_SCREEN
+    display_obj.display_buffer->add(
+      String(CYAN_KEY) + "Done - " + String(this->network_scan_result_count) + " " + result_label
+    );
+  #endif
+}
+// GCOVR_EXCL_STOP
 
 bool WiFiScan::joinWiFi(String ssid, String password, bool gui) {
   static const char * btns[] ={text16, ""};
@@ -2451,7 +2508,7 @@ void WiFiScan::setLEDMode(int mode) {
       xiao_led.attackLED();
     #elif defined(MARAUDER_M5STICKC)
       stickc_led.attackLED();
-    #elif defined(HAS_NEOPIXEL_LED)
+    #elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
       led_obj.setMode(MODE_ATTACK);
     #endif
   } else if (mode == MODE_SNIFF) {
@@ -2461,7 +2518,7 @@ void WiFiScan::setLEDMode(int mode) {
       xiao_led.sniffLED();
     #elif defined(MARAUDER_M5STICKC)
       stickc_led.sniffLED();
-    #elif defined(HAS_NEOPIXEL_LED)
+    #elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
       led_obj.setMode(MODE_SNIFF);
     #endif
   } else if (mode == MODE_OFF) {
@@ -2471,7 +2528,7 @@ void WiFiScan::setLEDMode(int mode) {
       xiao_led.offLED();
     #elif defined(MARAUDER_M5STICKC)
       stickc_led.offLED();
-    #elif defined(HAS_NEOPIXEL_LED)
+    #elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
       led_obj.setMode(MODE_OFF);
     #endif
   }
@@ -3351,14 +3408,21 @@ void WiFiScan::RunPingScan(uint8_t scan_mode, uint16_t color) {
     #endif
     this->prepareScanStage(TFT_RED, TFT_BLACK);
   #endif
-  this->current_scan_ip = this->gateway;
+  this->current_scan_ip = getNetworkIP(this->ip_addr, this->subnet);
+  this->last_scan_ip = IPAddress(0, 0, 0, 0);
   //Serial.print(F("Cleared IPs: "));
   this->clearList(CLEAR_IPS);
   if (scan_mode == WIFI_PING_SCAN)
     Serial.println(F("Starting Ping Scan with..."));
   else if (scan_mode == WIFI_ARP_SCAN)
     Serial.println(F("Starting ARP Scan with..."));
-  this->showNetworkInfo();
+  // GCOVR_EXCL_START -- scanner presentation requires the hardware TFT renderer.
+  this->showNetworkInfo(false);
+  this->resetNetworkScanDisplay(
+    String("Local ") + this->ip_addr.toString(),
+    scan_mode == WIFI_PING_SCAN ? "Scanning live hosts..." : "Scanning ARP neighbors..."
+  );
+  // GCOVR_EXCL_STOP
 
   if (scan_mode == WIFI_PING_SCAN)
     buffer_obj.append(F("Starting Ping Scan with..."));
@@ -3430,11 +3494,34 @@ void WiFiScan::RunPortScanAll(uint8_t scan_mode, uint16_t color) {
       (scan_mode == WIFI_SCAN_DNS) ||
       (scan_mode == WIFI_SCAN_HTTP) ||
       (scan_mode == WIFI_SCAN_HTTPS) ||
-      (scan_mode == WIFI_SCAN_RDP))
-    this->current_scan_ip = this->gateway;
+      (scan_mode == WIFI_SCAN_RDP)) {
+    this->current_scan_ip = getNetworkIP(this->ip_addr, this->subnet);
+    this->last_scan_ip = IPAddress(0, 0, 0, 0);
+  }
 
   Serial.println(F("Starting Port Scan with..."));
-  this->showNetworkInfo();
+  // GCOVR_EXCL_START -- scanner presentation requires the hardware TFT renderer.
+  this->showNetworkInfo(false);
+
+  String scan_target;
+  String scan_status;
+  if (scan_mode == WIFI_PORT_SCAN_ALL) {
+    scan_target = String("Target ") + this->current_scan_ip.toString();
+    scan_status = "Scanning ports 1-65535...";
+  }
+  else {
+    const uint16_t service_port =
+      scan_mode == WIFI_SCAN_SSH ? 22 :
+      scan_mode == WIFI_SCAN_TELNET ? 23 :
+      scan_mode == WIFI_SCAN_SMTP ? 25 :
+      scan_mode == WIFI_SCAN_DNS ? 53 :
+      scan_mode == WIFI_SCAN_HTTP ? 80 :
+      scan_mode == WIFI_SCAN_HTTPS ? 443 : 3389;
+    scan_target = String("Local ") + this->ip_addr.toString();
+    scan_status = String("Scanning service port ") + String(service_port) + "...";
+  }
+  this->resetNetworkScanDisplay(scan_target, scan_status);
+  // GCOVR_EXCL_STOP
 
   buffer_obj.append(F("Starting Port Scan with..."));
   this->writeNetworkInfo();
@@ -4379,41 +4466,35 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color) {
   if (scan_mode == WIFI_PACKET_MONITOR)
     startPcap("packet_monitor");
 
+  #if defined(HAS_SCREEN) && defined(HAS_ILI9341)
+    if (scan_mode == WIFI_PACKET_MONITOR)
+      this->resetPacketMonitorGraph();
+  #endif
+
   #ifdef HAS_ILI9341
     if ((scan_mode != WIFI_SCAN_PACKET_RATE) &&
         (scan_mode != WIFI_SCAN_CHAN_ANALYZER) &&
         (scan_mode != WIFI_SCAN_CHAN_ACT)) {
       #ifdef HAS_SCREEN
         display_obj.init();
-        #ifdef HAS_CAP_TOUCH
-          display_obj.tft.setRotation(3); // Pancake: landscape-3
-        #else
-          display_obj.tft.setRotation(1);
-        #endif
+        display_obj.tft.setRotation(SCREEN_ORIENTATION);
         display_obj.tft.fillScreen(TFT_BLACK);
       #endif
     
       #ifdef HAS_SCREEN
         #ifndef HAS_CYD_TOUCH
-          display_obj.setCalData(true);
+          display_obj.setCalData(false);
         #else
-          //display_obj.touchscreen.setRotation(1);
+          //display_obj.touchscreen.setRotation(SCREEN_ORIENTATION);
         #endif
       
         //display_obj.tft.setFreeFont(1);
         display_obj.tft.setFreeFont(NULL);
         display_obj.tft.setTextSize(1);
-        display_obj.tft.fillRect(127, 0, WIDTH_1 - 127, 28, TFT_BLACK); // Buttons
-        display_obj.tft.fillRect(12, 0, 90, 32, TFT_BLACK); // color key
-      
         delay(10);
       
-        display_obj.tftDrawGraphObjects(x_scale); //draw graph objects
-        display_obj.tftDrawColorKey();
-        display_obj.tftDrawXScaleButtons(x_scale);
-        display_obj.tftDrawYScaleButtons(y_scale);
-        display_obj.tftDrawChannelScaleButtons(set_channel);
-        display_obj.tftDrawExitScaleButtons();
+        this->drawPacketMonitorControls();
+        this->drawPacketMonitorGraphs();
       #endif
     }
     else {
@@ -9755,180 +9836,144 @@ bool WiFiScan::filterActive() {
 #endif
 
 #ifdef HAS_SCREEN
-
-  void WiFiScan::packetMonitorMain(uint32_t currentTime) {
-    
-    
-    for (x_pos = (11 + x_scale); x_pos <= WIDTH_1; x_pos = x_pos)
-    {
-      currentTime = millis();
-      do_break = false;
-      
-      y_pos_x = 0;
-      y_pos_y = 0;
-      y_pos_z = 0;
-
-      int8_t b = this->checkAnalyzerButtons(currentTime);
-          
-          // X - button pressed
-          if (b == X_MINUS_INDEX) {
-            if (x_scale > 1) {
-              x_scale--;
-              delay(70);
-              display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
-              display_obj.tftDrawXScaleButtons(x_scale);
-              display_obj.tftDrawYScaleButtons(y_scale);
-              display_obj.tftDrawChannelScaleButtons(set_channel);
-              display_obj.tftDrawExitScaleButtons();
-              //break;
-            }
-          }
-          // X + button pressed
-          else if (b == X_PLUS_INDEX) {
-            if (x_scale < 6) {
-              x_scale++;
-              delay(70);
-              display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
-              display_obj.tftDrawXScaleButtons(x_scale);
-              display_obj.tftDrawYScaleButtons(y_scale);
-              display_obj.tftDrawChannelScaleButtons(set_channel);
-              display_obj.tftDrawExitScaleButtons();
-              //break;
-            }
-          }
-  
-          // Y - button pressed
-          else if (b == Y_MINUS_INDEX) {
-            if (y_scale > 1) {
-              y_scale--;
-              delay(70);
-              display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
-              display_obj.tftDrawXScaleButtons(x_scale);
-              display_obj.tftDrawYScaleButtons(y_scale);
-              display_obj.tftDrawChannelScaleButtons(set_channel);
-              display_obj.tftDrawExitScaleButtons();
-              //updateMidway();
-              //break;
-            }
-          }
-  
-          // Y + button pressed
-          else if (b == Y_PLUS_INDEX) {
-            if (y_scale < 9) {
-              y_scale++;
-              delay(70);
-              display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
-              display_obj.tftDrawXScaleButtons(x_scale);
-              display_obj.tftDrawYScaleButtons(y_scale);
-              display_obj.tftDrawChannelScaleButtons(set_channel);
-              display_obj.tftDrawExitScaleButtons();
-              //updateMidway();
-              //break;
-            }
-          }
-  
-          // Channel - button pressed
-          else if (b == CHAN_MINUS_INDEX) {
-            #ifndef HAS_DUAL_BAND
-            if (set_channel > 1) {
-              set_channel--;
-            #else
-            if (dual_band_channel_index > 0) {
-              dual_band_channel_index--;
-              set_channel = dual_band_channels[dual_band_channel_index];
-            #endif
-              delay(70);
-              display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
-              display_obj.tftDrawXScaleButtons(x_scale);
-              display_obj.tftDrawYScaleButtons(y_scale);
-              display_obj.tftDrawChannelScaleButtons(set_channel);
-              display_obj.tftDrawExitScaleButtons();
-              changeChannel();
-              //break;
-            }
-          }
-  
-          // Channel + button pressed
-          else if (b == CHAN_PLUS_INDEX) {
-            #ifndef HAS_DUAL_BAND
-            if (set_channel < MAX_CHANNEL) {
-              set_channel++;
-            #else
-            if (dual_band_channel_index < (DUAL_BAND_CHANNELS - 1)) {
-              dual_band_channel_index++;
-              set_channel = dual_band_channels[dual_band_channel_index];
-            #endif
-              delay(70);
-              display_obj.tft.fillRect(127, 0, 193, 28, TFT_BLACK);
-              display_obj.tftDrawXScaleButtons(x_scale);
-              display_obj.tftDrawYScaleButtons(y_scale);
-              display_obj.tftDrawChannelScaleButtons(set_channel);
-              display_obj.tftDrawExitScaleButtons();
-              changeChannel();
-              //break;
-            }
-          }
-          else if (b == EXIT_BUTTON_INDEX) {
-            this->StartScan(WIFI_SCAN_OFF);
-            this->orient_display = true;
-            return;
-          }
-      //  }
-      //}
-  
-      if (currentTime - initTime >= GRAPH_REFRESH) {
-        x_pos += x_scale;
-        initTime = millis();
-        y_pos_x = ((-num_beacon * (y_scale * 3)) + (HEIGHT_1 - 2)); // GREEN
-        y_pos_y = ((-num_deauth * (y_scale * 3)) + (HEIGHT_1 - 2)); // RED
-        y_pos_z = ((-num_probe * (y_scale * 3)) + (HEIGHT_1 - 2)); // BLUE
-    
-        num_beacon = 0;
-        num_probe = 0;
-        num_deauth = 0;
-        
-        //CODE FOR PLOTTING CONTINUOUS LINES!!!!!!!!!!!!
-        //Plot "X" value
-        display_obj.tft.drawLine(x_pos - x_scale, y_pos_x_old, x_pos, y_pos_x, TFT_GREEN);
-        //Plot "Z" value
-        display_obj.tft.drawLine(x_pos - x_scale, y_pos_z_old, x_pos, y_pos_z, TFT_BLUE);
-        //Plot "Y" value
-        display_obj.tft.drawLine(x_pos - x_scale, y_pos_y_old, x_pos, y_pos_y, TFT_RED);
-        
-        //Draw preceding black 'boxes' to erase old plot lines, !!!WEIRD CODE TO COMPENSATE FOR BUTTONS AND COLOR KEY SO 'ERASER' DOESN'T ERASE BUTTONS AND COLOR KEY!!!
-        if ((x_pos <= 90) || ((x_pos >= 117) && (x_pos <= WIDTH_1))) //above x axis
-          display_obj.tft.fillRect(x_pos+1, 28, 10, PKT_HALF - 27, TFT_BLACK); //compensate for buttons!
-        else
-          display_obj.tft.fillRect(x_pos+1, 0, 10, PKT_HALF + 1, TFT_BLACK); //don't compensate for buttons!
-
-        if (x_pos < 0) // below x axis
-          display_obj.tft.fillRect(x_pos+1, PKT_HALF + 1, 10, PKT_HALF - 32, TFT_CYAN);
-        else
-          display_obj.tft.fillRect(x_pos+1, PKT_HALF + 1, 10, PKT_HALF - 2, TFT_BLACK);
-        
-        
-        if ( (y_pos_x == PKT_HALF) || (y_pos_y == PKT_HALF) || (y_pos_z == PKT_HALF) )
-          display_obj.tft.drawFastHLine(10, PKT_HALF, PKT_AXIS_W, TFT_WHITE); // x axis
-         
-        y_pos_x_old = y_pos_x; //set old y pos values to current y pos values 
-        y_pos_y_old = y_pos_y;
-        y_pos_z_old = y_pos_z;
-    
-        //delay(50);
-      }
-     
+  #ifdef HAS_ILI9341
+    void WiFiScan::resetPacketMonitorGraph() {
+      memset(packet_monitor_beacons, 0, sizeof(packet_monitor_beacons));
+      memset(packet_monitor_deauths, 0, sizeof(packet_monitor_deauths));
+      memset(packet_monitor_probes, 0, sizeof(packet_monitor_probes));
+      num_beacon = 0;
+      num_deauth = 0;
+      num_probe = 0;
+      initTime = millis();
     }
-    
-    display_obj.tft.fillRect(127, 0, WIDTH_1 - 127, 28, TFT_BLACK); //erase XY buttons and any lines behind them
-    display_obj.tft.fillRect(12, 0, 90, 32, TFT_BLACK); // key
-    
-    display_obj.tftDrawXScaleButtons(x_scale); //re-draw stuff
-    display_obj.tftDrawYScaleButtons(y_scale);
-    display_obj.tftDrawChannelScaleButtons(set_channel);
-    display_obj.tftDrawExitScaleButtons();
-    display_obj.tftDrawColorKey();
-    display_obj.tftDrawGraphObjects(x_scale);
+
+    void WiFiScan::samplePacketMonitorGraph() {
+      memmove(packet_monitor_beacons, packet_monitor_beacons + 1,
+              sizeof(packet_monitor_beacons) - sizeof(packet_monitor_beacons[0]));
+      memmove(packet_monitor_deauths, packet_monitor_deauths + 1,
+              sizeof(packet_monitor_deauths) - sizeof(packet_monitor_deauths[0]));
+      memmove(packet_monitor_probes, packet_monitor_probes + 1,
+              sizeof(packet_monitor_probes) - sizeof(packet_monitor_probes[0]));
+
+      packet_monitor_beacons[PACKET_MONITOR_HISTORY_LEN - 1] = min(num_beacon, 65535);
+      packet_monitor_deauths[PACKET_MONITOR_HISTORY_LEN - 1] = min(num_deauth, 65535);
+      packet_monitor_probes[PACKET_MONITOR_HISTORY_LEN - 1] = min(num_probe, 65535);
+      num_beacon = 0;
+      num_deauth = 0;
+      num_probe = 0;
+    }
+
+    void WiFiScan::drawPacketMonitorGraph(const uint16_t *values, int16_t top,
+                                          int16_t bottom, uint16_t color,
+                                          const char *label) {
+      const int16_t plot_top = top + 12;
+      const int16_t graph_height = bottom - plot_top;
+      uint16_t max_value = 1;
+      for (uint16_t i = 0; i < PACKET_MONITOR_HISTORY_LEN; i++)
+        max_value = max(max_value, values[i]);
+
+      display_obj.tft.fillRect(0, top, SCREEN_WIDTH, bottom - top + 1, TFT_BLACK);
+      display_obj.tft.setTextColor(color, TFT_BLACK);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setCursor(2, top + 2);
+      display_obj.tft.print(label);
+
+      const int16_t half_y = bottom - (graph_height / 2);
+      display_obj.tft.drawFastHLine(PACKET_MONITOR_GRAPH_LEFT, plot_top,
+                                    SCREEN_WIDTH - PACKET_MONITOR_GRAPH_LEFT, TFT_DARKGREY);
+      display_obj.tft.drawFastHLine(PACKET_MONITOR_GRAPH_LEFT, half_y,
+                                    SCREEN_WIDTH - PACKET_MONITOR_GRAPH_LEFT, TFT_DARKGREY);
+      display_obj.tft.drawFastHLine(PACKET_MONITOR_GRAPH_LEFT, bottom,
+                                    SCREEN_WIDTH - PACKET_MONITOR_GRAPH_LEFT, TFT_LIGHTGREY);
+      display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
+      display_obj.tft.setCursor(2, plot_top);
+      display_obj.tft.print(max_value);
+      display_obj.tft.setCursor(2, half_y - 4);
+      display_obj.tft.print((max_value + 1) / 2);
+
+      for (uint16_t i = 0; i < PACKET_MONITOR_HISTORY_LEN; i++) {
+        const int16_t x = PACKET_MONITOR_GRAPH_LEFT + (i * PACKET_MONITOR_COLUMN_WIDTH);
+        const int16_t height = ((uint32_t)values[i] * graph_height) / max_value;
+        if (height > 0)
+          display_obj.tft.fillRect(x, bottom - height, PACKET_MONITOR_COLUMN_WIDTH,
+                                   height, color);
+      }
+    }
+
+    void WiFiScan::drawPacketMonitorGraphs() {
+      const int16_t graph_top = 64;
+      const int16_t lane_height = (SCREEN_HEIGHT - graph_top) / 3;
+      drawPacketMonitorGraph(packet_monitor_beacons, graph_top,
+                             graph_top + lane_height - 1, TFT_GREEN, "BCN");
+      drawPacketMonitorGraph(packet_monitor_deauths, graph_top + lane_height,
+                             graph_top + (lane_height * 2) - 1, TFT_RED, "DEA");
+      drawPacketMonitorGraph(packet_monitor_probes, graph_top + (lane_height * 2),
+                             SCREEN_HEIGHT - 1, TFT_BLUE, "PRB");
+    }
+
+    void WiFiScan::drawPacketMonitorControls() {
+      display_obj.tft.fillRect(0, 0, SCREEN_WIDTH, 64, TFT_BLACK);
+      display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      display_obj.tft.drawCentreString(text_table1[45], SCREEN_WIDTH / 2, 0, 2);
+      display_obj.tftDrawChannelScaleButtons(set_channel, false);
+      display_obj.tftDrawExitScaleButtons(false);
+      display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      display_obj.tft.drawCentreString(String("CH ") + set_channel,
+                                       SCREEN_WIDTH / 2, 18, 1);
+    }
+  #endif
+
+  #ifdef HAS_ILI9341
+  void WiFiScan::packetMonitorMain(uint32_t currentTime) {
+    const int8_t b = this->checkAnalyzerButtons(currentTime);
+
+    if (b == CHAN_MINUS_INDEX) {
+      #ifndef HAS_DUAL_BAND
+        if (set_channel > 1)
+          set_channel--;
+        else
+          return;
+      #else
+        if (dual_band_channel_index > 0) {
+          dual_band_channel_index--;
+          set_channel = dual_band_channels[dual_band_channel_index];
+        }
+        else
+          return;
+      #endif
+      changeChannel();
+      this->drawPacketMonitorControls();
+    }
+    else if (b == CHAN_PLUS_INDEX) {
+      #ifndef HAS_DUAL_BAND
+        if (set_channel < MAX_CHANNEL)
+          set_channel++;
+        else
+          return;
+      #else
+        if (dual_band_channel_index < (DUAL_BAND_CHANNELS - 1)) {
+          dual_band_channel_index++;
+          set_channel = dual_band_channels[dual_band_channel_index];
+        }
+        else
+          return;
+      #endif
+      changeChannel();
+      this->drawPacketMonitorControls();
+    }
+    else if (b == EXIT_BUTTON_INDEX) {
+      this->StartScan(WIFI_SCAN_OFF);
+      this->orient_display = true;
+      return;
+    }
+
+    if (currentTime - initTime >= PACKET_MONITOR_REFRESH_MS) {
+      initTime = currentTime;
+      this->samplePacketMonitorGraph();
+      this->drawPacketMonitorGraphs();
+    }
   }
+  #endif
 #endif
 
 void WiFiScan::changeChannel(int chan) {
@@ -10499,40 +10544,77 @@ bool WiFiScan::checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout) {
   return false;
 }
 
-#ifndef HAS_IDF_3
+IPAddress WiFiScan::advanceScanIP() {
+  do {
+    this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
+  } while ((this->current_scan_ip != IPAddress(0, 0, 0, 0)) &&
+           (this->current_scan_ip == this->ip_addr));
+
+  if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
+    this->last_scan_ip = this->current_scan_ip;
+  }
+  return this->current_scan_ip;
+}
+
+// GCOVR_EXCL_START -- ARP discovery requires a live lwIP station interface.
+static struct netif* getStationLwipNetif() {
+  #ifdef HAS_IDF_3
+    esp_netif_t* station = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+    if (station == nullptr)
+      return nullptr;
+
+    return static_cast<struct netif*>(esp_netif_get_netif_impl(station));
+  #else
+    void* station = nullptr;
+    if (tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &station) != ESP_OK)
+      return nullptr;
+
+    return static_cast<struct netif*>(station);
+  #endif
+}
+
+static bool findStationARP(struct netif* station, const ip4_addr_t* ip) {
+  const ip4_addr_t* resolved_ip = nullptr;
+  struct eth_addr* resolved_mac = nullptr;
+
+  #ifdef HAS_IDF_3
+    LOCK_TCPIP_CORE();
+  #endif
+  const bool found = etharp_find_addr(station, ip, &resolved_mac, &resolved_ip) >= 0;
+  #ifdef HAS_IDF_3
+    UNLOCK_TCPIP_CORE();
+  #endif
+
+  return found;
+}
+
+static err_t requestStationARP(struct netif* station, const ip4_addr_t* ip) {
+  #ifdef HAS_IDF_3
+    LOCK_TCPIP_CORE();
+  #endif
+  const err_t result = etharp_request(station, ip);
+  #ifdef HAS_IDF_3
+    UNLOCK_TCPIP_CORE();
+  #endif
+
+  return result;
+}
+
   bool WiFiScan::readARP(IPAddress targ_ip) {
-    // Convert IPAddress to ip4_addr_t using IP4_ADDR
     ip4_addr_t test_ip;
     IP4_ADDR(&test_ip, targ_ip[0], targ_ip[1], targ_ip[2], targ_ip[3]);
 
-    // Get the netif interface for STA mode
-    //void* netif = NULL;
-    //tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
-    //struct netif* netif_interface = (struct netif*)netif;
+    struct netif* netif_interface = getStationLwipNetif();
+    if (netif_interface == nullptr)
+      return false;
 
-    const ip4_addr_t* ipaddr_ret = NULL;
-    struct eth_addr* eth_ret = NULL;
-
-    // Use actual interface instead of NULL
-    if (etharp_find_addr(NULL, &test_ip, &eth_ret, &ipaddr_ret) >= 0) {
-      return true;
-    }
-
-    return false;
+    return findStationARP(netif_interface, &test_ip);
   }
 
   bool WiFiScan::singleARP(IPAddress ip_addr) {
-
-    #ifndef HAS_IDF_3
-      void* netif = NULL;
-      tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
-      struct netif* netif_interface = (struct netif*)netif;
-    #else
-      struct netif* netif_interface = (struct netif*)esp_netif_get_netif_impl(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"));
-      //esp_netif_t* netif_interface = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
-      //struct netif* netif_interface = (struct netif*)netif;
-      //struct netif* netif_interface = esp_netif_get_netif_impl(*netif);
-    #endif
+    struct netif* netif_interface = getStationLwipNetif();
+    if (netif_interface == nullptr)
+      return false;
 
     ip4_addr_t lwip_ip;
     IP4_ADDR(&lwip_ip,
@@ -10541,7 +10623,7 @@ bool WiFiScan::checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout) {
               ip_addr[2],
               ip_addr[3]);
 
-    etharp_request(netif_interface, &lwip_ip);
+    requestStationARP(netif_interface, &lwip_ip);
 
     delay(250);
 
@@ -10555,20 +10637,14 @@ bool WiFiScan::checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout) {
     String display_string = "";
     String output_line = "";
 
-    #ifndef HAS_IDF_3
-      void* netif = NULL;
-      tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
-      struct netif* netif_interface = (struct netif*)netif;
-    #else
-      struct netif* netif_interface = (struct netif*)esp_netif_get_netif_impl(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"));
-      //esp_netif_t* netif_interface = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
-      //struct netif* netif_interface = (struct netif*)netif;
-      //struct netif* netif_interface = esp_netif_get_netif_impl(*netif);
-    #endif
+    struct netif* netif_interface = getStationLwipNetif();
+    if (netif_interface == nullptr)
+      return;
 
     //this->arp_count = 0;
 
-    if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
+    if (this->current_scan_ip != IPAddress(0, 0, 0, 0) &&
+        this->advanceScanIP() != IPAddress(0, 0, 0, 0)) {
       ip4_addr_t lwip_ip;
       IP4_ADDR(&lwip_ip,
               this->current_scan_ip[0],
@@ -10576,11 +10652,9 @@ bool WiFiScan::checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout) {
               this->current_scan_ip[2],
               this->current_scan_ip[3]);
 
-      etharp_request(netif_interface, &lwip_ip);
+      requestStationARP(netif_interface, &lwip_ip);
 
       delay(100);
-
-      this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
 
       this->arp_count++;
 
@@ -10589,7 +10663,7 @@ bool WiFiScan::checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout) {
 
         this->arp_count = 0;
 
-        for (int i = 10; i > 0; i--) {
+        for (int i = 9; i >= 0; i--) {
           IPAddress check_ip = getPrevIP(this->current_scan_ip, this->subnet, i);
           display_string = "";
           output_line = "";
@@ -10617,7 +10691,7 @@ bool WiFiScan::checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout) {
       for (int i = this->arp_count; i > 0; i--) {
         delay(250);
 
-        IPAddress check_ip = getPrevIP(this->current_scan_ip, this->subnet, i);
+        IPAddress check_ip = getPrevIP(this->last_scan_ip, this->subnet, i - 1);
         display_string = "";
         output_line = "";
         if (this->readARP(check_ip)) {
@@ -10645,29 +10719,21 @@ bool WiFiScan::checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout) {
       }
     }
   }
-#endif
+// GCOVR_EXCL_STOP
 
 void WiFiScan::pingScan(uint8_t scan_mode) {
-  String display_string = "";
   String output_line = "";
 
   if (scan_mode == WIFI_PING_SCAN) {
     if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
-      this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
+      this->advanceScanIP();
       
       // Check if IP is alive
-      if (this->isHostAlive(this->current_scan_ip)) {
+      if ((this->current_scan_ip != IPAddress(0, 0, 0, 0)) &&
+          this->isHostAlive(this->current_scan_ip)) {
         output_line = this->current_scan_ip.toString();
-        display_string.concat(output_line);
-        uint8_t temp_len = display_string.length();
-        for (uint8_t i = 0; i < 40 - temp_len; i++)
-        {
-          display_string.concat(" ");
-        }
         ipList->add(this->current_scan_ip);
-        #ifdef HAS_SCREEN
-          display_obj.display_buffer->add(display_string);
-        #endif
+        this->addNetworkScanDisplayResult(String("UP ") + output_line); // GCOVR_EXCL_LINE
         buffer_obj.append(output_line + "\n");
         Serial.println(output_line);
       }
@@ -10675,9 +10741,7 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
     else {
       if (!this->scan_complete) {
         this->scan_complete = true;
-        #ifdef HAS_SCREEN
-          display_obj.display_buffer->add("Scan complete");
-        #endif
+        this->finishNetworkScanDisplay("hosts up"); // GCOVR_EXCL_LINE
       }
     }
   }
@@ -10698,13 +10762,13 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
     else if (scan_mode == WIFI_SCAN_RDP)
       targ_port = 3389;
 
+    // GCOVR_EXCL_START -- service discovery requires a live lwIP station interface.
     if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
-      this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
-      #ifndef HAS_IDF_3
-        if (this->singleARP(this->current_scan_ip)) {
-      #else
-        if (this->isHostAlive(this->current_scan_ip)) {
-      #endif
+      this->advanceScanIP();
+      if (this->current_scan_ip == IPAddress(0, 0, 0, 0)) {
+        return;
+      }
+      if (this->singleARP(this->current_scan_ip)) {
         Serial.println(this->current_scan_ip);
         this->portScan(scan_mode, targ_port);
       }
@@ -10712,16 +10776,14 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
     else {
       if (!this->scan_complete) {
         this->scan_complete = true;
-        #ifdef HAS_SCREEN
-          display_obj.display_buffer->add("Scan complete");
-        #endif
+        this->finishNetworkScanDisplay("hosts open"); // GCOVR_EXCL_LINE
       }
     }
+    // GCOVR_EXCL_STOP
   }
 }
 
 void WiFiScan::portScan(uint8_t scan_mode, uint16_t targ_port) {
-  String display_string = "";
   if (scan_mode == WIFI_PORT_SCAN_ALL) {
     if (this->current_scan_port < MAX_PORT) {
       this->current_scan_port = getNextPort(this->current_scan_port);
@@ -10733,15 +10795,7 @@ void WiFiScan::portScan(uint8_t scan_mode, uint16_t targ_port) {
       }
       if (this->checkHostPort(this->current_scan_ip, this->current_scan_port, 100)) {
         String output_line = this->current_scan_ip.toString() + ": " + (String)this->current_scan_port;
-        display_string.concat(output_line);
-        uint8_t temp_len = display_string.length();
-        for (uint8_t i = 0; i < 40 - temp_len; i++)
-        {
-          display_string.concat(" ");
-        }
-        #ifdef HAS_SCREEN
-          display_obj.display_buffer->add(display_string);
-        #endif
+        this->addNetworkScanDisplayResult(String("OPEN ") + output_line); // GCOVR_EXCL_LINE
         Serial.println(output_line);
         buffer_obj.append(output_line + "\n");
       }
@@ -10749,9 +10803,7 @@ void WiFiScan::portScan(uint8_t scan_mode, uint16_t targ_port) {
     else {
       if (!this->scan_complete) {
         this->scan_complete = true;
-        #ifdef HAS_SCREEN
-          display_obj.display_buffer->add("Scan complete");
-        #endif
+        this->finishNetworkScanDisplay("ports open"); // GCOVR_EXCL_LINE
       }
     }
   }
@@ -10759,15 +10811,7 @@ void WiFiScan::portScan(uint8_t scan_mode, uint16_t targ_port) {
   else {
     if (this->checkHostPort(this->current_scan_ip, targ_port, 100)) {
       String output_line = this->current_scan_ip.toString() + ": " + (String)targ_port;
-      display_string.concat(output_line);
-      uint8_t temp_len = display_string.length();
-      for (uint8_t i = 0; i < 40 - temp_len; i++)
-      {
-        display_string.concat(" ");
-      }
-      #ifdef HAS_SCREEN
-        display_obj.display_buffer->add(display_string);
-      #endif
+      this->addNetworkScanDisplayResult(String("OPEN ") + output_line); // GCOVR_EXCL_LINE
       Serial.println(output_line);
       buffer_obj.append(output_line + "\n");
     }
@@ -10939,7 +10983,11 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
     String sidecarPath = filePath + "." + service;
     File f = SD.open(sidecarPath, FILE_WRITE);
     if (f) {
-      f.println("uploaded=" + gps_obj.getDatetime());
+      #ifdef HAS_GPS
+        f.println("uploaded=" + gps_obj.getDatetime());
+      #else
+        f.println("uploaded_uptime_ms=" + String(millis()));
+      #endif
       f.close();
       Serial.println("[UPLOAD] Sidecar written: " + sidecarPath);
     } else {
@@ -11686,9 +11734,7 @@ void WiFiScan::main(uint32_t currentTime)
     this->pingScan();
   }
   else if (currentScanMode == WIFI_ARP_SCAN) {
-    #ifndef HAS_IDF_3
-      this->fullARP();
-    #endif
+    this->fullARP(); // GCOVR_EXCL_LINE -- requires a live lwIP station interface.
   }
   else if (currentScanMode == WIFI_PORT_SCAN_ALL) {
     this->portScan(WIFI_PORT_SCAN_ALL);

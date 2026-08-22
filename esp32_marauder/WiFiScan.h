@@ -32,11 +32,13 @@
 #include "mbedtls/bignum.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/ecp.h"
-#ifndef HAS_IDF_3
-  #include <lwip/etharp.h>
-  #include <lwip/ip_addr.h>
-#endif
+#include <lwip/etharp.h>
+#include <lwip/ip_addr.h>
+#include <lwip/netif.h>
+#include <lwip/tcpip.h>
 #ifdef HAS_IDF_3
+  #include "esp_netif.h"
+  #include "esp_netif_net_stack.h"
   #include "esp_system.h"
   #include "esp_mac.h"
 #endif
@@ -64,7 +66,7 @@
   #include "xiaoLED.h"
 #elif defined(MARAUDER_M5STICKC)
   #include "stickcLED.h"
-#elif defined(HAS_NEOPIXEL_LED)
+#elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
   #include "LedInterface.h"
 #endif
 
@@ -245,7 +247,7 @@ extern Settings settings_obj;
   extern xiaoLED xiao_led;
 #elif defined(MARAUDER_M5STICKC)
   extern stickcLED stickc_led;
-#elif defined(HAS_NEOPIXEL_LED)
+#elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
   extern LedInterface led_obj;
 #endif
 
@@ -389,18 +391,22 @@ class WiFiScan
       WiFiClientSecure *client = new WiFiClientSecure();
     #endif
   
-    int x_pos; //position along the graph x axis
-    float y_pos_x; //current graph y axis position of X value
-    float y_pos_x_old = 120; //old y axis position of X value
-    float y_pos_y; //current graph y axis position of Y value
-    float y_pos_y_old = 120; //old y axis position of Y value
-    float y_pos_z; //current graph y axis position of Z value
-    float y_pos_z_old = 120; //old y axis position of Z value
-    int midway = 0;
-    byte x_scale = 1; //scale of graph x axis, controlled by touchscreen buttons
-    byte y_scale = 1;
-
-    bool do_break = false;
+    #if defined(HAS_SCREEN) && defined(HAS_ILI9341)
+      static const uint8_t PACKET_MONITOR_COLUMN_WIDTH = 4;
+      static const uint8_t PACKET_MONITOR_GRAPH_LEFT = 32;
+      static const uint16_t PACKET_MONITOR_REFRESH_MS = 200;
+      static const uint16_t PACKET_MONITOR_HISTORY_LEN =
+          (SCREEN_WIDTH - PACKET_MONITOR_GRAPH_LEFT) / PACKET_MONITOR_COLUMN_WIDTH;
+      uint16_t packet_monitor_beacons[PACKET_MONITOR_HISTORY_LEN] = {};
+      uint16_t packet_monitor_deauths[PACKET_MONITOR_HISTORY_LEN] = {};
+      uint16_t packet_monitor_probes[PACKET_MONITOR_HISTORY_LEN] = {};
+      void resetPacketMonitorGraph();
+      void samplePacketMonitorGraph();
+      void drawPacketMonitorGraph(const uint16_t *values, int16_t top, int16_t bottom,
+                                  uint16_t color, const char *label);
+      void drawPacketMonitorGraphs();
+      void drawPacketMonitorControls();
+    #endif
 
     bool wsl_bypass_enabled = false;
 
@@ -705,13 +711,17 @@ class WiFiScan
     void writeNetworkInfo();
     void setupScanDisplayArea(uint16_t background, uint16_t color);
     void updateTrackerUI();
-    void showNetworkInfo();
+    void showNetworkInfo(bool show_display = true);
+    void resetNetworkScanDisplay(const String& target_line, const String& status_line);
+    void addNetworkScanDisplayResult(const String& result_line);
+    void finishNetworkScanDisplay(const String& result_label);
     void setNetworkInfo();
     void fullARP();
     bool readARP(IPAddress targ_ip);
     bool singleARP(IPAddress ip_addr);
     void pingScan(uint8_t scan_mode = WIFI_PING_SCAN);
     void portScan(uint8_t scan_mode = WIFI_PORT_SCAN_ALL, uint16_t targ_port = 22);
+    IPAddress advanceScanIP();
     bool isHostAlive(IPAddress ip);
     bool checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout = 100);
     String extractManufacturer(const uint8_t* payload);
@@ -797,6 +807,10 @@ class WiFiScan
     volatile bool bt_pending_clear = false;
 
     bool send_deauth = false;
+
+    size_t retainedAccessPointCount() const;
+    size_t retainedStationCount() const;
+    size_t retainedBleDeviceCount() const;
 
     bool channel_hop = false;
     uint8_t connected_devices = 0;
@@ -922,8 +936,10 @@ class WiFiScan
     IPAddress subnet;
 
     IPAddress current_scan_ip;
+    IPAddress last_scan_ip;
 
     uint16_t current_scan_port = 1;
+    uint16_t network_scan_result_count = 0;
 
     String dst_mac = "ff:ff:ff:ff:ff:ff";
     byte src_mac[6] = {};

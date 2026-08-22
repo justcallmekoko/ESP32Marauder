@@ -157,6 +157,14 @@ jobs:
           ref: 1.12.0
           path: CustomAdafruit_NeoPixel
 
+      - name: Install APA102 for LilyGo T-Dongle C5
+        if: matrix.board.flag == 'MARAUDER_T_DONGLE_C5'
+        uses: actions/checkout@v4
+        with:
+          repository: pololu/apa102-arduino
+          ref: 3.0.0
+          path: CustomAPA102
+
       - name: Install ArduinoJson
         uses: actions/checkout@v4
         with:
@@ -226,6 +234,10 @@ jobs:
               sed -i 's/-fexceptions/-fno-exceptions/g' "$f"
             done
           fi
+
+      - name: Configure LilyGo T-Dongle C5 partition table
+        if: matrix.board.flag == 'MARAUDER_T_DONGLE_C5'
+        run: cp installer/partitions/t_dongle_c5.csv esp32_marauder/partitions.csv
 
       - name: Build Marauder for ${{ matrix.board.name }}
         uses: ArminJo/arduino-test-compile@v3.3.0
