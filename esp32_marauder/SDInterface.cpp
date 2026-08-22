@@ -1,6 +1,132 @@
 #include "SDInterface.h"
 #include "lang_var.h"
 
+// GCOVR_EXCL_START -- requires mounted SPIFFS and SD filesystems.
+namespace {
+  bool ensureDirectory(fs::FS& fs, const String& path) {
+    if (path.length() == 0 || path == "/" || fs.exists(path))
+      return true;
+
+    int slash = path.lastIndexOf('/');
+    if (slash > 0 && !ensureDirectory(fs, path.substring(0, slash)))
+      return false;
+
+    return fs.mkdir(path);
+  }
+
+  bool removeTree(fs::FS& fs, const String& path) {
+    if (!fs.exists(path))
+      return true;
+
+    File node = fs.open(path);
+    if (!node)
+      return false;
+
+    if (!node.isDirectory()) {
+      node.close();
+      return fs.remove(path);
+    }
+
+    File child = node.openNextFile();
+    while (child) {
+      String child_path = child.path();
+      child.close();
+      if (!removeTree(fs, child_path)) {
+        node.close();
+        return false;
+      }
+      child = node.openNextFile();
+    }
+
+    node.close();
+    return fs.rmdir(path);
+  }
+
+  bool copyTree(
+    fs::FS& source,
+    const String& source_path,
+    fs::FS& destination,
+    const String& destination_path,
+    size_t& files_copied,
+    size_t& bytes_copied,
+    String& error
+  ) {
+    File source_node = source.open(source_path);
+    if (!source_node) {
+      error = "Could not open SPIFFS path " + source_path;
+      return false;
+    }
+
+    if (!source_node.isDirectory()) {
+      int slash = destination_path.lastIndexOf('/');
+      if (slash > 0 && !ensureDirectory(destination, destination_path.substring(0, slash))) {
+        source_node.close();
+        error = "Could not create SD backup directory";
+        return false;
+      }
+
+      File destination_file = destination.open(destination_path, FILE_WRITE);
+      if (!destination_file) {
+        source_node.close();
+        error = "Could not create " + destination_path;
+        return false;
+      }
+
+      uint8_t buffer[512];
+      while (source_node.available()) {
+        size_t bytes_read = source_node.read(buffer, sizeof(buffer));
+        if (bytes_read == 0 || destination_file.write(buffer, bytes_read) != bytes_read) {
+          source_node.close();
+          destination_file.close();
+          error = "Failed while copying " + source_path;
+          return false;
+        }
+        bytes_copied += bytes_read;
+      }
+
+      source_node.close();
+      destination_file.close();
+      files_copied++;
+      return true;
+    }
+
+    if (!ensureDirectory(destination, destination_path)) {
+      source_node.close();
+      error = "Could not create " + destination_path;
+      return false;
+    }
+
+    File child = source_node.openNextFile();
+    while (child) {
+      String child_source_path = child.path();
+      String child_name = child_source_path;
+      if (child_name.startsWith(source_path))
+        child_name.remove(0, source_path.length());
+      while (child_name.startsWith("/"))
+        child_name.remove(0, 1);
+      child.close();
+
+      if (!copyTree(
+        source,
+        child_source_path,
+        destination,
+        destination_path + "/" + child_name,
+        files_copied,
+        bytes_copied,
+        error
+      )) {
+        source_node.close();
+        return false;
+      }
+      child = source_node.openNextFile();
+    }
+
+    source_node.close();
+    return true;
+  }
+}
+// GCOVR_EXCL_STOP
+
 #ifdef HAS_C5_SD
   SDInterface::SDInterface(SPIClass* spi, int cs)
     : _spi(spi), _cs(cs) {}
@@ -106,6 +232,49 @@ bool SDInterface::removeFile(String file_path) {
   else
     return false;
 }
+
+// GCOVR_EXCL_START -- requires mounted SPIFFS and SD filesystems.
+bool SDInterface::backupSPIFFS(size_t& files_copied, size_t& bytes_copied, String& error) {
+  files_copied = 0;
+  bytes_copied = 0;
+  error = "";
+
+  if (!this->supported) {
+    error = "SD card not detected";
+    return false;
+  }
+
+  const String backup_path = "/spiffs";
+  const String staging_path = "/spiffs.tmp";
+  const String previous_path = "/spiffs.previous";
+
+  if (!removeTree(SD, staging_path) || !removeTree(SD, previous_path)) {
+    error = "Could not clear old SPIFFS backup data";
+    return false;
+  }
+
+  if (!copyTree(SPIFFS, "/", SD, staging_path, files_copied, bytes_copied, error)) {
+    removeTree(SD, staging_path);
+    return false;
+  }
+
+  if (SD.exists(backup_path) && !SD.rename(backup_path, previous_path)) {
+    removeTree(SD, staging_path);
+    error = "Could not rotate existing SPIFFS backup";
+    return false;
+  }
+
+  if (!SD.rename(staging_path, backup_path)) {
+    if (SD.exists(previous_path))
+      SD.rename(previous_path, backup_path);
+    error = "Could not activate new SPIFFS backup";
+    return false;
+  }
+
+  removeTree(SD, previous_path);
+  return true;
+}
+// GCOVR_EXCL_STOP
 
 void SDInterface::listDirToLinkedList(LinkedList<String>* file_names, String str_dir, String ext) {
   if (this->supported) {
