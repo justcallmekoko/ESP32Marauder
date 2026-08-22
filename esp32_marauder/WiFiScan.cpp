@@ -10748,11 +10748,8 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
       targ_port = 3389;
 
     if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
-      this->advanceScanIP();
-      if (this->current_scan_ip == IPAddress(0, 0, 0, 0)) {
-        return;
-      }
-      if (this->singleARP(this->current_scan_ip)) {
+      if ((this->advanceScanIP() != IPAddress(0, 0, 0, 0)) &&
+          this->singleARP(this->current_scan_ip)) {
         this->portScan(scan_mode, targ_port);
       }
     }
