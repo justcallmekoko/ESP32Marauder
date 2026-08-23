@@ -118,7 +118,7 @@ namespace {
 
     if (!ensureDirectory(destination, destination_path)) {
       source_node.close();
-      error = "Could not create " + destination_path;
+      error = "Could not create destination directory";
       return false;
     }
 
