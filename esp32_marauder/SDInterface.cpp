@@ -3,18 +3,7 @@
 
 // GCOVR_EXCL_START -- requires mounted SPIFFS and SD filesystems.
 namespace {
-  bool ensureDirectory(fs::FS& fs, const String& path) {
-    if (path.length() == 0 || path == "/" || fs.exists(path))
-      return true;
-
-    int slash = path.lastIndexOf('/');
-    if (slash > 0 && !ensureDirectory(fs, path.substring(0, slash)))
-      return false;
-
-    return fs.mkdir(path);
-  }
-
-  bool removeTree(fs::FS& fs, const String& path) {
+  bool removeTree(fs::FS& fs, const String& path, bool keep_root = false) {
     if (!fs.exists(path))
       return true;
 
@@ -39,29 +28,7 @@ namespace {
     }
 
     node.close();
-    return fs.rmdir(path);
-  }
-
-  bool clearDirectoryContents(fs::FS& fs, const String& path) {
-    File directory = fs.open(path);
-    if (!directory || !directory.isDirectory()) {
-      directory.close();
-      return false;
-    }
-
-    File child = directory.openNextFile();
-    while (child) {
-      String child_path = child.path();
-      child.close();
-      if (!removeTree(fs, child_path)) {
-        directory.close();
-        return false;
-      }
-      child = directory.openNextFile();
-    }
-
-    directory.close();
-    return true;
+    return keep_root || fs.rmdir(path);
   }
 
   String joinPath(const String& base, const String& child) {
@@ -85,13 +52,6 @@ namespace {
 
     if (!source_node.isDirectory()) {
       if (destination) {
-        int slash = destination_path.lastIndexOf('/');
-        if (slash > 0 && !ensureDirectory(*destination, destination_path.substring(0, slash))) {
-          source_node.close();
-          error = 3;
-          return false;
-        }
-
         File destination_file = destination->open(destination_path, FILE_WRITE);
         if (!destination_file) {
           source_node.close();
@@ -119,7 +79,8 @@ namespace {
       return true;
     }
 
-    if (destination && !ensureDirectory(*destination, destination_path)) {
+    if (destination && destination_path != "/" &&
+        !destination->exists(destination_path) && !destination->mkdir(destination_path)) {
       source_node.close();
       error = 3;
       return false;
@@ -304,13 +265,13 @@ bool SDInterface::migrateSPIFFS(uint8_t operation, size_t& files_copied, size_t&
       return false;
     }
 
-    bool cleared = clearDirectoryContents(SPIFFS, "/");
+    bool cleared = removeTree(SPIFFS, "/", true);
     if (cleared && copyTree(SD, backup_path, &SPIFFS, "/", files_copied, bytes_copied, error)) {
       removeTree(SD, rollback_path);
       return true;
     }
 
-    clearDirectoryContents(SPIFFS, "/");
+    removeTree(SPIFFS, "/", true);
     size_t recovered_files = 0, recovered_bytes = 0;
     uint8_t recovery_error = 0;
     copyTree(SD, rollback_path, &SPIFFS, "/", recovered_files, recovered_bytes, recovery_error);

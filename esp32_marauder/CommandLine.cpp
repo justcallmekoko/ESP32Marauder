@@ -8,7 +8,8 @@ namespace {
 
     for (size_t i = 0; i < transaction_id.length(); i++) {
       char c = transaction_id.charAt(i);
-      if (!isalnum((unsigned char)c) && c != '-' && c != '_' && c != '.')
+      if (!((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') ||
+            (c >= 'a' && c <= 'z') || c == '-' || c == '_' || c == '.'))
         return false;
     }
     return true;
