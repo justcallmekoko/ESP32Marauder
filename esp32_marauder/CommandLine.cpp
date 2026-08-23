@@ -538,7 +538,7 @@ void CommandLine::runCommand(String input) {
       #endif
     }
     else
-      Serial.println(F("Marauder automation protocol v1: spiffs-backup, spiffs-backup-status, spiffs-restore"));
+      Serial.println(F("v1"));
   }
   else if (cmd_args.get(0) == BACKUP_SPIFFS_CMD ||
            cmd_args.get(0) == BACKUP_STATUS_CMD ||
@@ -566,17 +566,8 @@ void CommandLine::runCommand(String input) {
       if (success) {
         if (machine)
           machineResult(transaction_id, command, "success", "OK", files, bytes, operation == 2);
-        else if (operation == 0)
-          Serial.printf("SPIFFS backup complete: %u files, %u bytes -> /spiffs\n",
-                        (unsigned)files, (unsigned)bytes);
-        else if (operation == 1)
-          Serial.printf("SPIFFS backup ready: %u files, %u bytes in /spiffs\n",
-                        (unsigned)files, (unsigned)bytes);
-        else {
-          Serial.printf("SPIFFS restore complete: %u files, %u bytes\n",
-                        (unsigned)files, (unsigned)bytes);
-          Serial.println(F("Restarting to load restored content..."));
-        }
+        else
+          Serial.println(F("OK"));
         if (operation == 2) {
           delay(1000);
           ESP.restart();
@@ -588,13 +579,8 @@ void CommandLine::runCommand(String input) {
                                  operation == 1 ? "BACKUP_INSPECTION_FAILED" : "RESTORE_FAILED";
           machineResult(transaction_id, command, "error", storageErrorCode(error, fallback));
         }
-        else {
-          Serial.print(operation == 0 ? F("SPIFFS backup failed: ") :
-                       operation == 1 ? F("SPIFFS backup unavailable: ") :
-                                        F("SPIFFS restore failed: "));
-          Serial.println(error == 1 ? F("SD card not detected") :
-                         error == 2 ? F("backup not found") : F("operation failed"));
-        }
+        else
+          Serial.println(F("ERROR"));
       }
     #else
       if (machine)

@@ -256,7 +256,6 @@ bool SDInterface::migrateSPIFFS(uint8_t operation, size_t& files_copied, size_t&
       error = 3;
       return false;
     }
-
     size_t rollback_files = 0, rollback_bytes = 0;
     uint8_t rollback_error = 0;
     if (!copyTree(SPIFFS, "/", &SD, rollback_path, rollback_files, rollback_bytes, rollback_error)) {
@@ -264,13 +263,11 @@ bool SDInterface::migrateSPIFFS(uint8_t operation, size_t& files_copied, size_t&
       error = 3;
       return false;
     }
-
     bool cleared = removeTree(SPIFFS, "/", true);
     if (cleared && copyTree(SD, backup_path, &SPIFFS, "/", files_copied, bytes_copied, error)) {
       removeTree(SD, rollback_path);
       return true;
     }
-
     removeTree(SPIFFS, "/", true);
     size_t recovered_files = 0, recovered_bytes = 0;
     uint8_t recovery_error = 0;
