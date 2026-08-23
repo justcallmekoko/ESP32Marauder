@@ -3501,7 +3501,8 @@ void MenuFunctions::RunSetup()
         if (sd_obj.backupSPIFFS(files_copied, bytes_copied, error)) {
           display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
           display_obj.tft.println("Backup complete");
-          display_obj.tft.println((String)files_copied + " files");
+          display_obj.tft.print(files_copied);
+          display_obj.tft.println(" files");
           display_obj.tft.println("SD:/spiffs");
         }
         else {
@@ -3527,7 +3528,8 @@ void MenuFunctions::RunSetup()
         if (sd_obj.restoreSPIFFS(files_copied, bytes_copied, error)) {
           display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
           display_obj.tft.println("Restore complete");
-          display_obj.tft.println((String)files_copied + " files");
+          display_obj.tft.print(files_copied);
+          display_obj.tft.println(" files");
           display_obj.tft.println("Restarting...");
           delay(1500);
           ESP.restart();
@@ -4713,6 +4715,5 @@ void MenuFunctions::displayCurrentMenu(int start_index)
 #endif
 
 #endif
-
 
 

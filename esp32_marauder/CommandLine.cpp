@@ -5,24 +5,6 @@ namespace {
   const int MARAUDER_PROTOCOL_VERSION = 1;
   const char* MARAUDER_PROTOCOL_PREFIX = "@MARAUDER:";
 
-  String jsonEscape(const String& value) {
-    String escaped;
-    for (size_t i = 0; i < value.length(); i++) {
-      char c = value.charAt(i);
-      if (c == '\\' || c == '"') {
-        escaped += '\\';
-        escaped += c;
-      }
-      else if (c == '\n')
-        escaped += "\\n";
-      else if (c == '\r')
-        escaped += "\\r";
-      else if ((uint8_t)c >= 0x20)
-        escaped += c;
-    }
-    return escaped;
-  }
-
   bool validTransactionId(const String& transaction_id) {
     if (transaction_id.length() == 0 || transaction_id.length() > 40)
       return false;
@@ -37,9 +19,9 @@ namespace {
 
   void machineResult(
     const String& transaction_id,
-    const String& command,
-    const String& status,
-    const String& code,
+    const char* command,
+    const char* status,
+    const char* code,
     size_t files = 0,
     size_t bytes = 0,
     bool rebooting = false
@@ -48,7 +30,7 @@ namespace {
     Serial.print("{\"protocol\":");
     Serial.print(MARAUDER_PROTOCOL_VERSION);
     Serial.print(",\"tx\":\"");
-    Serial.print(jsonEscape(transaction_id));
+    Serial.print(transaction_id);
     Serial.print("\",\"command\":\"");
     Serial.print(command);
     Serial.print("\",\"status\":\"");
@@ -64,7 +46,7 @@ namespace {
     Serial.println("}");
   }
 
-  String storageErrorCode(const String& error, const String& fallback) {
+  const char* storageErrorCode(const String& error, const char* fallback) {
     if (error == "SD card not detected")
       return "SD_NOT_READY";
     if (error == "SD:/spiffs backup not found")
@@ -553,9 +535,9 @@ void CommandLine::runCommand(String input) {
     else if (machine_arg >= 0) {
       Serial.print(MARAUDER_PROTOCOL_PREFIX);
       Serial.print("{\"protocol\":1,\"tx\":\"");
-      Serial.print(jsonEscape(transaction_id));
+      Serial.print(transaction_id);
       Serial.print("\",\"command\":\"protocolinfo\",\"status\":\"success\",\"code\":\"OK\",\"firmware\":\"");
-      Serial.print(jsonEscape(version_number));
+      Serial.print(version_number);
       #ifdef HAS_SD
         Serial.println("\",\"capabilities\":[\"spiffs-backup\",\"spiffs-backup-status\",\"spiffs-restore\"],\"backupPath\":\"/spiffs\"}");
       #else
@@ -584,14 +566,16 @@ void CommandLine::runCommand(String input) {
         if (machine)
           machineResult(transaction_id, BACKUP_SPIFFS_CMD, "success", "OK", files_copied, bytes_copied);
         else
-          Serial.println("SPIFFS backup complete: " + (String)files_copied +
-                         " files, " + (String)bytes_copied + " bytes -> /spiffs");
+          Serial.printf("SPIFFS backup complete: %u files, %u bytes -> /spiffs\n",
+                        (unsigned)files_copied, (unsigned)bytes_copied);
       }
       else {
         if (machine)
           machineResult(transaction_id, BACKUP_SPIFFS_CMD, "error", storageErrorCode(error, "BACKUP_FAILED"));
-        else
-          Serial.println("SPIFFS backup failed: " + error);
+        else {
+          Serial.print(F("SPIFFS backup failed: "));
+          Serial.println(error);
+        }
       }
     #else
       if (machine)
@@ -617,13 +601,15 @@ void CommandLine::runCommand(String input) {
         if (machine)
           machineResult(transaction_id, BACKUP_STATUS_CMD, "success", "OK", files_found, bytes_found);
         else
-          Serial.println("SPIFFS backup ready: " + (String)files_found +
-                         " files, " + (String)bytes_found + " bytes in /spiffs");
+          Serial.printf("SPIFFS backup ready: %u files, %u bytes in /spiffs\n",
+                        (unsigned)files_found, (unsigned)bytes_found);
       }
       else if (machine)
         machineResult(transaction_id, BACKUP_STATUS_CMD, "error", storageErrorCode(error, "BACKUP_INSPECTION_FAILED"));
-      else
-        Serial.println("SPIFFS backup unavailable: " + error);
+      else {
+        Serial.print(F("SPIFFS backup unavailable: "));
+        Serial.println(error);
+      }
     #else
       if (machine)
         machineResult(transaction_id, BACKUP_STATUS_CMD, "error", "SD_NOT_SUPPORTED");
@@ -650,8 +636,8 @@ void CommandLine::runCommand(String input) {
         if (machine)
           machineResult(transaction_id, RESTORE_SPIFFS_CMD, "success", "OK", files_copied, bytes_copied, true);
         else {
-          Serial.println("SPIFFS restore complete: " + (String)files_copied +
-                         " files, " + (String)bytes_copied + " bytes");
+          Serial.printf("SPIFFS restore complete: %u files, %u bytes\n",
+                        (unsigned)files_copied, (unsigned)bytes_copied);
           Serial.println(F("Restarting to load restored content..."));
         }
         delay(1000);
@@ -660,8 +646,10 @@ void CommandLine::runCommand(String input) {
       else {
         if (machine)
           machineResult(transaction_id, RESTORE_SPIFFS_CMD, "error", storageErrorCode(error, "RESTORE_FAILED"));
-        else
-          Serial.println("SPIFFS restore failed: " + error);
+        else {
+          Serial.print(F("SPIFFS restore failed: "));
+          Serial.println(error);
+        }
       }
     #else
       if (machine)
