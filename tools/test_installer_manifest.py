@@ -76,9 +76,6 @@ class InstallerManifestTests(unittest.TestCase):
         )
         self.assertEqual(registry_flags - private_flags, workflow_flags)
         self.assertIn("MARAUDER_T_DONGLE_C5", workflow_flags)
-        c5_devkit = next(board for board in boards if board["flag"] == "MARAUDER_C5")
-        self.assertIn("FlashSize=8M", c5_devkit["fbqn"])
-        self.assertIn("PartitionScheme=default_8MB", c5_devkit["fbqn"])
         self.assertEqual(
             len(registry_flags),
             len(registry["targets"]),

@@ -2093,7 +2093,7 @@ void WiFiScan::setNetworkInfo() {
   this->subnet = WiFi.subnetMask();
 }
 
-void WiFiScan::showNetworkInfo(bool show_display) { // GCOVR_EXCL_LINE -- host tests have no TFT.
+void WiFiScan::showNetworkInfo() {
   Serial.print(F("IP address: "));
   Serial.println(this->ip_addr);
   Serial.print(F("Gateway: "));
@@ -2104,7 +2104,6 @@ void WiFiScan::showNetworkInfo(bool show_display) { // GCOVR_EXCL_LINE -- host t
   Serial.println(WiFi.macAddress());
 
   #ifdef HAS_SCREEN
-  if (show_display) { // GCOVR_EXCL_LINE
     display_obj.tft.println("\nConnected!");
     display_obj.tft.print("IP address: ");
     display_obj.tft.println(this->ip_addr);
@@ -2116,52 +2115,8 @@ void WiFiScan::showNetworkInfo(bool show_display) { // GCOVR_EXCL_LINE -- host t
     display_obj.tft.println(WiFi.macAddress());
     display_obj.tft.println("Returning...");
     delay(2000);
-  } // GCOVR_EXCL_LINE
   #endif
 }
-
-// GCOVR_EXCL_START -- scanner presentation requires the hardware TFT renderer.
-void WiFiScan::resetNetworkScanDisplay(const String& target_line, const String& status_line) {
-  this->network_scan_result_count = 0;
-
-  #ifdef HAS_SCREEN
-    // Scanner output uses the shared scrolling renderer. Reset its retained
-    // rows and the TFT content so connection-dialog text cannot leak through.
-    display_obj.display_buffer->clear();
-    #ifdef SCREEN_BUFFER
-      display_obj.screen_buffer->clear();
-    #endif
-    uint16_t content_top = TFT_HEIGHT / 6;
-    #ifdef HAS_TOUCH
-      content_top = (TFT_HEIGHT / 6) * 1.3;
-    #endif
-    #ifdef MARAUDER_PANCAKE
-      content_top = display_obj.TOP_FIXED_AREA_2;
-    #endif
-    display_obj.tft.fillRect(0, content_top, TFT_WIDTH, TFT_HEIGHT - content_top, TFT_BLACK);
-    display_obj.tft.setFreeFont(NULL);
-    display_obj.tft.setTextSize(1);
-    display_obj.tft.setTextWrap(false);
-    display_obj.display_buffer->add(String(WHITE_KEY) + target_line);
-    display_obj.display_buffer->add(String(CYAN_KEY) + status_line);
-  #endif
-}
-
-void WiFiScan::addNetworkScanDisplayResult(const String& result_line) {
-  this->network_scan_result_count++;
-  #ifdef HAS_SCREEN
-    display_obj.display_buffer->add(String(GREEN_KEY) + result_line);
-  #endif
-}
-
-void WiFiScan::finishNetworkScanDisplay(const String& result_label) {
-  #ifdef HAS_SCREEN
-    display_obj.display_buffer->add(
-      String(CYAN_KEY) + "Done - " + String(this->network_scan_result_count) + " " + result_label
-    );
-  #endif
-}
-// GCOVR_EXCL_STOP
 
 bool WiFiScan::joinWiFi(String ssid, String password, bool gui) {
   static const char * btns[] ={text16, ""};
@@ -3408,21 +3363,14 @@ void WiFiScan::RunPingScan(uint8_t scan_mode, uint16_t color) {
     #endif
     this->prepareScanStage(TFT_RED, TFT_BLACK);
   #endif
-  this->current_scan_ip = getNetworkIP(this->ip_addr, this->subnet);
-  this->last_scan_ip = IPAddress(0, 0, 0, 0);
+  this->current_scan_ip = this->gateway;
   //Serial.print(F("Cleared IPs: "));
   this->clearList(CLEAR_IPS);
   if (scan_mode == WIFI_PING_SCAN)
     Serial.println(F("Starting Ping Scan with..."));
   else if (scan_mode == WIFI_ARP_SCAN)
     Serial.println(F("Starting ARP Scan with..."));
-  // GCOVR_EXCL_START -- scanner presentation requires the hardware TFT renderer.
-  this->showNetworkInfo(false);
-  this->resetNetworkScanDisplay(
-    String("Local ") + this->ip_addr.toString(),
-    scan_mode == WIFI_PING_SCAN ? "Scanning live hosts..." : "Scanning ARP neighbors..."
-  );
-  // GCOVR_EXCL_STOP
+  this->showNetworkInfo();
 
   if (scan_mode == WIFI_PING_SCAN)
     buffer_obj.append(F("Starting Ping Scan with..."));
@@ -3494,34 +3442,11 @@ void WiFiScan::RunPortScanAll(uint8_t scan_mode, uint16_t color) {
       (scan_mode == WIFI_SCAN_DNS) ||
       (scan_mode == WIFI_SCAN_HTTP) ||
       (scan_mode == WIFI_SCAN_HTTPS) ||
-      (scan_mode == WIFI_SCAN_RDP)) {
-    this->current_scan_ip = getNetworkIP(this->ip_addr, this->subnet);
-    this->last_scan_ip = IPAddress(0, 0, 0, 0);
-  }
+      (scan_mode == WIFI_SCAN_RDP))
+    this->current_scan_ip = this->gateway;
 
   Serial.println(F("Starting Port Scan with..."));
-  // GCOVR_EXCL_START -- scanner presentation requires the hardware TFT renderer.
-  this->showNetworkInfo(false);
-
-  String scan_target;
-  String scan_status;
-  if (scan_mode == WIFI_PORT_SCAN_ALL) {
-    scan_target = String("Target ") + this->current_scan_ip.toString();
-    scan_status = "Scanning ports 1-65535...";
-  }
-  else {
-    const uint16_t service_port =
-      scan_mode == WIFI_SCAN_SSH ? 22 :
-      scan_mode == WIFI_SCAN_TELNET ? 23 :
-      scan_mode == WIFI_SCAN_SMTP ? 25 :
-      scan_mode == WIFI_SCAN_DNS ? 53 :
-      scan_mode == WIFI_SCAN_HTTP ? 80 :
-      scan_mode == WIFI_SCAN_HTTPS ? 443 : 3389;
-    scan_target = String("Local ") + this->ip_addr.toString();
-    scan_status = String("Scanning service port ") + String(service_port) + "...";
-  }
-  this->resetNetworkScanDisplay(scan_target, scan_status);
-  // GCOVR_EXCL_STOP
+  this->showNetworkInfo();
 
   buffer_obj.append(F("Starting Port Scan with..."));
   this->writeNetworkInfo();
@@ -10543,77 +10468,40 @@ bool WiFiScan::checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout) {
   return false;
 }
 
-IPAddress WiFiScan::advanceScanIP() {
-  do {
-    this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
-  } while ((this->current_scan_ip != IPAddress(0, 0, 0, 0)) &&
-           (this->current_scan_ip == this->ip_addr));
-
-  if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
-    this->last_scan_ip = this->current_scan_ip;
-  }
-  return this->current_scan_ip;
-}
-
-// GCOVR_EXCL_START -- ARP discovery requires a live lwIP station interface.
-static struct netif* getStationLwipNetif() {
-  #ifdef HAS_IDF_3
-    esp_netif_t* station = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
-    if (station == nullptr)
-      return nullptr;
-
-    return static_cast<struct netif*>(esp_netif_get_netif_impl(station));
-  #else
-    void* station = nullptr;
-    if (tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &station) != ESP_OK)
-      return nullptr;
-
-    return static_cast<struct netif*>(station);
-  #endif
-}
-
-static bool findStationARP(struct netif* station, const ip4_addr_t* ip) {
-  const ip4_addr_t* resolved_ip = nullptr;
-  struct eth_addr* resolved_mac = nullptr;
-
-  #ifdef HAS_IDF_3
-    LOCK_TCPIP_CORE();
-  #endif
-  const bool found = etharp_find_addr(station, ip, &resolved_mac, &resolved_ip) >= 0;
-  #ifdef HAS_IDF_3
-    UNLOCK_TCPIP_CORE();
-  #endif
-
-  return found;
-}
-
-static err_t requestStationARP(struct netif* station, const ip4_addr_t* ip) {
-  #ifdef HAS_IDF_3
-    LOCK_TCPIP_CORE();
-  #endif
-  const err_t result = etharp_request(station, ip);
-  #ifdef HAS_IDF_3
-    UNLOCK_TCPIP_CORE();
-  #endif
-
-  return result;
-}
-
+#ifndef HAS_IDF_3
   bool WiFiScan::readARP(IPAddress targ_ip) {
+    // Convert IPAddress to ip4_addr_t using IP4_ADDR
     ip4_addr_t test_ip;
     IP4_ADDR(&test_ip, targ_ip[0], targ_ip[1], targ_ip[2], targ_ip[3]);
 
-    struct netif* netif_interface = getStationLwipNetif();
-    if (netif_interface == nullptr)
-      return false;
+    // Get the netif interface for STA mode
+    //void* netif = NULL;
+    //tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
+    //struct netif* netif_interface = (struct netif*)netif;
 
-    return findStationARP(netif_interface, &test_ip);
+    const ip4_addr_t* ipaddr_ret = NULL;
+    struct eth_addr* eth_ret = NULL;
+
+    // Use actual interface instead of NULL
+    if (etharp_find_addr(NULL, &test_ip, &eth_ret, &ipaddr_ret) >= 0) {
+      return true;
+    }
+
+    return false;
   }
 
   bool WiFiScan::singleARP(IPAddress ip_addr) {
-    struct netif* netif_interface = getStationLwipNetif();
-    if (netif_interface == nullptr)
-      return false;
+
+    #ifndef HAS_IDF_3
+      void* netif = NULL;
+      tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
+      struct netif* netif_interface = (struct netif*)netif;
+    #else
+      struct netif* netif_interface = (struct netif*)esp_netif_get_netif_impl(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"));
+      //esp_netif_t* netif_interface = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+      //struct netif* netif_interface = (struct netif*)netif;
+      //struct netif* netif_interface = esp_netif_get_netif_impl(*netif);
+    #endif
 
     ip4_addr_t lwip_ip;
     IP4_ADDR(&lwip_ip,
@@ -10622,7 +10510,7 @@ static err_t requestStationARP(struct netif* station, const ip4_addr_t* ip) {
               ip_addr[2],
               ip_addr[3]);
 
-    requestStationARP(netif_interface, &lwip_ip);
+    etharp_request(netif_interface, &lwip_ip);
 
     delay(250);
 
@@ -10636,14 +10524,20 @@ static err_t requestStationARP(struct netif* station, const ip4_addr_t* ip) {
     String display_string = "";
     String output_line = "";
 
-    struct netif* netif_interface = getStationLwipNetif();
-    if (netif_interface == nullptr)
-      return;
+    #ifndef HAS_IDF_3
+      void* netif = NULL;
+      tcpip_adapter_get_netif(TCPIP_ADAPTER_IF_STA, &netif);
+      struct netif* netif_interface = (struct netif*)netif;
+    #else
+      struct netif* netif_interface = (struct netif*)esp_netif_get_netif_impl(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"));
+      //esp_netif_t* netif_interface = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+      //struct netif* netif_interface = (struct netif*)netif;
+      //struct netif* netif_interface = esp_netif_get_netif_impl(*netif);
+    #endif
 
     //this->arp_count = 0;
 
-    if (this->current_scan_ip != IPAddress(0, 0, 0, 0) &&
-        this->advanceScanIP() != IPAddress(0, 0, 0, 0)) {
+    if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
       ip4_addr_t lwip_ip;
       IP4_ADDR(&lwip_ip,
               this->current_scan_ip[0],
@@ -10651,9 +10545,11 @@ static err_t requestStationARP(struct netif* station, const ip4_addr_t* ip) {
               this->current_scan_ip[2],
               this->current_scan_ip[3]);
 
-      requestStationARP(netif_interface, &lwip_ip);
+      etharp_request(netif_interface, &lwip_ip);
 
       delay(100);
+
+      this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
 
       this->arp_count++;
 
@@ -10662,7 +10558,7 @@ static err_t requestStationARP(struct netif* station, const ip4_addr_t* ip) {
 
         this->arp_count = 0;
 
-        for (int i = 9; i >= 0; i--) {
+        for (int i = 10; i > 0; i--) {
           IPAddress check_ip = getPrevIP(this->current_scan_ip, this->subnet, i);
           display_string = "";
           output_line = "";
@@ -10690,7 +10586,7 @@ static err_t requestStationARP(struct netif* station, const ip4_addr_t* ip) {
       for (int i = this->arp_count; i > 0; i--) {
         delay(250);
 
-        IPAddress check_ip = getPrevIP(this->last_scan_ip, this->subnet, i - 1);
+        IPAddress check_ip = getPrevIP(this->current_scan_ip, this->subnet, i);
         display_string = "";
         output_line = "";
         if (this->readARP(check_ip)) {
@@ -10718,21 +10614,29 @@ static err_t requestStationARP(struct netif* station, const ip4_addr_t* ip) {
       }
     }
   }
-// GCOVR_EXCL_STOP
+#endif
 
 void WiFiScan::pingScan(uint8_t scan_mode) {
+  String display_string = "";
   String output_line = "";
 
   if (scan_mode == WIFI_PING_SCAN) {
     if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
-      this->advanceScanIP();
+      this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
       
       // Check if IP is alive
-      if ((this->current_scan_ip != IPAddress(0, 0, 0, 0)) &&
-          this->isHostAlive(this->current_scan_ip)) {
+      if (this->isHostAlive(this->current_scan_ip)) {
         output_line = this->current_scan_ip.toString();
+        display_string.concat(output_line);
+        uint8_t temp_len = display_string.length();
+        for (uint8_t i = 0; i < 40 - temp_len; i++)
+        {
+          display_string.concat(" ");
+        }
         ipList->add(this->current_scan_ip);
-        this->addNetworkScanDisplayResult(String("UP ") + output_line); // GCOVR_EXCL_LINE
+        #ifdef HAS_SCREEN
+          display_obj.display_buffer->add(display_string);
+        #endif
         buffer_obj.append(output_line + "\n");
         Serial.println(output_line);
       }
@@ -10740,7 +10644,9 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
     else {
       if (!this->scan_complete) {
         this->scan_complete = true;
-        this->finishNetworkScanDisplay("hosts up"); // GCOVR_EXCL_LINE
+        #ifdef HAS_SCREEN
+          display_obj.display_buffer->add("Scan complete");
+        #endif
       }
     }
   }
@@ -10761,13 +10667,13 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
     else if (scan_mode == WIFI_SCAN_RDP)
       targ_port = 3389;
 
-    // GCOVR_EXCL_START -- service discovery requires a live lwIP station interface.
     if (this->current_scan_ip != IPAddress(0, 0, 0, 0)) {
-      this->advanceScanIP();
-      if (this->current_scan_ip == IPAddress(0, 0, 0, 0)) {
-        return;
-      }
-      if (this->singleARP(this->current_scan_ip)) {
+      this->current_scan_ip = getNextIP(this->current_scan_ip, this->subnet);
+      #ifndef HAS_IDF_3
+        if (this->singleARP(this->current_scan_ip)) {
+      #else
+        if (this->isHostAlive(this->current_scan_ip)) {
+      #endif
         Serial.println(this->current_scan_ip);
         this->portScan(scan_mode, targ_port);
       }
@@ -10775,14 +10681,16 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
     else {
       if (!this->scan_complete) {
         this->scan_complete = true;
-        this->finishNetworkScanDisplay("hosts open"); // GCOVR_EXCL_LINE
+        #ifdef HAS_SCREEN
+          display_obj.display_buffer->add("Scan complete");
+        #endif
       }
     }
-    // GCOVR_EXCL_STOP
   }
 }
 
 void WiFiScan::portScan(uint8_t scan_mode, uint16_t targ_port) {
+  String display_string = "";
   if (scan_mode == WIFI_PORT_SCAN_ALL) {
     if (this->current_scan_port < MAX_PORT) {
       this->current_scan_port = getNextPort(this->current_scan_port);
@@ -10794,7 +10702,15 @@ void WiFiScan::portScan(uint8_t scan_mode, uint16_t targ_port) {
       }
       if (this->checkHostPort(this->current_scan_ip, this->current_scan_port, 100)) {
         String output_line = this->current_scan_ip.toString() + ": " + (String)this->current_scan_port;
-        this->addNetworkScanDisplayResult(String("OPEN ") + output_line); // GCOVR_EXCL_LINE
+        display_string.concat(output_line);
+        uint8_t temp_len = display_string.length();
+        for (uint8_t i = 0; i < 40 - temp_len; i++)
+        {
+          display_string.concat(" ");
+        }
+        #ifdef HAS_SCREEN
+          display_obj.display_buffer->add(display_string);
+        #endif
         Serial.println(output_line);
         buffer_obj.append(output_line + "\n");
       }
@@ -10802,7 +10718,9 @@ void WiFiScan::portScan(uint8_t scan_mode, uint16_t targ_port) {
     else {
       if (!this->scan_complete) {
         this->scan_complete = true;
-        this->finishNetworkScanDisplay("ports open"); // GCOVR_EXCL_LINE
+        #ifdef HAS_SCREEN
+          display_obj.display_buffer->add("Scan complete");
+        #endif
       }
     }
   }
@@ -10810,7 +10728,15 @@ void WiFiScan::portScan(uint8_t scan_mode, uint16_t targ_port) {
   else {
     if (this->checkHostPort(this->current_scan_ip, targ_port, 100)) {
       String output_line = this->current_scan_ip.toString() + ": " + (String)targ_port;
-      this->addNetworkScanDisplayResult(String("OPEN ") + output_line); // GCOVR_EXCL_LINE
+      display_string.concat(output_line);
+      uint8_t temp_len = display_string.length();
+      for (uint8_t i = 0; i < 40 - temp_len; i++)
+      {
+        display_string.concat(" ");
+      }
+      #ifdef HAS_SCREEN
+        display_obj.display_buffer->add(display_string);
+      #endif
       Serial.println(output_line);
       buffer_obj.append(output_line + "\n");
     }
@@ -11733,7 +11659,9 @@ void WiFiScan::main(uint32_t currentTime)
     this->pingScan();
   }
   else if (currentScanMode == WIFI_ARP_SCAN) {
-    this->fullARP(); // GCOVR_EXCL_LINE -- requires a live lwIP station interface.
+    #ifndef HAS_IDF_3
+      this->fullARP();
+    #endif
   }
   else if (currentScanMode == WIFI_PORT_SCAN_ALL) {
     this->portScan(WIFI_PORT_SCAN_ALL);
