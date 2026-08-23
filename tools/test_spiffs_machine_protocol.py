@@ -13,8 +13,7 @@ class SpiffsMachineProtocolTests(unittest.TestCase):
 
         self.assertIn('PROTOCOL_INFO_CMD[] = "protocolinfo"', header)
         self.assertIn('BACKUP_STATUS_CMD[] = "backupstatus"', header)
-        self.assertIn('MARAUDER_PROTOCOL_PREFIX = "@MARAUDER:"', source)
-        self.assertIn("MARAUDER_PROTOCOL_VERSION = 1", source)
+        self.assertIn('@MARAUDER:{\\"protocol\\":1', source)
         self.assertIn('this->argSearch(&cmd_args, "--machine")', source)
         self.assertIn('"INVALID_TRANSACTION"', source)
         self.assertIn('"SD_NOT_SUPPORTED"', source)
@@ -35,7 +34,7 @@ class SpiffsMachineProtocolTests(unittest.TestCase):
             r"bool SDInterface::inspectSPIFFSBackup\(.*?\n\}", source, re.S
         ).group(0)
         self.assertIn('SD.open("/spiffs")', method)
-        self.assertIn('measureTree(SD, "/spiffs"', method)
+        self.assertIn('copyTree(SD, "/spiffs", nullptr', method)
 
 
 if __name__ == "__main__":

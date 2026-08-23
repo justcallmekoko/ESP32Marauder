@@ -71,7 +71,7 @@ namespace {
   bool copyTree(
     fs::FS& source,
     const String& source_path,
-    fs::FS& destination,
+    fs::FS* destination,
     const String& destination_path,
     size_t& files_copied,
     size_t& bytes_copied,
@@ -84,39 +84,42 @@ namespace {
     }
 
     if (!source_node.isDirectory()) {
-      int slash = destination_path.lastIndexOf('/');
-      if (slash > 0 && !ensureDirectory(destination, destination_path.substring(0, slash))) {
-        source_node.close();
-        error = "Could not create destination directory";
-        return false;
-      }
-
-      File destination_file = destination.open(destination_path, FILE_WRITE);
-      if (!destination_file) {
-        source_node.close();
-        error = "Could not create destination file";
-        return false;
-      }
-
-      uint8_t buffer[512];
-      while (source_node.available()) {
-        size_t bytes_read = source_node.read(buffer, sizeof(buffer));
-        if (bytes_read == 0 || destination_file.write(buffer, bytes_read) != bytes_read) {
+      if (destination) {
+        int slash = destination_path.lastIndexOf('/');
+        if (slash > 0 && !ensureDirectory(*destination, destination_path.substring(0, slash))) {
           source_node.close();
-          destination_file.close();
-          error = "Failed while copying file";
+          error = "Could not create destination directory";
           return false;
         }
-        bytes_copied += bytes_read;
-      }
 
+        File destination_file = destination->open(destination_path, FILE_WRITE);
+        if (!destination_file) {
+          source_node.close();
+          error = "Could not create destination file";
+          return false;
+        }
+
+        uint8_t buffer[512];
+        while (source_node.available()) {
+          size_t bytes_read = source_node.read(buffer, sizeof(buffer));
+          if (bytes_read == 0 || destination_file.write(buffer, bytes_read) != bytes_read) {
+            source_node.close();
+            destination_file.close();
+            error = "Failed while copying file";
+            return false;
+          }
+          bytes_copied += bytes_read;
+        }
+        destination_file.close();
+      }
+      else
+        bytes_copied += source_node.size();
       source_node.close();
-      destination_file.close();
       files_copied++;
       return true;
     }
 
-    if (!ensureDirectory(destination, destination_path)) {
+    if (destination && !ensureDirectory(*destination, destination_path)) {
       source_node.close();
       error = "Could not create destination directory";
       return false;
@@ -151,40 +154,6 @@ namespace {
     return true;
   }
 
-  bool measureTree(
-    fs::FS& fs,
-    const String& path,
-    size_t& files_found,
-    size_t& bytes_found,
-    const char*& error
-  ) {
-    File node = fs.open(path);
-    if (!node) {
-      error = "Could not open backup path";
-      return false;
-    }
-
-    if (!node.isDirectory()) {
-      bytes_found += node.size();
-      files_found++;
-      node.close();
-      return true;
-    }
-
-    File child = node.openNextFile();
-    while (child) {
-      String child_path = child.path();
-      child.close();
-      if (!measureTree(fs, child_path, files_found, bytes_found, error)) {
-        node.close();
-        return false;
-      }
-      child = node.openNextFile();
-    }
-
-    node.close();
-    return true;
-  }
 }
 // GCOVR_EXCL_STOP
 
@@ -314,7 +283,7 @@ bool SDInterface::backupSPIFFS(size_t& files_copied, size_t& bytes_copied, const
     return false;
   }
 
-  if (!copyTree(SPIFFS, "/", SD, staging_path, files_copied, bytes_copied, error)) {
+  if (!copyTree(SPIFFS, "/", &SD, staging_path, files_copied, bytes_copied, error)) {
     removeTree(SD, staging_path);
     return false;
   }
@@ -354,7 +323,7 @@ bool SDInterface::inspectSPIFFSBackup(size_t& files_found, size_t& bytes_found, 
     return false;
   }
 
-  return measureTree(SD, "/spiffs", files_found, bytes_found, error);
+  return copyTree(SD, "/spiffs", nullptr, "", files_found, bytes_found, error);
 }
 
 bool SDInterface::restoreSPIFFS(size_t& files_copied, size_t& bytes_copied, const char*& error) {
@@ -385,14 +354,14 @@ bool SDInterface::restoreSPIFFS(size_t& files_copied, size_t& bytes_copied, cons
   size_t rollback_files = 0;
   size_t rollback_bytes = 0;
   const char* rollback_error = nullptr;
-  if (!copyTree(SPIFFS, "/", SD, rollback_path, rollback_files, rollback_bytes, rollback_error)) {
+  if (!copyTree(SPIFFS, "/", &SD, rollback_path, rollback_files, rollback_bytes, rollback_error)) {
     removeTree(SD, rollback_path);
     error = rollback_error ? rollback_error : "Could not preserve current SPIFFS";
     return false;
   }
 
   bool cleared = clearDirectoryContents(SPIFFS, "/");
-  if (cleared && copyTree(SD, backup_path, SPIFFS, "/", files_copied, bytes_copied, error)) {
+  if (cleared && copyTree(SD, backup_path, &SPIFFS, "/", files_copied, bytes_copied, error)) {
     removeTree(SD, rollback_path);
     return true;
   }
@@ -403,7 +372,7 @@ bool SDInterface::restoreSPIFFS(size_t& files_copied, size_t& bytes_copied, cons
   size_t recovered_files = 0;
   size_t recovered_bytes = 0;
   const char* recovery_error = nullptr;
-  if (copyTree(SD, rollback_path, SPIFFS, "/", recovered_files, recovered_bytes, recovery_error)) {
+  if (copyTree(SD, rollback_path, &SPIFFS, "/", recovered_files, recovered_bytes, recovery_error)) {
     removeTree(SD, rollback_path);
     error = "Restore failed; original SPIFFS recovered";
   }

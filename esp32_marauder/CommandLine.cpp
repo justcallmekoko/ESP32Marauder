@@ -2,9 +2,6 @@
 
 // GCOVR_EXCL_START -- serial protocol output depends on Arduino Serial.
 namespace {
-  const int MARAUDER_PROTOCOL_VERSION = 1;
-  const char* MARAUDER_PROTOCOL_PREFIX = "@MARAUDER:";
-
   bool validTransactionId(const String& transaction_id) {
     if (transaction_id.length() == 0 || transaction_id.length() > 40)
       return false;
@@ -26,24 +23,13 @@ namespace {
     size_t bytes = 0,
     bool rebooting = false
   ) {
-    Serial.print(MARAUDER_PROTOCOL_PREFIX);
-    Serial.print("{\"protocol\":");
-    Serial.print(MARAUDER_PROTOCOL_VERSION);
-    Serial.print(",\"tx\":\"");
-    Serial.print(transaction_id);
-    Serial.print("\",\"command\":\"");
-    Serial.print(command);
-    Serial.print("\",\"status\":\"");
-    Serial.print(status);
-    Serial.print("\",\"code\":\"");
-    Serial.print(code);
-    Serial.print("\",\"files\":");
-    Serial.print(files);
-    Serial.print(",\"bytes\":");
-    Serial.print(bytes);
-    Serial.print(",\"rebooting\":");
-    Serial.print(rebooting ? "true" : "false");
-    Serial.println("}");
+    Serial.printf(
+      "@MARAUDER:{\"protocol\":1,\"tx\":\"%s\",\"command\":\"%s\","
+      "\"status\":\"%s\",\"code\":\"%s\",\"files\":%u,\"bytes\":%u,"
+      "\"rebooting\":%s}\n",
+      transaction_id.c_str(), command, status, code,
+      (unsigned)files, (unsigned)bytes, rebooting ? "true" : "false"
+    );
   }
 
   const char* storageErrorCode(const char* error, const char* fallback) {
@@ -533,15 +519,21 @@ void CommandLine::runCommand(String input) {
     if (machine_arg >= 0 && !validTransactionId(transaction_id))
       machineResult(transaction_id, PROTOCOL_INFO_CMD, "error", "INVALID_TRANSACTION");
     else if (machine_arg >= 0) {
-      Serial.print(MARAUDER_PROTOCOL_PREFIX);
-      Serial.print("{\"protocol\":1,\"tx\":\"");
-      Serial.print(transaction_id);
-      Serial.print("\",\"command\":\"protocolinfo\",\"status\":\"success\",\"code\":\"OK\",\"firmware\":\"");
-      Serial.print(version_number);
       #ifdef HAS_SD
-        Serial.println("\",\"capabilities\":[\"spiffs-backup\",\"spiffs-backup-status\",\"spiffs-restore\"],\"backupPath\":\"/spiffs\"}");
+        Serial.printf(
+          "@MARAUDER:{\"protocol\":1,\"tx\":\"%s\",\"command\":\"protocolinfo\","
+          "\"status\":\"success\",\"code\":\"OK\",\"firmware\":\"%s\","
+          "\"capabilities\":[\"spiffs-backup\",\"spiffs-backup-status\","
+          "\"spiffs-restore\"],\"backupPath\":\"/spiffs\"}\n",
+          transaction_id.c_str(), version_number.c_str()
+        );
       #else
-        Serial.println("\",\"capabilities\":[]}");
+        Serial.printf(
+          "@MARAUDER:{\"protocol\":1,\"tx\":\"%s\",\"command\":\"protocolinfo\","
+          "\"status\":\"success\",\"code\":\"OK\",\"firmware\":\"%s\","
+          "\"capabilities\":[]}\n",
+          transaction_id.c_str(), version_number.c_str()
+        );
       #endif
     }
     else
