@@ -556,8 +556,6 @@ void CommandLine::runCommand(String input) {
       Serial.print(jsonEscape(transaction_id));
       Serial.print("\",\"command\":\"protocolinfo\",\"status\":\"success\",\"code\":\"OK\",\"firmware\":\"");
       Serial.print(jsonEscape(version_number));
-      Serial.print("\",\"board\":\"");
-      Serial.print(jsonEscape(board_target));
       #ifdef HAS_SD
         Serial.println("\",\"capabilities\":[\"spiffs-backup\",\"spiffs-backup-status\",\"spiffs-restore\"],\"backupPath\":\"/spiffs\"}");
       #else
