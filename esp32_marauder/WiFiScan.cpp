@@ -2683,12 +2683,14 @@ bool WiFiScan::shutdownBLE() {
       this->ble_initialized = false;
     }
     else {
+      // GCOVR_EXCL_START -- LED control is hardware-only; no host coverage.
       // Advertising-only attacks (e.g. Apple Juice) init and deinit NimBLE
       // every cycle and never set ble_initialized, but their mode LED was
       // lit when the attack started. Always clear it when the mode stops.
       this->setLEDMode(MODE_OFF);
 
       return false;
+      // GCOVR_EXCL_STOP
     }
 
     this->setLEDMode(MODE_OFF);
