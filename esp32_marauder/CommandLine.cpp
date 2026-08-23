@@ -1,5 +1,79 @@
 #include "CommandLine.h"
 
+// GCOVR_EXCL_START -- serial protocol output depends on Arduino Serial.
+namespace {
+  const int MARAUDER_PROTOCOL_VERSION = 1;
+  const char* MARAUDER_PROTOCOL_PREFIX = "@MARAUDER:";
+
+  String jsonEscape(const String& value) {
+    String escaped;
+    for (size_t i = 0; i < value.length(); i++) {
+      char c = value.charAt(i);
+      if (c == '\\' || c == '"') {
+        escaped += '\\';
+        escaped += c;
+      }
+      else if (c == '\n')
+        escaped += "\\n";
+      else if (c == '\r')
+        escaped += "\\r";
+      else if ((uint8_t)c >= 0x20)
+        escaped += c;
+    }
+    return escaped;
+  }
+
+  bool validTransactionId(const String& transaction_id) {
+    if (transaction_id.length() == 0 || transaction_id.length() > 40)
+      return false;
+
+    for (size_t i = 0; i < transaction_id.length(); i++) {
+      char c = transaction_id.charAt(i);
+      if (!isalnum((unsigned char)c) && c != '-' && c != '_' && c != '.')
+        return false;
+    }
+    return true;
+  }
+
+  void machineResult(
+    const String& transaction_id,
+    const String& command,
+    const String& status,
+    const String& code,
+    size_t files = 0,
+    size_t bytes = 0,
+    bool rebooting = false
+  ) {
+    Serial.print(MARAUDER_PROTOCOL_PREFIX);
+    Serial.print("{\"protocol\":");
+    Serial.print(MARAUDER_PROTOCOL_VERSION);
+    Serial.print(",\"tx\":\"");
+    Serial.print(jsonEscape(transaction_id));
+    Serial.print("\",\"command\":\"");
+    Serial.print(command);
+    Serial.print("\",\"status\":\"");
+    Serial.print(status);
+    Serial.print("\",\"code\":\"");
+    Serial.print(code);
+    Serial.print("\",\"files\":");
+    Serial.print(files);
+    Serial.print(",\"bytes\":");
+    Serial.print(bytes);
+    Serial.print(",\"rebooting\":");
+    Serial.print(rebooting ? "true" : "false");
+    Serial.println("}");
+  }
+
+  String storageErrorCode(const String& error, const String& fallback) {
+    if (error == "SD card not detected")
+      return "SD_NOT_READY";
+    if (error == "SD:/spiffs backup not found")
+      return "BACKUP_NOT_FOUND";
+    return fallback;
+  }
+}
+// GCOVR_EXCL_STOP
+
 // Brightness functions defined in esp32_marauder.ino
 #ifndef HAS_MINI_SCREEN
   extern void brightnessCycle();
@@ -231,9 +305,11 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_REBOOT_CMD);
     Serial.println(HELP_UPDATE_CMD_A);
     Serial.println(HELP_LS_CMD);
+    Serial.println(HELP_PROTOCOL_INFO_CMD);
     // GCOVR_EXCL_START -- hardware-only command help entry.
     #ifdef HAS_SD
       Serial.println(HELP_BACKUP_SPIFFS_CMD);
+      Serial.println(HELP_BACKUP_STATUS_CMD);
       Serial.println(HELP_RESTORE_SPIFFS_CMD);
     #endif
     // GCOVR_EXCL_STOP
@@ -468,39 +544,132 @@ void CommandLine::runCommand(String input) {
     #endif
   }
   // GCOVR_EXCL_START -- requires mounted SPIFFS and SD filesystems.
+  else if (cmd_args.get(0) == PROTOCOL_INFO_CMD) {
+    int machine_arg = this->argSearch(&cmd_args, "--machine");
+    String transaction_id = machine_arg >= 0 && machine_arg + 1 < cmd_args.size()
+      ? cmd_args.get(machine_arg + 1) : "";
+    if (machine_arg >= 0 && !validTransactionId(transaction_id))
+      machineResult(transaction_id, PROTOCOL_INFO_CMD, "error", "INVALID_TRANSACTION");
+    else if (machine_arg >= 0) {
+      Serial.print(MARAUDER_PROTOCOL_PREFIX);
+      Serial.print("{\"protocol\":1,\"tx\":\"");
+      Serial.print(jsonEscape(transaction_id));
+      Serial.print("\",\"command\":\"protocolinfo\",\"status\":\"success\",\"code\":\"OK\",\"firmware\":\"");
+      Serial.print(jsonEscape(version_number));
+      Serial.print("\",\"board\":\"");
+      Serial.print(jsonEscape(board_target));
+      #ifdef HAS_SD
+        Serial.println("\",\"capabilities\":[\"spiffs-backup\",\"spiffs-backup-status\",\"spiffs-restore\"],\"backupPath\":\"/spiffs\"}");
+      #else
+        Serial.println("\",\"capabilities\":[]}");
+      #endif
+    }
+    else
+      Serial.println(F("Marauder automation protocol v1: spiffs-backup, spiffs-backup-status, spiffs-restore"));
+  }
   else if (cmd_args.get(0) == BACKUP_SPIFFS_CMD) {
+    int machine_arg = this->argSearch(&cmd_args, "--machine");
+    String transaction_id = machine_arg >= 0 && machine_arg + 1 < cmd_args.size()
+      ? cmd_args.get(machine_arg + 1) : "";
+    bool machine = machine_arg >= 0;
+    if (machine && !validTransactionId(transaction_id)) {
+      machineResult(transaction_id, BACKUP_SPIFFS_CMD, "error", "INVALID_TRANSACTION");
+      return;
+    }
     #ifdef HAS_SD
       size_t files_copied = 0;
       size_t bytes_copied = 0;
       String error;
+      if (machine)
+        machineResult(transaction_id, BACKUP_SPIFFS_CMD, "started", "OK");
       if (sd_obj.backupSPIFFS(files_copied, bytes_copied, error)) {
-        Serial.println("SPIFFS backup complete: " + (String)files_copied +
-                       " files, " + (String)bytes_copied + " bytes -> /spiffs");
+        if (machine)
+          machineResult(transaction_id, BACKUP_SPIFFS_CMD, "success", "OK", files_copied, bytes_copied);
+        else
+          Serial.println("SPIFFS backup complete: " + (String)files_copied +
+                         " files, " + (String)bytes_copied + " bytes -> /spiffs");
       }
       else {
-        Serial.println("SPIFFS backup failed: " + error);
+        if (machine)
+          machineResult(transaction_id, BACKUP_SPIFFS_CMD, "error", storageErrorCode(error, "BACKUP_FAILED"));
+        else
+          Serial.println("SPIFFS backup failed: " + error);
       }
     #else
-      Serial.println(F("SD Card NOT Supported"));
+      if (machine)
+        machineResult(transaction_id, BACKUP_SPIFFS_CMD, "error", "SD_NOT_SUPPORTED");
+      else
+        Serial.println(F("SD Card NOT Supported"));
+    #endif
+  }
+  else if (cmd_args.get(0) == BACKUP_STATUS_CMD) {
+    int machine_arg = this->argSearch(&cmd_args, "--machine");
+    String transaction_id = machine_arg >= 0 && machine_arg + 1 < cmd_args.size()
+      ? cmd_args.get(machine_arg + 1) : "";
+    bool machine = machine_arg >= 0;
+    if (machine && !validTransactionId(transaction_id)) {
+      machineResult(transaction_id, BACKUP_STATUS_CMD, "error", "INVALID_TRANSACTION");
+      return;
+    }
+    #ifdef HAS_SD
+      size_t files_found = 0;
+      size_t bytes_found = 0;
+      String error;
+      if (sd_obj.inspectSPIFFSBackup(files_found, bytes_found, error)) {
+        if (machine)
+          machineResult(transaction_id, BACKUP_STATUS_CMD, "success", "OK", files_found, bytes_found);
+        else
+          Serial.println("SPIFFS backup ready: " + (String)files_found +
+                         " files, " + (String)bytes_found + " bytes in /spiffs");
+      }
+      else if (machine)
+        machineResult(transaction_id, BACKUP_STATUS_CMD, "error", storageErrorCode(error, "BACKUP_INSPECTION_FAILED"));
+      else
+        Serial.println("SPIFFS backup unavailable: " + error);
+    #else
+      if (machine)
+        machineResult(transaction_id, BACKUP_STATUS_CMD, "error", "SD_NOT_SUPPORTED");
+      else
+        Serial.println(F("SD Card NOT Supported"));
     #endif
   }
   else if (cmd_args.get(0) == RESTORE_SPIFFS_CMD) {
+    int machine_arg = this->argSearch(&cmd_args, "--machine");
+    String transaction_id = machine_arg >= 0 && machine_arg + 1 < cmd_args.size()
+      ? cmd_args.get(machine_arg + 1) : "";
+    bool machine = machine_arg >= 0;
+    if (machine && !validTransactionId(transaction_id)) {
+      machineResult(transaction_id, RESTORE_SPIFFS_CMD, "error", "INVALID_TRANSACTION");
+      return;
+    }
     #ifdef HAS_SD
       size_t files_copied = 0;
       size_t bytes_copied = 0;
       String error;
+      if (machine)
+        machineResult(transaction_id, RESTORE_SPIFFS_CMD, "started", "OK");
       if (sd_obj.restoreSPIFFS(files_copied, bytes_copied, error)) {
-        Serial.println("SPIFFS restore complete: " + (String)files_copied +
-                       " files, " + (String)bytes_copied + " bytes");
-        Serial.println(F("Restarting to load restored content..."));
+        if (machine)
+          machineResult(transaction_id, RESTORE_SPIFFS_CMD, "success", "OK", files_copied, bytes_copied, true);
+        else {
+          Serial.println("SPIFFS restore complete: " + (String)files_copied +
+                         " files, " + (String)bytes_copied + " bytes");
+          Serial.println(F("Restarting to load restored content..."));
+        }
         delay(1000);
         ESP.restart();
       }
       else {
-        Serial.println("SPIFFS restore failed: " + error);
+        if (machine)
+          machineResult(transaction_id, RESTORE_SPIFFS_CMD, "error", storageErrorCode(error, "RESTORE_FAILED"));
+        else
+          Serial.println("SPIFFS restore failed: " + error);
       }
     #else
-      Serial.println(F("SD Card NOT Supported"));
+      if (machine)
+        machineResult(transaction_id, RESTORE_SPIFFS_CMD, "error", "SD_NOT_SUPPORTED");
+      else
+        Serial.println(F("SD Card NOT Supported"));
     #endif
   }
   // GCOVR_EXCL_STOP
