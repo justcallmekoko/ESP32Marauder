@@ -275,11 +275,11 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_UPDATE_CMD_A);
     Serial.println(HELP_LS_CMD);
     // GCOVR_EXCL_START -- hardware-only command help entry.
-    Serial.println(HELP_PROTOCOL_INFO_CMD);
+    Serial.println(PROTOCOL_INFO_CMD);
     #ifdef HAS_SD
-      Serial.println(HELP_BACKUP_SPIFFS_CMD);
-      Serial.println(HELP_BACKUP_STATUS_CMD);
-      Serial.println(HELP_RESTORE_SPIFFS_CMD);
+      Serial.println(BACKUP_SPIFFS_CMD);
+      Serial.println(BACKUP_STATUS_CMD);
+      Serial.println(RESTORE_SPIFFS_CMD);
     #endif
     // GCOVR_EXCL_STOP
     Serial.println(HELP_LED_CMD);
@@ -537,8 +537,6 @@ void CommandLine::runCommand(String input) {
         );
       #endif
     }
-    else
-      Serial.println(F("v1"));
   }
   else if (cmd_args.get(0) == BACKUP_SPIFFS_CMD ||
            cmd_args.get(0) == BACKUP_STATUS_CMD ||
@@ -563,24 +561,18 @@ void CommandLine::runCommand(String input) {
         machineResult(transaction_id, command, "started", "OK");
 
       bool success = sd_obj.migrateSPIFFS(operation, files, bytes, error);
-      if (success) {
-        if (machine)
+      if (machine) {
+        if (success)
           machineResult(transaction_id, command, "success", "OK", files, bytes, operation == 2);
-        else
-          Serial.println(F("OK"));
-        if (operation == 2) {
-          delay(1000);
-          ESP.restart();
-        }
-      }
-      else {
-        if (machine) {
+        else {
           const char* fallback = operation == 0 ? "BACKUP_FAILED" :
                                  operation == 1 ? "BACKUP_INSPECTION_FAILED" : "RESTORE_FAILED";
           machineResult(transaction_id, command, "error", storageErrorCode(error, fallback));
         }
-        else
-          Serial.println(F("ERROR"));
+      }
+      if (success && operation == 2) {
+        delay(1000);
+        ESP.restart();
       }
     #else
       if (machine)

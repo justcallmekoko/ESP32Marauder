@@ -28,7 +28,7 @@ class SpiffsMachineProtocolTests(unittest.TestCase):
         )
         restart = restore.index("ESP.restart();")
         self.assertLess(success, restart)
-        self.assertIn("if (operation == 2)", restore[success:restart])
+        self.assertIn("if (success && operation == 2)", restore[success:restart])
 
     def test_backup_status_measures_the_activated_backup(self):
         source = (ROOT / "esp32_marauder" / "SDInterface.cpp").read_text()
