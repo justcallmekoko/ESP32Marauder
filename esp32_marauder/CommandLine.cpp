@@ -305,8 +305,8 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_REBOOT_CMD);
     Serial.println(HELP_UPDATE_CMD_A);
     Serial.println(HELP_LS_CMD);
-    Serial.println(HELP_PROTOCOL_INFO_CMD);
     // GCOVR_EXCL_START -- hardware-only command help entry.
+    Serial.println(HELP_PROTOCOL_INFO_CMD);
     #ifdef HAS_SD
       Serial.println(HELP_BACKUP_SPIFFS_CMD);
       Serial.println(HELP_BACKUP_STATUS_CMD);
