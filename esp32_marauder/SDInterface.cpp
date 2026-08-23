@@ -75,11 +75,11 @@ namespace {
     const String& destination_path,
     size_t& files_copied,
     size_t& bytes_copied,
-    const char*& error
+    uint8_t& error
   ) {
     File source_node = source.open(source_path);
     if (!source_node) {
-      error = "Could not open source path";
+      error = 3;
       return false;
     }
 
@@ -88,14 +88,14 @@ namespace {
         int slash = destination_path.lastIndexOf('/');
         if (slash > 0 && !ensureDirectory(*destination, destination_path.substring(0, slash))) {
           source_node.close();
-          error = "Could not create destination directory";
+          error = 3;
           return false;
         }
 
         File destination_file = destination->open(destination_path, FILE_WRITE);
         if (!destination_file) {
           source_node.close();
-          error = "Could not create destination file";
+          error = 3;
           return false;
         }
 
@@ -105,7 +105,7 @@ namespace {
           if (bytes_read == 0 || destination_file.write(buffer, bytes_read) != bytes_read) {
             source_node.close();
             destination_file.close();
-            error = "Failed while copying file";
+            error = 3;
             return false;
           }
           bytes_copied += bytes_read;
@@ -121,7 +121,7 @@ namespace {
 
     if (destination && !ensureDirectory(*destination, destination_path)) {
       source_node.close();
-      error = "Could not create destination directory";
+      error = 3;
       return false;
     }
 
@@ -264,22 +264,66 @@ bool SDInterface::removeFile(String file_path) {
 }
 
 // GCOVR_EXCL_START -- requires mounted SPIFFS and SD filesystems.
-bool SDInterface::backupSPIFFS(size_t& files_copied, size_t& bytes_copied, const char*& error) {
-  files_copied = 0;
-  bytes_copied = 0;
-  error = nullptr;
+bool SDInterface::migrateSPIFFS(uint8_t operation, size_t& files_copied, size_t& bytes_copied, uint8_t& error) {
+  files_copied = bytes_copied = error = 0;
 
   if (!this->supported) {
-    error = "SD card not detected";
+    error = 1;
     return false;
   }
 
   const String backup_path = "/spiffs";
+  File backup = SD.open(backup_path);
+  bool valid_backup = backup && backup.isDirectory();
+  backup.close();
+
+  if (operation == 1) {
+    if (!valid_backup) {
+      error = 2;
+      return false;
+    }
+    return copyTree(SD, backup_path, nullptr, "", files_copied, bytes_copied, error);
+  }
+
+  if (operation == 2) {
+    if (!valid_backup) {
+      error = 2;
+      return false;
+    }
+    const String rollback_path = "/spiffs.restore-rollback";
+    if (!removeTree(SD, rollback_path)) {
+      error = 3;
+      return false;
+    }
+
+    size_t rollback_files = 0, rollback_bytes = 0;
+    uint8_t rollback_error = 0;
+    if (!copyTree(SPIFFS, "/", &SD, rollback_path, rollback_files, rollback_bytes, rollback_error)) {
+      removeTree(SD, rollback_path);
+      error = 3;
+      return false;
+    }
+
+    bool cleared = clearDirectoryContents(SPIFFS, "/");
+    if (cleared && copyTree(SD, backup_path, &SPIFFS, "/", files_copied, bytes_copied, error)) {
+      removeTree(SD, rollback_path);
+      return true;
+    }
+
+    clearDirectoryContents(SPIFFS, "/");
+    size_t recovered_files = 0, recovered_bytes = 0;
+    uint8_t recovery_error = 0;
+    copyTree(SD, rollback_path, &SPIFFS, "/", recovered_files, recovered_bytes, recovery_error);
+    removeTree(SD, rollback_path);
+    error = 3;
+    return false;
+  }
+
   const String staging_path = "/spiffs.tmp";
   const String previous_path = "/spiffs.previous";
 
   if (!removeTree(SD, staging_path) || !removeTree(SD, previous_path)) {
-    error = "Could not clear old SPIFFS backup data";
+    error = 3;
     return false;
   }
 
@@ -290,96 +334,19 @@ bool SDInterface::backupSPIFFS(size_t& files_copied, size_t& bytes_copied, const
 
   if (SD.exists(backup_path) && !SD.rename(backup_path, previous_path)) {
     removeTree(SD, staging_path);
-    error = "Could not rotate existing SPIFFS backup";
+    error = 3;
     return false;
   }
 
   if (!SD.rename(staging_path, backup_path)) {
     if (SD.exists(previous_path))
       SD.rename(previous_path, backup_path);
-    error = "Could not activate new SPIFFS backup";
+    error = 3;
     return false;
   }
 
   removeTree(SD, previous_path);
   return true;
-}
-
-bool SDInterface::inspectSPIFFSBackup(size_t& files_found, size_t& bytes_found, const char*& error) {
-  files_found = 0;
-  bytes_found = 0;
-  error = nullptr;
-
-  if (!this->supported) {
-    error = "SD card not detected";
-    return false;
-  }
-
-  File backup = SD.open("/spiffs");
-  bool valid_backup = backup && backup.isDirectory();
-  backup.close();
-  if (!valid_backup) {
-    error = "SD:/spiffs backup not found";
-    return false;
-  }
-
-  return copyTree(SD, "/spiffs", nullptr, "", files_found, bytes_found, error);
-}
-
-bool SDInterface::restoreSPIFFS(size_t& files_copied, size_t& bytes_copied, const char*& error) {
-  files_copied = 0;
-  bytes_copied = 0;
-  error = nullptr;
-
-  if (!this->supported) {
-    error = "SD card not detected";
-    return false;
-  }
-
-  const String backup_path = "/spiffs";
-  const String rollback_path = "/spiffs.restore-rollback";
-  File backup = SD.open(backup_path);
-  bool valid_backup = backup && backup.isDirectory();
-  backup.close();
-  if (!valid_backup) {
-    error = "SD:/spiffs backup not found";
-    return false;
-  }
-
-  if (!removeTree(SD, rollback_path)) {
-    error = "Could not clear old restore rollback";
-    return false;
-  }
-
-  size_t rollback_files = 0;
-  size_t rollback_bytes = 0;
-  const char* rollback_error = nullptr;
-  if (!copyTree(SPIFFS, "/", &SD, rollback_path, rollback_files, rollback_bytes, rollback_error)) {
-    removeTree(SD, rollback_path);
-    error = rollback_error ? rollback_error : "Could not preserve current SPIFFS";
-    return false;
-  }
-
-  bool cleared = clearDirectoryContents(SPIFFS, "/");
-  if (cleared && copyTree(SD, backup_path, &SPIFFS, "/", files_copied, bytes_copied, error)) {
-    removeTree(SD, rollback_path);
-    return true;
-  }
-
-  if (!cleared)
-    error = "Could not clear SPIFFS before restore";
-  clearDirectoryContents(SPIFFS, "/");
-  size_t recovered_files = 0;
-  size_t recovered_bytes = 0;
-  const char* recovery_error = nullptr;
-  if (copyTree(SD, rollback_path, &SPIFFS, "/", recovered_files, recovered_bytes, recovery_error)) {
-    removeTree(SD, rollback_path);
-    error = "Restore failed; original SPIFFS recovered";
-  }
-  else {
-    error = "Restore and rollback failed";
-  }
-  return false;
 }
 // GCOVR_EXCL_STOP
 

@@ -33,10 +33,10 @@ class SpiffsMachineProtocolTests(unittest.TestCase):
     def test_backup_status_measures_the_activated_backup(self):
         source = (ROOT / "esp32_marauder" / "SDInterface.cpp").read_text()
         method = re.search(
-            r"bool SDInterface::inspectSPIFFSBackup\(.*?\n\}", source, re.S
+            r"bool SDInterface::migrateSPIFFS\(.*?\n\}", source, re.S
         ).group(0)
-        self.assertIn('SD.open("/spiffs")', method)
-        self.assertIn('copyTree(SD, "/spiffs", nullptr', method)
+        self.assertIn("File backup = SD.open(backup_path)", method)
+        self.assertIn('copyTree(SD, backup_path, nullptr', method)
 
 
 if __name__ == "__main__":

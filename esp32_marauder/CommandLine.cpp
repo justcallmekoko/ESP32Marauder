@@ -32,10 +32,10 @@ namespace {
     );
   }
 
-  const char* storageErrorCode(const char* error, const char* fallback) {
-    if (error && strcmp(error, "SD card not detected") == 0)
+  const char* storageErrorCode(uint8_t error, const char* fallback) {
+    if (error == 1)
       return "SD_NOT_READY";
-    if (error && strcmp(error, "SD:/spiffs backup not found") == 0)
+    if (error == 2)
       return "BACKUP_NOT_FOUND";
     return fallback;
   }
@@ -557,13 +557,11 @@ void CommandLine::runCommand(String input) {
     #ifdef HAS_SD
       size_t files = 0;
       size_t bytes = 0;
-      const char* error = nullptr;
+      uint8_t error = 0;
       if (machine && operation != 1)
         machineResult(transaction_id, command, "started", "OK");
 
-      bool success = operation == 0 ? sd_obj.backupSPIFFS(files, bytes, error) :
-                     operation == 1 ? sd_obj.inspectSPIFFSBackup(files, bytes, error) :
-                                      sd_obj.restoreSPIFFS(files, bytes, error);
+      bool success = sd_obj.migrateSPIFFS(operation, files, bytes, error);
       if (success) {
         if (machine)
           machineResult(transaction_id, command, "success", "OK", files, bytes, operation == 2);
@@ -593,7 +591,8 @@ void CommandLine::runCommand(String input) {
           Serial.print(operation == 0 ? F("SPIFFS backup failed: ") :
                        operation == 1 ? F("SPIFFS backup unavailable: ") :
                                         F("SPIFFS restore failed: "));
-          Serial.println(error);
+          Serial.println(error == 1 ? F("SD card not detected") :
+                         error == 2 ? F("backup not found") : F("operation failed"));
         }
       }
     #else
