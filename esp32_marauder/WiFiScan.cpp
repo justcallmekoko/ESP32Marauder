@@ -2679,10 +2679,15 @@ bool WiFiScan::shutdownBLE() {
 
       this->_analyzer_value = 0;
       this->bt_frames = 0;
-    
+
       this->ble_initialized = false;
     }
     else {
+      // Advertising-only attacks (e.g. Apple Juice) init and deinit NimBLE
+      // every cycle and never set ble_initialized, but their mode LED was
+      // lit when the attack started. Always clear it when the mode stops.
+      this->setLEDMode(MODE_OFF);
+
       return false;
     }
 
