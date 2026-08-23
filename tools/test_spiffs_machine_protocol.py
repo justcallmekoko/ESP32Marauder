@@ -22,11 +22,13 @@ class SpiffsMachineProtocolTests(unittest.TestCase):
 
     def test_machine_restore_acknowledges_reboot(self):
         source = (ROOT / "esp32_marauder" / "CommandLine.cpp").read_text()
-        restore = source[source.index("else if (cmd_args.get(0) == RESTORE_SPIFFS_CMD)") :]
-        success = restore.index('machineResult(transaction_id, RESTORE_SPIFFS_CMD, "success"')
+        restore = source[source.index("cmd_args.get(0) == RESTORE_SPIFFS_CMD) {") :]
+        success = restore.index(
+            'machineResult(transaction_id, command, "success", "OK", files, bytes, operation == 2)'
+        )
         restart = restore.index("ESP.restart();")
         self.assertLess(success, restart)
-        self.assertIn("files_copied, bytes_copied, true", restore[success:restart])
+        self.assertIn("if (operation == 2)", restore[success:restart])
 
     def test_backup_status_measures_the_activated_backup(self):
         source = (ROOT / "esp32_marauder" / "SDInterface.cpp").read_text()

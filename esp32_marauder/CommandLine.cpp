@@ -539,113 +539,66 @@ void CommandLine::runCommand(String input) {
     else
       Serial.println(F("Marauder automation protocol v1: spiffs-backup, spiffs-backup-status, spiffs-restore"));
   }
-  else if (cmd_args.get(0) == BACKUP_SPIFFS_CMD) {
+  else if (cmd_args.get(0) == BACKUP_SPIFFS_CMD ||
+           cmd_args.get(0) == BACKUP_STATUS_CMD ||
+           cmd_args.get(0) == RESTORE_SPIFFS_CMD) {
+    uint8_t operation = cmd_args.get(0) == BACKUP_SPIFFS_CMD ? 0 :
+                        cmd_args.get(0) == BACKUP_STATUS_CMD ? 1 : 2;
+    const char* command = operation == 0 ? BACKUP_SPIFFS_CMD :
+                          operation == 1 ? BACKUP_STATUS_CMD : RESTORE_SPIFFS_CMD;
     int machine_arg = this->argSearch(&cmd_args, "--machine");
     String transaction_id = machine_arg >= 0 && machine_arg + 1 < cmd_args.size()
       ? cmd_args.get(machine_arg + 1) : "";
     bool machine = machine_arg >= 0;
     if (machine && !validTransactionId(transaction_id)) {
-      machineResult(transaction_id, BACKUP_SPIFFS_CMD, "error", "INVALID_TRANSACTION");
+      machineResult(transaction_id, command, "error", "INVALID_TRANSACTION");
       return;
     }
     #ifdef HAS_SD
-      size_t files_copied = 0;
-      size_t bytes_copied = 0;
+      size_t files = 0;
+      size_t bytes = 0;
       const char* error = nullptr;
-      if (machine)
-        machineResult(transaction_id, BACKUP_SPIFFS_CMD, "started", "OK");
-      if (sd_obj.backupSPIFFS(files_copied, bytes_copied, error)) {
+      if (machine && operation != 1)
+        machineResult(transaction_id, command, "started", "OK");
+
+      bool success = operation == 0 ? sd_obj.backupSPIFFS(files, bytes, error) :
+                     operation == 1 ? sd_obj.inspectSPIFFSBackup(files, bytes, error) :
+                                      sd_obj.restoreSPIFFS(files, bytes, error);
+      if (success) {
         if (machine)
-          machineResult(transaction_id, BACKUP_SPIFFS_CMD, "success", "OK", files_copied, bytes_copied);
-        else
+          machineResult(transaction_id, command, "success", "OK", files, bytes, operation == 2);
+        else if (operation == 0)
           Serial.printf("SPIFFS backup complete: %u files, %u bytes -> /spiffs\n",
-                        (unsigned)files_copied, (unsigned)bytes_copied);
-      }
-      else {
-        if (machine)
-          machineResult(transaction_id, BACKUP_SPIFFS_CMD, "error", storageErrorCode(error, "BACKUP_FAILED"));
-        else {
-          Serial.print(F("SPIFFS backup failed: "));
-          Serial.println(error);
-        }
-      }
-    #else
-      if (machine)
-        machineResult(transaction_id, BACKUP_SPIFFS_CMD, "error", "SD_NOT_SUPPORTED");
-      else
-        Serial.println(F("SD Card NOT Supported"));
-    #endif
-  }
-  else if (cmd_args.get(0) == BACKUP_STATUS_CMD) {
-    int machine_arg = this->argSearch(&cmd_args, "--machine");
-    String transaction_id = machine_arg >= 0 && machine_arg + 1 < cmd_args.size()
-      ? cmd_args.get(machine_arg + 1) : "";
-    bool machine = machine_arg >= 0;
-    if (machine && !validTransactionId(transaction_id)) {
-      machineResult(transaction_id, BACKUP_STATUS_CMD, "error", "INVALID_TRANSACTION");
-      return;
-    }
-    #ifdef HAS_SD
-      size_t files_found = 0;
-      size_t bytes_found = 0;
-      const char* error = nullptr;
-      if (sd_obj.inspectSPIFFSBackup(files_found, bytes_found, error)) {
-        if (machine)
-          machineResult(transaction_id, BACKUP_STATUS_CMD, "success", "OK", files_found, bytes_found);
-        else
+                        (unsigned)files, (unsigned)bytes);
+        else if (operation == 1)
           Serial.printf("SPIFFS backup ready: %u files, %u bytes in /spiffs\n",
-                        (unsigned)files_found, (unsigned)bytes_found);
-      }
-      else if (machine)
-        machineResult(transaction_id, BACKUP_STATUS_CMD, "error", storageErrorCode(error, "BACKUP_INSPECTION_FAILED"));
-      else {
-        Serial.print(F("SPIFFS backup unavailable: "));
-        Serial.println(error);
-      }
-    #else
-      if (machine)
-        machineResult(transaction_id, BACKUP_STATUS_CMD, "error", "SD_NOT_SUPPORTED");
-      else
-        Serial.println(F("SD Card NOT Supported"));
-    #endif
-  }
-  else if (cmd_args.get(0) == RESTORE_SPIFFS_CMD) {
-    int machine_arg = this->argSearch(&cmd_args, "--machine");
-    String transaction_id = machine_arg >= 0 && machine_arg + 1 < cmd_args.size()
-      ? cmd_args.get(machine_arg + 1) : "";
-    bool machine = machine_arg >= 0;
-    if (machine && !validTransactionId(transaction_id)) {
-      machineResult(transaction_id, RESTORE_SPIFFS_CMD, "error", "INVALID_TRANSACTION");
-      return;
-    }
-    #ifdef HAS_SD
-      size_t files_copied = 0;
-      size_t bytes_copied = 0;
-      const char* error = nullptr;
-      if (machine)
-        machineResult(transaction_id, RESTORE_SPIFFS_CMD, "started", "OK");
-      if (sd_obj.restoreSPIFFS(files_copied, bytes_copied, error)) {
-        if (machine)
-          machineResult(transaction_id, RESTORE_SPIFFS_CMD, "success", "OK", files_copied, bytes_copied, true);
+                        (unsigned)files, (unsigned)bytes);
         else {
           Serial.printf("SPIFFS restore complete: %u files, %u bytes\n",
-                        (unsigned)files_copied, (unsigned)bytes_copied);
+                        (unsigned)files, (unsigned)bytes);
           Serial.println(F("Restarting to load restored content..."));
         }
-        delay(1000);
-        ESP.restart();
+        if (operation == 2) {
+          delay(1000);
+          ESP.restart();
+        }
       }
       else {
-        if (machine)
-          machineResult(transaction_id, RESTORE_SPIFFS_CMD, "error", storageErrorCode(error, "RESTORE_FAILED"));
+        if (machine) {
+          const char* fallback = operation == 0 ? "BACKUP_FAILED" :
+                                 operation == 1 ? "BACKUP_INSPECTION_FAILED" : "RESTORE_FAILED";
+          machineResult(transaction_id, command, "error", storageErrorCode(error, fallback));
+        }
         else {
-          Serial.print(F("SPIFFS restore failed: "));
+          Serial.print(operation == 0 ? F("SPIFFS backup failed: ") :
+                       operation == 1 ? F("SPIFFS backup unavailable: ") :
+                                        F("SPIFFS restore failed: "));
           Serial.println(error);
         }
       }
     #else
       if (machine)
-        machineResult(transaction_id, RESTORE_SPIFFS_CMD, "error", "SD_NOT_SUPPORTED");
+        machineResult(transaction_id, command, "error", "SD_NOT_SUPPORTED");
       else
         Serial.println(F("SD Card NOT Supported"));
     #endif
