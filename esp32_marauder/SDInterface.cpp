@@ -3,7 +3,7 @@
 
 // GCOVR_EXCL_START -- requires mounted SPIFFS and SD filesystems.
 namespace {
-  bool ensureDirectory(fs::FS& fs, const String& path) {
+  __attribute__((noinline)) bool ensureDirectory(fs::FS& fs, const String& path) {
     if (path.length() == 0 || path == "/" || fs.exists(path))
       return true;
 
@@ -14,7 +14,7 @@ namespace {
     return fs.mkdir(path);
   }
 
-  bool removeTree(fs::FS& fs, const String& path) {
+  __attribute__((noinline)) bool removeTree(fs::FS& fs, const String& path) {
     if (!fs.exists(path))
       return true;
 
@@ -42,7 +42,7 @@ namespace {
     return fs.rmdir(path);
   }
 
-  bool clearDirectoryContents(fs::FS& fs, const String& path) {
+  __attribute__((noinline)) bool clearDirectoryContents(fs::FS& fs, const String& path) {
     File directory = fs.open(path);
     if (!directory || !directory.isDirectory()) {
       directory.close();
@@ -64,11 +64,11 @@ namespace {
     return true;
   }
 
-  String joinPath(const String& base, const String& child) {
+  __attribute__((noinline)) String joinPath(const String& base, const String& child) {
     return base == "/" ? "/" + child : base + "/" + child;
   }
 
-  bool copyTree(
+  __attribute__((noinline)) bool copyTree(
     fs::FS& source,
     const String& source_path,
     fs::FS* destination,

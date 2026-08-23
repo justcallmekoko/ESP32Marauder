@@ -2,7 +2,7 @@
 
 // GCOVR_EXCL_START -- serial protocol output depends on Arduino Serial.
 namespace {
-  bool validTransactionId(const String& transaction_id) {
+  __attribute__((noinline)) bool validTransactionId(const String& transaction_id) {
     if (transaction_id.length() == 0 || transaction_id.length() > 40)
       return false;
 
@@ -14,7 +14,7 @@ namespace {
     return true;
   }
 
-  void machineResult(
+  __attribute__((noinline)) void machineResult(
     const String& transaction_id,
     const char* command,
     const char* status,
@@ -32,7 +32,7 @@ namespace {
     );
   }
 
-  const char* storageErrorCode(const char* error, const char* fallback) {
+  __attribute__((noinline)) const char* storageErrorCode(const char* error, const char* fallback) {
     if (error && strcmp(error, "SD card not detected") == 0)
       return "SD_NOT_READY";
     if (error && strcmp(error, "SD:/spiffs backup not found") == 0)
