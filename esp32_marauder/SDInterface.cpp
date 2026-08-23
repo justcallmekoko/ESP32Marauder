@@ -75,11 +75,11 @@ namespace {
     const String& destination_path,
     size_t& files_copied,
     size_t& bytes_copied,
-    String& error
+    const char*& error
   ) {
     File source_node = source.open(source_path);
     if (!source_node) {
-      error = "Could not open source path " + source_path;
+      error = "Could not open source path";
       return false;
     }
 
@@ -94,7 +94,7 @@ namespace {
       File destination_file = destination.open(destination_path, FILE_WRITE);
       if (!destination_file) {
         source_node.close();
-        error = "Could not create " + destination_path;
+        error = "Could not create destination file";
         return false;
       }
 
@@ -104,7 +104,7 @@ namespace {
         if (bytes_read == 0 || destination_file.write(buffer, bytes_read) != bytes_read) {
           source_node.close();
           destination_file.close();
-          error = "Failed while copying " + source_path;
+          error = "Failed while copying file";
           return false;
         }
         bytes_copied += bytes_read;
@@ -156,11 +156,11 @@ namespace {
     const String& path,
     size_t& files_found,
     size_t& bytes_found,
-    String& error
+    const char*& error
   ) {
     File node = fs.open(path);
     if (!node) {
-      error = "Could not open backup path " + path;
+      error = "Could not open backup path";
       return false;
     }
 
@@ -295,10 +295,10 @@ bool SDInterface::removeFile(String file_path) {
 }
 
 // GCOVR_EXCL_START -- requires mounted SPIFFS and SD filesystems.
-bool SDInterface::backupSPIFFS(size_t& files_copied, size_t& bytes_copied, String& error) {
+bool SDInterface::backupSPIFFS(size_t& files_copied, size_t& bytes_copied, const char*& error) {
   files_copied = 0;
   bytes_copied = 0;
-  error = "";
+  error = nullptr;
 
   if (!this->supported) {
     error = "SD card not detected";
@@ -336,10 +336,10 @@ bool SDInterface::backupSPIFFS(size_t& files_copied, size_t& bytes_copied, Strin
   return true;
 }
 
-bool SDInterface::inspectSPIFFSBackup(size_t& files_found, size_t& bytes_found, String& error) {
+bool SDInterface::inspectSPIFFSBackup(size_t& files_found, size_t& bytes_found, const char*& error) {
   files_found = 0;
   bytes_found = 0;
-  error = "";
+  error = nullptr;
 
   if (!this->supported) {
     error = "SD card not detected";
@@ -357,10 +357,10 @@ bool SDInterface::inspectSPIFFSBackup(size_t& files_found, size_t& bytes_found, 
   return measureTree(SD, "/spiffs", files_found, bytes_found, error);
 }
 
-bool SDInterface::restoreSPIFFS(size_t& files_copied, size_t& bytes_copied, String& error) {
+bool SDInterface::restoreSPIFFS(size_t& files_copied, size_t& bytes_copied, const char*& error) {
   files_copied = 0;
   bytes_copied = 0;
-  error = "";
+  error = nullptr;
 
   if (!this->supported) {
     error = "SD card not detected";
@@ -384,10 +384,10 @@ bool SDInterface::restoreSPIFFS(size_t& files_copied, size_t& bytes_copied, Stri
 
   size_t rollback_files = 0;
   size_t rollback_bytes = 0;
-  String rollback_error;
+  const char* rollback_error = nullptr;
   if (!copyTree(SPIFFS, "/", SD, rollback_path, rollback_files, rollback_bytes, rollback_error)) {
     removeTree(SD, rollback_path);
-    error = "Could not preserve current SPIFFS: " + rollback_error;
+    error = rollback_error ? rollback_error : "Could not preserve current SPIFFS";
     return false;
   }
 
@@ -397,17 +397,18 @@ bool SDInterface::restoreSPIFFS(size_t& files_copied, size_t& bytes_copied, Stri
     return true;
   }
 
-  String restore_error = cleared ? error : "Could not clear SPIFFS before restore";
+  if (!cleared)
+    error = "Could not clear SPIFFS before restore";
   clearDirectoryContents(SPIFFS, "/");
   size_t recovered_files = 0;
   size_t recovered_bytes = 0;
-  String recovery_error;
+  const char* recovery_error = nullptr;
   if (copyTree(SD, rollback_path, SPIFFS, "/", recovered_files, recovered_bytes, recovery_error)) {
     removeTree(SD, rollback_path);
-    error = "Restore failed; original SPIFFS recovered: " + restore_error;
+    error = "Restore failed; original SPIFFS recovered";
   }
   else {
-    error = "Restore and rollback failed: " + restore_error + "; " + recovery_error;
+    error = "Restore and rollback failed";
   }
   return false;
 }
