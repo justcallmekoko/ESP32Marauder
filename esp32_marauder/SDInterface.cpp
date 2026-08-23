@@ -150,6 +150,41 @@ namespace {
     source_node.close();
     return true;
   }
+
+  bool measureTree(
+    fs::FS& fs,
+    const String& path,
+    size_t& files_found,
+    size_t& bytes_found,
+    String& error
+  ) {
+    File node = fs.open(path);
+    if (!node) {
+      error = "Could not open backup path " + path;
+      return false;
+    }
+
+    if (!node.isDirectory()) {
+      bytes_found += node.size();
+      files_found++;
+      node.close();
+      return true;
+    }
+
+    File child = node.openNextFile();
+    while (child) {
+      String child_path = child.path();
+      child.close();
+      if (!measureTree(fs, child_path, files_found, bytes_found, error)) {
+        node.close();
+        return false;
+      }
+      child = node.openNextFile();
+    }
+
+    node.close();
+    return true;
+  }
 }
 // GCOVR_EXCL_STOP
 
@@ -299,6 +334,27 @@ bool SDInterface::backupSPIFFS(size_t& files_copied, size_t& bytes_copied, Strin
 
   removeTree(SD, previous_path);
   return true;
+}
+
+bool SDInterface::inspectSPIFFSBackup(size_t& files_found, size_t& bytes_found, String& error) {
+  files_found = 0;
+  bytes_found = 0;
+  error = "";
+
+  if (!this->supported) {
+    error = "SD card not detected";
+    return false;
+  }
+
+  File backup = SD.open("/spiffs");
+  bool valid_backup = backup && backup.isDirectory();
+  backup.close();
+  if (!valid_backup) {
+    error = "SD:/spiffs backup not found";
+    return false;
+  }
+
+  return measureTree(SD, "/spiffs", files_found, bytes_found, error);
 }
 
 bool SDInterface::restoreSPIFFS(size_t& files_copied, size_t& bytes_copied, String& error) {
