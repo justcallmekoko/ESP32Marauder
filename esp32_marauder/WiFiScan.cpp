@@ -596,34 +596,38 @@ extern "C" {
               #ifndef HAS_MINI_SCREEN
                 display_string.concat(text_table4[0]);
               #endif
+              // GCOVR_EXCL_START -- NimBLE callback path; no host coverage.
               display_string.concat(advertisedDevice->getRSSI());
-              Serial.print(advertisedDevice->getRSSI());
-      
               display_string.concat(" ");
-              Serial.print(F(" "));
-              
-              Serial.print(F("Device: "));
+              display_string.concat("Device: ");
               if(advertisedDevice->getName().length() != 0)
-              {
                 display_string.concat(advertisedDevice->getName().c_str());
-                Serial.print(advertisedDevice->getName().c_str());
-                
-              }
               else
-              {
                 display_string.concat(advertisedDevice->getAddress().toString().c_str());
-                Serial.print(advertisedDevice->getAddress().toString().c_str());
-              }
-      
+
+              // One atomic write per device line: this callback runs on the
+              // NimBLE task while command output (e.g. the "#cmd" receipt)
+              // prints on the main task. Piecewise prints race between calls
+              // and glue the two into one unterminated wire line (observed:
+              // "-54 Device: f2:b5:db:d5:3c:69#stopscan"). A single print
+              // call keeps the line, including its newline, atomic -- and
+              // terminates it on builds without HAS_SCREEN, which previously
+              // never ended it.
+              String device_line = (String)advertisedDevice->getRSSI() + " Device: ";
+              if(advertisedDevice->getName().length() != 0)
+                device_line += advertisedDevice->getName().c_str();
+              else
+                device_line += advertisedDevice->getAddress().toString().c_str();
+              Serial.print(device_line + "\n");
+              // GCOVR_EXCL_STOP
+
               #ifdef HAS_SCREEN
                 uint8_t temp_len = display_string.length();
                 for (uint8_t i = 0; i < 40 - temp_len; i++)
                 {
                   display_string.concat(" ");
                 }
-        
-                Serial.println();
-        
+
                 if (!display_obj.printing) {
                   display_obj.loading = true;
                   display_obj.display_buffer->add(display_string);
@@ -644,18 +648,23 @@ extern "C" {
                     return;
                   }
                     
-                  Serial.print(F("Device: "));
+                  // GCOVR_EXCL_START -- NimBLE callback path; no host coverage.
+                  // Atomic, newline-terminated: this line used to print unterminated and
+                  // glue onto the WiGLE CSV row below ("Device: <name>AA:BB..,,
+                  // [BLE],.."), corrupting the MAC field for CSV consumers.
+                  String device_line = String("Device: ");
                   if(advertisedDevice->getName().length() != 0)
                   {
                     display_string.concat(advertisedDevice->getName().c_str());
-                    Serial.print(advertisedDevice->getName().c_str());
-                    
+                    device_line += advertisedDevice->getName().c_str();
                   }
                   else
                   {
                     display_string.concat(advertisedDevice->getAddress().toString().c_str());
-                    Serial.print(advertisedDevice->getAddress().toString().c_str());
+                    device_line += advertisedDevice->getAddress().toString().c_str();
                   }
+                  Serial.print(device_line + "\n");
+                  // GCOVR_EXCL_STOP
 
                   if (gps_obj.getFixStatus()) {
                     do_save = true;
@@ -1000,19 +1009,21 @@ extern "C" {
                 display_string = "Meta Device: ";
                 display_string.concat((String)advertisedDevice->getRSSI());
                 display_string.concat(F(" "));
-                Serial.print(F("Meta Device: "));
-                Serial.print(advertisedDevice->getRSSI());
-                Serial.print(F(" "));
+                // GCOVR_EXCL_START -- NimBLE callback path; no host coverage.
+                // Atomic single write (was piecewise -- same NimBLE-task race).
+                String meta_line = String("Meta Device: ") + (String)advertisedDevice->getRSSI() + " ";
                 if(advertisedDevice->getName().length() != 0)
                 {
                   display_string.concat(advertisedDevice->getName().c_str());
-                  Serial.println(advertisedDevice->getName().c_str());
+                  meta_line += advertisedDevice->getName().c_str();
                 }
                 else
                 {
                   display_string.concat(advertisedDevice->getAddress().toString().c_str());
-                  Serial.println(advertisedDevice->getAddress().toString().c_str());
+                  meta_line += advertisedDevice->getAddress().toString().c_str();
                 }
+                Serial.print(meta_line + "\n");
+                // GCOVR_EXCL_STOP
 
                 #ifdef HAS_SCREEN
                   uint8_t temp_len = display_string.length();
@@ -1293,34 +1304,38 @@ extern "C" {
               #ifndef HAS_MINI_SCREEN
                 display_string.concat(text_table4[0]);
               #endif
+              // GCOVR_EXCL_START -- NimBLE callback path; no host coverage.
               display_string.concat((String)rssi);
-              Serial.print(rssi);
-      
               display_string.concat(" ");
-              Serial.print(F(" "));
-              
-              Serial.print(F("Device: "));
+              display_string.concat("Device: ");
               if(name_length != 0)
-              {
                 display_string.concat(name);
-                Serial.print(name);
-                
-              }
               else
-              {
                 display_string.concat(mac);
-                Serial.print(mac);
-              }
-      
+
+              // One atomic write per device line: this callback runs on the
+              // NimBLE task while command output (e.g. the "#cmd" receipt)
+              // prints on the main task. Piecewise prints race between calls
+              // and glue the two into one unterminated wire line (observed:
+              // "-54 Device: f2:b5:db:d5:3c:69#stopscan"). A single print
+              // call keeps the line, including its newline, atomic -- and
+              // terminates it on builds without HAS_SCREEN, which previously
+              // never ended it.
+              String device_line = (String)rssi + " Device: ";
+              if(name_length != 0)
+                device_line += name;
+              else
+                device_line += mac;
+              Serial.print(device_line + "\n");
+              // GCOVR_EXCL_STOP
+
               #ifdef HAS_SCREEN
                 uint8_t temp_len = display_string.length();
                 for (uint8_t i = 0; i < 40 - temp_len; i++)
                 {
                   display_string.concat(" ");
                 }
-        
-                Serial.println();
-        
+
                 if (!display_obj.printing) {
                   display_obj.loading = true;
                   display_obj.display_buffer->add(display_string);
@@ -1399,15 +1414,11 @@ extern "C" {
                     return;
                   }
 
-                  if(name_length != 0)
-                  {
-                    Serial.print(name);
-                    
-                  }
-                  else
-                  {
-                    Serial.print(mac);
-                  }
+                  // GCOVR_EXCL_START -- NimBLE callback path; no host coverage.
+                  // One atomic, newline-terminated write -- it used to glue onto the
+                  // WiGLE CSV row below.
+                  Serial.print((name_length != 0 ? name : mac) + String("\n"));
+                  // GCOVR_EXCL_STOP
 
                   if (gps_obj.getFixStatus())
                     do_save = true;
@@ -1631,18 +1642,21 @@ extern "C" {
                 display_string = "Meta Device: ";
                 display_string.concat((String)rssi);
                 display_string.concat(F(" "));
-                Serial.print(display_string);
-                Serial.print(F(" "));
+                // GCOVR_EXCL_START -- NimBLE callback path; no host coverage.
+                // Atomic single write (was piecewise -- same NimBLE-task race).
+                String meta_line = display_string + " ";
                 if(name_length != 0)
                 {
                   display_string.concat(name);
-                  Serial.println(name);
+                  meta_line += name;
                 }
                 else
                 {
                   display_string.concat(mac);
-                  Serial.println(mac);
+                  meta_line += mac;
                 }
+                Serial.print(meta_line + "\n");
+                // GCOVR_EXCL_STOP
 
                 #ifdef HAS_SCREEN
                   uint8_t temp_len = display_string.length();
