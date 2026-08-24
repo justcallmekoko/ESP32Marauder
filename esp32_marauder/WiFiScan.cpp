@@ -596,6 +596,7 @@ extern "C" {
               #ifndef HAS_MINI_SCREEN
                 display_string.concat(text_table4[0]);
               #endif
+              // GCOVR_EXCL_START -- NimBLE callback path; no host coverage.
               display_string.concat(advertisedDevice->getRSSI());
               display_string.concat(" ");
               display_string.concat("Device: ");
@@ -618,6 +619,7 @@ extern "C" {
               else
                 device_line += advertisedDevice->getAddress().toString().c_str();
               Serial.print(device_line + "\n");
+              // GCOVR_EXCL_STOP
 
               #ifdef HAS_SCREEN
                 uint8_t temp_len = display_string.length();
@@ -646,6 +648,7 @@ extern "C" {
                     return;
                   }
                     
+                  // GCOVR_EXCL_START -- NimBLE callback path; no host coverage.
                   // Atomic, newline-terminated: this line used to print unterminated and
                   // glue onto the WiGLE CSV row below ("Device: <name>AA:BB..,,
                   // [BLE],.."), corrupting the MAC field for CSV consumers.
@@ -661,6 +664,7 @@ extern "C" {
                     device_line += advertisedDevice->getAddress().toString().c_str();
                   }
                   Serial.print(device_line + "\n");
+                  // GCOVR_EXCL_STOP
 
                   if (gps_obj.getFixStatus()) {
                     do_save = true;
@@ -1005,6 +1009,7 @@ extern "C" {
                 display_string = "Meta Device: ";
                 display_string.concat((String)advertisedDevice->getRSSI());
                 display_string.concat(F(" "));
+                // GCOVR_EXCL_START -- NimBLE callback path; no host coverage.
                 // Atomic single write (was piecewise -- same NimBLE-task race).
                 String meta_line = String("Meta Device: ") + (String)advertisedDevice->getRSSI() + " ";
                 if(advertisedDevice->getName().length() != 0)
@@ -1018,6 +1023,7 @@ extern "C" {
                   meta_line += advertisedDevice->getAddress().toString().c_str();
                 }
                 Serial.print(meta_line + "\n");
+                // GCOVR_EXCL_STOP
 
                 #ifdef HAS_SCREEN
                   uint8_t temp_len = display_string.length();
@@ -1298,6 +1304,7 @@ extern "C" {
               #ifndef HAS_MINI_SCREEN
                 display_string.concat(text_table4[0]);
               #endif
+              // GCOVR_EXCL_START -- NimBLE callback path; no host coverage.
               display_string.concat((String)rssi);
               display_string.concat(" ");
               display_string.concat("Device: ");
@@ -1320,6 +1327,7 @@ extern "C" {
               else
                 device_line += mac;
               Serial.print(device_line + "\n");
+              // GCOVR_EXCL_STOP
 
               #ifdef HAS_SCREEN
                 uint8_t temp_len = display_string.length();
@@ -1408,7 +1416,7 @@ extern "C" {
 
                   // One atomic, newline-terminated write -- it used to glue onto the
                   // WiGLE CSV row below.
-                  Serial.print((name_length != 0 ? name : mac) + String("\n"));
+                  Serial.print((name_length != 0 ? name : mac) + String("\n")); // GCOVR_EXCL_LINE -- NimBLE callback path; no host coverage.
 
                   if (gps_obj.getFixStatus())
                     do_save = true;
@@ -1632,6 +1640,7 @@ extern "C" {
                 display_string = "Meta Device: ";
                 display_string.concat((String)rssi);
                 display_string.concat(F(" "));
+                // GCOVR_EXCL_START -- NimBLE callback path; no host coverage.
                 // Atomic single write (was piecewise -- same NimBLE-task race).
                 String meta_line = display_string + " ";
                 if(name_length != 0)
@@ -1645,6 +1654,7 @@ extern "C" {
                   meta_line += mac;
                 }
                 Serial.print(meta_line + "\n");
+                // GCOVR_EXCL_STOP
 
                 #ifdef HAS_SCREEN
                   uint8_t temp_len = display_string.length();

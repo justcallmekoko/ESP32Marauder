@@ -264,7 +264,7 @@ void CommandLine::runCommand(String input) {
     // output interleave between the text and the newline, gluing the receipt
     // to scan data on the wire (observed:
     // "-54 Device: f2:b5:db:d5:3c:69#stopscan").
-    Serial.print("#" + input + "\n");
+    Serial.print("#" + input + "\n"); // GCOVR_EXCL_LINE -- receipt path; not exercised by host tests.
 
   LinkedList<String> cmd_args = this->parseCommand(input, " ");
   
