@@ -260,11 +260,13 @@ void CommandLine::runCommand(String input) {
     if(input != STOPSCAN_CMD) return;    
   }
   else
+    // GCOVR_EXCL_START -- receipt path; not exercised by host tests.
     // Single atomic write: a two-part println lets concurrent NimBLE-callback
     // output interleave between the text and the newline, gluing the receipt
     // to scan data on the wire (observed:
     // "-54 Device: f2:b5:db:d5:3c:69#stopscan").
-    Serial.print("#" + input + "\n"); // GCOVR_EXCL_LINE -- receipt path; not exercised by host tests.
+    Serial.print("#" + input + "\n");
+    // GCOVR_EXCL_STOP
 
   LinkedList<String> cmd_args = this->parseCommand(input, " ");
   

@@ -1414,9 +1414,11 @@ extern "C" {
                     return;
                   }
 
+                  // GCOVR_EXCL_START -- NimBLE callback path; no host coverage.
                   // One atomic, newline-terminated write -- it used to glue onto the
                   // WiGLE CSV row below.
-                  Serial.print((name_length != 0 ? name : mac) + String("\n")); // GCOVR_EXCL_LINE -- NimBLE callback path; no host coverage.
+                  Serial.print((name_length != 0 ? name : mac) + String("\n"));
+                  // GCOVR_EXCL_STOP
 
                   if (gps_obj.getFixStatus())
                     do_save = true;
