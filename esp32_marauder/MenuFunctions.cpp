@@ -2002,13 +2002,13 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_PING_SCAN, TFT_CYAN);
   });
-  // GCOVR_EXCL_START -- scanner menu wiring requires the hardware UI.
-  this->addNodes(&wifiScannerMenu, "ARP Scan", TFTCYAN, SCANNERS, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_ARP_SCAN, TFT_CYAN);
-  });
-  // GCOVR_EXCL_STOP
+  #ifndef HAS_DUAL_BAND
+    this->addNodes(&wifiScannerMenu, "ARP Scan", TFTCYAN, SCANNERS, [this]() {
+      display_obj.clearScreen();
+      this->drawStatusBar();
+      wifi_scan_obj.StartScan(WIFI_ARP_SCAN, TFT_CYAN);
+    });
+  #endif
   this->addNodes(&wifiScannerMenu, "Port Scan All", TFTMAGENTA, BEACON_LIST, [this](){
     // Add the back button
     wifiIPMenu.list->clear();
@@ -3487,60 +3487,6 @@ void MenuFunctions::RunSetup()
         this->changeMenu(&sdDeleteMenu, true);
       });
 
-      // GCOVR_EXCL_START -- requires mounted SPIFFS, SD, and a hardware display.
-      this->addNodes(&deviceMenu, "Backup SPIFFS", TFTGREEN, SD_UPDATE, [this]() {
-        display_obj.clearScreen();
-        display_obj.tft.setTextWrap(true);
-        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-        display_obj.tft.println("Backing up SPIFFS...");
-
-        size_t files_copied = 0;
-        size_t bytes_copied = 0;
-        String error;
-        if (sd_obj.backupSPIFFS(files_copied, bytes_copied, error)) {
-          display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
-          display_obj.tft.println("Backup complete");
-          display_obj.tft.println((String)files_copied + " files");
-          display_obj.tft.println("SD:/spiffs");
-        }
-        else {
-          display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
-          display_obj.tft.println("Backup failed");
-          display_obj.tft.println(error);
-        }
-
-        delay(2500);
-        this->changeMenu(&deviceMenu, true);
-      });
-
-      this->addNodes(&deviceMenu, "Restore SPIFFS", TFTORANGE, SD_UPDATE, [this]() {
-        display_obj.clearScreen();
-        display_obj.tft.setTextWrap(true);
-        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-        display_obj.tft.println("Restoring SPIFFS...");
-
-        size_t files_copied = 0;
-        size_t bytes_copied = 0;
-        String error;
-        if (sd_obj.restoreSPIFFS(files_copied, bytes_copied, error)) {
-          display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
-          display_obj.tft.println("Restore complete");
-          display_obj.tft.println((String)files_copied + " files");
-          display_obj.tft.println("Restarting...");
-          delay(1500);
-          ESP.restart();
-        }
-        else {
-          display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
-          display_obj.tft.println("Restore failed");
-          display_obj.tft.println(error);
-          delay(3000);
-          this->changeMenu(&deviceMenu, true);
-        }
-      });
-      // GCOVR_EXCL_STOP
     }
   #endif
 
