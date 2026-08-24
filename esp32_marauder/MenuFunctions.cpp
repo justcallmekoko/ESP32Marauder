@@ -2002,13 +2002,13 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_PING_SCAN, TFT_CYAN);
   });
-  // GCOVR_EXCL_START -- scanner menu wiring requires the hardware UI.
-  this->addNodes(&wifiScannerMenu, "ARP Scan", TFTCYAN, SCANNERS, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_ARP_SCAN, TFT_CYAN);
-  });
-  // GCOVR_EXCL_STOP
+  #ifndef HAS_DUAL_BAND
+    this->addNodes(&wifiScannerMenu, "ARP Scan", TFTCYAN, SCANNERS, [this]() {
+      display_obj.clearScreen();
+      this->drawStatusBar();
+      wifi_scan_obj.StartScan(WIFI_ARP_SCAN, TFT_CYAN);
+    });
+  #endif
   this->addNodes(&wifiScannerMenu, "Port Scan All", TFTMAGENTA, BEACON_LIST, [this](){
     // Add the back button
     wifiIPMenu.list->clear();
@@ -3486,6 +3486,7 @@ void MenuFunctions::RunSetup()
 
         this->changeMenu(&sdDeleteMenu, true);
       });
+
     }
   #endif
 
@@ -4658,6 +4659,3 @@ void MenuFunctions::displayCurrentMenu(int start_index)
 #endif
 
 #endif
-
-
-

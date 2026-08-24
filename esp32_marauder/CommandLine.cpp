@@ -1,5 +1,48 @@
 #include "CommandLine.h"
 
+// GCOVR_EXCL_START -- serial protocol output depends on Arduino Serial.
+namespace {
+  bool validTransactionId(const String& transaction_id) {
+    if (transaction_id.length() == 0 || transaction_id.length() > 40)
+      return false;
+
+    for (size_t i = 0; i < transaction_id.length(); i++) {
+      char c = transaction_id.charAt(i);
+      if (!((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') ||
+            (c >= 'a' && c <= 'z') || c == '-' || c == '_' || c == '.'))
+        return false;
+    }
+    return true;
+  }
+
+  void machineResult(
+    const String& transaction_id,
+    const char* command,
+    const char* status,
+    const char* code,
+    size_t files = 0,
+    size_t bytes = 0,
+    bool rebooting = false
+  ) {
+    Serial.printf(
+      "@MARAUDER:{\"protocol\":1,\"tx\":\"%s\",\"command\":\"%s\","
+      "\"status\":\"%s\",\"code\":\"%s\",\"files\":%u,\"bytes\":%u,"
+      "\"rebooting\":%s}\n",
+      transaction_id.c_str(), command, status, code,
+      (unsigned)files, (unsigned)bytes, rebooting ? "true" : "false"
+    );
+  }
+
+  const char* storageErrorCode(uint8_t error, const char* fallback) {
+    if (error == 1)
+      return "SD_NOT_READY";
+    if (error == 2)
+      return "BACKUP_NOT_FOUND";
+    return fallback;
+  }
+}
+// GCOVR_EXCL_STOP
+
 // Brightness functions defined in esp32_marauder.ino
 #ifndef HAS_MINI_SCREEN
   extern void brightnessCycle();
@@ -231,6 +274,14 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_REBOOT_CMD);
     Serial.println(HELP_UPDATE_CMD_A);
     Serial.println(HELP_LS_CMD);
+    // GCOVR_EXCL_START -- hardware-only command help entry.
+    Serial.println(PROTOCOL_INFO_CMD);
+    #ifdef HAS_SD
+      Serial.println(BACKUP_SPIFFS_CMD);
+      Serial.println(BACKUP_STATUS_CMD);
+      Serial.println(RESTORE_SPIFFS_CMD);
+    #endif
+    // GCOVR_EXCL_STOP
     Serial.println(HELP_LED_CMD);
     Serial.println(HELP_GPS_DATA_CMD);
     Serial.println(HELP_GPS_CMD);
@@ -461,6 +512,76 @@ void CommandLine::runCommand(String input) {
         sd_obj.listDir(cmd_args.get(1));
     #endif
   }
+  // GCOVR_EXCL_START -- requires mounted SPIFFS and SD filesystems.
+  else if (cmd_args.get(0) == PROTOCOL_INFO_CMD) {
+    int machine_arg = this->argSearch(&cmd_args, "--machine");
+    String transaction_id = machine_arg >= 0 && machine_arg + 1 < cmd_args.size()
+      ? cmd_args.get(machine_arg + 1) : "";
+    if (machine_arg >= 0 && !validTransactionId(transaction_id))
+      machineResult(transaction_id, PROTOCOL_INFO_CMD, "error", "INVALID_TRANSACTION");
+    else if (machine_arg >= 0) {
+      #ifdef HAS_SD
+        Serial.printf(
+          "@MARAUDER:{\"protocol\":1,\"tx\":\"%s\",\"command\":\"protocolinfo\","
+          "\"status\":\"success\",\"code\":\"OK\",\"firmware\":\"%s\","
+          "\"capabilities\":[\"spiffs-backup\",\"spiffs-backup-status\","
+          "\"spiffs-restore\"],\"backupPath\":\"/spiffs\"}\n",
+          transaction_id.c_str(), version_number.c_str()
+        );
+      #else
+        Serial.printf(
+          "@MARAUDER:{\"protocol\":1,\"tx\":\"%s\",\"command\":\"protocolinfo\","
+          "\"status\":\"success\",\"code\":\"OK\",\"firmware\":\"%s\","
+          "\"capabilities\":[]}\n",
+          transaction_id.c_str(), version_number.c_str()
+        );
+      #endif
+    }
+  }
+  else if (cmd_args.get(0) == BACKUP_SPIFFS_CMD ||
+           cmd_args.get(0) == BACKUP_STATUS_CMD ||
+           cmd_args.get(0) == RESTORE_SPIFFS_CMD) {
+    uint8_t operation = cmd_args.get(0) == BACKUP_SPIFFS_CMD ? 0 :
+                        cmd_args.get(0) == BACKUP_STATUS_CMD ? 1 : 2;
+    const char* command = operation == 0 ? BACKUP_SPIFFS_CMD :
+                          operation == 1 ? BACKUP_STATUS_CMD : RESTORE_SPIFFS_CMD;
+    int machine_arg = this->argSearch(&cmd_args, "--machine");
+    String transaction_id = machine_arg >= 0 && machine_arg + 1 < cmd_args.size()
+      ? cmd_args.get(machine_arg + 1) : "";
+    bool machine = machine_arg >= 0;
+    if (machine && !validTransactionId(transaction_id)) {
+      machineResult(transaction_id, command, "error", "INVALID_TRANSACTION");
+      return;
+    }
+    #ifdef HAS_SD
+      size_t files = 0;
+      size_t bytes = 0;
+      uint8_t error = 0;
+      if (machine && operation != 1)
+        machineResult(transaction_id, command, "started", "OK");
+
+      bool success = sd_obj.migrateSPIFFS(operation, files, bytes, error);
+      if (machine) {
+        if (success)
+          machineResult(transaction_id, command, "success", "OK", files, bytes, operation == 2);
+        else {
+          const char* fallback = operation == 0 ? "BACKUP_FAILED" :
+                                 operation == 1 ? "BACKUP_INSPECTION_FAILED" : "RESTORE_FAILED";
+          machineResult(transaction_id, command, "error", storageErrorCode(error, fallback));
+        }
+      }
+      if (success && operation == 2) {
+        delay(1000);
+        ESP.restart();
+      }
+    #else
+      if (machine)
+        machineResult(transaction_id, command, "error", "SD_NOT_SUPPORTED");
+      else
+        Serial.println(F("SD Card NOT Supported"));
+    #endif
+  }
+  // GCOVR_EXCL_STOP
 
   // Channel command
   else if (cmd_args.get(0) == CH_CMD) {
@@ -1289,11 +1410,11 @@ void CommandLine::runCommand(String input) {
       this->startScanFromCLI(WIFI_PING_SCAN, TFT_GREEN, "Ping Scan");
     }
 
-    // GCOVR_EXCL_START -- command dispatch requires the firmware CLI runtime.
-    if (cmd_args.get(0) == ARP_SCAN_CMD) {
-      this->startScanFromCLI(WIFI_ARP_SCAN, TFT_CYAN, "ARP Scan");
-    }
-    // GCOVR_EXCL_STOP
+    #ifndef HAS_DUAL_BAND
+      if (cmd_args.get(0) == ARP_SCAN_CMD) {
+        this->startScanFromCLI(WIFI_ARP_SCAN, TFT_CYAN, "ARP Scan");
+      }
+    #endif
 
     // GPS POI
     if (cmd_args.get(0) == GPS_POI_CMD) {
