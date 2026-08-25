@@ -31,6 +31,16 @@ class RetainedDevelopFeatureTests(unittest.TestCase):
         self.assertIn("cli_obj.runCommand(BACKUP_SPIFFS_CMD)", source)
         self.assertIn("cli_obj.runCommand(RESTORE_SPIFFS_CMD)", source)
 
+    def test_v8_keeps_complete_cli_help(self):
+        source = (ROOT / "esp32_marauder" / "CommandLine.cpp").read_text()
+        help_block = source[source.index("if (cmd_args.get(0) == HELP_CMD)"):
+                            source.index("// Stop Scan")]
+        self.assertNotIn("ESP32 Marauder commands: https://", help_block)
+        self.assertNotIn("#ifdef MARAUDER_V8", help_block)
+        self.assertIn("Serial.println(HELP_HEAD)", help_block)
+        self.assertIn("Serial.println(HELP_PROTOCOL_INFO_CMD)", help_block)
+        self.assertIn("Serial.println(HELP_RESTORE_SPIFFS_CMD)", help_block)
+
 
 if __name__ == "__main__":
     unittest.main()

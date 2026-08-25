@@ -269,10 +269,6 @@ void CommandLine::runCommand(String input) {
   //// Admin commands
   // Help
   if (cmd_args.get(0) == HELP_CMD) {
-    #ifdef MARAUDER_V8
-      Serial.println(F("ESP32 Marauder commands: https://github.com/justcallmekoko/ESP32Marauder/wiki/cli"));
-      Serial.println(F("Use protocolinfo for automation capabilities."));
-    #else
     Serial.println(HELP_HEAD);
     Serial.println(HELP_CH_CMD);
     Serial.println(HELP_SETTINGS_CMD);
@@ -281,11 +277,11 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_UPDATE_CMD_A);
     Serial.println(HELP_LS_CMD);
     // GCOVR_EXCL_START -- hardware-only command help entry.
-    Serial.println(PROTOCOL_INFO_CMD);
+    Serial.println(HELP_PROTOCOL_INFO_CMD);
     #ifdef HAS_SD
-      Serial.println(BACKUP_SPIFFS_CMD);
-      Serial.println(BACKUP_STATUS_CMD);
-      Serial.println(RESTORE_SPIFFS_CMD);
+      Serial.println(HELP_BACKUP_SPIFFS_CMD);
+      Serial.println(HELP_BACKUP_STATUS_CMD);
+      Serial.println(HELP_RESTORE_SPIFFS_CMD);
     #endif
     // GCOVR_EXCL_STOP
     Serial.println(HELP_LED_CMD);
@@ -360,7 +356,6 @@ void CommandLine::runCommand(String input) {
     #endif
     Serial.println(HELP_BRIGHTNESS_CMD);
     Serial.println(HELP_FOOT);
-    #endif
     return;
   }
 
