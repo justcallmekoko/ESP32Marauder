@@ -55,6 +55,10 @@ const char PROGMEM UPDATE_CMD[] = "update";
 const char PROGMEM HELP_CMD[] = "help";
 const char PROGMEM SETTINGS_CMD[] = "settings";
 const char PROGMEM LS_CMD[] = "ls";
+const char PROGMEM PROTOCOL_INFO_CMD[] = "protocolinfo";
+const char PROGMEM BACKUP_SPIFFS_CMD[] = "backupspiffs";
+const char PROGMEM BACKUP_STATUS_CMD[] = "backupstatus";
+const char PROGMEM RESTORE_SPIFFS_CMD[] = "restorespiffs";
 const char PROGMEM LED_CMD[] = "led";
 const char PROGMEM GPS_DATA_CMD[] = "gpsdata";
 const char PROGMEM GPS_CMD[] = "gps";
@@ -133,6 +137,10 @@ const char PROGMEM HELP_REBOOT_CMD[] = "reboot";
 const char PROGMEM HELP_UPDATE_CMD_A[] = "update -s/-w";
 const char PROGMEM HELP_SETTINGS_CMD[] = "settings [-s <setting> enable/disable>]/[-r]";
 const char PROGMEM HELP_LS_CMD[] = "ls <directory>";
+const char PROGMEM HELP_PROTOCOL_INFO_CMD[] = "protocolinfo [--machine <transaction-id>]";
+const char PROGMEM HELP_BACKUP_SPIFFS_CMD[] = "backupspiffs [--machine <transaction-id>] - copy SPIFFS to /spiffs on SD";
+const char PROGMEM HELP_BACKUP_STATUS_CMD[] = "backupstatus [--machine <transaction-id>] - inspect /spiffs on SD";
+const char PROGMEM HELP_RESTORE_SPIFFS_CMD[] = "restorespiffs [--machine <transaction-id>] - restore SPIFFS from /spiffs on SD";
 const char PROGMEM HELP_LED_CMD[] = "led -s <hex color>/-p <rainbow>";
 const char PROGMEM HELP_GPS_DATA_CMD[] = "gpsdata";
 const char PROGMEM HELP_GPS_CMD[] = "gps [-t] [-g] <fix/sat/lon/lat/alt/date/accuracy/text/nmea>\r\n    [-n] <native/all/gps/glonass/galileo/navic/qzss/beidou>\r\n         [-b = use BD vs GB for beidou]";
@@ -217,7 +225,6 @@ class CommandLine {
     LinkedList<String> parseCommand(String input, char* delim);
     String toLowerCase(String str);
     void filterAccessPoints(String filter);
-    void runCommand(String input);
     bool checkValueExists(LinkedList<String>* cmd_args_list, int index);
     bool inRange(int max, int index);
     //bool apSelected();
@@ -226,6 +233,7 @@ class CommandLine {
     int argSearch(LinkedList<String>* cmd_args, const char* key);
     void startScanFromCLI(int scan_mode, uint16_t color, const char* scan_name);
 
+    #ifndef MARAUDER_V8
     const char* ascii_art =
     "\r\n"
     "              @@@@@@                        \r\n"
@@ -252,11 +260,13 @@ class CommandLine {
     "                      @@@@@@                \r\n"
     "                        @@@@                \r\n"
     "\r\n";
+    #endif
         
   public:
 
     void RunSetup();
     void main(uint32_t currentTime);
+    void runCommand(String input);
 };
 
 #endif

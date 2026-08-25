@@ -1,6 +1,5 @@
 #include "TargetListSort.h"
 
-#include <algorithm>
 #include <ctype.h>
 #include <string.h>
 
@@ -13,6 +12,21 @@ int caseInsensitiveCompare(const char* left, const char* right) {
       return a - b;
   }
   return (unsigned char)*left - (unsigned char)*right;
+}
+
+bool targetComesBefore(const TargetListItem& a, const TargetListItem& b,
+                       TargetSortMode mode) {
+  switch (mode) {
+    case TargetSortMode::SIGNAL_DESC:
+      return a.rssi != b.rssi ? a.rssi > b.rssi
+                              : caseInsensitiveCompare(a.name, b.name) < 0;
+    case TargetSortMode::NAME_ASC:
+      return caseInsensitiveCompare(a.name, b.name) < 0;
+    case TargetSortMode::CHANNEL_ASC:
+      return a.channel != b.channel ? a.channel < b.channel
+                                    : caseInsensitiveCompare(a.name, b.name) < 0;
+  }
+  return false;
 }
 }  // namespace
 
@@ -32,16 +46,15 @@ bool targetListItemMatchesFilter(const TargetListItem& item, TargetFilterMode fi
 }
 
 void sortTargetList(std::vector<TargetListItem>& items, TargetSortMode mode) {
-  std::stable_sort(items.begin(), items.end(), [mode](const TargetListItem& a, const TargetListItem& b) {
-    switch (mode) {
-      case TargetSortMode::SIGNAL_DESC:
-        return a.rssi != b.rssi ? a.rssi > b.rssi : caseInsensitiveCompare(a.name, b.name) < 0;
-      case TargetSortMode::NAME_ASC:
-        return caseInsensitiveCompare(a.name, b.name) < 0;
-      case TargetSortMode::CHANNEL_ASC:
-        return a.channel != b.channel ? a.channel < b.channel : caseInsensitiveCompare(a.name, b.name) < 0;
+  // Target lists are screen-sized. Stable insertion sort avoids pulling the
+  // large libstdc++ stable_sort implementation into constrained firmware.
+  for (size_t i = 1; i < items.size(); ++i) {
+    TargetListItem item = items[i];
+    size_t position = i;
+    while (position > 0 && targetComesBefore(item, items[position - 1], mode)) {
+      items[position] = items[position - 1];
+      --position;
     }
-    return false;
-  });
+    items[position] = item;
+  }
 }
-
