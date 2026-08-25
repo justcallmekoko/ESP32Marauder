@@ -267,6 +267,10 @@ void CommandLine::runCommand(String input) {
   //// Admin commands
   // Help
   if (cmd_args.get(0) == HELP_CMD) {
+    #ifdef MARAUDER_V8
+      Serial.println(F("ESP32 Marauder commands: https://github.com/justcallmekoko/ESP32Marauder/wiki/cli"));
+      Serial.println(F("Use protocolinfo for automation capabilities."));
+    #else
     Serial.println(HELP_HEAD);
     Serial.println(HELP_CH_CMD);
     Serial.println(HELP_SETTINGS_CMD);
@@ -354,6 +358,7 @@ void CommandLine::runCommand(String input) {
     #endif
     Serial.println(HELP_BRIGHTNESS_CMD);
     Serial.println(HELP_FOOT);
+    #endif
     return;
   }
 
