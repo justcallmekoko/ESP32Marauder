@@ -1,4 +1,5 @@
 #include "MenuFunctions.h"
+#include "CommandLine.h"
 #include "lang_var.h"
 
 #ifdef HAS_SCREEN
@@ -9,6 +10,7 @@ extern LinkedList<Station>* stations;
 extern LinkedList<AirTag>* airtags;
 extern LinkedList<Flipper>* flippers;
 extern LinkedList<BleDevice>* ble_devices;
+extern CommandLine cli_obj;
 
 #ifdef HAS_MINI_SCREEN
 void MenuFunctions::drawMiniMenuButton(int b, int x, bool selected) {
@@ -2002,13 +2004,13 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_PING_SCAN, TFT_CYAN);
   });
-  #ifndef HAS_DUAL_BAND
-    this->addNodes(&wifiScannerMenu, "ARP Scan", TFTCYAN, SCANNERS, [this]() {
-      display_obj.clearScreen();
-      this->drawStatusBar();
-      wifi_scan_obj.StartScan(WIFI_ARP_SCAN, TFT_CYAN);
-    });
-  #endif
+  // The C5 implementation uses the active station netif with lwIP core
+  // locking, so dual-band hardware supports the same ARP scanner.
+  this->addNodes(&wifiScannerMenu, "ARP Scan", TFTCYAN, SCANNERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(WIFI_ARP_SCAN, TFT_CYAN);
+  });
   this->addNodes(&wifiScannerMenu, "Port Scan All", TFTMAGENTA, BEACON_LIST, [this](){
     // Add the back button
     wifiIPMenu.list->clear();
@@ -3485,6 +3487,14 @@ void MenuFunctions::RunSetup()
         this->buildSDFileMenu(true);
 
         this->changeMenu(&sdDeleteMenu, true);
+      });
+
+      this->addNodes(&deviceMenu, "Backup SPIFFS", TFTGREEN, SD_UPDATE, [this]() {
+        cli_obj.runCommand(BACKUP_SPIFFS_CMD);
+      });
+
+      this->addNodes(&deviceMenu, "Restore SPIFFS", TFTORANGE, SD_UPDATE, [this]() {
+        cli_obj.runCommand(RESTORE_SPIFFS_CMD);
       });
 
     }

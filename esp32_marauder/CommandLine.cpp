@@ -50,7 +50,9 @@ namespace {
 #endif
 
 void CommandLine::RunSetup() {
-  Serial.println(this->ascii_art);
+  #ifndef MARAUDER_V8
+    Serial.println(this->ascii_art);
+  #endif
 
   Serial.println(F("\n\n--------------------------------\n"));
   Serial.println(F("         ESP32 Marauder      \n"));
@@ -1415,11 +1417,11 @@ void CommandLine::runCommand(String input) {
       this->startScanFromCLI(WIFI_PING_SCAN, TFT_GREEN, "Ping Scan");
     }
 
-    #ifndef HAS_DUAL_BAND
-      if (cmd_args.get(0) == ARP_SCAN_CMD) {
-        this->startScanFromCLI(WIFI_ARP_SCAN, TFT_CYAN, "ARP Scan");
-      }
-    #endif
+    // ARP discovery uses the active station netif on both legacy and C5
+    // dual-band hardware.
+    if (cmd_args.get(0) == ARP_SCAN_CMD) {
+      this->startScanFromCLI(WIFI_ARP_SCAN, TFT_CYAN, "ARP Scan");
+    }
 
     // GPS POI
     if (cmd_args.get(0) == GPS_POI_CMD) {

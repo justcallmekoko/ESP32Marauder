@@ -225,7 +225,6 @@ class CommandLine {
     LinkedList<String> parseCommand(String input, char* delim);
     String toLowerCase(String str);
     void filterAccessPoints(String filter);
-    void runCommand(String input);
     bool checkValueExists(LinkedList<String>* cmd_args_list, int index);
     bool inRange(int max, int index);
     //bool apSelected();
@@ -234,6 +233,7 @@ class CommandLine {
     int argSearch(LinkedList<String>* cmd_args, const char* key);
     void startScanFromCLI(int scan_mode, uint16_t color, const char* scan_name);
 
+    #ifndef MARAUDER_V8
     const char* ascii_art =
     "\r\n"
     "              @@@@@@                        \r\n"
@@ -260,11 +260,13 @@ class CommandLine {
     "                      @@@@@@                \r\n"
     "                        @@@@                \r\n"
     "\r\n";
+    #endif
         
   public:
 
     void RunSetup();
     void main(uint32_t currentTime);
+    void runCommand(String input);
 };
 
 #endif
