@@ -38,7 +38,7 @@ class Buffer {
     void write(const uint8_t* buf, uint32_t len);
     void saveFs();
     void saveSerial();
-    
+
     uint8_t* bufA;
     uint8_t* bufB;
 
