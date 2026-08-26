@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 
-constexpr uint32_t RECON_DEVICE_TTL_MS = 5UL * 60UL * 1000UL;
+constexpr uint32_t RECON_DEVICE_TTL_MS = 2UL * 60UL * 1000UL;
 constexpr uint32_t RECON_DEAUTH_ALERT_MS = 3000;
 constexpr uint32_t RECON_CHANNEL_PAGE_MS = 4000;
 constexpr uint8_t RECON_CHANNELS_PER_PAGE = 8;

@@ -53,7 +53,8 @@ void test_signal_trend_uses_meaningful_change_threshold() {
 
 void test_decay_is_wrap_safe_and_ignores_unknown_timestamps() {
   TEST_ASSERT_FALSE(reconDeviceExpired(500000, 0));
-  TEST_ASSERT_FALSE(reconDeviceExpired(400000, 200000));
+  TEST_ASSERT_FALSE(reconDeviceExpired(319999, 200000));
+  TEST_ASSERT_TRUE(reconDeviceExpired(320000, 200000));
   TEST_ASSERT_TRUE(reconDeviceExpired(500000, 200000));
   TEST_ASSERT_TRUE(reconDeviceExpired(0x00000020, 0xFFF00000, 100000));
 }

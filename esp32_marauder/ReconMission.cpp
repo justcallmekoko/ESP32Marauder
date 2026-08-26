@@ -577,9 +577,14 @@ void ReconMission::drawDashboard(uint32_t current_time) {
     #endif
     display_obj.tft.setTextColor(churn_in ? TFT_CYAN : TFT_DARKGREY, TFT_BLACK);
     display_obj.tft.drawRightString(churn_label, graph_x + graph_width - 3, graph_y + 3, 1);
-    const int16_t plot_left = graph_x + 3;
+    #if TFT_WIDTH >= 200 && TFT_HEIGHT >= 160
+      const int16_t plot_left = graph_x + 20;
+      const int16_t plot_width = graph_width - 23;
+    #else
+      const int16_t plot_left = graph_x + 3;
+      const int16_t plot_width = graph_width - 6;
+    #endif
     const int16_t plot_top = graph_y + 15;
-    const int16_t plot_width = graph_width - 6;
     const int16_t plot_height = graph_height - 29;
     for (uint8_t grid = 1; grid < 3; grid++)
       display_obj.tft.drawFastHLine(plot_left, plot_top + (plot_height * grid) / 3,
@@ -595,6 +600,17 @@ void ReconMission::drawDashboard(uint32_t current_time) {
       if (churn_in_history[index] > peak) peak = churn_in_history[index];
       if (churn_out_history[index] > peak) peak = churn_out_history[index];
     }
+    #if TFT_WIDTH >= 200 && TFT_HEIGHT >= 160
+      char scale_label[4];
+      display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
+      snprintf(scale_label, sizeof(scale_label), "%u", peak);
+      display_obj.tft.drawRightString(scale_label, plot_left - 3, plot_top - 3, 1);
+      snprintf(scale_label, sizeof(scale_label), "%u", (peak + 1) / 2);
+      display_obj.tft.drawRightString(scale_label, plot_left - 3,
+                                      plot_top + plot_height / 2 - 3, 1);
+      display_obj.tft.drawRightString("0", plot_left - 3,
+                                      plot_top + plot_height - 7, 1);
+    #endif
     for (uint8_t sample = 0; sample < visible_samples; sample++) {
       const uint8_t index = first_sample + sample;
       const int16_t x = first_x + sample * 3;
