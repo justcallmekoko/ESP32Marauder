@@ -15,6 +15,10 @@
 extern LinkedList<AccessPoint>* access_points;
 extern LinkedList<Station>* stations;
 extern LinkedList<BleDevice>* ble_devices;
+#ifdef HAS_BT
+  extern LinkedList<AirTag>* airtags;
+  extern LinkedList<Flipper>* flippers;
+#endif
 extern WiFiScan wifi_scan_obj;
 extern Buffer buffer_obj;
 #ifdef HAS_SCREEN
@@ -269,6 +273,18 @@ void ReconMission::pruneStaleDevices(uint32_t current_time) {
           ble_devices->remove(index);
           pending_churn_out++;
         }
+      }
+    }
+    if (airtags) {
+      for (int index = airtags->size() - 1; index >= 0; index--) {
+        if (reconDeviceExpired(current_time, airtags->get(index).last_seen))
+          airtags->remove(index);
+      }
+    }
+    if (flippers) {
+      for (int index = flippers->size() - 1; index >= 0; index--) {
+        if (reconDeviceExpired(current_time, flippers->get(index).last_seen))
+          flippers->remove(index);
       }
     }
   #endif

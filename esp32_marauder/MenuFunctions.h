@@ -141,6 +141,8 @@ class MenuFunctions
       BLE_TARGETS,
       FINDMY_TARGETS,
       FLIPPER_TARGETS,
+      META_TARGETS,
+      FLOCK_TARGETS,
     };
 
     String u_result = "";
@@ -192,6 +194,9 @@ class MenuFunctions
     LinkedList<SDDirectoryEntry>* sd_browser_entries = nullptr;
     LinkedList<String>* sd_delete_selection = nullptr;
     String sd_browser_path = "/";
+    bool sd_browser_release_pending = false;
+    void ensureSDDeleteBrowserResources();
+    void releaseSDDeleteBrowserResources();
 
     // WiFi menu stuff
     Menu wifiSnifferMenu;

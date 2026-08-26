@@ -348,6 +348,8 @@ struct AirTag {
 struct Flipper {
   String mac;
   String name;
+  int8_t rssi = -128;
+  uint32_t last_seen = 0;
 };
 
 struct BleDevice {
@@ -1012,6 +1014,8 @@ class WiFiScan
     bool isBlockedIdentifier(uint16_t id);
     #ifdef HAS_BT
       String classifyBLEDevice(const NimBLEAdvertisedDevice* advertised_device);
+      void retainBLEFoxHuntSubtype(const NimBLEAdvertisedDevice* advertised_device,
+                                   const BleDevice& ble_device);
     #endif
     void setFoxHuntTarget(const uint8_t mac[6], const String& name, int8_t rssi, uint8_t channel, bool bluetooth, const String& advertised_address = "");
     bool updateFoxHuntRssi(const uint8_t mac[6], int8_t rssi, uint8_t channel = 0);
