@@ -19,6 +19,7 @@
   //#define MARAUDER_V7_1
   //#define MARAUDER_KIT
   //#define GENERIC_ESP32
+  //#define HELTEC_WIFI_LORA_32_V4
   //#define MARAUDER_FLIPPER
   //#define MARAUDER_MULTIBOARD_S3
   //#define ESP32_LDDB
@@ -115,6 +116,8 @@
     #define HARDWARE_NAME "Dual Mini C5"
   #elif defined(MARAUDER_M5_NANO_C6)
     #define HARDWARE_NAME "M5 Nano C6"
+  #elif defined(HELTEC_WIFI_LORA_32_V4)
+    #define HARDWARE_NAME "Heltec WiFi LoRa 32 V4"
   #else
     #define HARDWARE_NAME "ESP32"
   #endif
@@ -409,6 +412,20 @@
     //#define HAS_NEOPIXEL_LED
     //#define HAS_PWR_MGMT
     //#define HAS_SCREEN
+    //#define HAS_SD
+    //#define HAS_TEMP_SENSOR
+    //#define HAS_GPS
+    //#define HAS_NIMBLE_2
+  #endif
+
+  #ifdef HELTEC_WIFI_LORA_32_V4
+    //#define FLIPPER_ZERO_HAT
+    //#define HAS_BATTERY
+    #define HAS_BT
+    //#define HAS_BUTTONS
+    //#define HAS_NEOPIXEL_LED
+    //#define HAS_PWR_MGMT
+    //#define HAS_SCREEN            // 0.96" SSD1306 driven by HeltecOLED, not TFT_eSPI
     //#define HAS_SD
     //#define HAS_TEMP_SENSOR
     //#define HAS_GPS

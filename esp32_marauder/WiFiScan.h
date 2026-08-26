@@ -784,6 +784,9 @@ class WiFiScan
 
 
   public:
+    // Added: expose attack TX counter for external status displays
+    int getPacketsSent() { return packets_sent; }
+
     struct FoxHuntTarget {
       uint8_t mac[6] = {};
       String name = "";

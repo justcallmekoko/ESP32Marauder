@@ -20,6 +20,9 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #include "Assets.h"
 #include "WiFiScan.h"
+#ifdef HELTEC_WIFI_LORA_32_V4
+  #include "HeltecOLED.h"
+#endif
 #ifdef HAS_SD
   #include "SDInterface.h"
 #endif
@@ -425,6 +428,10 @@ void setup()
   wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
   
   cli_obj.RunSetup();
+
+  #ifdef HELTEC_WIFI_LORA_32_V4
+    heltec_oled.begin();
+  #endif
 }
 
 
@@ -458,6 +465,10 @@ void loop()
   // Update all of our objects
   cli_obj.main(currentTime);
   wifi_scan_obj.main(currentTime);
+
+  #ifdef HELTEC_WIFI_LORA_32_V4
+    heltec_oled.update(currentTime);
+  #endif
 
   #ifdef HAS_T_DONGLE_DISPLAY
     t_dongle_display.update(currentTime, wifi_scan_obj);
