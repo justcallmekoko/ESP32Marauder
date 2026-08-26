@@ -38,7 +38,17 @@
   //#define MARAUDER_MINI_V3
   //#define MARAUDER_M5_NANO_C6
   //#define DUAL_MINI_C5
+  //#define MARAUDER_XIAOMIAO // XiaoMiao handheld: 1.8" ST7735 160x128, ESP32, shared VSPI
   //// END BOARD TARGETS
+
+  // XiaoMiao inherits the MARAUDER_MINI feature set and code paths
+  // (HAS_SCREEN / HAS_BUTTONS / HAS_SD etc.). Only pins and screen layout
+  // are overridden — see xiaomiao_config.h (included at the end of this file).
+  // MARAUDER_MINI must be defined here, early, so every #ifdef MARAUDER_MINI
+  // block below is actually entered.
+  #ifdef MARAUDER_XIAOMIAO
+    #define MARAUDER_MINI
+  #endif
 
   #define JSON_SETTING_SIZE 2048
 
@@ -3166,4 +3176,12 @@
 
   #endif
 
+  //=================================================================
+  // XiaoMiao board pin/layout overrides.
+  // Must be included AFTER every #ifdef MARAUDER_MINI block above so the
+  // #undef / #define overrides below take effect. See xiaomiao_config.h.
+  //=================================================================
+  #if defined(MARAUDER_XIAOMIAO)
+    #include "xiaomiao_config.h"
+  #endif
 #endif

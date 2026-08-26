@@ -904,6 +904,18 @@ void MenuFunctions::main(uint32_t currentTime)
       }
       #endif
 
+      // B button = go back to parent menu (reuses the parentMenu mechanism).
+      // Only active on boards that define a B_BTN (e.g. XiaoMiao 6-key pad).
+      #if defined(B_BTN) && (B_BTN >= 0)
+      if (b_btn.justPressed()) {
+        if (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
+          if (current_menu->parentMenu != NULL) {
+            this->changeMenu(current_menu->parentMenu, true);
+          }
+        }
+      }
+      #endif
+
       if(c_btn_press){
         current_menu->list->get(current_menu->selected).callable();
       }
