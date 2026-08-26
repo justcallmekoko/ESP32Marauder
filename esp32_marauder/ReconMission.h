@@ -37,7 +37,8 @@ class ReconMission {
   void drainProbeQueue();
   void drainRepeatQueue();
   void drainDeauthQueue();
-  void writeObservation(char type, const uint8_t mac[6], int rssi, uint8_t channel);
+  void writeObservation(char type, const uint8_t mac[6], int rssi, uint8_t channel,
+                        const char* label = nullptr);
   void writeProbe(const ReconProbeEvent& event);
   void writeRelationship(const uint8_t station[6], const uint8_t access_point[6]);
   void recordRelationship(const Station& station, const AccessPoint& access_point);
