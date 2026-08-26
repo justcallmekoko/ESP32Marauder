@@ -568,6 +568,7 @@ extern "C" {
             if (buf >= 0)
             {
               BleDevice ble_device;
+              ble_device.device_type = wifi_scan_obj.classifyBLEDevice(advertisedDevice);
               if (name_length > 0)
                 ble_device.name = name;
               else
@@ -1267,6 +1268,7 @@ extern "C" {
             if (buf >= 0)
             {
               BleDevice ble_device;
+              ble_device.device_type = wifi_scan_obj.classifyBLEDevice(advertisedDevice);
               if (name_length > 0)
                 ble_device.name = name;
               else
@@ -1984,6 +1986,68 @@ bool WiFiScan::isBlockedIdentifier(uint16_t id) {
   }
   return false;
 }
+
+#ifdef HAS_BT
+String WiFiScan::classifyBLEDevice(const NimBLEAdvertisedDevice* advertised_device) {
+  if (!advertised_device) return "BLE";
+
+  #ifndef HAS_NIMBLE_2
+    const uint8_t* payload = advertised_device->getPayload();
+    const size_t payload_length = advertised_device->getPayloadLength();
+  #else
+    const std::vector<unsigned char>& payload_bytes = advertised_device->getPayload();
+    const uint8_t* payload = payload_bytes.data();
+    const size_t payload_length = payload_bytes.size();
+  #endif
+
+  bool find_my = advertised_device->isAdvertisingService(FMNA_SERVICE_UUID) ||
+                 advertised_device->isAdvertisingService(DULT_SERVICE_UUID);
+  bool flipper = false;
+  if (payload) {
+    for (size_t index = 0; index + 3 < payload_length; index++) {
+      if ((payload[index] == 0x1E && payload[index + 1] == 0xFF &&
+           payload[index + 2] == 0x4C && payload[index + 3] == 0x00) ||
+          (payload[index] == 0x4C && payload[index + 1] == 0x00 &&
+           payload[index + 2] == 0x12))
+        find_my = true;
+      if ((payload[index] == 0x81 || payload[index] == 0x82 ||
+           payload[index] == 0x83) && payload[index + 1] == 0x30)
+        flipper = true;
+    }
+  }
+  if (find_my) return "FindMy";
+  if (flipper) return "Flipper";
+
+  bool meta = false;
+  bool blocked = false;
+  if (advertised_device->haveManufacturerData()) {
+    const std::string manufacturer_data = advertised_device->getManufacturerData();
+    if (manufacturer_data.length() >= 2) {
+      const uint16_t identifier =
+          (static_cast<uint8_t>(manufacturer_data[1]) << 8) |
+          static_cast<uint8_t>(manufacturer_data[0]);
+      blocked = isBlockedIdentifier(identifier);
+      meta = isMetaIdentifier(identifier);
+    }
+  }
+  if (advertised_device->haveServiceUUID()) {
+    for (int index = 0; index < advertised_device->getServiceUUIDCount(); index++) {
+      const String uuid = advertised_device->getServiceUUID(index).toString().c_str();
+      const uint16_t identifier = extract16BitFromUUID(uuid);
+      if (!identifier) continue;
+      blocked = blocked || isBlockedIdentifier(identifier);
+      meta = meta || isMetaIdentifier(identifier);
+    }
+  }
+  if (meta && !blocked) return "Meta";
+
+  String serial;
+  const String name = advertised_device->getName().c_str();
+  if (payload && isFlockCamera(payload, payload_length, name, &serial)) return "Flock";
+  if (name.length()) return name;
+  return "BLE";
+}
+#endif
 
 bool WiFiScan::isHostAlive(IPAddress ip) {
   if (ip != IPAddress(0, 0, 0, 0))
