@@ -353,6 +353,7 @@ struct Flipper {
 struct BleDevice {
   uint8_t  mac[6];
   String   name;
+  String   device_type;
   bool     selected = false;
   int      rssi     = -128;
   uint32_t last_seen_ms = 0;
@@ -1009,6 +1010,9 @@ class WiFiScan
     uint16_t rssiToColor(int8_t rssi);
     bool isMetaIdentifier(uint16_t id);
     bool isBlockedIdentifier(uint16_t id);
+    #ifdef HAS_BT
+      String classifyBLEDevice(const NimBLEAdvertisedDevice* advertised_device);
+    #endif
     void setFoxHuntTarget(const uint8_t mac[6], const String& name, int8_t rssi, uint8_t channel, bool bluetooth, const String& advertised_address = "");
     bool updateFoxHuntRssi(const uint8_t mac[6], int8_t rssi, uint8_t channel = 0);
     bool updateBluetoothFoxHuntRssi(const uint8_t mac[6], const String& advertised_address, int8_t rssi);

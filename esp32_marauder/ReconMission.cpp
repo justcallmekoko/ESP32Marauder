@@ -277,12 +277,12 @@ void ReconMission::pruneStaleDevices(uint32_t current_time) {
 }
 
 void ReconMission::writeObservation(char type, const uint8_t mac[6], int rssi,
-                                    uint8_t channel) {
+                                    uint8_t channel, const char* label) {
   if (type == 'a') { ap_count++; pending_churn_in++; }
   else if (type == 's') { station_count++; pending_churn_in++; }
   else if (type == 'b') { ble_count++; pending_churn_in++; }
   else if (type != 'd') repeat_count++;
-  recordUiEvent(type, mac, static_cast<int8_t>(rssi));
+  recordUiEvent(type, mac, static_cast<int8_t>(rssi), label);
   recordSignal(static_cast<int8_t>(rssi), channel);
 
   ReconLogRecord record = {};
@@ -434,7 +434,21 @@ void ReconMission::drainRepeatQueue() {
     const bool available = repeat_queue.pop(event);
     portEXIT_CRITICAL(&probe_queue_mux);
     if (!available) break;
-    writeObservation(event.type, event.mac, event.rssi, event.channel);
+    const char* label = nullptr;
+    #ifdef HAS_BT
+      String ble_label;
+      if (event.type == 'B' && ble_devices) {
+        for (int index = 0; index < ble_devices->size(); index++) {
+          const BleDevice& device = ble_devices->get(index);
+          if (!memcmp(device.mac, event.mac, sizeof(event.mac))) {
+            ble_label = device.device_type;
+            label = ble_label.c_str();
+            break;
+          }
+        }
+      }
+    #endif
+    writeObservation(event.type, event.mac, event.rssi, event.channel, label);
   }
 }
 
@@ -629,9 +643,11 @@ void ReconMission::drawDashboard(uint32_t current_time) {
     char band_label[20];
     snprintf(band_label, sizeof(band_label), "2G%u 5G%u", band_24_percent, band_5_percent);
     #if TFT_HEIGHT >= 160
-      display_obj.tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
-      display_obj.tft.drawCentreString(band_label, graph_x + graph_width / 2,
-                                       graph_y + graph_height - 12, 1);
+      if (active_mode == ReconMode::WIFI_RECON) {
+        display_obj.tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+        display_obj.tft.drawCentreString(band_label, graph_x + graph_width / 2,
+                                         graph_y + graph_height - 12, 1);
+      }
     #endif
 
     display_obj.tft.setTextSize(1);
@@ -708,17 +724,27 @@ void ReconMission::drawDashboard(uint32_t current_time) {
       #if TFT_WIDTH >= 200
         const int16_t relation_y = body_top + 112;
         display_obj.tft.drawFastHLine(6, relation_y - 6, TFT_WIDTH - 12, TFT_DARKGREY);
-        display_obj.tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
-        display_obj.tft.drawString("NEW ASSOCIATIONS", 8, relation_y, 1);
+        display_obj.tft.setTextColor(active_mode == ReconMode::WIFI_RECON
+                                       ? TFT_MAGENTA : TFT_CYAN, TFT_BLACK);
+        display_obj.tft.drawString(active_mode == ReconMode::WIFI_RECON
+                                     ? "NEW ASSOCIATIONS" : "DEVICE TYPE", 8, relation_y, 1);
         for (uint8_t row = 0; row < 3; row++) {
-          const UiRelationship& relationship =
-              ui_relationships[(ui_relationship_head + row) % 3];
-          if (!relationship.ap_name[0]) continue;
-          char ap_name[13];
-          reconTruncate(relationship.ap_name, ap_name, sizeof(ap_name));
-          snprintf(line, sizeof(line), "%02X:%02X:%02X > %s",
-                   relationship.station[3], relationship.station[4], relationship.station[5],
-                   ap_name);
+          if (active_mode == ReconMode::WIFI_RECON) {
+            const UiRelationship& relationship =
+                ui_relationships[(ui_relationship_head + row) % 3];
+            if (!relationship.ap_name[0]) continue;
+            char ap_name[13];
+            reconTruncate(relationship.ap_name, ap_name, sizeof(ap_name));
+            snprintf(line, sizeof(line), "%02X:%02X:%02X > %s",
+                     relationship.station[3], relationship.station[4], relationship.station[5],
+                     ap_name);
+          } else {
+            const UiEvent& event = ui_events[(ui_event_head + row + 1) % 4];
+            if (event.type != 'b') continue;
+            snprintf(line, sizeof(line), "%02X:%02X:%02X > %s",
+                     event.mac[3], event.mac[4], event.mac[5],
+                     event.label[0] ? event.label : "BLE");
+          }
           display_obj.tft.setTextColor(row == 2 ? TFT_CYAN : TFT_LIGHTGREY, TFT_BLACK);
           display_obj.tft.drawString(line, 8, relation_y + 15 + row * 14, 1);
         }
@@ -774,6 +800,9 @@ void ReconMission::drawDashboard(uint32_t current_time) {
         } else {
           const UiEvent& latest = ui_events[(ui_event_head + 3) % 4];
           if (latest.type == 'p') snprintf(line, sizeof(line), "PROBE %.12s", latest.label);
+          else if (latest.type == 'b') snprintf(line, sizeof(line), "%02X:%02X > %.8s",
+                                                latest.mac[4], latest.mac[5],
+                                                latest.label[0] ? latest.label : "BLE");
           else if (latest.type) snprintf(line, sizeof(line), "%c %02X:%02X:%02X",
                                          latest.type, latest.mac[3], latest.mac[4], latest.mac[5]);
           else snprintf(line, sizeof(line), "Waiting...");
@@ -819,7 +848,7 @@ void ReconMission::observeLists() {
         const ReconRange range = state.consume(ReconSource::BLE_LIST, ble_devices->size());
         for (size_t index = range.begin; index < range.end; index++) {
           const BleDevice& device = ble_devices->get(index);
-          writeObservation('b', device.mac, device.rssi, 0);
+          writeObservation('b', device.mac, device.rssi, 0, device.device_type.c_str());
         }
       }
     #endif
