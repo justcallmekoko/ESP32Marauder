@@ -47,6 +47,16 @@ void test_decay_is_wrap_safe_and_ignores_unknown_timestamps() {
   TEST_ASSERT_TRUE(reconDeviceExpired(0x00000020, 0xFFF00000, 100000));
 }
 
+void test_channel_pages_cycle_and_include_partial_final_page() {
+  TEST_ASSERT_EQUAL_UINT8(0, reconChannelPage(0, 51));
+  TEST_ASSERT_EQUAL_UINT8(1, reconChannelPage(RECON_CHANNEL_PAGE_MS, 51));
+  TEST_ASSERT_EQUAL_UINT8(6, reconChannelPage(RECON_CHANNEL_PAGE_MS * 6, 51));
+  TEST_ASSERT_EQUAL_UINT8(0, reconChannelPage(RECON_CHANNEL_PAGE_MS * 7, 51));
+  TEST_ASSERT_EQUAL_UINT8(8, reconChannelsOnPage(0, 51));
+  TEST_ASSERT_EQUAL_UINT8(3, reconChannelsOnPage(6, 51));
+  TEST_ASSERT_EQUAL_UINT8(0, reconChannelsOnPage(7, 51));
+}
+
 void test_truncation_preserves_both_ends() {
   char output[10];
   reconTruncate("MarauderNetwork", output, sizeof(output));
@@ -61,6 +71,7 @@ int main(int, char**) {
   RUN_TEST(test_signal_segments_and_labels_are_monotonic);
   RUN_TEST(test_signal_trend_uses_meaningful_change_threshold);
   RUN_TEST(test_decay_is_wrap_safe_and_ignores_unknown_timestamps);
+  RUN_TEST(test_channel_pages_cycle_and_include_partial_final_page);
   RUN_TEST(test_truncation_preserves_both_ends);
   return UNITY_END();
 }

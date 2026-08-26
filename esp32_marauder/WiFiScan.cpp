@@ -628,7 +628,7 @@ extern "C" {
         
                 Serial.println();
         
-                if (!display_obj.printing) {
+                if (!recon_obj.suppressScanUi() && !display_obj.printing) {
                   display_obj.loading = true;
                   display_obj.display_buffer->add(display_string);
                   display_obj.loading = false;
@@ -1327,7 +1327,7 @@ extern "C" {
         
                 Serial.println();
         
-                if (!display_obj.printing) {
+                if (!recon_obj.suppressScanUi() && !display_obj.printing) {
                   display_obj.loading = true;
                   display_obj.display_buffer->add(display_string);
                   display_obj.loading = false;
@@ -6817,7 +6817,8 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
         Serial.print(F(" "));
 
         #ifdef HAS_SCREEN
-          display_obj.display_buffer->add(display_string);
+          if (!recon_obj.suppressScanUi())
+            display_obj.display_buffer->add(display_string);
         #endif
         
         if (essid == "") {
@@ -7019,7 +7020,8 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
 
       Serial.print(F(" "));
 
-      display_obj.display_buffer->add(display_string);
+      if (!recon_obj.suppressScanUi())
+        display_obj.display_buffer->add(display_string);
     #endif
 
     if (mem_check) {

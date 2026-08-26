@@ -6,6 +6,8 @@
 
 constexpr uint32_t RECON_DEVICE_TTL_MS = 5UL * 60UL * 1000UL;
 constexpr uint32_t RECON_DEAUTH_ALERT_MS = 3000;
+constexpr uint32_t RECON_CHANNEL_PAGE_MS = 4000;
+constexpr uint8_t RECON_CHANNELS_PER_PAGE = 8;
 
 enum class ReconLayout : uint8_t {
   COMPACT_SQUARE,
@@ -26,6 +28,20 @@ inline ReconLayout reconLayoutFor(uint16_t width, uint16_t height) {
 inline uint8_t reconRelationshipRows(ReconLayout layout) {
   return layout == ReconLayout::LARGE ? 3 :
          layout == ReconLayout::NARROW_PORTRAIT ? 1 : 0;
+}
+
+inline uint8_t reconChannelPage(uint32_t elapsed_ms, uint8_t channel_count) {
+  if (!channel_count) return 0;
+  const uint8_t page_count =
+      (channel_count + RECON_CHANNELS_PER_PAGE - 1) / RECON_CHANNELS_PER_PAGE;
+  return (elapsed_ms / RECON_CHANNEL_PAGE_MS) % page_count;
+}
+
+inline uint8_t reconChannelsOnPage(uint8_t page, uint8_t channel_count) {
+  const uint16_t first = static_cast<uint16_t>(page) * RECON_CHANNELS_PER_PAGE;
+  if (first >= channel_count) return 0;
+  const uint8_t remaining = channel_count - first;
+  return remaining < RECON_CHANNELS_PER_PAGE ? remaining : RECON_CHANNELS_PER_PAGE;
 }
 
 inline uint8_t reconSignalSegments(int8_t rssi) {

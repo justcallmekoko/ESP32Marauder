@@ -29,6 +29,7 @@ class ReconMission {
   void queueDeauth(const uint8_t transmitter[6], const uint8_t bssid[6],
                    int8_t rssi, uint8_t channel, uint16_t reason);
   bool active() const { return running; }
+  bool suppressScanUi() const { return suppress_scan_ui; }
   ReconMode mode() const { return active_mode; }
 
  private:
@@ -50,6 +51,7 @@ class ReconMission {
 
   ReconMissionState state;
   bool running = false;
+  bool suppress_scan_ui = false;
   ReconMode active_mode = ReconMode::WIFI_RECON;
   uint32_t started_at = 0;
   uint32_t last_sample = 0;
@@ -83,7 +85,7 @@ class ReconMission {
   uint8_t ui_relationship_head = 0;
   int8_t signal_history[6] = {};
   uint8_t signal_history_count = 0;
-  uint16_t channel_activity[14] = {};
+  uint16_t channel_activity[DUAL_BAND_CHANNELS] = {};
   #ifdef HAS_SD
     File log_file;
     File probe_file;

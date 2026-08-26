@@ -96,6 +96,7 @@ bool ReconMission::start(ReconMode mode) {
   memset(signal_history, 0, sizeof(signal_history));
   signal_history_count = 0;
   memset(channel_activity, 0, sizeof(channel_activity));
+  suppress_scan_ui = true;
 
   buffer_obj.setDirectory(NULL);
   #ifdef HAS_SD
@@ -174,6 +175,7 @@ void ReconMission::stop() {
   writeManifest(true);
   buffer_obj.setDirectory(NULL);
   running = false;
+  suppress_scan_ui = false;
 }
 
 void ReconMission::writeRelationship(const uint8_t station[6],
@@ -347,8 +349,20 @@ void ReconMission::recordSignal(int8_t rssi, uint8_t channel) {
       signal_history[sizeof(signal_history) - 1] = rssi;
     }
   }
-  if (channel > 0 && channel < 15 && channel_activity[channel - 1] < UINT16_MAX)
-    channel_activity[channel - 1]++;
+  if (!channel) return;
+  uint8_t channel_index = UINT8_MAX;
+  #ifdef HAS_DUAL_BAND
+    for (uint8_t index = 0; index < DUAL_BAND_CHANNELS; index++) {
+      if (wifi_scan_obj.dual_band_channels[index] == channel) {
+        channel_index = index;
+        break;
+      }
+    }
+  #else
+    if (channel <= MAX_CHANNEL) channel_index = channel - 1;
+  #endif
+  if (channel_index != UINT8_MAX && channel_activity[channel_index] < UINT16_MAX)
+    channel_activity[channel_index]++;
 }
 
 void ReconMission::queueDeauth(const uint8_t transmitter[6], const uint8_t bssid[6],
@@ -485,13 +499,12 @@ void ReconMission::drawDashboard(uint32_t current_time) {
                  static_cast<unsigned long>(station_count),
                  static_cast<unsigned long>(probe_count));
       #else
-        snprintf(status, sizeof(status), "REC W %lu:%02lu A%lu S%lu P%lu D%lu G%c",
+        snprintf(status, sizeof(status), "REC W %lu:%02lu A%lu S%lu P%lu G%c",
                  static_cast<unsigned long>(seconds / 60),
                  static_cast<unsigned long>(seconds % 60),
                  static_cast<unsigned long>(ap_count),
                  static_cast<unsigned long>(station_count),
-                 static_cast<unsigned long>(probe_count),
-                 static_cast<unsigned long>(deauth_count), gps_fix ? '+' : '-');
+                 static_cast<unsigned long>(probe_count), gps_fix ? '+' : '-');
       #endif
     } else {
       snprintf(status, sizeof(status), "REC B %lu:%02lu D%lu U%lu G%c",
@@ -507,15 +520,6 @@ void ReconMission::drawDashboard(uint32_t current_time) {
     display_obj.tft.setTextSize(1);
     display_obj.tft.setTextColor(TFT_BLACK, color);
     display_obj.tft.drawCentreString(status, (TFT_WIDTH / 2) + 4, 20, 1);
-    if (active_mode == ReconMode::WIFI_RECON) {
-      const bool deauth_active = last_deauth && current_time - last_deauth < RECON_DEAUTH_ALERT_MS;
-      display_obj.tft.fillRect(TFT_WIDTH - 34, 34, 32, 12, TFT_BLACK);
-      display_obj.tft.setTextColor(deauth_active ? TFT_RED : TFT_DARKGREY, TFT_BLACK);
-      char deauth_badge[7];
-      snprintf(deauth_badge, sizeof(deauth_badge), "D!%lu",
-               static_cast<unsigned long>(deauth_count % 1000));
-      display_obj.tft.drawRightString(deauth_badge, TFT_WIDTH - 3, 35, 1);
-    }
     while (display_obj.display_buffer->size()) display_obj.display_buffer->shift();
     #ifdef SCREEN_BUFFER
       while (display_obj.screen_buffer->size()) display_obj.screen_buffer->shift();
@@ -582,6 +586,12 @@ void ReconMission::drawDashboard(uint32_t current_time) {
       else
         snprintf(line, sizeof(line), "UPDATE %-3lu", (unsigned long)repeat_count);
       display_obj.tft.drawString(line, stats_x, body_top + 22, 1);
+      if (active_mode == ReconMode::WIFI_RECON) {
+        const bool deauth_active = last_deauth && current_time - last_deauth < RECON_DEAUTH_ALERT_MS;
+        snprintf(line, sizeof(line), "D! %-4lu", (unsigned long)deauth_count);
+        display_obj.tft.setTextColor(deauth_active ? TFT_RED : TFT_DARKGREY, TFT_BLACK);
+        display_obj.tft.drawString(line, stats_x, body_top + 36, 1);
+      }
     #elif TFT_WIDTH < 200
       if (active_mode == ReconMode::WIFI_RECON)
         snprintf(line, sizeof(line), "AP %lu  STA %lu", (unsigned long)ap_count,
@@ -595,6 +605,12 @@ void ReconMission::drawDashboard(uint32_t current_time) {
       else
         snprintf(line, sizeof(line), "UPDATE %lu", (unsigned long)repeat_count);
       display_obj.tft.drawCentreString(line, TFT_WIDTH / 2, body_top + 110, 1);
+      if (active_mode == ReconMode::WIFI_RECON) {
+        const bool deauth_active = last_deauth && current_time - last_deauth < RECON_DEAUTH_ALERT_MS;
+        snprintf(line, sizeof(line), "DEAUTH %lu", (unsigned long)deauth_count);
+        display_obj.tft.setTextColor(deauth_active ? TFT_RED : TFT_DARKGREY, TFT_BLACK);
+        display_obj.tft.drawCentreString(line, TFT_WIDTH / 2, body_top + 124, 1);
+      }
     #else
       const int16_t stats_x = 108;
       display_obj.tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
@@ -609,6 +625,10 @@ void ReconMission::drawDashboard(uint32_t current_time) {
         display_obj.tft.drawString(line, stats_x, body_top + 56, 1);
         snprintf(line, sizeof(line), "UPDATE   %lu", (unsigned long)repeat_count);
         display_obj.tft.drawString(line, stats_x, body_top + 70, 1);
+        const bool deauth_active = last_deauth && current_time - last_deauth < RECON_DEAUTH_ALERT_MS;
+        snprintf(line, sizeof(line), "DEAUTH   %lu", (unsigned long)deauth_count);
+        display_obj.tft.setTextColor(deauth_active ? TFT_RED : TFT_DARKGREY, TFT_BLACK);
+        display_obj.tft.drawString(line, stats_x, body_top + 84, 1);
       } else {
         snprintf(line, sizeof(line), "BLE DEVICE  %lu", (unsigned long)ble_count);
         display_obj.tft.drawString(line, stats_x, body_top + 35, 1);
@@ -637,18 +657,39 @@ void ReconMission::drawDashboard(uint32_t current_time) {
         }
 
         if (active_mode == ReconMode::WIFI_RECON) {
+          #ifdef HAS_DUAL_BAND
+            const uint8_t channel_count = DUAL_BAND_CHANNELS;
+          #else
+            const uint8_t channel_count = MAX_CHANNEL;
+          #endif
+          const uint8_t page = reconChannelPage(current_time - started_at, channel_count);
+          const uint8_t first_channel = page * RECON_CHANNELS_PER_PAGE;
+          const uint8_t visible_channels = reconChannelsOnPage(page, channel_count);
           uint16_t peak = 1;
-          for (uint8_t channel = 0; channel < 14; channel++)
-            if (channel_activity[channel] > peak) peak = channel_activity[channel];
+          for (uint8_t offset = 0; offset < visible_channels; offset++)
+            if (channel_activity[first_channel + offset] > peak)
+              peak = channel_activity[first_channel + offset];
           const int16_t strip_y = TFT_HEIGHT - 31;
           display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
-          display_obj.tft.drawString("CH", 5, strip_y + 8, 1);
-          const int16_t slot = (TFT_WIDTH - 26) / 14;
-          for (uint8_t channel = 0; channel < 14; channel++) {
-            const int16_t height = 2 + (channel_activity[channel] * 14UL) / peak;
-            const int16_t x = 24 + channel * slot;
-            display_obj.tft.fillRect(x, strip_y + 17 - height, slot > 2 ? slot - 2 : 1,
-                                     height, channel_activity[channel] ? TFT_BLUE : TFT_DARKGREY);
+          display_obj.tft.drawString("CH", 3, strip_y + 7, 1);
+          const int16_t chart_left = 22;
+          const int16_t slot = (TFT_WIDTH - chart_left - 2) / visible_channels;
+          for (uint8_t offset = 0; offset < visible_channels; offset++) {
+            const uint8_t index = first_channel + offset;
+            const int16_t height = 2 + (channel_activity[index] * 12UL) / peak;
+            const int16_t x = chart_left + offset * slot;
+            display_obj.tft.fillRect(x + 1, strip_y + 16 - height,
+                                     slot > 3 ? slot - 3 : 1, height,
+                                     channel_activity[index] ? TFT_BLUE : TFT_DARKGREY);
+            #ifdef HAS_DUAL_BAND
+              const uint8_t channel = wifi_scan_obj.dual_band_channels[index];
+            #else
+              const uint8_t channel = index + 1;
+            #endif
+            char channel_label[4];
+            snprintf(channel_label, sizeof(channel_label), "%u", channel);
+            display_obj.tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+            display_obj.tft.drawCentreString(channel_label, x + slot / 2, strip_y + 19, 1);
           }
         }
       #else
