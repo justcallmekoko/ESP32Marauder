@@ -7096,6 +7096,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
     
     // Add to list of stations
     if (mem_check) {
+      // GCOVR_EXCL_START -- requires a live promiscuous WiFi packet callback.
       Station sta = {};
       for (int mac_byte = 0; mac_byte < 6; mac_byte++)
         sta.mac[mac_byte] = snifferPacket->payload[frame_offset + mac_byte];
@@ -7103,6 +7104,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
       sta.packets = 0;
       sta.ap = static_cast<uint16_t>(ap_index);
       sta.last_seen_ms = millis();
+      // GCOVR_EXCL_STOP
 
       stations->add(sta);
     }
