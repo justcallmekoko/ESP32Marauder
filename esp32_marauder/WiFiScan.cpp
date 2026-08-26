@@ -1,5 +1,6 @@
 #include "esp_random.h"
 #include "WiFiScan.h"
+#include "ReconMission.h"
 #include "FoxHuntTarget.h"
 #include "BeaconFrame.h"
 #include "WdgResponse.h"
@@ -38,6 +39,7 @@ LinkedList<Flipper>* flippers;
 LinkedList<IPAddress>* ipList;
 LinkedList<ProbeReqSsid>* probe_req_ssids;
 LinkedList<BleDevice>* ble_devices;
+extern ReconMission recon_obj;
 
 size_t WiFiScan::retainedAccessPointCount() const {
   return access_points == nullptr ? 0 : access_points->size();
@@ -572,12 +574,14 @@ extern "C" {
                 ble_device.name = mac;
 
               ble_device.rssi = rssi;
+              ble_device.last_seen_ms = millis();
 
               memcpy(ble_device.mac, mac_char, sizeof(mac_char));
 
               int device_match_check = wifi_scan_obj.seenBLEDevice(ble_device);
 
               if (device_match_check >= 0) {
+                recon_obj.queueRepeat('B', ble_device.mac, ble_device.rssi, 0);
                 ble_device.selected = ble_devices->get(device_match_check).selected;
                 ble_device.name = ble_devices->get(device_match_check).name;
                 memcpy(ble_device.mac, ble_devices->get(device_match_check).mac, sizeof(mac_char));
@@ -624,7 +628,7 @@ extern "C" {
         
                 Serial.println();
         
-                if (!display_obj.printing) {
+                if (!recon_obj.suppressScanUi() && !display_obj.printing) {
                   display_obj.loading = true;
                   display_obj.display_buffer->add(display_string);
                   display_obj.loading = false;
@@ -1269,12 +1273,14 @@ extern "C" {
                 ble_device.name = mac;
 
               ble_device.rssi = rssi;
+              ble_device.last_seen_ms = millis();
 
               memcpy(ble_device.mac, mac_char, sizeof(mac_char));
 
               int device_match_check = wifi_scan_obj.seenBLEDevice(ble_device);
 
               if (device_match_check >= 0) {
+                recon_obj.queueRepeat('B', ble_device.mac, ble_device.rssi, 0);
                 ble_device.selected = ble_devices->get(device_match_check).selected;
                 ble_device.name = ble_devices->get(device_match_check).name;
                 memcpy(ble_device.mac, ble_devices->get(device_match_check).mac, sizeof(mac_char));
@@ -1321,7 +1327,7 @@ extern "C" {
         
                 Serial.println();
         
-                if (!display_obj.printing) {
+                if (!recon_obj.suppressScanUi() && !display_obj.printing) {
                   display_obj.loading = true;
                   display_obj.display_buffer->add(display_string);
                   display_obj.loading = false;
@@ -6696,6 +6702,25 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
   {
     len -= 4;
 
+    if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA) &&
+        (snifferPacket->payload[0] == 0xC0) && (len >= 26)) {
+      const uint16_t reason = snifferPacket->payload[24] |
+                              (static_cast<uint16_t>(snifferPacket->payload[25]) << 8);
+      recon_obj.queueDeauth(&snifferPacket->payload[10], &snifferPacket->payload[16],
+                            snifferPacket->rx_ctrl.rssi,
+                            snifferPacket->rx_ctrl.channel, reason);
+    }
+
+    if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA) &&
+        (snifferPacket->payload[0] == 0x40) && (len > 26)) {
+      const uint8_t name_length = snifferPacket->payload[25];
+      if (name_length && (26 + name_length <= len)) {
+        recon_obj.queueProbe(&snifferPacket->payload[10], snifferPacket->rx_ctrl.rssi,
+                             snifferPacket->rx_ctrl.channel,
+                             &snifferPacket->payload[26], name_length);
+      }
+    }
+
     // If we dont the buffer size is not 0, don't write or else we get CORRUPT_HEAP
     #ifdef HAS_SCREEN
       int buf = display_obj.display_buffer->size();
@@ -6739,6 +6764,17 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
 
       int in_list = wifi_scan_obj.checkMatchAP(addr);
 
+      if (in_list >= 0) {
+        AccessPoint access_point = access_points->get(in_list);
+        access_point.rssi = snifferPacket->rx_ctrl.rssi;
+        access_point.channel = snifferPacket->rx_ctrl.channel;
+        access_point.last_seen_ms = millis();
+        access_points->set(in_list, access_point);
+        recon_obj.queueRepeat('A', &snifferPacket->payload[10],
+                              snifferPacket->rx_ctrl.rssi,
+                              snifferPacket->rx_ctrl.channel);
+      }
+
       if (in_list < 0) {
       
         Serial.print(snifferPacket->rx_ctrl.rssi);
@@ -6781,7 +6817,8 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
         Serial.print(F(" "));
 
         #ifdef HAS_SCREEN
-          display_obj.display_buffer->add(display_string);
+          if (!recon_obj.suppressScanUi())
+            display_obj.display_buffer->add(display_string);
         #endif
         
         if (essid == "") {
@@ -6829,6 +6866,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
           ap.packets = 0;
 
           ap.man = "";
+          ap.last_seen_ms = millis();
 
           access_points->add(ap);
         }
@@ -6911,6 +6949,9 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
       }
       if (mac_match) {
         in_list = true;
+        Station station = stations->get(i);
+        station.last_seen_ms = millis();
+        stations->set(i, station);
         break;
       }
     }
@@ -6918,6 +6959,11 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
     getMAC(dst_addr, snifferPacket->payload, 4);
 
     // Check if dest is broadcast
+    if (in_list) {
+      recon_obj.queueRepeat('S', &snifferPacket->payload[frame_offset],
+                            snifferPacket->rx_ctrl.rssi,
+                            snifferPacket->rx_ctrl.channel);
+    }
     if ((in_list) || (strcmp(dst_addr, "ff:ff:ff:ff:ff:ff") == 0))
       return;
     
@@ -6931,7 +6977,9 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
                     snifferPacket->payload[frame_offset + 4],
                     snifferPacket->payload[frame_offset + 5]},
                     false,
-                    0};
+                    0,
+                    static_cast<uint16_t>(ap_index),
+                    millis()};
 
       stations->add(sta);
     }
@@ -6972,7 +7020,8 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
 
       Serial.print(F(" "));
 
-      display_obj.display_buffer->add(display_string);
+      if (!recon_obj.suppressScanUi())
+        display_obj.display_buffer->add(display_string);
     #endif
 
     if (mem_check) {
