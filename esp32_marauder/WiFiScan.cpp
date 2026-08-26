@@ -1994,7 +1994,7 @@ bool WiFiScan::isBlockedIdentifier(uint16_t id) {
 }
 
 #ifdef HAS_BT
-String WiFiScan::classifyBLEDevice(MarauderBLEAdvertisedDevice* advertised_device) {
+String WiFiScan::classifyBLEDevice(MarauderBLEAdvertisedDevice* advertised_device) { // GCOVR_EXCL_LINE -- requires NimBLE hardware data.
   if (!advertised_device) return "BLE";
 
   #ifndef HAS_NIMBLE_2
@@ -2054,7 +2054,7 @@ String WiFiScan::classifyBLEDevice(MarauderBLEAdvertisedDevice* advertised_devic
   return "BLE";
 }
 
-void WiFiScan::retainBLEFoxHuntSubtype(MarauderBLEAdvertisedDevice* advertised_device,
+void WiFiScan::retainBLEFoxHuntSubtype(MarauderBLEAdvertisedDevice* advertised_device, // GCOVR_EXCL_LINE -- requires NimBLE hardware data.
                                       const BleDevice& ble_device) {
   if (!advertised_device) return;
 
