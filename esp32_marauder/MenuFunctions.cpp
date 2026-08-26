@@ -146,6 +146,11 @@ void MenuFunctions::displayMenuButtons() {
 // Function to check menu input
 void MenuFunctions::main(uint32_t currentTime)
 {
+  #ifdef HAS_SD
+    if (sd_browser_release_pending && current_menu != &sdDeleteMenu)
+      this->releaseSDDeleteBrowserResources();
+  #endif
+
   #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
     this->updateKeyboard();
   #endif
@@ -1871,9 +1876,7 @@ void MenuFunctions::RunSetup()
   htmlMenu.list = new LinkedList<MenuNode>();
   miniKbMenu.list = new LinkedList<MenuNode>();
   #ifdef HAS_SD
-    sdDeleteMenu.list = new LinkedList<MenuNode>();
-    sd_browser_entries = new LinkedList<SDDirectoryEntry>();
-    sd_delete_selection = new LinkedList<String>();
+    sdDeleteMenu.list = nullptr;
   #endif
 
   // Bluetooth menu stuff
@@ -4252,7 +4255,39 @@ void MenuFunctions::toggleSDDeleteSelection(const String& path) {
   sd_delete_selection->add(path);
 }
 
+void MenuFunctions::ensureSDDeleteBrowserResources() {
+  if (sdDeleteMenu.list == nullptr)
+    sdDeleteMenu.list = new LinkedList<MenuNode>();
+  if (sd_browser_entries == nullptr)
+    sd_browser_entries = new LinkedList<SDDirectoryEntry>();
+  if (sd_delete_selection == nullptr)
+    sd_delete_selection = new LinkedList<String>();
+  sd_browser_release_pending = false;
+}
+
+void MenuFunctions::releaseSDDeleteBrowserResources() {
+  if (sdDeleteMenu.list != nullptr) {
+    sdDeleteMenu.list->clear();
+    delete sdDeleteMenu.list;
+    sdDeleteMenu.list = nullptr;
+  }
+  if (sd_browser_entries != nullptr) {
+    sd_browser_entries->clear();
+    delete sd_browser_entries;
+    sd_browser_entries = nullptr;
+  }
+  if (sd_delete_selection != nullptr) {
+    sd_delete_selection->clear();
+    delete sd_delete_selection;
+    sd_delete_selection = nullptr;
+  }
+  sd_browser_path = "/";
+  sd_browser_release_pending = false;
+}
+
 void MenuFunctions::buildSDDeleteBrowser(const String& path, bool reset_selection) {
+  this->ensureSDDeleteBrowserResources();
+
   if (reset_selection)
     sd_delete_selection->clear();
 
@@ -4299,6 +4334,17 @@ void MenuFunctions::buildSDDeleteBrowser(const String& path, bool reset_selectio
       delay(1000);
       this->buildSDDeleteBrowser("/");
       this->changeMenu(&sdDeleteMenu, true);
+    });
+
+    this->addNodes(&sdDeleteMenu, "Deselect All", TFTYELLOW, 0, [this]() {
+      sd_delete_selection->clear();
+      for (int index = 0; index < current_menu->list->size(); index++) {
+        MenuNode node = current_menu->list->get(index);
+        node.selected = false;
+        current_menu->list->set(index, node);
+      }
+      this->buildButtons(current_menu, menu_start_index);
+      this->displayCurrentMenu(menu_start_index);
     });
   }
 
@@ -4553,6 +4599,10 @@ uint16_t MenuFunctions::getColor(uint16_t color) {
 
 // Function to change menu
 void MenuFunctions::changeMenu(Menu* menu, bool simple_change) {
+  #ifdef HAS_SD
+    const bool leaving_sd_browser = current_menu == &sdDeleteMenu && menu != &sdDeleteMenu;
+  #endif
+
   if (!simple_change) {
     //display_obj.initScrollValues();
     //display_obj.setupScrollArea(TOP_FIXED_AREA, BOT_FIXED_AREA);
@@ -4570,6 +4620,11 @@ void MenuFunctions::changeMenu(Menu* menu, bool simple_change) {
   buildButtons(menu);
 
   displayCurrentMenu();
+
+  #ifdef HAS_SD
+    if (leaving_sd_browser)
+      sd_browser_release_pending = true;
+  #endif
 
   //#ifdef MARAUDER_V8
   //  digitalWrite(TFT_BL, HIGH);

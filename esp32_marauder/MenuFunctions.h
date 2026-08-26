@@ -194,6 +194,9 @@ class MenuFunctions
     LinkedList<SDDirectoryEntry>* sd_browser_entries = nullptr;
     LinkedList<String>* sd_delete_selection = nullptr;
     String sd_browser_path = "/";
+    bool sd_browser_release_pending = false;
+    void ensureSDDeleteBrowserResources();
+    void releaseSDDeleteBrowserResources();
 
     // WiFi menu stuff
     Menu wifiSnifferMenu;
