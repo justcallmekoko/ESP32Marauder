@@ -4585,7 +4585,12 @@ void WiFiScan::RunEapolScan(uint8_t scan_mode, uint16_t color) {
     led_obj.setMode(MODE_SNIFF);
   #endif*/
 
-  this->send_deauth = settings_obj.loadSetting<bool>(text_table4[5]);
+  // Explicit active PMKID scan modes must win over the persistent ForcePMKID
+  // preference. Previously sniffpmkid -d selected an active mode here, but this
+  // assignment discarded that request whenever ForcePMKID was disabled.
+  this->send_deauth = (scan_mode == WIFI_SCAN_ACTIVE_EAPOL) ||
+                      (scan_mode == WIFI_SCAN_ACTIVE_LIST_EAPOL) ||
+                      settings_obj.loadSetting<bool>(text_table4[5]);
   
   num_eapol = 0;
 

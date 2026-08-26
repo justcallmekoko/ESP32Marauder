@@ -2359,6 +2359,16 @@ void MenuFunctions::RunSetup()
   this->addNodes(&evilPortalMenu, text09, TFTLIGHTGREY, 0, [this]() {
     this->changeMenu(evilPortalMenu.parentMenu, true);
   });
+  this->addNodes(&evilPortalMenu, "AP Config", TFTMAGENTA, SD_UPDATE, [this]() {
+    if (evil_portal_obj.setAPFromConfig()) {
+      display_obj.clearScreen();
+      this->drawStatusBar();
+      wifi_scan_obj.StartScan(WIFI_SCAN_EVIL_PORTAL, TFT_MAGENTA);
+      wifi_scan_obj.setMac();
+    }
+    else
+      this->changeMenu(&evilPortalMenu, true);
+  });
   this->addNodes(&evilPortalMenu, "Access Points", TFTGREEN, BEACON_SNIFF, [this]() {
     this->changeMenu(&wifiAPMenu, true);
   });
