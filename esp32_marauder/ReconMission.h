@@ -83,9 +83,13 @@ class ReconMission {
     char ap_name[17];
   } ui_relationships[3] = {};
   uint8_t ui_relationship_head = 0;
-  int8_t signal_history[64] = {};
-  uint8_t signal_history_count = 0;
-  int8_t pending_signal_peak = -128;
+  uint8_t churn_in_history[64] = {};
+  uint8_t churn_out_history[64] = {};
+  uint8_t churn_history_count = 0;
+  uint16_t pending_churn_in = 0;
+  uint16_t pending_churn_out = 0;
+  uint32_t band_24_observations = 0;
+  uint32_t band_5_observations = 0;
   uint16_t channel_activity[DUAL_BAND_CHANNELS] = {};
   #ifdef HAS_SD
     File log_file;

@@ -44,6 +44,13 @@ inline uint8_t reconChannelsOnPage(uint8_t page, uint8_t channel_count) {
   return remaining < RECON_CHANNELS_PER_PAGE ? remaining : RECON_CHANNELS_PER_PAGE;
 }
 
+inline uint8_t reconChurnHeight(uint8_t value, uint8_t peak, uint8_t height) {
+  if (!value || !height) return 0;
+  if (!peak) peak = 1;
+  const uint16_t scaled = 1 + (static_cast<uint16_t>(value) * (height - 1)) / peak;
+  return scaled > height ? height : scaled;
+}
+
 inline uint8_t reconSignalSegments(int8_t rssi) {
   if (rssi <= -127) return 0;
   if (rssi <= -90) return 1;

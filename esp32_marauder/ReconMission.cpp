@@ -93,9 +93,13 @@ bool ReconMission::start(ReconMode mode) {
   ui_event_head = 0;
   memset(ui_relationships, 0, sizeof(ui_relationships));
   ui_relationship_head = 0;
-  memset(signal_history, 0, sizeof(signal_history));
-  signal_history_count = 0;
-  pending_signal_peak = -128;
+  memset(churn_in_history, 0, sizeof(churn_in_history));
+  memset(churn_out_history, 0, sizeof(churn_out_history));
+  churn_history_count = 0;
+  pending_churn_in = 0;
+  pending_churn_out = 0;
+  band_24_observations = 0;
+  band_5_observations = 0;
   memset(channel_activity, 0, sizeof(channel_activity));
   suppress_scan_ui = true;
 
@@ -228,8 +232,10 @@ void ReconMission::pruneStaleDevices(uint32_t current_time) {
 
   if (stations) {
     for (int index = stations->size() - 1; index >= 0; index--) {
-      if (reconDeviceExpired(current_time, stations->get(index).last_seen_ms))
+      if (reconDeviceExpired(current_time, stations->get(index).last_seen_ms)) {
         stations->remove(index);
+        pending_churn_out++;
+      }
     }
   }
 
@@ -239,7 +245,10 @@ void ReconMission::pruneStaleDevices(uint32_t current_time) {
       if (stations) {
         for (int station_index = stations->size() - 1; station_index >= 0; station_index--) {
           Station station = stations->get(station_index);
-          if (station.ap == ap_index) stations->remove(station_index);
+          if (station.ap == ap_index) {
+            stations->remove(station_index);
+            pending_churn_out++;
+          }
           else if (station.ap > ap_index) {
             station.ap--;
             stations->set(station_index, station);
@@ -249,14 +258,17 @@ void ReconMission::pruneStaleDevices(uint32_t current_time) {
       LinkedList<uint16_t>* links = access_points->get(ap_index).stations;
       if (links) delete links;
       access_points->remove(ap_index);
+      pending_churn_out++;
     }
   }
 
   #ifdef HAS_BT
     if (ble_devices) {
       for (int index = ble_devices->size() - 1; index >= 0; index--) {
-        if (reconDeviceExpired(current_time, ble_devices->get(index).last_seen_ms))
+        if (reconDeviceExpired(current_time, ble_devices->get(index).last_seen_ms)) {
           ble_devices->remove(index);
+          pending_churn_out++;
+        }
       }
     }
   #endif
@@ -266,9 +278,9 @@ void ReconMission::pruneStaleDevices(uint32_t current_time) {
 
 void ReconMission::writeObservation(char type, const uint8_t mac[6], int rssi,
                                     uint8_t channel) {
-  if (type == 'a') ap_count++;
-  else if (type == 's') station_count++;
-  else if (type == 'b') ble_count++;
+  if (type == 'a') { ap_count++; pending_churn_in++; }
+  else if (type == 's') { station_count++; pending_churn_in++; }
+  else if (type == 'b') { ble_count++; pending_churn_in++; }
   else if (type != 'd') repeat_count++;
   recordUiEvent(type, mac, static_cast<int8_t>(rssi));
   recordSignal(static_cast<int8_t>(rssi), channel);
@@ -342,7 +354,7 @@ void ReconMission::writeProbe(const ReconProbeEvent& event) {
 }
 
 void ReconMission::recordSignal(int8_t rssi, uint8_t channel) {
-  if (rssi > pending_signal_peak) pending_signal_peak = rssi;
+  (void)rssi;
   if (!channel) return;
   uint8_t channel_index = UINT8_MAX;
   #ifdef HAS_DUAL_BAND
@@ -355,8 +367,11 @@ void ReconMission::recordSignal(int8_t rssi, uint8_t channel) {
   #else
     if (channel <= MAX_CHANNEL) channel_index = channel - 1;
   #endif
-  if (channel_index != UINT8_MAX && channel_activity[channel_index] < UINT16_MAX)
-    channel_activity[channel_index]++;
+  if (channel_index != UINT8_MAX) {
+    if (channel_activity[channel_index] < UINT16_MAX) channel_activity[channel_index]++;
+    if (channel <= 14) band_24_observations++;
+    else band_5_observations++;
+  }
 }
 
 void ReconMission::queueDeauth(const uint8_t transmitter[6], const uint8_t bssid[6],
@@ -478,13 +493,19 @@ void ReconMission::drawDashboard(uint32_t current_time) {
   #ifdef HAS_SCREEN
     if (last_dashboard && current_time - last_dashboard < 1000) return;
     last_dashboard = current_time;
-    if (signal_history_count < sizeof(signal_history)) {
-      signal_history[signal_history_count++] = pending_signal_peak;
+    const uint8_t churn_in = pending_churn_in > UINT8_MAX ? UINT8_MAX : pending_churn_in;
+    const uint8_t churn_out = pending_churn_out > UINT8_MAX ? UINT8_MAX : pending_churn_out;
+    if (churn_history_count < sizeof(churn_in_history)) {
+      churn_in_history[churn_history_count] = churn_in;
+      churn_out_history[churn_history_count++] = churn_out;
     } else {
-      memmove(signal_history, signal_history + 1, sizeof(signal_history) - 1);
-      signal_history[sizeof(signal_history) - 1] = pending_signal_peak;
+      memmove(churn_in_history, churn_in_history + 1, sizeof(churn_in_history) - 1);
+      memmove(churn_out_history, churn_out_history + 1, sizeof(churn_out_history) - 1);
+      churn_in_history[sizeof(churn_in_history) - 1] = churn_in;
+      churn_out_history[sizeof(churn_out_history) - 1] = churn_out;
     }
-    pending_signal_peak = -128;
+    pending_churn_in = 0;
+    pending_churn_out = 0;
     const uint32_t seconds = (current_time - started_at) / 1000;
     bool gps_fix = false;
     #ifdef HAS_GPS
@@ -544,54 +565,58 @@ void ReconMission::drawDashboard(uint32_t current_time) {
       const int16_t graph_width = 92;
       const int16_t graph_height = 88;
     #endif
-    const int8_t latest_rssi = signal_history_count
-                                 ? signal_history[signal_history_count - 1] : -128;
-    const uint8_t lit_segments = reconSignalSegments(latest_rssi);
-    const ReconSignalTrend trend = reconSignalTrend(signal_history, signal_history_count);
-    const uint16_t signal_color = !lit_segments ? TFT_DARKGREY :
-                                  lit_segments >= 4 ? TFT_GREEN :
-                                  lit_segments >= 2 ? TFT_YELLOW : TFT_ORANGE;
     display_obj.tft.drawRect(graph_x, graph_y, graph_width, graph_height, TFT_DARKGREY);
     display_obj.tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
-    display_obj.tft.drawString("RSSI", graph_x + 3, graph_y + 3, 1);
-    char rssi_label[6];
-    if (latest_rssi > -127) snprintf(rssi_label, sizeof(rssi_label), "%d", latest_rssi);
-    else snprintf(rssi_label, sizeof(rssi_label), "--");
-    display_obj.tft.setTextColor(signal_color, TFT_BLACK);
-    display_obj.tft.drawRightString(rssi_label, graph_x + graph_width - 3, graph_y + 3, 1);
+    char churn_label[10];
+    #if TFT_HEIGHT < 160
+      display_obj.tft.drawString("C", graph_x + 3, graph_y + 3, 1);
+      snprintf(churn_label, sizeof(churn_label), "+%u-%u", churn_in, churn_out);
+    #else
+      display_obj.tft.drawString("CHURN", graph_x + 3, graph_y + 3, 1);
+      snprintf(churn_label, sizeof(churn_label), "+%u -%u", churn_in, churn_out);
+    #endif
+    display_obj.tft.setTextColor(churn_in ? TFT_CYAN : TFT_DARKGREY, TFT_BLACK);
+    display_obj.tft.drawRightString(churn_label, graph_x + graph_width - 3, graph_y + 3, 1);
     const int16_t plot_left = graph_x + 3;
     const int16_t plot_top = graph_y + 15;
     const int16_t plot_width = graph_width - 6;
-    const int16_t plot_height = graph_height - 30;
+    const int16_t plot_height = graph_height - 29;
     for (uint8_t grid = 1; grid < 3; grid++)
       display_obj.tft.drawFastHLine(plot_left, plot_top + (plot_height * grid) / 3,
                                    plot_width, TFT_DARKGREY);
-    const uint8_t visible_samples = signal_history_count < plot_width
-                                      ? signal_history_count : plot_width;
-    const uint8_t first_sample = signal_history_count - visible_samples;
-    const int16_t first_x = plot_left + plot_width - visible_samples;
-    bool have_previous = false;
-    int16_t previous_x = 0;
-    int16_t previous_y = 0;
+    const uint8_t sample_slots = plot_width / 3;
+    const uint8_t visible_samples = churn_history_count < sample_slots
+                                      ? churn_history_count : sample_slots;
+    const uint8_t first_sample = churn_history_count - visible_samples;
+    const int16_t first_x = plot_left + plot_width - visible_samples * 3;
+    uint8_t peak = 1;
     for (uint8_t sample = 0; sample < visible_samples; sample++) {
-      const uint8_t level = reconRssiPlotLevel(signal_history[first_sample + sample]);
-      if (!level) {
-        have_previous = false;
-        continue;
-      }
-      const int16_t x = first_x + sample;
-      const int16_t y = plot_top + plot_height - 1 - ((level - 1) * (plot_height - 1)) / 99;
-      if (have_previous) display_obj.tft.drawLine(previous_x, previous_y, x, y, signal_color);
-      else display_obj.tft.drawPixel(x, y, signal_color);
-      previous_x = x;
-      previous_y = y;
-      have_previous = true;
+      const uint8_t index = first_sample + sample;
+      if (churn_in_history[index] > peak) peak = churn_in_history[index];
+      if (churn_out_history[index] > peak) peak = churn_out_history[index];
     }
-    const char* trend_label = trend == ReconSignalTrend::APPROACHING ? "CLOSING +" :
-                              trend == ReconSignalTrend::DEPARTING ? "LEAVING -" : "STEADY";
-    display_obj.tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
-    display_obj.tft.drawCentreString(trend_label, graph_x + graph_width / 2,
-                                     graph_y + graph_height - 12, 1);
+    for (uint8_t sample = 0; sample < visible_samples; sample++) {
+      const uint8_t index = first_sample + sample;
+      const int16_t x = first_x + sample * 3;
+      const uint8_t in_height = reconChurnHeight(churn_in_history[index], peak, plot_height);
+      const uint8_t out_height = reconChurnHeight(churn_out_history[index], peak, plot_height);
+      if (in_height)
+        display_obj.tft.drawFastHLine(x, plot_top + plot_height - in_height, 2, TFT_CYAN);
+      if (out_height)
+        display_obj.tft.drawFastHLine(x, plot_top + plot_height - out_height, 2, TFT_ORANGE);
+    }
+    const uint32_t band_total = band_24_observations + band_5_observations;
+    const uint8_t band_24_percent = band_total
+                                      ? (static_cast<uint64_t>(band_24_observations) * 100ULL) /
+                                          band_total : 0;
+    const uint8_t band_5_percent = band_total ? 100 - band_24_percent : 0;
+    char band_label[20];
+    snprintf(band_label, sizeof(band_label), "2G%u 5G%u", band_24_percent, band_5_percent);
+    #if TFT_HEIGHT >= 160
+      display_obj.tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+      display_obj.tft.drawCentreString(band_label, graph_x + graph_width / 2,
+                                       graph_y + graph_height - 12, 1);
+    #endif
 
     display_obj.tft.setTextSize(1);
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
@@ -615,6 +640,8 @@ void ReconMission::drawDashboard(uint32_t current_time) {
         snprintf(line, sizeof(line), "D! %-4lu", (unsigned long)deauth_count);
         display_obj.tft.setTextColor(deauth_active ? TFT_RED : TFT_DARKGREY, TFT_BLACK);
         display_obj.tft.drawString(line, stats_x, body_top + 36, 1);
+        display_obj.tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+        display_obj.tft.drawString(band_label, stats_x, body_top + 50, 1);
       }
     #elif TFT_WIDTH < 200
       if (active_mode == ReconMode::WIFI_RECON)

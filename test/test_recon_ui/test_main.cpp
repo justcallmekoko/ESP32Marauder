@@ -68,6 +68,13 @@ void test_channel_pages_cycle_and_include_partial_final_page() {
   TEST_ASSERT_EQUAL_UINT8(0, reconChannelsOnPage(7, 51));
 }
 
+void test_churn_height_scales_and_clamps() {
+  TEST_ASSERT_EQUAL_UINT8(0, reconChurnHeight(0, 10, 20));
+  TEST_ASSERT_EQUAL_UINT8(10, reconChurnHeight(5, 10, 20));
+  TEST_ASSERT_EQUAL_UINT8(20, reconChurnHeight(10, 10, 20));
+  TEST_ASSERT_EQUAL_UINT8(20, reconChurnHeight(20, 10, 20));
+}
+
 void test_truncation_preserves_both_ends() {
   char output[10];
   reconTruncate("MarauderNetwork", output, sizeof(output));
@@ -84,6 +91,7 @@ int main(int, char**) {
   RUN_TEST(test_signal_trend_uses_meaningful_change_threshold);
   RUN_TEST(test_decay_is_wrap_safe_and_ignores_unknown_timestamps);
   RUN_TEST(test_channel_pages_cycle_and_include_partial_final_page);
+  RUN_TEST(test_churn_height_scales_and_clamps);
   RUN_TEST(test_truncation_preserves_both_ends);
   return UNITY_END();
 }
