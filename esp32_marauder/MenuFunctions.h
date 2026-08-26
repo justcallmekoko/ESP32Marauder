@@ -141,6 +141,8 @@ class MenuFunctions
       BLE_TARGETS,
       FINDMY_TARGETS,
       FLIPPER_TARGETS,
+      META_TARGETS,
+      FLOCK_TARGETS,
     };
 
     String u_result = "";

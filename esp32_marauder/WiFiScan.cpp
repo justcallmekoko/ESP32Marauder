@@ -552,6 +552,8 @@ extern "C" {
               Flipper flipper;
               flipper.mac = mac;
               flipper.name = name;
+              flipper.rssi = rssi;
+              flipper.last_seen = millis();
 
               flippers->add(flipper);
 
@@ -578,6 +580,7 @@ extern "C" {
               ble_device.last_seen_ms = millis();
 
               memcpy(ble_device.mac, mac_char, sizeof(mac_char));
+              wifi_scan_obj.retainBLEFoxHuntSubtype(advertisedDevice, ble_device);
 
               int device_match_check = wifi_scan_obj.seenBLEDevice(ble_device);
 
@@ -1252,6 +1255,8 @@ extern "C" {
               Flipper flipper;
               flipper.mac = mac;
               flipper.name = name;
+              flipper.rssi = rssi;
+              flipper.last_seen = millis();
 
               flippers->add(flipper);
 
@@ -1278,6 +1283,7 @@ extern "C" {
               ble_device.last_seen_ms = millis();
 
               memcpy(ble_device.mac, mac_char, sizeof(mac_char));
+              wifi_scan_obj.retainBLEFoxHuntSubtype(advertisedDevice, ble_device);
 
               int device_match_check = wifi_scan_obj.seenBLEDevice(ble_device);
 
@@ -2046,6 +2052,63 @@ String WiFiScan::classifyBLEDevice(const NimBLEAdvertisedDevice* advertised_devi
   if (payload && isFlockCamera(payload, payload_length, name, &serial)) return "Flock";
   if (name.length()) return name;
   return "BLE";
+}
+
+void WiFiScan::retainBLEFoxHuntSubtype(const NimBLEAdvertisedDevice* advertised_device,
+                                      const BleDevice& ble_device) {
+  if (!advertised_device) return;
+
+  String mac = advertised_device->getAddress().toString().c_str();
+  mac.toUpperCase();
+
+  if (ble_device.device_type == "FindMy") {
+    for (int index = 0; index < airtags->size(); index++) {
+      if (airtags->get(index).mac != mac) continue;
+      AirTag airtag = airtags->get(index);
+      airtag.rssi = ble_device.rssi;
+      airtag.last_seen = ble_device.last_seen_ms;
+      airtags->set(index, airtag);
+      return;
+    }
+
+    AirTag airtag;
+    airtag.mac = mac;
+    #ifndef HAS_NIMBLE_2
+      const uint8_t* payload = advertised_device->getPayload();
+      const size_t payload_length = advertised_device->getPayloadLength();
+      if (payload && payload_length)
+        airtag.payload.assign(payload, payload + payload_length);
+    #else
+      airtag.payload = advertised_device->getPayload();
+    #endif
+    airtag.payloadSize = airtag.payload.size();
+    airtag.rssi = ble_device.rssi;
+    airtag.last_seen = ble_device.last_seen_ms;
+    airtag.is_fmna = advertised_device->isAdvertisingService(FMNA_SERVICE_UUID);
+    airtag.is_dult = advertised_device->isAdvertisingService(DULT_SERVICE_UUID);
+    airtag.is_airtag = !airtag.is_fmna && !airtag.is_dult;
+    airtag.device_address = advertised_device->getAddress();
+    airtags->add(airtag);
+    return;
+  }
+
+  if (ble_device.device_type == "Flipper") {
+    for (int index = 0; index < flippers->size(); index++) {
+      if (flippers->get(index).mac != mac) continue;
+      Flipper flipper = flippers->get(index);
+      flipper.name = advertised_device->getName().c_str();
+      flipper.rssi = ble_device.rssi;
+      flipper.last_seen = ble_device.last_seen_ms;
+      flippers->set(index, flipper);
+      return;
+    }
+    Flipper flipper;
+    flipper.mac = mac;
+    flipper.name = advertised_device->getName().c_str();
+    flipper.rssi = ble_device.rssi;
+    flipper.last_seen = ble_device.last_seen_ms;
+    flippers->add(flipper);
+  }
 }
 #endif
 
