@@ -8,6 +8,10 @@
 
   //#define DEVELOPER
 
+  // Developer-only escape hatch for unsigned or mismatched SD update images.
+  // Production builds must remain fail-closed.
+  //#define ALLOW_UNVERIFIED_SD_UPDATE
+
   //// BOARD TARGETS
   //#define MARAUDER_M5STICKC
   //#define MARAUDER_M5STICKCP2
