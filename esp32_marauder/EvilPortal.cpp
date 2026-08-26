@@ -212,82 +212,54 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
   // If there are no SSIDs and there are no APs selected, pull from file
   // This means the file is last resort
   if ((ssids->size() <= 0) && (temp_ap_name == "")) {
-    #ifdef HAS_SD
-      File ap_config_file = sd_obj.getFile("/ap.config.txt");
-    #else
-      File ap_config_file;
-    #endif
-    // Could not open config file. return false
-    if (!ap_config_file) {
-      #ifdef HAS_SCREEN
-        this->sendToDisplay(F("Could not find /ap.config.txt."));
-        this->sendToDisplay(F("Touch to exit..."));
-      #endif
-      Serial.println(F("Could not find /ap.config.txt. Use stopscan..."));
-      return false;
-    }
-    // Config file good. Proceed
-    else {
-      // ap name too long. return false        
-      if (ap_config_file.size() > MAX_AP_NAME_SIZE) {
-        #ifdef HAS_SCREEN
-          this->sendToDisplay(F("The given AP name is too large. Touch to exit..."));
-        #endif
-        Serial.println("The provided AP name is too large.\nUse stopscan...");
-        return false;
-      }
-      // AP name length good. Read from file into var
-      while (ap_config_file.available()) {
-        char c = ap_config_file.read();
-        Serial.print(c);
-        if (isPrintable(c)) {
-          ap_config.concat(c);
-        }
-      }
-      #ifdef HAS_SCREEN
-        this->sendToDisplay(F("AP name from config file"));
-        this->sendToDisplay("AP name: " + ap_config);
-      #endif
-      Serial.println("AP name from config file: " + ap_config);
-      ap_config_file.close();
-    }
+    return this->setAPFromConfig();
   }
   // There are SSIDs in the list but there could also be an AP selected
   // Priority is SSID list before AP selected and config file
   else if (ssids->size() > 0) {
     ap_config = ssids->get(0).essid;
     if (ap_config.length() > MAX_AP_NAME_SIZE) {
-      #ifdef HAS_SCREEN
+      #if defined(HAS_SCREEN) && !defined(MARAUDER_V8)
         this->sendToDisplay(F("The given AP name is too large. Touch to exit..."));
       #endif
-      Serial.println("The provided AP name is too large.\nUse stopscan...");
+      #ifndef MARAUDER_V8
+        Serial.println("The provided AP name is too large.\nUse stopscan...");
+      #endif
       return false;
     }
-    #ifdef HAS_SCREEN
+    #if defined(HAS_SCREEN) && !defined(MARAUDER_V8)
       this->sendToDisplay(F("AP name from SSID list"));
       this->sendToDisplay("AP name: " + ap_config);
     #endif
-    Serial.println("AP name from SSID list: " + ap_config);
+    #ifndef MARAUDER_V8
+      Serial.println("AP name from SSID list: " + ap_config);
+    #endif
   }
   else if (temp_ap_name != "") {
     if (temp_ap_name.length() > MAX_AP_NAME_SIZE) {
-      #ifdef HAS_SCREEN
+      #if defined(HAS_SCREEN) && !defined(MARAUDER_V8)
         this->sendToDisplay(F("The given AP name is too large. Touch to exit..."));
       #endif
-      Serial.println("The given AP name is too large.\nUse stopscan...");
+      #ifndef MARAUDER_V8
+        Serial.println("The given AP name is too large.\nUse stopscan...");
+      #endif
     }
     else {
       ap_config = temp_ap_name;
-      #ifdef HAS_SCREEN
+      #if defined(HAS_SCREEN) && !defined(MARAUDER_V8)
         this->sendToDisplay(F("AP name from AP list"));
         this->sendToDisplay("AP name: " + ap_config);
       #endif
-      Serial.println("AP name from AP list: " + ap_config);
+      #ifndef MARAUDER_V8
+        Serial.println("AP name from AP list: " + ap_config);
+      #endif
     }
   }
   else {
-    Serial.println(F("Could not configure Access Point. Use stopscan..."));
-    #ifdef HAS_SCREEN
+    #ifndef MARAUDER_V8
+      Serial.println(F("Could not configure Access Point. Use stopscan..."));
+    #endif
+    #if defined(HAS_SCREEN) && !defined(MARAUDER_V8)
       this->sendToDisplay(F("Could not configure Access Point.\nTouch to exit..."));
     #endif
   }
@@ -295,13 +267,39 @@ bool EvilPortal::setAP(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_
   if (ap_config != "") {
     strncpy(apName, ap_config.c_str(), MAX_AP_NAME_SIZE);
     this->has_ap = true;
-    Serial.println(F("ap config set"));
+    #ifndef MARAUDER_V8
+      Serial.println(F("ap config set"));
+    #endif
     this->ap_index = targ_ap_index;
     return true;
   }
   else
     return false;
 
+}
+
+bool EvilPortal::setAPFromConfig() {
+  #ifdef HAS_SD
+    File ap_config_file = sd_obj.getFile("/ap.config.txt");
+  #else
+    File ap_config_file;
+  #endif
+
+  if (!ap_config_file || ap_config_file.size() > MAX_AP_NAME_SIZE) {
+    if (ap_config_file)
+      ap_config_file.close();
+    return false;
+  }
+
+  String ap_config = ap_config_file.readString();
+  ap_config_file.close();
+
+  if (this->setAP(ap_config)) {
+    this->ap_index = -1;
+    return true;
+  }
+
+  return false;
 }
 
 bool EvilPortal::setAP(String essid) {
@@ -312,9 +310,12 @@ bool EvilPortal::setAP(String essid) {
     return false;
   }
 
-  strncpy(apName, essid.c_str(), MAX_AP_NAME_SIZE);
+  strncpy(apName, essid.c_str(), MAX_AP_NAME_SIZE - 1);
+  apName[MAX_AP_NAME_SIZE - 1] = '\0';
   this->has_ap = true;
-  Serial.println(F("ap config set"));
+  #ifndef MARAUDER_V8
+    Serial.println(F("ap config set"));
+  #endif
   return true;
 }
 
