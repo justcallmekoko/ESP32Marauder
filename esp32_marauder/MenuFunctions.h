@@ -18,6 +18,7 @@
 #define BATTERY_ANALOG_ON 0
 
 #include "WiFiScan.h"
+#include "ReconMission.h"
 #include "TargetListSort.h"
 #include "BatteryInterface.h"
 #include "SDInterface.h"
@@ -43,6 +44,7 @@
 #endif
 
 extern WiFiScan wifi_scan_obj;
+extern ReconMission recon_obj;
 extern SDInterface sd_obj;
 // #ifdef HAS_BATTERY
 extern BatteryInterface battery_obj;
@@ -168,6 +170,7 @@ class MenuFunctions
 
     // Main menu stuff
     Menu mainMenu;
+    Menu reconMenu;
 
     Menu wifiMenu;
     Menu bluetoothMenu;

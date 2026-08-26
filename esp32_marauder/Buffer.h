@@ -26,6 +26,7 @@ class Buffer {
     void append(String log);
     void save();
     String getFileName();
+    void setDirectory(const char* path);
   private:
     void createFile(const char* name, bool is_pcap, bool is_gpx = false);
     void open(bool is_pcap);
@@ -49,6 +50,7 @@ class Buffer {
     bool saving = false; // currently saving onto the SD card
 
     String fileName = "/0.pcap";
+    const char* directory = NULL;
     File file;
     fs::FS* fs;
     bool serial;

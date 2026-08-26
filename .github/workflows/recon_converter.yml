@@ -1,0 +1,42 @@
+name: Recon desktop converter
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "tools/recon_*.py"
+      - "tools/RECON_CONVERTER_README.md"
+      - ".github/workflows/recon_converter.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: package ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: windows
+          - os: macos-latest
+            name: macos
+          - os: ubuntu-latest
+            name: linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --disable-pip-version-check pyinstaller==6.15.0
+      - run: python -m unittest tools.test_recon_report
+      - run: python -m PyInstaller --onefile --windowed --name Marauder-Recon-Converter tools/recon_converter.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: Marauder-Recon-Converter-${{ matrix.name }}
+          path: |
+            dist/Marauder-Recon-Converter*
+            tools/RECON_CONVERTER_README.md
+          if-no-files-found: error

@@ -1883,9 +1883,11 @@ void MenuFunctions::RunSetup()
   #endif
 
   foxHuntMenu.list = new LinkedList<MenuNode>();
+  reconMenu.list = new LinkedList<MenuNode>();
 
   // Work menu names
   mainMenu.name = text_table1[6];
+  reconMenu.name = "Recon";
   wifiMenu.name = text_table1[7];
   deviceMenu.name = text_table1[9];
   failedUpdateMenu.name = text_table1[11];
@@ -1949,6 +1951,25 @@ void MenuFunctions::RunSetup()
 
   // Build Main Menu
   mainMenu.parentMenu = NULL;
+  reconMenu.parentMenu = &mainMenu;
+  this->addNodes(&reconMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(&mainMenu, true);
+  });
+  this->addNodes(&reconMenu, "Start WiFi", TFTGREEN, WIFI, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    recon_obj.start(ReconMode::WIFI_RECON);
+  });
+  #ifdef HAS_BT
+    this->addNodes(&reconMenu, "Start BLE", TFTCYAN, BLUETOOTH, [this]() {
+      display_obj.clearScreen();
+      this->drawStatusBar();
+      recon_obj.start(ReconMode::BLE_RECON);
+    });
+  #endif
+  this->addNodes(&mainMenu, "Recon", TFTMAGENTA, GENERAL_APPS, [this]() {
+    this->changeMenu(&reconMenu, true);
+  });
   this->addNodes(&mainMenu, text_table1[7], TFTGREEN, WIFI, [this]() {
     this->changeMenu(&wifiMenu, true);
   });
