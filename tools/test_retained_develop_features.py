@@ -41,6 +41,20 @@ class RetainedDevelopFeatureTests(unittest.TestCase):
         self.assertIn("Serial.println(HELP_PROTOCOL_INFO_CMD)", help_block)
         self.assertIn("Serial.println(HELP_RESTORE_SPIFFS_CMD)", help_block)
 
+    def test_ble_recon_supports_both_nimble_api_generations(self):
+        header = (ROOT / "esp32_marauder" / "WiFiScan.h").read_text()
+        self.assertIn("using MarauderBLEAdvertisedDevice = const NimBLEAdvertisedDevice;",
+                      header)
+        self.assertIn("using MarauderBLEAdvertisedDevice = NimBLEAdvertisedDevice;",
+                      header)
+        self.assertIn("classifyBLEDevice(MarauderBLEAdvertisedDevice*", header)
+
+    def test_station_retention_is_cxx11_compatible(self):
+        source = (ROOT / "esp32_marauder" / "WiFiScan.cpp").read_text()
+        self.assertIn("Station sta = {};", source)
+        self.assertIn("sta.last_seen_ms = millis();", source)
+        self.assertNotIn("Station sta = {\n                    {", source)
+
 
 if __name__ == "__main__":
     unittest.main()

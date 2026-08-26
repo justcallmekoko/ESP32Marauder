@@ -12,6 +12,12 @@
 
 #ifdef HAS_BT
   #include <NimBLEDevice.h> // 1.3.8, 2.3.2
+
+  #ifdef HAS_NIMBLE_2
+    using MarauderBLEAdvertisedDevice = const NimBLEAdvertisedDevice;
+  #else
+    using MarauderBLEAdvertisedDevice = NimBLEAdvertisedDevice;
+  #endif
 #endif
 
 /*#ifdef HAS_IDF_3
@@ -1013,8 +1019,8 @@ class WiFiScan
     bool isMetaIdentifier(uint16_t id);
     bool isBlockedIdentifier(uint16_t id);
     #ifdef HAS_BT
-      String classifyBLEDevice(const NimBLEAdvertisedDevice* advertised_device);
-      void retainBLEFoxHuntSubtype(const NimBLEAdvertisedDevice* advertised_device,
+      String classifyBLEDevice(MarauderBLEAdvertisedDevice* advertised_device);
+      void retainBLEFoxHuntSubtype(MarauderBLEAdvertisedDevice* advertised_device,
                                    const BleDevice& ble_device);
     #endif
     void setFoxHuntTarget(const uint8_t mac[6], const String& name, int8_t rssi, uint8_t channel, bool bluetooth, const String& advertised_address = "");

@@ -1994,7 +1994,7 @@ bool WiFiScan::isBlockedIdentifier(uint16_t id) {
 }
 
 #ifdef HAS_BT
-String WiFiScan::classifyBLEDevice(const NimBLEAdvertisedDevice* advertised_device) {
+String WiFiScan::classifyBLEDevice(MarauderBLEAdvertisedDevice* advertised_device) { // GCOVR_EXCL_LINE -- requires NimBLE hardware data.
   if (!advertised_device) return "BLE";
 
   #ifndef HAS_NIMBLE_2
@@ -2054,7 +2054,7 @@ String WiFiScan::classifyBLEDevice(const NimBLEAdvertisedDevice* advertised_devi
   return "BLE";
 }
 
-void WiFiScan::retainBLEFoxHuntSubtype(const NimBLEAdvertisedDevice* advertised_device,
+void WiFiScan::retainBLEFoxHuntSubtype(MarauderBLEAdvertisedDevice* advertised_device, // GCOVR_EXCL_LINE -- requires NimBLE hardware data.
                                       const BleDevice& ble_device) {
   if (!advertised_device) return;
 
@@ -7096,17 +7096,15 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
     
     // Add to list of stations
     if (mem_check) {
-      Station sta = {
-                    {snifferPacket->payload[frame_offset],
-                    snifferPacket->payload[frame_offset + 1],
-                    snifferPacket->payload[frame_offset + 2],
-                    snifferPacket->payload[frame_offset + 3],
-                    snifferPacket->payload[frame_offset + 4],
-                    snifferPacket->payload[frame_offset + 5]},
-                    false,
-                    0,
-                    static_cast<uint16_t>(ap_index),
-                    millis()};
+      // GCOVR_EXCL_START -- requires a live promiscuous WiFi packet callback.
+      Station sta = {};
+      for (int mac_byte = 0; mac_byte < 6; mac_byte++)
+        sta.mac[mac_byte] = snifferPacket->payload[frame_offset + mac_byte];
+      sta.selected = false;
+      sta.packets = 0;
+      sta.ap = static_cast<uint16_t>(ap_index);
+      sta.last_seen_ms = millis();
+      // GCOVR_EXCL_STOP
 
       stations->add(sta);
     }
