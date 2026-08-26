@@ -1849,6 +1849,8 @@ void MenuFunctions::RunSetup()
   miniKbMenu.list = new LinkedList<MenuNode>();
   #ifdef HAS_SD
     sdDeleteMenu.list = new LinkedList<MenuNode>();
+    sd_browser_entries = new LinkedList<SDDirectoryEntry>();
+    sd_delete_selection = new LinkedList<String>();
   #endif
 
   // Bluetooth menu stuff
@@ -3563,7 +3565,7 @@ void MenuFunctions::RunSetup()
         display_obj.tft.println("Loading...");
 
         // Clear menu and lists
-        this->buildSDFileMenu();
+        this->buildSDDeleteBrowser("/", true);
 
         this->changeMenu(&sdDeleteMenu, true);
       });
@@ -4172,57 +4174,133 @@ void MenuFunctions::setupSDFileList(bool update) {
 }
 
 void MenuFunctions::buildSDFileMenu(bool update) {
+  if (!update) {
+    this->buildSDDeleteBrowser("/", true);
+    return;
+  }
+
   this->setupSDFileList(update);
 
   sdDeleteMenu.list->clear();
   delete sdDeleteMenu.list;
   sdDeleteMenu.list = new LinkedList<MenuNode>();
 
-  if (!update)
-    sdDeleteMenu.name = "SD Files";
-  else
-    sdDeleteMenu.name = "Bin Files";
+  sdDeleteMenu.name = "Bin Files";
 
   this->addNodes(&sdDeleteMenu, text09, TFTLIGHTGREY, 0, [this]() {
     this->changeMenu(sdDeleteMenu.parentMenu, true);
   });
 
-  if (!update) {
-    this->addNodes(&sdDeleteMenu, "Delete Selected", TFTORANGE, 0, [this]() {
-      for (int x = 0; x < sd_obj.sd_files->size(); x++) {
-        if (current_menu->list->get(x + 2).selected) {
-          if (sd_obj.removeFile("/" + sd_obj.sd_files->get(x))) {
-            Serial.println("Deleted /" + sd_obj.sd_files->get(x));
-            display_obj.clearScreen();
-            display_obj.tft.setTextWrap(false);
-            display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-            display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-            display_obj.tft.println("Deleting /" + sd_obj.sd_files->get(x) + "...");
-          }
+  for (int x = 0; x < sd_obj.sd_files->size(); x++) {
+    this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x).c_str(), TFTCYAN, SD_UPDATE, [this, x]() {
+      wifi_scan_obj.currentScanMode = OTA_UPDATE;
+      this->changeMenu(&failedUpdateMenu, true);
+      sd_obj.runUpdate("/" + sd_obj.sd_files->get(x));
+    });
+  }
+}
+
+String MenuFunctions::parentSDPath(const String& path) const {
+  if (path == "/")
+    return "/";
+
+  int slash = path.lastIndexOf('/');
+  return slash <= 0 ? "/" : path.substring(0, slash);
+}
+
+bool MenuFunctions::isSDFileSelected(const String& path) const {
+  if (sd_delete_selection == nullptr)
+    return false;
+
+  for (int i = 0; i < sd_delete_selection->size(); i++) {
+    if (sd_delete_selection->get(i) == path)
+      return true;
+  }
+  return false;
+}
+
+void MenuFunctions::toggleSDDeleteSelection(const String& path) {
+  for (int i = 0; i < sd_delete_selection->size(); i++) {
+    if (sd_delete_selection->get(i) == path) {
+      sd_delete_selection->remove(i);
+      return;
+    }
+  }
+  sd_delete_selection->add(path);
+}
+
+void MenuFunctions::buildSDDeleteBrowser(const String& path, bool reset_selection) {
+  if (reset_selection)
+    sd_delete_selection->clear();
+
+  sd_browser_path = path;
+  sd_browser_entries->clear();
+  sd_obj.listDirectory(path, sd_browser_entries);
+
+  sdDeleteMenu.list->clear();
+  delete sdDeleteMenu.list;
+  sdDeleteMenu.list = new LinkedList<MenuNode>();
+  sdDeleteMenu.selected = 0;
+  sdDeleteMenu.name = path == "/" ? "SD Card" : path;
+
+  this->addNodes(&sdDeleteMenu, text09, TFTLIGHTGREY, 0, [this, path]() {
+    if (path == "/") {
+      sd_delete_selection->clear();
+      this->changeMenu(sdDeleteMenu.parentMenu, true);
+      return;
+    }
+    this->buildSDDeleteBrowser(this->parentSDPath(path));
+    this->changeMenu(&sdDeleteMenu, true);
+  });
+
+  if (path == "/") {
+    this->addNodes(&sdDeleteMenu, "Delete Selected", TFTRED, 0, [this]() {
+      display_obj.clearScreen();
+      display_obj.tft.setTextWrap(false);
+      display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+      display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+
+      int deleted = 0;
+      for (int i = 0; i < sd_delete_selection->size(); i++) {
+        String selected_path = sd_delete_selection->get(i);
+        if (sd_obj.removeFile(selected_path)) {
+          Serial.println("Deleted " + selected_path);
+          deleted++;
+        }
+        else {
+          Serial.println("Could not delete " + selected_path);
         }
       }
-      this->buildSDFileMenu();
+      sd_delete_selection->clear();
+      display_obj.tft.println("Deleted " + String(deleted) + " file(s)");
+      delay(1000);
+      this->buildSDDeleteBrowser("/");
       this->changeMenu(&sdDeleteMenu, true);
     });
   }
 
-  if (!update) {
-    for (int x = 0; x < sd_obj.sd_files->size(); x++) {
-      this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x).c_str(), TFTCYAN, SD_UPDATE, [this, x]() {
-        // Change selection status of menu node
-        MenuNode new_node = current_menu->list->get(x + 2);
-        new_node.selected = !current_menu->list->get(x + 2).selected;
-        current_menu->list->set(x + 2, new_node);
+  for (int i = 0; i < sd_browser_entries->size(); i++) {
+    SDDirectoryEntry entry = sd_browser_entries->get(i);
+    if (entry.is_directory) {
+      String label = "[DIR] " + entry.name;
+      this->addNodes(&sdDeleteMenu, label.c_str(), TFTYELLOW, SD_UPDATE, [this, entry]() {
+        this->buildSDDeleteBrowser(entry.path);
+        this->changeMenu(&sdDeleteMenu, true);
       });
     }
-  }
-  else {
-    for (int x = 0; x < sd_obj.sd_files->size(); x++) {
-      this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x).c_str(), TFTCYAN, SD_UPDATE, [this, x]() {
-        wifi_scan_obj.currentScanMode = OTA_UPDATE;
-        this->changeMenu(&failedUpdateMenu, true);
-        sd_obj.runUpdate("/" + sd_obj.sd_files->get(x));
-      });
+    else {
+      this->addNodes(
+        &sdDeleteMenu,
+        entry.name.c_str(),
+        TFTCYAN,
+        SD_UPDATE,
+        [this, entry]() {
+          this->toggleSDDeleteSelection(entry.path);
+          this->buildSDDeleteBrowser(sd_browser_path);
+          this->changeMenu(&sdDeleteMenu, true);
+        },
+        this->isSDFileSelected(entry.path)
+      );
     }
   }
 }

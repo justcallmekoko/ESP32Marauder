@@ -189,6 +189,9 @@ class MenuFunctions
     Menu specSettingMenu;
     //Menu languageMenu;
     Menu sdDeleteMenu;
+    LinkedList<SDDirectoryEntry>* sd_browser_entries = nullptr;
+    LinkedList<String>* sd_delete_selection = nullptr;
+    String sd_browser_path = "/";
 
     // WiFi menu stuff
     Menu wifiSnifferMenu;
@@ -242,6 +245,10 @@ class MenuFunctions
     void buildUploadFileMenu();
     void setupSDFileList(bool update = false);
     void buildSDFileMenu(bool update = false);
+    void buildSDDeleteBrowser(const String& path, bool reset_selection = false);
+    void toggleSDDeleteSelection(const String& path);
+    bool isSDFileSelected(const String& path) const;
+    String parentSDPath(const String& path) const;
     void displayMenuButtons();
     uint16_t getColor(uint16_t color);
     void drawAvgLine(int16_t value);

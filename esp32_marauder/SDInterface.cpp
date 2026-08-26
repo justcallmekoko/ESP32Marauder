@@ -334,6 +334,33 @@ void SDInterface::listDirToLinkedList(LinkedList<String>* file_names, String str
   }
 }
 
+bool SDInterface::listDirectory(String path, LinkedList<SDDirectoryEntry>* entries) {
+  if (!this->supported || entries == nullptr)
+    return false;
+
+  File dir = SD.open(path);
+  if (!dir || !dir.isDirectory()) {
+    dir.close();
+    return false;
+  }
+
+  File entry = dir.openNextFile();
+  while (entry) {
+    String entry_path = entry.path();
+    String entry_name = entry_path;
+    int slash = entry_name.lastIndexOf('/');
+    if (slash >= 0)
+      entry_name = entry_name.substring(slash + 1);
+
+    entries->add(SDDirectoryEntry{entry_name, entry_path, entry.isDirectory()});
+    entry.close();
+    entry = dir.openNextFile();
+  }
+
+  dir.close();
+  return true;
+}
+
 void SDInterface::listDir(String str_dir){
   if (this->supported) {
     File dir = SD.open(str_dir);
