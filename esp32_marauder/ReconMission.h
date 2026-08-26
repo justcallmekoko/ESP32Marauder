@@ -6,6 +6,7 @@
 #include "configs.h"
 #include "ReconProbeQueue.h"
 #include "ReconMissionState.h"
+#include "ReconUi.h"
 
 #include <Arduino.h>
 #ifdef HAS_SD
@@ -13,6 +14,9 @@
 #endif
 
 enum class ReconMode : uint8_t { WIFI_RECON, BLE_RECON };
+
+struct Station;
+struct AccessPoint;
 
 class ReconMission {
  public:
@@ -22,6 +26,8 @@ class ReconMission {
   void queueProbe(const uint8_t mac[6], int8_t rssi, uint8_t channel,
                   const uint8_t* name, uint8_t name_length);
   void queueRepeat(char type, const uint8_t mac[6], int8_t rssi, uint8_t channel);
+  void queueDeauth(const uint8_t transmitter[6], const uint8_t bssid[6],
+                   int8_t rssi, uint8_t channel, uint16_t reason);
   bool active() const { return running; }
   ReconMode mode() const { return active_mode; }
 
@@ -29,9 +35,14 @@ class ReconMission {
   void observeLists();
   void drainProbeQueue();
   void drainRepeatQueue();
+  void drainDeauthQueue();
   void writeObservation(char type, const uint8_t mac[6], int rssi, uint8_t channel);
   void writeProbe(const ReconProbeEvent& event);
   void writeRelationship(const uint8_t station[6], const uint8_t access_point[6]);
+  void recordRelationship(const Station& station, const AccessPoint& access_point);
+  void recordSignal(int8_t rssi, uint8_t channel);
+  void pruneStaleDevices(uint32_t current_time);
+  void rebuildStationLinks();
   void writeManifest(bool complete);
   void drawDashboard(uint32_t current_time);
   void recordUiEvent(char type, const uint8_t mac[6], int8_t rssi,
@@ -43,15 +54,19 @@ class ReconMission {
   uint32_t started_at = 0;
   uint32_t last_sample = 0;
   uint32_t last_dashboard = 0;
+  uint32_t last_prune = 0;
+  uint32_t last_deauth = 0;
   uint32_t ap_count = 0;
   uint32_t station_count = 0;
   uint32_t ble_count = 0;
   uint32_t probe_count = 0;
   uint32_t repeat_count = 0;
+  uint32_t deauth_count = 0;
   uint8_t pending_flush = 0;
   uint8_t probe_pending_flush = 0;
   ReconProbeQueue probe_queue;
   ReconRepeatQueue repeat_queue;
+  ReconDeauthQueue deauth_queue;
   ReconRepeatGate repeat_gate;
   struct UiEvent {
     uint8_t mac[6];
@@ -60,6 +75,15 @@ class ReconMission {
     int8_t rssi;
   } ui_events[4] = {};
   uint8_t ui_event_head = 0;
+  struct UiRelationship {
+    uint8_t station[6];
+    uint8_t access_point[6];
+    char ap_name[17];
+  } ui_relationships[3] = {};
+  uint8_t ui_relationship_head = 0;
+  int8_t signal_history[6] = {};
+  uint8_t signal_history_count = 0;
+  uint16_t channel_activity[14] = {};
   #ifdef HAS_SD
     File log_file;
     File probe_file;

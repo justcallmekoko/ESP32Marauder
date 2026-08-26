@@ -22,6 +22,7 @@ struct Station {
   bool selected;
   uint16_t packets;
   uint16_t ap;
+  uint32_t last_seen_ms = 0;
 };
 
 struct ProbeReqSsid {

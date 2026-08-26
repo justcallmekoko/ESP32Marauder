@@ -34,10 +34,29 @@ void test_repeat_gate_handles_timer_rollover() {
   TEST_ASSERT_TRUE(gate.accept(mac, -60, 25000));
 }
 
+void test_deauth_queue_preserves_alert_details() {
+  ReconDeauthQueue queue;
+  ReconDeauthEvent expected = {};
+  expected.transmitter[5] = 0xAA;
+  expected.bssid[5] = 0xBB;
+  expected.rssi = -63;
+  expected.channel = 11;
+  expected.reason = 7;
+  TEST_ASSERT_TRUE(queue.push(expected));
+  ReconDeauthEvent actual = {};
+  TEST_ASSERT_TRUE(queue.pop(actual));
+  TEST_ASSERT_EQUAL_UINT8(0xAA, actual.transmitter[5]);
+  TEST_ASSERT_EQUAL_UINT8(0xBB, actual.bssid[5]);
+  TEST_ASSERT_EQUAL_INT8(-63, actual.rssi);
+  TEST_ASSERT_EQUAL_UINT8(11, actual.channel);
+  TEST_ASSERT_EQUAL_UINT16(7, actual.reason);
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_probe_queue_is_bounded_and_fifo);
   RUN_TEST(test_repeat_gate_emits_changes_and_returns);
   RUN_TEST(test_repeat_gate_handles_timer_rollover);
+  RUN_TEST(test_deauth_queue_preserves_alert_details);
   return UNITY_END();
 }

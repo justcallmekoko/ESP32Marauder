@@ -75,6 +75,8 @@ bool ReconMission::start(ReconMode mode) {
   started_at = millis();
   last_sample = 0;
   last_dashboard = 0;
+  last_prune = started_at;
+  last_deauth = 0;
   pending_flush = 0;
   probe_pending_flush = 0;
   ap_count = 0;
@@ -82,11 +84,18 @@ bool ReconMission::start(ReconMode mode) {
   ble_count = 0;
   probe_count = 0;
   repeat_count = 0;
+  deauth_count = 0;
   probe_queue.reset();
   repeat_queue.reset();
+  deauth_queue.reset();
   repeat_gate.reset();
   memset(ui_events, 0, sizeof(ui_events));
   ui_event_head = 0;
+  memset(ui_relationships, 0, sizeof(ui_relationships));
+  ui_relationship_head = 0;
+  memset(signal_history, 0, sizeof(signal_history));
+  signal_history_count = 0;
+  memset(channel_activity, 0, sizeof(channel_activity));
 
   buffer_obj.setDirectory(NULL);
   #ifdef HAS_SD
@@ -147,6 +156,7 @@ void ReconMission::stop() {
   observeLists();
   drainProbeQueue();
   drainRepeatQueue();
+  drainDeauthQueue();
   #ifdef HAS_SD
     if (log_file) {
       log_file.flush();
@@ -180,13 +190,85 @@ void ReconMission::writeRelationship(const uint8_t station[6],
   #endif
 }
 
+void ReconMission::recordRelationship(const Station& station,
+                                      const AccessPoint& access_point) {
+  UiRelationship& relationship = ui_relationships[ui_relationship_head++ % 3];
+  memcpy(relationship.station, station.mac, sizeof(relationship.station));
+  memcpy(relationship.access_point, access_point.bssid, sizeof(relationship.access_point));
+  const String& name = access_point.essid;
+  if (name.length()) {
+    name.substring(0, sizeof(relationship.ap_name) - 1)
+        .toCharArray(relationship.ap_name, sizeof(relationship.ap_name));
+  } else {
+    snprintf(relationship.ap_name, sizeof(relationship.ap_name), "%02X:%02X:%02X",
+             access_point.bssid[3], access_point.bssid[4], access_point.bssid[5]);
+  }
+}
+
+void ReconMission::rebuildStationLinks() {
+  if (!access_points || !stations) return;
+  for (int ap_index = 0; ap_index < access_points->size(); ap_index++) {
+    LinkedList<uint16_t>* links = access_points->get(ap_index).stations;
+    if (links) links->clear();
+  }
+  for (int station_index = 0; station_index < stations->size(); station_index++) {
+    Station station = stations->get(station_index);
+    if (station.ap >= access_points->size()) continue;
+    LinkedList<uint16_t>* links = access_points->get(station.ap).stations;
+    if (links) links->add(static_cast<uint16_t>(station_index));
+  }
+}
+
+void ReconMission::pruneStaleDevices(uint32_t current_time) {
+  if (current_time - last_prune < 15000) return;
+  last_prune = current_time;
+
+  if (stations) {
+    for (int index = stations->size() - 1; index >= 0; index--) {
+      if (reconDeviceExpired(current_time, stations->get(index).last_seen_ms))
+        stations->remove(index);
+    }
+  }
+
+  if (access_points) {
+    for (int ap_index = access_points->size() - 1; ap_index >= 0; ap_index--) {
+      if (!reconDeviceExpired(current_time, access_points->get(ap_index).last_seen_ms)) continue;
+      if (stations) {
+        for (int station_index = stations->size() - 1; station_index >= 0; station_index--) {
+          Station station = stations->get(station_index);
+          if (station.ap == ap_index) stations->remove(station_index);
+          else if (station.ap > ap_index) {
+            station.ap--;
+            stations->set(station_index, station);
+          }
+        }
+      }
+      LinkedList<uint16_t>* links = access_points->get(ap_index).stations;
+      if (links) delete links;
+      access_points->remove(ap_index);
+    }
+  }
+
+  #ifdef HAS_BT
+    if (ble_devices) {
+      for (int index = ble_devices->size() - 1; index >= 0; index--) {
+        if (reconDeviceExpired(current_time, ble_devices->get(index).last_seen_ms))
+          ble_devices->remove(index);
+      }
+    }
+  #endif
+
+  rebuildStationLinks();
+}
+
 void ReconMission::writeObservation(char type, const uint8_t mac[6], int rssi,
                                     uint8_t channel) {
   if (type == 'a') ap_count++;
   else if (type == 's') station_count++;
   else if (type == 'b') ble_count++;
-  else repeat_count++;
+  else if (type != 'd') repeat_count++;
   recordUiEvent(type, mac, static_cast<int8_t>(rssi));
+  recordSignal(static_cast<int8_t>(rssi), channel);
 
   ReconLogRecord record = {};
   record.elapsed_ms = millis() - started_at;
@@ -232,6 +314,7 @@ void ReconMission::writeProbe(const ReconProbeEvent& event) {
   char label[13] = {};
   memcpy(label, event.name, min(event.name_length, static_cast<uint8_t>(sizeof(label) - 1)));
   recordUiEvent('p', event.mac, event.rssi, label);
+  recordSignal(event.rssi, event.channel);
   #ifdef HAS_SD
     if (!probe_file) return;
     ReconProbeRecord record = {};
@@ -253,6 +336,33 @@ void ReconMission::writeProbe(const ReconProbeEvent& event) {
       probe_pending_flush = 0;
     }
   #endif
+}
+
+void ReconMission::recordSignal(int8_t rssi, uint8_t channel) {
+  if (rssi > -127) {
+    if (signal_history_count < sizeof(signal_history)) {
+      signal_history[signal_history_count++] = rssi;
+    } else {
+      memmove(signal_history, signal_history + 1, sizeof(signal_history) - 1);
+      signal_history[sizeof(signal_history) - 1] = rssi;
+    }
+  }
+  if (channel > 0 && channel < 15 && channel_activity[channel - 1] < UINT16_MAX)
+    channel_activity[channel - 1]++;
+}
+
+void ReconMission::queueDeauth(const uint8_t transmitter[6], const uint8_t bssid[6],
+                               int8_t rssi, uint8_t channel, uint16_t reason) {
+  if (!running || active_mode != ReconMode::WIFI_RECON) return;
+  ReconDeauthEvent event = {};
+  memcpy(event.transmitter, transmitter, sizeof(event.transmitter));
+  memcpy(event.bssid, bssid, sizeof(event.bssid));
+  event.rssi = rssi;
+  event.channel = channel;
+  event.reason = reason;
+  portENTER_CRITICAL(&probe_queue_mux);
+  deauth_queue.push(event);
+  portEXIT_CRITICAL(&probe_queue_mux);
 }
 
 void ReconMission::recordUiEvent(char type, const uint8_t mac[6], int8_t rssi,
@@ -305,6 +415,19 @@ void ReconMission::drainRepeatQueue() {
   }
 }
 
+void ReconMission::drainDeauthQueue() {
+  ReconDeauthEvent event;
+  while (true) {
+    portENTER_CRITICAL(&probe_queue_mux);
+    const bool available = deauth_queue.pop(event);
+    portEXIT_CRITICAL(&probe_queue_mux);
+    if (!available) break;
+    deauth_count++;
+    last_deauth = millis();
+    writeObservation('d', event.transmitter, event.rssi, event.channel);
+  }
+}
+
 void ReconMission::writeManifest(bool complete) {
   #ifdef HAS_SD
     if (!session_dir[0]) return;
@@ -322,7 +445,7 @@ void ReconMission::writeManifest(bool complete) {
     manifest.printf(
       "{\"schema\":1,\"state\":\"%s\",\"mode\":\"%s\",\"start_ms\":%lu,"
       "\"duration_ms\":%lu,\"ap\":%lu,\"station\":%lu,\"ble\":%lu,"
-      "\"probe\":%lu,\"repeat\":%lu,\"dropped\":%u,\"gps_fix\":%s,"
+      "\"probe\":%lu,\"repeat\":%lu,\"deauth\":%lu,\"dropped\":%u,\"gps_fix\":%s,"
       "\"observations\":\"obs.rlog\",\"probes\":\"probes.rlog\","
       "\"relationships\":\"relations.rlog\",\"capture\":\"%s\"}\n",
       complete ? "complete" : "active",
@@ -334,7 +457,8 @@ void ReconMission::writeManifest(bool complete) {
       static_cast<unsigned long>(ble_count),
       static_cast<unsigned long>(probe_count),
       static_cast<unsigned long>(repeat_count),
-      probe_queue.dropped() + repeat_queue.dropped(),
+      static_cast<unsigned long>(deauth_count),
+      probe_queue.dropped() + repeat_queue.dropped() + deauth_queue.dropped(),
       gps_fix ? "true" : "false", capture.c_str());
     manifest.close();
   #else
@@ -361,13 +485,13 @@ void ReconMission::drawDashboard(uint32_t current_time) {
                  static_cast<unsigned long>(station_count),
                  static_cast<unsigned long>(probe_count));
       #else
-        snprintf(status, sizeof(status), "REC W %lu:%02lu A%lu S%lu P%lu U%lu G%c",
+        snprintf(status, sizeof(status), "REC W %lu:%02lu A%lu S%lu P%lu D%lu G%c",
                  static_cast<unsigned long>(seconds / 60),
                  static_cast<unsigned long>(seconds % 60),
                  static_cast<unsigned long>(ap_count),
                  static_cast<unsigned long>(station_count),
                  static_cast<unsigned long>(probe_count),
-                 static_cast<unsigned long>(repeat_count), gps_fix ? '+' : '-');
+                 static_cast<unsigned long>(deauth_count), gps_fix ? '+' : '-');
       #endif
     } else {
       snprintf(status, sizeof(status), "REC B %lu:%02lu D%lu U%lu G%c",
@@ -383,6 +507,15 @@ void ReconMission::drawDashboard(uint32_t current_time) {
     display_obj.tft.setTextSize(1);
     display_obj.tft.setTextColor(TFT_BLACK, color);
     display_obj.tft.drawCentreString(status, (TFT_WIDTH / 2) + 4, 20, 1);
+    if (active_mode == ReconMode::WIFI_RECON) {
+      const bool deauth_active = last_deauth && current_time - last_deauth < RECON_DEAUTH_ALERT_MS;
+      display_obj.tft.fillRect(TFT_WIDTH - 34, 34, 32, 12, TFT_BLACK);
+      display_obj.tft.setTextColor(deauth_active ? TFT_RED : TFT_DARKGREY, TFT_BLACK);
+      char deauth_badge[7];
+      snprintf(deauth_badge, sizeof(deauth_badge), "D!%lu",
+               static_cast<unsigned long>(deauth_count % 1000));
+      display_obj.tft.drawRightString(deauth_badge, TFT_WIDTH - 3, 35, 1);
+    }
     while (display_obj.display_buffer->size()) display_obj.display_buffer->shift();
     #ifdef SCREEN_BUFFER
       while (display_obj.screen_buffer->size()) display_obj.screen_buffer->shift();
@@ -391,47 +524,46 @@ void ReconMission::drawDashboard(uint32_t current_time) {
     const int16_t body_top = 48;
     display_obj.tft.fillRect(0, body_top, TFT_WIDTH, TFT_HEIGHT - body_top, TFT_BLACK);
     #if TFT_HEIGHT < 160
-      const int16_t meter_x = 7;
-      const int16_t meter_y = body_top + 10;
-      const int16_t meter_width = 50;
-      const int16_t meter_height = 54;
+      const int16_t beacon_x = 7;
+      const int16_t beacon_y = body_top + 7;
+      const int16_t beacon_width = 50;
+      const int16_t beacon_height = 62;
     #elif TFT_WIDTH < 200
-      const int16_t meter_x = (TFT_WIDTH - 76) / 2;
-      const int16_t meter_y = body_top + 10;
-      const int16_t meter_width = 76;
-      const int16_t meter_height = 76;
+      const int16_t beacon_x = (TFT_WIDTH - 84) / 2;
+      const int16_t beacon_y = body_top + 7;
+      const int16_t beacon_width = 84;
+      const int16_t beacon_height = 82;
     #else
-      const int16_t meter_x = 10;
-      const int16_t meter_y = body_top + 10;
-      const int16_t meter_width = 84;
-      const int16_t meter_height = 84;
+      const int16_t beacon_x = 8;
+      const int16_t beacon_y = body_top + 7;
+      const int16_t beacon_width = 92;
+      const int16_t beacon_height = 88;
     #endif
-    display_obj.tft.drawRect(meter_x, meter_y, meter_width, meter_height, TFT_DARKGREY);
-    display_obj.tft.drawFastHLine(meter_x + 1, meter_y + meter_height / 3,
-                                  meter_width - 2, TFT_DARKGREY);
-    display_obj.tft.drawFastHLine(meter_x + 1, meter_y + (meter_height * 2) / 3,
-                                  meter_width - 2, TFT_DARKGREY);
-    const int16_t slot_width = (meter_width - 6) / 4;
-    const int16_t baseline = meter_y + meter_height - 3;
-    for (uint8_t index = 0; index < 4; index++) {
-      const UiEvent& event = ui_events[(ui_event_head + index) % 4];
-      if (!event.type) continue;
-      uint16_t bar_color = TFT_CYAN;
-      if (event.type == 'a') bar_color = TFT_GREEN;
-      else if (event.type == 'p') bar_color = TFT_YELLOW;
-      else if (event.type == 'A' || event.type == 'S' || event.type == 'B')
-        bar_color = TFT_MAGENTA;
-      const uint8_t level = reconRssiLevel(event.rssi);
-      const int16_t x = meter_x + 3 + index * slot_width;
-      const int16_t bar_width = slot_width - 3 > 3 ? slot_width - 3 : 3;
-      if (level) {
-        const int16_t scaled_height = (meter_height - 7) * level / 8;
-        const int16_t bar_height = scaled_height > 2 ? scaled_height : 2;
-        display_obj.tft.fillRect(x, baseline - bar_height, bar_width, bar_height, bar_color);
-      } else {
-        display_obj.tft.drawRect(x, baseline - 3, bar_width, 3, TFT_DARKGREY);
-      }
+    const int8_t latest_rssi = signal_history_count
+                                 ? signal_history[signal_history_count - 1] : -128;
+    const uint8_t lit_segments = reconSignalSegments(latest_rssi);
+    const ReconSignalTrend trend = reconSignalTrend(signal_history, signal_history_count);
+    const uint16_t signal_color = lit_segments >= 4 ? TFT_GREEN :
+                                  lit_segments >= 2 ? TFT_YELLOW : TFT_ORANGE;
+    display_obj.tft.drawRect(beacon_x, beacon_y, beacon_width, beacon_height, TFT_DARKGREY);
+    display_obj.tft.fillCircle(beacon_x + beacon_width / 2, beacon_y + 10, 3,
+                              lit_segments ? signal_color : TFT_DARKGREY);
+    for (uint8_t segment = 0; segment < 5; segment++) {
+      const int16_t width = 12 + segment * 11;
+      const int16_t x = beacon_x + (beacon_width - width) / 2;
+      const int16_t y = beacon_y + 18 + segment * 8;
+      const uint16_t segment_color = segment < lit_segments ? signal_color : TFT_DARKGREY;
+      display_obj.tft.fillRect(x, y, width, 4, segment_color);
     }
+    display_obj.tft.setTextColor(signal_color, TFT_BLACK);
+    display_obj.tft.drawCentreString(reconProximityLabel(latest_rssi),
+                                     beacon_x + beacon_width / 2,
+                                     beacon_y + beacon_height - 15, 1);
+    const char* trend_label = trend == ReconSignalTrend::APPROACHING ? "CLOSING +" :
+                              trend == ReconSignalTrend::DEPARTING ? "LEAVING -" : "STEADY";
+    display_obj.tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+    display_obj.tft.drawCentreString(trend_label, beacon_x + beacon_width / 2,
+                                     beacon_y + beacon_height + 2, 1);
 
     display_obj.tft.setTextSize(1);
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
@@ -486,21 +618,61 @@ void ReconMission::drawDashboard(uint32_t current_time) {
     #endif
 
     #if TFT_HEIGHT >= 160
-      const int16_t event_y = TFT_HEIGHT - 34;
-      display_obj.tft.drawFastHLine(6, event_y - 5, TFT_WIDTH - 12, TFT_DARKGREY);
-      const UiEvent& latest = ui_events[(ui_event_head + 3) % 4];
-      if (latest.type) {
-        if (latest.type == 'p') snprintf(line, sizeof(line), "PROBE  %s", latest.label);
-        else snprintf(line, sizeof(line), "%s %02X:%02X:%02X",
-          (latest.type == 'a') ? "NEW AP " : (latest.type == 's') ? "NEW STA" :
-          (latest.type == 'b') ? "NEW BLE" : "UPDATE ",
-          latest.mac[3], latest.mac[4], latest.mac[5]);
-        display_obj.tft.setTextColor(latest.type == 'p' ? TFT_YELLOW : TFT_CYAN, TFT_BLACK);
-        display_obj.tft.drawString(line, 8, event_y, 1);
-      } else {
-        display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
-        display_obj.tft.drawString("Waiting for activity...", 8, event_y, 1);
-      }
+      #if TFT_WIDTH >= 200
+        const int16_t relation_y = body_top + 112;
+        display_obj.tft.drawFastHLine(6, relation_y - 6, TFT_WIDTH - 12, TFT_DARKGREY);
+        display_obj.tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
+        display_obj.tft.drawString("NEW ASSOCIATIONS", 8, relation_y, 1);
+        for (uint8_t row = 0; row < 3; row++) {
+          const UiRelationship& relationship =
+              ui_relationships[(ui_relationship_head + row) % 3];
+          if (!relationship.ap_name[0]) continue;
+          char ap_name[13];
+          reconTruncate(relationship.ap_name, ap_name, sizeof(ap_name));
+          snprintf(line, sizeof(line), "%02X:%02X:%02X > %s",
+                   relationship.station[3], relationship.station[4], relationship.station[5],
+                   ap_name);
+          display_obj.tft.setTextColor(row == 2 ? TFT_CYAN : TFT_LIGHTGREY, TFT_BLACK);
+          display_obj.tft.drawString(line, 8, relation_y + 15 + row * 14, 1);
+        }
+
+        if (active_mode == ReconMode::WIFI_RECON) {
+          uint16_t peak = 1;
+          for (uint8_t channel = 0; channel < 14; channel++)
+            if (channel_activity[channel] > peak) peak = channel_activity[channel];
+          const int16_t strip_y = TFT_HEIGHT - 31;
+          display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
+          display_obj.tft.drawString("CH", 5, strip_y + 8, 1);
+          const int16_t slot = (TFT_WIDTH - 26) / 14;
+          for (uint8_t channel = 0; channel < 14; channel++) {
+            const int16_t height = 2 + (channel_activity[channel] * 14UL) / peak;
+            const int16_t x = 24 + channel * slot;
+            display_obj.tft.fillRect(x, strip_y + 17 - height, slot > 2 ? slot - 2 : 1,
+                                     height, channel_activity[channel] ? TFT_BLUE : TFT_DARKGREY);
+          }
+        }
+      #else
+        const int16_t event_y = TFT_HEIGHT - 32;
+        display_obj.tft.drawFastHLine(5, event_y - 5, TFT_WIDTH - 10, TFT_DARKGREY);
+        if (active_mode == ReconMode::WIFI_RECON && ui_relationship_head) {
+          const UiRelationship& relationship =
+              ui_relationships[(ui_relationship_head + 2) % 3];
+          char ap_name[9];
+          reconTruncate(relationship.ap_name, ap_name, sizeof(ap_name));
+          snprintf(line, sizeof(line), "%02X:%02X > %s", relationship.station[4],
+                   relationship.station[5], ap_name);
+          display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+          display_obj.tft.drawCentreString(line, TFT_WIDTH / 2, event_y, 1);
+        } else {
+          const UiEvent& latest = ui_events[(ui_event_head + 3) % 4];
+          if (latest.type == 'p') snprintf(line, sizeof(line), "PROBE %.12s", latest.label);
+          else if (latest.type) snprintf(line, sizeof(line), "%c %02X:%02X:%02X",
+                                         latest.type, latest.mac[3], latest.mac[4], latest.mac[5]);
+          else snprintf(line, sizeof(line), "Waiting...");
+          display_obj.tft.setTextColor(latest.type == 'd' ? TFT_RED : TFT_LIGHTGREY, TFT_BLACK);
+          display_obj.tft.drawCentreString(line, TFT_WIDTH / 2, event_y, 1);
+        }
+      #endif
     #endif
     display_obj.tft.setTextColor(active_mode == ReconMode::WIFI_RECON ? TFT_GREEN : TFT_CYAN,
                                  TFT_BLACK);
@@ -528,6 +700,7 @@ void ReconMission::observeLists() {
           const AccessPoint& ap = access_points->get(station.ap);
           channel = ap.channel;
           writeRelationship(station.mac, ap.bssid);
+          recordRelationship(station, ap);
         }
         writeObservation('s', station.mac, -128, channel);
       }
@@ -556,5 +729,7 @@ void ReconMission::main(uint32_t current_time) {
   observeLists();
   drainProbeQueue();
   drainRepeatQueue();
+  drainDeauthQueue();
+  pruneStaleDevices(current_time);
   drawDashboard(current_time);
 }

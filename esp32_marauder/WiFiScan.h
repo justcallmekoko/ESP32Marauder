@@ -355,6 +355,7 @@ struct BleDevice {
   String   name;
   bool     selected = false;
   int      rssi     = -128;
+  uint32_t last_seen_ms = 0;
 };
 
 #ifdef HAS_PSRAM

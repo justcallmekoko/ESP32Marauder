@@ -1,0 +1,66 @@
+#include <unity.h>
+
+#include "ReconUi.h"
+
+void setUp() {}
+void tearDown() {}
+
+void test_layout_profiles_cover_supported_display_shapes() {
+  TEST_ASSERT_EQUAL_INT(static_cast<int>(ReconLayout::COMPACT_SQUARE),
+                        static_cast<int>(reconLayoutFor(128, 128)));
+  TEST_ASSERT_EQUAL_INT(static_cast<int>(ReconLayout::COMPACT_LANDSCAPE),
+                        static_cast<int>(reconLayoutFor(240, 135)));
+  TEST_ASSERT_EQUAL_INT(static_cast<int>(ReconLayout::NARROW_PORTRAIT),
+                        static_cast<int>(reconLayoutFor(135, 240)));
+  TEST_ASSERT_EQUAL_INT(static_cast<int>(ReconLayout::LARGE),
+                        static_cast<int>(reconLayoutFor(240, 320)));
+  TEST_ASSERT_EQUAL_UINT8(3, reconRelationshipRows(ReconLayout::LARGE));
+  TEST_ASSERT_EQUAL_UINT8(0, reconRelationshipRows(ReconLayout::COMPACT_SQUARE));
+}
+
+void test_signal_segments_and_labels_are_monotonic() {
+  TEST_ASSERT_EQUAL_UINT8(0, reconSignalSegments(-128));
+  TEST_ASSERT_EQUAL_UINT8(1, reconSignalSegments(-95));
+  TEST_ASSERT_EQUAL_UINT8(3, reconSignalSegments(-67));
+  TEST_ASSERT_EQUAL_UINT8(5, reconSignalSegments(-40));
+  TEST_ASSERT_EQUAL_STRING("FAR", reconProximityLabel(-90));
+  TEST_ASSERT_EQUAL_STRING("MID", reconProximityLabel(-72));
+  TEST_ASSERT_EQUAL_STRING("NEAR", reconProximityLabel(-50));
+}
+
+void test_signal_trend_uses_meaningful_change_threshold() {
+  const int8_t approaching[] = {-82, -78, -70};
+  const int8_t departing[] = {-55, -60, -66};
+  const int8_t steady[] = {-70, -68, -71};
+  TEST_ASSERT_EQUAL_INT(static_cast<int>(ReconSignalTrend::APPROACHING),
+                        static_cast<int>(reconSignalTrend(approaching, 3)));
+  TEST_ASSERT_EQUAL_INT(static_cast<int>(ReconSignalTrend::DEPARTING),
+                        static_cast<int>(reconSignalTrend(departing, 3)));
+  TEST_ASSERT_EQUAL_INT(static_cast<int>(ReconSignalTrend::STEADY),
+                        static_cast<int>(reconSignalTrend(steady, 3)));
+}
+
+void test_decay_is_wrap_safe_and_ignores_unknown_timestamps() {
+  TEST_ASSERT_FALSE(reconDeviceExpired(500000, 0));
+  TEST_ASSERT_FALSE(reconDeviceExpired(400000, 200000));
+  TEST_ASSERT_TRUE(reconDeviceExpired(500000, 200000));
+  TEST_ASSERT_TRUE(reconDeviceExpired(0x00000020, 0xFFF00000, 100000));
+}
+
+void test_truncation_preserves_both_ends() {
+  char output[10];
+  reconTruncate("MarauderNetwork", output, sizeof(output));
+  TEST_ASSERT_EQUAL_STRING("Mar..work", output);
+  reconTruncate("short", output, sizeof(output));
+  TEST_ASSERT_EQUAL_STRING("short", output);
+}
+
+int main(int, char**) {
+  UNITY_BEGIN();
+  RUN_TEST(test_layout_profiles_cover_supported_display_shapes);
+  RUN_TEST(test_signal_segments_and_labels_are_monotonic);
+  RUN_TEST(test_signal_trend_uses_meaningful_change_threshold);
+  RUN_TEST(test_decay_is_wrap_safe_and_ignores_unknown_timestamps);
+  RUN_TEST(test_truncation_preserves_both_ends);
+  return UNITY_END();
+}

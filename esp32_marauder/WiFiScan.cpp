@@ -574,6 +574,7 @@ extern "C" {
                 ble_device.name = mac;
 
               ble_device.rssi = rssi;
+              ble_device.last_seen_ms = millis();
 
               memcpy(ble_device.mac, mac_char, sizeof(mac_char));
 
@@ -1272,6 +1273,7 @@ extern "C" {
                 ble_device.name = mac;
 
               ble_device.rssi = rssi;
+              ble_device.last_seen_ms = millis();
 
               memcpy(ble_device.mac, mac_char, sizeof(mac_char));
 
@@ -6701,6 +6703,15 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
     len -= 4;
 
     if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA) &&
+        (snifferPacket->payload[0] == 0xC0) && (len >= 26)) {
+      const uint16_t reason = snifferPacket->payload[24] |
+                              (static_cast<uint16_t>(snifferPacket->payload[25]) << 8);
+      recon_obj.queueDeauth(&snifferPacket->payload[10], &snifferPacket->payload[16],
+                            snifferPacket->rx_ctrl.rssi,
+                            snifferPacket->rx_ctrl.channel, reason);
+    }
+
+    if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA) &&
         (snifferPacket->payload[0] == 0x40) && (len > 26)) {
       const uint8_t name_length = snifferPacket->payload[25];
       if (name_length && (26 + name_length <= len)) {
@@ -6754,6 +6765,11 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
       int in_list = wifi_scan_obj.checkMatchAP(addr);
 
       if (in_list >= 0) {
+        AccessPoint access_point = access_points->get(in_list);
+        access_point.rssi = snifferPacket->rx_ctrl.rssi;
+        access_point.channel = snifferPacket->rx_ctrl.channel;
+        access_point.last_seen_ms = millis();
+        access_points->set(in_list, access_point);
         recon_obj.queueRepeat('A', &snifferPacket->payload[10],
                               snifferPacket->rx_ctrl.rssi,
                               snifferPacket->rx_ctrl.channel);
@@ -6849,6 +6865,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
           ap.packets = 0;
 
           ap.man = "";
+          ap.last_seen_ms = millis();
 
           access_points->add(ap);
         }
@@ -6931,6 +6948,9 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
       }
       if (mac_match) {
         in_list = true;
+        Station station = stations->get(i);
+        station.last_seen_ms = millis();
+        stations->set(i, station);
         break;
       }
     }
@@ -6957,7 +6977,8 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
                     snifferPacket->payload[frame_offset + 5]},
                     false,
                     0,
-                    static_cast<uint16_t>(ap_index)};
+                    static_cast<uint16_t>(ap_index),
+                    millis()};
 
       stations->add(sta);
     }

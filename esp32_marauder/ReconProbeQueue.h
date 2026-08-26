@@ -81,6 +81,39 @@ class ReconRepeatQueue {
   uint16_t dropped_count = 0;
 };
 
+struct ReconDeauthEvent {
+  uint8_t transmitter[6];
+  uint8_t bssid[6];
+  int8_t rssi;
+  uint8_t channel;
+  uint16_t reason;
+};
+
+class ReconDeauthQueue {
+ public:
+  void reset() { head = tail = dropped_count = 0; }
+  bool push(const ReconDeauthEvent& event) {
+    const uint8_t next = (head + 1) % RECON_PROBE_QUEUE_SIZE;
+    if (next == tail) { dropped_count++; return false; }
+    entries[head] = event;
+    head = next;
+    return true;
+  }
+  bool pop(ReconDeauthEvent& event) {
+    if (tail == head) return false;
+    event = entries[tail];
+    tail = (tail + 1) % RECON_PROBE_QUEUE_SIZE;
+    return true;
+  }
+  uint16_t dropped() const { return dropped_count; }
+
+ private:
+  ReconDeauthEvent entries[RECON_PROBE_QUEUE_SIZE] = {};
+  uint8_t head = 0;
+  uint8_t tail = 0;
+  uint16_t dropped_count = 0;
+};
+
 class ReconRepeatGate {
  public:
   void reset() { memset(entries, 0, sizeof(entries)); }
