@@ -95,6 +95,7 @@ bool ReconMission::start(ReconMode mode) {
   ui_relationship_head = 0;
   memset(signal_history, 0, sizeof(signal_history));
   signal_history_count = 0;
+  pending_signal_peak = -128;
   memset(channel_activity, 0, sizeof(channel_activity));
   suppress_scan_ui = true;
 
@@ -341,14 +342,7 @@ void ReconMission::writeProbe(const ReconProbeEvent& event) {
 }
 
 void ReconMission::recordSignal(int8_t rssi, uint8_t channel) {
-  if (rssi > -127) {
-    if (signal_history_count < sizeof(signal_history)) {
-      signal_history[signal_history_count++] = rssi;
-    } else {
-      memmove(signal_history, signal_history + 1, sizeof(signal_history) - 1);
-      signal_history[sizeof(signal_history) - 1] = rssi;
-    }
-  }
+  if (rssi > pending_signal_peak) pending_signal_peak = rssi;
   if (!channel) return;
   uint8_t channel_index = UINT8_MAX;
   #ifdef HAS_DUAL_BAND
@@ -484,6 +478,13 @@ void ReconMission::drawDashboard(uint32_t current_time) {
   #ifdef HAS_SCREEN
     if (last_dashboard && current_time - last_dashboard < 1000) return;
     last_dashboard = current_time;
+    if (signal_history_count < sizeof(signal_history)) {
+      signal_history[signal_history_count++] = pending_signal_peak;
+    } else {
+      memmove(signal_history, signal_history + 1, sizeof(signal_history) - 1);
+      signal_history[sizeof(signal_history) - 1] = pending_signal_peak;
+    }
+    pending_signal_peak = -128;
     const uint32_t seconds = (current_time - started_at) / 1000;
     bool gps_fix = false;
     #ifdef HAS_GPS
@@ -528,46 +529,69 @@ void ReconMission::drawDashboard(uint32_t current_time) {
     const int16_t body_top = 48;
     display_obj.tft.fillRect(0, body_top, TFT_WIDTH, TFT_HEIGHT - body_top, TFT_BLACK);
     #if TFT_HEIGHT < 160
-      const int16_t beacon_x = 7;
-      const int16_t beacon_y = body_top + 7;
-      const int16_t beacon_width = 50;
-      const int16_t beacon_height = 62;
+      const int16_t graph_x = 7;
+      const int16_t graph_y = body_top + 7;
+      const int16_t graph_width = 50;
+      const int16_t graph_height = 62;
     #elif TFT_WIDTH < 200
-      const int16_t beacon_x = (TFT_WIDTH - 84) / 2;
-      const int16_t beacon_y = body_top + 7;
-      const int16_t beacon_width = 84;
-      const int16_t beacon_height = 82;
+      const int16_t graph_x = (TFT_WIDTH - 84) / 2;
+      const int16_t graph_y = body_top + 7;
+      const int16_t graph_width = 84;
+      const int16_t graph_height = 82;
     #else
-      const int16_t beacon_x = 8;
-      const int16_t beacon_y = body_top + 7;
-      const int16_t beacon_width = 92;
-      const int16_t beacon_height = 88;
+      const int16_t graph_x = 8;
+      const int16_t graph_y = body_top + 7;
+      const int16_t graph_width = 92;
+      const int16_t graph_height = 88;
     #endif
     const int8_t latest_rssi = signal_history_count
                                  ? signal_history[signal_history_count - 1] : -128;
     const uint8_t lit_segments = reconSignalSegments(latest_rssi);
     const ReconSignalTrend trend = reconSignalTrend(signal_history, signal_history_count);
-    const uint16_t signal_color = lit_segments >= 4 ? TFT_GREEN :
+    const uint16_t signal_color = !lit_segments ? TFT_DARKGREY :
+                                  lit_segments >= 4 ? TFT_GREEN :
                                   lit_segments >= 2 ? TFT_YELLOW : TFT_ORANGE;
-    display_obj.tft.drawRect(beacon_x, beacon_y, beacon_width, beacon_height, TFT_DARKGREY);
-    display_obj.tft.fillCircle(beacon_x + beacon_width / 2, beacon_y + 10, 3,
-                              lit_segments ? signal_color : TFT_DARKGREY);
-    for (uint8_t segment = 0; segment < 5; segment++) {
-      const int16_t width = 12 + segment * 11;
-      const int16_t x = beacon_x + (beacon_width - width) / 2;
-      const int16_t y = beacon_y + 18 + segment * 8;
-      const uint16_t segment_color = segment < lit_segments ? signal_color : TFT_DARKGREY;
-      display_obj.tft.fillRect(x, y, width, 4, segment_color);
-    }
+    display_obj.tft.drawRect(graph_x, graph_y, graph_width, graph_height, TFT_DARKGREY);
+    display_obj.tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+    display_obj.tft.drawString("RSSI", graph_x + 3, graph_y + 3, 1);
+    char rssi_label[6];
+    if (latest_rssi > -127) snprintf(rssi_label, sizeof(rssi_label), "%d", latest_rssi);
+    else snprintf(rssi_label, sizeof(rssi_label), "--");
     display_obj.tft.setTextColor(signal_color, TFT_BLACK);
-    display_obj.tft.drawCentreString(reconProximityLabel(latest_rssi),
-                                     beacon_x + beacon_width / 2,
-                                     beacon_y + beacon_height - 15, 1);
+    display_obj.tft.drawRightString(rssi_label, graph_x + graph_width - 3, graph_y + 3, 1);
+    const int16_t plot_left = graph_x + 3;
+    const int16_t plot_top = graph_y + 15;
+    const int16_t plot_width = graph_width - 6;
+    const int16_t plot_height = graph_height - 30;
+    for (uint8_t grid = 1; grid < 3; grid++)
+      display_obj.tft.drawFastHLine(plot_left, plot_top + (plot_height * grid) / 3,
+                                   plot_width, TFT_DARKGREY);
+    const uint8_t visible_samples = signal_history_count < plot_width
+                                      ? signal_history_count : plot_width;
+    const uint8_t first_sample = signal_history_count - visible_samples;
+    const int16_t first_x = plot_left + plot_width - visible_samples;
+    bool have_previous = false;
+    int16_t previous_x = 0;
+    int16_t previous_y = 0;
+    for (uint8_t sample = 0; sample < visible_samples; sample++) {
+      const uint8_t level = reconRssiPlotLevel(signal_history[first_sample + sample]);
+      if (!level) {
+        have_previous = false;
+        continue;
+      }
+      const int16_t x = first_x + sample;
+      const int16_t y = plot_top + plot_height - 1 - ((level - 1) * (plot_height - 1)) / 99;
+      if (have_previous) display_obj.tft.drawLine(previous_x, previous_y, x, y, signal_color);
+      else display_obj.tft.drawPixel(x, y, signal_color);
+      previous_x = x;
+      previous_y = y;
+      have_previous = true;
+    }
     const char* trend_label = trend == ReconSignalTrend::APPROACHING ? "CLOSING +" :
                               trend == ReconSignalTrend::DEPARTING ? "LEAVING -" : "STEADY";
     display_obj.tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
-    display_obj.tft.drawCentreString(trend_label, beacon_x + beacon_width / 2,
-                                     beacon_y + beacon_height + 2, 1);
+    display_obj.tft.drawCentreString(trend_label, graph_x + graph_width / 2,
+                                     graph_y + graph_height - 12, 1);
 
     display_obj.tft.setTextSize(1);
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);

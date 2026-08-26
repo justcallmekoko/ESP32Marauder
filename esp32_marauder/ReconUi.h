@@ -53,6 +53,13 @@ inline uint8_t reconSignalSegments(int8_t rssi) {
   return 5;
 }
 
+inline uint8_t reconRssiPlotLevel(int8_t rssi) {
+  if (rssi <= -127) return 0;
+  if (rssi <= -100) return 1;
+  if (rssi >= -35) return 100;
+  return 1 + ((static_cast<int16_t>(rssi) + 100) * 99) / 65;
+}
+
 inline const char* reconProximityLabel(int8_t rssi) {
   if (rssi <= -127) return "NO SIGNAL";
   if (rssi <= -82) return "FAR";
@@ -62,7 +69,13 @@ inline const char* reconProximityLabel(int8_t rssi) {
 
 inline ReconSignalTrend reconSignalTrend(const int8_t* samples, size_t count) {
   if (!samples || count < 2) return ReconSignalTrend::STEADY;
-  const int delta = static_cast<int>(samples[count - 1]) - samples[0];
+  size_t first = 0;
+  while (first < count && samples[first] <= -127) first++;
+  if (first == count) return ReconSignalTrend::STEADY;
+  size_t last = count - 1;
+  while (last > first && samples[last] <= -127) last--;
+  if (last == first) return ReconSignalTrend::STEADY;
+  const int delta = static_cast<int>(samples[last]) - samples[first];
   if (delta >= 6) return ReconSignalTrend::APPROACHING;
   if (delta <= -6) return ReconSignalTrend::DEPARTING;
   return ReconSignalTrend::STEADY;

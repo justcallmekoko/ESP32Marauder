@@ -28,16 +28,27 @@ void test_signal_segments_and_labels_are_monotonic() {
   TEST_ASSERT_EQUAL_STRING("NEAR", reconProximityLabel(-50));
 }
 
+void test_rssi_plot_mapping_clamps_and_increases() {
+  TEST_ASSERT_EQUAL_UINT8(0, reconRssiPlotLevel(-128));
+  TEST_ASSERT_EQUAL_UINT8(1, reconRssiPlotLevel(-100));
+  TEST_ASSERT_TRUE(reconRssiPlotLevel(-80) < reconRssiPlotLevel(-60));
+  TEST_ASSERT_EQUAL_UINT8(100, reconRssiPlotLevel(-35));
+  TEST_ASSERT_EQUAL_UINT8(100, reconRssiPlotLevel(-10));
+}
+
 void test_signal_trend_uses_meaningful_change_threshold() {
   const int8_t approaching[] = {-82, -78, -70};
   const int8_t departing[] = {-55, -60, -66};
   const int8_t steady[] = {-70, -68, -71};
+  const int8_t with_gaps[] = {-128, -82, -75, -128};
   TEST_ASSERT_EQUAL_INT(static_cast<int>(ReconSignalTrend::APPROACHING),
                         static_cast<int>(reconSignalTrend(approaching, 3)));
   TEST_ASSERT_EQUAL_INT(static_cast<int>(ReconSignalTrend::DEPARTING),
                         static_cast<int>(reconSignalTrend(departing, 3)));
   TEST_ASSERT_EQUAL_INT(static_cast<int>(ReconSignalTrend::STEADY),
                         static_cast<int>(reconSignalTrend(steady, 3)));
+  TEST_ASSERT_EQUAL_INT(static_cast<int>(ReconSignalTrend::APPROACHING),
+                        static_cast<int>(reconSignalTrend(with_gaps, 4)));
 }
 
 void test_decay_is_wrap_safe_and_ignores_unknown_timestamps() {
@@ -69,6 +80,7 @@ int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_layout_profiles_cover_supported_display_shapes);
   RUN_TEST(test_signal_segments_and_labels_are_monotonic);
+  RUN_TEST(test_rssi_plot_mapping_clamps_and_increases);
   RUN_TEST(test_signal_trend_uses_meaningful_change_threshold);
   RUN_TEST(test_decay_is_wrap_safe_and_ignores_unknown_timestamps);
   RUN_TEST(test_channel_pages_cycle_and_include_partial_final_page);
