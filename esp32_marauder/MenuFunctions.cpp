@@ -3501,7 +3501,7 @@ void MenuFunctions::RunSetup()
     });
   #endif
 
-  #if defined(HAS_ILI9341) && !defined(HAS_LOVYANGFX)
+  #if defined(HAS_ILI9341) && !defined(HAS_LOVYANGFX) && !defined(HAS_CAP_TOUCH)
   this->addNodes(&deviceMenu, "Touch Calibration", TFTMAGENTA, 0, [this]() {
     display_obj.clearScreen();
     display_obj.tft.setTextWrap(true);
