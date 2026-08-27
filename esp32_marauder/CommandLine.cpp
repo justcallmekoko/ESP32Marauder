@@ -587,6 +587,8 @@ void CommandLine::runCommand(String input) {
       uint8_t error = 0;
       if (machine && operation != 1)
         machineResult(transaction_id, command, "started", "OK");
+      else if (!machine && operation != 1)
+        Serial.printf("SPIFFS %s started\n", operation == 0 ? "backup" : "restore");
 
       bool success = sd_obj.migrateSPIFFS(operation, files, bytes, error);
       if (machine) {
@@ -597,6 +599,21 @@ void CommandLine::runCommand(String input) {
                                  operation == 1 ? "BACKUP_INSPECTION_FAILED" : "RESTORE_FAILED";
           machineResult(transaction_id, command, "error", storageErrorCode(error, fallback));
         }
+      }
+      else if (success) {
+        const char* action = operation == 0 ? "backup complete" :
+                             operation == 1 ? "backup status" : "restore complete";
+        Serial.printf("SPIFFS %s: %u files, %u bytes%s\n", action,
+                      static_cast<unsigned int>(files),
+                      static_cast<unsigned int>(bytes),
+                      operation == 2 ? "; rebooting" : "");
+      }
+      else {
+        const char* fallback = operation == 0 ? "BACKUP_FAILED" :
+                               operation == 1 ? "BACKUP_INSPECTION_FAILED" : "RESTORE_FAILED";
+        Serial.printf("SPIFFS %s failed: %s\n",
+                      operation == 0 ? "backup" : operation == 1 ? "backup status" : "restore",
+                      storageErrorCode(error, fallback));
       }
       if (success && operation == 2) {
         delay(1000);

@@ -38,6 +38,18 @@ class SpiffsMachineProtocolTests(unittest.TestCase):
         self.assertIn("File backup = SD.open(backup_path)", method)
         self.assertIn('copyTree(SD, backup_path, nullptr', method)
 
+    def test_human_spiffs_commands_report_lifecycle_and_results(self):
+        source = (ROOT / "esp32_marauder" / "CommandLine.cpp").read_text()
+        start = source.index("cmd_args.get(0) == BACKUP_SPIFFS_CMD ||")
+        commands = source[start:source.index("// GCOVR_EXCL_STOP", start)]
+
+        self.assertIn('else if (!machine && operation != 1)', commands)
+        self.assertIn('Serial.printf("SPIFFS %s started\\n"', commands)
+        self.assertIn('operation == 1 ? "backup status"', commands)
+        self.assertIn('operation == 2 ? "; rebooting" : ""', commands)
+        self.assertIn('Serial.printf("SPIFFS %s failed: %s\\n"', commands)
+        self.assertIn('storageErrorCode(error, fallback)', commands)
+
 
 if __name__ == "__main__":
     unittest.main()
