@@ -193,6 +193,13 @@ inline void convertMacStringToUint8(const String& macStr, uint8_t macAddr[6]) {
 }
 
 
+// Network base address (ip & mask), so subnet scans cover the whole range
+// regardless of where the gateway sits (e.g. .254 routers). getNextIP walks up from here.
+inline IPAddress getNetworkBase(IPAddress ip, IPAddress subnetMask) {
+  return IPAddress(ip[0] & subnetMask[0], ip[1] & subnetMask[1],
+                   ip[2] & subnetMask[2], ip[3] & subnetMask[3]);
+}
+
 inline IPAddress getNextIP(IPAddress currentIP, IPAddress subnetMask) {
   // Convert IPAddress to uint32_t
   uint32_t ipInt = (currentIP[0] << 24) | (currentIP[1] << 16) | (currentIP[2] << 8) | currentIP[3];
