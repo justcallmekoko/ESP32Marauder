@@ -1,4 +1,5 @@
 #include "MenuFunctions.h"
+#include "MenuMarquee.h"
 #include "CommandLine.h"
 #include "lang_var.h"
 
@@ -13,7 +14,7 @@ extern LinkedList<BleDevice>* ble_devices;
 extern CommandLine cli_obj;
 
 #ifdef HAS_MINI_SCREEN
-void MenuFunctions::drawMiniMenuButton(int b, int x, bool selected) {
+void MenuFunctions::drawMiniMenuButton(int b, int x, bool selected, uint16_t text_offset) {
   if (!current_menu || !current_menu->list || x < 0 || x >= current_menu->list->size())
     return;
 
@@ -32,9 +33,100 @@ void MenuFunctions::drawMiniMenuButton(int b, int x, bool selected) {
   display_obj.tft.fillRect(button_x, button_y - 4, KEY_W, KEY_H, background);
   display_obj.tft.setTextColor(text_color, background);
   display_obj.tft.setCursor(button_x + BUTTON_PADDING, button_y + (KEY_H / 2) - 8);
-  display_obj.tft.print(current_menu->list->get(x).name);
+  display_obj.tft.print(this->menuLabelWindow(current_menu->list->get(x).name, text_offset));
 }
 #endif
+
+String MenuFunctions::menuLabelWindow(const String& name, uint16_t offset) {
+  const int16_t available_width = max(1, KEY_W - (2 * BUTTON_PADDING));
+
+  #ifdef HAS_MINI_SCREEN
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.tft.setTextSize(1);
+  #else
+    display_obj.tft.setFreeFont(MENU_FONT);
+    display_obj.tft.setTextSize(KEY_TEXTSIZE);
+  #endif
+
+  if (offset >= name.length())
+    offset = 0;
+
+  String visible = name.substring(offset);
+  while (visible.length() > 1 && display_obj.tft.textWidth(visible) > available_width)
+    visible.remove(visible.length() - 1);
+
+  return visible;
+}
+
+uint16_t MenuFunctions::menuLabelMaxOffset(const String& name) {
+  const int16_t available_width = max(1, KEY_W - (2 * BUTTON_PADDING));
+  uint16_t max_offset = 0;
+
+  #ifdef HAS_MINI_SCREEN
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.tft.setTextSize(1);
+  #else
+    display_obj.tft.setFreeFont(MENU_FONT);
+    display_obj.tft.setTextSize(KEY_TEXTSIZE);
+  #endif
+
+  if (display_obj.tft.textWidth(name) > available_width) {
+    max_offset = name.length() > 0 ? name.length() - 1 : 0;
+    for (uint16_t offset = 1; offset < name.length(); offset++) {
+      if (display_obj.tft.textWidth(name.substring(offset)) <= available_width) {
+        max_offset = offset;
+        break;
+      }
+    }
+  }
+
+  #ifdef HAS_FULL_SCREEN
+    display_obj.tft.setFreeFont(NULL);
+  #endif
+
+  return max_offset;
+}
+
+void MenuFunctions::updateMenuMarquee(uint32_t current_time) {
+  const bool menu_visible = (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
+                            (wifi_scan_obj.currentScanMode == WIFI_CONNECTED) ||
+                            (wifi_scan_obj.currentScanMode == OTA_UPDATE);
+
+  if (!menu_visible || !current_menu || !current_menu->list ||
+      current_menu->list->size() == 0 || current_menu->selected >= current_menu->list->size()) {
+    marquee_menu = nullptr;
+    marquee_selected = 0xFFFF;
+    marquee_rendered_offset = 0;
+    marquee_max_offset = 0;
+    return;
+  }
+
+  if (marquee_menu != current_menu || marquee_selected != current_menu->selected) {
+    marquee_menu = current_menu;
+    marquee_selected = current_menu->selected;
+    marquee_selected_since = current_time;
+    marquee_rendered_offset = 0;
+    marquee_max_offset = this->menuLabelMaxOffset(
+      current_menu->list->get(current_menu->selected).name
+    );
+    return;
+  }
+
+  const uint16_t next_offset = MenuMarquee::offsetForElapsed(
+    current_time - marquee_selected_since,
+    marquee_max_offset
+  );
+
+  if (next_offset == marquee_rendered_offset)
+    return;
+
+  marquee_rendered_offset = next_offset;
+  this->buttonSelected(
+    current_menu->selected - menu_start_index,
+    current_menu->selected,
+    marquee_rendered_offset
+  );
+}
 
 void MenuFunctions::buttonNotSelected(int b, int x) {
   if (x == -1)
@@ -53,7 +145,7 @@ void MenuFunctions::buttonNotSelected(int b, int x) {
   #ifdef HAS_FULL_SCREEN
     display_obj.tft.setFreeFont(MENU_FONT);
     display_obj.key[b].initButton(&display_obj.tft, KEY_X, KEY_Y + b * (KEY_H + KEY_SPACING_Y), KEY_W, KEY_H, TFT_BLACK, TFT_BLACK, color, (char*)"", KEY_TEXTSIZE);
-    display_obj.key[b].drawButton(false, current_menu->list->get(x).name);
+    display_obj.key[b].drawButton(false, this->menuLabelWindow(current_menu->list->get(x).name));
     if ((current_menu->list->get(x).name != text09) && (current_menu->list->get(x).icon != 255))
           display_obj.tft.drawXBitmap(0,
                                       KEY_Y + (b * (KEY_H + KEY_SPACING_Y)) - (ICON_H / 2),
@@ -66,7 +158,7 @@ void MenuFunctions::buttonNotSelected(int b, int x) {
   #endif
 }
 
-void MenuFunctions::buttonSelected(int b, int x) {
+void MenuFunctions::buttonSelected(int b, int x, uint16_t text_offset) {
   if (x == -1)
     x = b;
 
@@ -76,7 +168,7 @@ void MenuFunctions::buttonSelected(int b, int x) {
   uint16_t color = this->getColor(current_menu->list->get(x).color);
 
   #ifdef HAS_MINI_SCREEN
-    this->drawMiniMenuButton(b, x, true);
+    this->drawMiniMenuButton(b, x, true, text_offset);
   #endif
 
   #ifdef HAS_FULL_SCREEN
@@ -84,7 +176,7 @@ void MenuFunctions::buttonSelected(int b, int x) {
     if (current_menu->list->get(x).icon == SETTINGS && current_menu->list->get(x).color == TFTLIGHTGREY) {
       uint16_t setting_color = current_menu->list->get(x).selected ? TFT_GREEN : TFT_RED;
       display_obj.key[b].initButton(&display_obj.tft, KEY_X, KEY_Y + b * (KEY_H + KEY_SPACING_Y), KEY_W, KEY_H, TFT_BLACK, TFT_LIGHTGREY, setting_color, (char*)"", KEY_TEXTSIZE);
-      display_obj.key[b].drawButton(false, current_menu->list->get(x).name);
+      display_obj.key[b].drawButton(false, this->menuLabelWindow(current_menu->list->get(x).name, text_offset));
       display_obj.tft.drawXBitmap(0,
                                       KEY_Y + (b * (KEY_H + KEY_SPACING_Y)) - (ICON_H / 2),
                                       menu_icons[current_menu->list->get(x).icon],
@@ -93,7 +185,7 @@ void MenuFunctions::buttonSelected(int b, int x) {
                                       TFT_BLACK,
                                       TFT_LIGHTGREY);
     } else {
-      display_obj.key[b].drawButton(true, current_menu->list->get(x).name);
+      display_obj.key[b].drawButton(true, this->menuLabelWindow(current_menu->list->get(x).name, text_offset));
       if ((current_menu->list->get(x).name != text09) && (current_menu->list->get(x).icon != 255))
             display_obj.tft.drawXBitmap(0,
                                         KEY_Y + (b * (KEY_H + KEY_SPACING_Y)) - (ICON_H / 2),
@@ -204,6 +296,8 @@ void MenuFunctions::main(uint32_t currentTime)
       }
     }
   }
+
+  this->updateMenuMarquee(currentTime);
 
 
   boolean pressed = false;
@@ -4616,6 +4710,10 @@ void MenuFunctions::changeMenu(Menu* menu, bool simple_change) {
   current_menu = menu;
 
   current_menu->selected = 0;
+  marquee_menu = nullptr;
+  marquee_selected = 0xFFFF;
+  marquee_rendered_offset = 0;
+  marquee_max_offset = 0;
 
   buildButtons(menu);
 
@@ -4697,6 +4795,10 @@ void MenuFunctions::buildButtons(Menu *menu, int starting_index, const char* but
 void MenuFunctions::displayCurrentMenu(int start_index)
 {
   //Serial.println(F("Displaying current menu..."));
+  marquee_menu = nullptr;
+  marquee_selected = 0xFFFF;
+  marquee_rendered_offset = 0;
+  marquee_max_offset = 0;
   display_obj.clearScreen();
   display_obj.updateBanner(current_menu->name);
   display_obj.tft.setTextColor(TFT_LIGHTGREY, TFT_DARKGREY);
@@ -4723,7 +4825,7 @@ void MenuFunctions::displayCurrentMenu(int start_index)
         if (is_setting_node && current_menu->selected == i) {
           uint16_t setting_color = current_menu->list->get(i).selected ? TFT_GREEN : TFT_RED;
           display_obj.key[i - start_index].initButton(&display_obj.tft, KEY_X, KEY_Y + (i - start_index) * (KEY_H + KEY_SPACING_Y), KEY_W, KEY_H, TFT_BLACK, TFT_LIGHTGREY, setting_color, (char*)"", KEY_TEXTSIZE);
-          display_obj.key[i - start_index].drawButton(false, current_menu->list->get(i).name);
+          display_obj.key[i - start_index].drawButton(false, this->menuLabelWindow(current_menu->list->get(i).name));
           display_obj.tft.drawXBitmap(0,
                                       KEY_Y + (i - start_index) * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
                                       menu_icons[current_menu->list->get(i).icon],
@@ -4732,7 +4834,7 @@ void MenuFunctions::displayCurrentMenu(int start_index)
                                       TFT_BLACK,
                                       TFT_LIGHTGREY);
         } else if ((!is_setting_node && current_menu->list->get(i).selected) || (current_menu->selected == i)) {
-          display_obj.key[i - start_index].drawButton(true, current_menu->list->get(i).name);
+          display_obj.key[i - start_index].drawButton(true, this->menuLabelWindow(current_menu->list->get(i).name));
           if ((current_menu->list->get(i).name != text09) && (current_menu->list->get(i).icon != 255))
             display_obj.tft.drawXBitmap(0,
                                         KEY_Y + (i - start_index) * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
@@ -4742,7 +4844,7 @@ void MenuFunctions::displayCurrentMenu(int start_index)
                                         TFT_BLACK,
                                         color);
         } else {
-          display_obj.key[i - start_index].drawButton(false, current_menu->list->get(i).name);
+          display_obj.key[i - start_index].drawButton(false, this->menuLabelWindow(current_menu->list->get(i).name));
           if ((current_menu->list->get(i).name != text09) && (current_menu->list->get(i).icon != 255))
             display_obj.tft.drawXBitmap(0,
                                         KEY_Y + (i - start_index) * (KEY_H + KEY_SPACING_Y) - (ICON_H / 2),
