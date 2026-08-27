@@ -154,6 +154,11 @@ class MenuFunctions
     uint8_t mini_kb_index = 0;
     uint8_t old_gps_sat_count = 0;
     uint8_t max_graph_value = 0;
+    Menu* marquee_menu = nullptr;
+    uint16_t marquee_selected = 0xFFFF;
+    uint16_t marquee_rendered_offset = 0;
+    uint16_t marquee_max_offset = 0;
+    uint32_t marquee_selected_since = 0;
 
     void buildWiFiFoxHuntMenu();
     void buildBluetoothFoxHuntMenu();
@@ -275,10 +280,13 @@ class MenuFunctions
     void battery2(bool initial = false);
     const char* callSetting(const char* key);
     void displaySetting(const char* key, Menu* menu, int index);
-    void buttonSelected(int b, int x = -1);
+    void buttonSelected(int b, int x = -1, uint16_t text_offset = 0);
     void buttonNotSelected(int b, int x = -1);
+    String menuLabelWindow(const String& name, uint16_t offset = 0);
+    uint16_t menuLabelMaxOffset(const String& name);
+    void updateMenuMarquee(uint32_t current_time);
     #ifdef HAS_MINI_SCREEN
-      void drawMiniMenuButton(int b, int x, bool selected);
+      void drawMiniMenuButton(int b, int x, bool selected, uint16_t text_offset = 0);
     #endif
     //#if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
     #ifdef HAS_MINI_KB
