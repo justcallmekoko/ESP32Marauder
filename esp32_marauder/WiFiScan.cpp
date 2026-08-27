@@ -12,6 +12,21 @@
 static const uint8_t *g_filter_bssid = nullptr;
 uint8_t *current_act = nullptr;
 
+// Guards analyzer_name_string (fixed char[33]) between the Channel-Analyzer RX callback
+// (WiFi task) and the main-task display readers -> no cross-task String use-after-free.
+static portMUX_TYPE analyzer_name_mux = portMUX_INITIALIZER_UNLOCKED;
+void WiFiScan::setAnalyzerName(const char *s) {
+  portENTER_CRITICAL(&analyzer_name_mux);
+  strlcpy(this->analyzer_name_string, s ? s : "", sizeof(this->analyzer_name_string));
+  portEXIT_CRITICAL(&analyzer_name_mux);
+}
+void WiFiScan::getAnalyzerName(char *out, size_t n) {
+  if (!out || n == 0) return;
+  portENTER_CRITICAL(&analyzer_name_mux);
+  strlcpy(out, this->analyzer_name_string, n);
+  portEXIT_CRITICAL(&analyzer_name_mux);
+}
+
 MacEntry WiFiScan::mac_entries[mac_history_len_half];
 uint8_t WiFiScan::mac_entry_state[mac_history_len_half];
 WiFiEventId_t WiFiScan::eventId;
@@ -712,7 +727,7 @@ extern "C" {
                 display_string.concat(advertisedDevice->getAddress().toString().c_str());
 
               wifi_scan_obj.analyzer_frames_recvd = 0;
-              wifi_scan_obj.analyzer_name_string = display_string;
+              wifi_scan_obj.setAnalyzerName(display_string.c_str());
               wifi_scan_obj.analyzer_name_update = true;
             }
           }
@@ -1457,7 +1472,7 @@ extern "C" {
                 display_string.concat(mac);
 
               wifi_scan_obj.analyzer_frames_recvd = 0;
-              wifi_scan_obj.analyzer_name_string = display_string;
+              wifi_scan_obj.setAnalyzerName(display_string.c_str());
               wifi_scan_obj.analyzer_name_update = true;
             }
           }
@@ -2727,7 +2742,7 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
       for (int i = 0; i < TFT_WIDTH; i++) {
         this->_analyzer_values[i] = 0;
       }
-      this->analyzer_name_string = "";
+      this->setAnalyzerName("");
       this->analyzer_name_update = true;
       this->mgmt_frames = 0;
       this->data_frames = 0;
@@ -2788,7 +2803,7 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
         for (int i = 0; i < TFT_WIDTH; i++) {
           this->_analyzer_values[i] = 0;
         }
-        this->analyzer_name_string = "";
+        this->setAnalyzerName("");
         this->analyzer_name_update = true;
       #endif
 
@@ -9349,7 +9364,7 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
             }
           }
         }
-        wifi_scan_obj.analyzer_name_string = display_string;
+        wifi_scan_obj.setAnalyzerName(display_string.c_str());
         wifi_scan_obj.analyzer_frames_recvd = 0;
         wifi_scan_obj.analyzer_name_update = true;
       }
@@ -10042,7 +10057,7 @@ void WiFiScan::signalAnalyzerLoop(uint32_t tick) {
         #endif
         this->_analyzer_value = 0;
         if (this->analyzer_name_update) {
-          this->displayAnalyzerString(this->analyzer_name_string);
+          { char _an[33]; this->getAnalyzerName(_an, sizeof(_an)); this->displayAnalyzerString(_an); }
           this->analyzer_name_update = false;
         }
       }
@@ -10216,7 +10231,7 @@ void WiFiScan::channelActivityLoop(uint32_t tick) {
       this->addAnalyzerValue(this->_analyzer_value * BASE_MULTIPLIER, -72, this->_analyzer_values, TFT_WIDTH);
       this->_analyzer_value = 0;
       if (this->analyzer_name_update) {
-        this->displayAnalyzerString(this->analyzer_name_string);
+        { char _an[33]; this->getAnalyzerName(_an, sizeof(_an)); this->displayAnalyzerString(_an); }
         this->analyzer_name_update = false;
       }
     }
