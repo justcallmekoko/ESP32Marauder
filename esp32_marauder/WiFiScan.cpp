@@ -4599,12 +4599,27 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color) {
   if (scan_mode == WIFI_PACKET_MONITOR)
     startPcap("packet_monitor");
 
-  #if defined(HAS_SCREEN) && defined(HAS_ILI9341)
+  // GCOVR_EXCL_START -- Packet Monitor presentation requires a hardware TFT.
+  #if defined(HAS_SCREEN) && (defined(HAS_ILI9341) || (defined(MARAUDER_MINI_V3) && !defined(DUAL_MINI_C5)))
     if (scan_mode == WIFI_PACKET_MONITOR)
       this->resetPacketMonitorGraph();
   #endif
 
-  #ifdef HAS_ILI9341
+  #if defined(MARAUDER_MINI_V3) && !defined(DUAL_MINI_C5)
+    if (scan_mode == WIFI_PACKET_MONITOR) {
+      display_obj.init();
+      display_obj.tft.setRotation(SCREEN_ORIENTATION);
+      display_obj.tft.fillScreen(TFT_BLACK);
+      display_obj.tft.setFreeFont(NULL);
+      display_obj.tft.setTextSize(1);
+      this->drawPacketMonitorControls();
+      this->drawPacketMonitorGraphs();
+    }
+    else {
+      this->setupScanDisplayArea(TFT_WHITE, color);
+      this->prepareScanStage(TFT_GREEN, TFT_BLACK);
+    }
+  #elif defined(HAS_ILI9341)
     if ((scan_mode != WIFI_SCAN_PACKET_RATE) &&
         (scan_mode != WIFI_SCAN_CHAN_ANALYZER) &&
         (scan_mode != WIFI_SCAN_CHAN_ACT)) {
@@ -4681,6 +4696,7 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color) {
       this->prepareScanStage(TFT_GREEN, TFT_BLACK);
     #endif
   #endif
+  // GCOVR_EXCL_STOP
 
   //Serial.println(F("Running packet scan..."));
   esp_wifi_init(&cfg2);
@@ -9518,18 +9534,18 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
 
       // If we dont the buffer size is not 0, don't write or else we get CORRUPT_HEAP
       #ifdef HAS_SCREEN
-        #ifdef HAS_ILI9341
-          if (snifferPacket->payload[0] == 0x80)
+        #if defined(HAS_ILI9341) || (defined(MARAUDER_MINI_V3) && !defined(DUAL_MINI_C5)) // GCOVR_EXCL_LINE
+          if (snifferPacket->payload[0] == 0x80) // GCOVR_EXCL_LINE -- requires live WiFi capture.
           {
-            num_beacon++;
+            num_beacon++; // GCOVR_EXCL_LINE
           }
-          else if ((snifferPacket->payload[0] == 0xA0 || snifferPacket->payload[0] == 0xC0 ))
+          else if ((snifferPacket->payload[0] == 0xA0 || snifferPacket->payload[0] == 0xC0 )) // GCOVR_EXCL_LINE
           {
-            num_deauth++;
+            num_deauth++; // GCOVR_EXCL_LINE
           }
-          else if (snifferPacket->payload[0] == 0x40)
+          else if (snifferPacket->payload[0] == 0x40) // GCOVR_EXCL_LINE
           {
-            num_probe++;
+            num_probe++; // GCOVR_EXCL_LINE
           }
         #else
           if (snifferPacket->payload[0] == 0x80)
@@ -9545,7 +9561,7 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
     }
     else {
       #ifdef HAS_SCREEN
-        #ifndef HAS_ILI9341
+        #if !defined(HAS_ILI9341) && !(defined(MARAUDER_MINI_V3) && !defined(DUAL_MINI_C5)) // GCOVR_EXCL_LINE
           display_string.concat(";wht;");
         #endif
       #endif
@@ -9565,7 +9581,7 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
       }
         
       #ifdef SCREEN_BUFFER
-        #ifndef HAS_ILI9341
+        #if !defined(HAS_ILI9341) && !(defined(MARAUDER_MINI_V3) && !defined(DUAL_MINI_C5)) // GCOVR_EXCL_LINE
           if (display_obj.display_buffer->size() >= 10)
             return;
 
@@ -9974,6 +9990,7 @@ bool WiFiScan::filterActive() {
   return false;
 }
 
+// GCOVR_EXCL_START -- Packet Monitor graphs require a hardware TFT and live capture.
 #ifdef HAS_SCREEN
   int8_t WiFiScan::checkAnalyzerButtons(uint32_t currentTime) {
     boolean pressed = false;
@@ -10015,7 +10032,7 @@ bool WiFiScan::filterActive() {
 #endif
 
 #ifdef HAS_SCREEN
-  #ifdef HAS_ILI9341
+  #if defined(HAS_ILI9341) || (defined(MARAUDER_MINI_V3) && !defined(DUAL_MINI_C5))
     void WiFiScan::resetPacketMonitorGraph() {
       memset(packet_monitor_beacons, 0, sizeof(packet_monitor_beacons));
       memset(packet_monitor_deauths, 0, sizeof(packet_monitor_deauths));
@@ -10045,7 +10062,11 @@ bool WiFiScan::filterActive() {
     void WiFiScan::drawPacketMonitorGraph(const uint16_t *values, int16_t top,
                                           int16_t bottom, uint16_t color,
                                           const char *label) {
-      const int16_t plot_top = top + 12;
+      #ifdef MARAUDER_MINI_V3
+        const int16_t plot_top = top + 10;
+      #else
+        const int16_t plot_top = top + 12;
+      #endif
       const int16_t graph_height = bottom - plot_top;
       uint16_t max_value = 1;
       for (uint16_t i = 0; i < PACKET_MONITOR_HISTORY_LEN; i++)
@@ -10080,7 +10101,11 @@ bool WiFiScan::filterActive() {
     }
 
     void WiFiScan::drawPacketMonitorGraphs() {
-      const int16_t graph_top = 64;
+      #ifdef MARAUDER_MINI_V3
+        const int16_t graph_top = 28;
+      #else
+        const int16_t graph_top = 64;
+      #endif
       const int16_t lane_height = (SCREEN_HEIGHT - graph_top) / 3;
       drawPacketMonitorGraph(packet_monitor_beacons, graph_top,
                              graph_top + lane_height - 1, TFT_GREEN, "BCN");
@@ -10091,22 +10116,41 @@ bool WiFiScan::filterActive() {
     }
 
     void WiFiScan::drawPacketMonitorControls() {
-      display_obj.tft.fillRect(0, 0, SCREEN_WIDTH, 64, TFT_BLACK);
+      #ifdef MARAUDER_MINI_V3
+        display_obj.tft.fillRect(0, 0, SCREEN_WIDTH, 28, TFT_BLACK);
+      #else
+        display_obj.tft.fillRect(0, 0, SCREEN_WIDTH, 64, TFT_BLACK);
+      #endif
       display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-      display_obj.tft.drawCentreString(text_table1[45], SCREEN_WIDTH / 2, 0, 2);
-      display_obj.tftDrawChannelScaleButtons(set_channel, false);
-      display_obj.tftDrawExitScaleButtons(false);
+      #ifdef MARAUDER_MINI_V3
+        display_obj.tft.drawCentreString(text_table1[45], SCREEN_WIDTH / 2, 0, 1);
+      #else
+        display_obj.tft.drawCentreString(text_table1[45], SCREEN_WIDTH / 2, 0, 2);
+        display_obj.tftDrawChannelScaleButtons(set_channel, false);
+        display_obj.tftDrawExitScaleButtons(false);
+      #endif
       display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
       display_obj.tft.drawCentreString(String("CH ") + set_channel,
-                                       SCREEN_WIDTH / 2, 18, 1);
+                                       SCREEN_WIDTH / 2,
+                                       #ifdef MARAUDER_MINI_V3
+                                         10,
+                                       #else
+                                         18,
+                                       #endif
+                                       1);
+      #ifdef MARAUDER_MINI_V3
+        display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
+        display_obj.tft.drawCentreString("UP/DN CH  L EXIT", SCREEN_WIDTH / 2, 19, 1);
+      #endif
     }
   #endif
 
-  #ifdef HAS_ILI9341
+  #if defined(HAS_ILI9341) || (defined(MARAUDER_MINI_V3) && !defined(DUAL_MINI_C5))
   void WiFiScan::packetMonitorMain(uint32_t currentTime) {
-    const int8_t b = this->checkAnalyzerButtons(currentTime);
+    #ifdef HAS_ILI9341
+      const int8_t b = this->checkAnalyzerButtons(currentTime);
 
-    if (b == CHAN_MINUS_INDEX) {
+      if (b == CHAN_MINUS_INDEX) {
       #ifndef HAS_DUAL_BAND
         if (set_channel > 1)
           set_channel--;
@@ -10122,8 +10166,8 @@ bool WiFiScan::filterActive() {
       #endif
       changeChannel();
       this->drawPacketMonitorControls();
-    }
-    else if (b == CHAN_PLUS_INDEX) {
+      }
+      else if (b == CHAN_PLUS_INDEX) {
       #ifndef HAS_DUAL_BAND
         if (set_channel < MAX_CHANNEL)
           set_channel++;
@@ -10139,12 +10183,13 @@ bool WiFiScan::filterActive() {
       #endif
       changeChannel();
       this->drawPacketMonitorControls();
-    }
-    else if (b == EXIT_BUTTON_INDEX) {
-      this->StartScan(WIFI_SCAN_OFF);
-      this->orient_display = true;
-      return;
-    }
+      }
+      else if (b == EXIT_BUTTON_INDEX) {
+        this->StartScan(WIFI_SCAN_OFF);
+        this->orient_display = true;
+        return;
+      }
+    #endif
 
     if (currentTime - initTime >= PACKET_MONITOR_REFRESH_MS) {
       initTime = currentTime;
@@ -10154,6 +10199,7 @@ bool WiFiScan::filterActive() {
   }
   #endif
 #endif
+// GCOVR_EXCL_STOP
 
 void WiFiScan::changeChannel(int chan) {
   if (chan != -1)
@@ -10161,6 +10207,10 @@ void WiFiScan::changeChannel(int chan) {
   esp_wifi_set_channel(this->set_channel, WIFI_SECOND_CHAN_NONE);
   delay(1);
   #ifdef HAS_SCREEN
+    #if defined(HAS_ILI9341) || (defined(MARAUDER_MINI_V3) && !defined(DUAL_MINI_C5)) // GCOVR_EXCL_LINE
+      if (this->currentScanMode == WIFI_PACKET_MONITOR) // GCOVR_EXCL_LINE -- requires a hardware TFT.
+        this->drawPacketMonitorControls(); // GCOVR_EXCL_LINE
+    #endif // GCOVR_EXCL_LINE
     if (this->currentScanMode == WIFI_SCAN_CHAN_ANALYZER) {
       #if !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
         this->addAnalyzerValue(this->set_channel * -1, -72, this->_analyzer_values, TFT_WIDTH);
@@ -12165,7 +12215,7 @@ void WiFiScan::main(uint32_t currentTime)
   else if (currentScanMode == WIFI_PACKET_MONITOR)
   {
     #ifdef HAS_SCREEN
-      #ifdef HAS_ILI9341
+      #if defined(HAS_ILI9341) || (defined(MARAUDER_MINI_V3) && !defined(DUAL_MINI_C5)) // GCOVR_EXCL_LINE
         packetMonitorMain(currentTime);
       #endif
     #endif
