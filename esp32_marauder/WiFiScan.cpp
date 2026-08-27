@@ -9535,17 +9535,17 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
       // If we dont the buffer size is not 0, don't write or else we get CORRUPT_HEAP
       #ifdef HAS_SCREEN
         #if defined(HAS_ILI9341) || (defined(MARAUDER_MINI_V3) && !defined(DUAL_MINI_C5))
-          if (snifferPacket->payload[0] == 0x80)
+          if (snifferPacket->payload[0] == 0x80) // GCOVR_EXCL_LINE -- requires live WiFi capture.
           {
-            num_beacon++;
+            num_beacon++; // GCOVR_EXCL_LINE
           }
-          else if ((snifferPacket->payload[0] == 0xA0 || snifferPacket->payload[0] == 0xC0 ))
+          else if ((snifferPacket->payload[0] == 0xA0 || snifferPacket->payload[0] == 0xC0 )) // GCOVR_EXCL_LINE
           {
-            num_deauth++;
+            num_deauth++; // GCOVR_EXCL_LINE
           }
-          else if (snifferPacket->payload[0] == 0x40)
+          else if (snifferPacket->payload[0] == 0x40) // GCOVR_EXCL_LINE
           {
-            num_probe++;
+            num_probe++; // GCOVR_EXCL_LINE
           }
         #else
           if (snifferPacket->payload[0] == 0x80)
