@@ -1,6 +1,7 @@
 #include "Display.h"
 #include "DisplayLine.h"
 #include "lang_var.h"
+#include <Preferences.h>
 
 #ifdef HAS_SCREEN
 
@@ -160,6 +161,25 @@ void Display::init() {
 
 void Display::setCalData(bool landscape) {
   #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH)
+    // Try to load calibration from NVS first (saved by Touch Calibration menu)
+    #if defined(HAS_ILI9341) && !defined(HAS_LOVYANGFX)
+    {
+      Preferences nvs;
+      nvs.begin("tftcal", true);
+      if (nvs.isKey("x0")) {
+        uint16_t calData[5];
+        calData[0] = nvs.getUShort("x0");
+        calData[1] = nvs.getUShort("x1");
+        calData[2] = nvs.getUShort("y0");
+        calData[3] = nvs.getUShort("y1");
+        calData[4] = nvs.getUShort("rot");
+        nvs.end();
+        tft.setTouch(calData);
+        return;
+      }
+      nvs.end();
+    }
+    #endif
     if (!landscape) {
       #ifdef TFT_SHIELD
         uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield
