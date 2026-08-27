@@ -4599,6 +4599,7 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color) {
   if (scan_mode == WIFI_PACKET_MONITOR)
     startPcap("packet_monitor");
 
+  // GCOVR_EXCL_START -- Packet Monitor presentation requires a hardware TFT.
   #if defined(HAS_SCREEN) && (defined(HAS_ILI9341) || (defined(MARAUDER_MINI_V3) && !defined(DUAL_MINI_C5)))
     if (scan_mode == WIFI_PACKET_MONITOR)
       this->resetPacketMonitorGraph();
@@ -4695,6 +4696,7 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color) {
       this->prepareScanStage(TFT_GREEN, TFT_BLACK);
     #endif
   #endif
+  // GCOVR_EXCL_STOP
 
   //Serial.println(F("Running packet scan..."));
   esp_wifi_init(&cfg2);
@@ -9988,6 +9990,7 @@ bool WiFiScan::filterActive() {
   return false;
 }
 
+// GCOVR_EXCL_START -- Packet Monitor graphs require a hardware TFT and live capture.
 #ifdef HAS_SCREEN
   int8_t WiFiScan::checkAnalyzerButtons(uint32_t currentTime) {
     boolean pressed = false;
@@ -10196,6 +10199,7 @@ bool WiFiScan::filterActive() {
   }
   #endif
 #endif
+// GCOVR_EXCL_STOP
 
 void WiFiScan::changeChannel(int chan) {
   if (chan != -1)
@@ -10204,8 +10208,8 @@ void WiFiScan::changeChannel(int chan) {
   delay(1);
   #ifdef HAS_SCREEN
     #if defined(HAS_ILI9341) || (defined(MARAUDER_MINI_V3) && !defined(DUAL_MINI_C5))
-      if (this->currentScanMode == WIFI_PACKET_MONITOR)
-        this->drawPacketMonitorControls();
+      if (this->currentScanMode == WIFI_PACKET_MONITOR) // GCOVR_EXCL_LINE -- requires a hardware TFT.
+        this->drawPacketMonitorControls(); // GCOVR_EXCL_LINE
     #endif
     if (this->currentScanMode == WIFI_SCAN_CHAN_ANALYZER) {
       #if !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
