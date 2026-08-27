@@ -519,6 +519,7 @@ void ReconMission::writeManifest(bool complete) {
   #endif
 }
 
+// GCOVR_EXCL_START -- Recon dashboard rendering requires a hardware TFT.
 void ReconMission::drawDashboard(uint32_t current_time) {
   #ifdef HAS_SCREEN
     if (last_dashboard && current_time - last_dashboard < 1000) return;
@@ -868,6 +869,7 @@ void ReconMission::drawDashboard(uint32_t current_time) {
     (void)current_time;
   #endif
 }
+// GCOVR_EXCL_STOP
 
 void ReconMission::observeLists() {
   if (!running) return;
