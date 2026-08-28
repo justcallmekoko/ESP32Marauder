@@ -180,10 +180,9 @@
 #define TFT_DC   4
 #define TFT_RST  -1   // 不使用 MCU 控制复位, ST7735 自带 POR 上电复位
                       // GPIO19 被 SD 卡 MISO 占用, 不能用作 TFT_RST
-// TFT_BL: 背光直连电源, 无软件控制。此处不 #undef/#define TFT_BL,
-// 保留官方 Mini 屏幕块定义的 TFT_BL=32 (亦由 TFT_eSPI 的
-// User_Setup_marauder_mini.h 提供)。对小喵 GPIO32 为空脚,
-// .ino 里 digitalWrite(TFT_BL, LOW/HIGH) 无副作用, 编译正常。
+// TFT_BL: 背光直连电源, 无软件控制。不在此 #define, 让 TFT_eSPI 的
+// User_Setup_marauder_mini.h 提供 TFT_BL=32 (官方 Mini 背光脚)。
+// 对小喵 GPIO32 为空脚, digitalWrite(32, LOW) 无副作用, 编译正常。
 #define TOUCH_CS -1
 
 // ---- 5. 屏幕分辨率与方向覆盖 ----

@@ -21,10 +21,21 @@ Switches::Switches(int pin, uint32_t hold_lim, bool pullup) {
 	this->cur_hold = 0;
 	this->isheld = false;
 	
-  if (pullup)
-  	pinMode(this->pin, INPUT_PULLUP);
-  else
-    pinMode(this->pin, INPUT_PULLDOWN);
+  // ESP32 GPIO 34-39 are INPUT-ONLY pads — they do NOT have internal
+  // pull-up or pull-down resistors. Attempting to enable PU/PD on them
+  // triggers "gpio_pullup_en: GPIO number error (input-only pad...)"
+#if defined(ESP32) && !defined(CONFIG_IDF_TARGET_ESP32C3) && !defined(CONFIG_IDF_TARGET_ESP32C5) && !defined(CONFIG_IDF_TARGET_ESP32C6) && !defined(CONFIG_IDF_TARGET_ESP32S2) && !defined(CONFIG_IDF_TARGET_ESP32S3)
+  // Classic ESP32: GPIO 34, 35, 36, 37, 38, 39 are input-only
+  if (this->pin >= 34 && this->pin <= 39) {
+    pinMode(this->pin, INPUT);   // No internal PU/PD available — use plain INPUT
+  } else
+#endif
+  {
+    if (pullup)
+      pinMode(this->pin, INPUT_PULLUP);
+    else
+      pinMode(this->pin, INPUT_PULLDOWN);
+  }
 	
 	return;
 }

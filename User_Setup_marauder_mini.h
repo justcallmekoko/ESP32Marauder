@@ -1,12 +1,6 @@
 //                            USER DEFINED SETTINGS
-//   Set driver type, fonts to be loaded, pins used and SPI control method etc
-//
-//   See the User_Setup_Select.h file if you wish to be able to define multiple
-//   setups and then easily select which setup file is used by the compiler.
-//
-//   If this file is edited correctly then all the library example sketches should
-//   run without the need to make any more changes for a particular hardware setup!
-//   Note that some sketches are designed for a particular TFT pixel width/height
+//   TFT_eSPI setup for Marauder Mini (ESP32 + ST7735 2.0" 160x128)
+//   Uses standard hardware SPI (VSPI) on ESP32
 
 
 // ##################################################################################
@@ -20,16 +14,16 @@
 
 // Only define one driver, the other ones must be commented out
 //#define ILI9341_DRIVER // OG Marauder
-#define ST7735_DRIVER    // Marauder Mini  // Define additional parameters below for this display
-//#define ILI9163_DRIVER     // Define additional parameters below for this display
+#define ST7735_DRIVER    // 2.0" ST7735 160x128
+//#define ST7789_DRIVER
+//#define ILI9163_DRIVER
 //#define S6D02A1_DRIVER
-//#define RPI_ILI9486_DRIVER // 20MHz maximum SPI
+//#define RPI_ILI9486_DRIVER
 //#define HX8357D_DRIVER
 //#define ILI9481_DRIVER
 //#define ILI9486_DRIVER
-//#define ILI9488_DRIVER     // WARNING: Do not connect ILI9488 display SDO to MISO if other devices share the SPI bus (TFT SDO does NOT tristate when CS is high)
-//#define ST7789_DRIVER      // Full configuration option, define additional parameters below for this display
-//#define ST7789_2_DRIVER    // Minimal configuration option, define additional parameters below for this display
+//#define ILI9488_DRIVER
+//#define ST7789_2_DRIVER
 //#define R61581_DRIVER
 //#define RM68140_DRIVER
 //#define ST7796_DRIVER
@@ -40,47 +34,53 @@
 
 // #define TFT_SDA_READ      // This option is for ESP32 ONLY, tested with ST7789 display only
 
-// For ST7789 and ILI9341 ONLY, define the colour order IF the blue and red are swapped on your display
+// For ST7735, ST7789 and ILI9163 ONLY, define the colour order
 // Try ONE option at a time to find the correct colour order for your display
+// If colours look wrong (red/blue swapped), toggle between TFT_RGB and TFT_BGR
 
-//  #define TFT_RGB_ORDER TFT_RGB  // Colour order Red-Green-Blue
-  #define TFT_RGB_ORDER TFT_BGR  // Colour order Blue-Green-Red
+  #define TFT_RGB_ORDER TFT_BGR  // Try TFT_RGB if colours are wrong (2.0" ST7735 often uses BGR)
 
 // For M5Stack ESP32 module with integrated ILI9341 display ONLY, remove // in line below
 
 // #define M5STACK
 
-// For ST7789, ST7735 and ILI9163 ONLY, define the pixel width and height in portrait orientation
-// #define TFT_WIDTH  80
- #define TFT_WIDTH  128 // Marauder Mini
-// #define TFT_WIDTH  240 // ST7789 240 x 240 and 240 x 320
-// #define TFT_HEIGHT 160
- #define TFT_HEIGHT 128 // Marauder Mini
-// #define TFT_HEIGHT 240 // ST7789 240 x 240
-// #define TFT_HEIGHT 320 // ST7789 240 x 320
+// For ST7735, ST7789 and ILI9163 ONLY, define the pixel width and height in portrait orientation
+// 2.0" ST7735 display — native 128 cols × 160 rows (portrait)
+// Rotation 1 or 3 (landscape) gives 160×128 effective display
+#define TFT_WIDTH  128
+#define TFT_HEIGHT 160
 
-// For ST7735 ONLY, define the type of display, originally this was based on the
-// colour of the tab on the screen protector film but this is not always true, so try
-// out the different options below if the screen does not display graphics correctly,
-// e.g. colours wrong, mirror images, or tray pixels at the edges.
-// Comment out ALL BUT ONE of these options for a ST7735 display driver, save this
-// this User_Setup file, then rebuild and upload the sketch to the board again:
+// For ST7735 ONLY, define the type of display — this selects the correct init sequence.
+// Try the options below if the screen does not display correctly (wrong colours,
+// mirror images, offset, or stray pixels at edges).
+// Only ONE of these should be uncommented for ST7735 driver.
+//
+// OFFSETS at rotation = 3 (landscape 160×128, current MARAUDER_MINI setting):
+//   Tab variant    |  horizontal (left→right)  |  vertical (top→down)
+//   GREENTAB       |  1px (min)                |  2px (max)
+//   GREENTAB2      |  2px (max)                |  1px
+//   GREENTAB3      |  2px (max)                |  1px   ← try 1st, fixes left edge garbage
+//   REDTAB         |  0px                      |  0px
+//   BLACKTAB       |  0px                      |  0px
+// If garbage on LEFT edge:  prefer GREENTAB2 / GREENTAB3 (larger horizontal offset)
+// If garbage on TOP edge:   prefer GREENTAB (larger vertical offset)
+// If still garbage:         try REDTAB or BLACKTAB (different init command sequence)
 
-// #define ST7735_INITB
-// #define ST7735_GREENTAB
-// #define ST7735_GREENTAB2
- #define ST7735_GREENTAB3
-// #define ST7735_GREENTAB128    // For 128 x 128 display
-// #define ST7735_GREENTAB160x80 // For 160 x 80 display (BGR, inverted, 26 offset)
+//#define ST7735_GREENTAB        // Larger VERTICAL offset 2px, fixes top garbage
+// #define ST7735_GREENTAB2     // colstart=2, rowstart=1 (if display shifts right)
+#define ST7735_GREENTAB3       // Larger HORIZONTAL offset 2px, fixes left garbage [TRY FIRST]
+// #define ST7735_GREENTAB128   // For 128 x 128 display
 // #define ST7735_REDTAB
 // #define ST7735_BLACKTAB
-// #define ST7735_REDTAB160x80   // For 160 x 80 display with 24 pixel offset
+// #define ST7735_REDTAB160x80  // For 160 x 80 display with 24 pixel offset
+// #define ST7735_INITB
 
 // If colours are inverted (white shows as black) then uncomment one of the next
-// 2 lines try both options, one of the options should correct the inversion.
+// 2 lines — try both options, one should correct the inversion.
+// Many cheap ST7735 modules need TFT_INVERSION_ON for correct colors
 
 // #define TFT_INVERSION_ON
-// #define TFT_INVERSION_OFF
+#define TFT_INVERSION_OFF
 
 // If a backlight control signal is available then define the TFT_BL pin in Section 2
 // below. The backlight will be turned ON when tft.begin() is called, but the library
@@ -88,7 +88,7 @@
 // driven with a PWM signal or turned OFF/ON then this must be handled by the user
 // sketch. e.g. with digitalWrite(TFT_BL, LOW);
 
- #define TFT_BACKLIGHT_ON LOW  // HIGH or LOW are options
+#define TFT_BACKLIGHT_ON HIGH  // HIGH or LOW are options
 
 // ##################################################################################
 //
@@ -164,15 +164,17 @@
 // For ESP32 Dev board (only tested with ILI9341 display)
 // The hardware SPI can be mapped to any pins
 
-// Marauder Mini
-#define TFT_CS   17  // Chip select control pin D8
-#define TFT_DC   16  // Data Command control pin
-#define TFT_RST  5  // Reset pin (could connect to NodeMCU RST, see next line)
+// XiaoMiao (小喵掌机) — 2.0" ST7735 160x128 (成品板引脚固定)
+// TFT_RST = -1: 不使用MCU控制屏幕复位(ST7735自带POR上电复位)，
+//               释放GPIO 19给SD卡MISO使用(SD_MISO=19)
+#define TFT_CS   5  // Chip select control pin
+#define TFT_DC   4  // Data Command control pin
+#define TFT_RST  -1  // Set to -1 to skip MCU-controlled reset (GPIO 19 = SD_MISO)
 #define TOUCH_CS -1
-#define TFT_MISO 19
+#define TFT_MISO -1  // ST7735 doesn't read back, leave disconnected
 #define TFT_MOSI 23
 #define TFT_SCLK 18
-//#define TFT_BL   32
+//#define TFT_BL   12  // LED back-light (directly connected to power)
 
 /*
 // ESP32 Marauder 
@@ -284,21 +286,25 @@
 // With a ST7735 display more than 27MHz may not work (spurious pixels and lines)
 // With an ILI9163 display 27 MHz works OK.
 
-// #define SPI_FREQUENCY   1000000
-//#define SPI_FREQUENCY   5000000
-// #define SPI_FREQUENCY  10000000
- #define SPI_FREQUENCY  20000000
-//#define SPI_FREQUENCY  27000000 // Marauder // Actually sets it to 26.67MHz = 80/3
-// #define SPI_FREQUENCY  40000000
-// #define SPI_FREQUENCY  80000000
+// SPI frequency for ESP32 hardware SPI — ST7735 typically supports up to 27MHz
+// 2.0" cheap modules often show stray pixels (left/top edge) above 10-12MHz due to
+// weak PCB signal integrity. Start at 10MHz, then increase if display is clean.
+// If left / top edge still shows garbage (random colored pixels) after trying all
+// tab variants above: reduce SPI frequency by 2-4MHz and try again.
+//#define SPI_FREQUENCY  27000000   // Absolute max (risky for 2.0" modules)
+//#define SPI_FREQUENCY  20000000
+//#define SPI_FREQUENCY  16000000
+#define SPI_FREQUENCY  10000000      // ← start here (most stable for 2.0" cheap ST7735)
 
 // Optional reduced SPI frequency for reading TFT
-#define SPI_READ_FREQUENCY  20000000
+#define SPI_READ_FREQUENCY  10000000
 
-// The XPT2046 requires a lower SPI clock rate of 2.5MHz so we define that here:
+// Touch controller SPI frequency (not used for this display)
 #define SPI_TOUCH_FREQUENCY  2500000
 
 // The ESP32 has 2 free SPI ports i.e. VSPI and HSPI, the VSPI is the default.
+// Pin mapping for VSPI: SCK=18, MOSI=23, MISO=19 (matches our setup except TFT_RST=19)
+// We use explicit pin definitions so no port conflict with RST pin on 19
 // If the VSPI port is in use and pins are not accessible (e.g. TTGO T-Beam)
 // then uncomment the following line:
 //#define USE_HSPI_PORT

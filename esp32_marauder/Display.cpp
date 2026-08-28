@@ -1,5 +1,4 @@
 #include "Display.h"
-#include "DisplayLine.h"
 #include "lang_var.h"
 
 #ifdef HAS_SCREEN
@@ -42,47 +41,8 @@ int8_t Display::menuButton(uint16_t *x, uint16_t *y, bool pressed, bool check_ho
 
 uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
   #ifdef HAS_ILI9341
-    if (!this->headless_mode) {
-      #ifdef HAS_CAP_TOUCH
-        // FT6336 capacitive touch: rotation-aware + edge exclusion
-        {
-          uint16_t raw_x, raw_y;
-          if (!ft6336_read_raw(&raw_x, &raw_y)) return 0;
-
-          // Discard touches within PANCAKE_TOUCH_MARGIN pixels of any panel edge
-          #define PANCAKE_PANEL_W TFT_WIDTH
-          #define PANCAKE_PANEL_H TFT_HEIGHT
-          #define PANCAKE_TOUCH_MARGIN 5
-          if (raw_x < PANCAKE_TOUCH_MARGIN || raw_x >= (PANCAKE_PANEL_W - PANCAKE_TOUCH_MARGIN)) return 0;
-          if (raw_y < PANCAKE_TOUCH_MARGIN || raw_y >= (PANCAKE_PANEL_H - PANCAKE_TOUCH_MARGIN)) return 0;
-
-          // Transform panel-native portrait coords to screen coords per rotation
-          uint8_t rot = this->tft.getRotation();
-          switch (rot) {
-            case 0: // Portrait
-              *x = raw_x;
-              *y = raw_y;
-              break;
-            case 1: // Landscape 90 CW
-              *x = raw_y;
-              *y = (PANCAKE_PANEL_W - 1) - raw_x;
-              break;
-            case 2: // Portrait 180
-              *x = (PANCAKE_PANEL_W - 1) - raw_x;
-              *y = (PANCAKE_PANEL_H - 1) - raw_y;
-              break;
-            case 3: // Landscape 270 CW
-              *x = (PANCAKE_PANEL_H - 1) - raw_y;
-              *y = raw_x;
-              break;
-            default:
-              *x = raw_x;
-              *y = raw_y;
-              break;
-          }
-          return 1;
-        }
-      #elif !defined(HAS_CYD_TOUCH)
+    if (!this->headless_mode)
+      #ifndef HAS_CYD_TOUCH
         return this->tft.getTouch(x, y, threshold);
       #else
         if (this->touchscreen.tirqTouched() && this->touchscreen.touched()) {
@@ -120,9 +80,8 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
         else
           return 0;
       #endif
-    } else {
+    else
       return !this->headless_mode;
-    }
   #endif
 
   return 0;
@@ -151,15 +110,19 @@ bool Display::isTouchHeld(uint16_t threshold) {
 }
 
 void Display::init() {
+  // For all boards (including MARAUDER_MINI):
+  // tft.init() first calls initBus() to configure SPI pins,
+  // then sends the ST7735 controller initialization command sequence.
+  // Without this call the display stays in power-on reset state (white/blank).
   tft.init();
 
-  #if defined(HAS_DUAL_BAND) && !defined(MARAUDER_MINI_V3)
+  #if defined(HAS_DUAL_BAND) && !defined(MARAUDER_MINI_V3) && !defined(MARAUDER_MINI)
     digitalWrite(TFT_BL, HIGH);
   #endif
 }
 
 void Display::setCalData(bool landscape) {
-  #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH)
+  #ifndef HAS_CYD_TOUCH
     if (!landscape) {
       #ifdef TFT_SHIELD
         uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield
@@ -209,19 +172,31 @@ void Display::RunSetup() {
     this->touchscreen.setRotation(0);
   #endif
 
-  #ifdef HAS_CAP_TOUCH
-    ft6336_init();
-  #endif
-  
-  tft.init();
+  // IMPORTANT: Always init TFT — this sets pin directions and sends
+  // the ST7735 init command sequence. Without this the display
+  // stays in its power-on state (all pixels white / no update).
+  // Previously MARAUDER_MINI was skipped here, which caused a white screen.
+  this->init();
 
   tft.setRotation(SCREEN_ORIENTATION);
+
+  // NOTE: ST7735 colstart/rowstart are private members of TFT_eSPI,
+  // so they CANNOT be set directly from user code.
+  // Tuning of the display offset MUST be done by selecting the correct
+  // tab variant in User_Setup_marauder_mini.h (see comments there).
+  // For rotation=3 the tab offsets are:
+  //   GREENTAB:   rowstart=1 (horiz), colstart=2 (vert)  [tab default]
+  //   GREENTAB2:  rowstart=2 (horiz), colstart=1 (vert)
+  //   GREENTAB3:  rowstart=2 (horiz), colstart=1 (vert)  [MAX horiz offset]
+  // If left/top garbage pixels are STILL visible after trying all tabs, reduce
+  //   the SPI frequency in User_Setup_marauder_mini.h to 10MHz as a last resort
+  //   (some modules can't handle cleanly at higher SPI speed).
 
   tft.setCursor(0, 0);
 
   #ifdef HAS_ILI9341
 
-    #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH)
+    #ifndef HAS_CYD_TOUCH
       this->setCalData();
     #endif
 
@@ -245,13 +220,14 @@ void Display::RunSetup() {
 void Display::tftDrawGraphObjects(byte x_scale)
 {
   //draw the graph objects
-  tft.fillRect(11, 5, x_scale+1, PKT_HALF, TFT_BLACK); // positive start point
-  tft.fillRect(11, PKT_HALF + 1, x_scale+1, PKT_HALF - 1, TFT_BLACK); // negative start point
-  tft.drawFastVLine(10, 5, PKT_HALF * 2 - 10, TFT_WHITE); // y axis
-  tft.drawFastHLine(10, HEIGHT_1 - 1, PKT_AXIS_W, TFT_WHITE); // x axis
+  tft.fillRect(11, 5, x_scale+1, 120, TFT_BLACK); // positive start point
+  tft.fillRect(11, 121, x_scale+1, 119, TFT_BLACK); // negative start point
+  tft.drawFastVLine(10, 5, 230, TFT_WHITE); // y axis
+  tft.drawFastHLine(10, HEIGHT_1 - 1, 310, TFT_WHITE); // x axis
   tft.setTextColor(TFT_YELLOW); tft.setTextSize(1); // set parameters for y axis labels
-  tft.setCursor(3, 6); tft.print("+"); // '+' at top of y axis
-  tft.setCursor(3, PKT_HALF * 2 - 12); tft.print("0"); // "0" near baseline
+  //tft.setCursor(3, 116); tft.print(midway);  // "0" at center of ya axis
+  tft.setCursor(3, 6); tft.print("+"); // "+' at top of y axis
+  tft.setCursor(3, 228); tft.print("0"); // "-" at bottom of y axis
 }
 
 void Display::tftDrawEapolColorKey(bool filter)
@@ -341,9 +317,6 @@ void Display::tftDrawYScaleButtons(byte y_scale)
 }
 
 void Display::tftDrawChannelScaleButtons(int set_channel, bool lnd_an) {
-  #ifdef MARAUDER_PANCAKE
-    TOP_FIXED_AREA_2 = lnd_an ? 48 : 64;
-  #endif
   if (lnd_an) {
     tft.drawFastVLine(178, 0, 20, TFT_WHITE);
     tft.setCursor(145, 21); tft.setTextColor(TFT_WHITE); tft.setTextSize(1); tft.print(text10); tft.print(set_channel);
@@ -401,9 +374,6 @@ void Display::tftDrawChannelScaleButtons(int set_channel, bool lnd_an) {
 }
 
 void Display::tftDrawChanHopButton(bool lnd_an, bool en) {
-  #ifdef MARAUDER_PANCAKE
-    TOP_FIXED_AREA_2 = lnd_an ? 48 : 64;
-  #endif
   if (lnd_an) {
     if (!en) {
       key[CHAN_HOP_INDEX].initButton(&tft, // Exit box
@@ -462,9 +432,6 @@ void Display::tftDrawChanHopButton(bool lnd_an, bool en) {
 }
 
 void Display::tftDrawExitScaleButtons(bool lnd_an) {
-  #ifdef MARAUDER_PANCAKE
-    TOP_FIXED_AREA_2 = lnd_an ? 48 : 64;
-  #endif
   //tft.drawFastVLine(178, 0, 20, TFT_WHITE);
   //tft.setCursor(145, 21); tft.setTextColor(TFT_WHITE); tft.setTextSize(1); tft.print("Channel:"); tft.print(set_channel);
 
@@ -526,20 +493,16 @@ void Display::touchToExit()
 // Function to just draw the screen black
 void Display::clearScreen()
 {
-  #ifdef MARAUDER_PANCAKE
-    TOP_FIXED_AREA_2 = 48;
-  #endif
   //Serial.println(F("clearScreen()"));
-  #ifndef MARAUDER_V7
-    tft.fillScreen(TFT_BLACK);
-    tft.setCursor(0, 0);
-  #elif defined(MARAUDER_MINI) || defined(MARAUDER_MINI_V3)
+  // Use fillRect for all boards with ST7735 / small displays —
+  // fillScreen is fine too, but explicit rect avoids relying on
+  // post-rotation viewport state of the driver.
+  #if defined(MARAUDER_MINI) || defined(MARAUDER_MINI_V3)
     tft.fillRect(0, 0, TFT_WIDTH, TFT_HEIGHT, TFT_BLACK);
-    tft.setCursor(0, 0);
   #else
-    tft.fillRect(0, 0, TFT_WIDTH, TFT_HEIGHT, TFT_BLACK);
-    tft.setCursor(0, 0);
+    tft.fillScreen(TFT_BLACK);
   #endif
+  tft.setCursor(0, 0);
 }
 
 #ifdef SCREEN_BUFFER
@@ -578,15 +541,17 @@ void Display::processAndPrintString(TFT_eSPI& tft, const String& originalString)
     }
   }
 
-  // Scan output uses the built-in 6-pixel font. CHAR_WIDTH describes larger
-  // menu/layout cells on full-size displays, so using it here cut their line
-  // capacity in half and truncated values such as MAC addresses.
-  char line[STANDARD_FONT_CHAR_LIMIT + 1];
-  fitDisplayLine(line, sizeof(line), new_string.c_str()); // GCOVR_EXCL_LINE
+  int count = TFT_WIDTH / CHAR_WIDTH;
+
+  char buf[count + 1];
+  memset(buf, ' ', count);
+  buf[count] = '\0';
+
+  String spaces(buf);
 
   // Set text color and print the string
   tft.setTextColor(text_color, background_color);
-  tft.print(line);
+  tft.print(new_string + spaces);
 }
 
 void Display::displayBuffer(bool do_clear)
@@ -627,15 +592,11 @@ void Display::displayBuffer(bool do_clear)
         screen_buffer->add(display_buffer->shift());
 
         for (int i = 0; i < this->screen_buffer->size(); i++) {
-		  #ifdef MARAUDER_PANCAKE
-			tft.setCursor(xPos, (i * TEXT_HEIGHT) + TOP_FIXED_AREA_2);
-		  #else
-			#ifdef HAS_TOUCH
-			  tft.setCursor(xPos, (i * 12) + ((TFT_HEIGHT / 6) * 1.3));
-			#else
-			  tft.setCursor(xPos, (i * 12) + (TFT_HEIGHT / 6));
-			#endif
-		  #endif
+          #ifdef HAS_TOUCH
+            tft.setCursor(xPos, (i * 12) + ((TFT_HEIGHT / 6) * 1.3));
+          #else
+            tft.setCursor(xPos, (i * 12) + (TFT_HEIGHT / 6));
+          #endif
 
           this->processAndPrintString(tft, this->screen_buffer->get(i));
         }
@@ -648,24 +609,12 @@ void Display::displayBuffer(bool do_clear)
   }
 }
 
-void Display::showCenterText(const char* text, int y, bool small_pp, uint8_t text_size)
+void Display::showCenterText(String text, int y, bool small_pp)
 {
-  if (!text)
-    text = "";
-
-  // Centering already assumes either the 1x bitmap font or text_size scaling.
-  // Apply that size here as well so callers never inherit a previous UI's
-  // text scale (for example, the 2x upload percentage display).
-  const uint8_t effective_text_size = resolveDisplayTextSize(small_pp, text_size);
-  tft.setTextSize(effective_text_size);
-
-  size_t len = strlen(text);
-
   if (!small_pp)
-    tft.setCursor((SCREEN_WIDTH - (len * (6 * effective_text_size))) / 2, y);
+    tft.setCursor((SCREEN_WIDTH - (text.length() * (6 * BANNER_TEXT_SIZE))) / 2, y);
   else
-    tft.setCursor((SCREEN_WIDTH - (len * 6)) / 2, y);
-
+    tft.setCursor((SCREEN_WIDTH - (text.length() * (6))) / 2, y);
   tft.println(text);
 }
 
@@ -689,7 +638,7 @@ void Display::buildBanner(String msg, int xpos)
   this->tft.setFreeFont(NULL);           // Font 4 selected
   this->tft.setTextSize(BANNER_TEXT_SIZE);           // Font size scaling is x1
   this->tft.setTextColor(TFT_WHITE, TFT_BLACK);  // Black text, no background colour
-  this->showCenterText(msg.c_str(), banner_y);
+  this->showCenterText(msg, banner_y);
 }
 
 #endif

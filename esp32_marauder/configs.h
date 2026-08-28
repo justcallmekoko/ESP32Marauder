@@ -30,29 +30,38 @@
   //#define MARAUDER_CYD_GUITION // ESP32-2432S024 GUITION
   //#define MARAUDER_CYD_3_5_INCH
   //#define MARAUDER_C5
-  //#define MARAUDER_T_DONGLE_C5
   //#define MARAUDER_CARDPUTER
   //#define MARAUDER_CARDPUTER_ADV
   //#define MARAUDER_V8
-  //#define MARAUDER_PANCAKE
   //#define MARAUDER_MINI_V3
-  //#define MARAUDER_M5_NANO_C6
   //#define DUAL_MINI_C5
-  //#define MARAUDER_XIAOMIAO // XiaoMiao handheld: 1.8" ST7735 160x128, ESP32, shared VSPI
+  #define MARAUDER_MINI_XIAOMIAO   // 小喵掌机: 1.8" ST7735 160x128, ESP32, 共享VSPI
   //// END BOARD TARGETS
 
-  // XiaoMiao inherits the MARAUDER_MINI feature set and code paths
-  // (HAS_SCREEN / HAS_BUTTONS / HAS_SD etc.). Only pins and screen layout
-  // are overridden — see xiaomiao_config.h (included at the end of this file).
-  // MARAUDER_MINI must be defined here, early, so every #ifdef MARAUDER_MINI
-  // block below is actually entered.
-  #ifdef MARAUDER_XIAOMIAO
-    #define MARAUDER_MINI
+  //=================================================================
+  // 小喵掌机 (XiaoMiao) 板型配置
+  // 屏幕: 1.8" ST7735（驱动协议与1.44"/2.0"的ST7735完全通用，仅玻璃物理尺寸不同）
+  // 屏幕引脚: sck=18 mosi=23 cs=5 dc=4 rst=-1(不用,ST7735自带POR) bl=None
+  // TF卡引脚: sck=18 mosi=23 miso=19 cs=22 (与屏幕共享VSPI)
+  // 按键引脚: 上=IO2 下=IO13 左=IO27 右=IO35 A(确认)=IO34 B(返回)=IO12
+  //   注: GPIO34/35为输入-only引脚,无内部上拉,依赖PCB外部上拉电阻
+  //   Switches.cpp中对34-39自动使用纯INPUT模式避免GPIO报错
+  // 屏幕驱动: ST7735 GREENTAB3, BGR颜色, 横屏rotation=3, SPI 10MHz
+  // 配置文件: User_Setup_marauder_mini.h (TFT_eSPI库配置)
+  //=================================================================
+  #if defined(MARAUDER_MINI_XIAOMIAO)
+    #ifndef MARAUDER_MINI
+      #define MARAUDER_MINI   // 继承Marauder Mini的全部硬件配置
+    #endif
+    #ifndef HARDWARE_NAME
+      // HARDWARE_NAME会在下方#elif defined(MARAUDER_MINI)中被赋值,
+      // 此处仅留一个编译期标记,便于代码中识别小喵板型
+    #endif
   #endif
 
   #define JSON_SETTING_SIZE 2048
 
-#define MARAUDER_VERSION "v1.15.1"
+  #define MARAUDER_VERSION "v1.12.1"
 
   #define GRAPH_REFRESH   100
 
@@ -77,6 +86,8 @@
     #define HARDWARE_NAME "M5 Cardputer"
   #elif defined(MARAUDER_CARDPUTER_ADV)
     #define HARDWARE_NAME "M5 Cardputer ADV"
+  #elif defined(MARAUDER_MINI_XIAOMIAO)
+    #define HARDWARE_NAME "XiaoMiao Mini"
   #elif defined(MARAUDER_MINI)
     #define HARDWARE_NAME "Marauder Mini"
   #elif defined(MARAUDER_V7)
@@ -113,18 +124,12 @@
     #define HARDWARE_NAME "XIAO ESP32 S3"
   #elif defined(MARAUDER_C5)
     #define HARDWARE_NAME "ESP32-C5 DevKit"
-  #elif defined(MARAUDER_T_DONGLE_C5)
-    #define HARDWARE_NAME "LilyGo T-Dongle C5"
   #elif defined(MARAUDER_V8)
     #define HARDWARE_NAME "Marauder v8"
-  #elif defined(MARAUDER_PANCAKE)
-    #define HARDWARE_NAME "Pancake Marauder V8"
   #elif defined(MARAUDER_MINI_V3)
     #define HARDWARE_NAME "Marauder Mini v3"
   #elif defined(DUAL_MINI_C5)
     #define HARDWARE_NAME "Dual Mini C5"
-  #elif defined(MARAUDER_M5_NANO_C6)
-    #define HARDWARE_NAME "M5 Nano C6"
   #else
     #define HARDWARE_NAME "ESP32"
   #endif
@@ -140,11 +145,6 @@
     //#define FLIPPER_ZERO_HAT
     #define HAS_MINI_KB
     #define HAS_BATTERY
-      #if defined(MARAUDER_M5STICKC)
-        #define HAS_AXP192
-      #else
-        #define HAS_TP4057
-      #endif
     #define HAS_BT
     #define HAS_BUTTONS
     //#define HAS_NEOPIXEL_LED
@@ -155,7 +155,6 @@
     #define USE_SD
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
-    #define HAS_DIRECT_UPLOAD
   #endif
 
   #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
@@ -172,7 +171,6 @@
     #define USE_SD
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
-    #define HAS_DIRECT_UPLOAD
 
     #ifdef MARAUDER_CARDPUTER_ADV
       #define HAS_BATTERY
@@ -199,7 +197,6 @@
     #define HAS_IDF_3
     //#define HAS_C5_SD
     #define HAS_SIMPLEX_DISPLAY
-    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_V7
@@ -220,7 +217,6 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     #define HAS_C5_SD
-    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_V7_1
@@ -240,7 +236,6 @@
     #define HAS_GPS
     #define HAS_PSRAM
     //#define HAS_NIMBLE_2
-    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_REV_FEATHER
@@ -257,14 +252,12 @@
     #define USE_SD
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
-    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_V4
     #define HAS_TOUCH
     //#define FLIPPER_ZERO_HAT
     #define HAS_BATTERY
-      #define HAS_IP5306
     #define HAS_BT
     //#define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
@@ -278,14 +271,12 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     #define HAS_C5_SD
-    #define HAS_DIRECT_UPLOAD
   #endif
 
   #if defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
     #define HAS_TOUCH
     //#define FLIPPER_ZERO_HAT
     #define HAS_BATTERY
-      #define HAS_IP5306
     #define HAS_BT
     #define HAS_BT_REMOTE
     #define HAS_BUTTONS
@@ -300,7 +291,6 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     #define HAS_C5_SD
-    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_CYD_MICRO
@@ -321,7 +311,6 @@
     #define HAS_GPS
     #define HAS_CYD_TOUCH
     //#define HAS_NIMBLE_2
-    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_CYD_2USB
@@ -344,7 +333,6 @@
     #define HAS_CYD_PORTRAIT
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
-    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_CYD_3_5_INCH
@@ -367,7 +355,6 @@
     #define HAS_SEPARATE_SD
     #define HAS_CYD_PORTRAIT
     //#define HAS_NIMBLE_2
-    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_CYD_GUITION
@@ -388,7 +375,6 @@
     #define HAS_GPS
     //#define HAS_CYD_TOUCH
     //#define HAS_NIMBLE_2
-    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_KIT
@@ -408,7 +394,6 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     #define HAS_C5_SD
-    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef GENERIC_ESP32
@@ -427,7 +412,7 @@
 
   #ifdef MARAUDER_FLIPPER
     #define HAS_FLIPPER_LED
-    //#define FLIPPER_ZERO_HAT
+    #define FLIPPER_ZERO_HAT
     //#define HAS_BATTERY
     //#define HAS_BT
     //#define HAS_BUTTONS
@@ -437,9 +422,8 @@
     #define HAS_GPS
     #define HAS_SD
     #define USE_SD
-    #define HAS_PSRAM
+    //#define HAS_PSRAM
     //#define HAS_TEMP_SENSOR
-    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_MULTIBOARD_S3
@@ -456,7 +440,6 @@
     #define USE_SD
     //#define HAS_PSRAM
     //#define HAS_TEMP_SENSOR
-    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef ESP32_LDDB
@@ -473,7 +456,6 @@
     //#define HAS_GPS
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
-    //#define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_DEV_BOARD_PRO
@@ -490,7 +472,6 @@
     #define HAS_GPS
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
-    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef XIAO_ESP32_S3
@@ -524,27 +505,6 @@
     //#define HAS_TEMP_SENSOR
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
-    #define HAS_DIRECT_UPLOAD
-  #endif
-
-  #ifdef MARAUDER_T_DONGLE_C5
-    #define HAS_BT
-    #define HAS_T_DONGLE_DISPLAY
-    #define HAS_T_DONGLE_LED
-    #define T_DONGLE_LED_DATA_PIN 2
-    #define T_DONGLE_LED_CLOCK_PIN 6
-    #define T_DONGLE_SPI_SCLK_PIN 6
-    #define T_DONGLE_SPI_MISO_PIN 7
-    #define T_DONGLE_SPI_MOSI_PIN 2
-    #define HAS_GPS
-    #define HAS_C5_SD
-    #define HAS_SD
-    #define USE_SD
-    #define HAS_DUAL_BAND
-    #define HAS_PSRAM
-    #define HAS_NIMBLE_2
-    #define HAS_IDF_3
-    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_V8
@@ -567,32 +527,6 @@
     //#define HAS_TEMP_SENSOR
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
-    #define HAS_ACT_LED
-    #define HAS_DIRECT_UPLOAD
-  #endif
-
-  #ifdef MARAUDER_PANCAKE
-    #define HAS_TOUCH
-    #define HAS_CAP_TOUCH
-    //#define HAS_FLIPPER_LED
-    //#define FLIPPER_ZERO_HAT
-    #define HAS_BATTERY
-    #define HAS_BT
-    //#define HAS_BUTTONS
-    #define HAS_NEOPIXEL_LED
-    //#define HAS_PWR_MGMT
-    #define HAS_SCREEN
-    #define HAS_FULL_SCREEN
-    #define HAS_GPS
-    #define HAS_C5_SD
-    #define HAS_SD
-    #define USE_SD
-    #define HAS_DUAL_BAND
-    #define HAS_PSRAM
-    //#define HAS_TEMP_SENSOR
-    #define HAS_NIMBLE_2
-    #define HAS_IDF_3
-    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_MINI_V3
@@ -617,32 +551,12 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     //#define HAS_SIMPLEX_DISPLAY
-    #define HAS_DIRECT_UPLOAD
-  #endif
-
-  #if defined(MARAUDER_M5_NANO_C6)
-    //#define FLIPPER_ZERO_HAT
-    //#define HAS_MINI_KB
-    //#define HAS_BATTERY
-    #define HAS_BT
-    //#define HAS_BUTTONS
-    #define HAS_NEOPIXEL_LED
-    //#define HAS_PWR_MGMT
-    //#define HAS_SCREEN
-    //#define HAS_MINI_SCREEN
-    //#define HAS_SD
-    //#define USE_SD
-    //#define HAS_TEMP_SENSOR
-    //#define HAS_GPS
-    #define HAS_NIMBLE_2
-    #define HAS_IDF_3
-    //#define HAS_DIRECT_UPLOAD
   #endif
   //// END BOARD FEATURES
 
   //// POWER MANAGEMENT
   #ifdef HAS_PWR_MGMT
-    #if defined(HAS_AXP192)
+    #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
       #include "AXP192.h"
     #endif
 
@@ -677,23 +591,32 @@
     #endif
 
     #ifdef MARAUDER_MINI
-      #define L_BTN 13
-      #define C_BTN 34
-      #define U_BTN 36
-      #define R_BTN 39
-      #define D_BTN 35
+      // 成品板PCB引脚固定，不可改线
+      // 按键映射：上=IO2, 下=IO13, 左=IO27, 右=IO35, A(确认)=IO34, B(返回)=IO12
+      // GPIO 34, 35 = ESP32 input-only pads (无内部PU/PD)，
+      // 成品板PCB上有外部上拉电阻，Switches.cpp对34-39用纯INPUT模式(不报错)，
+      // getButtonState()按pullup=true判断(LOW=按下)
+      #define L_BTN 27
+      #define C_BTN 34   // A键 = 确认/选择
+      #define U_BTN 2
+      #define R_BTN 35
+      #define D_BTN 13
+      #define B_BTN 12   // B键 = 返回上级菜单
 
       #define HAS_L
       #define HAS_R
       #define HAS_U
       #define HAS_D
       #define HAS_C
+      #define HAS_B
 
+      // true = 外部上拉(按下时=LOW)，false = 外部下拉(按下时=HIGH)
       #define L_PULL true
       #define C_PULL true
       #define U_PULL true
       #define R_PULL true
       #define D_PULL true
+      #define B_PULL true
     #endif
 
     #ifdef MARAUDER_V7
@@ -1044,7 +967,8 @@
 
       #define EXT_BUTTON_WIDTH 0
 
-      #define SCREEN_ORIENTATION 0
+      // Orientation 2: 160×128 landscape (180° rotation — flips upside-down display)
+      #define SCREEN_ORIENTATION 2
 
       #define CHAR_WIDTH 6
       #define SCREEN_WIDTH TFT_HEIGHT // Originally 240
@@ -1378,75 +1302,6 @@
     
       #define KIT_LED_BUILTIN 13
     #endif 
-
-    #if defined(MARAUDER_PANCAKE)
-      #define CHAN_PER_PAGE 7
-
-      #define SCREEN_CHAR_WIDTH 40
-      #define HAS_ILI9341
-    
-      #define BANNER_TEXT_SIZE 2
-
-      #ifndef TFT_WIDTH
-        #define TFT_WIDTH 320
-      #endif
-
-      #ifndef TFT_HEIGHT
-        #define TFT_HEIGHT 480
-      #endif
-
-      #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
-
-      #define EXT_BUTTON_WIDTH 30
-
-      #define SCREEN_BUFFER
-
-      #define MAX_SCREEN_BUFFER 26
-
-      #define SCREEN_ORIENTATION 0
-    
-      #define CHAR_WIDTH 12
-      #define SCREEN_WIDTH TFT_WIDTH
-      #define SCREEN_HEIGHT TFT_HEIGHT
-      #define HEIGHT_1 TFT_WIDTH
-      #define WIDTH_1 TFT_HEIGHT
-      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6)
-      #define TEXT_HEIGHT 16
-      #define BOT_FIXED_AREA 0
-      #define TOP_FIXED_AREA 48
-      #define YMAX 480
-      #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
-      //#define MENU_FONT NULL
-      #define MENU_FONT &FreeMono9pt7b // Winner
-      //#define MENU_FONT &FreeMonoBold9pt7b
-      //#define MENU_FONT &FreeSans9pt7b
-      //#define MENU_FONT &FreeSansBold9pt7b
-      #define BUTTON_SCREEN_LIMIT 18
-      #define BUTTON_ARRAY_LEN BUTTON_SCREEN_LIMIT
-      #define STATUS_BAR_WIDTH 16
-      #define LVGL_TICK_PERIOD 6
-
-      #define FRAME_X 100
-      #define FRAME_Y 64
-      #define FRAME_W TFT_WIDTH / 2
-      #define FRAME_H 50
-    
-      // Red zone size
-      #define REDBUTTON_X FRAME_X
-      #define REDBUTTON_Y FRAME_Y
-      #define REDBUTTON_W (FRAME_W/2)
-      #define REDBUTTON_H FRAME_H
-    
-      // Green zone size
-      #define GREENBUTTON_X (REDBUTTON_X + REDBUTTON_W)
-      #define GREENBUTTON_Y FRAME_Y
-      #define GREENBUTTON_W (FRAME_W/2)
-      #define GREENBUTTON_H FRAME_H
-    
-      #define STATUSBAR_COLOR 0x4A49
-    
-      #define KIT_LED_BUILTIN 13
-    #endif
 
     #if defined(MARAUDER_CYD_MICRO)
       #define CHAN_PER_PAGE 7
@@ -1948,15 +1803,17 @@
       #define CHAN_PER_PAGE 7
 
       #define SCREEN_CHAR_WIDTH 40
-      #define TFT_MISO 19
+      #define TFT_MISO -1  // ST7735 doesn't read back
       #define TFT_MOSI 23
       #define TFT_SCLK 18
-      #define TFT_CS 27
-      #define TFT_DC 26
-      #define TFT_RST 5
-      #define TFT_BL 32
-      #define TOUCH_CS 21
-      #define SD_CS 4
+      #define TFT_CS 5
+      #define TFT_DC 4
+      // TFT_RST = -1: 不使用MCU控制屏幕复位，ST7735自带POR上电复位。
+      // 成品板上GPIO 19被SD卡MISO占用，不能再用作TFT_RST输出。
+      #define TFT_RST -1
+      //#define TFT_BL 12  // LED back-light (directly connected to power)
+      #define TOUCH_CS -1
+      #define SD_CS 22
 
       #define SCREEN_BUFFER
 
@@ -1964,45 +1821,50 @@
 
       #define BANNER_TEXT_SIZE 1
 
-      #ifndef TFT_WIDTH
-        #define TFT_WIDTH 128
-      #endif
+      // NOTE: TFT_WIDTH/TFT_HEIGHT in User_Setup_marauder_mini.h define the
+      // NATIVE portrait resolution (128×160) used by TFT_eSPI driver init.
+      // We run in LANDSCAPE mode (SCREEN_ORIENTATION=1) giving 160×128.
+      // The actual TFT_WIDTH/TFT_HEIGHT override happens in Display.h AFTER
+      // TFT_eSPI is included, so application code sees landscape 160×128.
 
-      #ifndef TFT_HEIGHT
-        #define TFT_HEIGHT 128
-      #endif
+      // 2.0" ST7735 LANDSCAPE effective resolution: 160 wide × 128 tall
+      #define DISP_W 160
+      #define DISP_H 128
 
-      #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
+      #define GRAPH_VERT_LIM DISP_H/2 - 1
 
       #define EXT_BUTTON_WIDTH 0
 
-      #define SCREEN_ORIENTATION 0
+      // Orientation 3 = landscape (flipped) — should fix upside-down display
+      // Rotation 0 = portrait, 1 = landscape, 2 = portrait flipped, 3 = landscape flipped
+      #define SCREEN_ORIENTATION 3
+      //#define SCREEN_ORIENTATION 1  // Alternative landscape
 
       #define CHAR_WIDTH 6
-      #define SCREEN_WIDTH TFT_WIDTH // Originally 240
-      #define SCREEN_HEIGHT TFT_HEIGHT // Originally 320
-      #define HEIGHT_1 TFT_WIDTH
-      #define WIDTH_1 TFT_WIDTH
-      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
-      #define TEXT_HEIGHT (TFT_HEIGHT/10) // Height of text to be printed and scrolled
-      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
-      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
-      #define YMAX TFT_HEIGHT // Bottom of screen area
+      #define SCREEN_WIDTH  DISP_W   // 160 in landscape
+      #define SCREEN_HEIGHT DISP_H   // 128 in landscape
+      #define HEIGHT_1 DISP_H
+      #define WIDTH_1  DISP_W
+      #define STANDARD_FONT_CHAR_LIMIT (DISP_W/6) // characters per line (~26)
+      #define TEXT_HEIGHT (DISP_H/10) // Height of text to be printed and scrolled
+      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area
+      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area
+      #define YMAX DISP_H // Bottom of screen area
       #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
       //#define MENU_FONT NULL
-      #define MENU_FONT &FreeMono9pt7b // Winner
+      #define MENU_FONT &FreeMono9pt7b
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
       #define BUTTON_SCREEN_LIMIT 9
       #define BUTTON_ARRAY_LEN BUTTON_SCREEN_LIMIT
-      #define STATUS_BAR_WIDTH (TFT_HEIGHT/16)
+      #define STATUS_BAR_WIDTH (DISP_H/16)
       #define LVGL_TICK_PERIOD 6
 
-      #define FRAME_X 100
-      #define FRAME_Y 64
-      #define FRAME_W 120
-      #define FRAME_H 50
+      #define FRAME_X 80
+      #define FRAME_Y 48
+      #define FRAME_W 110
+      #define FRAME_H 44
 
       // Red zone size
       #define REDBUTTON_X FRAME_X
@@ -2211,24 +2073,6 @@
     //#define BUTTON_ARRAY_LEN 5
   #endif
 
-  // Status bar right-side icon x-positions (SCREEN_WIDTH-relative)
-  // V8 (240px): SD=170 WiFi=154 Force=138 Touch=186 Bat=204
-  // Pancake (320px): SD=250 WiFi=234 Force=218 Touch=266 Bat=284
-  #define SB_MEM_X    (SCREEN_WIDTH / 2 - 20)    // D%/P% text: 120 on V8, 160 on Pancake
-  #define SB_SD_X     (SCREEN_WIDTH - 70)
-  #define SB_WIFI_X   (SCREEN_WIDTH - 86)
-  #define SB_FORCE_X  (SCREEN_WIDTH - 102)
-  #define SB_TOUCH_X  (SCREEN_WIDTH - 54)
-  #define SB_BAT_X    (SCREEN_WIDTH - 36)
-
-  // Packet monitor oscilloscope geometry
-  // PKT_HALF  = landscape height midpoint (zero-line y)
-  // PKT_AXIS_W = x-axis draw width
-  // HEIGHT_1 = TFT_WIDTH (landscape height): V8=240 Pancake=320
-  // WIDTH_1  = TFT_HEIGHT (landscape width):  V8=320 Pancake=480
-  #define PKT_HALF    (HEIGHT_1 / 2)
-  #define PKT_AXIS_W  (WIDTH_1 - 10)
-
   #if defined(MARAUDER_V8)
     #define BANNER_TIME 100
     
@@ -2238,25 +2082,6 @@
     #define KEY_X 120 // Centre of key
     #define KEY_Y 50
     #define KEY_W 240 // Width and height
-    #define KEY_H 22
-    #define KEY_SPACING_X 0 // X and Y gap
-    #define KEY_SPACING_Y 1
-    #define KEY_TEXTSIZE 1   // Font size multiplier
-    #define ICON_W 22
-    #define ICON_H 22
-    #define BUTTON_PADDING 22
-    //#define BUTTON_ARRAY_LEN 5
-  #endif
-
-  #if defined(MARAUDER_PANCAKE)
-    #define BANNER_TIME 100
-    
-    #define COMMAND_PREFIX "!"
-    
-    // Keypad start position, key sizes and spacing
-    #define KEY_X 160 // Centre of key
-    #define KEY_Y 59
-    #define KEY_W 320 // Width and height
     #define KEY_H 22
     #define KEY_SPACING_X 0 // X and Y gap
     #define KEY_SPACING_Y 1
@@ -2527,7 +2352,10 @@
     #endif
 
     #ifdef MARAUDER_MINI
-      #define SD_CS 4
+      #define SD_CS 22
+      #define SD_SCK 18
+      #define SD_MISO 19
+      #define SD_MOSI 23
     #endif
 
     #ifdef MARAUDER_V7
@@ -2555,7 +2383,10 @@
     #endif
 
     #ifdef MARAUDER_FLIPPER
-      #define SD_CS 10
+      #define SD_CS 4
+      #define SD_SCK 14
+      #define SD_MISO 16
+      #define SD_MOSI 17
     #endif
 
     #ifdef MARAUDER_MULTIBOARD_S3
@@ -2574,18 +2405,12 @@
       #define SD_CS 3
     #endif
 
-    #if defined(MARAUDER_C5)
+    #ifdef MARAUDER_C5
       #define SD_CS 10
-    #elif defined(MARAUDER_T_DONGLE_C5)
-      #define SD_CS 23
     #endif
 
     #ifdef MARAUDER_V8
       #define SD_CS 10
-    #endif
-
-    #ifdef MARAUDER_PANCAKE
-      #define SD_CS 7
     #endif
 
     #ifdef MARAUDER_MINI_V3
@@ -2622,9 +2447,6 @@
   #ifndef HAS_SCREEN
 
     #define BANNER_TIME GRAPH_REFRESH
-
-    #define TFT_WIDTH 0
-    #define TFT_HEIGHT 0
 
     #define TFT_BLACK 0
     #define TFT_WHITE 0
@@ -2694,15 +2516,9 @@
     #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_C5)
     #define MEM_LOWER_LIM 10000
-  #elif defined(MARAUDER_T_DONGLE_C5)
-    #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_V8)
     #define MEM_LOWER_LIM 10000
-  #elif defined(MARAUDER_PANCAKE)
-    #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_MINI_V3)
-    #define MEM_LOWER_LIM 10000
-  #else
     #define MEM_LOWER_LIM 10000
   #endif
   //// END MEMORY LOWER LIMIT STUFF
@@ -2726,12 +2542,8 @@
       #define PIN 27
     #elif defined(MARAUDER_V8)
       #define PIN 27
-    #elif defined(MARAUDER_PANCAKE)
-      #define PIN 27
     #elif defined(MARAUDER_CARDPUTER_ADV)
       #define PIN 21
-    #elif defined(MARAUDER_M5_NANO_C6)
-      #define PIN 20
     #else
       #define PIN 25
     #endif
@@ -2805,8 +2617,8 @@
       #define GPS_RX 22
     #elif defined(MARAUDER_FLIPPER)
       #define GPS_SERIAL_INDEX 1
-      #define GPS_TX 9
-      #define GPS_RX 21
+      #define GPS_TX 14
+      #define GPS_RX 12
     #elif defined(MARAUDER_MULTIBOARD_S3)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 9
@@ -2827,19 +2639,11 @@
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 6
       #define GPS_RX 9
-    #elif defined(MARAUDER_T_DONGLE_C5)
-      #define GPS_SERIAL_INDEX 1
-      #define GPS_TX 12 // External GPS TX -> T-Dongle UART0 RX
-      #define GPS_RX 11 // External GPS RX -> T-Dongle UART0 TX
     #elif defined(MARAUDER_C5)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 14
       #define GPS_RX 13
     #elif defined(MARAUDER_V8)
-      #define GPS_SERIAL_INDEX 1
-      #define GPS_TX 14
-      #define GPS_RX 13
-    #elif defined(MARAUDER_PANCAKE)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 14
       #define GPS_RX 13
@@ -2857,116 +2661,72 @@
   //// BATTERY STUFF
   #ifdef HAS_BATTERY
 
-    #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2) 
+    #ifdef MARAUDER_V4
       #define I2C_SDA 33
       #define I2C_SCL 22
+    #endif
 
-    #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_KIT)
+    #ifdef MARAUDER_V6
       #define I2C_SDA 33
       #define I2C_SCL 22
-      #define HAS_MAX1704X
-      #undef HAS_AXP2101
-      #undef HAS_IP5306
+    #endif
 
-    #elif defined(MARAUDER_MINI)
+    #ifdef MARAUDER_V6_1
+      #define I2C_SDA 33
+      #define I2C_SCL 22
+    #endif
+
+    #ifdef MARAUDER_M5STICKC
+      #define I2C_SDA 33
+      #define I2C_SCL 22
+    #endif
+
+    #ifdef MARAUDER_KIT
+      #define I2C_SDA 33
+      #define I2C_SCL 22
+    #endif
+
+    #ifdef MARAUDER_MINI
       #define I2C_SDA 33
       #define I2C_SCL 26
+    #endif
 
-    #elif defined(MARAUDER_V7)
+    #ifdef MARAUDER_V7
       #define I2C_SDA 33
       #define I2C_SCL 16
-      #define HAS_MAX1704X
-      #undef HAS_AXP2101
-      #undef HAS_IP5306
+    #endif
 
-    #elif defined(MARAUDER_V7_1)
+    #ifdef MARAUDER_V7_1
       #define I2C_SDA 33
       #define I2C_SCL 27
-      #define HAS_MAX1704X
-      #undef HAS_AXP2101
-      #undef HAS_IP5306
+    #endif
 
-    #elif defined(MARAUDER_CYD_MICRO)
+    #ifdef MARAUDER_CYD_MICRO
       #define I2C_SDA 22
       #define I2C_SCL 27
+    #endif
 
-    #elif defined(MARAUDER_CYD_2USB)
+    #ifdef MARAUDER_CYD_2USB
       #define I2C_SDA 22
       #define I2C_SCL 27
+    #endif
 
-    #elif defined(MARAUDER_CYD_3_5_INCH)
+    #ifdef MARAUDER_CYD_3_5_INCH
       #define I2C_SDA 32
       #define I2C_SCL 25
+    #endif
 
-    #elif defined(MARAUDER_CYD_GUITION)
+    #ifdef MARAUDER_CYD_GUITION
       #define I2C_SDA 22
       #define I2C_SCL 21
+    #endif
 
-    #elif defined(MARAUDER_V8)
+    #ifdef MARAUDER_V8
       #define I2C_SCL 4
       #define I2C_SDA 5
-
-    #elif defined(MARAUDER_REV_FEATHER)
-      #define I2C_SCL 4
-      #define I2C_SDA 3
-      #define HAS_MAX1704X
-      #undef HAS_AXP2101
-      #undef HAS_IP5306
-
-    #elif defined(MARAUDER_PANCAKE)
-      #define I2C_SDA 9
-      #define I2C_SCL 10
-      #define HAS_MAX1704X
-      // FT6336 cap touch - shares I2C bus with MAX17048
-      #define CTP_RST 8
-      #define CTP_SDA I2C_SDA
-      #define CTP_SCL I2C_SCL
     #endif
 
-
-    //  If we know what we have, we can delete what we're not using
-    #ifdef BATTERY_ADC_PIN
-      #undef HAS_AXP2101
-      #undef HAS_IP5306
-      #undef HAS_MAX1704X
-      #undef HAS_AXP192
-
-    // No driver for this LiPo charger
-    #elif defined(HAS_TP4057)
-      #undef HAS_AXP2101
-      #undef HAS_IP5306
-      #undef HAS_MAX1704X
-      #undef HAS_AXP192
-
-    #elif defined(HAS_IP5306)
-      #undef HAS_AXP2101
-      #undef HAS_MAX1704X
-      #undef HAS_AXP192
-
-    #elif defined(HAS_AXP192)
-      #undef HAS_AXP2101
-      #undef HAS_IP5306
-      #undef HAS_MAX1704X
-
-    #elif defined(HAS_AXP2101)
-      #undef HAS_IP5306
-      #undef HAS_MAX1704X
-
-    #elif defined(HAS_MAX1704X)
-      #undef HAS_AXP2101
-      #undef HAS_IP5306
-      #undef HAS_AXP192
-
-
-    #else       // punt
-       // #define HAS_AXP2101
-       #define HAS_IP5306
-       #define HAS_MAX1704X
-       #define HAS_AXP192
-    #endif
-
-  #endif  // HAS_BATTERY
-
+  #endif
 
   //// MARAUDER TITLE STUFF
   #ifdef MARAUDER_V4
@@ -2994,8 +2754,6 @@
   #elif defined(MARAUDER_C5)
     #define MARAUDER_TITLE_BYTES 13578
   #elif defined(MARAUDER_V8)
-    #define MARAUDER_TITLE_BYTES 13578
-  #elif defined(MARAUDER_PANCAKE)
     #define MARAUDER_TITLE_BYTES 13578
   #elif defined(MARAUDER_MINI_V3)
     #define MARAUDER_TITLE_BYTES 13578
@@ -3051,23 +2809,13 @@
       #define SD_SCK       18
     #endif
 
-    #if defined(MARAUDER_C5)
+    #ifdef MARAUDER_C5
       #define SD_MISO 2
       #define SD_MOSI 7
-      #define SD_SCK  6
-    #elif defined(MARAUDER_T_DONGLE_C5)
-      #define SD_MISO 7
-      #define SD_MOSI 2
       #define SD_SCK  6
     #endif
 
     #ifdef MARAUDER_V8
-      #define SD_MISO TFT_MISO
-      #define SD_MOSI TFT_MOSI
-      #define SD_SCK  TFT_SCLK
-    #endif
-
-    #ifdef MARAUDER_PANCAKE
       #define SD_MISO TFT_MISO
       #define SD_MOSI TFT_MOSI
       #define SD_SCK  TFT_SCLK
@@ -3165,23 +2913,5 @@
     #define HOP_DELAY 1000
   #else
     #define HOP_DELAY 250
-  #endif
-
-  //// ACT LED STUFF
-  #ifdef HAS_ACT_LED
-
-    #ifdef MARAUDER_V8
-      #define ACT_LED_PIN 28
-    #endif
-
-  #endif
-
-  //=================================================================
-  // XiaoMiao board pin/layout overrides.
-  // Must be included AFTER every #ifdef MARAUDER_MINI block above so the
-  // #undef / #define overrides below take effect. See xiaomiao_config.h.
-  //=================================================================
-  #if defined(MARAUDER_XIAOMIAO)
-    #include "xiaomiao_config.h"
   #endif
 #endif

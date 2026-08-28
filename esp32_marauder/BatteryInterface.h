@@ -1,31 +1,19 @@
 #pragma once
 
-// #ifdef HAS_BATTERY
-
 #ifndef BatteryInterface_h
 #define BatteryInterface_h
 
 #include <Arduino.h>
 
 #include "configs.h"
-
-#ifdef HAS_MAX1704X
-  #include "Adafruit_MAX1704X.h"
-#endif
+#include "Adafruit_MAX1704X.h"
 
 #ifdef HAS_AXP2101
   #define XPOWERS_CHIP_AXP2101
   #include "XPowersLib.h"
 #endif
 
-#ifdef HAS_AXP192
-  #include "AXP192.h"
-  AXP192 axp192_obj;
-#endif
-
-#ifndef BATTERY_ADC_PIN  // not 12c
-  #include <Wire.h>
-#endif
+#include <Wire.h>
 
 #define IP5306_ADDR 0x75
 #define MAX17048_ADDR 0x36
@@ -33,10 +21,7 @@
 class BatteryInterface {
   private:
     uint32_t initTime = 0;
-
-    #ifdef HAS_MAX1704X
-      Adafruit_MAX17048 maxlipo;
-    #endif
+    Adafruit_MAX17048 maxlipo;
 
     #ifdef HAS_AXP2101
       XPowersPMU power;
@@ -58,7 +43,4 @@ class BatteryInterface {
     int8_t getBatteryLevel();
 };
 
-#endif  // ifndef BatteryInterface_h
-
-// #endif // HAS_BATTERY
-
+#endif

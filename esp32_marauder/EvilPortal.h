@@ -40,9 +40,10 @@ extern Buffer buffer_obj;
 extern char apName[MAX_AP_NAME_SIZE];
 
 #ifndef HAS_PSRAM
-  char index_html[MAX_HTML_SIZE] = "TEST";
+  // 加上 static，防止多文件引入时发生链接冲突
+  static char index_html[MAX_HTML_SIZE] = "TEST";
 #else
-  extern char* index_html;
+  extern const char* index_html;
 #endif
 
 struct ssid {

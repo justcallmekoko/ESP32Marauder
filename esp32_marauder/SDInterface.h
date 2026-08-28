@@ -6,12 +6,11 @@
 #include "configs.h"
 
 #include "settings.h"
-#ifdef HAS_C5_SD
+#if defined(HAS_C5_SD) || defined(MARAUDER_MINI)
   #include "FS.h"
 #endif
 #include "SD.h"
-#include "SPIFFS.h"
-#ifdef HAS_C5_SD
+#if defined(HAS_C5_SD) || defined(MARAUDER_MINI)
   #include "SPI.h"
 #endif
 #include "Buffer.h"
@@ -42,10 +41,13 @@ class SDInterface {
   #elif defined(HAS_C5_SD)
     SPIClass* _spi;
     int _cs;
+  #elif defined(MARAUDER_MINI)
+    SPIClass* _spi;
+    int _cs;
   #endif
 
   public:
-    #ifdef HAS_C5_SD
+    #if defined(HAS_C5_SD) || defined(MARAUDER_MINI)
       SDInterface(SPIClass* spi, int cs);
     #endif
 
@@ -57,7 +59,6 @@ class SDInterface {
     bool supported = false;
 
     String card_sz;
-    String selected_file_name = "";
   
     bool initSD();
 
@@ -69,7 +70,6 @@ class SDInterface {
     void runUpdate(String file_name = "");
     void performUpdate(Stream &updateSource, size_t updateSize);
     bool removeFile(String file_path);
-    bool migrateSPIFFS(uint8_t operation, size_t& files, size_t& bytes, uint8_t& error);
 };
 
 #endif
