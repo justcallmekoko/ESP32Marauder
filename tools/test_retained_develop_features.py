@@ -55,6 +55,5 @@ class RetainedDevelopFeatureTests(unittest.TestCase):
         self.assertIn("sta.last_seen_ms = millis();", source)
         self.assertNotIn("Station sta = {\n                    {", source)
 
-
 if __name__ == "__main__":
     unittest.main()

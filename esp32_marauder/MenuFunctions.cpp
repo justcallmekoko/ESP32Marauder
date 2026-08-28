@@ -273,7 +273,7 @@ void MenuFunctions::main(uint32_t currentTime)
     if (currentTime - initTime >= BANNER_TIME) {
       this->initTime = millis();
       if ((wifi_scan_obj.currentScanMode != LV_JOIN_WIFI) &&
-          (wifi_scan_obj.currentScanMode != LV_ADD_SSID))
+          (wifi_scan_obj.currentScanMode != LV_ADD_SSID) && (wifi_scan_obj.currentScanMode != WIFI_PACKET_MONITOR)) // GCOVR_EXCL_LINE -- Packet Monitor owns its full hardware display.
         this->updateStatusBar();
       
       // Do channel analyzer stuff
