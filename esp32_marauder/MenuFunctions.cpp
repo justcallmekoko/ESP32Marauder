@@ -1,5 +1,6 @@
 #include "MenuFunctions.h"
 #include "lang_var.h"
+#include <Preferences.h>
 
 #ifdef HAS_SCREEN
 
@@ -2747,6 +2748,41 @@ void MenuFunctions::RunSetup()
     this->addNodes(&deviceMenu, "Brightness", TFTYELLOW, NULL, BRIGHTNESS, [this]() {
       this->brightnessMode();
     });
+  #endif
+
+  #if defined(HAS_ILI9341) && !defined(HAS_LOVYANGFX) && !defined(HAS_CAP_TOUCH)
+  this->addNodes(&deviceMenu, "Touch Calibration", TFTMAGENTA, NULL, 0, [this]() {
+    display_obj.clearScreen();
+    display_obj.tft.setTextWrap(true);
+    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    display_obj.tft.fillScreen(TFT_BLACK);
+    display_obj.tft.drawCentreString("Touch Calibration", TFT_WIDTH/2, TFT_HEIGHT/2 - 30, 2);
+    display_obj.tft.drawCentreString("Tap the corners", TFT_WIDTH/2, TFT_HEIGHT/2, 1);
+    display_obj.tft.drawCentreString("as shown", TFT_WIDTH/2, TFT_HEIGHT/2 + 15, 1);
+    delay(1500);
+
+    uint16_t calData[5];
+    display_obj.tft.calibrateTouch(calData, TFT_MAGENTA, TFT_BLACK, 3);
+    display_obj.tft.setTouch(calData);
+
+    // Save to NVS
+    Preferences nvs;
+    nvs.begin("tftcal", false);
+    nvs.putUShort("x0", calData[0]);
+    nvs.putUShort("x1", calData[1]);
+    nvs.putUShort("y0", calData[2]);
+    nvs.putUShort("y1", calData[3]);
+    nvs.putUShort("rot", calData[4]);
+    nvs.end();
+
+    display_obj.clearScreen();
+    display_obj.tft.fillScreen(TFT_BLACK);
+    display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+    display_obj.tft.drawCentreString("Calibration Saved!", TFT_WIDTH/2, TFT_HEIGHT/2 - 10, 2);
+    delay(1500);
+
+    this->changeMenu(&deviceMenu, true);
+  });
   #endif
 
   this->addNodes(&deviceMenu, text_table1[17], TFTWHITE, NULL, DEVICE_INFO, [this]() {
