@@ -5,6 +5,7 @@
 
 #include "configs.h"
 #include "utils.h"
+#include "GpsTrackerStats.h"
 
 #include <ArduinoJson.h>
 #include <algorithm>
@@ -433,6 +434,7 @@ class WiFiScan
     //int num_deauth = 0; // RED
 
     uint32_t initTime = 0;
+    marauder::GpsTrackerStats gps_tracker_stats;
     uint32_t last_ui_update = 0;
     uint32_t last_sour_apple_update = 0;
     bool run_setup = true;
