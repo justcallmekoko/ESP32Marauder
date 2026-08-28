@@ -1,6 +1,6 @@
 /* FLASH SETTINGS
 Board: LOLIN D32
- Frequency: 80MHz
+Flash Frequency: 80MHz
 Partition Scheme: Minimal SPIFFS
 https://www.online-utility.org/image/convert/to/XBM
 */
@@ -31,17 +31,13 @@ https://www.online-utility.org/image/convert/to/XBM
   #include "xiaoLED.h"
 #elif defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
   #include "stickcLED.h"
-#elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
+#elif defined(HAS_NEOPIXEL_LED)
   #include "LedInterface.h"
 #endif
 
 #include "settings.h"
 #include "CommandLine.h"
 #include "lang_var.h"
-
-#ifdef HAS_T_DONGLE_DISPLAY
-  #include "TDongleDisplay.h"
-#endif
 
 #ifdef HAS_BATTERY
   #include "BatteryInterface.h"
@@ -70,6 +66,9 @@ https://www.online-utility.org/image/convert/to/XBM
   #if (C_BTN >= 0)
     Switches c_btn = Switches(C_BTN, 1000, C_PULL);
   #endif
+  #if defined(B_BTN) && (B_BTN >= 0)
+    Switches b_btn = Switches(B_BTN, 1000, B_PULL);
+  #endif
 
 #endif
 
@@ -78,10 +77,6 @@ EvilPortal evil_portal_obj;
 Buffer buffer_obj;
 Settings settings_obj;
 CommandLine cli_obj;
-
-#ifdef HAS_T_DONGLE_DISPLAY
-  TDongleDisplay t_dongle_display;
-#endif
 
 #ifdef HAS_GPS
   GpsInterface gps_obj;
@@ -96,8 +91,13 @@ CommandLine cli_obj;
   MenuFunctions menu_function_obj;
 #endif
 
-#if defined(HAS_SD) && !defined(HAS_C5_SD)
+#if defined(HAS_SD) && !defined(HAS_C5_SD) && !defined(MARAUDER_MINI)
   SDInterface sd_obj;
+#endif
+
+#if defined(HAS_SD) && defined(MARAUDER_MINI)
+  SPIClass sdSPI(SPI);
+  SDInterface sd_obj = SDInterface(&sdSPI, SD_CS);
 #endif
 
 #ifdef HAS_FLIPPER_LED
@@ -106,7 +106,7 @@ CommandLine cli_obj;
   xiaoLED xiao_led;
 #elif defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
   stickcLED stickc_led;
-#elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
+#elif defined(HAS_NEOPIXEL_LED)
   LedInterface led_obj;
 #endif
 
@@ -201,10 +201,8 @@ uint32_t currentTime  = 0;
   void backlightOn() {
     #ifdef HAS_SCREEN
       #if defined(MARAUDER_MINI) || defined(MARAUDER_MINI_V3)
-        digitalWrite(TFT_BL, LOW);
-      #endif
-    
-      #if !defined(MARAUDER_MINI) && !defined(MARAUDER_MINI_V3)
+        // Backlight is directly connected to power, no software control needed
+      #elif defined(TFT_BL)
         digitalWrite(TFT_BL, HIGH);
       #endif
     #endif
@@ -213,10 +211,8 @@ uint32_t currentTime  = 0;
   void backlightOff() {
     #ifdef HAS_SCREEN
       #if defined(MARAUDER_MINI) || defined(MARAUDER_MINI_V3)
-        digitalWrite(TFT_BL, HIGH);
-      #endif
-    
-      #if !defined(MARAUDER_MINI) && !defined(MARAUDER_MINI_V3)
+        // Backlight is directly connected to power, no software control needed
+      #elif defined(TFT_BL)
         digitalWrite(TFT_BL, LOW);
       #endif
     #endif
@@ -242,18 +238,24 @@ void setup()
 
   Serial.begin(115200);
 
-  #ifdef HAS_ACT_LED
-    pinMode(ACT_LED_PIN, OUTPUT);
-    delay(100);
-    digitalWrite(ACT_LED_PIN, LOW);
-  #endif
-
   while(!Serial)
     delay(10);
 
-  #ifdef HAS_C5_SD
+  #if defined(HAS_C5_SD)
     sharedSPI.begin(SD_SCK, SD_MISO, SD_MOSI);
     delay(100);
+  #endif
+
+  #if defined(HAS_SD) && defined(MARAUDER_MINI)
+    // Initialize SD SPI bus BEFORE TFT init to avoid bus conflicts.
+    // TFT_eSPI uses the same VSPI hardware; we re-init the bus here
+    // with SD pins so SD.begin() has a clean SPI configuration.
+    sdSPI.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
+    delay(100);
+  #endif
+
+  #ifdef defined(MARAUDER_M5STICKC) && !defined(MARAUDER_M5STICKCP2)
+    axp192_obj.begin();
   #endif
 
   #if defined(MARAUDER_M5STICKCP2) // Prevent StickCP2 from turning off when disconnect USB cable
@@ -262,7 +264,9 @@ void setup()
   #endif
   
   #ifdef HAS_SCREEN
-    pinMode(TFT_BL, OUTPUT);
+    #if defined(TFT_BL) && !defined(MARAUDER_MINI) && !defined(MARAUDER_MINI_V3)
+      pinMode(TFT_BL, OUTPUT);
+    #endif
   #endif
   
   backlightOff();
@@ -293,10 +297,26 @@ void setup()
 
   Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
 
+  // Debug: print raw GPIO values for button pins to help identify circuit type
+  #ifdef MARAUDER_MINI
+    Serial.println(F("=== Button Pin Debug ==="));
+    Serial.printf("U_BTN(IO%d)=%d  D_BTN(IO%d)=%d  L_BTN(IO%d)=%d\n",
+      U_BTN, digitalRead(U_BTN), D_BTN, digitalRead(D_BTN), L_BTN, digitalRead(L_BTN));
+    Serial.printf("R_BTN(IO%d)=%d  C_BTN(IO%d)=%d  B_BTN(IO%d)=%d\n",
+      R_BTN, digitalRead(R_BTN), C_BTN, digitalRead(C_BTN), B_BTN, digitalRead(B_BTN));
+    Serial.println(F("(0=LOW, 1=HIGH. Press each button and watch the value change.)"));
+    Serial.println(F("========================"));
+  #endif
+
   #ifdef HAS_PSRAM
     if (!psramInit()) {
       Serial.println(F("PSRAM not available"));
     }
+  #endif
+
+  #ifdef HAS_SCREEN
+    display_obj.RunSetup();
+    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
   #endif
 
   #ifdef HAS_SIMPLEX_DISPLAY
@@ -306,11 +326,6 @@ void setup()
         Serial.println(F("SD Card NOT Supported"));
 
     #endif
-  #endif
-
-  #ifdef HAS_SCREEN
-    display_obj.RunSetup();
-    display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
   #endif
 
   // Init PWM brightness AFTER display init (so ledcAttach overrides TFT_eSPI's pinMode)
@@ -347,7 +362,7 @@ void setup()
 
   settings_obj.begin();
 
-  const char* type = settings_obj.getSettingType("wu");
+  const char* type = settings_obj.getSettingType("ChanHop");
 
   if (type == nullptr || type[0] == '\0') {
     Serial.println(F("Current settings format not supported. Installing new default settings..."));
@@ -366,10 +381,6 @@ void setup()
   #endif
 
   wifi_scan_obj.RunSetup();
-
-  #ifdef HAS_T_DONGLE_DISPLAY
-    t_dongle_display.begin();
-  #endif
 
   #ifdef HAS_SCREEN
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
@@ -393,7 +404,7 @@ void setup()
     xiao_led.RunSetup();
   #elif defined(MARAUDER_M5STICKC)
     stickc_led.RunSetup();
-  #elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
+  #elif defined(HAS_NEOPIXEL_LED)
     led_obj.RunSetup();
   #endif
 
@@ -459,10 +470,6 @@ void loop()
   cli_obj.main(currentTime);
   wifi_scan_obj.main(currentTime);
 
-  #ifdef HAS_T_DONGLE_DISPLAY
-    t_dongle_display.update(currentTime, wifi_scan_obj);
-  #endif
-
   #ifdef HAS_GPS
     gps_obj.main();
   #endif
@@ -485,10 +492,6 @@ void loop()
     xiao_led.main();
   #elif defined(MARAUDER_M5STICKC)
     stickc_led.main();
-  #elif defined(HAS_T_DONGLE_LED)
-    // The LED shares GPIO2/GPIO7 with the display/SD bus. Always make it the
-    // final writer so later SPI activity cannot leave it latched white.
-    led_obj.refresh();
   #elif defined(HAS_NEOPIXEL_LED)
     led_obj.main(currentTime);
   #endif

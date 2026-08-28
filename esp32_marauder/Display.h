@@ -16,12 +16,17 @@
 
 #include <TFT_eSPI.h>
 
-#ifdef HAS_CYD_TOUCH
-  #include <XPT2046_Touchscreen.h>
+// Override TFT_WIDTH/TFT_HEIGHT for landscape display AFTER TFT_eSPI includes
+// User_Setup gives us portrait 128x160 for driver init; we redefine to landscape 160x120 for app layout
+#ifdef MARAUDER_MINI
+  #undef TFT_WIDTH
+  #undef TFT_HEIGHT
+  #define TFT_WIDTH  DISP_W   // 160 — landscape width
+  #define TFT_HEIGHT DISP_H   // 128 — landscape height
 #endif
 
-#ifdef HAS_CAP_TOUCH
-  #include "ft6336.h"
+#ifdef HAS_CYD_TOUCH
+  #include <XPT2046_Touchscreen.h>
 #endif
 
 // WiFi stuff
@@ -145,7 +150,7 @@ class Display
     void getTouchWhileFunction(bool pressed);
     void init();
     void RunSetup();
-    void showCenterText(const char* text, int y, bool small_pp = false, uint8_t text_size = BANNER_TEXT_SIZE);
+    void showCenterText(String text, int y, bool small_pp = false);
     void touchToExit();
     void twoPartDisplay(String center_text);
     void updateBanner(String msg);

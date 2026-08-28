@@ -18,7 +18,6 @@
 #define BATTERY_ANALOG_ON 0
 
 #include "WiFiScan.h"
-#include "TargetListSort.h"
 #include "BatteryInterface.h"
 #include "SDInterface.h"
 #include "settings.h"
@@ -40,13 +39,14 @@
   #if (C_BTN >= 0)
     extern Switches c_btn;
   #endif
+  #if defined(B_BTN) && (B_BTN >= 0)
+    extern Switches b_btn;
+  #endif
 #endif
 
 extern WiFiScan wifi_scan_obj;
 extern SDInterface sd_obj;
-// #ifdef HAS_BATTERY
 extern BatteryInterface battery_obj;
-// #endif
 extern Settings settings_obj;
 
 #define FLASH_BUTTON 0
@@ -130,17 +130,6 @@ class MenuFunctions
 {
   private:
 
-    enum class FoxHuntListKind : uint8_t {
-      AP_TARGETS,
-      APS_WITH_STATIONS,
-      STATION_TARGETS,
-      PINEAPPLE_TARGETS,
-      MULTISSID_TARGETS,
-      BLE_TARGETS,
-      FINDMY_TARGETS,
-      FLIPPER_TARGETS,
-    };
-
     String u_result = "";
 
 
@@ -150,21 +139,6 @@ class MenuFunctions
     uint8_t mini_kb_index = 0;
     uint8_t old_gps_sat_count = 0;
     uint8_t max_graph_value = 0;
-
-    void buildWiFiFoxHuntMenu();
-    void buildBluetoothFoxHuntMenu();
-    void buildFoxTargetList(FoxHuntListKind type, int context_ap = -1);
-    void buildFoxSortMenu();
-    void buildFoxFilterMenu();
-    const char* foxSortLabel() const;
-    const char* foxFilterLabel() const;
-    bool foxListSupportsRecent() const;
-    bool foxListSupportsBand() const;
-
-    FoxHuntListKind fox_target_list = FoxHuntListKind::AP_TARGETS;
-    int fox_target_context_ap = -1;
-    TargetSortMode fox_sort_mode = TargetSortMode::SIGNAL_DESC;
-    TargetFilterMode fox_filter_mode = TargetFilterMode::ALL;
 
     // Main menu stuff
     Menu mainMenu;
@@ -223,20 +197,10 @@ class MenuFunctions
 
     Menu evilPortalMenu;
 
-    Menu foxHuntMenu;
-    Menu foxSortMenu;
-    Menu foxFilterMenu;
-
-    #ifdef HAS_DIRECT_UPLOAD
-      Menu deleteAllMenu;
-      Menu uploadAllMenu;
-    #endif
-
     //static void lv_tick_handler();
 
     // Menu icons
 
-    void buildUploadFileMenu();
     void setupSDFileList(bool update = false);
     void buildSDFileMenu(bool update = false);
     void displayMenuButtons();
@@ -255,11 +219,11 @@ class MenuFunctions
     void drawGraph(int16_t *values);
     void drawGraphSmall(uint8_t *values);
     void renderGraphUI(uint8_t scan_mode = 0);
-    void addNodes(Menu* menu, const char* name, uint8_t color, int place, std::function<void()> callable, bool selected = false);
+    void addNodes(Menu* menu, String name, uint8_t color, Menu* child, int place, std::function<void()> callable, bool selected = false);
     void battery(bool initial = false);
     void battery2(bool initial = false);
     const char* callSetting(const char* key);
-    void displaySetting(const char* key, Menu* menu, int index);
+    void displaySetting(String key, Menu* menu, int index);
     void buttonSelected(int b, int x = -1);
     void buttonNotSelected(int b, int x = -1);
     #ifdef HAS_MINI_SCREEN
@@ -298,11 +262,6 @@ class MenuFunctions
 
     Menu infoMenu;
     Menu apInfoMenu;
-
-    #ifdef HAS_DIRECT_UPLOAD
-      Menu uploadLogsMenu;
-      Menu actionMenu;
-    #endif
 
     //Ticker tick;
 

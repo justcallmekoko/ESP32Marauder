@@ -1,124 +1,7 @@
 #include "SDInterface.h"
 #include "lang_var.h"
 
-// GCOVR_EXCL_START -- requires mounted SPIFFS and SD filesystems.
-namespace {
-  bool removeTree(fs::FS& fs, const String& path, bool keep_root = false) {
-    if (!fs.exists(path))
-      return true;
-
-    File node = fs.open(path);
-    if (!node)
-      return false;
-
-    if (!node.isDirectory()) {
-      node.close();
-      return fs.remove(path);
-    }
-
-    File child = node.openNextFile();
-    while (child) {
-      String child_path = child.path();
-      child.close();
-      if (!removeTree(fs, child_path)) {
-        node.close();
-        return false;
-      }
-      child = node.openNextFile();
-    }
-
-    node.close();
-    return keep_root || fs.rmdir(path);
-  }
-
-  String joinPath(const String& base, const String& child) {
-    return base == "/" ? "/" + child : base + "/" + child;
-  }
-
-  bool copyTree(
-    fs::FS& source,
-    const String& source_path,
-    fs::FS* destination,
-    const String& destination_path,
-    size_t& files_copied,
-    size_t& bytes_copied,
-    uint8_t& error
-  ) {
-    File source_node = source.open(source_path);
-    if (!source_node) {
-      error = 3;
-      return false;
-    }
-
-    if (!source_node.isDirectory()) {
-      if (destination) {
-        File destination_file = destination->open(destination_path, FILE_WRITE);
-        if (!destination_file) {
-          source_node.close();
-          error = 3;
-          return false;
-        }
-
-        uint8_t buffer[512];
-        while (source_node.available()) {
-          size_t bytes_read = source_node.read(buffer, sizeof(buffer));
-          if (bytes_read == 0 || destination_file.write(buffer, bytes_read) != bytes_read) {
-            source_node.close();
-            destination_file.close();
-            error = 3;
-            return false;
-          }
-          bytes_copied += bytes_read;
-        }
-        destination_file.close();
-      }
-      else
-        bytes_copied += source_node.size();
-      source_node.close();
-      files_copied++;
-      return true;
-    }
-
-    if (destination && destination_path != "/" &&
-        !destination->exists(destination_path) && !destination->mkdir(destination_path)) {
-      source_node.close();
-      error = 3;
-      return false;
-    }
-
-    File child = source_node.openNextFile();
-    while (child) {
-      String child_source_path = child.path();
-      String child_name = child_source_path;
-      if (child_name.startsWith(source_path))
-        child_name.remove(0, source_path.length());
-      while (child_name.startsWith("/"))
-        child_name.remove(0, 1);
-      child.close();
-
-      if (!copyTree(
-        source,
-        child_source_path,
-        destination,
-        joinPath(destination_path, child_name),
-        files_copied,
-        bytes_copied,
-        error
-      )) {
-        source_node.close();
-        return false;
-      }
-      child = source_node.openNextFile();
-    }
-
-    source_node.close();
-    return true;
-  }
-
-}
-// GCOVR_EXCL_STOP
-
-#ifdef HAS_C5_SD
+#if defined(HAS_C5_SD) || defined(MARAUDER_MINI)
   SDInterface::SDInterface(SPIClass* spi, int cs)
     : _spi(spi), _cs(cs) {}
 #endif
@@ -126,6 +9,7 @@ namespace {
 bool SDInterface::initSD() {
   #ifdef HAS_SD
     String display_string = "";
+    bool mounted = false;
 
     #ifdef KIT
       pinMode(SD_DET, INPUT);
@@ -136,18 +20,56 @@ bool SDInterface::initSD() {
     #endif
 
     pinMode(SD_CS, OUTPUT);
-
+    // Drive CS HIGH before any SPI activity so the SD card does not
+    // respond to traffic on the shared SPI bus (e.g. TFT commands).
+    digitalWrite(SD_CS, HIGH);
     delay(10);
-    #if (defined(MARAUDER_M5STICKC)) || (defined(HAS_CYD_TOUCH)) || (defined(MARAUDER_CARDPUTER)) || (defined(MARAUDER_CARDPUTER_ADV))
-      /* Set up SPI SD Card using external pin header
-      StickCPlus Header - SPI SD Card Reader
-                  3v3   -   3v3
-                  GND   -   GND
-                   G0   -   CLK
-              G36/G25   -   MISO
-                  G26   -   MOSI
-                        -   CS (jumper to SD Card GND Pin)
-      */
+
+    //=================================================================
+    // Board-specific SD.begin() — sets `mounted` true/false
+    //=================================================================
+    #if defined(MARAUDER_MINI) && defined(HAS_SD)
+      // --- MARAUDER_MINI: shared VSPI with TFT_eSPI.
+      // First try the fast path (10 MHz with minimal delays); if it fails we
+      // fall back to a full SPI reset and the multi-frequency hunt.
+      {
+        static const uint32_t s_sd_spi_freqs[] = {
+          10000000,   // Fast path
+          5000000,    // Fallback speeds (not normally reached
+          2500000,
+          1000000
+        };
+        // Fast path: skip SPI is already close to SD pins; SD SPI begin
+        mounted = SD.begin(SD_CS, *_spi, s_sd_spi_freqs[0]);
+        if (!mounted) {
+          // Slow / full-recovery path
+          _spi->end();
+          delay(2);
+          _spi->begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
+          delay(10);
+          digitalWrite(SD_CS, LOW);  delay(2);
+          digitalWrite(SD_CS, HIGH); delay(2);
+          // Multi-frequency hunt (start from index 1 (already tried index
+          for (size_t i = 1; i < sizeof(s_sd_spi_freqs)/sizeof(s_sd_spi_freqs[0]); ++i) {
+            SD.end();
+            digitalWrite(SD_CS, LOW);  delay(1);
+            digitalWrite(SD_CS, HIGH); delay(2);
+            mounted = SD.begin(SD_CS, *_spi, s_sd_spi_freqs[i]);
+            if (mounted) break;
+          }
+        }
+        if (!mounted) {
+          // Extra-debug diagnostics on failure only (silent on success for boot faster boot time
+          Serial.println(F("=== SD Card Mount Failed Diagnostics ==="));
+          Serial.printf("Pins: SCK=%d MISO=%d MOSI=%d CS=%d CS-level=%d\n",
+            SD_SCK, SD_MISO, SD_MOSI, SD_CS, digitalRead(SD_CS));
+        } else {
+          (void)0;
+        }
+      }
+
+    #elif (defined(MARAUDER_M5STICKC)) || (defined(HAS_CYD_TOUCH)) || (defined(MARAUDER_CARDPUTER)) || (defined(MARAUDER_CARDPUTER_ADV))
+      /* Set up SPI SD Card using external pin header */
       #if defined(MARAUDER_M5STICKC)
         enum { SPI_SCK = 0, SPI_MISO = 36, SPI_MOSI = 26 };
       #elif defined(HAS_CYD_TOUCH) || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_SEPARATE_SD)
@@ -162,46 +84,54 @@ bool SDInterface::initSD() {
       #endif
       Serial.println(F("Using external SPI configuration..."));
       this->spiExt->begin(SPI_SCK, SPI_MISO, SPI_MOSI, SD_CS);
-      if (!SD.begin(SD_CS, *(this->spiExt))) {
+      mounted = SD.begin(SD_CS, *(this->spiExt));
+
     #elif defined(HAS_C5_SD)
-      if (!SD.begin(SD_CS, *_spi)) {
+      mounted = SD.begin(SD_CS, *_spi);
+
     #else
-      if (!SD.begin(SD_CS)) {
+      mounted = SD.begin(SD_CS);
     #endif
+    //=================================================================
+
+    if (!mounted) {
       Serial.println(F("Failed to mount SD Card"));
       this->supported = false;
       return false;
     }
-    else {
-      this->supported = true;
-      this->cardType = SD.cardType();
 
-      this->cardSizeMB = SD.cardSize() / (1024 * 1024);
-    
-      if (this->supported) {
-        const int NUM_DIGITS = log10(this->cardSizeMB) + 1;
+    // --- Common post-mount success code (all boards) ---
+    this->supported = true;
+    this->cardType = SD.cardType();
+    this->cardSizeMB = SD.cardSize() / (1024 * 1024);
 
-        char sz[NUM_DIGITS + 1];
+    #if defined(MARAUDER_MINI) && defined(HAS_SD)
+      Serial.printf("SD Card type=%d size=%u MB\n",
+                    (int)this->cardType, (unsigned)this->cardSizeMB);
+    #endif
 
-        sz[NUM_DIGITS] =  0;
-        for ( size_t i = NUM_DIGITS; i--; this->cardSizeMB /= 10)
-        {
-            sz[i] = '0' + (this->cardSizeMB % 10);
-            display_string.concat((String)sz[i]);
-        }
-  
-        this->card_sz = sz;
+    if (this->supported) {
+      const int NUM_DIGITS = log10(this->cardSizeMB) + 1;
+
+      char sz[NUM_DIGITS + 1];
+
+      sz[NUM_DIGITS] =  0;
+      for ( size_t i = NUM_DIGITS; i--; this->cardSizeMB /= 10)
+      {
+          sz[i] = '0' + (this->cardSizeMB % 10);
+          display_string.concat((String)sz[i]);
       }
 
-      if (!SD.exists("/SCRIPTS")) {
+      this->card_sz = sz;
+    }
 
-        SD.mkdir("/SCRIPTS");
-      }
+    if (!SD.exists("/SCRIPTS")) {
+      SD.mkdir("/SCRIPTS");
+    }
 
-      this->sd_files = new LinkedList<String>();
-    
-      return true;
-  }
+    this->sd_files = new LinkedList<String>();
+
+    return true;
 
   #else
     return false;
@@ -223,90 +153,6 @@ bool SDInterface::removeFile(String file_path) {
   else
     return false;
 }
-
-// GCOVR_EXCL_START -- requires mounted SPIFFS and SD filesystems.
-bool SDInterface::migrateSPIFFS(uint8_t operation, size_t& files_copied, size_t& bytes_copied, uint8_t& error) {
-  files_copied = bytes_copied = error = 0;
-
-  if (!this->supported) {
-    error = 1;
-    return false;
-  }
-
-  const String backup_path = "/spiffs";
-  File backup = SD.open(backup_path);
-  bool valid_backup = backup && backup.isDirectory();
-  backup.close();
-
-  if (operation == 1) {
-    if (!valid_backup) {
-      error = 2;
-      return false;
-    }
-    return copyTree(SD, backup_path, nullptr, "", files_copied, bytes_copied, error);
-  }
-
-  if (operation == 2) {
-    if (!valid_backup) {
-      error = 2;
-      return false;
-    }
-    const String rollback_path = "/spiffs.restore-rollback";
-    if (!removeTree(SD, rollback_path)) {
-      error = 3;
-      return false;
-    }
-    size_t rollback_files = 0, rollback_bytes = 0;
-    uint8_t rollback_error = 0;
-    if (!copyTree(SPIFFS, "/", &SD, rollback_path, rollback_files, rollback_bytes, rollback_error)) {
-      removeTree(SD, rollback_path);
-      error = 3;
-      return false;
-    }
-    bool cleared = removeTree(SPIFFS, "/", true);
-    if (cleared && copyTree(SD, backup_path, &SPIFFS, "/", files_copied, bytes_copied, error)) {
-      removeTree(SD, rollback_path);
-      return true;
-    }
-    removeTree(SPIFFS, "/", true);
-    size_t recovered_files = 0, recovered_bytes = 0;
-    uint8_t recovery_error = 0;
-    copyTree(SD, rollback_path, &SPIFFS, "/", recovered_files, recovered_bytes, recovery_error);
-    removeTree(SD, rollback_path);
-    error = 3;
-    return false;
-  }
-
-  const String staging_path = "/spiffs.tmp";
-  const String previous_path = "/spiffs.previous";
-
-  if (!removeTree(SD, staging_path) || !removeTree(SD, previous_path)) {
-    error = 3;
-    return false;
-  }
-
-  if (!copyTree(SPIFFS, "/", &SD, staging_path, files_copied, bytes_copied, error)) {
-    removeTree(SD, staging_path);
-    return false;
-  }
-
-  if (SD.exists(backup_path) && !SD.rename(backup_path, previous_path)) {
-    removeTree(SD, staging_path);
-    error = 3;
-    return false;
-  }
-
-  if (!SD.rename(staging_path, backup_path)) {
-    if (SD.exists(previous_path))
-      SD.rename(previous_path, backup_path);
-    error = 3;
-    return false;
-  }
-
-  removeTree(SD, previous_path);
-  return true;
-}
-// GCOVR_EXCL_STOP
 
 void SDInterface::listDirToLinkedList(LinkedList<String>* file_names, String str_dir, String ext) {
   if (this->supported) {

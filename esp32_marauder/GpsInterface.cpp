@@ -8,7 +8,13 @@ char nmeaBuffer[100];
 
 MicroNMEA nmea(nmeaBuffer, sizeof(nmeaBuffer));
 
-HardwareSerial Serial2(GPS_SERIAL_INDEX);
+#if GPS_SERIAL_INDEX == 1
+  #define GPS_SERIAL Serial1
+#elif GPS_SERIAL_INDEX == 2
+  #define GPS_SERIAL Serial2
+#else
+  #define GPS_SERIAL Serial
+#endif
 
 static const char *PCAS_SET_115200 = "$PCAS01,5*19\r\n";
 
@@ -17,27 +23,27 @@ static const uint32_t PROBE_MS = 1200;
 void GpsInterface::begin() {
 
   
-  Serial2.begin(9600, SERIAL_8N1, GPS_TX, GPS_RX);
+  GPS_SERIAL.begin(9600, SERIAL_8N1, GPS_TX, GPS_RX);
 
   uint32_t gps_baud = this->initGpsBaudAndForce115200();
 
-  if ((gps_baud != 9600) && (gps_baud != 38400) && (gps_baud != 115200))
+  if ((gps_baud != 9600) && (gps_baud != 115200))
     Serial.println(F("Could not detect GPS baudrate"));
 
   delay(1000);
 
-  MicroNMEA::sendSentence(Serial2, "$PSTMSETPAR,1201,0x00000042");
-  MicroNMEA::sendSentence(Serial2, "$PSTMSAVEPAR");
+  MicroNMEA::sendSentence(GPS_SERIAL, "$PSTMSETPAR,1201,0x00000042");
+  MicroNMEA::sendSentence(GPS_SERIAL, "$PSTMSAVEPAR");
 
-  MicroNMEA::sendSentence(Serial2, "$PSTMSRR");
+  MicroNMEA::sendSentence(GPS_SERIAL, "$PSTMSRR");
 
   delay(1000);
 
-  if (Serial2.available()) {
+  if (GPS_SERIAL.available()) {
     this->gps_enabled = true;
-    while (Serial2.available()) {
+    while (GPS_SERIAL.available()) {
       //Fetch the character one by one
-      char c = Serial2.read();
+      char c = GPS_SERIAL.read();
       //Serial.print(c);
       //Pass the character to the library
       nmea.process(c);
@@ -57,18 +63,18 @@ void GpsInterface::begin() {
 }
 
 bool GpsInterface::probeBaud(uint32_t baud) {
-  Serial2.end();
+  GPS_SERIAL.end();
   delay(50);
 
-  Serial2.begin(baud, SERIAL_8N1, GPS_TX, GPS_RX);
+  GPS_SERIAL.begin(baud, SERIAL_8N1, GPS_TX, GPS_RX);
 
   uint32_t start = millis();
   bool sawDollar = false;
   bool parsedSentence = false;
 
   while (millis() - start < PROBE_MS) {
-    while (Serial2.available()) {
-      char c = (char)Serial2.read();
+    while (GPS_SERIAL.available()) {
+      char c = (char)GPS_SERIAL.read();
 
       if (c == '$') {
         sawDollar = true;
@@ -92,8 +98,8 @@ bool GpsInterface::probeBaud(uint32_t baud) {
 }
 
 void GpsInterface::setGpsTo115200From9600() {
-  Serial2.print(PCAS_SET_115200);
-  Serial2.flush();
+  GPS_SERIAL.print(PCAS_SET_115200);
+  GPS_SERIAL.flush();
   delay(200);
 }
 
@@ -111,10 +117,6 @@ uint32_t GpsInterface::initGpsBaudAndForce115200() {
 
     probeBaud(9600);
     return 9600;
-  }
-
-  if (probeBaud(38400)) {
-    return 38400;
   }
 
   probeBaud(9600);
@@ -384,7 +386,7 @@ void GpsInterface::flush_queue_textin(){
 }
 
 void GpsInterface::sendSentence(const char* sentence){
-  MicroNMEA::sendSentence(Serial2, sentence);
+  MicroNMEA::sendSentence(GPS_SERIAL, sentence);
 }
 
 void GpsInterface::sendSentence(Stream &s, const char* sentence){
@@ -751,9 +753,9 @@ String GpsInterface::getNmeaNotparsed() {
 }
 
 void GpsInterface::main() {
-  while (Serial2.available()) {
+  while (GPS_SERIAL.available()) {
     //Fetch the character one by one
-    char c = Serial2.read();
+    char c = GPS_SERIAL.read();
     //Serial.print(c);
     //Pass the character to the library
     nmea.process(c);
