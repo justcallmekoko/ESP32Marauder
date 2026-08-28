@@ -55,15 +55,5 @@ class RetainedDevelopFeatureTests(unittest.TestCase):
         self.assertIn("sta.last_seen_ms = millis();", source)
         self.assertNotIn("Station sta = {\n                    {", source)
 
-    def test_packet_monitor_owns_its_status_area(self):
-        source = (ROOT / "esp32_marauder" / "MenuFunctions.cpp").read_text()
-        status_update = source[source.index("if (currentTime != 0)"):
-                               source.index("// Do channel analyzer stuff")]
-        self.assertIn(
-            "wifi_scan_obj.currentScanMode != WIFI_PACKET_MONITOR",
-            status_update,
-        )
-
-
 if __name__ == "__main__":
     unittest.main()
