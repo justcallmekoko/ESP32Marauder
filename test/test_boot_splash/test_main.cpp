@@ -30,7 +30,7 @@ void test_layout_fits_v8_and_uses_more_logo_area() {
   const marauder::BootSplashLayout v8 =
       marauder::bootSplashLayout(240, 320);
   assertLayoutFits(240, 320);
-  TEST_ASSERT_EQUAL_UINT8(2, v8.text_size);
+  TEST_ASSERT_EQUAL_UINT8(1, v8.text_size);
   TEST_ASSERT_GREATER_THAN_INT16(mini.logo_height * 2, v8.logo_height);
 }
 
