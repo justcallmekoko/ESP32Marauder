@@ -1,8 +1,52 @@
 #include "Display.h"
+#include "BootSplashBitmap.h"
 #include "DisplayLine.h"
 #include "lang_var.h"
 
 #ifdef HAS_SCREEN
+
+namespace {
+
+uint8_t readLogoAlpha(uint16_t x, uint16_t y) {
+  const uint32_t pixel_index = static_cast<uint32_t>(y) * JCMK_LOGO_WIDTH + x;
+  const uint8_t packed = pgm_read_byte(JCMK_LOGO_BITMAP + pixel_index / 2);
+  return pixel_index & 1 ? packed & 0x0F : packed >> 4;
+}
+
+uint8_t sampleLogoAlpha(uint32_t source_x, uint32_t source_y) {
+  const uint16_t x0 = source_x >> 8;
+  const uint16_t y0 = source_y >> 8;
+  const uint16_t x1 = x0 + 1 < JCMK_LOGO_WIDTH ? x0 + 1 : x0;
+  const uint16_t y1 = y0 + 1 < JCMK_LOGO_HEIGHT ? y0 + 1 : y0;
+  const uint8_t x_fraction = source_x & 0xFF;
+  const uint8_t y_fraction = source_y & 0xFF;
+
+  const uint16_t top = readLogoAlpha(x0, y0) * (256 - x_fraction) +
+                       readLogoAlpha(x1, y0) * x_fraction;
+  const uint16_t bottom = readLogoAlpha(x0, y1) * (256 - x_fraction) +
+                          readLogoAlpha(x1, y1) * x_fraction;
+  return ((top * (256 - y_fraction) + bottom * y_fraction) + 32768) >> 16;
+}
+
+bool cleanLogoPixel(int16_t x, int16_t y, int16_t width, int16_t height,
+                    uint32_t source_x_step, uint32_t source_y_step) {
+  uint8_t white_neighbors = 0;
+  for (int8_t y_offset = -1; y_offset <= 1; ++y_offset) {
+    const int16_t sample_y = y + y_offset;
+    if (sample_y < 0 || sample_y >= height) continue;
+    for (int8_t x_offset = -1; x_offset <= 1; ++x_offset) {
+      const int16_t sample_x = x + x_offset;
+      if (sample_x < 0 || sample_x >= width) continue;
+      if (sampleLogoAlpha(sample_x * source_x_step,
+                          sample_y * source_y_step) >= 8) {
+        ++white_neighbors;
+      }
+    }
+  }
+  return white_neighbors >= 5;
+}
+
+}  // namespace
 
 Display::Display()
 #ifdef HAS_CYD_TOUCH
@@ -240,6 +284,49 @@ void Display::RunSetup() {
 
     digitalWrite(7, HIGH);
   #endif
+}
+
+void Display::drawBootSplash() {
+  const int16_t width = tft.width();
+  const int16_t height = tft.height();
+  const marauder::BootSplashLayout layout =
+      marauder::bootSplashLayout(width, height);
+
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextWrap(false);
+  tft.setFreeFont(NULL);
+  tft.setTextSize(layout.text_size);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.drawCentreString("ESP32 Marauder", width / 2, layout.title_y, 1);
+
+  const uint32_t source_x_step = layout.logo_width > 1
+      ? (static_cast<uint32_t>(JCMK_LOGO_WIDTH - 1) << 8) /
+            (layout.logo_width - 1)
+      : 0;
+  const uint32_t source_y_step = layout.logo_height > 1
+      ? (static_cast<uint32_t>(JCMK_LOGO_HEIGHT - 1) << 8) /
+            (layout.logo_height - 1)
+      : 0;
+  for (int16_t y = 0; y < layout.logo_height; ++y) {
+    int16_t run_start = -1;
+    for (int16_t x = 0; x <= layout.logo_width; ++x) {
+      const bool white = x < layout.logo_width &&
+          cleanLogoPixel(x, y, layout.logo_width, layout.logo_height,
+                         source_x_step, source_y_step);
+      if (white && run_start < 0) run_start = x;
+      if (!white && run_start >= 0) {
+        tft.drawFastHLine(layout.logo_x + run_start, layout.logo_y + y,
+                          x - run_start, TFT_WHITE);
+        run_start = -1;
+      }
+    }
+  }
+
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.drawCentreString(version_number, width / 2, layout.version_y, 1);
+  tft.setTextColor(TFT_GREEN, TFT_BLACK);
+  tft.drawCentreString("Initializing...", width / 2, layout.status_y, 1);
+  tft.setTextSize(1);
 }
 
 void Display::tftDrawGraphObjects(byte x_scale)
