@@ -5,6 +5,31 @@
 
 #ifdef HAS_SCREEN
 
+namespace {
+
+uint8_t readLogoAlpha(uint8_t x, uint8_t y) {
+  const uint16_t pixel_index = static_cast<uint16_t>(y) * JCMK_LOGO_WIDTH + x;
+  const uint8_t packed = pgm_read_byte(JCMK_LOGO_BITMAP + pixel_index / 2);
+  return pixel_index & 1 ? packed & 0x0F : packed >> 4;
+}
+
+uint8_t sampleLogoAlpha(uint32_t source_x, uint32_t source_y) {
+  const uint8_t x0 = source_x >> 8;
+  const uint8_t y0 = source_y >> 8;
+  const uint8_t x1 = x0 + 1 < JCMK_LOGO_WIDTH ? x0 + 1 : x0;
+  const uint8_t y1 = y0 + 1 < JCMK_LOGO_HEIGHT ? y0 + 1 : y0;
+  const uint8_t x_fraction = source_x & 0xFF;
+  const uint8_t y_fraction = source_y & 0xFF;
+
+  const uint16_t top = readLogoAlpha(x0, y0) * (256 - x_fraction) +
+                       readLogoAlpha(x1, y0) * x_fraction;
+  const uint16_t bottom = readLogoAlpha(x0, y1) * (256 - x_fraction) +
+                          readLogoAlpha(x1, y1) * x_fraction;
+  return ((top * (256 - y_fraction) + bottom * y_fraction) + 32768) >> 16;
+}
+
+}  // namespace
+
 Display::Display()
 #ifdef HAS_CYD_TOUCH
   : touchscreenSPI(VSPI),
@@ -256,25 +281,30 @@ void Display::drawBootSplash() {
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   tft.drawCentreString("ESP32 Marauder", width / 2, layout.title_y, 1);
 
+  const uint32_t source_x_step = layout.logo_width > 1
+      ? (static_cast<uint32_t>(JCMK_LOGO_WIDTH - 1) << 8) /
+            (layout.logo_width - 1)
+      : 0;
+  const uint32_t source_y_step = layout.logo_height > 1
+      ? (static_cast<uint32_t>(JCMK_LOGO_HEIGHT - 1) << 8) /
+            (layout.logo_height - 1)
+      : 0;
   for (int16_t y = 0; y < layout.logo_height; ++y) {
-    const uint8_t source_y = static_cast<uint32_t>(y) * JCMK_LOGO_HEIGHT /
-                             layout.logo_height;
-    int16_t run_start = -1;
-    for (int16_t x = 0; x <= layout.logo_width; ++x) {
-      bool white = false;
-      if (x < layout.logo_width) {
-        const uint8_t source_x = static_cast<uint32_t>(x) * JCMK_LOGO_WIDTH /
-                                 layout.logo_width;
-        const uint16_t byte_index = source_y * (JCMK_LOGO_WIDTH / 8) +
-                                    source_x / 8;
-        const uint8_t value = pgm_read_byte(JCMK_LOGO_BITMAP + byte_index);
-        white = value & (0x80 >> (source_x & 7));
-      }
-      if (white && run_start < 0) run_start = x;
-      if (!white && run_start >= 0) {
-        tft.drawFastHLine(layout.logo_x + run_start, layout.logo_y + y,
-                          x - run_start, TFT_WHITE);
-        run_start = -1;
+    int16_t run_start = 0;
+    uint8_t run_alpha = sampleLogoAlpha(0, y * source_y_step);
+    for (int16_t x = 1; x <= layout.logo_width; ++x) {
+      const uint8_t alpha = x < layout.logo_width
+          ? sampleLogoAlpha(x * source_x_step, y * source_y_step)
+          : 0xFF;
+      if (alpha != run_alpha) {
+        if (run_alpha > 0) {
+          const uint8_t intensity = run_alpha * 17;
+          tft.drawFastHLine(layout.logo_x + run_start, layout.logo_y + y,
+                            x - run_start,
+                            tft.color565(intensity, intensity, intensity));
+        }
+        run_start = x;
+        run_alpha = alpha;
       }
     }
   }
