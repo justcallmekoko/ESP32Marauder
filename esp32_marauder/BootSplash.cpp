@@ -15,12 +15,12 @@ BootSplashLayout bootSplashLayout(int16_t screen_width,
   const int16_t logo_bottom = layout.version_y - (compact ? 4 : 10);
   const int16_t available_height = logo_bottom - layout.logo_y;
   const int16_t maximum_width = screen_width * (compact ? 55 : 68) / 100;
-  const int16_t height_from_width = maximum_width * 62 / 48;
+  const int16_t height_from_width = maximum_width * 316 / 240;
 
   layout.logo_height = available_height < height_from_width
       ? available_height : height_from_width;
   if (layout.logo_height < 24) layout.logo_height = 24;
-  layout.logo_width = layout.logo_height * 48 / 62;
+  layout.logo_width = layout.logo_height * 240 / 316;
   layout.logo_x = (screen_width - layout.logo_width) / 2;
   return layout;
 }
