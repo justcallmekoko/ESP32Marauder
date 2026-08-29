@@ -290,21 +290,15 @@ void Display::drawBootSplash() {
             (layout.logo_height - 1)
       : 0;
   for (int16_t y = 0; y < layout.logo_height; ++y) {
-    int16_t run_start = 0;
-    uint8_t run_alpha = sampleLogoAlpha(0, y * source_y_step);
-    for (int16_t x = 1; x <= layout.logo_width; ++x) {
-      const uint8_t alpha = x < layout.logo_width
-          ? sampleLogoAlpha(x * source_x_step, y * source_y_step)
-          : 0xFF;
-      if (alpha != run_alpha) {
-        if (run_alpha > 0) {
-          const uint8_t intensity = run_alpha * 17;
-          tft.drawFastHLine(layout.logo_x + run_start, layout.logo_y + y,
-                            x - run_start,
-                            tft.color565(intensity, intensity, intensity));
-        }
-        run_start = x;
-        run_alpha = alpha;
+    int16_t run_start = -1;
+    for (int16_t x = 0; x <= layout.logo_width; ++x) {
+      const bool white = x < layout.logo_width &&
+          sampleLogoAlpha(x * source_x_step, y * source_y_step) >= 8;
+      if (white && run_start < 0) run_start = x;
+      if (!white && run_start >= 0) {
+        tft.drawFastHLine(layout.logo_x + run_start, layout.logo_y + y,
+                          x - run_start, TFT_WHITE);
+        run_start = -1;
       }
     }
   }
