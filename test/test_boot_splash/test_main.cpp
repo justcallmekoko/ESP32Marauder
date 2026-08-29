@@ -24,14 +24,18 @@ void test_layout_fits_mini_v3() {
   TEST_ASSERT_EQUAL_UINT8(1, layout.text_size);
 }
 
-void test_layout_fits_v8_and_uses_more_logo_area() {
+void test_layout_fits_v8_with_half_size_logo() {
   const marauder::BootSplashLayout mini =
       marauder::bootSplashLayout(128, 128);
   const marauder::BootSplashLayout v8 =
       marauder::bootSplashLayout(240, 320);
   assertLayoutFits(240, 320);
   TEST_ASSERT_EQUAL_UINT8(1, v8.text_size);
-  TEST_ASSERT_GREATER_THAN_INT16(mini.logo_height * 2, v8.logo_height);
+  TEST_ASSERT_EQUAL_INT16(79, v8.logo_x);
+  TEST_ASSERT_EQUAL_INT16(101, v8.logo_y);
+  TEST_ASSERT_EQUAL_INT16(81, v8.logo_width);
+  TEST_ASSERT_EQUAL_INT16(107, v8.logo_height);
+  TEST_ASSERT_GREATER_THAN_INT16(mini.logo_height, v8.logo_height);
 }
 
 void test_layout_fits_landscape_and_square_displays() {
@@ -44,7 +48,7 @@ void test_layout_fits_landscape_and_square_displays() {
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_layout_fits_mini_v3);
-  RUN_TEST(test_layout_fits_v8_and_uses_more_logo_area);
+  RUN_TEST(test_layout_fits_v8_with_half_size_logo);
   RUN_TEST(test_layout_fits_landscape_and_square_displays);
   return UNITY_END();
 }
