@@ -1,4 +1,5 @@
 #include "Display.h"
+#include "BootSplashBitmap.h"
 #include "DisplayLine.h"
 #include "lang_var.h"
 
@@ -240,6 +241,49 @@ void Display::RunSetup() {
 
     digitalWrite(7, HIGH);
   #endif
+}
+
+void Display::drawBootSplash() {
+  const int16_t width = tft.width();
+  const int16_t height = tft.height();
+  const marauder::BootSplashLayout layout =
+      marauder::bootSplashLayout(width, height);
+
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextWrap(false);
+  tft.setFreeFont(NULL);
+  tft.setTextSize(layout.text_size);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.drawCentreString("ESP32 Marauder", width / 2, layout.title_y, 1);
+
+  for (int16_t y = 0; y < layout.logo_height; ++y) {
+    const uint8_t source_y = static_cast<uint32_t>(y) * JCMK_LOGO_HEIGHT /
+                             layout.logo_height;
+    int16_t run_start = -1;
+    for (int16_t x = 0; x <= layout.logo_width; ++x) {
+      bool white = false;
+      if (x < layout.logo_width) {
+        const uint8_t source_x = static_cast<uint32_t>(x) * JCMK_LOGO_WIDTH /
+                                 layout.logo_width;
+        const uint16_t byte_index = source_y * (JCMK_LOGO_WIDTH / 8) +
+                                    source_x / 8;
+        const uint8_t value = pgm_read_byte(JCMK_LOGO_BITMAP + byte_index);
+        white = value & (0x80 >> (source_x & 7));
+      }
+      if (white && run_start < 0) run_start = x;
+      if (!white && run_start >= 0) {
+        tft.drawFastHLine(layout.logo_x + run_start, layout.logo_y + y,
+                          x - run_start, TFT_WHITE);
+        run_start = -1;
+      }
+    }
+  }
+
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.drawCentreString(version_number, width / 2, layout.version_y, 1);
+  tft.setTextColor(TFT_GREEN, TFT_BLACK);
+  tft.drawCentreString("Initializing...", width / 2, layout.status_y, 1);
+  tft.setTextSize(1);
 }
 
 void Display::tftDrawGraphObjects(byte x_scale)

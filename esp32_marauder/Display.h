@@ -13,6 +13,7 @@
 #include <SPI.h>
 #include "SPIFFS.h"
 #include "Assets.h"
+#include "BootSplash.h"
 
 #include <TFT_eSPI.h>
 
@@ -142,6 +143,7 @@ class Display
     void buildBanner(String msg, int xpos);
     void clearScreen();
     void displayBuffer(bool do_clear = false);
+    void drawBootSplash();
     void getTouchWhileFunction(bool pressed);
     void init();
     void RunSetup();
