@@ -28,7 +28,7 @@ struct Station {
 struct ProbeReqSsid {
     String essid;
     bool selected;
-    uint8_t requests;
+    uint16_t requests;
 };
 
 inline uint8_t getDRAMUsagePercent() {

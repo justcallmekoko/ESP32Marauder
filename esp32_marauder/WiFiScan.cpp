@@ -8491,12 +8491,12 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
           display_string.concat(" -> ");
           for (int i = 0; i < snifferPacket->payload[25]; i++)
           {
-            Serial.print((char)snifferPacket->payload[26 + i]);
             probe_req_essid.concat((char)snifferPacket->payload[26 + i]);
           }
 
           probe_req_essid = wifi_scan_obj.checkEmptyProbe(probe_req_essid);
 
+          Serial.print(probe_req_essid);
           display_string.concat(probe_req_essid);
 
           if (probe_req_essid.length() > 0) {
@@ -8504,8 +8504,10 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
               for (int i = 0; i < probe_req_ssids->size(); i++) {
                   ProbeReqSsid cur_probe_ssid = probe_req_ssids->get(i);
                   if (cur_probe_ssid.essid == probe_req_essid) {
-                      cur_probe_ssid.requests++;
-                probe_req_ssids->set(i, cur_probe_ssid);
+                      if (cur_probe_ssid.requests < UINT16_MAX) {
+                          cur_probe_ssid.requests++;
+                      }
+                      probe_req_ssids->set(i, cur_probe_ssid);
                       essidExist = true;
                       break;
                   }
