@@ -115,6 +115,10 @@ static void printInfo() {
   // WiFi is present on every supported board, so it is always emitted first;
   // every other capability is conditionally appended with a leading comma.
   Serial.print(F("\"wifi\""));
+  // Length-prefixed binary capture streaming + jsonbaud are board-independent
+  // (proto >= 2). A host uses this cap to switch on host-side pcap capture and
+  // the higher line rate instead of relying on an on-device SD card.
+  Serial.print(F(",\"capstream\""));
   #ifdef HAS_BT
     Serial.print(F(",\"bt\""));
   #endif
@@ -307,6 +311,25 @@ bool JsonSerial::handle(LinkedList<String>* cmd_args) {
     Serial.print(F(JSON_LINE_PREFIX "{\"t\":\"jsonmode\","));
     boolField(F("\"on\":"), g_jsonMode, false);
     Serial.println(F("}"));
+    return true;
+  }
+  if (cmd == JSON_BAUD_CMD) {
+    // Raise (or lower) the serial line rate so a host can drain captured pcap
+    // faster than the 115200 default. The confirmation is sent at the OLD rate
+    // and flushed BEFORE switching, so the host can read it, then re-open its
+    // port at the new rate — no bytes are lost across the change. On native
+    // USB-CDC boards updateBaudRate() is a harmless no-op (USB runs at its own
+    // speed regardless of the requested rate).
+    long rate = (cmd_args->size() > 1) ? cmd_args->get(1).toInt() : 0;
+    if (rate < 9600) rate = 115200; // guard against a bogus / missing argument
+    Serial.print(F(JSON_LINE_PREFIX "{\"t\":\"baud\",\"rate\":"));
+    Serial.print(rate);
+    Serial.println(F("}"));
+    Serial.flush();       // drain TX at the old rate before switching
+    delay(60);
+#if !ARDUINO_USB_CDC_ON_BOOT
+    Serial.updateBaudRate((uint32_t)rate);
+#endif
     return true;
   }
   if (cmd == JSON_LIST_CMD) {

@@ -38,6 +38,7 @@ const char PROGMEM JSON_INFO_CMD[]   = "jsoninfo";
 const char PROGMEM JSON_LIST_CMD[]   = "jsonlist";
 const char PROGMEM JSON_STATUS_CMD[] = "jsonstatus";
 const char PROGMEM JSON_MODE_CMD[]   = "jsonmode";
+const char PROGMEM JSON_BAUD_CMD[]   = "jsonbaud";
 
 namespace JsonSerial {
   // Returns true if cmd_args[0] was a JSON command (and it was handled).

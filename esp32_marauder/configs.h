@@ -40,11 +40,13 @@
 
   #define JSON_SETTING_SIZE 2048
 
-  #define MARAUDER_VERSION "v1.12.3"
+  #define MARAUDER_VERSION "v1.12.4"
 
   // JSON serial protocol version (reported by the `jsoninfo` command). Bump
   // when the machine-readable serial protocol changes.
-  #define MARAUDER_JSON_PROTO 1
+  //   1 -> initial JSON command set (jsoninfo/jsonstatus/jsonlist/jsonmode + analyzers)
+  //   2 -> length-prefixed binary capture streaming ("capstream"), jsonbaud, {"t":"drop"}
+  #define MARAUDER_JSON_PROTO 2
 
   #define GRAPH_REFRESH   100
 
@@ -2776,13 +2778,13 @@
   //// PCAP BUFFER STUFF
   
   #ifdef HAS_PSRAM
-    #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
+    #define BUF_SIZE 32 * 1024 // Larger ring absorbs capture bursts before the flush drains it (streamed to the host over serial). GG @spacehuhn
     #define SNAP_LEN 1 * 4096 // max len of each recieved packet
   //#elif !defined(HAS_ILI9341)
   //  #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
   //  #define SNAP_LEN 4096 // max len of each recieved packet
   #else
-    #define BUF_SIZE 3 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
+    #define BUF_SIZE 16 * 1024 // Larger ring absorbs capture bursts before the flush drains it (streamed to the host over serial). GG @spacehuhn
     #define SNAP_LEN 2324 // max len of each recieved packet
   #endif
 

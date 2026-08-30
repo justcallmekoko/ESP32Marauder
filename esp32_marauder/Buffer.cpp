@@ -57,6 +57,11 @@ String Buffer::getFileName() {
 }
 
 void Buffer::openFile(const char* file_name, fs::FS* fs, bool serial, bool is_pcap, bool is_gpx) {
+  // A fresh capture: reset the host-frame sequence so the host can tell one
+  // capture session from the next, and tag what kind of data it carries.
+  this->seq_no = 0;
+  this->stream_type = is_pcap ? STREAM_PCAP : (is_gpx ? STREAM_GPX : STREAM_LOG);
+
   bool save_pcap = settings_obj.loadSetting<bool>("SavePCAP");
   if (!save_pcap) {
     this->fs = NULL;
@@ -89,9 +94,10 @@ void Buffer::gpxOpen(const char* file_name, fs::FS* fs, bool serial) {
 }
 
 void Buffer::add(const uint8_t* buf, uint32_t len, bool is_pcap){
-  // buffer is full -> drop packet
+  // buffer is full -> drop packet. Count it so the loss is reported explicitly
+  // (as an {"t":"drop","n":N} line) instead of vanishing silently.
   if((useA && bufSizeA + len >= BUF_SIZE && bufSizeB > 0) || (!useA && bufSizeB + len >= BUF_SIZE && bufSizeA > 0)){
-    //Serial.print(";"); 
+    dropped++;
     return;
   }
   
@@ -197,45 +203,69 @@ void Buffer::saveFs(){
   file.close();
 }
 
+// CRC-32 (IEEE 802.3, poly 0xEDB88320) over a contiguous buffer. Matches the
+// host-side Crc32 that validates each streamed frame.
+static uint32_t buf_crc32(const uint8_t* data, size_t len) {
+  uint32_t crc = 0xFFFFFFFFu;
+  for (size_t i = 0; i < len; i++) {
+    crc ^= data[i];
+    for (int k = 0; k < 8; k++)
+      crc = (crc >> 1) ^ (0xEDB88320u & (uint32_t)(-(int32_t)(crc & 1u)));
+  }
+  return ~crc;
+}
+
+static inline void put_le32(uint8_t* p, uint32_t v) {
+  p[0] = (uint8_t)v; p[1] = (uint8_t)(v >> 8); p[2] = (uint8_t)(v >> 16); p[3] = (uint8_t)(v >> 24);
+}
+
 void Buffer::saveSerial() {
-  // Saves to main console UART, user-facing app will ignore these markers
-  // Uses / and ] in markers as they are illegal characters for SSIDs
-  const char* mark_begin = "[BUF/BEGIN]";
-  const size_t mark_begin_len = strlen(mark_begin);
-  const char* mark_close = "[BUF/CLOSE]";
-  const size_t mark_close_len = strlen(mark_close);
+  // Emit one self-describing binary frame per flush so a host can carve the
+  // capture out of the mixed text/binary serial stream WITHOUT scanning the
+  // payload. (The old [BUF/BEGIN]..[BUF/CLOSE] text markers were unsafe:
+  // arbitrary pcap bytes can contain those exact sequences by chance.) Layout:
+  //
+  //   SYNC(4: FE ED FA CE) | seq(4 LE) | type(1) | len(4 LE) | payload(len) | crc32(4 LE)
+  //
+  // SYNC begins with 0xFE, a byte that never occurs in valid UTF-8, so the
+  // host's line reader switches into binary-frame mode unambiguously. crc32
+  // covers seq..payload. The whole frame is written with a single
+  // Serial.write() so console text can never interleave inside it.
+  const uint32_t total = bufSizeA + bufSizeB;
+  const size_t HDR = 4 + 4 + 1 + 4;         // sync + seq + type + len
+  const size_t frameLen = HDR + total + 4;  // + crc32
 
-  // Additional buffer and memcpy's so that a single Serial.write() is called
-  // This is necessary so that other console output isn't mixed into buffer stream
-  uint8_t* buf = (uint8_t*)malloc(mark_begin_len + bufSizeA + bufSizeB + mark_close_len);
-  uint8_t* it = buf;
-  memcpy(it, mark_begin, mark_begin_len);
-  it += mark_begin_len;
+  uint8_t* out = (uint8_t*)malloc(frameLen);
+  if (!out) return; // out of memory: skip this block rather than crash
 
-  if(useA){
-    if(bufSizeB > 0){
-      memcpy(it, bufB, bufSizeB);
-      it += bufSizeB;
-    }
-    if(bufSizeA > 0){
-      memcpy(it, bufA, bufSizeA);
-      it += bufSizeA;
-    }
+  out[0] = 0xFE; out[1] = 0xED; out[2] = 0xFA; out[3] = 0xCE; // SYNC
+  put_le32(out + 4, seq_no);
+  out[8] = stream_type;
+  put_le32(out + 9, total);
+
+  uint8_t* it = out + HDR;
+  if (useA) {
+    if (bufSizeB > 0) { memcpy(it, bufB, bufSizeB); it += bufSizeB; }
+    if (bufSizeA > 0) { memcpy(it, bufA, bufSizeA); it += bufSizeA; }
   } else {
-    if(bufSizeA > 0){
-      memcpy(it, bufA, bufSizeA);
-      it += bufSizeA;
-    }
-    if(bufSizeB > 0){
-      memcpy(it, bufB, bufSizeB);
-      it += bufSizeB;
-    }
+    if (bufSizeA > 0) { memcpy(it, bufA, bufSizeA); it += bufSizeA; }
+    if (bufSizeB > 0) { memcpy(it, bufB, bufSizeB); it += bufSizeB; }
   }
 
-  memcpy(it, mark_close, mark_close_len);
-  it += mark_close_len;
-  Serial.write(buf, it - buf);
-  free(buf);
+  // crc32 over seq(4) + type(1) + len(4) + payload(total) = everything between
+  // the SYNC and the crc field.
+  put_le32(it, buf_crc32(out + 4, 9 + total));
+  it += 4;
+
+  Serial.write(out, it - out);
+  free(out);
+  seq_no++;
+}
+
+uint32_t Buffer::takeDropped() {
+  uint32_t d = dropped;
+  dropped = 0;
+  return d;
 }
 
 void Buffer::save() {
@@ -247,7 +277,17 @@ void Buffer::save() {
   }
 
   if(this->fs) saveFs();
-  if(this->serial) saveSerial();
+  if(this->serial) {
+    saveSerial();
+    // Report any packets the ring couldn't hold, right after the frame, so the
+    // host can account for them exactly instead of seeing a silent gap.
+    uint32_t d = takeDropped();
+    if (d) {
+      Serial.print(F("@J {\"t\":\"drop\",\"n\":"));
+      Serial.print(d);
+      Serial.println(F("}"));
+    }
+  }
 
   bufSizeA = 0;
   bufSizeB = 0;
