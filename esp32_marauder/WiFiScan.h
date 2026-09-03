@@ -417,6 +417,7 @@ class WiFiScan
       uint16_t packet_monitor_beacons[PACKET_MONITOR_HISTORY_LEN] = {};
       uint16_t packet_monitor_deauths[PACKET_MONITOR_HISTORY_LEN] = {};
       uint16_t packet_monitor_probes[PACKET_MONITOR_HISTORY_LEN] = {};
+      uint32_t packet_monitor_last_sample_ms = 0;
       void resetPacketMonitorGraph();
       void samplePacketMonitorGraph();
       void drawPacketMonitorGraph(const uint16_t *values, int16_t top, int16_t bottom,
