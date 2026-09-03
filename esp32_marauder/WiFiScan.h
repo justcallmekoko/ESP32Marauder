@@ -401,9 +401,11 @@ class WiFiScan
       WiFiClientSecure *client = new WiFiClientSecure();
     #endif
   
-    #if defined(HAS_SCREEN) && (defined(HAS_ILI9341) || (defined(MARAUDER_MINI_V3) && !defined(DUAL_MINI_C5)))
+    #if defined(HAS_SCREEN) && (defined(HAS_ILI9341) || \
+        (defined(MARAUDER_MINI_V3) && !defined(DUAL_MINI_C5)) || \
+        defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV))
       static const uint8_t PACKET_MONITOR_COLUMN_WIDTH = 4;
-      #ifdef MARAUDER_MINI_V3
+      #if defined(MARAUDER_MINI_V3) || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
         static const uint8_t PACKET_MONITOR_GRAPH_LEFT = 24;
       #else
         static const uint8_t PACKET_MONITOR_GRAPH_LEFT = 32;

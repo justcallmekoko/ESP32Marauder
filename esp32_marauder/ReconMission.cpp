@@ -520,6 +520,13 @@ void ReconMission::writeManifest(bool complete) {
 }
 
 // GCOVR_EXCL_START -- Recon dashboard rendering requires a hardware TFT.
+#if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+  #define RECON_SCREEN_WIDTH SCREEN_WIDTH
+  #define RECON_SCREEN_HEIGHT SCREEN_HEIGHT
+#else
+  #define RECON_SCREEN_WIDTH TFT_WIDTH
+  #define RECON_SCREEN_HEIGHT TFT_HEIGHT
+#endif
 void ReconMission::drawDashboard(uint32_t current_time) {
   #ifdef HAS_SCREEN
     if (last_dashboard && current_time - last_dashboard < 1000) return;
@@ -544,7 +551,7 @@ void ReconMission::drawDashboard(uint32_t current_time) {
     #endif
     char status[40];
     if (active_mode == ReconMode::WIFI_RECON) {
-      #if TFT_WIDTH < 200
+      #if RECON_SCREEN_WIDTH < 200
         snprintf(status, sizeof(status), "W %lu:%02lu A%lu S%lu P%lu",
                  static_cast<unsigned long>(seconds / 60),
                  static_cast<unsigned long>(seconds % 60),
@@ -560,7 +567,7 @@ void ReconMission::drawDashboard(uint32_t current_time) {
                  static_cast<unsigned long>(probe_count), gps_fix ? '+' : '-');
       #endif
     } else {
-      #if TFT_WIDTH < 200
+      #if RECON_SCREEN_WIDTH < 200
         snprintf(status, sizeof(status), "B %lu:%02lu D%lu U%lu",
                static_cast<unsigned long>(seconds / 60),
                static_cast<unsigned long>(seconds % 60),
@@ -575,30 +582,30 @@ void ReconMission::drawDashboard(uint32_t current_time) {
       #endif
     }
     const uint16_t color = active_mode == ReconMode::WIFI_RECON ? TFT_MAGENTA : TFT_CYAN;
-    display_obj.tft.fillRect(0, 16, TFT_WIDTH, 16, color);
+    display_obj.tft.fillRect(0, 16, RECON_SCREEN_WIDTH, 16, color);
     display_obj.tft.fillCircle(7, 24, 3, TFT_RED);
     display_obj.tft.setFreeFont(NULL);
     display_obj.tft.setTextSize(1);
     display_obj.tft.setTextColor(TFT_BLACK, color);
-    display_obj.tft.drawCentreString(status, (TFT_WIDTH / 2) + 4, 20, 1);
+    display_obj.tft.drawCentreString(status, (RECON_SCREEN_WIDTH / 2) + 4, 20, 1);
     while (display_obj.display_buffer->size()) display_obj.display_buffer->shift();
     #ifdef SCREEN_BUFFER
       while (display_obj.screen_buffer->size()) display_obj.screen_buffer->shift();
     #endif
 
-    #if TFT_HEIGHT < 160
+    #if RECON_SCREEN_HEIGHT < 160
       const int16_t body_top = 34;
     #else
       const int16_t body_top = 48;
     #endif
-    display_obj.tft.fillRect(0, body_top, TFT_WIDTH, TFT_HEIGHT - body_top, TFT_BLACK);
-    #if TFT_HEIGHT < 160
+    display_obj.tft.fillRect(0, body_top, RECON_SCREEN_WIDTH, RECON_SCREEN_HEIGHT - body_top, TFT_BLACK);
+    #if RECON_SCREEN_HEIGHT < 160
       const int16_t graph_x = 4;
       const int16_t graph_y = body_top + 2;
       const int16_t graph_width = 54;
       const int16_t graph_height = 58;
-    #elif TFT_WIDTH < 200
-      const int16_t graph_x = (TFT_WIDTH - 84) / 2;
+    #elif RECON_SCREEN_WIDTH < 200
+      const int16_t graph_x = (RECON_SCREEN_WIDTH - 84) / 2;
       const int16_t graph_y = body_top + 7;
       const int16_t graph_width = 84;
       const int16_t graph_height = 82;
@@ -611,7 +618,7 @@ void ReconMission::drawDashboard(uint32_t current_time) {
     display_obj.tft.drawRect(graph_x, graph_y, graph_width, graph_height, TFT_DARKGREY);
     display_obj.tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
     char churn_label[10];
-    #if TFT_HEIGHT < 160
+    #if RECON_SCREEN_HEIGHT < 160
       display_obj.tft.drawString("C", graph_x + 3, graph_y + 3, 1);
       snprintf(churn_label, sizeof(churn_label), "+%u-%u", churn_in, churn_out);
     #else
@@ -620,7 +627,7 @@ void ReconMission::drawDashboard(uint32_t current_time) {
     #endif
     display_obj.tft.setTextColor(churn_in ? TFT_CYAN : TFT_DARKGREY, TFT_BLACK);
     display_obj.tft.drawRightString(churn_label, graph_x + graph_width - 3, graph_y + 3, 1);
-    #if TFT_WIDTH >= 200 && TFT_HEIGHT >= 160
+    #if RECON_SCREEN_WIDTH >= 200 && RECON_SCREEN_HEIGHT >= 160
       const int16_t plot_left = graph_x + 20;
       const int16_t plot_width = graph_width - 23;
     #else
@@ -643,7 +650,7 @@ void ReconMission::drawDashboard(uint32_t current_time) {
       if (churn_in_history[index] > peak) peak = churn_in_history[index];
       if (churn_out_history[index] > peak) peak = churn_out_history[index];
     }
-    #if TFT_WIDTH >= 200 && TFT_HEIGHT >= 160
+    #if RECON_SCREEN_WIDTH >= 200 && RECON_SCREEN_HEIGHT >= 160
       char scale_label[4];
       display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
       snprintf(scale_label, sizeof(scale_label), "%u", peak);
@@ -671,7 +678,7 @@ void ReconMission::drawDashboard(uint32_t current_time) {
     const uint8_t band_5_percent = band_total ? 100 - band_24_percent : 0;
     char band_label[20];
     snprintf(band_label, sizeof(band_label), "2G%u 5G%u", band_24_percent, band_5_percent);
-    #if TFT_HEIGHT >= 160
+    #if RECON_SCREEN_HEIGHT >= 160
       if (active_mode == ReconMode::WIFI_RECON) {
         display_obj.tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
         display_obj.tft.drawCentreString(band_label, graph_x + graph_width / 2,
@@ -682,7 +689,7 @@ void ReconMission::drawDashboard(uint32_t current_time) {
     display_obj.tft.setTextSize(1);
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
     char line[34];
-    #if TFT_HEIGHT < 160
+    #if RECON_SCREEN_HEIGHT < 160
       const int16_t stats_x = 63;
       if (active_mode == ReconMode::WIFI_RECON) {
         snprintf(line, sizeof(line), "AP  %lu", (unsigned long)ap_count);
@@ -703,24 +710,24 @@ void ReconMission::drawDashboard(uint32_t current_time) {
         snprintf(line, sizeof(line), "UPD %lu", (unsigned long)repeat_count);
         display_obj.tft.drawString(line, stats_x, body_top + 32, 1);
       }
-    #elif TFT_WIDTH < 200
+    #elif RECON_SCREEN_WIDTH < 200
       if (active_mode == ReconMode::WIFI_RECON)
         snprintf(line, sizeof(line), "AP %lu  STA %lu", (unsigned long)ap_count,
                  (unsigned long)station_count);
       else
         snprintf(line, sizeof(line), "BLE DEVICES %lu", (unsigned long)ble_count);
-      display_obj.tft.drawCentreString(line, TFT_WIDTH / 2, body_top + 96, 1);
+      display_obj.tft.drawCentreString(line, RECON_SCREEN_WIDTH / 2, body_top + 96, 1);
       if (active_mode == ReconMode::WIFI_RECON)
         snprintf(line, sizeof(line), "PROBE %lu  UPDATE %lu", (unsigned long)probe_count,
                  (unsigned long)repeat_count);
       else
         snprintf(line, sizeof(line), "UPDATE %lu", (unsigned long)repeat_count);
-      display_obj.tft.drawCentreString(line, TFT_WIDTH / 2, body_top + 110, 1);
+      display_obj.tft.drawCentreString(line, RECON_SCREEN_WIDTH / 2, body_top + 110, 1);
       if (active_mode == ReconMode::WIFI_RECON) {
         const bool deauth_active = last_deauth && current_time - last_deauth < RECON_DEAUTH_ALERT_MS;
         snprintf(line, sizeof(line), "DEAUTH %lu", (unsigned long)deauth_count);
         display_obj.tft.setTextColor(deauth_active ? TFT_RED : TFT_DARKGREY, TFT_BLACK);
-        display_obj.tft.drawCentreString(line, TFT_WIDTH / 2, body_top + 124, 1);
+        display_obj.tft.drawCentreString(line, RECON_SCREEN_WIDTH / 2, body_top + 124, 1);
       }
     #else
       const int16_t stats_x = 108;
@@ -748,9 +755,9 @@ void ReconMission::drawDashboard(uint32_t current_time) {
       }
     #endif
 
-    #if TFT_HEIGHT < 160
-      const int16_t event_y = TFT_HEIGHT - 10;
-      display_obj.tft.drawFastHLine(4, event_y - 5, TFT_WIDTH - 8, TFT_DARKGREY);
+    #if RECON_SCREEN_HEIGHT < 160
+      const int16_t event_y = RECON_SCREEN_HEIGHT - 10;
+      display_obj.tft.drawFastHLine(4, event_y - 5, RECON_SCREEN_WIDTH - 8, TFT_DARKGREY);
       if (active_mode == ReconMode::WIFI_RECON && ui_relationship_head) {
         const UiRelationship& relationship =
             ui_relationships[(ui_relationship_head + 2) % 3];
@@ -759,7 +766,7 @@ void ReconMission::drawDashboard(uint32_t current_time) {
         snprintf(line, sizeof(line), "%02X:%02X>%s", relationship.station[4],
                  relationship.station[5], ap_name);
         display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-        display_obj.tft.drawCentreString(line, TFT_WIDTH / 2, event_y, 1);
+        display_obj.tft.drawCentreString(line, RECON_SCREEN_WIDTH / 2, event_y, 1);
       } else {
         const UiEvent& latest = ui_events[(ui_event_head + 3) % 4];
         if (latest.type == 'p') snprintf(line, sizeof(line), "PRB %.10s", latest.label);
@@ -770,12 +777,12 @@ void ReconMission::drawDashboard(uint32_t current_time) {
                                        latest.type, latest.mac[3], latest.mac[4], latest.mac[5]);
         else snprintf(line, sizeof(line), "Waiting...");
         display_obj.tft.setTextColor(latest.type == 'd' ? TFT_RED : TFT_LIGHTGREY, TFT_BLACK);
-        display_obj.tft.drawCentreString(line, TFT_WIDTH / 2, event_y, 1);
+        display_obj.tft.drawCentreString(line, RECON_SCREEN_WIDTH / 2, event_y, 1);
       }
     #else
-      #if TFT_WIDTH >= 200
+      #if RECON_SCREEN_WIDTH >= 200
         const int16_t relation_y = body_top + 112;
-        display_obj.tft.drawFastHLine(6, relation_y - 6, TFT_WIDTH - 12, TFT_DARKGREY);
+        display_obj.tft.drawFastHLine(6, relation_y - 6, RECON_SCREEN_WIDTH - 12, TFT_DARKGREY);
         display_obj.tft.setTextColor(active_mode == ReconMode::WIFI_RECON
                                        ? TFT_MAGENTA : TFT_CYAN, TFT_BLACK);
         display_obj.tft.drawString(active_mode == ReconMode::WIFI_RECON
@@ -814,11 +821,11 @@ void ReconMission::drawDashboard(uint32_t current_time) {
           for (uint8_t offset = 0; offset < visible_channels; offset++)
             if (channel_activity[first_channel + offset] > peak)
               peak = channel_activity[first_channel + offset];
-          const int16_t strip_y = TFT_HEIGHT - 31;
+          const int16_t strip_y = RECON_SCREEN_HEIGHT - 31;
           display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
           display_obj.tft.drawString("CH", 3, strip_y + 7, 1);
           const int16_t chart_left = 22;
-          const int16_t slot = (TFT_WIDTH - chart_left - 2) / visible_channels;
+          const int16_t slot = (RECON_SCREEN_WIDTH - chart_left - 2) / visible_channels;
           for (uint8_t offset = 0; offset < visible_channels; offset++) {
             const uint8_t index = first_channel + offset;
             const int16_t height = 2 + (channel_activity[index] * 12UL) / peak;
@@ -838,8 +845,8 @@ void ReconMission::drawDashboard(uint32_t current_time) {
           }
         }
       #else
-        const int16_t event_y = TFT_HEIGHT - 32;
-        display_obj.tft.drawFastHLine(5, event_y - 5, TFT_WIDTH - 10, TFT_DARKGREY);
+        const int16_t event_y = RECON_SCREEN_HEIGHT - 32;
+        display_obj.tft.drawFastHLine(5, event_y - 5, RECON_SCREEN_WIDTH - 10, TFT_DARKGREY);
         if (active_mode == ReconMode::WIFI_RECON && ui_relationship_head) {
           const UiRelationship& relationship =
               ui_relationships[(ui_relationship_head + 2) % 3];
@@ -848,7 +855,7 @@ void ReconMission::drawDashboard(uint32_t current_time) {
           snprintf(line, sizeof(line), "%02X:%02X > %s", relationship.station[4],
                    relationship.station[5], ap_name);
           display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-          display_obj.tft.drawCentreString(line, TFT_WIDTH / 2, event_y, 1);
+          display_obj.tft.drawCentreString(line, RECON_SCREEN_WIDTH / 2, event_y, 1);
         } else {
           const UiEvent& latest = ui_events[(ui_event_head + 3) % 4];
           if (latest.type == 'p') snprintf(line, sizeof(line), "PROBE %.12s", latest.label);
@@ -859,7 +866,7 @@ void ReconMission::drawDashboard(uint32_t current_time) {
                                          latest.type, latest.mac[3], latest.mac[4], latest.mac[5]);
           else snprintf(line, sizeof(line), "Waiting...");
           display_obj.tft.setTextColor(latest.type == 'd' ? TFT_RED : TFT_LIGHTGREY, TFT_BLACK);
-          display_obj.tft.drawCentreString(line, TFT_WIDTH / 2, event_y, 1);
+          display_obj.tft.drawCentreString(line, RECON_SCREEN_WIDTH / 2, event_y, 1);
         }
       #endif
     #endif
@@ -869,6 +876,8 @@ void ReconMission::drawDashboard(uint32_t current_time) {
     (void)current_time;
   #endif
 }
+#undef RECON_SCREEN_WIDTH
+#undef RECON_SCREEN_HEIGHT
 // GCOVR_EXCL_STOP
 
 void ReconMission::observeLists() {
