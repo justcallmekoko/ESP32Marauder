@@ -3,7 +3,8 @@
 namespace marauder {
 
 BootSplashLayout bootSplashLayout(int16_t screen_width,
-                                  int16_t screen_height) {
+                                  int16_t screen_height,
+                                  bool half_scale_logo) {
   const bool compact = screen_height <= 160 || screen_width <= 160;
   const bool v8_portrait = screen_width == 240 && screen_height == 320;
   BootSplashLayout layout{};
@@ -21,7 +22,7 @@ BootSplashLayout bootSplashLayout(int16_t screen_width,
   layout.logo_height = available_height < height_from_width
       ? available_height : height_from_width;
   if (layout.logo_height < 24) layout.logo_height = 24;
-  if (v8_portrait) {
+  if (v8_portrait || half_scale_logo) {
     layout.logo_height /= 2;
     layout.logo_y += (available_height - layout.logo_height) / 2;
   }
