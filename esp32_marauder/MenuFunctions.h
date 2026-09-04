@@ -18,6 +18,7 @@
 #define BATTERY_ANALOG_ON 0
 
 #include "WiFiScan.h"
+#include "ReconMission.h"
 #include "TargetListSort.h"
 #include "BatteryInterface.h"
 #include "SDInterface.h"
@@ -43,6 +44,7 @@
 #endif
 
 extern WiFiScan wifi_scan_obj;
+extern ReconMission recon_obj;
 extern SDInterface sd_obj;
 // #ifdef HAS_BATTERY
 extern BatteryInterface battery_obj;
@@ -139,6 +141,8 @@ class MenuFunctions
       BLE_TARGETS,
       FINDMY_TARGETS,
       FLIPPER_TARGETS,
+      META_TARGETS,
+      FLOCK_TARGETS,
     };
 
     String u_result = "";
@@ -150,6 +154,11 @@ class MenuFunctions
     uint8_t mini_kb_index = 0;
     uint8_t old_gps_sat_count = 0;
     uint8_t max_graph_value = 0;
+    Menu* marquee_menu = nullptr;
+    uint16_t marquee_selected = 0xFFFF;
+    uint16_t marquee_rendered_offset = 0;
+    uint16_t marquee_max_offset = 0;
+    uint32_t marquee_selected_since = 0;
 
     void buildWiFiFoxHuntMenu();
     void buildBluetoothFoxHuntMenu();
@@ -168,6 +177,7 @@ class MenuFunctions
 
     // Main menu stuff
     Menu mainMenu;
+    Menu reconMenu;
 
     Menu wifiMenu;
     Menu bluetoothMenu;
@@ -186,6 +196,12 @@ class MenuFunctions
     Menu specSettingMenu;
     //Menu languageMenu;
     Menu sdDeleteMenu;
+    LinkedList<SDDirectoryEntry>* sd_browser_entries = nullptr;
+    LinkedList<String>* sd_delete_selection = nullptr;
+    String sd_browser_path = "/";
+    bool sd_browser_release_pending = false;
+    void ensureSDDeleteBrowserResources();
+    void releaseSDDeleteBrowserResources();
 
     // WiFi menu stuff
     Menu wifiSnifferMenu;
@@ -239,6 +255,10 @@ class MenuFunctions
     void buildUploadFileMenu();
     void setupSDFileList(bool update = false);
     void buildSDFileMenu(bool update = false);
+    void buildSDDeleteBrowser(const String& path, bool reset_selection = false);
+    void toggleSDDeleteSelection(const String& path);
+    bool isSDFileSelected(const String& path) const;
+    String parentSDPath(const String& path) const;
     void displayMenuButtons();
     uint16_t getColor(uint16_t color);
     void drawAvgLine(int16_t value);
@@ -260,10 +280,13 @@ class MenuFunctions
     void battery2(bool initial = false);
     const char* callSetting(const char* key);
     void displaySetting(const char* key, Menu* menu, int index);
-    void buttonSelected(int b, int x = -1);
+    void buttonSelected(int b, int x = -1, uint16_t text_offset = 0);
     void buttonNotSelected(int b, int x = -1);
+    String menuLabelWindow(const String& name, uint16_t offset = 0);
+    uint16_t menuLabelMaxOffset(const String& name);
+    void updateMenuMarquee(uint32_t current_time);
     #ifdef HAS_MINI_SCREEN
-      void drawMiniMenuButton(int b, int x, bool selected);
+      void drawMiniMenuButton(int b, int x, bool selected, uint16_t text_offset = 0);
     #endif
     //#if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
     #ifdef HAS_MINI_KB

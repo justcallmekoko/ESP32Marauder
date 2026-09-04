@@ -37,6 +37,7 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #include "settings.h"
 #include "CommandLine.h"
+#include "ReconMission.h"
 #include "lang_var.h"
 
 #ifdef HAS_T_DONGLE_DISPLAY
@@ -78,6 +79,7 @@ EvilPortal evil_portal_obj;
 Buffer buffer_obj;
 Settings settings_obj;
 CommandLine cli_obj;
+ReconMission recon_obj;
 
 #ifdef HAS_T_DONGLE_DISPLAY
   TDongleDisplay t_dongle_display;
@@ -320,15 +322,7 @@ void setup()
   #endif
 
   #ifdef HAS_SCREEN
-    #if !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
-      display_obj.tft.drawCentreString("ESP32 Marauder", TFT_WIDTH/2, TFT_HEIGHT * 0.33, 1);
-      display_obj.tft.drawCentreString("JustCallMeKoko", TFT_WIDTH/2, TFT_HEIGHT * 0.5, 1);
-      display_obj.tft.drawCentreString(display_obj.version_number, TFT_WIDTH/2, TFT_HEIGHT * 0.66, 1);
-    #else
-      display_obj.tft.drawCentreString("ESP32 Marauder", TFT_HEIGHT/2, TFT_WIDTH * 0.33, 1);
-      display_obj.tft.drawCentreString("JustCallMeKoko", TFT_HEIGHT/2, TFT_WIDTH * 0.5, 1);
-      display_obj.tft.drawCentreString(display_obj.version_number, TFT_HEIGHT/2, TFT_WIDTH * 0.66, 1);
-    #endif
+    display_obj.drawBootSplash();
   #endif
 
 
@@ -369,11 +363,6 @@ void setup()
 
   #ifdef HAS_T_DONGLE_DISPLAY
     t_dongle_display.begin();
-  #endif
-
-  #ifdef HAS_SCREEN
-    display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
-    display_obj.tft.drawCentreString("Initializing...", TFT_WIDTH/2, TFT_HEIGHT * 0.82, 1);
   #endif
 
   evil_portal_obj.setup();
@@ -458,6 +447,7 @@ void loop()
   // Update all of our objects
   cli_obj.main(currentTime);
   wifi_scan_obj.main(currentTime);
+  recon_obj.main(currentTime);
 
   #ifdef HAS_T_DONGLE_DISPLAY
     t_dongle_display.update(currentTime, wifi_scan_obj);

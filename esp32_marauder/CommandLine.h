@@ -16,6 +16,7 @@
   #include "SDInterface.h"
 #endif
 #include "settings.h"
+#include "ReconMission.h"
 #if defined(HAS_NEOPIXEL_LED)
   #include "LedInterface.h"
 #endif
@@ -31,6 +32,7 @@ extern WiFiScan wifi_scan_obj;
   extern SDInterface sd_obj;
 #endif
 extern Settings settings_obj;
+extern ReconMission recon_obj;
 #if defined(HAS_NEOPIXEL_LED)
   extern LedInterface led_obj;
 #endif
@@ -65,6 +67,7 @@ const char PROGMEM GPS_CMD[] = "gps";
 const char PROGMEM NMEA_CMD[] = "nmea";
 const char PROGMEM GPS_POI_CMD[] = "gpspoi";
 const char PROGMEM GPS_TRACKER_CMD[] = "gpstracker";
+const char PROGMEM RECON_CMD[] = "recon";
 
 // WiFi sniff/scan
 const char PROGMEM EVIL_PORTAL_CMD[] = "evilportal";
@@ -137,11 +140,16 @@ const char PROGMEM HELP_REBOOT_CMD[] = "reboot";
 const char PROGMEM HELP_UPDATE_CMD_A[] = "update -s/-w";
 const char PROGMEM HELP_SETTINGS_CMD[] = "settings [-s <setting> enable/disable>]/[-r]";
 const char PROGMEM HELP_LS_CMD[] = "ls <directory>";
+const char PROGMEM HELP_PROTOCOL_INFO_CMD[] = "protocolinfo [--machine <transaction-id>]";
+const char PROGMEM HELP_BACKUP_SPIFFS_CMD[] = "backupspiffs [--machine <transaction-id>] - copy SPIFFS to /spiffs on SD";
+const char PROGMEM HELP_BACKUP_STATUS_CMD[] = "backupstatus [--machine <transaction-id>] - inspect /spiffs on SD";
+const char PROGMEM HELP_RESTORE_SPIFFS_CMD[] = "restorespiffs [--machine <transaction-id>] - restore SPIFFS from /spiffs on SD";
 const char PROGMEM HELP_LED_CMD[] = "led -s <hex color>/-p <rainbow>";
 const char PROGMEM HELP_GPS_DATA_CMD[] = "gpsdata";
 const char PROGMEM HELP_GPS_CMD[] = "gps [-t] [-g] <fix/sat/lon/lat/alt/date/accuracy/text/nmea>\r\n    [-n] <native/all/gps/glonass/galileo/navic/qzss/beidou>\r\n         [-b = use BD vs GB for beidou]";
 const char PROGMEM HELP_GPS_POI_CMD[] = "gpspoi -s/-m/-e";
 const char PROGMEM HELP_GPS_TRACKER_CMD[] = "gpstracker -c <start/stop>";
+const char PROGMEM HELP_RECON_CMD[] = "recon wifi|ble|status|stop";
 const char PROGMEM HELP_NMEA_CMD[] = "nmea";
 
 // WiFi sniff/scan
@@ -221,7 +229,6 @@ class CommandLine {
     LinkedList<String> parseCommand(String input, char* delim);
     String toLowerCase(String str);
     void filterAccessPoints(String filter);
-    void runCommand(String input);
     bool checkValueExists(LinkedList<String>* cmd_args_list, int index);
     bool inRange(int max, int index);
     //bool apSelected();
@@ -230,6 +237,7 @@ class CommandLine {
     int argSearch(LinkedList<String>* cmd_args, const char* key);
     void startScanFromCLI(int scan_mode, uint16_t color, const char* scan_name);
 
+    #ifndef MARAUDER_V8
     const char* ascii_art =
     "\r\n"
     "              @@@@@@                        \r\n"
@@ -256,11 +264,13 @@ class CommandLine {
     "                      @@@@@@                \r\n"
     "                        @@@@                \r\n"
     "\r\n";
+    #endif
         
   public:
 
     void RunSetup();
     void main(uint32_t currentTime);
+    void runCommand(String input);
 };
 
 #endif

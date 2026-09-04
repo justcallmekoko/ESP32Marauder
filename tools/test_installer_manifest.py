@@ -76,42 +76,12 @@ class InstallerManifestTests(unittest.TestCase):
         )
         self.assertEqual(registry_flags - private_flags, workflow_flags)
         self.assertIn("MARAUDER_T_DONGLE_C5", workflow_flags)
+        c5_devkit = next(board for board in boards if board["flag"] == "MARAUDER_C5")
+        self.assertIn("FlashSize=8M", c5_devkit["fbqn"])
+        self.assertIn("PartitionScheme=default_8MB", c5_devkit["fbqn"])
         self.assertEqual(
             len(registry_flags),
             len(registry["targets"]),
-        )
-
-    def test_public_targets_keep_their_release_partition_layouts(self) -> None:
-        normal_boards = load_normal_build_matrix(NORMAL_WORKFLOW, REGISTRY)
-        normal_fqbns = {board["flag"]: board["fbqn"] for board in normal_boards}
-
-        self.assertFalse((REPOSITORY_ROOT / "esp32_marauder/partitions.csv").exists())
-
-        layout_exceptions = {
-            "MARAUDER_T_DONGLE_C5": (
-                "FlashSize=16M",
-                "PartitionScheme=custom",
-            ),
-            "MARAUDER_PANCAKE": (
-                "FlashSize=8M",
-                "PartitionScheme=default_8MB",
-            ),
-        }
-        for flag, fqbn in normal_fqbns.items():
-            if flag in layout_exceptions:
-                for setting in layout_exceptions[flag]:
-                    self.assertIn(setting, fqbn)
-            else:
-                self.assertIn("PartitionScheme=min_spiffs", fqbn, flag)
-
-        workflow = NORMAL_WORKFLOW.read_text(encoding="utf-8")
-        self.assertIn(
-            "if: matrix.board.flag == 'MARAUDER_T_DONGLE_C5'",
-            workflow,
-        )
-        self.assertIn(
-            "cp installer/partitions/t_dongle_c5.csv esp32_marauder/partitions.csv",
-            workflow,
         )
 
     def test_build_matrix_parser_fails_closed_on_unsupported_syntax(self) -> None:

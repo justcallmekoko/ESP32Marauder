@@ -8,6 +8,10 @@
 
   //#define DEVELOPER
 
+  // Developer-only escape hatch for unsigned or mismatched SD update images.
+  // Production builds must remain fail-closed.
+  //#define ALLOW_UNVERIFIED_SD_UPDATE
+
   //// BOARD TARGETS
   //#define MARAUDER_M5STICKC
   //#define MARAUDER_M5STICKCP2
@@ -42,7 +46,7 @@
 
   #define JSON_SETTING_SIZE 2048
 
-#define MARAUDER_VERSION "v1.15.1"
+#define MARAUDER_VERSION "v1.16.0"
 
   #define GRAPH_REFRESH   100
 
@@ -568,7 +572,7 @@
     //#define FLIPPER_ZERO_HAT
     #define HAS_BATTERY
     #define HAS_BT
-    //#define HAS_BUTTONS
+    #define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
     //#define HAS_PWR_MGMT
     #define HAS_SCREEN
@@ -811,6 +815,26 @@
       #define R_PULL true
       #define D_PULL true
     #endif  
+
+    #ifdef MARAUDER_PANCAKE
+      #define L_BTN -1
+      #define C_BTN 28
+      #define U_BTN -1
+      #define R_BTN -1
+      #define D_BTN -1
+
+      //#define HAS_L
+      //#define HAS_R
+      //#define HAS_U
+      //#define HAS_D
+      #define HAS_C
+
+      #define L_PULL true
+      #define C_PULL true
+      #define U_PULL true
+      #define R_PULL true
+      #define D_PULL true
+    #endif
 
     #ifdef MARAUDER_CYD_MICRO
       #define L_BTN -1
