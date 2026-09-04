@@ -10141,6 +10141,27 @@ bool WiFiScan::filterActive() {
         max_value = max(max_value, values[i]);
 
       display_obj.tft.fillRect(0, top, SCREEN_WIDTH, bottom - top + 1, TFT_BLACK);
+      #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+        // The rotated Cardputer ST7789 path can leave pixels from a taller
+        // rendering behind when the history shifts. Explicitly erase every
+        // time slot from ceiling through baseline before redrawing the grid
+        // and the new scaled bars.
+        for (uint16_t i = 0; i < PACKET_MONITOR_HISTORY_LEN; i++) {
+          const int16_t x = PACKET_MONITOR_GRAPH_LEFT +
+              (i * PACKET_MONITOR_COLUMN_STEP);
+          display_obj.tft.fillRect(x, plot_top, PACKET_MONITOR_COLUMN_STEP,
+                                   graph_height + 1, TFT_BLACK);
+        }
+        const int16_t cleared_width =
+            PACKET_MONITOR_HISTORY_LEN * PACKET_MONITOR_COLUMN_STEP;
+        if (PACKET_MONITOR_GRAPH_LEFT + cleared_width < SCREEN_WIDTH) {
+          display_obj.tft.fillRect(PACKET_MONITOR_GRAPH_LEFT + cleared_width,
+                                   plot_top,
+                                   SCREEN_WIDTH - PACKET_MONITOR_GRAPH_LEFT -
+                                       cleared_width,
+                                   graph_height + 1, TFT_BLACK);
+        }
+      #endif
       display_obj.tft.setTextColor(color, TFT_BLACK);
       display_obj.tft.setTextSize(1);
       display_obj.tft.setCursor(2, top + 2);
