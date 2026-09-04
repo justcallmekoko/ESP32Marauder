@@ -10108,7 +10108,7 @@ bool WiFiScan::filterActive() {
       num_beacon = 0;
       num_deauth = 0;
       num_probe = 0;
-      packet_monitor_last_sample_ms = millis();
+      initTime = millis();
     }
 
     void WiFiScan::samplePacketMonitorGraph() {
@@ -10136,19 +10136,9 @@ bool WiFiScan::filterActive() {
         const int16_t plot_top = top + 12;
       #endif
       const int16_t graph_height = bottom - plot_top;
-      uint32_t max_value = 1;
+      uint16_t max_value = 1;
       for (uint16_t i = 0; i < PACKET_MONITOR_HISTORY_LEN; i++)
-        max_value = max(max_value, static_cast<uint32_t>(values[i]));
-
-      #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
-        // Leave visible headroom and recompute it on every frame so a new peak
-        // expands the graph immediately without waiting for a channel redraw.
-        max_value += max(static_cast<uint32_t>(1), (max_value + 3) / 4);
-        max_value = max(max_value, static_cast<uint32_t>(4));
-        constexpr int16_t bar_width = PACKET_MONITOR_COLUMN_WIDTH - 1;
-      #else
-        constexpr int16_t bar_width = PACKET_MONITOR_COLUMN_WIDTH;
-      #endif
+        max_value = max(max_value, values[i]);
 
       display_obj.tft.fillRect(0, top, SCREEN_WIDTH, bottom - top + 1, TFT_BLACK);
       display_obj.tft.setTextColor(color, TFT_BLACK);
@@ -10173,7 +10163,7 @@ bool WiFiScan::filterActive() {
         const int16_t x = PACKET_MONITOR_GRAPH_LEFT + (i * PACKET_MONITOR_COLUMN_WIDTH);
         const int16_t height = ((uint32_t)values[i] * graph_height) / max_value;
         if (height > 0)
-          display_obj.tft.fillRect(x, bottom - height, bar_width,
+          display_obj.tft.fillRect(x, bottom - height, PACKET_MONITOR_COLUMN_WIDTH,
                                    height, color);
       }
     }
@@ -10270,8 +10260,8 @@ bool WiFiScan::filterActive() {
       }
     #endif
 
-    if (currentTime - packet_monitor_last_sample_ms >= PACKET_MONITOR_REFRESH_MS) {
-      packet_monitor_last_sample_ms = currentTime;
+    if (currentTime - initTime >= PACKET_MONITOR_REFRESH_MS) {
+      initTime = currentTime;
       this->samplePacketMonitorGraph();
       this->drawPacketMonitorGraphs();
     }
