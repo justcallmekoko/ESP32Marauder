@@ -307,6 +307,10 @@ void MenuFunctions::main(uint32_t currentTime)
   // Get the display buffer out of the way
   if ((wifi_scan_obj.currentScanMode != WIFI_SCAN_OFF ) &&
       (wifi_scan_obj.currentScanMode != WIFI_CONNECTED) &&
+      // Packet Monitor owns the entire TFT. On Cardputer targets this menu
+      // loop still runs for keyboard input, but the legacy text buffer must
+      // not draw over the graph lanes.
+      (wifi_scan_obj.currentScanMode != WIFI_PACKET_MONITOR) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_BEACON_SPAM) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_AP_SPAM) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_CSA) &&

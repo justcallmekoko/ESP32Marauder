@@ -55,5 +55,14 @@ class RetainedDevelopFeatureTests(unittest.TestCase):
         self.assertIn("sta.last_seen_ms = millis();", source)
         self.assertNotIn("Station sta = {\n                    {", source)
 
+    def test_packet_monitor_excludes_legacy_text_renderer(self):
+        source = (ROOT / "esp32_marauder" / "MenuFunctions.cpp").read_text()
+        buffer_guard = source[source.index("// Get the display buffer out of the way"):
+                              source.index("display_obj.displayBuffer();")]
+        self.assertIn(
+            "wifi_scan_obj.currentScanMode != WIFI_PACKET_MONITOR",
+            buffer_guard,
+        )
+
 if __name__ == "__main__":
     unittest.main()
