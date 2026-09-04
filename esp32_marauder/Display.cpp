@@ -289,8 +289,13 @@ void Display::RunSetup() {
 void Display::drawBootSplash() {
   const int16_t width = tft.width();
   const int16_t height = tft.height();
+  #ifdef MARAUDER_CYD_3_5_INCH
+    constexpr bool half_scale_logo = true;
+  #else
+    constexpr bool half_scale_logo = false;
+  #endif
   const marauder::BootSplashLayout layout =
-      marauder::bootSplashLayout(width, height);
+      marauder::bootSplashLayout(width, height, half_scale_logo);
 
   tft.fillScreen(TFT_BLACK);
   tft.setTextWrap(false);

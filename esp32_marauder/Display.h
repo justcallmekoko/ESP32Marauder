@@ -17,6 +17,15 @@
 
 #include <TFT_eSPI.h>
 
+// Reject board/display configuration mismatches at compile time. A mismatched
+// TFT setup can boot normally while driving the wrong controller and pins.
+#if defined(MARAUDER_CYD_3_5_INCH) && !defined(ST7796_DRIVER)
+  #error "MARAUDER_CYD_3_5_INCH requires User_Setup_cyd_3_5_inch.h (ST7796_DRIVER)"
+#endif
+#if (defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)) && !defined(ST7789_2_DRIVER)
+  #error "Cardputer targets require their ST7789_2_DRIVER TFT_eSPI setup"
+#endif
+
 #ifdef HAS_CYD_TOUCH
   #include <XPT2046_Touchscreen.h>
 #endif

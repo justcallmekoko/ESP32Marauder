@@ -55,5 +55,16 @@ class RetainedDevelopFeatureTests(unittest.TestCase):
         self.assertIn("sta.last_seen_ms = millis();", source)
         self.assertNotIn("Station sta = {\n                    {", source)
 
+    def test_cardputer_packet_graph_explicitly_clears_each_slot(self):
+        source = (ROOT / "esp32_marauder" / "WiFiScan.cpp").read_text()
+        renderer = source[source.index("void WiFiScan::drawPacketMonitorGraph"):
+                          source.index("void WiFiScan::drawPacketMonitorGraphs")]
+        self.assertIn("i * PACKET_MONITOR_COLUMN_STEP", renderer)
+        self.assertIn("fillRect(x, plot_top, PACKET_MONITOR_COLUMN_STEP", renderer)
+        self.assertLess(
+            renderer.index("fillRect(x, plot_top, PACKET_MONITOR_COLUMN_STEP"),
+            renderer.index("drawFastHLine(PACKET_MONITOR_GRAPH_LEFT, plot_top"),
+        )
+
 if __name__ == "__main__":
     unittest.main()

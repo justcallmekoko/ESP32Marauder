@@ -16,6 +16,7 @@ struct BootSplashLayout {
 };
 
 BootSplashLayout bootSplashLayout(int16_t screen_width,
-                                  int16_t screen_height);
+                                  int16_t screen_height,
+                                  bool half_scale_logo = false);
 
 }  // namespace marauder
