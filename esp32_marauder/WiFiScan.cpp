@@ -10145,9 +10145,7 @@ bool WiFiScan::filterActive() {
         // expands the graph immediately without waiting for a channel redraw.
         max_value += max(static_cast<uint32_t>(1), (max_value + 3) / 4);
         max_value = max(max_value, static_cast<uint32_t>(4));
-        // A single lit column keeps consecutive 200 ms samples visually
-        // distinct on the 240x135 panel instead of merging into a wide block.
-        constexpr int16_t bar_width = 1;
+        constexpr int16_t bar_width = PACKET_MONITOR_COLUMN_WIDTH - 1;
       #else
         constexpr int16_t bar_width = PACKET_MONITOR_COLUMN_WIDTH;
       #endif
