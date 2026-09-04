@@ -22,6 +22,7 @@ String WiFiScan::lastClientIP  = "N/A";
 int num_beacon = 0;
 int num_deauth = 0;
 int num_probe = 0;
+portMUX_TYPE packet_monitor_counter_mux = portMUX_INITIALIZER_UNLOCKED;
 int num_eapol = 0;
 
 // https://mbed-tls.readthedocs.io/en/latest/kb/how-to/mbedtls-tutorial/
@@ -9600,6 +9601,7 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
       #ifdef HAS_SCREEN
         #if defined(HAS_ILI9341) || (defined(MARAUDER_MINI_V3) && !defined(DUAL_MINI_C5)) || \
             defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) // GCOVR_EXCL_LINE
+          portENTER_CRITICAL(&packet_monitor_counter_mux); // GCOVR_EXCL_LINE
           if (snifferPacket->payload[0] == 0x80) // GCOVR_EXCL_LINE -- requires live WiFi capture.
           {
             num_beacon++; // GCOVR_EXCL_LINE
@@ -9612,6 +9614,7 @@ void WiFiScan::wifiSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) 
           {
             num_probe++; // GCOVR_EXCL_LINE
           }
+          portEXIT_CRITICAL(&packet_monitor_counter_mux); // GCOVR_EXCL_LINE
         #else
           if (snifferPacket->payload[0] == 0x80)
             display_string.concat(";grn;");
@@ -10105,13 +10108,27 @@ bool WiFiScan::filterActive() {
       memset(packet_monitor_beacons, 0, sizeof(packet_monitor_beacons));
       memset(packet_monitor_deauths, 0, sizeof(packet_monitor_deauths));
       memset(packet_monitor_probes, 0, sizeof(packet_monitor_probes));
+      portENTER_CRITICAL(&packet_monitor_counter_mux);
       num_beacon = 0;
       num_deauth = 0;
       num_probe = 0;
+      portEXIT_CRITICAL(&packet_monitor_counter_mux);
       packet_monitor_last_sample_ms = millis();
     }
 
     void WiFiScan::samplePacketMonitorGraph() {
+      uint16_t beacon_sample;
+      uint16_t deauth_sample;
+      uint16_t probe_sample;
+      portENTER_CRITICAL(&packet_monitor_counter_mux);
+      beacon_sample = min(num_beacon, 65535);
+      deauth_sample = min(num_deauth, 65535);
+      probe_sample = min(num_probe, 65535);
+      num_beacon = 0;
+      num_deauth = 0;
+      num_probe = 0;
+      portEXIT_CRITICAL(&packet_monitor_counter_mux);
+
       memmove(packet_monitor_beacons, packet_monitor_beacons + 1,
               sizeof(packet_monitor_beacons) - sizeof(packet_monitor_beacons[0]));
       memmove(packet_monitor_deauths, packet_monitor_deauths + 1,
@@ -10119,12 +10136,9 @@ bool WiFiScan::filterActive() {
       memmove(packet_monitor_probes, packet_monitor_probes + 1,
               sizeof(packet_monitor_probes) - sizeof(packet_monitor_probes[0]));
 
-      packet_monitor_beacons[PACKET_MONITOR_HISTORY_LEN - 1] = min(num_beacon, 65535);
-      packet_monitor_deauths[PACKET_MONITOR_HISTORY_LEN - 1] = min(num_deauth, 65535);
-      packet_monitor_probes[PACKET_MONITOR_HISTORY_LEN - 1] = min(num_probe, 65535);
-      num_beacon = 0;
-      num_deauth = 0;
-      num_probe = 0;
+      packet_monitor_beacons[PACKET_MONITOR_HISTORY_LEN - 1] = beacon_sample;
+      packet_monitor_deauths[PACKET_MONITOR_HISTORY_LEN - 1] = deauth_sample;
+      packet_monitor_probes[PACKET_MONITOR_HISTORY_LEN - 1] = probe_sample;
     }
 
     void WiFiScan::drawPacketMonitorGraph(const uint16_t *values, int16_t top,
