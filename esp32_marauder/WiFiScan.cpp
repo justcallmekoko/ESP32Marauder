@@ -10143,7 +10143,7 @@ bool WiFiScan::filterActive() {
 
     void WiFiScan::drawPacketMonitorGraph(const uint16_t *values, int16_t top,
                                           int16_t bottom, uint16_t color,
-                                          const char *label) {
+                                          const char *label, bool line_trace) {
       #if defined(MARAUDER_MINI_V3) || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
         const int16_t plot_top = top + 10;
       #else
@@ -10185,12 +10185,30 @@ bool WiFiScan::filterActive() {
       display_obj.tft.setCursor(2, half_y - 4);
       display_obj.tft.print((max_value + 1) / 2);
 
-      for (uint16_t i = 0; i < PACKET_MONITOR_HISTORY_LEN; i++) {
-        const int16_t x = PACKET_MONITOR_GRAPH_LEFT + (i * PACKET_MONITOR_COLUMN_WIDTH);
-        const int16_t height = ((uint32_t)values[i] * graph_height) / max_value;
-        if (height > 0)
-          display_obj.tft.fillRect(x, bottom - height, bar_width,
-                                   height, color);
+      if (line_trace) {
+        int16_t previous_x = PACKET_MONITOR_GRAPH_LEFT;
+        int16_t previous_y = bottom -
+            ((static_cast<uint32_t>(values[0]) * graph_height) / max_value);
+        for (uint16_t i = 1; i < PACKET_MONITOR_HISTORY_LEN; i++) {
+          const int16_t x = PACKET_MONITOR_GRAPH_LEFT +
+              (i * PACKET_MONITOR_COLUMN_WIDTH);
+          const int16_t y = bottom -
+              ((static_cast<uint32_t>(values[i]) * graph_height) / max_value);
+          display_obj.tft.drawLine(previous_x, previous_y, x, y, color);
+          previous_x = x;
+          previous_y = y;
+        }
+      }
+      else {
+        for (uint16_t i = 0; i < PACKET_MONITOR_HISTORY_LEN; i++) {
+          const int16_t x = PACKET_MONITOR_GRAPH_LEFT +
+              (i * PACKET_MONITOR_COLUMN_WIDTH);
+          const int16_t height =
+              (static_cast<uint32_t>(values[i]) * graph_height) / max_value;
+          if (height > 0)
+            display_obj.tft.fillRect(x, bottom - height, bar_width,
+                                     height, color);
+        }
       }
     }
 
@@ -10200,9 +10218,15 @@ bool WiFiScan::filterActive() {
       #else
         const int16_t graph_top = 64;
       #endif
+      #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+        constexpr bool beacon_line_trace = true;
+      #else
+        constexpr bool beacon_line_trace = false;
+      #endif
       const int16_t lane_height = (SCREEN_HEIGHT - graph_top) / 3;
       drawPacketMonitorGraph(packet_monitor_beacons, graph_top,
-                             graph_top + lane_height - 1, TFT_GREEN, "BCN");
+                             graph_top + lane_height - 1, TFT_GREEN, "BCN",
+                             beacon_line_trace);
       drawPacketMonitorGraph(packet_monitor_deauths, graph_top + lane_height,
                              graph_top + (lane_height * 2) - 1, TFT_RED, "DEA");
       drawPacketMonitorGraph(packet_monitor_probes, graph_top + (lane_height * 2),
