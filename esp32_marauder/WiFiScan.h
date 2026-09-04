@@ -412,8 +412,18 @@ class WiFiScan
         static const uint8_t PACKET_MONITOR_GRAPH_LEFT = 32;
       #endif
       static const uint16_t PACKET_MONITOR_REFRESH_MS = 200;
-      static const uint16_t PACKET_MONITOR_HISTORY_LEN =
-          (SCREEN_WIDTH - PACKET_MONITOR_GRAPH_LEFT) / PACKET_MONITOR_COLUMN_WIDTH;
+      #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+        // Match the proven Mini v3 graph's 26-sample time window. The wider
+        // Cardputer panel changes only the horizontal spacing, not the data
+        // window, sampling cadence, scaling, or bar renderer.
+        static const uint16_t PACKET_MONITOR_HISTORY_LEN = (128 - 24) / 4;
+        static const uint8_t PACKET_MONITOR_COLUMN_STEP =
+            (SCREEN_WIDTH - PACKET_MONITOR_GRAPH_LEFT) / PACKET_MONITOR_HISTORY_LEN;
+      #else
+        static const uint16_t PACKET_MONITOR_HISTORY_LEN =
+            (SCREEN_WIDTH - PACKET_MONITOR_GRAPH_LEFT) / PACKET_MONITOR_COLUMN_WIDTH;
+        static const uint8_t PACKET_MONITOR_COLUMN_STEP = PACKET_MONITOR_COLUMN_WIDTH;
+      #endif
       uint16_t packet_monitor_beacons[PACKET_MONITOR_HISTORY_LEN] = {};
       uint16_t packet_monitor_deauths[PACKET_MONITOR_HISTORY_LEN] = {};
       uint16_t packet_monitor_probes[PACKET_MONITOR_HISTORY_LEN] = {};
