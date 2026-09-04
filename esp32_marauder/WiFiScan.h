@@ -421,8 +421,7 @@ class WiFiScan
       void resetPacketMonitorGraph();
       void samplePacketMonitorGraph();
       void drawPacketMonitorGraph(const uint16_t *values, int16_t top, int16_t bottom,
-                                  uint16_t color, const char *label,
-                                  bool line_trace = false);
+                                  uint16_t color, const char *label);
       void drawPacketMonitorGraphs();
       void drawPacketMonitorControls();
     #endif
