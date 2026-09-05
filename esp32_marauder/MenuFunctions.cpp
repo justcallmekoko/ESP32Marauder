@@ -335,7 +335,17 @@ void MenuFunctions::main(uint32_t currentTime)
 
   // Brightness gesture: hold top or bottom zone 1.5s to enter brightness mode
   #ifdef HAS_ILI9341
-    if (pressed && (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF ||
+    bool touching_menu_control = false;
+    if (pressed) {
+      for (uint8_t b = BUTTON_ARRAY_LEN; b < BUTTON_ARRAY_LEN + 3; b++) {
+        if (display_obj.key[b].contains(t_x, t_y)) {
+          touching_menu_control = true;
+          break;
+        }
+      }
+    }
+    if (pressed && !touching_menu_control &&
+        (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF ||
                     wifi_scan_obj.currentScanMode == WIFI_CONNECTED)) {
       uint16_t zoneUp = TFT_HEIGHT * 25 / 100;
       uint16_t zoneDown = TFT_HEIGHT * 75 / 100;
@@ -644,9 +654,30 @@ void MenuFunctions::main(uint32_t currentTime)
       }*/
 
       // Detect up, down, select
-      uint8_t menu_button = display_obj.menuButton(&t_x, &t_y, pressed);
+      int8_t menu_button;
+      const bool menu_navigation_active =
+          wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF ||
+          wifi_scan_obj.currentScanMode == WIFI_CONNECTED ||
+          wifi_scan_obj.currentScanMode == OTA_UPDATE;
+      if (menu_navigation_active) {
+        const int8_t held_button =
+            display_obj.menuButton(&t_x, &t_y, pressed, true);
+        const int8_t released_button =
+            display_obj.menuButton(&t_x, &t_y, pressed);
+        const bool up_event = menu_up_repeat.update(
+            held_button == UP_BUTTON, currentTime);
+        const bool down_event = menu_down_repeat.update(
+            held_button == DOWN_BUTTON, currentTime);
+        menu_button = up_event ? UP_BUTTON :
+                      down_event ? DOWN_BUTTON :
+                      released_button == SELECT_BUTTON ? SELECT_BUTTON : -1;
+      } else {
+        menu_up_repeat.reset();
+        menu_down_repeat.reset();
+        menu_button = display_obj.menuButton(&t_x, &t_y, pressed);
+      }
 
-      if (menu_button > -1) {
+      if (menu_button >= 0) {
         if (menu_button == UP_BUTTON) {
           if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
               (wifi_scan_obj.currentScanMode == WIFI_CONNECTED) ||
@@ -801,10 +832,21 @@ void MenuFunctions::main(uint32_t currentTime)
       #if !defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
         #if (U_BTN >= 0 || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV))
           #if (U_BTN >= 0)
-            if (u_btn.justPressed()) {
+            const bool up_just_pressed = u_btn.justPressed();
+            const bool up_is_pressed = u_btn.isPressedNow();
           #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
-            if (this->isKeyPressed(';')) {
+            const bool up_just_pressed = this->isKeyPressed(';');
+            const bool up_is_pressed = up_just_pressed;
           #endif
+            const bool menu_navigation_active =
+                wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF ||
+                wifi_scan_obj.currentScanMode == WIFI_CONNECTED ||
+                wifi_scan_obj.currentScanMode == OTA_UPDATE;
+            const bool up_event = menu_navigation_active
+                ? menu_up_repeat.update(up_is_pressed, currentTime)
+                : up_just_pressed;
+            if (!menu_navigation_active) menu_up_repeat.reset();
+            if (up_event) {
               if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
                   (wifi_scan_obj.currentScanMode == WIFI_CONNECTED) ||
                   (wifi_scan_obj.currentScanMode == OTA_UPDATE)) {
@@ -873,10 +915,21 @@ void MenuFunctions::main(uint32_t currentTime)
 
       #if (D_BTN >= 0 || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV))
       #if (D_BTN >= 0)
-      if (d_btn.justPressed()){
+      const bool down_just_pressed = d_btn.justPressed();
+      const bool down_is_pressed = d_btn.isPressedNow();
       #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
-      if (this->isKeyPressed('.')){
+      const bool down_just_pressed = this->isKeyPressed('.');
+      const bool down_is_pressed = down_just_pressed;
       #endif
+      const bool down_menu_navigation_active =
+          wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF ||
+          wifi_scan_obj.currentScanMode == WIFI_CONNECTED ||
+          wifi_scan_obj.currentScanMode == OTA_UPDATE;
+      const bool down_event = down_menu_navigation_active
+          ? menu_down_repeat.update(down_is_pressed, currentTime)
+          : down_just_pressed;
+      if (!down_menu_navigation_active) menu_down_repeat.reset();
+      if (down_event) {
         if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
             (wifi_scan_obj.currentScanMode == WIFI_CONNECTED) ||
             (wifi_scan_obj.currentScanMode == OTA_UPDATE)) {

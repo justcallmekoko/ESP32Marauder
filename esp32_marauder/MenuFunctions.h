@@ -23,6 +23,7 @@
 #include "BatteryInterface.h"
 #include "SDInterface.h"
 #include "settings.h"
+#include "MenuInputRepeat.h"
 
 #ifdef HAS_BUTTONS
   #include "Switches.h"
@@ -159,6 +160,8 @@ class MenuFunctions
     uint16_t marquee_rendered_offset = 0;
     uint16_t marquee_max_offset = 0;
     uint32_t marquee_selected_since = 0;
+    MenuInputRepeat menu_up_repeat;
+    MenuInputRepeat menu_down_repeat;
 
     void buildWiFiFoxHuntMenu();
     void buildBluetoothFoxHuntMenu();
