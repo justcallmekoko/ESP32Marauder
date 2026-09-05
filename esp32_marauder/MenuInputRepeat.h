@@ -2,6 +2,12 @@
 
 #include <stdint.h>
 
+inline int8_t menuTouchReleasedButton(int8_t previous_button,
+                                      int8_t current_button,
+                                      bool touch_pressed) {
+  return !touch_pressed && current_button < 0 ? previous_button : -1;
+}
+
 class MenuInputRepeat {
  public:
   static constexpr uint32_t kHoldDelayMs = 1000;

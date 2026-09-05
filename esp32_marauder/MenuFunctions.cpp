@@ -662,8 +662,9 @@ void MenuFunctions::main(uint32_t currentTime)
       if (menu_navigation_active) {
         const int8_t held_button =
             display_obj.menuButton(&t_x, &t_y, pressed, true);
-        const int8_t released_button =
-            display_obj.menuButton(&t_x, &t_y, pressed);
+        const int8_t released_button = menuTouchReleasedButton(
+            menu_touch_button, held_button, pressed);
+        menu_touch_button = held_button;
         const bool up_event = menu_up_repeat.update(
             held_button == UP_BUTTON, currentTime);
         const bool down_event = menu_down_repeat.update(
@@ -674,6 +675,7 @@ void MenuFunctions::main(uint32_t currentTime)
       } else {
         menu_up_repeat.reset();
         menu_down_repeat.reset();
+        menu_touch_button = -1;
         menu_button = display_obj.menuButton(&t_x, &t_y, pressed);
       }
 

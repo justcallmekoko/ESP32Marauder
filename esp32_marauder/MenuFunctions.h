@@ -162,6 +162,7 @@ class MenuFunctions
     uint32_t marquee_selected_since = 0;
     MenuInputRepeat menu_up_repeat;
     MenuInputRepeat menu_down_repeat;
+    int8_t menu_touch_button = -1;
 
     void buildWiFiFoxHuntMenu();
     void buildBluetoothFoxHuntMenu();
