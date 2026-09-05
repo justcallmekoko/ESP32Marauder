@@ -387,8 +387,6 @@ class WiFiScan
       struct mac_addr mac_history[mac_history_len];
     #endif
 
-    int current_act_len = 0;
-
     uint32_t chanActTime = 0;
 
     uint8_t ap_mac[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};

