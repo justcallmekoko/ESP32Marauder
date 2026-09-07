@@ -37,6 +37,7 @@ jobs:
           - { name: "M5Cardputer",                   flag: "MARAUDER_CARDPUTER",       fbqn: "esp32:esp32:esp32s3:PartitionScheme=min_spiffs,FlashSize=8M,PSRAM=disabled",                    file_name: "m5cardputer",             tft: true,  tft_file: "User_Setup_marauder_m5cardputer.h",  build_dir: "esp32s3",                    addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
           - { name: "M5Cardputer ADV",               flag: "MARAUDER_CARDPUTER_ADV",   fbqn: "esp32:esp32:esp32s3:PartitionScheme=min_spiffs,FlashSize=8M,PSRAM=disabled",                    file_name: "m5cardputer_adv",         tft: true,  tft_file: "User_Setup_marauder_m5cardputer_adv.h",  build_dir: "esp32s3",                addr: "0x1000",   idf_ver: "2.0.11",   nimble_ver: "1.3.8",    esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
           - { name: "ESP32-C5-DevKitC-1",            flag: "MARAUDER_C5",              fbqn: "esp32:esp32:esp32c5:FlashSize=8M,PartitionScheme=min_spiffs,PSRAM=enabled",                     file_name: "esp32c5devkitc1",         tft: false, tft_file: "",                                   build_dir: "esp32c5",                    addr: "0x2000",   idf_ver: "3.3.4",    nimble_ver: "2.3.8",   esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
+          - { name: "LilyGo T-Dongle C5",            flag: "MARAUDER_T_DONGLE_C5",     fbqn: "esp32:esp32:esp32c5:CDCOnBoot=cdc,FlashMode=qio,FlashSize=16M,PartitionScheme=custom,PSRAM=enabled", file_name: "t_dongle_c5", tft: true, tft_file: "User_Setup_marauder_t_dongle_c5.h", tft_repo: "H4W9/TFT_eSPI", tft_ref: "ESP32-C5", build_dir: "esp32c5", addr: "0x2000", idf_ver: "3.3.4", nimble_ver: "2.3.8", esp_async: "bigbrodude6119/ESPAsyncWebServer", esp_async_ver: "master" }
           - { name: "M5NanoC6",                      flag: "MARAUDER_M5_NANO_C6",      fbqn: "esp32:esp32:esp32c6:CDCOnBoot=cdc,PartitionScheme=min_spiffs",                                  file_name: "m5nanoc6",                tft: false, tft_file: "",                                   build_dir: "esp32c6",                    addr: "0x2000",   idf_ver: "3.3.4",    nimble_ver: "2.3.8",   esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
           - { name: "T-HMI ESP32-S3",                flag: "MARAUDER_CYD_HMI",         fbqn: "esp32:esp32:esp32c3:CDCOnBoot=cdc,PartitionScheme=min_spiffs",                                  file_name: "thmi_S3",                 tft: true,  tft_file: "User_Setup_LilyGo_T_HMI.h",          build_dir: "esp32c3",                    addr: "0x1000",   idf_ver: "3.3.4",    nimble_ver: "2.3.8",   esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master" }
           - { name: "Marauder Pancake",              flag: "MARAUDER_PANCAKE",         fbqn: "esp32:esp32:esp32c5:FlashSize=8M,PartitionScheme=default_8MB,PSRAM=enabled",                    file_name: "pancake",                 tft: true,  tft_file: "User_Setup_marauder_pancake.h",      build_dir: "esp32c5",                    addr: "0x2000",   idf_ver: "3.3.4",    nimble_ver: "2.3.8",   esp_async: "bigbrodude6119/ESPAsyncWebServer",    esp_async_ver: "master", tft_repo: "H4W9/TFT_eSPI", tft_ref: "ESP32-C5" }
@@ -149,12 +150,22 @@ jobs:
           ref: 1.12.0
           path: CustomAdafruit_NeoPixel
 
+
       - name: Install Adafruit RTClib 
         uses: actions/checkout@v2
         with:
           repository: adafruit/RTClib
           ref: 2.1.4
           path: CustomAdafruit_RTClib
+
+      - name: Install APA102 for LilyGo T-Dongle C5
+        if: matrix.board.flag == 'MARAUDER_T_DONGLE_C5'
+        uses: actions/checkout@v4
+        with:
+          repository: pololu/apa102-arduino
+          ref: 3.0.0
+          path: CustomAPA102
+
 
       - name: Install ArduinoJson
         uses: actions/checkout@v2
@@ -243,6 +254,10 @@ jobs:
             sed -i 's/^\/\/#include <${{ matrix.board.tft_file }}>/#include <${{ matrix.board.tft_file }}>/' /home/runner/work/ESP32Marauder/ESP32Marauder/CustomTFT_eSPI/User_Setup_Select.h
           fi
 
+      - name: Configure LilyGo T-Dongle C5 partition table
+        if: matrix.board.flag == 'MARAUDER_T_DONGLE_C5'
+        run: cp installer/partitions/t_dongle_c5.csv esp32_marauder/partitions.csv
+
       - name: Build Marauder for ${{ matrix.board.name }}
         uses: ArminJo/arduino-test-compile@v3.3.0
         with:
@@ -282,6 +297,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [compile_sketch]
     if: ${{ github.event_name == 'workflow_dispatch' }}
+    permissions:
+      contents: write
     steps: 
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -294,10 +311,12 @@ jobs:
           echo "version_dot=$VERSION_DOT" >> $GITHUB_ENV
           
       - name: Create Release
+        id: create_release
         uses: softprops/action-gh-release@v1
         with:
           name: "Marauder Release ${{ github.ref_name }}"
           tag_name: ${{ env.version_dot }}
+          target_commitish: ${{ github.sha }}
           generate_release_notes: false
           draft: true
           files: |
@@ -333,6 +352,7 @@ jobs:
             | Kit | `_kit.bin` |
             | Mini | `_mini.bin` |
             | Mini v3 | `_mini_v3.bin` |
+            | Dual Mini C5 | `_dual_mini_c5.bin` |
             | Flipper Zero | `_flipper.bin` |
             | MutliBoard S3 | `_multiboardS3.bin` |
             | LDDB/NodeMCU/Wemos | `_lddb.bin` |
@@ -345,6 +365,46 @@ jobs:
             | M5 Cardputer | `_m5cardputer.bin` (Available on M5 Burner) |
             | M5 Cardputer ADV | `_m5cardputer_adv.bin` |
             | ESP32-C5 DevKit | [`_esp32c5_devkit.bin`](https://github.com/justcallmekoko/ESP32Marauder/wiki/ESP32%E2%80%90C5%E2%80%90DevKitC%E2%80%901) |
+            | LilyGo T-Dongle C5 | `_t_dongle_c5.bin` |
             | AWOK V2/V3 screen (white usb) | `_v6_1.bin` |
             | AWOK V2 flipper (orange usb) | `_flipper.bin` |
             | AWOK V3 flipper (orange usb) | `_marauder_dev_board_pro.bin` |
+
+      - name: Dispatch private C5 builds
+        env:
+          PRIVATE_TFT_BUILD_TOKEN: ${{ secrets.PRIVATE_TFT_BUILD_TOKEN }}
+          RELEASE_ID: ${{ steps.create_release.outputs.id }}
+        run: |
+          test -n "$PRIVATE_TFT_BUILD_TOKEN"
+          test -n "$RELEASE_ID"
+          [[ "$RELEASE_ID" =~ ^[0-9]+$ ]]
+          echo "release_id=$RELEASE_ID" >> "$GITHUB_ENV"
+          PAYLOAD=$(jq -n \
+            --arg source_sha "${{ github.sha }}" \
+            --arg release_tag "${{ env.version_dot }}" \
+            --arg release_id "$RELEASE_ID" \
+            '{ref:"main",inputs:{mode:"release",source_sha:$source_sha,release_tag:$release_tag,release_id:$release_id}}')
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $PRIVATE_TFT_BUILD_TOKEN" \
+            --header 'Accept: application/vnd.github+json' \
+            --header 'X-GitHub-Api-Version: 2022-11-28' \
+            --header 'Content-Type: application/json' \
+            --data "$PAYLOAD" \
+            'https://api.github.com/repos/justcallmekoko/TFT_eSPI_JCMK/actions/workflows/private-c5-build.yml/dispatches'
+
+      - name: Wait for private C5 binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in $(seq 1 60); do
+            ASSETS=$(gh api "repos/${{ github.repository }}/releases/${{ env.release_id }}" --jq '.assets[].name')
+            if grep -Eq '_v8\.bin$' <<< "$ASSETS" && \
+               grep -Eq '_mini_v3\.bin$' <<< "$ASSETS" && \
+               grep -Eq '_dual_mini_c5\.bin$' <<< "$ASSETS"; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Timed out waiting for the private C5 binaries" >&2
+          exit 1

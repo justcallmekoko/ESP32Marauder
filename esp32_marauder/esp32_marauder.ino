@@ -13,7 +13,7 @@ https://www.online-utility.org/image/convert/to/XBM
 #endif
 
 
-#include "ESP32_PinDebug.h"
+// #include "ESP32_PinDebug.h"
 
 #include <stdio.h>
 
@@ -34,13 +34,17 @@ https://www.online-utility.org/image/convert/to/XBM
   #include "xiaoLED.h"
 #elif defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
   #include "stickcLED.h"
-#elif defined(HAS_NEOPIXEL_LED)
+#elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
   #include "LedInterface.h"
 #endif
 
 #include "settings.h"
 #include "CommandLine.h"
 #include "lang_var.h"
+
+#ifdef HAS_T_DONGLE_DISPLAY
+  #include "TDongleDisplay.h"
+#endif
 
 #ifdef HAS_BATTERY
   #include "BatteryInterface.h"
@@ -72,20 +76,25 @@ https://www.online-utility.org/image/convert/to/XBM
 #ifdef HAS_BUTTONS
   #include "Switches.h"
   
-  #if (U_BTN >= 0)
+  #if (U_BTN >= 0 && U_BTN != -1)
     Switches u_btn = Switches(U_BTN, 1000, U_PULL);
+    // perimanSetPinBusExtraType(U_BTN, "U_BTN");
   #endif
-  #if (D_BTN >= 0)
+  #if (D_BTN >= 0 && D_BTN != -1)
     Switches d_btn = Switches(D_BTN, 1000, D_PULL);
+    // perimanSetPinBusExtraType(D_BTN, "D_BTN");
   #endif
-  #if (L_BTN >= 0)
+  #if (L_BTN >= 0 && L_BTN != -1)
     Switches l_btn = Switches(L_BTN, 1000, L_PULL);
+    // perimanSetPinBusExtraType(L_BTN, "L_BTN");
   #endif
-  #if (R_BTN >= 0)
+  #if (R_BTN >= 0 && R_BTN != -1)
     Switches r_btn = Switches(R_BTN, 1000, R_PULL);
+    // perimanSetPinBusExtraType(R_BTN, "R_BTN");
   #endif
-  #if (C_BTN >= 0)
+  #if (C_BTN >= 0 && C_BTN != -1)
     Switches c_btn = Switches(C_BTN, 1000, C_PULL);
+    // perimanSetPinBusExtraType(C_BTN, "C_BTN");
   #endif
 
 #endif
@@ -97,10 +106,15 @@ Buffer buffer_obj;
 Settings settings_obj;
 CommandLine cli_obj;
 
+// Brightness functions defined in BackLight.cpp
 #ifdef HAS_SCREEN
   extern void brightnessInit();
   extern void backlightOff();
   extern void backlightOn();
+#endif
+
+#ifdef HAS_T_DONGLE_DISPLAY
+  TDongleDisplay t_dongle_display;
 #endif
 
 #ifdef HAS_GPS
@@ -121,8 +135,12 @@ CommandLine cli_obj;
   MenuFunctions menu_function_obj;
 #endif
 
-#if defined(HAS_SD) && !defined(HAS_C5_SD)
-  SDInterface sd_obj;
+#if defined(HAS_SD)
+  #if defined(HAS_C5_SD)
+    SDInterface sd_obj = SDInterface(nullptr);
+  #else
+    SDInterface sd_obj;
+  #endif
 #endif
 
 #ifdef HAS_FLIPPER_LED
@@ -131,7 +149,7 @@ CommandLine cli_obj;
   xiaoLED xiao_led;
 #elif defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
   stickcLED stickc_led;
-#elif defined(HAS_NEOPIXEL_LED)
+#elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
   LedInterface led_obj;
 #endif
 
@@ -219,10 +237,12 @@ uint32_t currentTime  = 0;
 #endif  // SHUTDOWN
 
 
+/*  Fixed Below
 #ifdef HAS_C5_SD
   SPIClass sharedSPI(SPI);
   SDInterface sd_obj = SDInterface(&sharedSPI, SD_CS);
 #endif
+*/
 
 // Screen backlight moved to Backlight.cpp
 #ifdef HAS_SCREEN
@@ -257,56 +277,24 @@ void print_reset_reason() {
 }
 
 
-bool system_time_set = false;
-
-bool set_system_time(struct tm *timeInfo) {
-    // struct tm tmp = timeInfo;
-    time_t t = mktime(timeInfo);
-    if (t == (time_t)-1) {
-        log_w("set_system_time: mktime failed");
-        return false;
-    }
-    struct timeval now = { .tv_sec = t, .tv_usec = 0 };
-    if (settimeofday(&now, NULL) != 0) {
-        log_d("settimeofday failed");
-        return false;
-    }
-    system_time_set = true;
-    log_d("system time updated");
-
-    #ifdef HAS_RTC
-      log_d("set_system_time: calling rtc_obj.adjust_rtc");
-      rtc_obj.adjust_rtc(timeInfo);
-    #endif
-
-    return true;
-}
-
-bool set_system_time(const String& time_str) {
-    struct tm tm_info = {0};
-    // log_d("set_system_time: '%s'", time_str.c_str());
-    if (strptime(time_str.c_str(), "%F %T", &tm_info) != NULL) {
-        return set_system_time(&tm_info);
-    }
-    log_d("set_system_time: invalid time_str '%s'", time_str.c_str());
-    return false;
-}
-
 void setup()
 {
-
-
+  log_d("Main setup");
   // https://github.com/Xinyuan-LilyGO/T-HMI/issues/34
   // T-HMI : latch power on if on battery
   // Prevent StickCP2 from turning off when disconnect USB cable
   #ifdef POWER_HOLD_PIN  
+    log_d("Enable POWER_HOLD_PIN");
     pinMode(POWER_HOLD_PIN, OUTPUT);
     digitalWrite(POWER_HOLD_PIN, HIGH);
+    // perimanSetPinBusExtraType(POWER_HOLD_PIN, "POWER_HOLD_PIN");
   #endif
 
   #ifdef PWR_EN_PIN  // Enable power to peripherals
+    log_d("Enable power to peripherals");
     pinMode(PWR_EN_PIN, OUTPUT);
     digitalWrite(PWR_EN_PIN, HIGH);
+    // perimanSetPinBusExtraType(PWR_EN_PIN, "PWR_EN_PIN");
   #endif
 
   randomSeed(esp_random());
@@ -322,17 +310,19 @@ void setup()
   #endif
   
   #ifndef HAS_IDF_3
+    log_d("esp_spiram_init");
     esp_spiram_init();
   #endif
 
   Serial.begin(115200);
 
-  #ifdef HAS_CH32V003
-    log_d("HAS_CH32V003: Wire: I2C_SDA=%d  I2C_SCL=%d", TP_SDA, TP_SCL);
+  #ifdef I2C_SDA
+    log_d("I2C Begin: Wire: I2C_SDA=%d  I2C_SCL=%d", TP_SDA, TP_SCL);
     Wire.begin(TP_SDA, TP_SCL);
-    if (CH32V003_obj.begin()) {
-      Serial.println("CH32V003 found");
-    } else {
+  #endif
+
+  #ifdef HAS_CH32V003
+    if (!CH32V003_obj.begin()) {
       Serial.println("CH32V003 not found - check wiring and I2C address");
     }
   #endif
@@ -341,48 +331,27 @@ void setup()
     pinMode(ACT_LED_PIN, OUTPUT);
     delay(100);
     digitalWrite(ACT_LED_PIN, LOW);
+    // perimanSetPinBusExtraType(ACT_LED_PIN, "ACT_LED_PIN");
   #endif
 
-  #if defined(TFT_BL)
-    pinMode(TFT_BL, OUTPUT);
-    digitalWrite(TFT_BL, HIGH); // ???
+  #if defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT == 1
+    while(!Serial && millis() < 2000) {
+      delay(500);
+    }
+  #else
+    while(!Serial)
+	delay(10);
   #endif
 
+  // #ifdef HAS_C5_SD
+  //   sharedSPI.begin(SD_SCK, SD_MISO, SD_MOSI);
+  //   delay(100);
+  // #endif
 
-#if defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT == 1
-  while(!Serial && millis() < 2000) {
-    delay(500);
-  }
-#else
-  while(!Serial)
-      delay(10);
-#endif
-
-  #ifdef ENABLE_PM
-    log_d("Setting up power saving");
-    // 1. Define the power management settings
-    esp_pm_config_t pm_config = {
-      .max_freq_mhz = 240,        // Max CPU frequency in MHz (e.g., 240, 160, 80)
-      .min_freq_mhz = 160,         // Min CPU frequency in MHz (XTAL frequency)
-      .light_sleep_enable = true  // true to automatically enter Light-sleep on idle
-    };
-    // 2. Apply the configuration
-    ESP_ERROR_CHECK(esp_pm_configure(&pm_config));
-  #endif
-
-  #ifdef HAS_C5_SD
-    sharedSPI.begin(SD_SCK, SD_MISO, SD_MOSI);
-    delay(100);
-  #endif
-
-  #if defined(MARAUDER_M5STICKCP2) // Prevent StickCP2 from turning off when disconnect USB cable
-    pinMode(POWER_HOLD_PIN, OUTPUT);
-    digitalWrite(POWER_HOLD_PIN, HIGH);
-  #endif
-  
-  #ifdef HAS_SCREEN && defined(TFT_BL) && TFT_BL >= 0
+  #ifdef HAS_SCREEN && defined(TFT_BL) && TFT_BL != -1
     log_d("pinMode %d OUTPUT", TFT_BL);
     pinMode(TFT_BL, OUTPUT);
+    // perimanSetPinBusExtraType(TFT_BL, "TFT_BL");
   #endif
   
   #ifdef HAS_SCREEN
@@ -392,32 +361,23 @@ void setup()
   #if BATTERY_ANALOG_ON == 1
     pinMode(BATTERY_PIN, OUTPUT);
     pinMode(CHARGING_PIN, INPUT);
+    // perimanSetPinBusExtraType(BATTERY_PIN, "BATTERY_PIN");
+    // perimanSetPinBusExtraType(CHARGING_PIN, "CHARGING_PIN");
   #endif
   
+  #if defined(TFT_CS) && TFT_CS != -1
+    log_d("TFT_CS=%d", TFT_CS);
+    pinMode(TFT_CS, OUTPUT);
+    // perimanSetPinBusExtraType(TFT_CS, "TFT_CS");
+  #endif
 
   #ifdef MARAUDER_WS_C5_28
 
     // Must happen before display init CH32V003 controls LCD_RST and backlight
     log_d("Wire: I2C_SDA=%d  I2C_SCL=%d", TP_SDA, TP_SCL);
-    // Wire.begin(TP_SDA, TP_SCL);
-    // Wire.setPins(TP_SDA, TP_SCL);
-    // Wire.begin(TP_SDA, TP_SCL);
-
-    // log_d("CH32V003_obj.begin start");
-    // while(!CH32V003_obj.begin()) {
-    //  Serial.println("CH32V003 not found - check wiring and I2C address");
-    //  delay(1000);
-    // }
-    // log_d("CH32V003 found");
-    // Serial.println("CH32V003 found");
-
 
     log_d("CH32V003_obj.lcdReset");
     CH32V003_obj.lcdReset();      // pulses LCD_RST via EXIO1
-
-    #if defined(TFT_CS) && TFT_CS >= 0
-      pinMode(TFT_CS, OUTPUT);
-    #endif
 
     log_d("CH32V003_obj.setPWM");
     CH32V003_obj.setPWM(80); // 80% brightness
@@ -444,11 +404,13 @@ void setup()
   #endif  // MARAUDER_WS_C5_28
 
   // Preset SPI CS pins to avoid bus conflicts
-  #if defined(HAS_SCREEN) && defined(TFT_CS)
+  // Beware of "unsigned promotion ruless" where -1 == maxint
+  #if defined(HAS_SCREEN) && defined(TFT_CS) && TFT_CS != -1
     digitalWrite(TFT_CS, HIGH);
   #endif
-  
+
   #if defined(HAS_SD) && defined(SD_CS) && !defined(HAS_C5_SD)
+    log_d("SD_CS=%d", SD_CS);
     pinMode(SD_CS, OUTPUT);
     delay(10);
   
@@ -478,12 +440,11 @@ void setup()
 	    ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
   #endif
 
-
-
-
   #ifdef HAS_PSRAM
+    log_d("psramInit");
     if (!psramInit()) {
       Serial.println(F("PSRAM not available"));
+      log_d("PSRAM not available");
     }
   #endif
 
@@ -492,15 +453,24 @@ void setup()
       // Do some SD stuff
       if(!sd_obj.initSD())
         Serial.println(F("SD Card NOT Supported"));
-
     #endif
   #endif
 
-  Serial.println("display_obj.RunSetup");
-  describeAllPins();
   #ifdef HAS_SCREEN
+    log_d("display_obj.RunSetup");
     display_obj.RunSetup();
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  #endif
+
+
+  // this removes the need for "sharedSPI"
+  // the TFT init fucks up the SPI bus, effecting the SD
+  // so reinit it and assert it to for the sd_obj.
+  #ifdef HAS_C5_SD
+    SPIClass& spi = display_obj.tft.getSPIinstance();
+    spi.end();                                          // release TFT's MISO-less bus config
+    spi.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);         // re-init with MISO included
+    sd_obj.setSPI(&spi);
   #endif
 
   #if defined(HAS_SCREEN) && !defined(HAS_MINI_SCREEN)
@@ -547,23 +517,25 @@ void setup()
 
   buffer_obj = Buffer();
 
-  Serial.println("ifndef HAS_SIMPLEX_DISPLAY defined(HAS_SD)");
-  describeAllPins();
   #ifndef HAS_SIMPLEX_DISPLAY
     #if defined(HAS_SD)
       // Do some SD stuff
       if(!sd_obj.initSD())
         Serial.println(F("SD Card NOT Supported"));
-
     #endif
   #endif
 
+  log_d("wifi_scan_obj.RunSetup");
   wifi_scan_obj.RunSetup();
 
   #ifdef HAS_RTC
     rtc_obj.RunSetup();
   #else
-    Serial.println(F("RTC NOT Installed"));
+    log_d("RTC NOT Installed");
+  #endif
+
+  #ifdef HAS_T_DONGLE_DISPLAY
+    t_dongle_display.begin();
   #endif
 
   #ifdef HAS_SCREEN
@@ -573,13 +545,8 @@ void setup()
 
   evil_portal_obj.setup();
 
-  Serial.println("battery_obj.RunSetup");
-  describeAllPins();
   #ifdef HAS_BATTERY
     battery_obj.RunSetup();
-  #endif
-
-  #ifdef HAS_BATTERY
     battery_obj.battery_level = battery_obj.getBatteryLevel();
   #endif
 
@@ -590,7 +557,7 @@ void setup()
     xiao_led.RunSetup();
   #elif defined(MARAUDER_M5STICKC)
     stickc_led.RunSetup();
-  #elif defined(HAS_NEOPIXEL_LED)
+  #elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
     led_obj.RunSetup();
   #endif
 
@@ -622,24 +589,13 @@ void setup()
   wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
 
   cli_obj.RunSetup();
-  describeAllPins();
 }
 
-
-int opins = 1;
 
 void loop()
 {
   currentTime = millis();
   bool mini = false;
-
-  /*
-  int apins = currentTime & (1 << 13);
-  if (apins != opins) {
-     opins = apins;
-     describeAllPins();
-  }
-  */
 
   #ifdef SCREEN_BUFFER
     #ifndef HAS_ILI9341
@@ -668,6 +624,10 @@ void loop()
   cli_obj.main(currentTime);
   wifi_scan_obj.main(currentTime);
 
+  #ifdef HAS_T_DONGLE_DISPLAY
+    t_dongle_display.update(currentTime, wifi_scan_obj);
+  #endif
+
   #ifdef HAS_GPS
     gps_obj.main();
   #endif
@@ -693,6 +653,10 @@ void loop()
     xiao_led.main();
   #elif defined(MARAUDER_M5STICKC)
     stickc_led.main();
+  #elif defined(HAS_T_DONGLE_LED)
+    // The LED shares GPIO2/GPIO7 with the display/SD bus. Always make it the
+    // final writer so later SPI activity cannot leave it latched white.
+    led_obj.refresh();
   #elif defined(HAS_NEOPIXEL_LED)
     led_obj.main(currentTime);
   #endif

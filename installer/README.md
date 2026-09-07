@@ -1,10 +1,10 @@
 # Installer manifest
 
-`targets.json` is the canonical installer identity registry for the 22 stable firmware build targets. It maps each build flag to a stable target ID, aliases, release asset suffix, browser-facing chip family, and esptool chip name.
+`targets.json` is the canonical installer identity registry for all stable firmware build targets. It maps each build flag to a stable target ID, aliases, release asset suffix, browser-facing chip family, and esptool chip name. `privateBuildFlags` identifies Marauder v8, Marauder Mini v3, and Dual Mini C5, which are built only in the private TFT repository.
 
 The normal release workflow, `.github/workflows/build_parallel.yml`, remains unchanged and continues producing its existing downloadable application binaries. Installer automation lives only in the additive `.github/workflows/build_installer_manifests.yml` workflow.
 
-The installer workflow exports its build matrix directly from the normal workflow and validates every build flag against `targets.json`. Matrix parsing fails closed on unsupported syntax, missing fields, duplicates, or target drift. This keeps the existing normal-release matrix authoritative without requiring it to consume installer-specific configuration.
+The installer workflow exports its public build matrix directly from the normal workflow and validates every public build flag against `targets.json`. Matrix parsing fails closed on unsupported syntax, missing fields, duplicates, or target drift. Private target identities remain public, but their TFT implementation and build configuration do not.
 
 Each installer build reads Arduino CLI's expanded upload recipe and concrete build properties; it does not guess offsets, flash size, mode, frequency, or segment paths. It copies each actual flash segment into a target-specific asset, calculates its size and SHA-256 digest, and emits:
 
@@ -12,7 +12,7 @@ Each installer build reads Arduino CLI's expanded upload recipe and concrete bui
 - a factory plan containing every emitted flash segment and requiring erase;
 - a per-target manifest used only as an intermediate CI artifact.
 
-The combine job refuses to create `firmware-manifest.json` unless every registry target is present exactly once and every target agrees on stable channel, version, and full source commit.
+For stable releases, the combine job refuses to create `firmware-manifest.json` unless every public and private registry target is present exactly once and every target agrees on stable channel, version, and full source commit.
 
 ## Triggers and release relationship
 

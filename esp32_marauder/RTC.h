@@ -62,7 +62,7 @@ public:
 
   // -- Adjust overloads - all chips use DateTime now --------------------------
   void adjust_rtc(const char *time_str);   // ISO8601 string
-  void adjust_rtc(struct tm *timeInfo);
+  void adjust_rtc(struct tm timeInfo);
   void adjust_rtc(const DateTime &dt);
   void adjust_rtc(uint32_t t);             // Unix epoch
   void adjust_rtc(time_t t) { rtclock.adjust((uint32_t) t); }             // Unix epoch

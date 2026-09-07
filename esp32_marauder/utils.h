@@ -7,6 +7,7 @@
 #include <WiFi.h>
 
 #include "configs.h"
+#include "MarauderMacAddress.h"
 
 #include "esp_heap_caps.h"
 #include "mbedtls/base64.h"
@@ -170,38 +171,25 @@ inline void generateRandomMac(uint8_t* mac) {
 }
 
 inline String macToString(const Station& station) {
-  char macStr[18]; // 6 pairs of hex digits + 5 colons + null terminator
-  snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
-           station.mac[0], station.mac[1], station.mac[2],
-           station.mac[3], station.mac[4], station.mac[5]);
+  char macStr[marauder::kMacAddressTextLength + 1];
+  marauder::formatMacAddress(station.mac, macStr);
   return String(macStr);
 }
 
 inline String macToString(uint8_t macAddr[6]) {
-  char macStr[18]; // 17 characters for "XX:XX:XX:XX:XX:XX" + 1 null terminator
-  snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X", 
-    macAddr[0], macAddr[1], macAddr[2], 
-    macAddr[3], macAddr[4], macAddr[5]);
+  char macStr[marauder::kMacAddressTextLength + 1];
+  marauder::formatMacAddress(macAddr, macStr);
   return String(macStr);
 }
 
 inline String macToString(const uint8_t macAddr[6]) {
-  char macStr[18]; // 17 characters for "XX:XX:XX:XX:XX:XX" + 1 null terminator
-  snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X", 
-    macAddr[0], macAddr[1], macAddr[2], 
-    macAddr[3], macAddr[4], macAddr[5]);
+  char macStr[marauder::kMacAddressTextLength + 1];
+  marauder::formatMacAddress(macAddr, macStr);
   return String(macStr);
 }
 
 inline void convertMacStringToUint8(const String& macStr, uint8_t macAddr[6]) {
-    // Ensure the input string is in the format "XX:XX:XX:XX:XX:XX"
-    if (macStr.length() != 17)
-        return;
-
-    // Parse the MAC address string and fill the uint8_t array
-    for (int i = 0; i < 6; i++) {
-        macAddr[i] = (uint8_t)strtol(macStr.substring(i * 3, i * 3 + 2).c_str(), nullptr, 16);
-    }
+  marauder::parseMacAddress(macStr.c_str(), macAddr);
 }
 
 

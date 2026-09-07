@@ -20,7 +20,10 @@
 
 class SHTC3 {
 public:
-    inline SHTC3() : _wire(nullptr) {}
+    inline SHTC3() : _wire(nullptr) {
+      suppoorted = false;
+    }
+    bool suppoorted;
 
     /// Start the I2C bus and check the sensor is there.
     inline bool begin(int sdaPin, int sclPin, uint32_t frequency = 400000) {
@@ -40,7 +43,21 @@ public:
     inline bool begin(TwoWire *wireInstance = &Wire) {
         _wire = wireInstance;
 
-        if (!wake()) {
+        _wire->beginTransmission(SHTC3_ADDRESS); // Start transmission to address
+        byte error = Wire.endTransmission(); // End and get status
+        if (error == 0) {
+          log_d("SHTC3 found at I2C 0x%X", SHTC3_ADDRESS);
+          suppoorted = true;
+        } else {
+          log_d("SHTC3 NOT found");
+          suppoorted = false;
+          return false;
+        }
+
+        wake();
+        if (!read()) {
+            log_d("bad read");
+            suppoorted = false;
             return false;
         }
 

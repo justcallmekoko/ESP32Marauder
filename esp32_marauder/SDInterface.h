@@ -18,6 +18,7 @@
   #include "SD.h"
 #endif
 
+#include "SPIFFS.h"
 #ifdef HAS_C5_SD
   #include "SPI.h"
 #endif
@@ -48,12 +49,12 @@ class SDInterface {
     SPIClass *spiExt;
   #elif defined(HAS_C5_SD)
     SPIClass* _spi;
-    int _cs;
   #endif
 
   public:
     #ifdef HAS_C5_SD
-      SDInterface(SPIClass* spi, int cs);
+      SDInterface(SPIClass* spi);
+      void setSPI(SPIClass* spi) { _spi = spi; }   // Fix SPI after Display_obj fuckers it
     #endif
 
     uint8_t cardType;
@@ -76,6 +77,7 @@ class SDInterface {
     void runUpdate(String file_name = "");
     void performUpdate(Stream &updateSource, size_t updateSize);
     bool removeFile(String file_path);
+    bool migrateSPIFFS(uint8_t operation, size_t& files, size_t& bytes, uint8_t& error);
 };
 
 #endif

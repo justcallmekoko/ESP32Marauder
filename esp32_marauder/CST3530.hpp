@@ -97,7 +97,7 @@ public:
     }
 
     inline bool begin(TwoWire &wire = Wire) {
-        log_d("_intPin=%d  _rstPin=%d, _intPin, _rstPin");
+        log_d("_intPin=%d  _rstPin=%d", _intPin, _rstPin);
         if (_intPin >= 0) ::pinMode(_intPin, INPUT);
         if (_rstPin >= 0) {
             ::pinMode(_rstPin, OUTPUT);

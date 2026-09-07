@@ -36,6 +36,7 @@ void BatteryInterface::RunSetup() {
   byte error;
   byte addr;
 
+  log_d("BatteryInterface::RunSetup");
   #ifdef HAS_BATTERY
 
     #if defined(HAS_CH32V003)

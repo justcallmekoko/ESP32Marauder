@@ -29,17 +29,19 @@ inline float get_sys_temp() {
 
   // Read the temperature in Celsius
   if (temperature_sensor_get_celsius(temp_handle, &celsius) == ESP_OK) {
-    Serial.print("Chip Temperature: ");
-    Serial.print(celsius);
-    Serial.println(" °C");
+    // log_d("Chip Temperature: %f", celsius);
   } else {
-    Serial.println("Error reading temperature");
+    log_d("Error reading temperature");
+    
     return 0.0;
   }
   
   return celsius;
 }
 
+inline void disable_sys_temp() {
+  temperature_sensor_disable(temp_handle);
+}
 
 
 #endif   // USE_CPU_TEMP & CONFIG_IDF_TARGET

@@ -50,6 +50,11 @@ void RTC::RunSetup(TwoWire *wireInstance) {
   }
 
   setup();
+
+  if (rtc_synced && !system_time_set) {
+    syncFromRTC();
+    system_time_set = true;
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -67,14 +72,10 @@ bool RTC::setup() {
   if (!rtclock.initialized() || rtclock.lostPower()) {
     log_w("RTC: chip found but time not set (OS bit set)");
     Serial.println(F("RTC found - time not set, needs adjust()"));
-    system_time_set = false;
     rtc_synced = false;
     // supported stays true - caller can call adjust_rtc() or sync_rtc_ntp() later
   } else {
     rtc_synced = true;
-    syncFromRTC();
-    system_time_set = true;
-    log_i("RTC: time valid, system clock synced");
   }
 
   Serial.println(dt_string());
@@ -89,11 +90,9 @@ bool RTC::setup() {
   if (!rtclock.initialized() || rtclock.lostPower()) {
     log_d("RTC is NOT initialized");
     Serial.println(F("RTC is NOT initialized"));
-    system_time_set = false;
+    rtc_synced = false;
   } else {
-    system_time_set = true;
-    syncFromRTC();
-    log_i("SystemTime set from RTC");
+    rtc_synced = true;
   }
 
   rtclock.start();
@@ -106,21 +105,20 @@ bool RTC::setup() {
 bool RTC::setup() {
   log_i("RTC::DS1307_setup");
 
-  struct tm timeinfo;
-  if (getLocalTime(&timeinfo)) {
-    Serial.print("RTC::setup: getLocalTime=");
-    Serial.println(&timeinfo, "%F %T");
-  } else {
-    log_w("getLocalTime Fail");
-  }
+ //  struct tm timeinfo;
+ //  if (getLocalTime(&timeinfo)) {
+ //    Serial.print("RTC::setup: getLocalTime=");
+ //    Serial.println(&timeinfo, "%F %T");
+ //  } else {
+ //    log_w("getLocalTime Fail");
+ //  }
 
   if (!rtclock.isrunning()) {
     Serial.println(F("RTC NOT initialized"));
     log_w("RTC is NOT initialized");
+    rtc_synced = false;
   } else {
-    system_time_set = true;
-    syncFromRTC();
-    Serial.println(F("SystemTime set from RTC"));
+    rtc_synced = true;
   }
 
   log_d("dt_string(): %s", dt_string().c_str());
@@ -165,18 +163,18 @@ void RTC::adjust_rtc(const char *time_str) {
   rtclock.adjust(DateTime(time_str));
 }
 
-void RTC::adjust_rtc(struct tm *ti) {
-  log_d("RTC::adjust_rtc struct tm: %d", ti->tm_year, ti->tm_year + 1900);
+void RTC::adjust_rtc(struct tm ti) {
+  log_d("RTC::adjust_rtc struct tm: %d", ti.tm_year, ti.tm_year + 1900);
   Serial.print("RTC::adjust_rtc ");
-  Serial.println(ti, "%F %T");
+  Serial.println(&ti, "%F %T");
 
   rtclock.adjust(DateTime(
-    (uint16_t)(ti->tm_year) + 1900,
-    (uint8_t) (ti->tm_mon  + 1),
-    (uint8_t)  ti->tm_mday,
-    (uint8_t)  ti->tm_hour,
-    (uint8_t)  ti->tm_min,
-    (uint8_t)  ti->tm_sec
+    (uint16_t)(ti.tm_year) + 1900,
+    (uint8_t) (ti.tm_mon  + 1),
+    (uint8_t)  ti.tm_mday,
+    (uint8_t)  ti.tm_hour,
+    (uint8_t)  ti.tm_min,
+    (uint8_t)  ti.tm_sec
     ));
   }
 
@@ -187,6 +185,8 @@ void RTC::adjust_rtc(const DateTime &dt) {
 void RTC::adjust_rtc(uint32_t t) {
   rtclock.adjust(DateTime(t));
 }
+
+/*   Now Done in system_time.cpp
 
 // -----------------------------------------------------------------------------
 // NTP sync
@@ -209,7 +209,7 @@ bool RTC::sync_rtc_ntp(const char *ntpServer) {
   Serial.println(&timeinfo, "%F %T");
   Serial.println(F("RTC successfully set via NTP"));
 
-  adjust_rtc(&timeinfo);
+  adjust_rtc(timeinfo);
   Serial.println(F("RTC updated with NTP time"));
   return true;
 }
@@ -238,6 +238,8 @@ bool RTC::getSystemTimeFromString(const char *timeStr) {
   return true;
 }
 
+*/
+
 // -----------------------------------------------------------------------------
 // dt_string / millis_dt_string
 // -----------------------------------------------------------------------------
@@ -251,6 +253,8 @@ String RTC::dt_string() {
   return String(buf);
 }
 
+
+/*  Not Used
 String RTC::millis_dt_string() {
   uint32_t ms = millis();
   uint32_t s  = (ms / 1000)     % 60;
@@ -261,5 +265,6 @@ String RTC::millis_dt_string() {
   snprintf(buf, sizeof(buf), "%ud %02u:%02u:%02u", d, h, m, s);
   return String(buf);
 }
+*/
 
 #endif // HAS_RTC
