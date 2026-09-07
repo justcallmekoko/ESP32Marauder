@@ -68,8 +68,8 @@ class InstallerManifestTests(unittest.TestCase):
         self.assertIn("github.event_name == 'release'", installer_workflow)
         self.assertIn('marauder-installer-assets.zip', installer_workflow)
         self.assertNotIn('release-assets/*.bin\n', installer_workflow)
-        self.assertEqual(len(registry["targets"]), 26)
-        self.assertEqual(len(boards), 23)
+        self.assertEqual(len(registry["targets"]), 27)
+        self.assertEqual(len(boards), 24)
         self.assertEqual(
             private_flags,
             {"MARAUDER_V8", "MARAUDER_MINI_V3", "DUAL_MINI_C5"},
@@ -221,7 +221,7 @@ class InstallerManifestTests(unittest.TestCase):
             self.assertEqual(release["metadataStatus"], "authoritative")
             self.assertEqual(release["channel"], "stable")
             self.assertEqual(release["sourceCommit"], "a" * 40)
-            self.assertEqual(len(release["targets"]), 26)
+            self.assertEqual(len(release["targets"]), 27)
             self.assertIn("/" + "a" * 40 + "/", release["$schema"])
 
     def test_combiner_rejects_target_identity_drift(self) -> None:

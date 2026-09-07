@@ -135,10 +135,15 @@ bool SDInterface::initSD() {
       }
     #endif
 
-    pinMode(SD_CS, OUTPUT);
+    #ifndef HAS_SD_MMC
+      pinMode(SD_CS, OUTPUT);
+    #endif
 
     delay(10);
-    #if (defined(MARAUDER_M5STICKC)) || (defined(HAS_CYD_TOUCH)) || (defined(MARAUDER_CARDPUTER)) || (defined(MARAUDER_CARDPUTER_ADV))
+    #if defined(HAS_SD_MMC)
+      SD_MMC.setPins(SD_MMC_CLK_PIN, SD_MMC_CMD_PIN, SD_MMC_D0_PIN);
+      if (!SD_MMC.begin("/sdcard", true /* 1-bit mode */)) {
+    #elif (defined(MARAUDER_M5STICKC)) || (defined(HAS_CYD_TOUCH)) || (defined(MARAUDER_CARDPUTER)) || (defined(MARAUDER_CARDPUTER_ADV))
       /* Set up SPI SD Card using external pin header
       StickCPlus Header - SPI SD Card Reader
                   3v3   -   3v3

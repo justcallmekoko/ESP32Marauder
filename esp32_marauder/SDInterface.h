@@ -9,7 +9,16 @@
 #ifdef HAS_C5_SD
   #include "FS.h"
 #endif
-#include "SD.h"
+#ifdef HAS_SD_MMC
+  // This board's microSD slot is wired to the SDMMC peripheral (1-bit), not SPI.
+  // SD_MMC exposes the same fs::FS API as SD, so alias it and keep the rest of
+  // the codebase bus-agnostic. SD.h is intentionally left out here to avoid a
+  // clash on the aliased name.
+  #include "SD_MMC.h"
+  #define SD SD_MMC
+#else
+  #include "SD.h"
+#endif
 #include "SPIFFS.h"
 #ifdef HAS_C5_SD
   #include "SPI.h"

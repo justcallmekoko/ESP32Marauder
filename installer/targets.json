@@ -236,6 +236,15 @@
       "assetSuffix": "dual_mini_c5",
       "chipFamily": "ESP32-C5",
       "esptoolChip": "esp32c5"
+    },
+    {
+      "id": "waveshare-s3-touch-lcd-3-49",
+      "displayName": "Waveshare ESP32-S3-Touch-LCD-3.49",
+      "aliases": ["Waveshare 3.49", "Waveshare S3 Touch LCD 3.49"],
+      "buildFlag": "MARAUDER_WAVESHARE_S3_349",
+      "assetSuffix": "waveshare_s3_touch_lcd_349",
+      "chipFamily": "ESP32-S3",
+      "esptoolChip": "esp32s3"
     }
   ]
 }

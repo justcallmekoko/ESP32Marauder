@@ -38,6 +38,7 @@
   //#define MARAUDER_MINI_V3
   //#define MARAUDER_M5_NANO_C6
   //#define DUAL_MINI_C5
+  //#define MARAUDER_WAVESHARE_S3_349
   //// END BOARD TARGETS
 
   #define JSON_SETTING_SIZE 2048
@@ -115,6 +116,8 @@
     #define HARDWARE_NAME "Dual Mini C5"
   #elif defined(MARAUDER_M5_NANO_C6)
     #define HARDWARE_NAME "M5 Nano C6"
+  #elif defined(MARAUDER_WAVESHARE_S3_349)
+    #define HARDWARE_NAME "Waveshare S3 Touch LCD 3.49"
   #else
     #define HARDWARE_NAME "ESP32"
   #endif
@@ -628,6 +631,21 @@
     #define HAS_IDF_3
     //#define HAS_DIRECT_UPLOAD
   #endif
+
+  #if defined(MARAUDER_WAVESHARE_S3_349)
+    // Headless build: the AXS15231B QSPI panel is not wired up yet (see PR follow-up).
+    //#define HAS_SCREEN
+    //#define HAS_GPS
+    #define HAS_BT
+    #define HAS_BUTTONS
+    #define HAS_SD
+    #define USE_SD
+    #define HAS_SD_MMC
+    #define HAS_PSRAM
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3
+    #define HAS_DIRECT_UPLOAD
+  #endif
   //// END BOARD FEATURES
 
   //// POWER MANAGEMENT
@@ -911,6 +929,23 @@
       #define HAS_R
       #define HAS_U
       #define HAS_D
+      #define HAS_C
+
+      #define L_PULL true
+      #define C_PULL true
+      #define U_PULL true
+      #define R_PULL true
+      #define D_PULL true
+    #endif
+
+    #ifdef MARAUDER_WAVESHARE_S3_349
+      // Onboard BOOT button (GPIO0), active low with internal pull-up.
+      #define L_BTN -1
+      #define C_BTN 0
+      #define U_BTN -1
+      #define R_BTN -1
+      #define D_BTN -1
+
       #define HAS_C
 
       #define L_PULL true
@@ -2580,6 +2615,13 @@
 
     #ifdef MARAUDER_MINI_V3
       #define SD_CS 10
+    #endif
+
+    #ifdef MARAUDER_WAVESHARE_S3_349
+      // Onboard microSD is wired to the SDMMC peripheral (1-bit), not SPI.
+      #define SD_MMC_CLK_PIN 41
+      #define SD_MMC_CMD_PIN 39
+      #define SD_MMC_D0_PIN  40
     #endif
 
   #endif
