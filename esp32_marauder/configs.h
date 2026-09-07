@@ -2851,12 +2851,20 @@
       #define I2C_SDA 33
       #define I2C_SCL 22
 
-    #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_KIT)
+    #elif defined(MARAUDER_KIT)
       #define I2C_SDA 33
       #define I2C_SCL 22
       #define HAS_MAX1704X
       #undef HAS_AXP2101
       #undef HAS_IP5306
+
+    // V4, V6 and V6.1 declare HAS_IP5306 in their own board blocks (lines 257
+    // and 278). Let that stand rather than overriding it here -- the dedup
+    // ladder below resolves the rest.
+    #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
+      #define I2C_SDA 33
+      #define I2C_SCL 22
+      #undef HAS_AXP2101
 
     #elif defined(MARAUDER_MINI)
       #define I2C_SDA 33
