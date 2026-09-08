@@ -41,6 +41,7 @@
   //#define MARAUDER_PANCAKE
   //#define MARAUDER_MINI_V3
   //#define MARAUDER_M5_NANO_C6
+  //#define MARAUDER_M5_NANO_C6_GROVE
   //#define DUAL_MINI_C5
   //// END BOARD TARGETS
 
@@ -119,6 +120,8 @@
     #define HARDWARE_NAME "Dual Mini C5"
   #elif defined(MARAUDER_M5_NANO_C6)
     #define HARDWARE_NAME "M5 Nano C6"
+  #elif defined(MARAUDER_M5_NANO_C6_GROVE)
+    #define HARDWARE_NAME "M5 Nano C6 (Grove UART)"
   #else
     #define HARDWARE_NAME "ESP32"
   #endif
@@ -615,8 +618,7 @@
     #define HAS_DIRECT_UPLOAD
   #endif
 
-  #if defined(MARAUDER_M5_NANO_C6)
-    //#define FLIPPER_ZERO_HAT
+  #if defined(MARAUDER_M5_NANO_C6) || defined(MARAUDER_M5_NANO_C6_GROVE)
     //#define HAS_MINI_KB
     //#define HAS_BATTERY
     #define HAS_BT
@@ -632,6 +634,19 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     //#define HAS_DIRECT_UPLOAD
+  #endif
+
+  // M5NanoC6's Grove port is wired to GPIO1/GPIO2 only (see schematic:
+  // https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/505/Sch_M5NanoC6_v0.0.1_sch_01.png)
+  // - the chip's native UART0 pins (GPIO16/17) aren't broken out to it. This variant
+  // remaps the CLI's Serial to those Grove pins so a Flipper Zero connected via
+  // Grove can talk to Marauder. Requires CDCOnBoot=default (cdc_on_boot=0) at
+  // build time so `Serial` resolves to UART0 instead of native USB-CDC; the
+  // regular MARAUDER_M5_NANO_C6 target is unaffected and keeps its USB CLI.
+  #ifdef MARAUDER_M5_NANO_C6_GROVE
+    #define FLIPPER_ZERO_HAT
+    #define FLIPPER_GROVE_TX_PIN 1
+    #define FLIPPER_GROVE_RX_PIN 2
   #endif
   //// END BOARD FEATURES
 
@@ -2745,7 +2760,7 @@
       #define PIN 27
     #elif defined(MARAUDER_CARDPUTER_ADV)
       #define PIN 21
-    #elif defined(MARAUDER_M5_NANO_C6)
+    #elif defined(MARAUDER_M5_NANO_C6) || defined(MARAUDER_M5_NANO_C6_GROVE)
       #define PIN 20
     #else
       #define PIN 25
