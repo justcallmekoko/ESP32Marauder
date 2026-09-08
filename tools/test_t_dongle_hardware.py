@@ -38,8 +38,7 @@ class TDongleHardwareTests(unittest.TestCase):
         self.assertIn("t_dongle_led.sendColor(red, green, blue, brightness)", writer)
         self.assertIn("t_dongle_led.endFrame(1)", writer)
         self.assertIn("? 10 : 0", writer)
-        self.assertIn("digitalWrite(T_DONGLE_TFT_CS_PIN, HIGH)", writer)
-        self.assertIn("digitalWrite(SD_CS, HIGH)", writer)
+        self.assertIn("deselectTDongleSharedSpi(T_DONGLE_TFT_CS_PIN, SD_CS)", writer)
         self.assertNotIn("SPI.begin", writer)
 
         header = (ROOT / "esp32_marauder" / "LedInterface.h").read_text()
