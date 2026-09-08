@@ -636,8 +636,9 @@
     //#define HAS_DIRECT_UPLOAD
   #endif
 
-  // M5NanoC6's Grove port is wired to GPIO1/GPIO2 only (see schematic) - the
-  // chip's native UART0 pins (GPIO16/17) aren't broken out to it. This variant
+  // M5NanoC6's Grove port is wired to GPIO1/GPIO2 only (see schematic:
+  // https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/505/Sch_M5NanoC6_v0.0.1_sch_01.png)
+  // - the chip's native UART0 pins (GPIO16/17) aren't broken out to it. This variant
   // remaps the CLI's Serial to those Grove pins so a Flipper Zero connected via
   // Grove can talk to Marauder. Requires CDCOnBoot=default (cdc_on_boot=0) at
   // build time so `Serial` resolves to UART0 instead of native USB-CDC; the
