@@ -121,7 +121,7 @@
   #elif defined(MARAUDER_M5_NANO_C6)
     #define HARDWARE_NAME "M5 Nano C6"
   #elif defined(MARAUDER_M5_NANO_C6_GROVE)
-    #define HARDWARE_NAME "M5 Nano C6 (Flipper Grove)"
+    #define HARDWARE_NAME "M5 Nano C6 (Grove UART)"
   #else
     #define HARDWARE_NAME "ESP32"
   #endif

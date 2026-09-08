@@ -202,6 +202,15 @@
       "esptoolChip": "esp32c6"
     },
     {
+      "id": "m5-nano-c6-grove",
+      "displayName": "M5 Nano C6 (Grove UART)",
+      "aliases": ["M5NanoC6 Grove", "M5NanoC6 Flipper Grove"],
+      "buildFlag": "MARAUDER_M5_NANO_C6_GROVE",
+      "assetSuffix": "m5nanoc6_grove",
+      "chipFamily": "ESP32-C6",
+      "esptoolChip": "esp32c6"
+    },
+    {
       "id": "marauder-pancake",
       "displayName": "Marauder Pancake",
       "aliases": ["Pancake Marauder V8"],
