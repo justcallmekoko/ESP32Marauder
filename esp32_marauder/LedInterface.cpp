@@ -96,6 +96,16 @@ void LedInterface::setColor(int r, int g, int b) {
 #ifdef HAS_T_DONGLE_LED
 void LedInterface::writeApa102Color(uint8_t red, uint8_t green, uint8_t blue) {
   const uint8_t brightness = (red || green || blue) ? 10 : 0;
+
+  // The APA102 shares the TFT/SD clock and data lines on shipped T-Dongle
+  // hardware. Keep both SPI peripherals deselected while bit-banging the LED;
+  // otherwise the LED frame can be interpreted as display or SD traffic and
+  // leave the panel lit black.
+  pinMode(T_DONGLE_TFT_CS_PIN, OUTPUT);
+  digitalWrite(T_DONGLE_TFT_CS_PIN, HIGH);
+  pinMode(SD_CS, OUTPUT);
+  digitalWrite(SD_CS, HIGH);
+
   this->t_dongle_led.startFrame();
   this->t_dongle_led.sendColor(red, green, blue, brightness);
   this->t_dongle_led.endFrame(1);
