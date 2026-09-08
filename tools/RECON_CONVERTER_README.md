@@ -22,7 +22,7 @@ python3 tools/recon_report.py /path/to/m0042 --zip
 ## Inputs
 
 - `session.json`: mission manifest and completion state.
-- `obs.rlog`: AP, station, BLE, repeat, and change observations.
+- `obs.rlog`: AP, station, BLE, deauth, repeat, and change observations.
 - `probes.rlog`: Wi-Fi probe-request observations, when present.
 - `relations.rlog`: observed station-to-AP relationships, when present.
 - `.pcap`: packet capture for separate inspection in Wireshark.

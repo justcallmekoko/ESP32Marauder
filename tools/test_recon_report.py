@@ -15,7 +15,7 @@ class ReconReportTests(unittest.TestCase):
     @staticmethod
     def make_mission(root: Path) -> Path:
         mission = root / "m0042"
-        mission.mkdir()
+        mission.mkdir(parents=True, exist_ok=True)
         (mission / "session.json").write_text(
             json.dumps(
                 {
@@ -48,6 +48,16 @@ class ReconReportTests(unittest.TestCase):
                 0,
                 b"s",
             ),
+            struct.pack(
+                "<Iii6sbBc",
+                3000,
+                38856870,
+                -77225870,
+                bytes.fromhex("112233445566"),
+                -60,
+                11,
+                b"d",
+            ),
         ]
         (mission / "obs.rlog").write_bytes(b"RCN1" + b"".join(records))
         probe = struct.pack(
@@ -70,13 +80,17 @@ class ReconReportTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             mission = self.make_mission(Path(temporary))
             observations = read_observations(mission / "obs.rlog")
-            self.assertEqual(len(observations), 2)
+            self.assertEqual(len(observations), 3)
             self.assertEqual(observations[0].mac, "00:11:22:33:44:55")
             self.assertEqual(observations[0].latitude, 38.85685)
             self.assertEqual(observations[0].longitude, -77.22585)
             self.assertEqual(observations[0].type, "access-point")
             self.assertEqual(observations[0].event, "new")
             self.assertIsNone(observations[1].latitude)
+            self.assertEqual(observations[2].type, "deauth")
+            self.assertEqual(observations[2].event, "deauth")
+            self.assertEqual(observations[2].mac, "11:22:33:44:55:66")
+            self.assertEqual(observations[2].channel, 11)
 
     def test_decodes_probe_names_and_source(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -114,6 +128,8 @@ class ReconReportTests(unittest.TestCase):
             self.assertIn("GPS SIGHTING PLOT", report)
             self.assertIn("MISSION REPLAY", report)
             self.assertIn("OBSERVED RELATIONSHIPS", report)
+            self.assertIn("Deauth frames", report)
+            self.assertIn("m0042", report)
             self.assertIn("38.856850, -77.225850", report)
             payload = json.loads((output / "mission.json").read_text(encoding="utf-8"))
             self.assertEqual(len(payload["relationships"]), 2)
@@ -134,6 +150,14 @@ class ReconReportTests(unittest.TestCase):
             path.write_bytes(b"NOPE")
             with self.assertRaisesRegex(ReconReportError, "not an RCN1"):
                 read_observations(path)
+
+    def test_custom_output_directory_preserves_mission_name(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            mission = self.make_mission(Path(temporary) / "missions")
+            custom_out = Path(temporary) / "custom_reports" / "run1"
+            convert(mission, output=custom_out)
+            report = (custom_out / "index.html").read_text(encoding="utf-8")
+            self.assertIn("m0042", report)
 
 
 if __name__ == "__main__":
