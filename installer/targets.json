@@ -204,7 +204,7 @@
     {
       "id": "m5-nano-c6-grove",
       "displayName": "M5 Nano C6 (Grove UART)",
-      "aliases": ["M5NanoC6 Grove", "M5NanoC6 Flipper Grove"],
+      "aliases": ["M5NanoC6 Grove UART", "M5NanoC6 Grove", "M5NanoC6 Flipper Grove"],
       "buildFlag": "MARAUDER_M5_NANO_C6_GROVE",
       "assetSuffix": "m5nanoc6_grove",
       "chipFamily": "ESP32-C6",
