@@ -1,0 +1,12 @@
+# The native harness currently exercises only host-testable firmware modules.
+# Whole-source reports deliberately retain zero-hit lines for hardware-bound
+# code, so coverage remains visible but must not imply that hardware/PCAP
+# validation failed.
+coverage:
+  status:
+    project:
+      default:
+        informational: true
+    patch:
+      default:
+        informational: true
