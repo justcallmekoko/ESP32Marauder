@@ -5,6 +5,7 @@
 constexpr int LOW = 0;
 constexpr int HIGH = 1;
 constexpr int INPUT = 0;
+constexpr int OUTPUT = 1;
 constexpr int INPUT_PULLUP = 1;
 constexpr int INPUT_PULLDOWN = 2;
 
@@ -13,6 +14,9 @@ inline int read_value = LOW;
 inline uint32_t current_millis = 0;
 inline int pin_mode_pin = -1;
 inline int pin_mode_value = -1;
+inline int write_pins[2] = {-1, -1};
+inline int write_values[2] = {-1, -1};
+inline int write_count = 0;
 }
 
 inline void pinMode(int pin, int mode) {
@@ -20,6 +24,13 @@ inline void pinMode(int pin, int mode) {
   arduino_test::pin_mode_value = mode;
 }
 inline int digitalRead(int) { return arduino_test::read_value; }
+inline void digitalWrite(int pin, int value) {
+  if (arduino_test::write_count < 2) {
+    arduino_test::write_pins[arduino_test::write_count] = pin;
+    arduino_test::write_values[arduino_test::write_count] = value;
+  }
+  ++arduino_test::write_count;
+}
 inline uint32_t millis() { return arduino_test::current_millis; }
 
 namespace arduino_test {
@@ -28,9 +39,15 @@ inline void reset() {
   current_millis = 0;
   pin_mode_pin = -1;
   pin_mode_value = -1;
+  write_pins[0] = write_pins[1] = -1;
+  write_values[0] = write_values[1] = -1;
+  write_count = 0;
 }
 inline void setDigitalRead(int value) { read_value = value; }
 inline void setMillis(uint32_t value) { current_millis = value; }
 inline int lastPinModePin() { return pin_mode_pin; }
 inline int lastPinModeValue() { return pin_mode_value; }
+inline int digitalWriteCount() { return write_count; }
+inline int digitalWritePin(int index) { return write_pins[index]; }
+inline int digitalWriteValue(int index) { return write_values[index]; }
 }
