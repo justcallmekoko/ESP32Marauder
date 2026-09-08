@@ -18,7 +18,7 @@ PROBE_MAGIC = b"PRB1"
 PROBE_RECORD = struct.Struct("<Iii6sbBB24s")
 RELATIONSHIP_MAGIC = b"REL1"
 RELATIONSHIP_RECORD = struct.Struct("<6s6s")
-TYPE_NAMES = {"a": "access-point", "s": "station", "b": "ble"}
+TYPE_NAMES = {"a": "access-point", "s": "station", "b": "ble", "d": "deauth"}
 GPS_COORDINATE_SCALE = 1_000_000
 
 
@@ -76,7 +76,7 @@ def read_observations(path: Path) -> list[Observation]:
                 rssi=rssi,
                 channel=channel,
                 type=TYPE_NAMES[base_kind],
-                event="repeat" if kind.isupper() else "new",
+                event="repeat" if kind.isupper() else ("deauth" if base_kind == "d" else "new"),
                 ssid=None,
             )
         )
@@ -197,13 +197,15 @@ def _route_points(observations: list[Observation]) -> str:
 
 
 def write_html(path: Path, manifest: dict, observations: list[Observation],
-               relationships: list[Relationship]) -> None:
+               relationships: list[Relationship], mission_name: str | None = None) -> None:
     counts = {name: 0 for name in TYPE_NAMES.values()}
     for item in observations:
         if item.event == "new":
             counts[item.type] += 1
     probe_count = sum(item.event == "probe" for item in observations)
     repeat_count = sum(item.event == "repeat" for item in observations)
+    deauth_count = sum(item.event == "deauth" for item in observations)
+    name = mission_name or path.parent.parent.name
     duration = int(manifest.get("duration_ms", 0)) // 1000
     rows = "".join(
         f'<tr data-time="{item.elapsed_ms}">'
@@ -234,12 +236,13 @@ main{{max-width:1100px;margin:auto;padding:28px}} h1{{letter-spacing:.12em;margi
 .route{{fill:none;stroke:var(--mag);stroke-width:3;filter:url(#glow)}} table{{width:100%;border-collapse:collapse;white-space:nowrap}} th,td{{padding:8px;border-bottom:1px solid var(--line);text-align:left}} th{{color:var(--cyan)}} .empty{{color:var(--muted);padding:28px;text-align:center}}
 .replay{{display:flex;gap:14px;align-items:center}} .replay input{{width:100%;accent-color:var(--mag)}} .hidden{{display:none}}
 </style></head><body><main><h1>RECON MISSION</h1>
-<div class="sub">{html.escape(path.parent.parent.name)} · {html.escape(str(manifest.get('mode', 'unknown')).upper())} · {html.escape(str(manifest.get('state', 'unknown')).upper())}</div>
+<div class="sub">{html.escape(name)} · {html.escape(str(manifest.get('mode', 'unknown')).upper())} · {html.escape(str(manifest.get('state', 'unknown')).upper())}</div>
 <section class="grid"><div class="card"><div class="value">{len(observations)}</div><div class="label">Sightings</div></div>
 <div class="card"><div class="value">{counts['access-point']}</div><div class="label">Access points</div></div>
 <div class="card"><div class="value">{counts['station']}</div><div class="label">Stations</div></div>
 <div class="card"><div class="value">{counts['ble']}</div><div class="label">BLE devices</div></div>
 <div class="card"><div class="value">{probe_count}</div><div class="label">Probe requests</div></div>
+<div class="card"><div class="value">{deauth_count}</div><div class="label">Deauth frames</div></div>
 <div class="card"><div class="value">{repeat_count}</div><div class="label">Changed / returned</div></div>
 <div class="card"><div class="value">{len(relationships)}</div><div class="label">Relationships</div></div>
 <div class="card"><div class="value">{duration // 60}:{duration % 60:02d}</div><div class="label">Duration</div></div></section>
@@ -262,7 +265,7 @@ def convert(directory: Path, output: Path | None = None, make_zip: bool = False)
     output.mkdir(parents=True, exist_ok=True)
     write_csv(output / "observations.csv", observations)
     write_json(output / "mission.json", manifest, observations, relationships)
-    write_html(output / "index.html", manifest, observations, relationships)
+    write_html(output / "index.html", manifest, observations, relationships, mission_name=directory.name)
     if make_zip:
         archive = output.parent / f"{directory.name}-report.zip"
         with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as bundle:
