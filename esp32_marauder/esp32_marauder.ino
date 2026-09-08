@@ -242,7 +242,13 @@ void setup()
     esp_spiram_init();
   #endif
 
-  Serial.begin(115200);
+  #if defined(FLIPPER_ZERO_HAT) && defined(FLIPPER_GROVE_TX_PIN) && defined(FLIPPER_GROVE_RX_PIN)
+    // Serial is UART0 here (build must set CDCOnBoot=default/cdc_on_boot=0);
+    // remap it onto the Grove pins so a Flipper Zero wired to Grove can reach it.
+    Serial.begin(115200, SERIAL_8N1, FLIPPER_GROVE_RX_PIN, FLIPPER_GROVE_TX_PIN);
+  #else
+    Serial.begin(115200);
+  #endif
 
   #ifdef HAS_ACT_LED
     pinMode(ACT_LED_PIN, OUTPUT);
@@ -250,8 +256,10 @@ void setup()
     digitalWrite(ACT_LED_PIN, LOW);
   #endif
 
-  while(!Serial)
-    delay(10);
+  #if !(defined(FLIPPER_ZERO_HAT) && defined(FLIPPER_GROVE_TX_PIN) && defined(FLIPPER_GROVE_RX_PIN))
+    while(!Serial)
+      delay(10);
+  #endif
 
   #ifdef HAS_C5_SD
     sharedSPI.begin(SD_SCK, SD_MISO, SD_MOSI);
