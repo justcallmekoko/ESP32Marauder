@@ -4237,20 +4237,6 @@ bool WiFiScan::RunGPSInfo(bool tracker, bool display, bool poi) {
       //Serial.println(F("Refreshing GPS Data on screen..."));
       #ifdef HAS_SCREEN
         const int16_t content_top = (SCREEN_HEIGHT / 3) - 6;
-        const bool compact = SCREEN_HEIGHT <= 160 || SCREEN_WIDTH <= 160;
-        const bool expanded = SCREEN_HEIGHT >= 240 && SCREEN_WIDTH >= 200;
-        const uint32_t elapsed_seconds = this->gps_tracker_stats.elapsedMs(now_ms) / 1000;
-        const uint32_t elapsed_hours = elapsed_seconds / 3600;
-        const uint8_t elapsed_minutes = (elapsed_seconds / 60) % 60;
-        const uint8_t elapsed_secs = elapsed_seconds % 60;
-        char elapsed_text[16];
-        snprintf(elapsed_text, sizeof(elapsed_text), "%02lu:%02u:%02u",
-                 static_cast<unsigned long>(elapsed_hours), elapsed_minutes, elapsed_secs);
-        const float distance_m = this->gps_tracker_stats.distanceMeters();
-        const String distance_text = distance_m >= 1000.0f
-            ? String(distance_m / 1000.0f, 2) + " km"
-            : String(distance_m, 1) + " m";
-
         display_obj.tft.setTextWrap(false);
         display_obj.tft.setFreeFont(NULL);
         display_obj.tft.setTextSize(1);
@@ -4261,57 +4247,88 @@ bool WiFiScan::RunGPSInfo(bool tracker, bool display, bool poi) {
           return_val = false;
         }
 
-        if (compact) {
-          display_obj.tft.setCursor(0, content_top + 6);
-          display_obj.tft.setTextColor(gps_obj.getFixStatus() ? TFT_GREEN : TFT_RED);
-          display_obj.tft.print(gps_obj.getFixStatus() ? F("FIX") : F("NO FIX"));
-          display_obj.tft.setTextColor(TFT_CYAN);
-          display_obj.tft.println("  SAT " + gps_obj.getNumSatsString() + "  " + elapsed_text);
-          display_obj.tft.println("DIST " + distance_text);
-          display_obj.tft.println("LAT  " + gps_obj.getLat());
-          display_obj.tft.println("LON  " + gps_obj.getLon());
-          display_obj.tft.println("ALT " + String(gps_obj.getAlt(), 1) + "m  ACC " +
-                                  String(gps_obj.getAccuracy(), 1) + "m");
-          display_obj.tft.println("SPD " + String(this->gps_tracker_stats.speedMetersPerSecond() * 3.6f, 1) +
-                                  "km/h  PTS " + String(this->gps_tracker_stats.loggedPoints()));
+        if (tracker && !poi) {
+          const bool compact = SCREEN_HEIGHT <= 160 || SCREEN_WIDTH <= 160;
+          const bool expanded = SCREEN_HEIGHT >= 240 && SCREEN_WIDTH >= 200;
+          const uint32_t elapsed_seconds = this->gps_tracker_stats.elapsedMs(now_ms) / 1000;
+          const uint32_t elapsed_hours = elapsed_seconds / 3600;
+          const uint8_t elapsed_minutes = (elapsed_seconds / 60) % 60;
+          const uint8_t elapsed_secs = elapsed_seconds % 60;
+          char elapsed_text[16];
+          snprintf(elapsed_text, sizeof(elapsed_text), "%02lu:%02u:%02u",
+                   static_cast<unsigned long>(elapsed_hours), elapsed_minutes, elapsed_secs);
+          const float distance_m = this->gps_tracker_stats.distanceMeters();
+          const String distance_text = distance_m >= 1000.0f
+              ? String(distance_m / 1000.0f, 2) + " km"
+              : String(distance_m, 1) + " m";
+
+          if (compact) {
+            display_obj.tft.setCursor(0, content_top + 6);
+            display_obj.tft.setTextColor(gps_obj.getFixStatus() ? TFT_GREEN : TFT_RED);
+            display_obj.tft.print(gps_obj.getFixStatus() ? F("FIX") : F("NO FIX"));
+            display_obj.tft.setTextColor(TFT_CYAN);
+            display_obj.tft.println("  SAT " + gps_obj.getNumSatsString() + "  " + elapsed_text);
+            display_obj.tft.println("DIST " + distance_text);
+            display_obj.tft.println("LAT  " + gps_obj.getLat());
+            display_obj.tft.println("LON  " + gps_obj.getLon());
+            display_obj.tft.println("ALT " + String(gps_obj.getAlt(), 1) + "m  ACC " +
+                                    String(gps_obj.getAccuracy(), 1) + "m");
+            display_obj.tft.println("SPD " + String(this->gps_tracker_stats.speedMetersPerSecond() * 3.6f, 1) +
+                                    "km/h  PTS " + String(this->gps_tracker_stats.loggedPoints()));
+            display_obj.tft.println("UTC " + gps_obj.getDatetime());
+          }
+          else {
+            int16_t y = content_top + 10;
+            display_obj.tft.setCursor(8, y);
+            display_obj.tft.setTextColor(gps_obj.getFixStatus() ? TFT_GREEN : TFT_RED);
+            display_obj.tft.setTextSize(expanded ? 2 : 1);
+            display_obj.tft.print(gps_obj.getFixStatus() ? F("GPS FIX") : F("NO GPS FIX"));
+            display_obj.tft.setTextColor(TFT_CYAN);
+            display_obj.tft.setTextSize(1);
+            display_obj.tft.setCursor(SCREEN_WIDTH - 72, y + 3);
+            display_obj.tft.print("SATS " + gps_obj.getNumSatsString());
+
+            y += expanded ? 30 : 18;
+            display_obj.tft.setCursor(8, y);
+            display_obj.tft.setTextSize(expanded ? 2 : 1);
+            display_obj.tft.println(distance_text);
+            display_obj.tft.setTextSize(1);
+            display_obj.tft.setCursor(SCREEN_WIDTH / 2, y + (expanded ? 4 : 0));
+            display_obj.tft.println(elapsed_text);
+
+            y += expanded ? 28 : 16;
+            display_obj.tft.setCursor(8, y);
+            display_obj.tft.println("LAT  " + gps_obj.getLat());
+            display_obj.tft.setCursor(8, y + 16);
+            display_obj.tft.println("LON  " + gps_obj.getLon());
+            display_obj.tft.setCursor(8, y + 36);
+            display_obj.tft.println("ALT " + String(gps_obj.getAlt(), 1) + " m");
+            display_obj.tft.setCursor(SCREEN_WIDTH / 2, y + 36);
+            display_obj.tft.println("ACC " + String(gps_obj.getAccuracy(), 1) + " m");
+            display_obj.tft.setCursor(8, y + 52);
+            display_obj.tft.println("SPEED " + String(this->gps_tracker_stats.speedMetersPerSecond() * 3.6f, 1) + " km/h");
+            display_obj.tft.setCursor(SCREEN_WIDTH / 2, y + 52);
+            display_obj.tft.println("POINTS " + String(this->gps_tracker_stats.loggedPoints()));
+            if (expanded) {
+              display_obj.tft.setCursor(8, y + 72);
+              display_obj.tft.println("UTC " + gps_obj.getDatetime());
+              display_obj.tft.setCursor(8, y + 88);
+              display_obj.tft.setTextColor(TFT_GREEN);
+              display_obj.tft.println(F("GPX LOGGING ACTIVE"));
+            }
+          }
         }
         else {
-          int16_t y = content_top + 10;
-          display_obj.tft.setCursor(8, y);
-          display_obj.tft.setTextColor(gps_obj.getFixStatus() ? TFT_GREEN : TFT_RED);
-          display_obj.tft.setTextSize(expanded ? 2 : 1);
-          display_obj.tft.print(gps_obj.getFixStatus() ? F("GPS FIX") : F("NO GPS FIX"));
+          display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
           display_obj.tft.setTextColor(TFT_CYAN);
-          display_obj.tft.setTextSize(1);
-          display_obj.tft.setCursor(SCREEN_WIDTH - 72, y + 3);
-          display_obj.tft.print("SATS " + gps_obj.getNumSatsString());
-
-          y += expanded ? 30 : 18;
-          display_obj.tft.setCursor(8, y);
-          display_obj.tft.setTextSize(expanded ? 2 : 1);
-          display_obj.tft.println(distance_text);
-          display_obj.tft.setTextSize(1);
-          display_obj.tft.setCursor(SCREEN_WIDTH / 2, y + (expanded ? 4 : 0));
-          display_obj.tft.println(elapsed_text);
-
-          y += expanded ? 28 : 16;
-          display_obj.tft.setCursor(8, y);
-          display_obj.tft.println("LAT  " + gps_obj.getLat());
-          display_obj.tft.setCursor(8, y + 16);
-          display_obj.tft.println("LON  " + gps_obj.getLon());
-          display_obj.tft.setCursor(8, y + 36);
-          display_obj.tft.println("ALT " + String(gps_obj.getAlt(), 1) + " m");
-          display_obj.tft.setCursor(SCREEN_WIDTH / 2, y + 36);
-          display_obj.tft.println("ACC " + String(gps_obj.getAccuracy(), 1) + " m");
-          display_obj.tft.setCursor(8, y + 52);
-          display_obj.tft.println("SPEED " + String(this->gps_tracker_stats.speedMetersPerSecond() * 3.6f, 1) + " km/h");
-          display_obj.tft.setCursor(SCREEN_WIDTH / 2, y + 52);
-          display_obj.tft.println("POINTS " + String(this->gps_tracker_stats.loggedPoints()));
-          if (expanded) {
-            display_obj.tft.setCursor(8, y + 72);
-            display_obj.tft.setTextColor(TFT_GREEN);
-            display_obj.tft.println(F("GPX LOGGING ACTIVE"));
-          }
+          display_obj.tft.println(gps_obj.getFixStatus() ? F("  Good Fix: Yes") : F("  Good Fix: No"));
+          if (text != "") display_obj.tft.println("      Text: " + text);
+          display_obj.tft.println(" Sats: " + gps_obj.getNumSatsString());
+          display_obj.tft.println("  Acc: " + String(gps_obj.getAccuracy()));
+          display_obj.tft.println("  Lat: " + gps_obj.getLat());
+          display_obj.tft.println("  Lon: " + gps_obj.getLon());
+          display_obj.tft.println("  Alt: " + String(gps_obj.getAlt()));
+          display_obj.tft.println("  D/T: " + gps_obj.getDatetime());
         }
       #endif
 
