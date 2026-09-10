@@ -28,9 +28,10 @@ jobs:
         run: |
           python3 -m venv .venv
           .venv/bin/python -m pip install --disable-pip-version-check platformio==6.1.19 gcovr==7.2
+	  cp platformio-test.ini platformio.ini
 
       - name: Run firmware unit tests
-        run: .venv/bin/platformio test -c platformio-test.ini -e native
+        run: .venv/bin/platformio test -e native
 
       - name: Generate coverage report
         run: .venv/bin/gcovr --root . --filter esp32_marauder --exclude test --cobertura coverage.xml
