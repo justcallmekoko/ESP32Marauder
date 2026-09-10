@@ -682,13 +682,8 @@ void CommandLine::runCommand(String input) {
         upload_dest = BOTH_UPLOAD;
 
       if (upload_dest > -1) {
-        String ssid = settings_obj.loadSetting<String>("ClientSSID");
-        String pw = settings_obj.loadSetting<String>("ClientPW");
-
-        Serial.println("Connecting to " + ssid);
-
-        if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
-          Serial.println("Failed to connected to " + ssid);
+        if (!wifi_scan_obj.joinSavedWiFi(false)) {
+          Serial.println(F("Failed to connect to saved WiFi"));
           return;
         }
         delay(1000);
@@ -1684,7 +1679,7 @@ void CommandLine::runCommand(String input) {
       int index = cmd_args.get(ap_sw + 1).toInt();
       String password = cmd_args.get(pw_sw + 1);
       AccessPoint access_point = access_points->get(index);
-      Serial.println("Using SSID: " + (String)access_point.essid + " Password: " + (String)password);
+      Serial.println("Using SSID: " + (String)access_point.essid);
       //wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
       //wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
       wifi_scan_obj.joinWiFi(access_point.essid, password, false);
@@ -1695,11 +1690,8 @@ void CommandLine::runCommand(String input) {
       #endif
     }
     else if (s_sw != -1) {
-      String ssid = settings_obj.loadSetting<String>("ClientSSID");
-      String pw = settings_obj.loadSetting<String>("ClientPW");
-
-      if ((ssid != "") && (pw != "")) {
-        wifi_scan_obj.joinWiFi(ssid, pw, false);
+      if (settings_obj.getSavedWifiCount() > 0) {
+        wifi_scan_obj.joinSavedWiFi(false);
         #ifdef HAS_SCREEN
           menu_function_obj.changeMenu(menu_function_obj.current_menu);
         #endif

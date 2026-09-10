@@ -242,6 +242,10 @@ void MenuFunctions::main(uint32_t currentTime)
     if (sd_browser_release_pending && current_menu != &sdDeleteMenu)
       this->releaseSDDeleteBrowserResources();
   #endif
+  if (saved_wifi_release_pending && current_menu != &savedWifiMenu) {
+    this->releaseSavedWifiMenu();
+    saved_wifi_release_pending = false;
+  }
 
   #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
     this->updateKeyboard();
@@ -2012,6 +2016,7 @@ void MenuFunctions::RunSetup()
   #endif*/
   wifiGeneralMenu.list = new LinkedList<MenuNode>();
   wifiAPMenu.list = new LinkedList<MenuNode>();
+  savedWifiMenu.list = nullptr;
   wifiIPMenu.list = new LinkedList<MenuNode>();
   apInfoMenu.list = new LinkedList<MenuNode>();
   setMacMenu.list = new LinkedList<MenuNode>();
@@ -2889,11 +2894,17 @@ void MenuFunctions::RunSetup()
             this->changeMenu(&miniKbMenu, true);
             String password = this->miniKeyboard(&miniKbMenu, true);
             if (password != "") {
-              Serial.println("Using SSID: " + (String)access_points->get(i).essid + " Password: " + (String)password);
+              Serial.println("Using SSID: " + (String)access_points->get(i).essid);
               wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
               wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
               wifi_scan_obj.joinWiFi(access_points->get(i).essid, password);
-              this->changeMenu(current_menu, true);
+              if (wifi_scan_obj.hasPendingWifiCredential()) {
+                this->buildSavedWifiMenu(true);
+                this->changeMenu(&savedWifiMenu, true);
+              }
+              else {
+                this->changeMenu(current_menu, true);
+              }
             }
           #endif
 
@@ -2902,6 +2913,11 @@ void MenuFunctions::RunSetup()
             char passwordBuf[64] = {0};  // or prefill with existing SSID
             if (keyboardInput(passwordBuf, sizeof(passwordBuf), "Enter Password")) {
               wifi_scan_obj.joinWiFi(access_points->get(i).essid, String(passwordBuf), true);
+              if (wifi_scan_obj.hasPendingWifiCredential()) {
+                this->buildSavedWifiMenu(true);
+                this->changeMenu(&savedWifiMenu, true);
+                return;
+              }
             }
 
             this->changeMenu(&wifiGeneralMenu, true);
@@ -2912,52 +2928,13 @@ void MenuFunctions::RunSetup()
     });
 
     this->addNodes(&wifiGeneralMenu, "Join Saved WiFi", TFTWHITE, KEYBOARD_ICO, [this](){
-      String ssid = settings_obj.loadSetting<String>("ClientSSID");
-      String pw = settings_obj.loadSetting<String>("ClientPW");
+      wifi_scan_obj.joinSavedWiFi(true);
+      this->changeMenu(&wifiGeneralMenu, true);
+    });
 
-      if ((ssid != "") && (pw != "")) {
-        wifi_scan_obj.joinWiFi(ssid, pw, false);
-        this->changeMenu(&wifiGeneralMenu, true);
-      }
-      else {
-        wifiAPMenu.parentMenu = &wifiGeneralMenu;
-
-        // Add the back button
-        wifiAPMenu.list->clear();
-          this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, 0, [this]() {
-          this->changeMenu(wifiAPMenu.parentMenu, true);
-        });
-
-        // Populate the menu with buttons
-        for (int i = 0; i < access_points->size(); i++) {
-          // This is the menu node
-          this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, 255, [this, i](){
-            // Join WiFi using mini keyboard
-            #ifdef HAS_MINI_KB
-              this->changeMenu(&miniKbMenu, true);
-              String password = this->miniKeyboard(&miniKbMenu, true);
-              if (password != "") {
-                Serial.println("Using SSID: " + (String)access_points->get(i).essid + " Password: " + (String)password);
-                wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
-                wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
-                wifi_scan_obj.joinWiFi(access_points->get(i).essid, password);
-                this->changeMenu(current_menu, true);
-              }
-            #endif
-
-            // Join WiFi using touch screen keyboard
-            #ifdef HAS_TOUCH
-              char passwordBuf[64] = {0};  // or prefill with existing SSID
-              if (keyboardInput(passwordBuf, sizeof(passwordBuf), "Enter Password")) {
-                wifi_scan_obj.joinWiFi(access_points->get(i).essid, String(passwordBuf), true);
-              }
-
-              this->changeMenu(&wifiGeneralMenu, true);
-            #endif
-          });
-        }
-        this->changeMenu(&wifiAPMenu, true);
-      }
+    this->addNodes(&wifiGeneralMenu, "Manage Saved WiFi", TFTWHITE, SETTINGS, [this](){
+      this->buildSavedWifiMenu(false);
+      this->changeMenu(&savedWifiMenu, true);
     });
 
     this->addNodes(&wifiGeneralMenu, "Start AP", TFTGREEN, KEYBOARD_ICO, [this](){
@@ -2978,7 +2955,7 @@ void MenuFunctions::RunSetup()
             this->changeMenu(&miniKbMenu, true);
             String password = this->miniKeyboard(&miniKbMenu, true);
             if (password != "") {
-              Serial.println("Using SSID: " + (String)ssids->get(i).essid + " Password: " + (String)password);
+              Serial.println("Using SSID: " + (String)ssids->get(i).essid);
               wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
               wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
               wifi_scan_obj.startWiFi(ssids->get(i).essid, password);
@@ -2990,7 +2967,7 @@ void MenuFunctions::RunSetup()
           #ifdef HAS_TOUCH
             char passwordBuf[64] = {0};  // or prefill with existing SSID
             if (keyboardInput(passwordBuf, sizeof(passwordBuf), "Enter Password")) {
-              Serial.println("Using SSID: " + (String)ssids->get(i).essid + " Password: " + String(passwordBuf));
+              Serial.println("Using SSID: " + (String)ssids->get(i).essid);
               wifi_scan_obj.startWiFi(ssids->get(i).essid, String(passwordBuf));
             }
 
@@ -3044,10 +3021,7 @@ void MenuFunctions::RunSetup()
     this->addNodes(&uploadAllMenu, "WiGLE", TFTLIGHTGREY, 0, [this]() {
       display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
 
-      String ssid = settings_obj.loadSetting<String>("ClientSSID");
-      String pw = settings_obj.loadSetting<String>("ClientPW");
-
-      if ((ssid == "") && (pw == "")) {
+      if (settings_obj.getSavedWifiCount() == 0) {
         display_obj.clearScreen();
         display_obj.tft.setTextWrap(true);
         display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
@@ -3056,9 +3030,7 @@ void MenuFunctions::RunSetup()
         display_obj.tft.setTextWrap(false);
       }
       else {
-        display_obj.clearScreen();
-        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2, true);
-        if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
+        if (!wifi_scan_obj.joinSavedWiFi(true)) {
           display_obj.clearScreen();
           display_obj.tft.setTextWrap(true);
           display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
@@ -3093,12 +3065,9 @@ void MenuFunctions::RunSetup()
       this->changeMenu(uploadAllMenu.parentMenu, true);
     });
     this->addNodes(&uploadAllMenu, "WDGWars", TFTLIGHTGREY, 0, [this]() {
-      String ssid = settings_obj.loadSetting<String>("ClientSSID");
-      String pw = settings_obj.loadSetting<String>("ClientPW");
-
       display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
 
-      if ((ssid == "") && (pw == "")) {
+      if (settings_obj.getSavedWifiCount() == 0) {
         display_obj.clearScreen();
         display_obj.tft.setTextWrap(true);
         display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
@@ -3107,9 +3076,7 @@ void MenuFunctions::RunSetup()
         display_obj.tft.setTextWrap(false);
       }
       else {
-        display_obj.clearScreen();
-        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2, true);
-        if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
+        if (!wifi_scan_obj.joinSavedWiFi(true)) {
           display_obj.clearScreen();
           display_obj.tft.setTextWrap(true);
           display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
@@ -3144,12 +3111,9 @@ void MenuFunctions::RunSetup()
       this->changeMenu(uploadAllMenu.parentMenu, true);
     });
     this->addNodes(&uploadAllMenu, "Both", TFTLIGHTGREY, 0, [this]() {
-      String ssid = settings_obj.loadSetting<String>("ClientSSID");
-      String pw = settings_obj.loadSetting<String>("ClientPW");
-
       display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
 
-      if ((ssid == "") && (pw == "")) {
+      if (settings_obj.getSavedWifiCount() == 0) {
         display_obj.clearScreen();
         display_obj.tft.setTextWrap(true);
         display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
@@ -3158,9 +3122,7 @@ void MenuFunctions::RunSetup()
         display_obj.tft.setTextWrap(false);
       }
       else {
-        display_obj.clearScreen();
-        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2, true);
-        if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
+        if (!wifi_scan_obj.joinSavedWiFi(true)) {
           display_obj.clearScreen();
           display_obj.tft.setTextWrap(true);
           display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
@@ -3234,12 +3196,9 @@ void MenuFunctions::RunSetup()
       this->changeMenu(actionMenu.parentMenu, true);
     });
     this->addNodes(&actionMenu, "WiGLE", TFTLIGHTGREY, 0, [this]() {
-      String ssid = settings_obj.loadSetting<String>("ClientSSID");
-      String pw = settings_obj.loadSetting<String>("ClientPW");
-
       display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
 
-      if ((ssid == "") && (pw == "")) {
+      if (settings_obj.getSavedWifiCount() == 0) {
         display_obj.clearScreen();
         display_obj.tft.setTextWrap(true);
         display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
@@ -3248,9 +3207,7 @@ void MenuFunctions::RunSetup()
         display_obj.tft.setTextWrap(false);
       }
       else {
-        display_obj.clearScreen();
-        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2, true);
-        if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
+        if (!wifi_scan_obj.joinSavedWiFi(true)) {
           display_obj.clearScreen();
           display_obj.tft.setTextWrap(true);
           display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
@@ -3281,12 +3238,9 @@ void MenuFunctions::RunSetup()
       this->changeMenu(&actionMenu, true);
     });
     this->addNodes(&actionMenu, "WDGWars", TFTLIGHTGREY, 0, [this]() {
-      String ssid = settings_obj.loadSetting<String>("ClientSSID");
-      String pw = settings_obj.loadSetting<String>("ClientPW");
-
       display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
 
-      if ((ssid == "") && (pw == "")) {
+      if (settings_obj.getSavedWifiCount() == 0) {
         display_obj.clearScreen();
         display_obj.tft.setTextWrap(true);
         display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
@@ -3295,9 +3249,7 @@ void MenuFunctions::RunSetup()
         display_obj.tft.setTextWrap(false);
       }
       else {
-        display_obj.clearScreen();
-        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2, true);
-        if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
+        if (!wifi_scan_obj.joinSavedWiFi(true)) {
           display_obj.clearScreen();
           display_obj.tft.setTextWrap(true);
           display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
@@ -3327,12 +3279,9 @@ void MenuFunctions::RunSetup()
       this->changeMenu(&actionMenu, true);
     });
     this->addNodes(&actionMenu, "Both", TFTLIGHTGREY, 0, [this]() {
-      String ssid = settings_obj.loadSetting<String>("ClientSSID");
-      String pw = settings_obj.loadSetting<String>("ClientPW");
-
       display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
 
-      if ((ssid == "") && (pw == "")) {
+      if (settings_obj.getSavedWifiCount() == 0) {
         display_obj.clearScreen();
         display_obj.tft.setTextWrap(true);
         display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
@@ -3341,9 +3290,7 @@ void MenuFunctions::RunSetup()
         display_obj.tft.setTextWrap(false);
       }
       else {
-        display_obj.clearScreen();
-        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2, true);
-        if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
+        if (!wifi_scan_obj.joinSavedWiFi(true)) {
           display_obj.clearScreen();
           display_obj.tft.setTextWrap(true);
           display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
@@ -4334,6 +4281,50 @@ void MenuFunctions::RunSetup()
     #endif
   }
 #endif
+
+void MenuFunctions::releaseSavedWifiMenu() {
+  if (savedWifiMenu.list != nullptr) {
+    savedWifiMenu.list->clear();
+    delete savedWifiMenu.list;
+    savedWifiMenu.list = nullptr;
+  }
+}
+
+void MenuFunctions::buildSavedWifiMenu(bool replace_mode) {
+  this->releaseSavedWifiMenu();
+  savedWifiMenu.list = new LinkedList<MenuNode>();
+  savedWifiMenu.selected = 0;
+  savedWifiMenu.parentMenu = &wifiGeneralMenu;
+  savedWifiMenu.name = replace_mode ? "Replace Saved WiFi" : "Saved WiFi";
+
+  this->addNodes(&savedWifiMenu, replace_mode ? "Cancel" : text09, TFTLIGHTGREY, 0, [this, replace_mode]() {
+    if (replace_mode)
+      wifi_scan_obj.discardPendingWifiCredential();
+    this->changeMenu(savedWifiMenu.parentMenu, true);
+    saved_wifi_release_pending = true;
+  });
+
+  const uint8_t count = settings_obj.getSavedWifiCount();
+  for (uint8_t index = 0; index < count; index++) {
+    String ssid;
+    String password;
+    if (!settings_obj.loadSavedWifiCredential(index, ssid, password))
+      continue;
+    String label = replace_mode ? "Replace " + ssid : "Remove " + ssid;
+    this->addNodes(&savedWifiMenu, label.c_str(), replace_mode ? TFTORANGE : TFTRED, 0, [this, index, replace_mode]() {
+      if (replace_mode)
+        wifi_scan_obj.savePendingWifiCredential(index);
+      else
+        settings_obj.removeSavedWifiCredential(index);
+
+      // Leave before freeing the node whose callback is currently running.
+      // The menu is rebuilt on demand, so another profile can be removed by
+      // reopening Manage Saved WiFi.
+      this->changeMenu(savedWifiMenu.parentMenu, true);
+      saved_wifi_release_pending = true;
+    });
+  }
+}
 
 void MenuFunctions::setupSDFileList(bool update) {
   sd_obj.sd_files->clear();
