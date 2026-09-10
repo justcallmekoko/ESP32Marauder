@@ -2296,7 +2296,7 @@ void WiFiScan::finishNetworkScanDisplay(const String& result_label) {
 }
 // GCOVR_EXCL_STOP
 
-bool WiFiScan::joinWiFi(String ssid, String password, bool gui) {
+bool WiFiScan::joinWiFi(String ssid, String password, bool gui, bool save_credential) {
   static const char * btns[] ={text16, ""};
   int count = 0;
   
@@ -2370,10 +2370,160 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui) {
     #endif
   #endif
 
-  settings_obj.saveSetting<bool>("ClientSSID", ssid);
-  settings_obj.saveSetting<bool>("ClientPW", password);
+  if (save_credential) {
+    WifiCredentialSaveResult save_result = settings_obj.saveWifiCredential(ssid, password);
+    if (save_result == WIFI_CREDENTIAL_FULL) {
+      ssid.toCharArray(this->pending_wifi_ssid, sizeof(this->pending_wifi_ssid));
+      password.toCharArray(this->pending_wifi_password, sizeof(this->pending_wifi_password));
+      this->pending_wifi_credential = true;
+    }
+  }
 
   return true;
+}
+
+bool WiFiScan::joinSavedWiFi(bool gui) {
+  const uint8_t count = settings_obj.getSavedWifiCount();
+  if (count == 0) {
+    Serial.println(F("There are no saved WiFi credentials"));
+    return false;
+  }
+
+  #ifdef HAS_SCREEN
+    if (gui) {
+      display_obj.clearScreen();
+      display_obj.tft.setTextWrap(false);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+      display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+      display_obj.tft.println(F("Scanning for saved WiFi..."));
+    }
+  #endif
+
+  WiFi.disconnect(true);
+  delay(100);
+  WiFi.mode(WIFI_MODE_STA);
+  const int16_t network_count = WiFi.scanNetworks(false, true, false, 80);
+
+  // Keep only profile indexes and signal strengths. Credentials are loaded
+  // transiently when a connection is actually attempted, and scan results are
+  // released before association.
+  uint8_t visible_indexes[MAX_SAVED_WIFI_PROFILES] = {0};
+  int32_t visible_rssi[MAX_SAVED_WIFI_PROFILES] = {0};
+  bool visible[MAX_SAVED_WIFI_PROFILES] = {false};
+  uint8_t visible_count = 0;
+
+  if (network_count > 0) {
+    for (uint8_t profile_index = 0; profile_index < count; profile_index++) {
+      String saved_ssid;
+      String saved_password;
+      if (!settings_obj.loadSavedWifiCredential(profile_index, saved_ssid, saved_password))
+        continue;
+
+      int32_t best_rssi = INT32_MIN;
+      for (int16_t network_index = 0; network_index < network_count; network_index++) {
+        if (saved_ssid == WiFi.SSID(network_index) && WiFi.RSSI(network_index) > best_rssi)
+          best_rssi = WiFi.RSSI(network_index);
+      }
+      if (best_rssi == INT32_MIN)
+        continue;
+
+      visible[profile_index] = true;
+      uint8_t insert_at = visible_count;
+      while (insert_at > 0 && best_rssi > visible_rssi[insert_at - 1]) {
+        visible_indexes[insert_at] = visible_indexes[insert_at - 1];
+        visible_rssi[insert_at] = visible_rssi[insert_at - 1];
+        insert_at--;
+      }
+      visible_indexes[insert_at] = profile_index;
+      visible_rssi[insert_at] = best_rssi;
+      visible_count++;
+    }
+  }
+  WiFi.scanDelete();
+
+  auto try_profile = [this, gui](uint8_t profile_index, uint8_t attempt, uint8_t attempts, bool fallback) {
+    String ssid;
+    String password;
+    if (!settings_obj.loadSavedWifiCredential(profile_index, ssid, password))
+      return false;
+
+    Serial.println("Trying saved WiFi: " + ssid);
+    #ifdef HAS_SCREEN
+      if (gui) {
+        display_obj.clearScreen();
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+        display_obj.tft.println((fallback ? String("Fallback ") : String("Trying ")) + String(attempt) + "/" + String(attempts));
+        display_obj.tft.println(ssid);
+      }
+    #endif
+
+    if (this->joinWiFi(ssid, password, false, false)) {
+      settings_obj.markSavedWifiSuccessful(profile_index);
+      Serial.println("Connected to saved WiFi: " + ssid);
+      #ifdef HAS_SCREEN
+        if (gui) {
+          display_obj.clearScreen();
+          display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+          display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+          display_obj.tft.println(F("Connected:"));
+          display_obj.tft.println(ssid);
+          delay(1000);
+        }
+      #endif
+      return true;
+    }
+    return false;
+  };
+
+  // The usual path tries only visible profiles, strongest first. Profile order
+  // breaks equal-RSSI ties because insertion above is stable.
+  for (uint8_t i = 0; i < visible_count; i++) {
+    if (try_profile(visible_indexes[i], i + 1, visible_count, false))
+      return true;
+  }
+
+  // Preserve support for hidden SSIDs and transient scan failures. If visible
+  // candidates failed, do not retry them during this fallback pass.
+  const uint8_t fallback_count = count - visible_count;
+  uint8_t fallback_attempt = 0;
+  for (uint8_t profile_index = 0; profile_index < count; profile_index++) {
+    if (visible[profile_index])
+      continue;
+    fallback_attempt++;
+    if (try_profile(profile_index, fallback_attempt, fallback_count, true))
+      return true;
+  }
+
+  Serial.println(F("Could not connect to any saved WiFi network"));
+  return false;
+}
+
+bool WiFiScan::hasPendingWifiCredential() const {
+  return this->pending_wifi_credential;
+}
+
+bool WiFiScan::savePendingWifiCredential(uint8_t replace_index) {
+  if (!this->pending_wifi_credential)
+    return false;
+  WifiCredentialSaveResult result = settings_obj.saveWifiCredential(
+    String(this->pending_wifi_ssid),
+    String(this->pending_wifi_password),
+    replace_index
+  );
+  if (result == WIFI_CREDENTIAL_ERROR || result == WIFI_CREDENTIAL_FULL)
+    return false;
+  this->discardPendingWifiCredential();
+  return true;
+}
+
+void WiFiScan::discardPendingWifiCredential() {
+  memset(this->pending_wifi_ssid, 0, sizeof(this->pending_wifi_ssid));
+  memset(this->pending_wifi_password, 0, sizeof(this->pending_wifi_password));
+  this->pending_wifi_credential = false;
 }
 
 bool WiFiScan::startWiFi(String ssid, String password, bool gui) {
@@ -2441,8 +2591,6 @@ void WiFiScan::initWiFi(uint8_t scan_mode) {
     this->force_probe = settings_obj.loadSetting<bool>(text_table4[6]);
     this->save_pcap = settings_obj.loadSetting<bool>(text_table4[7]);
     this->ep_deauth = settings_obj.loadSetting<bool>("EPDeauth");
-    settings_obj.loadSetting<String>("ClientSSID");
-    settings_obj.loadSetting<String>("ClientPW");
     //Serial.println(F("Initialization complete"));
   }
 }

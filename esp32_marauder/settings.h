@@ -18,6 +18,15 @@
 #endif
 
 #define WDG_KEY_NAME       "wdg_key"   // WDG Wars API key (String)
+#define SAVED_WIFI_KEY_NAME "SavedWiFi"
+#define MAX_SAVED_WIFI_PROFILES 5
+
+enum WifiCredentialSaveResult : uint8_t {
+  WIFI_CREDENTIAL_SAVED,
+  WIFI_CREDENTIAL_UPDATED,
+  WIFI_CREDENTIAL_FULL,
+  WIFI_CREDENTIAL_ERROR
+};
 
 class Settings {
 
@@ -60,6 +69,11 @@ class Settings {
     int getNumberSettings();
 
     String getSettingsString();
+    uint8_t getSavedWifiCount();
+    bool loadSavedWifiCredential(uint8_t index, String& ssid, String& password);
+    WifiCredentialSaveResult saveWifiCredential(const String& ssid, const String& password, int8_t replace_index = -1);
+    bool removeSavedWifiCredential(uint8_t index);
+    bool markSavedWifiSuccessful(uint8_t index);
     //bool createDefaultSettings(fs::FS &fs, bool spec = false, uint8_t index = 0, String typeStr = "bool", String name = "");
     bool createDefaultSettings(fs::FS &fs, bool spec = false, uint8_t index = 0, const char* typeStr = "bool", const char* name = "");
     void printJsonSettings(String json_string);

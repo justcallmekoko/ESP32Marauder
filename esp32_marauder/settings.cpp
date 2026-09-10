@@ -1,5 +1,30 @@
 #include "settings.h"
 
+static JsonObject findSavedWifiSetting(DynamicJsonDocument& json) {
+  JsonArray settings = json["Settings"].as<JsonArray>();
+  for (JsonObject setting : settings) {
+    if (strcmp(setting["name"] | "", SAVED_WIFI_KEY_NAME) == 0)
+      return setting;
+  }
+  return JsonObject();
+}
+
+static JsonObject ensureSavedWifiSetting(DynamicJsonDocument& json) {
+  JsonObject setting = findSavedWifiSetting(json);
+  if (!setting.isNull())
+    return setting;
+
+  JsonArray settings = json["Settings"].as<JsonArray>();
+  setting = settings.createNestedObject();
+  setting["name"] = SAVED_WIFI_KEY_NAME;
+  setting["type"] = "wifi_list";
+  setting.createNestedArray("value");
+  JsonObject range = setting.createNestedObject("range");
+  range["min"] = 0;
+  range["max"] = MAX_SAVED_WIFI_PROFILES;
+  return setting;
+}
+
 // ---------------------------------------------------------------------------
 // _buildCache — called once after json_settings_string is loaded/updated.
 // Parses the JSON exactly once and fills every field of _cache.
@@ -76,6 +101,47 @@ bool Settings::begin() {
   DeserializationError error = deserializeJson(jsonBuffer, settingsFile);
   if (error)
     Serial.println(error.f_str());
+
+  settingsFile.close();
+
+  bool settings_changed = false;
+  JsonObject saved_wifi_setting = findSavedWifiSetting(jsonBuffer);
+  if (saved_wifi_setting.isNull()) {
+    saved_wifi_setting = ensureSavedWifiSetting(jsonBuffer);
+    settings_changed = true;
+  }
+
+  // One-time, backward-compatible migration of the previous single profile.
+  JsonArray saved_wifi = saved_wifi_setting["value"].as<JsonArray>();
+  if (saved_wifi.isNull()) {
+    saved_wifi = saved_wifi_setting.createNestedArray("value");
+    settings_changed = true;
+  }
+  if (saved_wifi.size() == 0) {
+    const char* legacy_ssid = "";
+    const char* legacy_password = "";
+    for (JsonObject setting : jsonBuffer["Settings"].as<JsonArray>()) {
+      const char* setting_name = setting["name"] | "";
+      if (strcmp(setting_name, "ClientSSID") == 0)
+        legacy_ssid = setting["value"] | "";
+      else if (strcmp(setting_name, "ClientPW") == 0)
+        legacy_password = setting["value"] | "";
+    }
+    if (legacy_ssid[0] != '\0') {
+      JsonObject profile = saved_wifi.createNestedObject();
+      profile["ssid"] = legacy_ssid;
+      profile["password"] = legacy_password;
+      settings_changed = true;
+    }
+  }
+
+  if (settings_changed) {
+    File updated_settings = SPIFFS.open("/settings.json", FILE_WRITE);
+    if (!updated_settings)
+      return false;
+    serializeJson(jsonBuffer, updated_settings);
+    updated_settings.close();
+  }
 
   serializeJson(jsonBuffer, json_string);
 
@@ -397,9 +463,13 @@ void Settings::printJsonSettings(String json_string) {
 
   Serial.println("Settings\n----------------------------------------------");
   for (int i = 0; i < (int)json["Settings"].size(); i++) {
-    Serial.println("Name: " + json["Settings"][i]["name"].as<String>());
+    String setting_name = json["Settings"][i]["name"].as<String>();
+    Serial.println("Name: " + setting_name);
     Serial.println("Type: " + json["Settings"][i]["type"].as<String>());
-    Serial.println("Value: " + json["Settings"][i]["value"].as<String>() + "\n");
+    if (setting_name == "ClientPW" || setting_name == SAVED_WIFI_KEY_NAME)
+      Serial.println(F("Value: [redacted]\n"));
+    else
+      Serial.println("Value: " + json["Settings"][i]["value"].as<String>() + "\n");
   }
 }
 
@@ -486,6 +556,12 @@ bool Settings::createDefaultSettings(fs::FS &fs, bool spec, uint8_t index, const
     jsonBuffer["Settings"][10]["range"]["min"] = "";
     jsonBuffer["Settings"][10]["range"]["max"] = "";
 
+    jsonBuffer["Settings"][11]["name"] = SAVED_WIFI_KEY_NAME;
+    jsonBuffer["Settings"][11]["type"] = "wifi_list";
+    jsonBuffer["Settings"][11].createNestedArray("value");
+    jsonBuffer["Settings"][11]["range"]["min"] = 0;
+    jsonBuffer["Settings"][11]["range"]["max"] = MAX_SAVED_WIFI_PROFILES;
+
     serializeJson(jsonBuffer, settingsFile);
     serializeJson(jsonBuffer, settings_string);
   } else {
@@ -527,4 +603,113 @@ bool Settings::createDefaultSettings(fs::FS &fs, bool spec, uint8_t index, const
   this->printJsonSettings(settings_string);
 
   return true;
+}
+
+uint8_t Settings::getSavedWifiCount() {
+  DynamicJsonDocument json(JSON_SETTING_SIZE);
+  if (deserializeJson(json, this->json_settings_string))
+    return 0;
+  JsonObject setting = findSavedWifiSetting(json);
+  if (setting.isNull())
+    return 0;
+  const size_t count = setting["value"].as<JsonArray>().size();
+  return count > MAX_SAVED_WIFI_PROFILES ? MAX_SAVED_WIFI_PROFILES : count;
+}
+
+bool Settings::loadSavedWifiCredential(uint8_t index, String& ssid, String& password) {
+  ssid = "";
+  password = "";
+  DynamicJsonDocument json(JSON_SETTING_SIZE);
+  if (deserializeJson(json, this->json_settings_string))
+    return false;
+  JsonObject setting = findSavedWifiSetting(json);
+  JsonArray profiles = setting["value"].as<JsonArray>();
+  if (setting.isNull() || index >= profiles.size())
+    return false;
+  ssid = profiles[index]["ssid"].as<String>();
+  password = profiles[index]["password"].as<String>();
+  return ssid.length() > 0;
+}
+
+WifiCredentialSaveResult Settings::saveWifiCredential(const String& ssid, const String& password, int8_t replace_index) {
+  if (ssid.length() == 0 || ssid.length() > 32 || password.length() > 63)
+    return WIFI_CREDENTIAL_ERROR;
+
+  DynamicJsonDocument json(JSON_SETTING_SIZE);
+  if (deserializeJson(json, this->json_settings_string))
+    return WIFI_CREDENTIAL_ERROR;
+  JsonObject setting = ensureSavedWifiSetting(json);
+  JsonArray profiles = setting["value"].as<JsonArray>();
+
+  int8_t existing_index = -1;
+  for (uint8_t i = 0; i < profiles.size(); i++) {
+    if (ssid == profiles[i]["ssid"].as<String>()) {
+      existing_index = i;
+      break;
+    }
+  }
+
+  WifiCredentialSaveResult result = WIFI_CREDENTIAL_SAVED;
+  int8_t target_index = existing_index;
+  if (existing_index >= 0) {
+    result = WIFI_CREDENTIAL_UPDATED;
+  }
+  else if (profiles.size() < MAX_SAVED_WIFI_PROFILES) {
+    profiles.createNestedObject();
+    target_index = profiles.size() - 1;
+  }
+  else if (replace_index >= 0 && replace_index < (int8_t)profiles.size()) {
+    target_index = replace_index;
+  }
+  else {
+    return WIFI_CREDENTIAL_FULL;
+  }
+
+  // Successful/new credentials become the first profile tried. Rotate the
+  // small bounded array without retaining a second credential collection.
+  for (int8_t i = target_index; i > 0; i--) {
+    profiles[i]["ssid"] = profiles[i - 1]["ssid"].as<String>();
+    profiles[i]["password"] = profiles[i - 1]["password"].as<String>();
+  }
+  profiles[0]["ssid"] = ssid;
+  profiles[0]["password"] = password;
+
+  File settings_file = SPIFFS.open("/settings.json", FILE_WRITE);
+  if (!settings_file)
+    return WIFI_CREDENTIAL_ERROR;
+  serializeJson(json, settings_file);
+  settings_file.close();
+  serializeJson(json, this->json_settings_string);
+  return result;
+}
+
+bool Settings::removeSavedWifiCredential(uint8_t index) {
+  DynamicJsonDocument json(JSON_SETTING_SIZE);
+  if (deserializeJson(json, this->json_settings_string))
+    return false;
+  JsonObject setting = findSavedWifiSetting(json);
+  JsonArray profiles = setting["value"].as<JsonArray>();
+  if (setting.isNull() || index >= profiles.size())
+    return false;
+  profiles.remove(index);
+
+  File settings_file = SPIFFS.open("/settings.json", FILE_WRITE);
+  if (!settings_file)
+    return false;
+  serializeJson(json, settings_file);
+  settings_file.close();
+  serializeJson(json, this->json_settings_string);
+  return true;
+}
+
+bool Settings::markSavedWifiSuccessful(uint8_t index) {
+  // The first profile is already the most recently successful. Avoid an
+  // unnecessary settings-file rewrite on every normal connection.
+  if (index == 0)
+    return getSavedWifiCount() > 0;
+  String ssid;
+  String password;
+  if (!loadSavedWifiCredential(index, ssid, password))
+    return false;
+  return saveWifiCredential(ssid, password) != WIFI_CREDENTIAL_ERROR;
 }

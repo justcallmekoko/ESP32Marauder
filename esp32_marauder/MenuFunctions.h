@@ -204,6 +204,7 @@ class MenuFunctions
     LinkedList<String>* sd_delete_selection = nullptr;
     String sd_browser_path = "/";
     bool sd_browser_release_pending = false;
+    bool saved_wifi_release_pending = false;
     void ensureSDDeleteBrowserResources();
     void releaseSDDeleteBrowserResources();
 
@@ -216,6 +217,7 @@ class MenuFunctions
     #endif*/
     Menu wifiGeneralMenu;
     Menu wifiAPMenu;
+    Menu savedWifiMenu;
     Menu wifiIPMenu;
     Menu ssidsMenu;
     //#ifdef HAS_BT
@@ -259,6 +261,8 @@ class MenuFunctions
     void buildUploadFileMenu();
     void setupSDFileList(bool update = false);
     void buildSDFileMenu(bool update = false);
+    void buildSavedWifiMenu(bool replace_mode = false);
+    void releaseSavedWifiMenu();
     void buildSDDeleteBrowser(const String& path, bool reset_selection = false);
     void toggleSDDeleteSelection(const String& path);
     bool isSDFileSelected(const String& path) const;
