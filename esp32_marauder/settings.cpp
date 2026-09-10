@@ -610,7 +610,10 @@ uint8_t Settings::getSavedWifiCount() {
   if (deserializeJson(json, this->json_settings_string))
     return 0;
   JsonObject setting = findSavedWifiSetting(json);
-  return setting.isNull() ? 0 : setting["value"].as<JsonArray>().size();
+  if (setting.isNull())
+    return 0;
+  const size_t count = setting["value"].as<JsonArray>().size();
+  return count > MAX_SAVED_WIFI_PROFILES ? MAX_SAVED_WIFI_PROFILES : count;
 }
 
 bool Settings::loadSavedWifiCredential(uint8_t index, String& ssid, String& password) {
