@@ -4,6 +4,7 @@
 #include "FoxHuntTarget.h"
 #include "BeaconFrame.h"
 #include "WdgResponse.h"
+#include "UploadStreamBuffer.h"
 #include "lang_var.h"
 
 #ifdef HAS_PSRAM
@@ -11618,15 +11619,20 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
     // Send body
     client->print(part1);
 
-    const size_t CHUNK = 4096;
-    uint8_t buf[CHUNK];
+    marauder::UploadStreamBuffer uploadBuffer;
+    if (!uploadBuffer) {
+      fileToUpload.close();
+      client->stop();
+      Serial.println("[WDG] Could not allocate upload buffer");
+      return false;
+    }
     size_t totalSent = 0;
     uint8_t pct = 0;
 
     while (fileToUpload.available()) {
-      size_t n = fileToUpload.read(buf, CHUNK);
+      size_t n = fileToUpload.read(uploadBuffer.data(), uploadBuffer.size());
       totalSent += n;
-      client->write(buf, n);
+      client->write(uploadBuffer.data(), n);
       pct = (totalSent * 100) / fileToUpload.size();
       #ifdef HAS_SCREEN
       this->drawUploadProgress("WDG WARS", pct); // GCOVR_EXCL_LINE
@@ -11833,8 +11839,13 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
 
     // Send body
     client->print(part1);
-    const size_t BUFFER_SIZE = 4096; // 1KB at a time
-    uint8_t buffer[BUFFER_SIZE];
+    marauder::UploadStreamBuffer uploadBuffer;
+    if (!uploadBuffer) {
+      fileToUpload.close();
+      client->stop();
+      Serial.println("[WIGLE] Could not allocate upload buffer");
+      return false;
+    }
 
     Serial.println("Finished sending part1");
 
@@ -11842,7 +11853,7 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
 
     size_t totalBytesSent = 0;
     while (fileToUpload.available()) {
-      size_t bytesRead = fileToUpload.read(buffer, BUFFER_SIZE);
+      size_t bytesRead = fileToUpload.read(uploadBuffer.data(), uploadBuffer.size());
       totalBytesSent += bytesRead;
       Serial.print("Writing ");
       Serial.print(totalBytesSent);
@@ -11851,7 +11862,7 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
       #ifdef HAS_SCREEN
       this->drawUploadProgress("WiGLE", percent_sent); // GCOVR_EXCL_LINE
       #endif
-      client->write(buffer, bytesRead);
+      client->write(uploadBuffer.data(), bytesRead);
     }
 
     Serial.println("Uploaded file bytes: " + String(totalBytesSent));
