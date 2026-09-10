@@ -9,21 +9,22 @@ Buffer::Buffer(){
 
 void Buffer::createFile(const char* name, bool is_pcap, bool is_gpx){
   int i=0;
+  String prefix = directory ? String(directory) + "/" : "/";
   if (is_pcap) {
     do{
-      fileName = "/"+String(name)+"_"+(String)i+".pcap";
+      fileName = prefix+String(name)+"_"+(String)i+".pcap";
       i++;
     } while(fs->exists(fileName));
   }
   else if ((!is_pcap) && (!is_gpx)) {
     do{
-      fileName = "/"+String(name)+"_"+(String)i+".log";
+      fileName = prefix+String(name)+"_"+(String)i+".log";
       i++;
     } while(fs->exists(fileName));
   }
   else {
     do{
-      fileName = "/"+String(name)+"_"+(String)i+".gpx";
+      fileName = prefix+String(name)+"_"+(String)i+".gpx";
       i++;
     } while(fs->exists(fileName));
   }
@@ -51,6 +52,10 @@ void Buffer::open(bool is_pcap){
 
 String Buffer::getFileName() {
   return this->fileName;
+}
+
+void Buffer::setDirectory(const char* path) {
+  directory = path;
 }
 
 void Buffer::openFile(const char* file_name, fs::FS* fs, bool serial, bool is_pcap, bool is_gpx) {

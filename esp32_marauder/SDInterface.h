@@ -15,6 +15,7 @@
   #include "SPI.h"
 #endif
 #include "Buffer.h"
+#include "FirmwareMetadata.h"
 #ifdef HAS_SCREEN
   #include "Display.h"
 #endif
@@ -30,6 +31,12 @@ extern Settings settings_obj;
   extern Display display_obj;
 #endif
 
+struct SDDirectoryEntry {
+  String name;
+  String path;
+  bool is_directory;
+};
+
 #ifdef KIT
   #define SD_DET 4
 #endif
@@ -43,6 +50,8 @@ class SDInterface {
     SPIClass* _spi;
     int _cs;
   #endif
+
+    bool validateUpdate(File &updateBin);
 
   public:
     #ifdef HAS_C5_SD
@@ -65,9 +74,10 @@ class SDInterface {
 
     void listDir(String str_dir);
     void listDirToLinkedList(LinkedList<String>* file_names, String str_dir = "/", String ext = "");
+    bool listDirectory(String path, LinkedList<SDDirectoryEntry>* entries);
     File getFile(String path);
     void runUpdate(String file_name = "");
-    void performUpdate(Stream &updateSource, size_t updateSize);
+    bool performUpdate(Stream &updateSource, size_t updateSize);
     bool removeFile(String file_path);
     bool migrateSPIFFS(uint8_t operation, size_t& files, size_t& bytes, uint8_t& error);
 };
