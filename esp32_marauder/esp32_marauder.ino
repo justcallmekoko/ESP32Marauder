@@ -50,7 +50,6 @@ https://www.online-utility.org/image/convert/to/XBM
   #include "BatteryInterface.h"
 #endif
 
-
 #ifdef HAS_SCREEN
   #include "Display.h"
   #include "MenuFunctions.h"
@@ -163,6 +162,7 @@ uint32_t currentTime  = 0;
 
 #if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
 
+  // should this be in a separate .cpp file
   void DeepSleep(int8_t wakeup_but = -1) {
 
     // 1. Disconnect from the network gracefully
@@ -244,13 +244,6 @@ uint32_t currentTime  = 0;
 #endif
 */
 
-// Screen backlight moved to Backlight.cpp
-#ifdef HAS_SCREEN
-  extern void brightnessInit();
-  extern void backlightOn();
-  extern void backlightOff();
-#endif
-
 //   Converts reason type to a C string.
 //  Type is located in /tools/sdk/esp32/include/esp_system/include/esp_system.h
 const char *resetReasonName() {
@@ -279,9 +272,11 @@ void print_reset_reason() {
 
 void setup()
 {
+
   log_d("Main setup");
+
   // https://github.com/Xinyuan-LilyGO/T-HMI/issues/34
-  // T-HMI : latch power on if on battery
+  // LILYGO T-HMI : latch power on if on battery
   // Prevent StickCP2 from turning off when disconnect USB cable
   #ifdef POWER_HOLD_PIN  
     log_d("Enable POWER_HOLD_PIN");
@@ -290,6 +285,8 @@ void setup()
     // perimanSetPinBusExtraType(POWER_HOLD_PIN, "POWER_HOLD_PIN");
   #endif
 
+  // needed for MARAUDER_CYD_HMI "LILYGO T-HMI ESP32-S3
+  // Enable power to screen & peripherals
   #ifdef PWR_EN_PIN  // Enable power to peripherals
     log_d("Enable power to peripherals");
     pinMode(PWR_EN_PIN, OUTPUT);
@@ -302,15 +299,8 @@ void setup()
   #ifndef DEVELOPER
     esp_log_level_set("*", ESP_LOG_NONE);
   #endif
-  #ifdef ARDUINO_USB_MODE
-    Serial.println("ARDUINO_USB_MODE = " + (String)ARDUINO_USB_MODE);
-  #endif
-  #ifdef ARDUINO_USB_CDC_ON_BOOT
-    Serial.println("ARDUINO_USB_CDC_ON_BOOT = " + (String)ARDUINO_USB_CDC_ON_BOOT);
-  #endif
-  
+
   #ifndef HAS_IDF_3
-    log_d("esp_spiram_init");
     esp_spiram_init();
   #endif
 
@@ -348,6 +338,8 @@ void setup()
   //   delay(100);
   // #endif
 
+  // TFT_BL >= 0 does not if TFT_BL is -1
+  // due to cpp's "unsigned promotion rules" where -1 == maxint
   #ifdef HAS_SCREEN && defined(TFT_BL) && TFT_BL != -1
     log_d("pinMode %d OUTPUT", TFT_BL);
     pinMode(TFT_BL, OUTPUT);
@@ -404,7 +396,7 @@ void setup()
   #endif  // MARAUDER_WS_C5_28
 
   // Preset SPI CS pins to avoid bus conflicts
-  // Beware of "unsigned promotion ruless" where -1 == maxint
+  // Beware of "unsigned promotion rules" where -1 == maxint
   #if defined(HAS_SCREEN) && defined(TFT_CS) && TFT_CS != -1
     digitalWrite(TFT_CS, HIGH);
   #endif

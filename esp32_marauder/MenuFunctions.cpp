@@ -1983,6 +1983,9 @@ void MenuFunctions::RunSetup()
     gpsPOIMenu.list = new LinkedList<MenuNode>();
   #endif
 
+  adminMenu.list = new LinkedList<MenuNode>();
+  adminSubMenu.list = new LinkedList<MenuNode>();
+
   foxHuntMenu.list = new LinkedList<MenuNode>();
 
   // Work menu names
@@ -2045,6 +2048,9 @@ void MenuFunctions::RunSetup()
   #ifdef HAS_GPS
     gpsPOIMenu.name = "GPS POI";
   #endif
+
+  adminMenu.name = "Admin Tools";
+  adminSubMenu.name = "-";
 
   foxHuntMenu.name = "Fox Hunt";
 
@@ -3707,6 +3713,63 @@ void MenuFunctions::RunSetup()
   loadATsMenu.parentMenu = &saveFileMenu;
   this->addNodes(&loadATsMenu, text09, TFTLIGHTGREY, 0, [this]() {
     this->changeMenu(loadATsMenu.parentMenu, true);
+  });
+
+  // Admin Menu
+  // TFT_GREENYELLOW
+  this->addNodes(&deviceMenu, "Admin Tools", TFTPINK, SD_UPDATE, [this]() {
+    this->changeMenu(&adminMenu, true);
+  });
+
+  adminMenu.parentMenu = &deviceMenu;
+  this->addNodes(&adminMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(adminMenu.parentMenu, true);
+  });
+
+  adminSubMenu.parentMenu = &adminMenu;
+  this->addNodes(&adminSubMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(adminSubMenu.parentMenu, true);
+  });
+  #if defined(HAS_SD) || defined(USE_SD)
+    this->addNodes(&adminMenu, "Rescan SD", TFTPINK, SD_UPDATE, [this]() {
+      this->changeMenu(&adminMenu, true);
+      sd_obj.initSD();
+    });
+  #endif
+
+  #ifdef HAS_GPS
+    this->addNodes(&saveFileMenu, "ReProbe GPS", TFTSKYBLUE, SD_UPDATE, [this]() {
+      gps_obj.begin();
+    });
+  #endif //  HAS_GPS
+
+
+  this->addNodes(&adminMenu, "Sync Clock with WiFi", TFTPINK, SETTINGS, [this]() {
+    this->changeMenu(&adminSubMenu, true);
+    display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    bool sync_ntp(const char *ntpServer = nullptr);    // system_time.cpp
+
+   if (!wifi_scan_obj.wifi_connected) {
+     display_obj.tft.println("WIFI is not connected.");
+     return;
+   }
+
+   sync_ntp();
+   struct tm timeinfo;
+   if (getLocalTime(&timeinfo)) {
+     Serial.println(&timeinfo, "%F %T");
+   } else {
+     log_d("Failed to obtain time from NTP");
+   }
+
+   return;
+  });
+
+  this->addNodes(&adminMenu, "Reset Reasion", TFTMAGENTA, SETTINGS, [this]() {
+    this->changeMenu(&adminSubMenu, true);
+      display_obj.tft.setTextColor(TFT_SKYBLUE, TFT_BLACK);
+      display_obj.tft.drawCentreString(resetReasonName(), TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+      print_reset_reason();
   });
 
   // GPS Menu
