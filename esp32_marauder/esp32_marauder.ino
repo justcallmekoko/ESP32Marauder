@@ -40,6 +40,7 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #include "settings.h"
 #include "CommandLine.h"
+#include "ReconMission.h"
 #include "lang_var.h"
 
 #ifdef HAS_T_DONGLE_DISPLAY
@@ -104,10 +105,11 @@ EvilPortal evil_portal_obj;
 Buffer buffer_obj;
 Settings settings_obj;
 CommandLine cli_obj;
+ReconMission recon_obj;
 
 // Brightness functions defined in BackLight.cpp
 #ifdef HAS_SCREEN
-  extern void brightnessInit();
+  void brightnessInit();
   extern void backlightOff();
   extern void backlightOn();
 #endif
@@ -159,82 +161,6 @@ const String PROGMEM version_number = MARAUDER_VERSION;
 #endif
 
 uint32_t currentTime  = 0;
-
-#if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
-
-  // should this be in a separate .cpp file
-  void DeepSleep(int8_t wakeup_but = -1) {
-
-    // 1. Disconnect from the network gracefully
-    WiFi.disconnect(true);
-    WiFi.mode(WIFI_OFF);
-    esp_wifi_stop();
-
-    #ifdef HAS_BT
-      // This handles stopping and deinitializing BT gracefully
-      // esp_bluedroid_disable();
-      esp_bt_controller_disable();
-      esp_bt_controller_deinit();
-    #endif
-
-    // Should we isolate  pins with external pull-up resistors
-    // to minimize current consumption.
-    // #ifdef I2C_SDA
-    //   rtc_gpio_isolate(I2C_SDA);
-    //   rtc_gpio_isolate(I2C_SCL);
-    // #endif
-
-    // Code specific to the classic ESP32 (e.g., WROOM-32) goes here
-    // #ifdef CONFIG_IDF_TARGET_ESP32
-    // rtc_gpio_isolate(GPIO_NUM_12);
-    // 18 19 5 23 10 33 32 16 17 20 
-    esp_sleep_config_gpio_isolate();
-    
-    if (wakeup_but >= 0) {
-      gpio_hold_dis((gpio_num_t) wakeup_but);
-      pinMode(wakeup_but, INPUT_PULLUP);
-
-    // Configure the wake-up source: wake up when GPIO 0 goes LOW (button press)
-    #if SOC_PM_SUPPORT_EXT_WAKEUP
-	// For classic ESP32 which supports EXT0 (e.g., ESP32)
-        esp_sleep_enable_ext0_wakeup((gpio_num_t)wakeup_but, 0); // 0 means LOW
-    #elif SOC_PM_SUPPORT_GPIO_WAKEUP
-       // For newer chips that use generic GPIO wakeup (e.g., ESP32-C3, ESP32-S3)
-      esp_deep_sleep_enable_gpio_wakeup((1ULL << wakeup_but), ESP_GPIO_WAKEUP_GPIO_LOW);
-    #else
-      #warning "Unsupported sleep/wakeup architecture on this chip"
-    #endif
-
-
-    }
-
-    Serial.println("Going to sleep now...");
-    Serial.flush();
-    delay(100); // Give serial monitor time to flush
-
-    // Enter deep sleep
-    esp_deep_sleep_start();
-  }
-
-  void shutdown() {
-    #ifdef POWER_HOLD_PIN
-        // T-HMI
-        //  if on battery, can be turn off with the PWR_ON_PIN/POWER_HOLD_PIN if on battery
-        Serial.println("Set POWER_HOLD_PIN:  LOW");
-        Serial.flush();
-        digitalWrite(POWER_HOLD_PIN, LOW);
-
-        //  if plugged in we use DEEPSLEEP instead
-        delay(500);
-        Serial.println("DeepSleep");
-        DeepSleep();
-    #else
-        DeepSleep(0);
-    #endif
-  }
-// #endif  // SHUTDOWN
-
-#endif  // SHUTDOWN
 
 
 /*  Fixed Below
@@ -454,9 +380,8 @@ void setup()
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
   #endif
 
-
   // this removes the need for "sharedSPI"
-  // the TFT init fucks up the SPI bus, effecting the SD
+  // the TFT init fucks up the SPI bus by closing SD_MISO
   // so reinit it and assert it to for the sd_obj.
   #ifdef HAS_C5_SD
     SPIClass& spi = display_obj.tft.getSPIinstance();
@@ -465,23 +390,15 @@ void setup()
     sd_obj.setSPI(&spi);
   #endif
 
+  // Init PWM brightness AFTER display init (so ledcAttach overrides TFT_eSPI's pinMode)
   #if defined(HAS_SCREEN) && !defined(HAS_MINI_SCREEN)
     brightnessInit();
     backlightOff();
   #endif
 
   #ifdef HAS_SCREEN
-    #if !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
-      display_obj.tft.drawCentreString("ESP32 Marauder", TFT_WIDTH/2, TFT_HEIGHT * 0.33, 1);
-      display_obj.tft.drawCentreString("JustCallMeKoko", TFT_WIDTH/2, TFT_HEIGHT * 0.5, 1);
-      display_obj.tft.drawCentreString(display_obj.version_number, TFT_WIDTH/2, TFT_HEIGHT * 0.66, 1);
-    #else
-      display_obj.tft.drawCentreString("ESP32 Marauder", TFT_HEIGHT/2, TFT_WIDTH * 0.33, 1);
-      display_obj.tft.drawCentreString("JustCallMeKoko", TFT_HEIGHT/2, TFT_WIDTH * 0.5, 1);
-      display_obj.tft.drawCentreString(display_obj.version_number, TFT_HEIGHT/2, TFT_WIDTH * 0.66, 1);
-    #endif
+    display_obj.drawBootSplash();
   #endif
-
 
   #ifdef HAS_SCREEN
     backlightOn(); // Need this
@@ -528,11 +445,6 @@ void setup()
 
   #ifdef HAS_T_DONGLE_DISPLAY
     t_dongle_display.begin();
-  #endif
-
-  #ifdef HAS_SCREEN
-    display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
-    display_obj.tft.drawCentreString("Initializing...", TFT_WIDTH/2, TFT_HEIGHT * 0.82, 1);
   #endif
 
   evil_portal_obj.setup();
@@ -603,7 +515,6 @@ void loop()
         else
           menu_function_obj.disable_touch = true;
 
-        Serial.println("!esp32_marauder.ino: menu_function_obj.updateStatusBar");
         menu_function_obj.updateStatusBar();
 
         while (!c_btn.justReleased())
@@ -615,6 +526,7 @@ void loop()
   // Update all of our objects
   cli_obj.main(currentTime);
   wifi_scan_obj.main(currentTime);
+  recon_obj.main(currentTime);
 
   #ifdef HAS_T_DONGLE_DISPLAY
     t_dongle_display.update(currentTime, wifi_scan_obj);
@@ -630,13 +542,11 @@ void loop()
   #ifdef HAS_BATTERY
     battery_obj.main(currentTime);
   #endif
-  menu_function_obj.updateStatusBar();
+  // menu_function_obj.updateStatusBar();
   if ((wifi_scan_obj.currentScanMode != WIFI_PACKET_MONITOR) ||
       (mini)) {
     #ifdef HAS_SCREEN
       menu_function_obj.main(currentTime);
-    #else
-      Serial.println("!!!!!esp32_marauder.ino: HAS_SCREEN menu_function_obj.main");
     #endif
   }
   #ifdef HAS_FLIPPER_LED

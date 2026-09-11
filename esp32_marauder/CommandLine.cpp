@@ -52,7 +52,9 @@ namespace {
 #endif
 
 void CommandLine::RunSetup() {
+  #ifndef MARAUDER_V8
   Serial.println(this->ascii_art);
+  #endif
 
   Serial.println(F("\n\n--------------------------------\n"));
   Serial.println(F("         ESP32 Marauder      \n"));
@@ -279,11 +281,11 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_UPDATE_CMD_A);
     Serial.println(HELP_LS_CMD);
     // GCOVR_EXCL_START -- hardware-only command help entry.
-    Serial.println(PROTOCOL_INFO_CMD);
+    Serial.println(HELP_PROTOCOL_INFO_CMD);
     #ifdef HAS_SD
-      Serial.println(BACKUP_SPIFFS_CMD);
-      Serial.println(BACKUP_STATUS_CMD);
-      Serial.println(RESTORE_SPIFFS_CMD);
+      Serial.println(HELP_BACKUP_SPIFFS_CMD);
+      Serial.println(HELP_BACKUP_STATUS_CMD);
+      Serial.println(HELP_RESTORE_SPIFFS_CMD);
     #endif
     // GCOVR_EXCL_STOP
     Serial.println(HELP_LED_CMD);
@@ -298,6 +300,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_NTP_SYNC);
     Serial.println(HELP_DATE);
     Serial.println(HELP_SETDATE);
+    Serial.println(HELP_RECON_CMD);
     
     // WiFi sniff/scan
     Serial.println(HELP_EVIL_PORTAL_CMD);
@@ -379,6 +382,7 @@ void CommandLine::runCommand(String input) {
     }
 
     wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+    recon_obj.stop();
 
     if(old_scan_mode == WIFI_SCAN_GPS_NMEA)
       Serial.println(F("END OF NMEA STREAM"));
@@ -394,6 +398,30 @@ void CommandLine::runCommand(String input) {
     Serial.println("STOPSCAN_CMD menu_function_obj.changeMenu");
       menu_function_obj.changeMenu(menu_function_obj.current_menu);
     #endif
+  }
+  else if (cmd_args.get(0) == RECON_CMD) {
+    if (cmd_args.size() < 2 || cmd_args.get(1) == "status") {
+      Serial.println(recon_obj.active() ? F("active") : F("stopped"));
+    }
+    else if (cmd_args.get(1) == "stop") {
+      recon_obj.stop();
+      wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+      Serial.println(F("stopped"));
+    }
+    else {
+      if (wifi_scan_obj.scanning()) {
+        Serial.println(F("Stop the current scan before starting Recon"));
+      }
+      else if (cmd_args.get(1) == "wifi") {
+        if (recon_obj.start(ReconMode::WIFI_RECON)) Serial.println(F("active"));
+      }
+      #ifdef HAS_BT
+        else if (cmd_args.get(1) == "ble") {
+          if (recon_obj.start(ReconMode::BLE_RECON)) Serial.println(F("active"));
+        }
+      #endif
+      else Serial.println(HELP_RECON_CMD);
+    }
   }
   else if (cmd_args.get(0) == GPS_DATA_CMD) {
     #ifdef HAS_GPS
@@ -571,6 +599,8 @@ void CommandLine::runCommand(String input) {
       uint8_t error = 0;
       if (machine && operation != 1)
         machineResult(transaction_id, command, "started", "OK");
+      else if (!machine && operation != 1)
+        Serial.printf("SPIFFS %s started\n", operation == 0 ? "backup" : "restore");
 
       bool success = sd_obj.migrateSPIFFS(operation, files, bytes, error);
       if (machine) {
@@ -581,6 +611,21 @@ void CommandLine::runCommand(String input) {
                                  operation == 1 ? "BACKUP_INSPECTION_FAILED" : "RESTORE_FAILED";
           machineResult(transaction_id, command, "error", storageErrorCode(error, fallback));
         }
+      }
+      else if (success) {
+        const char* action = operation == 0 ? "backup complete" :
+                             operation == 1 ? "backup status" : "restore complete";
+        Serial.printf("SPIFFS %s: %u files, %u bytes%s\n", action,
+                      static_cast<unsigned int>(files),
+                      static_cast<unsigned int>(bytes),
+                      operation == 2 ? "; rebooting" : "");
+      }
+      else {
+        const char* fallback = operation == 0 ? "BACKUP_FAILED" :
+                               operation == 1 ? "BACKUP_INSPECTION_FAILED" : "RESTORE_FAILED";
+        Serial.printf("SPIFFS %s failed: %s\n",
+                      operation == 0 ? "backup" : operation == 1 ? "backup status" : "restore",
+                      storageErrorCode(error, fallback));
       }
       if (success && operation == 2) {
         delay(1000);
@@ -1427,11 +1472,11 @@ void CommandLine::runCommand(String input) {
       this->startScanFromCLI(WIFI_PING_SCAN, TFT_GREEN, "Ping Scan");
     }
 
-    #ifndef HAS_DUAL_BAND
+    // ARP discovery uses the active station netif on both legacy and C5
+    // dual-band hardware.
       if (cmd_args.get(0) == ARP_SCAN_CMD) {
         this->startScanFromCLI(WIFI_ARP_SCAN, TFT_CYAN, "ARP Scan");
       }
-    #endif
 
     // GPS POI
     if (cmd_args.get(0) == GPS_POI_CMD) {

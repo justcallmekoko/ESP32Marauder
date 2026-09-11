@@ -15,6 +15,7 @@ class TDongleHardwareTests(unittest.TestCase):
         self.assertIn("#define HAS_GPS", feature_block)
         self.assertIn("#define T_DONGLE_LED_DATA_PIN 2", feature_block)
         self.assertIn("#define T_DONGLE_LED_CLOCK_PIN 6", feature_block)
+        self.assertIn("#define T_DONGLE_TFT_CS_PIN 10", feature_block)
         self.assertIn("#define T_DONGLE_SPI_SCLK_PIN 6", feature_block)
         self.assertIn("#define T_DONGLE_SPI_MISO_PIN 7", feature_block)
         self.assertIn("#define T_DONGLE_SPI_MOSI_PIN 2", feature_block)
@@ -37,6 +38,7 @@ class TDongleHardwareTests(unittest.TestCase):
         self.assertIn("t_dongle_led.sendColor(red, green, blue, brightness)", writer)
         self.assertIn("t_dongle_led.endFrame(1)", writer)
         self.assertIn("? 10 : 0", writer)
+        self.assertIn("deselectTDongleSharedSpi(T_DONGLE_TFT_CS_PIN, SD_CS)", writer)
         self.assertNotIn("SPI.begin", writer)
 
         header = (ROOT / "esp32_marauder" / "LedInterface.h").read_text()
