@@ -247,7 +247,7 @@
       "esptoolChip": "esp32s3"
     },
     {
-      "id": "marauder-waveshare-c5-Touch",
+      "id": "marauder-waveshare-c5-touch",
       "displayName": "Marauder WS-C5",
       "aliases": ["Waveshare ESP32-C5-Touch-LCD-2.8"],
       "buildFlag": "MARAUDER_WS_C5_28",
