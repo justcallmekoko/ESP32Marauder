@@ -25,6 +25,28 @@
 #include "settings.h"
 #include "MenuInputRepeat.h"
 
+#if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
+  #include "shutdown.hpp"
+#endif
+
+
+#ifdef HAS_RTC
+  #include "RTC.h"
+  extern RTC rtc_obj;
+#endif
+
+#ifdef USE_CPU_TEMP
+#include "cpu_temp_sensor.hpp"
+#endif
+
+// If system time/date has been set
+extern bool system_time_set;
+
+extern void print_reset_reason();
+extern const char *resetReasonName();
+
+extern int8_t wifi_power;
+
 #ifdef HAS_BUTTONS
   #include "Switches.h"
   #if (U_BTN >= 0)
@@ -51,6 +73,14 @@ extern SDInterface sd_obj;
 extern BatteryInterface battery_obj;
 // #endif
 extern Settings settings_obj;
+
+// extern void shutdown();
+// extern void DeepSleep(int8_t);
+
+#ifdef HAS_SHTC3
+  #include "SHTC3.hpp"
+  extern SHTC3 SHTC3_obj;
+#endif
 
 #define FLASH_BUTTON 0
 
@@ -242,6 +272,11 @@ class MenuFunctions
     Menu generateSSIDsMenu;
 
     Menu evilPortalMenu;
+
+
+    // Admin
+    Menu adminMenu;
+    Menu adminSubMenu;
 
     Menu foxHuntMenu;
     Menu foxSortMenu;

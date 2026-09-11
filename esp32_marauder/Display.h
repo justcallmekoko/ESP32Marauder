@@ -26,12 +26,27 @@
   #error "Cardputer targets require their ST7789_2_DRIVER TFT_eSPI setup"
 #endif
 
-#ifdef HAS_CYD_TOUCH
+#if defined( HAS_CYD_TOUCH) || defined(MARAUDER_CYD_HMI)
   #include <XPT2046_Touchscreen.h>
 #endif
 
-#ifdef HAS_CAP_TOUCH
+#ifdef HAS_FT6336
   #include "ft6336.h"
+#endif
+
+// #ifdef MARAUDER_WS_C5_28
+//   #include <CH32V003_IOExpander.hpp>
+//   extern CH32V003_IOExpander CH32V003_obj;
+// #endif
+
+#ifdef HAS_CST3530
+  #include <CST3530.hpp>
+  extern CST3530 CST3530_obj;
+#endif
+
+#ifdef HAS_CST820
+  #include <CST820.hpp>
+  extern CST820 CST820_touch;
 #endif
 
 // WiFi stuff
@@ -100,7 +115,7 @@ class Display
     TFT_eSPI_Button key[BUTTON_ARRAY_LEN + 4];
     const String PROGMEM version_number = MARAUDER_VERSION;
 
-    #ifdef HAS_CYD_TOUCH
+    #if defined( HAS_CYD_TOUCH) || defined(MARAUDER_CYD_HMI)
       SPIClass touchscreenSPI;
       XPT2046_Touchscreen touchscreen;
     #endif

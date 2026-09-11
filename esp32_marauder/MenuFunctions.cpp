@@ -3,6 +3,10 @@
 #include "CommandLine.h"
 #include "lang_var.h"
 
+#if defined(HAS_TEMP_SENSOR) && defined(USE_CPU_TEMP)
+  #include "cpu_temp_sensor.hpp"
+#endif
+
 #ifdef HAS_SCREEN
 
 extern const unsigned char menu_icons[][66];
@@ -1076,6 +1080,7 @@ byte battery_analog_last = 101;
 uint16_t battery_analog = 0;
 void MenuFunctions::battery(bool initial)
 {
+  log_d("MenuFunctions::battery BATTERY_ANALOG_ON");
   if (BATTERY_ANALOG_ON) {
     uint8_t n = 0;
     byte battery_analog_sample[10];
@@ -1119,6 +1124,7 @@ void MenuFunctions::battery(bool initial)
 void MenuFunctions::battery2(bool initial)
 {
   uint16_t the_color;
+  log_d("MenuFunctions::battery2");
   if ( digitalRead(CHARGING_PIN) == 1) the_color = TFT_BLUE;
   else if (battery_analog < 20) the_color = TFT_RED;
   else if (battery_analog < 40)  the_color = TFT_YELLOW;
@@ -1140,7 +1146,7 @@ void MenuFunctions::battery(bool initial)
 {
   #ifdef HAS_BATTERY
     uint16_t the_color;
-    if (battery_obj.i2c_supported)
+    if (battery_obj.supported)
     {
       // Could use int compare maybe idk
       if (((String)battery_obj.battery_level != "25") && ((String)battery_obj.battery_level != "0"))
@@ -1163,10 +1169,11 @@ void MenuFunctions::battery(bool initial)
                                     STATUSBAR_COLOR,
                                     the_color);
       }*/
+        // display_obj.tft.drawString((String)battery_obj.battery_level + "%", SB_BAT_X, 0, 1);
       #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
-        display_obj.tft.drawString((String)battery_obj.battery_level + "%", SB_BAT_X, 0, 1);
+        display_obj.tft.drawRightString((String)battery_obj.battery_level + "%",  TFT_WIDTH, 0, 1);
       #else
-        display_obj.tft.drawString((String)battery_obj.battery_level + "%", SB_BAT_X, 0, 2);
+        display_obj.tft.drawRightString((String)battery_obj.battery_level + "%",  TFT_WIDTH, 0, 2);
       #endif
     }
   #endif
@@ -1177,6 +1184,8 @@ void MenuFunctions::battery2(bool initial)
 }
 #endif
 
+uint32_t clock_update = 1;
+uint32_t count_pass = 0;
 void MenuFunctions::updateStatusBar()
 {
   display_obj.tft.setTextSize(1);
@@ -1252,6 +1261,89 @@ void MenuFunctions::updateStatusBar()
       display_obj.tft.drawString("CH:" + (String)wifi_scan_obj.old_channel, TFT_WIDTH/4, 0, 1);
     #endif
   }
+
+  // #ifdef HAS_RTC
+    uint32_t ct = initTime & (1 << 12);
+    // Serial.print("count_pass   = "); Serial.println(count_pass++);
+    // Serial.print("initTime     = "); Serial.println(initTime);
+    // Serial.print("clock_update = "); Serial.println(clock_update);
+    // Serial.print("ct           = "); Serial.println(ct);
+    if(ct != clock_update) {  // we dont need to update the clock several time a sec.
+      count_pass = 0;
+      clock_update = ct;
+      char timeBuffer[16];
+      struct tm timeinfo;
+      // static uint32_t tic = 0;
+      uint16_t bg_color = STATUSBAR_COLOR;
+
+      // tic = this->initTime;
+      if (clock_update && system_time_set) {
+
+        if(getLocalTime(&timeinfo))
+          strftime(timeBuffer, sizeof(timeBuffer), "%k:%M", &timeinfo);
+        else
+          timeBuffer[0] = '\0';
+
+      } else {
+          #if defined(HAS_TEMP_SENSOR)
+            #if defined(HAS_SHTC3)
+              SHTC3_obj.read();
+              snprintf(timeBuffer, sizeof(timeBuffer), "%.1fc", SHTC3_obj._temperature);
+            #elif defined(USE_CPU_TEMP)
+              snprintf(timeBuffer, sizeof(timeBuffer), "%.1fC", get_sys_temp());
+            #else
+              snprintf(timeBuffer, sizeof(timeBuffer), "0.0C");
+            #endif
+          #else
+            return;
+          #endif
+      }
+
+        //  "%H:%M"
+
+        int tx, ty, tw, th;
+        tw = (5 * 8) - 4;
+
+        #ifdef HAS_BATTERY
+          if (battery_obj.supported) {
+            th = 15;
+            bg_color = TFT_BLACK;
+          } else
+        #endif
+          th = 0;
+
+        // log_d("timeBuffer: %s  th=%d", timeBuffer, th);
+
+        // Serial.print("TimeBuffer =");
+        // Serial.println(timeBuffer);
+
+        #ifdef HAS_MINI_SCREEN // SCREEN_ORIENTATION == 1
+          tx = TFT_HEIGHT; //  - tw;
+          // ty = TFT_WIDTH - th; // Bottom Right
+          ty = th;   // Near Top Right
+        #else
+          tx = TFT_WIDTH;  // - tw;
+          // ty = TFT_HEIGHT - th;    // Bottom Right
+          ty = th;   // Near Top Right
+        #endif
+
+        // Serial.print("time: ");
+        // Serial.println(timeBuffer);
+        // Serial.println((String) tx + " : " + (String) ty);
+
+        static int16_t  str_w = 32;
+
+        // display_obj.tft.fillRect(tx, ty, tw, th, bg_color);
+        // Serial.printf("Str width = %d\n", str_w);
+        str_w +=2;
+        display_obj.tft.fillRect(TFT_WIDTH - str_w, ty, str_w, th, bg_color);
+        display_obj.tft.setTextColor(TFT_YELLOW, bg_color, true);
+
+        str_w = display_obj.tft.drawRightString(timeBuffer, tx , ty , 2);
+
+        // restore Text color
+        display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR, true);
+  }  //  system_time_set && clock_update
 
   // RAM Stuff
   wifi_scan_obj.free_ram = String(esp_get_free_heap_size());
@@ -1976,6 +2068,17 @@ void MenuFunctions::RunSetup()
 
   this->disable_touch = false;
 
+  #if defined(HAS_TEMP_SENSOR)
+    #if defined(HAS_SHTC3)
+      SHTC3_obj.read();
+    #elif defined(USE_CPU_TEMP)
+      init_sys_temp();
+    #else
+      #undef HAS_TEMP_SENSOR
+    #endif
+  #endif
+
+
   #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
     M5CardputerKeyboard.begin();
   #endif
@@ -2059,6 +2162,9 @@ void MenuFunctions::RunSetup()
     gpsPOIMenu.list = new LinkedList<MenuNode>();
   #endif
 
+  adminMenu.list = new LinkedList<MenuNode>();
+  adminSubMenu.list = new LinkedList<MenuNode>();
+
   foxHuntMenu.list = new LinkedList<MenuNode>();
   reconMenu.list = new LinkedList<MenuNode>();
 
@@ -2124,6 +2230,9 @@ void MenuFunctions::RunSetup()
     gpsPOIMenu.name = "GPS POI";
   #endif
 
+  adminMenu.name = "Admin Tools";
+  adminSubMenu.name = "-";
+
   foxHuntMenu.name = "Fox Hunt";
 
   // Build Main Menu
@@ -2168,6 +2277,15 @@ void MenuFunctions::RunSetup()
   this->addNodes(&mainMenu, text_table1[30], TFTLIGHTGREY, REBOOT, []() {
     ESP.restart();
   });
+  #ifdef POWER_HOLD_PIN
+    this->addNodes(&mainMenu, "Power Off", TFTLIGHTGREY, SHUTDOWN, []() {
+        shutdown();
+    });
+  #elif defined(DEEPSLEEP)
+    this->addNodes(&mainMenu, "Deep Sleep", TFTLIGHTGREY, SHUTDOWN, []() {
+        DeepSleep(0);
+      });
+  #endif
 
   // Build WiFi Menu
   wifiMenu.parentMenu = &mainMenu; // Main Menu is second menu parent
@@ -2204,11 +2322,11 @@ void MenuFunctions::RunSetup()
   });
   // The C5 implementation uses the active station netif with lwIP core
   // locking, so dual-band hardware supports the same ARP scanner.
-  this->addNodes(&wifiScannerMenu, "ARP Scan", TFTCYAN, SCANNERS, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_ARP_SCAN, TFT_CYAN);
-  });
+    this->addNodes(&wifiScannerMenu, "ARP Scan", TFTCYAN, SCANNERS, [this]() {
+      display_obj.clearScreen();
+      this->drawStatusBar();
+      wifi_scan_obj.StartScan(WIFI_ARP_SCAN, TFT_CYAN);
+    });
   this->addNodes(&wifiScannerMenu, "Port Scan All", TFTMAGENTA, BEACON_LIST, [this](){
     // Add the back button
     wifiIPMenu.list->clear();
@@ -2375,7 +2493,7 @@ void MenuFunctions::RunSetup()
   // Build Wardriving menu
   #ifdef HAS_GPS
     /*wardrivingMenu.parentMenu = &wifiMenu; // Main Menu is second menu parent
-    this->addNodes(&wardrivingMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
+    this->addNodes(&wardrivingMenu, text09, TFTLIGHTGREY, 0, [this]() {
       this->changeMenu(wardrivingMenu.parentMenu, true);
     });*/
     if (gps_obj.getGpsModuleStatus()) {
@@ -2388,7 +2506,7 @@ void MenuFunctions::RunSetup()
   #endif
   /*#ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
-      this->addNodes(&wardrivingMenu, "Station Wardrive", TFTORANGE, NULL, PROBE_SNIFF, [this]() {
+      this->addNodes(&wardrivingMenu, "Station Wardrive", TFTORANGE, PROBE_SNIFF, [this]() {
         display_obj.clearScreen();
         this->drawStatusBar();
         wifi_scan_obj.StartScan(WIFI_SCAN_STATION_WAR_DRIVE, TFT_ORANGE);
@@ -3014,6 +3132,11 @@ void MenuFunctions::RunSetup()
 
   this->addNodes(&wifiGeneralMenu, "Set MACs", TFTLIGHTGREY, 0, [this]() {
     this->changeMenu(&setMacMenu, true);
+  });
+
+  this->addNodes(&wifiGeneralMenu, "Sort APs", TFTBLUE, GENERATE, [this]() {
+    wifi_scan_obj.RunSortAPList();
+    this->changeMenu(current_menu, true);
   });
 
   this->addNodes(&wifiGeneralMenu, "Shutdown WiFi", TFTRED, 0, [this]() {
@@ -3777,6 +3900,14 @@ void MenuFunctions::RunSetup()
     wifi_scan_obj.RunLoadATList();
   });
 
+
+#ifdef HAS_SD
+      this->addNodes(&saveFileMenu, "Rescan SD", TFTWHITE, SD_UPDATE, [this]() {
+        this->changeMenu(&loadAPsMenu, true);
+        sd_obj.initSD();
+      });
+#endif
+
   saveSSIDsMenu.parentMenu = &saveFileMenu;
   this->addNodes(&saveSSIDsMenu, text09, TFTLIGHTGREY, 0, [this]() {
     this->changeMenu(saveSSIDsMenu.parentMenu, true);
@@ -3807,6 +3938,100 @@ void MenuFunctions::RunSetup()
     this->changeMenu(loadATsMenu.parentMenu, true);
   });
 
+  // Admin Menu
+  // TFT_GREENYELLOW
+  this->addNodes(&deviceMenu, "Admin Tools", TFTPINK, SD_UPDATE, [this]() {
+    this->changeMenu(&adminMenu, true);
+  });
+
+  adminMenu.parentMenu = &deviceMenu;
+  this->addNodes(&adminMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(adminMenu.parentMenu, true);
+  });
+
+  adminSubMenu.parentMenu = &adminMenu;
+  this->addNodes(&adminSubMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(adminSubMenu.parentMenu, true);
+  });
+  #if defined(HAS_SD) || defined(USE_SD)
+    this->addNodes(&adminMenu, "Rescan SD", TFTPINK, SD_UPDATE, [this]() {
+      this->changeMenu(&adminMenu, true);
+      sd_obj.initSD();
+    });
+  #endif
+
+  #ifdef HAS_GPS
+    this->addNodes(&saveFileMenu, "ReProbe GPS", TFTSKYBLUE, SD_UPDATE, [this]() {
+      gps_obj.begin();
+    });
+  #endif //  HAS_GPS
+
+
+  this->addNodes(&adminMenu, "WifiTx 21dBm (Max)", TFTGREEN, WIFI, [this]() {
+      // WIFI_POWER_21dBm = 84,
+      wifi_power = 84;
+      // WiFi.status() 
+      esp_wifi_set_max_tx_power(wifi_power);
+     this->changeMenu(&adminMenu, true);
+  });
+  this->addNodes(&adminMenu, "WifiTx 20dBm (Default)", TFTLIME, WIFI, [this]() {
+    // this->changeMenu(&adminSubMenu, true);
+      // WIFI_POWER_20dB = 80
+      wifi_power = 78;
+      esp_wifi_set_max_tx_power(wifi_power);
+     this->changeMenu(&adminMenu, true);
+  });
+
+  this->addNodes(&adminMenu, "WifiTx 15dBm", TFTGREEN, WIFI, [this]() {
+     // this->changeMenu(&adminSubMenu, true);
+     // WIFI_POWER_15dBm = 60
+     wifi_power = 60;
+     esp_wifi_set_max_tx_power(wifi_power);
+     this->changeMenu(&adminMenu, true);
+  });
+  this->addNodes(&adminMenu, "WifiTx 8.5dBm", TFTGREEN, WIFI, [this]() {
+    // this->changeMenu(&adminSubMenu, true);
+    // WIFI_POWER_8_5dBm = 34
+      wifi_power = 34;
+      esp_wifi_set_max_tx_power(wifi_power);
+         this->changeMenu(&adminMenu, true);
+      });
+  this->addNodes(&adminMenu, "WifiTx 5dBm", TFTGREEN, WIFI, [this]() {
+      // this->changeMenu(&adminSubMenu, true);
+      // WIFI_POWER_5dBm = 20,
+      wifi_power = 20;
+      esp_wifi_set_max_tx_power(wifi_power);
+      this->changeMenu(&adminMenu, true);
+    });
+
+  this->addNodes(&adminMenu, "Sync Clock with WiFi", TFTPINK, SETTINGS, [this]() {
+    this->changeMenu(&adminSubMenu, true);
+    display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    bool sync_ntp(const char *ntpServer = nullptr);    // system_time.cpp
+
+   if (!wifi_scan_obj.wifi_connected) {
+     display_obj.tft.println("WIFI is not connected.");
+     return;
+   }
+
+   sync_ntp();
+   struct tm timeinfo;
+   if (getLocalTime(&timeinfo)) {
+     Serial.println(&timeinfo, "%F %T");
+   } else {
+     log_d("Failed to obtain time from NTP");
+   }
+
+   return;
+  });
+
+  this->addNodes(&adminMenu, "Reset Reasion", TFTMAGENTA, SETTINGS, [this]() {
+    this->changeMenu(&adminSubMenu, true);
+      display_obj.tft.setTextColor(TFT_SKYBLUE, TFT_BLACK);
+      display_obj.tft.drawCentreString(resetReasonName(), TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+      print_reset_reason();
+  });
+
   // GPS Menu
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
@@ -3822,11 +4047,13 @@ void MenuFunctions::RunSetup()
         wifi_scan_obj.StartScan(WIFI_SCAN_GPS_DATA, TFT_CYAN);
       });
 
+#ifndef HAS_GPSI2C
       this->addNodes(&gpsMenu, "NMEA Stream", TFTORANGE, GPS_MENU, [this]() {
         wifi_scan_obj.currentScanMode = WIFI_SCAN_GPS_NMEA;
         this->changeMenu(&gpsInfoMenu, true);
         wifi_scan_obj.StartScan(WIFI_SCAN_GPS_NMEA, TFT_ORANGE);
       });
+#endif
 
       this->addNodes(&gpsMenu, "GPS Tracker", TFTGREEN, GPS_MENU, [this]() {
         wifi_scan_obj.currentScanMode = GPS_TRACKER;
@@ -3931,6 +4158,7 @@ void MenuFunctions::RunSetup()
 //#if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
 #ifdef HAS_MINI_KB
   String MenuFunctions::miniKeyboard(Menu * targetMenu, bool do_pass) {
+    Serial.println("MenuFunctions::miniKeyboard");
     // Prepare a char array and reset temp SSID string
     extern LinkedList<ssid>* ssids;
 
@@ -4159,6 +4387,7 @@ void MenuFunctions::RunSetup()
 
           // Keyboard functions for touch hardware
           #ifdef HAS_TOUCH
+            Serial.println("Keyboard functions for touch hardware");
             bool touched = display_obj.updateTouch(&t_x, &t_y);
 
             uint8_t menu_button = display_obj.menuButton(&t_x, &t_y, touched);
@@ -4283,6 +4512,7 @@ void MenuFunctions::RunSetup()
               pressed = false;
 
           #endif
+            Serial.println("endif   Keyboard functions for touch hardware");
 
           // Display info on screen
           if (pressed) {
@@ -4360,20 +4590,20 @@ void MenuFunctions::buildSDFileMenu(bool update) {
   delete sdDeleteMenu.list;
   sdDeleteMenu.list = new LinkedList<MenuNode>();
 
-  sdDeleteMenu.name = "Bin Files";
+    sdDeleteMenu.name = "Bin Files";
 
   this->addNodes(&sdDeleteMenu, text09, TFTLIGHTGREY, 0, [this]() {
     this->changeMenu(sdDeleteMenu.parentMenu, true);
   });
 
-  for (int x = 0; x < sd_obj.sd_files->size(); x++) {
-    this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x).c_str(), TFTCYAN, SD_UPDATE, [this, x]() {
-      wifi_scan_obj.currentScanMode = OTA_UPDATE;
-      this->changeMenu(&failedUpdateMenu, true);
-      sd_obj.runUpdate("/" + sd_obj.sd_files->get(x));
-    });
+    for (int x = 0; x < sd_obj.sd_files->size(); x++) {
+      this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x).c_str(), TFTCYAN, SD_UPDATE, [this, x]() {
+        wifi_scan_obj.currentScanMode = OTA_UPDATE;
+        this->changeMenu(&failedUpdateMenu, true);
+        sd_obj.runUpdate("/" + sd_obj.sd_files->get(x));
+      });
+    }
   }
-}
 
 String MenuFunctions::parentSDPath(const String& path) const {
   if (path == "/")
@@ -4743,6 +4973,7 @@ uint16_t MenuFunctions::getColor(uint16_t color) {
   else if (color == TFTDARKGREY) return TFT_DARKGREY;
   else if (color == TFTSKYBLUE) return TFT_SKYBLUE;
   else if (color == TFTLIME) return 0x97e0;
+  else if (color == TFTPINK) return TFT_PINK;
   else return color;
 }
 
@@ -4932,19 +5163,20 @@ void MenuFunctions::displayCurrentMenu(int start_index)
 // ============================================================
 #ifndef HAS_MINI_SCREEN
   void MenuFunctions::brightnessMode() {
-    extern void brightnessSave(uint8_t level);
-    extern uint8_t getBrightnessLevel();
 
-    const uint8_t levels[] = {26, 51, 77, 102, 128, 153, 179, 204, 230, 255};
-    const uint8_t numLevels = 10;
+    // From BackLight.cpp
+    extern void brightnessSave(uint8_t level);
+    extern void brightnessSet(uint8_t level);
+    extern uint8_t getBrightnessLevel();
+    extern const uint8_t BL_NUM_LEVELS;
+
     uint8_t level = getBrightnessLevel();
 
-    // LEDC write compatibility (2.x vs 3.x board package)
-    #if ESP_ARDUINO_VERSION_MAJOR >= 3
-      #define BL_PREVIEW(duty) ledcWrite(TFT_BL, (duty))
-    #else
-      #define BL_PREVIEW(duty) ledcWrite(0, (duty))
-    #endif
+    // Dont start with a Black screen
+    if (level == 0) {
+      level = 1;
+      brightnessSet(1);
+    }
 
     display_obj.tft.fillScreen(TFT_BLACK);
     display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
@@ -4959,12 +5191,13 @@ void MenuFunctions::displayCurrentMenu(int start_index)
     auto drawBar = [&]() {
       uint16_t barX = 30, barY = TFT_HEIGHT/2 - 25, barW = TFT_WIDTH - 60, barH = 30;
       display_obj.tft.drawRect(barX, barY, barW, barH, TFT_WHITE);
-      uint16_t fillW = (barW - 4) * (level + 1) / numLevels;
+      uint16_t fillW = (barW - 4) * (level + 1) / BL_NUM_LEVELS;
       display_obj.tft.fillRect(barX + 2, barY + 2, barW - 4, barH - 4, TFT_BLACK);
       display_obj.tft.fillRect(barX + 2, barY + 2, fillW, barH - 4, TFT_CYAN);
       display_obj.tft.fillRect(0, barY + barH + 5, TFT_WIDTH, 20, TFT_BLACK);
       display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-      String pct = String(levels[level] * 100 / 255) + "%";
+      // Serial.printf("%d / %d = %f\n", level, BL_NUM_LEVELS, ((level / (float) BL_NUM_LEVELS) * 100));
+      String pct = String((level / (float) BL_NUM_LEVELS) * 100) + "%";
       display_obj.tft.drawCentreString(pct, TFT_WIDTH/2, barY + barH + 8, 2);
     };
     drawBar();
@@ -4987,15 +5220,15 @@ void MenuFunctions::displayCurrentMenu(int start_index)
         while (display_obj.updateTouch(&tx, &ty)) delay(10);
 
         if (ty < zoneUp) {
-          if (level < numLevels - 1) {
+          if (level < BL_NUM_LEVELS) {
             level++;
-            BL_PREVIEW(levels[level]);
+            brightnessSet(level);
             drawBar();
           }
         } else if (ty >= zoneDown) {
           if (level > 0) {
             level--;
-            BL_PREVIEW(levels[level]);
+            brightnessSet(level);
             drawBar();
           }
         } else {
@@ -5008,9 +5241,10 @@ void MenuFunctions::displayCurrentMenu(int start_index)
       delay(30);
     }
 
-    #undef BL_PREVIEW
+    // #undef BL_PREVIEW
     this->changeMenu(current_menu, true);
   }
-#endif
+#endif // HAS_MINI_SCREEN
 
-#endif
+#endif // HAS_SCREEN
+

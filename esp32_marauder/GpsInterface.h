@@ -16,6 +16,11 @@
 //#define GPS_NMEA_SCRNWRAP true //default:true, except on MARAUDER_MINI where false
 //#define GPS_NMEA_MAXQUEUE 30 //default:30 messages max in queue
 
+// from system_time.cpp
+extern bool system_time_set;   // flag if system's time/date have been set yet..
+extern bool set_system_time(struct tm, bool setrt);
+extern bool set_system_time(const String& time_str, bool setrtc);
+
 #if defined(MARAUDER_MINI) || defined(MARAUDER_MINI_V3)
   #ifndef GPS_NMEA_SCRNWRAP
     #define GPS_NMEA_SCRNWRAP false
@@ -58,6 +63,8 @@ class GpsInterface {
     String getNmeaNotimp();
     String getNmeaNotparsed();
 
+    void GetTimeInfo(struct tm *timeInfo);
+
     void setType(String t);
 
     void enqueue(MicroNMEA& nmea);
@@ -74,6 +81,9 @@ class GpsInterface {
 
     String generateGXgga();
     String generateGXrmc();
+
+
+    bool gps_enabled = false;
 
   private:
     enum type_t {
@@ -101,7 +111,6 @@ class GpsInterface {
     float accuracy = 0.0;
     String datetime = "";
     
-    bool gps_enabled = false;
     bool good_fix = false;
     char nav_system='\0';
     uint8_t num_sats = 0;

@@ -1,5 +1,6 @@
 #include "CommandLine.h"
 
+// Brightness functions defined in BackLight.cpp
 // GCOVR_EXCL_START -- serial protocol output depends on Arduino Serial.
 namespace {
   bool validTransactionId(const String& transaction_id) {
@@ -47,11 +48,12 @@ namespace {
 #ifndef HAS_MINI_SCREEN
   extern void brightnessCycle();
   extern uint8_t getBrightnessLevel();
+  extern const uint8_t BL_NUM_LEVELS;
 #endif
 
 void CommandLine::RunSetup() {
   #ifndef MARAUDER_V8
-    Serial.println(this->ascii_art);
+  Serial.println(this->ascii_art);
   #endif
 
   Serial.println(F("\n\n--------------------------------\n"));
@@ -249,7 +251,9 @@ void CommandLine::startScanFromCLI(int scan_mode, uint16_t color, const char* sc
   Serial.print(F(". Stop with "));
   Serial.println(STOPSCAN_CMD);
   #ifdef HAS_SCREEN
+  Serial.println("display_obj.clearScreen");
     display_obj.clearScreen();
+  Serial.println("menu_function_obj.drawStatusBar");
     menu_function_obj.drawStatusBar();
   #endif
   wifi_scan_obj.StartScan(scan_mode, color);
@@ -290,6 +294,12 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_NMEA_CMD);
     Serial.println(HELP_GPS_POI_CMD);
     Serial.println(HELP_GPS_TRACKER_CMD);
+    #if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
+      Serial.println(HELP_SHUTDOWN_CMD);
+    #endif
+    Serial.println(HELP_NTP_SYNC);
+    Serial.println(HELP_DATE);
+    Serial.println(HELP_SETDATE);
     Serial.println(HELP_RECON_CMD);
     
     // WiFi sniff/scan
@@ -383,7 +393,9 @@ void CommandLine::runCommand(String input) {
 
     // If we don't do this, the text and button coordinates will be off
     #ifdef HAS_SCREEN
+    Serial.println("STOPSCAN_CMD display_obj.init");
       display_obj.init();
+    Serial.println("STOPSCAN_CMD menu_function_obj.changeMenu");
       menu_function_obj.changeMenu(menu_function_obj.current_menu);
     #endif
   }
@@ -749,6 +761,10 @@ void CommandLine::runCommand(String input) {
 
   else if (cmd_args.get(0) == REBOOT_CMD)
     ESP.restart();
+  #if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
+  else if (cmd_args.get(0) == SHUTDOWN_CMD)
+    shutdown();
+  #endif
 
   //// WiFi/Bluetooth Scan/Attack commands
   if (!wifi_scan_obj.scanning()) {
@@ -1403,7 +1419,8 @@ void CommandLine::runCommand(String input) {
             Serial.print(F("[Brightness] Set to level "));
             Serial.println(lvl);
           } else {
-            Serial.println(F("Level must be 0-9"));
+            Serial.print(F("Level must be 0-"));
+            Serial.println(BL_NUM_LEVELS);
           }
         } else {
           Serial.print(F("[Brightness] Current level: "));
@@ -1457,9 +1474,9 @@ void CommandLine::runCommand(String input) {
 
     // ARP discovery uses the active station netif on both legacy and C5
     // dual-band hardware.
-    if (cmd_args.get(0) == ARP_SCAN_CMD) {
-      this->startScanFromCLI(WIFI_ARP_SCAN, TFT_CYAN, "ARP Scan");
-    }
+      if (cmd_args.get(0) == ARP_SCAN_CMD) {
+        this->startScanFromCLI(WIFI_ARP_SCAN, TFT_CYAN, "ARP Scan");
+      }
 
     // GPS POI
     if (cmd_args.get(0) == GPS_POI_CMD) {
@@ -1676,8 +1693,9 @@ void CommandLine::runCommand(String input) {
     }
   }
   else if (cmd_args.get(0) == JOIN_CMD) {
-    int ap_sw = this->argSearch(&cmd_args, "-a");
-    int pw_sw = this->argSearch(&cmd_args, "-p");
+    int np_sw = this->argSearch(&cmd_args, "-n");   // Network
+    int ap_sw = this->argSearch(&cmd_args, "-a");   // AP Index
+    int pw_sw = this->argSearch(&cmd_args, "-p");   // Password
     int s_sw  = this->argSearch(&cmd_args, "-s");
 
     if ((ap_sw != -1) && (pw_sw != -1)) {
@@ -1693,6 +1711,17 @@ void CommandLine::runCommand(String input) {
           menu_function_obj.changeMenu(menu_function_obj.current_menu);
         #endif
       #endif
+    }
+    else if ((np_sw != -1) && (pw_sw != -1)) {
+      String password = cmd_args.get(pw_sw + 1);
+      String ssid = cmd_args.get(np_sw + 1);
+
+      Serial.println("Using SSID: " + (String)ssid + " Password: " + (String)password);
+      settings_obj.saveSetting<bool>("ClientSSID", ssid);
+      settings_obj.saveSetting<bool>("ClientPW", password);
+
+      wifi_scan_obj.joinWiFi(ssid, password, false);
+
     }
     else if (s_sw != -1) {
       String ssid = settings_obj.loadSetting<String>("ClientSSID");
@@ -1713,6 +1742,7 @@ void CommandLine::runCommand(String input) {
       return;
     }
   }
+
   // Select access points or stations
   else if (cmd_args.get(0) == SEL_CMD) {
     // Get switches
@@ -2067,6 +2097,93 @@ void CommandLine::runCommand(String input) {
     }
     else {
       Serial.println(F("Usage: add -a -b <mac> or add -c -b <mac> -ap <index>"));
+    }
+  }
+
+
+  else if (cmd_args.get(0) == NTP_SYNC_CMD) {
+    bool sync_ntp(const char *ntpServer = nullptr);
+
+    if (!wifi_scan_obj.wifi_connected) {
+      Serial.println(F("WIFI is not connected."));
+      return;
+    }
+    sync_ntp();
+
+    struct tm timeinfo;
+    if (getLocalTime(&timeinfo)) {
+        char timeBuffer[64];
+        system_time_set = true;
+        strftime(timeBuffer, sizeof(timeBuffer), "%F %T", &timeinfo);
+        Serial.println(&timeinfo, "%F %T");
+    } else {
+        log_w("getLocalTime Fail");
+        perror("getLocalTime");
+    }
+  }
+
+
+  else if (cmd_args.get(0) == DATE_CMD) {
+    struct tm timeinfo;
+    #ifdef HAS_RTC
+    if (!rtc_obj.supported) {
+      Serial.println("RTC: Not Supported");
+    } else if ( !rtc_obj.rtc_synced ) {
+      Serial.println("RTC: Not Synced / Time not set");
+    } else {
+      Serial.print("RTC: ");
+      Serial.println(rtc_obj.dt_string());
+    }
+    #endif
+    Serial.print(F("system_time_set: ")); Serial.println(system_time_set);
+    if (getLocalTime(&timeinfo)) {
+      Serial.println(&timeinfo, "%F %T");
+    } else {
+      log_w("getLocalTime Fail");
+    }
+  }
+
+  else if (cmd_args.get(0) == SETDATE_CMD) {
+    struct tm tm_info = {0}; 
+    extern bool set_system_time(struct tm timeInfo, bool setrtc = false);
+
+    /* 
+    if ( cmd_args.size() == 2 && cmd_args.get(1).length == 19 ) {
+      String arg_str = cmd_args.get(1);
+      if (arg_str[10] == ' ')
+        arg_str[10] = 'T';
+
+      Serial.println(F("Failed to parse time string."));
+      Serial.print("strlen arg_str: ");
+      Serial.println(arg_str.length());
+      Serial.printf("char 10 = %c", tmstr);
+    }
+    */
+
+    log_d("SETDATE_CMD: %s %s", cmd_args.get(1).c_str(), cmd_args.get(2).c_str());
+    if ( cmd_args.size() == 3 &&
+         strptime(cmd_args.get(1).c_str(), "%F", &tm_info) &&
+         strptime(cmd_args.get(2).c_str(), "%T", &tm_info) ) {
+
+
+      /*
+      // now done in set_system_time if 2nd arg true
+      #ifdef HAS_RTC
+        Serial.print("SETDATE_CMD tm_info: ");
+        Serial.println(tm_info.tm_year);
+        Serial.print("rtc_obj.dt_string: ");
+        Serial.println(rtc_obj.dt_string());
+          rtc_obj.adjust(&tm_info);
+        Serial.print("rtc_obj.dt_string: ");
+        Serial.println(rtc_obj.dt_string());
+      #endif
+      */
+
+      set_system_time(tm_info, true);
+
+    } else {
+      Serial.println(F("Failed to parse time string."));
+      Serial.println(F("expected format: YYYY-MM-DD HH:MM:SS"));
     }
   }
 
