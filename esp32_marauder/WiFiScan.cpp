@@ -677,7 +677,7 @@ extern "C" {
                   String wardrive_line = (String)advertisedDevice->getAddress().toString().c_str() + ",,[BLE]," + gps_obj.getDatetime() + ",0," + (String)advertisedDevice->getRSSI() + "," + gps_obj.getLat() + "," + gps_obj.getLon() + "," + gps_obj.getAlt() + "," + gps_obj.getAccuracy() + ",BLE\n";
                   Serial.print(wardrive_line);
 
-                  if (do_save)
+                  if (do_save && !wifi_scan_obj.isGeofencePaused())
                     buffer_obj.append(wardrive_line);
 
                   wifi_scan_obj.save_mac(mac_char);
@@ -1429,7 +1429,7 @@ extern "C" {
                   String wardrive_line = (String)mac + ",,[BLE]," + gps_obj.getDatetime() + ",0," + (String)rssi + "," + gps_obj.getLat() + "," + gps_obj.getLon() + "," + gps_obj.getAlt() + "," + gps_obj.getAccuracy() + ",BLE\n";
                   Serial.print(wardrive_line);
 
-                  if (do_save)
+                  if (do_save && !wifi_scan_obj.isGeofencePaused())
                     buffer_obj.append(wardrive_line);
                     
                   wifi_scan_obj.save_mac(mac_char);
@@ -2637,6 +2637,10 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
   else if (scan_mode == WIFI_SCAN_AP)
     RunBeaconScan(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_WAR_DRIVE) {
+    this->reloadGeofences();
+    this->geofence_paused = false;
+    this->active_geofence_name = "";
+    this->updateGeofenceState(true);
     #ifdef HAS_BT
       RunBluetoothScan(scan_mode, color);
     #endif
@@ -6030,6 +6034,15 @@ void WiFiScan::setBaseMacAddress(uint8_t macAddr[6]) {
 void WiFiScan::executeWarDrive() {
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
+      if (this->updateGeofenceState()) {
+        WiFi.scanDelete();
+        #ifdef HAS_BT
+          if (pBLEScan && pBLEScan->isScanning()) pBLEScan->stop();
+          this->ble_scanning = false;
+        #endif
+        delay(10);
+        return;
+      }
       bool do_save;
       String display_string;
 
@@ -6204,6 +6217,56 @@ void WiFiScan::executeWarDrive() {
       }
     }
   #endif
+}
+
+void WiFiScan::reloadGeofences() {
+  for (uint8_t i = 0; i < MAX_GEOFENCES; i++)
+    settings_obj.loadGeofence(i, this->geofences[i]);
+  this->last_geofence_check = 0;
+}
+
+bool WiFiScan::updateGeofenceState(bool force) {
+  #ifdef HAS_GPS
+    const uint32_t now = millis();
+    if (!force && this->last_geofence_check && now - this->last_geofence_check < 500)
+      return this->geofence_paused;
+    this->last_geofence_check = now;
+
+    bool inside = false;
+    String matched = "";
+    if (gps_obj.getFixStatus()) {
+      const double lat = gps_obj.getLat().toDouble();
+      const double lon = gps_obj.getLon().toDouble();
+      for (uint8_t i = 0; i < MAX_GEOFENCES; i++) {
+        const GeofenceConfig& fence = this->geofences[i];
+        if (fence.enabled && GeofenceMath::distanceMiles(lat, lon, fence.latitude, fence.longitude) <= fence.radiusMiles) {
+          inside = true;
+          matched = fence.name;
+          break;
+        }
+      }
+    }
+
+    if (inside != this->geofence_paused || (inside && matched != this->active_geofence_name)) {
+      this->geofence_paused = inside;
+      this->active_geofence_name = matched;
+      if (inside) {
+        Serial.println("Wardrive paused inside geofence: " + matched);
+        #ifdef HAS_SCREEN
+          display_obj.clearScreen();
+          display_obj.showCenterText("GEOFENCE PAUSED", TFT_HEIGHT / 2 - 12);
+          display_obj.showCenterText(matched.c_str(), TFT_HEIGHT / 2 + 12);
+        #endif
+      } else {
+        Serial.println(F("Wardrive resumed outside geofence"));
+        #ifdef HAS_SCREEN
+          display_obj.clearScreen();
+          display_obj.showCenterText("Wardrive resumed", TFT_HEIGHT / 2);
+        #endif
+      }
+    }
+  #endif
+  return this->geofence_paused;
 }
 
 void WiFiScan::openPoiFile() {
@@ -8890,7 +8953,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
 
             Serial.print((String)wifi_scan_obj.mac_history_cursor + " | " + wardrive_line);
 
-            if (gps_obj.getFixStatus()) {
+            if (gps_obj.getFixStatus() && !wifi_scan_obj.isGeofencePaused()) {
               buffer_obj.append(wardrive_line);
             }
           #endif

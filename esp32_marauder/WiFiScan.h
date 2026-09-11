@@ -66,6 +66,7 @@
   #include "GpsInterface.h"
 #endif
 #include "settings.h"
+#include "GeofenceMath.h"
 #include "Assets.h"
 #ifdef HAS_FLIPPER_LED
   #include "flipperLED.h"
@@ -440,6 +441,11 @@ class WiFiScan
     bool scan_complete = false;
 
     uint8_t wardrive_channel_index = 0;
+    GeofenceConfig geofences[MAX_GEOFENCES];
+    bool geofence_paused = false;
+    uint32_t last_geofence_check = 0;
+    String active_geofence_name = "";
+    bool updateGeofenceState(bool force = false);
 
     //int num_beacon = 0; // GREEN
     //int num_probe = 0; // BLUE
@@ -1091,6 +1097,8 @@ class WiFiScan
     bool scanning();
     bool joinWiFi(String ssid, String password, bool gui = true, bool save_credential = true);
     bool joinSavedWiFi(bool gui = true);
+    void reloadGeofences();
+    bool isGeofencePaused() const { return geofence_paused; }
     bool hasPendingWifiCredential() const;
     bool savePendingWifiCredential(uint8_t replace_index);
     void discardPendingWifiCredential();

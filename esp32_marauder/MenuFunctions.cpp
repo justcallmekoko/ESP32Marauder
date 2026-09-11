@@ -13,6 +13,14 @@ extern LinkedList<Flipper>* flippers;
 extern LinkedList<BleDevice>* ble_devices;
 extern CommandLine cli_obj;
 
+namespace {
+bool parseGeofenceNumber(const String& value, double& parsed) {
+  char* end = nullptr;
+  parsed = strtod(value.c_str(), &end);
+  return end != value.c_str() && *end == '\0' && isfinite(parsed);
+}
+}
+
 #ifdef HAS_MINI_SCREEN
 void MenuFunctions::drawMiniMenuButton(int b, int x, bool selected, uint16_t text_offset) {
   if (!current_menu || !current_menu->list || x < 0 || x >= current_menu->list->size())
@@ -2006,6 +2014,8 @@ void MenuFunctions::RunSetup()
   updateMenu.list = new LinkedList<MenuNode>();
   settingsMenu.list = new LinkedList<MenuNode>();
   specSettingMenu.list = new LinkedList<MenuNode>();
+  geofenceMenu.list = new LinkedList<MenuNode>();
+  geofenceActionMenu.list = new LinkedList<MenuNode>();
   infoMenu.list = new LinkedList<MenuNode>();
   // WiFi menu stuff
   wifiSnifferMenu.list = new LinkedList<MenuNode>();
@@ -2077,6 +2087,8 @@ void MenuFunctions::RunSetup()
   updateMenu.name = text_table1[15];
   infoMenu.name = text_table1[17];
   settingsMenu.name = text_table1[18];
+  geofenceMenu.name = "Geofences";
+  geofenceActionMenu.name = "Geofence";
   bluetoothMenu.name = text_table1[19];
   wifiSnifferMenu.name = text_table1[20];
   wifiScannerMenu.name = "Scanners";
@@ -3673,6 +3685,9 @@ void MenuFunctions::RunSetup()
   this->addNodes(&deviceMenu, text08, TFTBLUE, SETTINGS, [this]() {
     this->changeMenu(&settingsMenu, true);
   });
+  this->addNodes(&deviceMenu, "Geofences", TFTGREEN, GPS_MENU, [this]() {
+    this->buildGeofenceMenu();
+  });
 
   #ifdef HAS_SD
     if (sd_obj.supported) {
@@ -3873,6 +3888,101 @@ void MenuFunctions::RunSetup()
   this->changeMenu(&mainMenu, true);
 
   this->initTime = millis();
+}
+
+String MenuFunctions::geofenceTextInput(const char* title) {
+  #ifdef HAS_TOUCH
+    char value[40] = {0};
+    if (keyboardInput(value, sizeof(value), title)) return String(value);
+    return "";
+  #elif defined(HAS_MINI_KB)
+    miniKbMenu.name = title;
+    miniKbMenu.parentMenu = &geofenceActionMenu;
+    this->changeMenu(&miniKbMenu, true);
+    return this->miniKeyboard(&miniKbMenu, true);
+  #else
+    return "";
+  #endif
+}
+
+bool MenuFunctions::editGeofence(uint8_t slot, bool use_current_location) {
+  GeofenceConfig fence;
+  fence.enabled = true;
+  fence.name = this->geofenceTextInput("Geofence name");
+  fence.name.trim();
+  if (fence.name.length() == 0 || fence.name.length() > GEOFENCE_NAME_MAX) return false;
+
+  if (use_current_location) {
+    #ifdef HAS_GPS
+      if (!gps_obj.getFixStatus()) return false;
+      fence.latitude = gps_obj.getLat().toDouble();
+      fence.longitude = gps_obj.getLon().toDouble();
+    #else
+      return false;
+    #endif
+  } else {
+    String latitude = this->geofenceTextInput("Latitude (-90 to 90)");
+    String longitude = this->geofenceTextInput("Longitude (-180 to 180)");
+    if (latitude.length() == 0 || longitude.length() == 0) return false;
+    if (!parseGeofenceNumber(latitude, fence.latitude) || !parseGeofenceNumber(longitude, fence.longitude)) return false;
+  }
+  String radius = this->geofenceTextInput("Radius miles (0.1-1.0)");
+  if (radius.length() == 0) return false;
+  double radius_miles = 0;
+  if (!parseGeofenceNumber(radius, radius_miles)) return false;
+  fence.radiusMiles = radius_miles;
+  if (!settings_obj.saveGeofence(slot, fence)) return false;
+  wifi_scan_obj.reloadGeofences();
+  return true;
+}
+
+void MenuFunctions::buildGeofenceMenu() {
+  geofenceMenu.list->clear();
+  geofenceMenu.parentMenu = &deviceMenu;
+  this->addNodes(&geofenceMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(geofenceMenu.parentMenu, true);
+  });
+  for (uint8_t i = 0; i < MAX_GEOFENCES; i++) {
+    GeofenceConfig fence;
+    const bool configured = settings_obj.loadGeofence(i, fence);
+    String label = String(i + 1) + ": " + (configured ? fence.name : "Empty");
+    this->addNodes(&geofenceMenu, label.c_str(), configured ? TFTGREEN : TFTLIGHTGREY, GPS_MENU, [this, i]() {
+      this->buildGeofenceActionMenu(i);
+    });
+  }
+  this->changeMenu(&geofenceMenu, true);
+}
+
+void MenuFunctions::buildGeofenceActionMenu(uint8_t slot) {
+  this->selectedGeofence = slot;
+  geofenceActionMenu.list->clear();
+  geofenceActionMenu.parentMenu = &geofenceMenu;
+  this->addNodes(&geofenceActionMenu, text09, TFTLIGHTGREY, 0, [this]() { this->buildGeofenceMenu(); });
+  this->addNodes(&geofenceActionMenu, "Enter coordinates", TFTCYAN, GPS_MENU, [this, slot]() {
+    const bool saved = this->editGeofence(slot, false);
+    display_obj.clearScreen();
+    display_obj.showCenterText(saved ? "Geofence saved" : "Invalid or cancelled", TFT_HEIGHT / 2);
+    delay(1200);
+    this->buildGeofenceMenu();
+  });
+  #ifdef HAS_GPS
+    this->addNodes(&geofenceActionMenu, "Use current GPS", TFTGREEN, GPS_MENU, [this, slot]() {
+      const bool saved = this->editGeofence(slot, true);
+      display_obj.clearScreen();
+      display_obj.showCenterText(saved ? "Geofence saved" : "GPS fix/input needed", TFT_HEIGHT / 2);
+      delay(1200);
+      this->buildGeofenceMenu();
+    });
+  #endif
+  GeofenceConfig fence;
+  if (settings_obj.loadGeofence(slot, fence)) {
+    this->addNodes(&geofenceActionMenu, "Clear geofence", TFTRED, CLEAR_ICO, [this, slot]() {
+      settings_obj.clearGeofence(slot);
+      wifi_scan_obj.reloadGeofences();
+      this->buildGeofenceMenu();
+    });
+  }
+  this->changeMenu(&geofenceActionMenu, true);
 }
 
 //#if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
