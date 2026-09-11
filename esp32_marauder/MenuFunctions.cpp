@@ -3134,6 +3134,11 @@ void MenuFunctions::RunSetup()
     this->changeMenu(&setMacMenu, true);
   });
 
+  this->addNodes(&wifiGeneralMenu, "Sort APs", TFTBLUE, GENERATE, [this]() {
+    wifi_scan_obj.RunSortAPList();
+    this->changeMenu(current_menu, true);
+  });
+
   this->addNodes(&wifiGeneralMenu, "Shutdown WiFi", TFTRED, 0, [this]() {
     WiFi.softAPdisconnect(true); // Also shut down the SoftAP if it is running
 	WiFi.disconnect(true);
@@ -3961,6 +3966,43 @@ void MenuFunctions::RunSetup()
     });
   #endif //  HAS_GPS
 
+
+  this->addNodes(&adminMenu, "WifiTx 21dBm (Max)", TFTGREEN, WIFI, [this]() {
+      // WIFI_POWER_21dBm = 84,
+      wifi_power = 84;
+      // WiFi.status() 
+      esp_wifi_set_max_tx_power(wifi_power);
+     this->changeMenu(&adminMenu, true);
+  });
+  this->addNodes(&adminMenu, "WifiTx 20dBm (Default)", TFTLIME, WIFI, [this]() {
+    // this->changeMenu(&adminSubMenu, true);
+      // WIFI_POWER_20dB = 80
+      wifi_power = 78;
+      esp_wifi_set_max_tx_power(wifi_power);
+     this->changeMenu(&adminMenu, true);
+  });
+
+  this->addNodes(&adminMenu, "WifiTx 15dBm", TFTGREEN, WIFI, [this]() {
+     // this->changeMenu(&adminSubMenu, true);
+     // WIFI_POWER_15dBm = 60
+     wifi_power = 60;
+     esp_wifi_set_max_tx_power(wifi_power);
+     this->changeMenu(&adminMenu, true);
+  });
+  this->addNodes(&adminMenu, "WifiTx 8.5dBm", TFTGREEN, WIFI, [this]() {
+    // this->changeMenu(&adminSubMenu, true);
+    // WIFI_POWER_8_5dBm = 34
+      wifi_power = 34;
+      esp_wifi_set_max_tx_power(wifi_power);
+         this->changeMenu(&adminMenu, true);
+      });
+  this->addNodes(&adminMenu, "WifiTx 5dBm", TFTGREEN, WIFI, [this]() {
+      // this->changeMenu(&adminSubMenu, true);
+      // WIFI_POWER_5dBm = 20,
+      wifi_power = 20;
+      esp_wifi_set_max_tx_power(wifi_power);
+      this->changeMenu(&adminMenu, true);
+    });
 
   this->addNodes(&adminMenu, "Sync Clock with WiFi", TFTPINK, SETTINGS, [this]() {
     this->changeMenu(&adminSubMenu, true);
@@ -4931,6 +4973,7 @@ uint16_t MenuFunctions::getColor(uint16_t color) {
   else if (color == TFTDARKGREY) return TFT_DARKGREY;
   else if (color == TFTSKYBLUE) return TFT_SKYBLUE;
   else if (color == TFTLIME) return 0x97e0;
+  else if (color == TFTPINK) return TFT_PINK;
   else return color;
 }
 

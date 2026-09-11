@@ -35,14 +35,17 @@
   extern RTC rtc_obj;
 #endif
 
-#define USE_CPU_TEMP
+#ifdef USE_CPU_TEMP
 #include "cpu_temp_sensor.hpp"
+#endif
 
 // If system time/date has been set
 extern bool system_time_set;
 
 extern void print_reset_reason();
 extern const char *resetReasonName();
+
+extern int8_t wifi_power;
 
 #ifdef HAS_BUTTONS
   #include "Switches.h"
@@ -71,8 +74,8 @@ extern BatteryInterface battery_obj;
 // #endif
 extern Settings settings_obj;
 
-extern void shutdown();
-extern void DeepSleep(int8_t);
+// extern void shutdown();
+// extern void DeepSleep(int8_t);
 
 #ifdef HAS_SHTC3
   #include "SHTC3.hpp"

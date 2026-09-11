@@ -186,9 +186,15 @@ const char *resetReasonName() {
     case ESP_RST_DEEPSLEEP: return "Sleep";      //Reset after exiting deep sleep mode
     case ESP_RST_BROWNOUT:  return "BrownOut";   //Brownout reset (software or hardware)
     case ESP_RST_SDIO:      return "SDIO";       //Reset over SDIO
-    default:                return "";
+    case ESP_RST_USB:       return "USB";        // Reset by USB peripheral
+    case ESP_RST_JTAG:      return "JTAG";       // Reset by JTAG
+    case ESP_RST_EFUSE:     return "EFUSE";      // Reset due to efuse error
+    case ESP_RST_PWR_GLITCH: return "PWR_GLITCH";       // Reset due to power glitch detected
+    case ESP_RST_CPU_LOCKUP: return "CPU_LOCKUP";       // Reset due to CPU lock up (double exception)
+    default:                return "?";
   }
 }
+
 
 void print_reset_reason() {
   Serial.print(F("Last reset reason: "));
@@ -257,6 +263,12 @@ void setup()
   #else
     while(!Serial)
 	delay(10);
+  #endif
+
+  #if ESP_ARDUINO_VERSION_MAJOR >= 3
+  // &&  defined(ARDUINO_USB_CDC_ON_BOOT)
+    log_d("setting setTxTimeoutMs()");
+    Serial.setTxTimeoutMs(0);
   #endif
 
   // #ifdef HAS_C5_SD
@@ -466,7 +478,9 @@ void setup()
   #endif
 
   #ifdef HAS_GPS
-    gps_obj.begin();
+    if (settings_obj.loadSetting<bool>("Probe GPS at Boot")) {    // faster Boot
+      gps_obj.begin();
+    }
   #endif
 
   #ifdef HAS_SCREEN  

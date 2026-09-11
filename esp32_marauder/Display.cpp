@@ -96,8 +96,11 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
 
   #ifdef HAS_CST3530
      if (CST3530_obj.available()) {
-       // if (CST3530_obj.data.event == 0) {  // Down event
-         CST3530_obj.readData();
+        
+       CST3530_obj.readData();
+       // Serial.print("Event ");
+       // Serial.println((int)CST3530_obj.data->event);
+       if (CST3530_obj.data->event == CST3530Event::DOWN) {  // Down event
          *x = CST3530_obj.data->x;
          *y = CST3530_obj.data->y;
 
@@ -109,8 +112,8 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
 
          // if ( *x || *y ) { log_d("x=%d y=%d", *x, *y); }
          return 1;
-     //   }
-     } else {
+        }
+     // } else {
        // log_d("CST3530_obj.available : FALSE");
      }
      return 0;

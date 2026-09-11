@@ -1,4 +1,9 @@
 
+#pragma once
+
+#ifndef SHUTDOWN_HPP
+#define SHUTDOWN_HPP
+
 #if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
 
   // should this be in a separate .cpp file
@@ -71,6 +76,6 @@
         DeepSleep(0);
     #endif
   }
-// #endif  // SHUTDOWN
 
-#endif  // SHUTDOWN
+#endif  // DEEPSLEEP / POWER_HOLD_PIN
+#endif  // SHUTDOWN_HPP

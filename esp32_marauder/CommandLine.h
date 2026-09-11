@@ -60,11 +60,6 @@ extern LinkedList<ProbeReqSsid>* probe_req_ssids;
 extern const String PROGMEM version_number;
 extern const String PROGMEM board_target;
 
-#if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
-  extern void shutdown();
-  extern void DeepSleep(int8_t wakeup_but);
-#endif
-
 //// Commands
 
 // Admin

@@ -30,6 +30,8 @@ void Settings::_buildCache() {
       _cache.EPDeauth = json["Settings"][i]["value"].as<bool>();
     else if (strcmp(name, "ChanHop") == 0)
       _cache.ChanHop = json["Settings"][i]["value"].as<bool>();
+    else if (strcmp(name, "Probe GPS at Boot") == 0)
+      _cache.ProbeGPS = json["Settings"][i]["value"].as<bool>();
     else if (strcmp(name, "ClientSSID") == 0)
       _cache.ClientSSID = json["Settings"][i]["value"].as<String>();
     else if (strcmp(name, "ClientPW") == 0)
@@ -166,6 +168,8 @@ template <> bool Settings::loadSetting<bool>(const char* key) {
     return _cache.EPDeauth;
   if (strcmp(key, "ChanHop") == 0)
     return _cache.ChanHop;
+  if (strcmp(key, "Probe GPS at Boot") == 0)
+    return _cache.ProbeGPS;
 
   // Unknown bool key: fall back to JSON so the setting can be auto-created.
   DynamicJsonDocument json(JSON_SETTING_SIZE);
@@ -212,6 +216,9 @@ template <> uint8_t Settings::loadSetting<uint8_t>(const char* key) {
 
   if (strcmp(key, "ChanHop") == 0)
     return (uint8_t)_cache.ChanHop;
+
+  if (strcmp(key, "Probe GPS at Boot") == 0)
+    return (uint8_t)_cache.ProbeGPS;
 
   DynamicJsonDocument json(JSON_SETTING_SIZE);
   deserializeJson(json, this->json_settings_string);
@@ -276,6 +283,8 @@ template <> bool Settings::saveSetting<bool>(const char* key, bool value) {
         _cache.EPDeauth = value;
       else if (strcmp(key, "ChanHop") == 0)
         _cache.ChanHop = value;
+      else if (strcmp(key, "Probe GPS at Boot") == 0)
+        _cache.ProbeGPS = value;
 
       this->printJsonSettings(settings_string);
 
@@ -471,36 +480,41 @@ bool Settings::createDefaultSettings(fs::FS &fs, bool spec, uint8_t index, const
     jsonBuffer["Settings"][6]["range"]["min"] = false;
     jsonBuffer["Settings"][6]["range"]["max"] = true;
 
+    jsonBuffer["Settings"][7]["name"] = "Probe GPS at Boot";
+    jsonBuffer["Settings"][7]["type"] = "bool";
+    jsonBuffer["Settings"][7]["value"] = false;
+    jsonBuffer["Settings"][7]["range"]["min"] = false;
+    jsonBuffer["Settings"][7]["range"]["max"] = true;
 
-    jsonBuffer["Settings"][7]["name"] = "ClientSSID";
-    jsonBuffer["Settings"][7]["type"] = "String";
-    jsonBuffer["Settings"][7]["value"] = "";
-    jsonBuffer["Settings"][7]["range"]["min"] = "";
-    jsonBuffer["Settings"][7]["range"]["max"] = "";
-
-    jsonBuffer["Settings"][8]["name"] = "ClientPW";
+    jsonBuffer["Settings"][8]["name"] = "ClientSSID";
     jsonBuffer["Settings"][8]["type"] = "String";
     jsonBuffer["Settings"][8]["value"] = "";
     jsonBuffer["Settings"][8]["range"]["min"] = "";
     jsonBuffer["Settings"][8]["range"]["max"] = "";
 
-    jsonBuffer["Settings"][9]["name"] = "wu";
+    jsonBuffer["Settings"][9]["name"] = "ClientPW";
     jsonBuffer["Settings"][9]["type"] = "String";
     jsonBuffer["Settings"][9]["value"] = "";
     jsonBuffer["Settings"][9]["range"]["min"] = "";
     jsonBuffer["Settings"][9]["range"]["max"] = "";
 
-    jsonBuffer["Settings"][10]["name"] = "wt";
+    jsonBuffer["Settings"][10]["name"] = "wu";
     jsonBuffer["Settings"][10]["type"] = "String";
     jsonBuffer["Settings"][10]["value"] = "";
     jsonBuffer["Settings"][10]["range"]["min"] = "";
     jsonBuffer["Settings"][10]["range"]["max"] = "";
 
-    jsonBuffer["Settings"][11]["name"] = WDG_KEY_NAME;
+    jsonBuffer["Settings"][11]["name"] = "wt";
     jsonBuffer["Settings"][11]["type"] = "String";
     jsonBuffer["Settings"][11]["value"] = "";
     jsonBuffer["Settings"][11]["range"]["min"] = "";
     jsonBuffer["Settings"][11]["range"]["max"] = "";
+
+    jsonBuffer["Settings"][12]["name"] = WDG_KEY_NAME;
+    jsonBuffer["Settings"][12]["type"] = "String";
+    jsonBuffer["Settings"][12]["value"] = "";
+    jsonBuffer["Settings"][12]["range"]["min"] = "";
+    jsonBuffer["Settings"][12]["range"]["max"] = "";
 
 
 
