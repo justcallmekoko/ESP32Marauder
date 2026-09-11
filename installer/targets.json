@@ -236,6 +236,24 @@
       "assetSuffix": "dual_mini_c5",
       "chipFamily": "ESP32-C5",
       "esptoolChip": "esp32c5"
+    },
+    {
+      "id": "lilygo-t-hmi-s3",
+      "displayName": "LILYGO T-HMI S3",
+      "aliases": [],
+      "buildFlag": "MARAUDER_CYD_HMI",
+      "assetSuffix": "lilygo-t-hmi",
+      "chipFamily": "ESP32-S3",
+      "esptoolChip": "esp32s3"
+    },
+    {
+      "id": "marauder-waveshare-c5-Touch",
+      "displayName": "Marauder WS-C5",
+      "aliases": ["Waveshare ESP32-C5-Touch-LCD-2.8"],
+      "buildFlag": "MARAUDER_WS_C5_28",
+      "assetSuffix": "ws-c5-touch",
+      "chipFamily": "ESP32-C5",
+      "esptoolChip": "esp32c5"
     }
   ]
 }
