@@ -446,6 +446,7 @@ class WiFiScan
     uint32_t last_geofence_check = 0;
     String active_geofence_name = "";
     bool updateGeofenceState(bool force = false);
+    void renderWardriveGeofenceState();
 
     //int num_beacon = 0; // GREEN
     //int num_probe = 0; // BLUE

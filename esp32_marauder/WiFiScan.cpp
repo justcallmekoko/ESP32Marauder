@@ -2640,11 +2640,14 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
     this->reloadGeofences();
     this->geofence_paused = false;
     this->active_geofence_name = "";
-    this->updateGeofenceState(true);
     #ifdef HAS_BT
       RunBluetoothScan(scan_mode, color);
     #endif
     RunBeaconScan(scan_mode, color);
+    // Evaluate only after RunBeaconScan establishes the wardrive display.
+    // Drawing a status screen before that left its text size active and
+    // corrupted the wardrive status-bar typography.
+    this->updateGeofenceState(true);
   }
   else if (scan_mode == WIFI_SCAN_SIG_STREN)
     RunRawScan(scan_mode, color);    
@@ -6252,21 +6255,33 @@ bool WiFiScan::updateGeofenceState(bool force) {
       this->active_geofence_name = matched;
       if (inside) {
         Serial.println("Wardrive paused inside geofence: " + matched);
-        #ifdef HAS_SCREEN
-          display_obj.clearScreen();
-          display_obj.showCenterText("GEOFENCE PAUSED", TFT_HEIGHT / 2 - 12);
-          display_obj.showCenterText(matched.c_str(), TFT_HEIGHT / 2 + 12);
-        #endif
       } else {
         Serial.println(F("Wardrive resumed outside geofence"));
-        #ifdef HAS_SCREEN
-          display_obj.clearScreen();
-          display_obj.showCenterText("Wardrive resumed", TFT_HEIGHT / 2);
-        #endif
       }
+      this->renderWardriveGeofenceState();
     }
   #endif
   return this->geofence_paused;
+}
+
+void WiFiScan::renderWardriveGeofenceState() {
+  #ifdef HAS_SCREEN
+    // Rebuild the normal wardrive chrome on both entry and exit so no font,
+    // text-size, or stale pixels leak between the overlay and scan UI.
+    this->setupScanDisplayArea(TFT_WHITE, TFT_GREEN);
+    #ifdef HAS_FULL_SCREEN
+      display_obj.tft.fillRect(0, 16, TFT_WIDTH, 16, TFT_GREEN);
+      display_obj.tft.drawCentreString("Wardrive", TFT_WIDTH / 2, 16, 2);
+    #endif
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+    if (this->geofence_paused) {
+      display_obj.showCenterText("GEOFENCE PAUSED", TFT_HEIGHT / 2 - 12, false, 1);
+      display_obj.showCenterText(this->active_geofence_name.c_str(), TFT_HEIGHT / 2 + 4, false, 1);
+      display_obj.tft.setTextSize(1);
+    }
+  #endif
 }
 
 void WiFiScan::openPoiFile() {

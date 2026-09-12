@@ -3950,7 +3950,9 @@ void MenuFunctions::buildGeofenceMenu() {
       this->buildGeofenceActionMenu(i);
     });
   }
-  this->changeMenu(&geofenceMenu, true);
+  // A full display reinitialization clears keyboard/status font state and
+  // guarantees newly persisted labels are visible immediately.
+  this->changeMenu(&geofenceMenu, false);
 }
 
 void MenuFunctions::buildGeofenceActionMenu(uint8_t slot) {
