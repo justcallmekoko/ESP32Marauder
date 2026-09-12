@@ -50,7 +50,13 @@ static bool writeSettingsDocument(DynamicJsonDocument& json, String& cache) {
   if (!file) return false;
   const bool ok = serializeJson(json, file) > 0;
   file.close();
-  if (ok) serializeJson(json, cache);
+  if (ok) {
+    // ArduinoJson appends when serializing into an existing String. Replace
+    // the cache so runtime readers see the document just written to SPIFFS,
+    // rather than continuing to parse the stale document at the front.
+    cache = "";
+    serializeJson(json, cache);
+  }
   return ok;
 }
 
