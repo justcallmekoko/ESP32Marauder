@@ -204,6 +204,7 @@ class MenuFunctions
       Menu geofenceRadiusMenu;
       GeofenceConfig pendingGeofence;
       uint8_t pendingGeofenceSlot = 0;
+      bool geofenceMenuRefreshPending = false;
     #endif
     uint8_t selectedGeofence = 0;
     //Menu languageMenu;
@@ -277,6 +278,7 @@ class MenuFunctions
     #ifdef HAS_MINI_SCREEN
       void beginMiniGeofenceEdit(uint8_t slot, bool use_current_location);
       void buildGeofenceRadiusMenu(uint8_t slot, const GeofenceConfig& fence);
+      void deferGeofenceMenuRefresh();
     #endif
     void releaseSavedWifiMenu();
     void buildSDDeleteBrowser(const String& path, bool reset_selection = false);

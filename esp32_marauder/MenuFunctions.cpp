@@ -246,6 +246,12 @@ void MenuFunctions::displayMenuButtons() {
 // Function to check menu input
 void MenuFunctions::main(uint32_t currentTime)
 {
+  #ifdef HAS_MINI_SCREEN
+    if (geofenceMenuRefreshPending) {
+      geofenceMenuRefreshPending = false;
+      this->buildGeofenceMenu();
+    }
+  #endif
   #ifdef HAS_SD
     if (sd_browser_release_pending && current_menu != &sdDeleteMenu)
       this->releaseSDDeleteBrowserResources();
@@ -4002,13 +4008,18 @@ void MenuFunctions::buildGeofenceRadiusMenu(uint8_t slot, const GeofenceConfig& 
       display_obj.clearScreen();
       display_obj.showCenterText(saved ? "Geofence saved" : "Unable to save", TFT_HEIGHT / 2);
       delay(1200);
-      // Rebuild from the updated settings cache after the picker callback has
-      // completed. This avoids the Mini returning to a stale pre-edit list.
-      this->buildGeofenceMenu();
+      this->deferGeofenceMenuRefresh();
     });
   }
 
   this->changeMenu(&geofenceRadiusMenu, false);
+}
+
+void MenuFunctions::deferGeofenceMenuRefresh() {
+  // Menu callbacks run inside the button event that selected them. Rebuilding
+  // immediately lets the remainder of that event redraw stale button objects
+  // on Mini displays. Defer the rebuild until the next main UI cycle.
+  geofenceMenuRefreshPending = true;
 }
 #endif
 
@@ -4065,7 +4076,11 @@ void MenuFunctions::buildGeofenceActionMenu(uint8_t slot) {
     this->addNodes(&geofenceActionMenu, "Clear geofence", TFTRED, CLEAR_ICO, [this, slot]() {
       settings_obj.clearGeofence(slot);
       wifi_scan_obj.reloadGeofences();
-      this->buildGeofenceMenu();
+      #ifdef HAS_MINI_SCREEN
+        this->deferGeofenceMenuRefresh();
+      #else
+        this->buildGeofenceMenu();
+      #endif
     });
   }
   this->changeMenu(&geofenceActionMenu, true);
