@@ -1,0 +1,71 @@
+{
+  "schema_version": 2,
+  "package": "waveshare-esp32-c5-35",
+  "validation_date": "2026-08-09",
+  "upstream_base": "9f6c10dbce99efe3b2ff56f5805a0f2036b67fdf",
+  "tested_source_head": "f401e813276d8ebb3d660a314776572139b1146a",
+  "tested_source_tree": "9fa19d322f33c67078edcfbc8ebfa83f03d4d335",
+  "published_source_tree": "adb2fa1bb9ba49d8a662bedc0ca0d1bc3e1305f9",
+  "publication_only_delta": "redact the runtime-generated SD file-manager password from serial output",
+  "snapshot_patch_sha256": "0977e6750c046b1933cdde339adea611170f46fddfe4adbb2d93ec518de1c617",
+  "toolchain": {
+    "arduino_cli": "1.5.1",
+    "esp32_arduino_core": "3.3.5",
+    "fqbn": "esp32:esp32:esp32c5:FlashSize=8M,PartitionScheme=default_8MB,PSRAM=enabled",
+    "compiler_cpp_extra_flags": "-DMARAUDER_WAVESHARE_C5 -fno-exceptions",
+    "compiler_c_elf_extra_flags": "-Wl,-zmuldefs",
+    "host_path_prefix_mapping": true,
+    "published_path_prefixes": ["package", "source", "arduino", "workspace"]
+  },
+  "build_result": {
+    "sketch_bytes": 2109718,
+    "global_variable_bytes": 67044
+  },
+  "hardware_validation": {
+    "path_sanitized_app_hardware_flashed": false,
+    "hardware_tested_predecessor_usb_ota_safe_flash_to_ota_0": true,
+    "sd_update_workflow_validated_on_earlier_integration_image": true,
+    "internal_slot_switch_workflow_validated_on_earlier_integration_image": true,
+    "final_app_booted_from_both_ota_slots": false,
+    "merged_image_hardware_flashed": false
+  },
+  "artifacts": [
+    {
+      "file": "esp32_marauder_waveshare_c5_35_app.bin",
+      "bytes": 2109872,
+      "sha256": "64307554007412dd8e4d480e27310024909879ed1697107765d493dd907eaac2",
+      "flash_offset": "0x10000",
+      "hardware_flashed": false,
+      "validation_basis": "hardware-tested source and pinned toolchain plus serial password diagnostic redaction and host path prefix mapping"
+    },
+    {
+      "file": "boot_app0.bin",
+      "bytes": 8192,
+      "sha256": "f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0",
+      "flash_offset": "0xe000",
+      "hardware_flashed": true
+    },
+    {
+      "file": "esp32_marauder_waveshare_c5_35_merged.bin",
+      "bytes": 8388608,
+      "sha256": "b925ad7e7c6bda9072b3b006b58db3d80af1d5929011148a9a9ac2ac29e66cbd",
+      "flash_offset": "0x0",
+      "hardware_flashed": false
+    },
+    {
+      "file": "bootloader.bin",
+      "bytes": 20800,
+      "sha256": "5e19f4d759045cfc38446c70d0dacbd59bdc3e71208fd46b1a24375bc289fa60"
+    },
+    {
+      "file": "partitions.bin",
+      "bytes": 3072,
+      "sha256": "1d9cca96de0fe07ad7fc0648b9878ddecd9ce565e38b589ad20fea698ed4c80c"
+    },
+    {
+      "file": "partitions.csv",
+      "bytes": 305,
+      "sha256": "ab2f33c14eb855054613fd3a4ba85457ae281c6f371c25931ccc763bc79cb0e2"
+    }
+  ]
+}
