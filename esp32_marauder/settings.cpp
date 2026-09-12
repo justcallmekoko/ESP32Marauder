@@ -25,6 +25,41 @@ static JsonObject ensureSavedWifiSetting(DynamicJsonDocument& json) {
   return setting;
 }
 
+static JsonObject findGeofenceSetting(DynamicJsonDocument& json) {
+  for (JsonObject setting : json["Settings"].as<JsonArray>()) {
+    if (strcmp(setting["name"] | "", GEOFENCES_KEY_NAME) == 0)
+      return setting;
+  }
+  return JsonObject();
+}
+
+static JsonObject ensureGeofenceSetting(DynamicJsonDocument& json) {
+  JsonObject setting = findGeofenceSetting(json);
+  if (!setting.isNull()) return setting;
+  setting = json["Settings"].as<JsonArray>().createNestedObject();
+  setting["name"] = GEOFENCES_KEY_NAME;
+  setting["type"] = "geofence_list";
+  setting.createNestedArray("value");
+  setting["range"]["min"] = 0;
+  setting["range"]["max"] = MAX_GEOFENCES;
+  return setting;
+}
+
+static bool writeSettingsDocument(DynamicJsonDocument& json, String& cache) {
+  File file = SPIFFS.open("/settings.json", FILE_WRITE);
+  if (!file) return false;
+  const bool ok = serializeJson(json, file) > 0;
+  file.close();
+  if (ok) {
+    // ArduinoJson appends when serializing into an existing String. Replace
+    // the cache so runtime readers see the document just written to SPIFFS,
+    // rather than continuing to parse the stale document at the front.
+    cache = "";
+    serializeJson(json, cache);
+  }
+  return ok;
+}
+
 // ---------------------------------------------------------------------------
 // _buildCache — called once after json_settings_string is loaded/updated.
 // Parses the JSON exactly once and fills every field of _cache.
@@ -108,6 +143,10 @@ bool Settings::begin() {
   JsonObject saved_wifi_setting = findSavedWifiSetting(jsonBuffer);
   if (saved_wifi_setting.isNull()) {
     saved_wifi_setting = ensureSavedWifiSetting(jsonBuffer);
+    settings_changed = true;
+  }
+  if (findGeofenceSetting(jsonBuffer).isNull()) {
+    ensureGeofenceSetting(jsonBuffer);
     settings_changed = true;
   }
 
@@ -562,6 +601,12 @@ bool Settings::createDefaultSettings(fs::FS &fs, bool spec, uint8_t index, const
     jsonBuffer["Settings"][11]["range"]["min"] = 0;
     jsonBuffer["Settings"][11]["range"]["max"] = MAX_SAVED_WIFI_PROFILES;
 
+    jsonBuffer["Settings"][12]["name"] = GEOFENCES_KEY_NAME;
+    jsonBuffer["Settings"][12]["type"] = "geofence_list";
+    jsonBuffer["Settings"][12].createNestedArray("value");
+    jsonBuffer["Settings"][12]["range"]["min"] = 0;
+    jsonBuffer["Settings"][12]["range"]["max"] = MAX_GEOFENCES;
+
     serializeJson(jsonBuffer, settingsFile);
     serializeJson(jsonBuffer, settings_string);
   } else {
@@ -712,4 +757,54 @@ bool Settings::markSavedWifiSuccessful(uint8_t index) {
   if (!loadSavedWifiCredential(index, ssid, password))
     return false;
   return saveWifiCredential(ssid, password) != WIFI_CREDENTIAL_ERROR;
+}
+
+bool Settings::loadGeofence(uint8_t index, GeofenceConfig& geofence) {
+  geofence = GeofenceConfig();
+  if (index >= MAX_GEOFENCES) return false;
+  DynamicJsonDocument json(JSON_SETTING_SIZE);
+  if (deserializeJson(json, this->json_settings_string)) return false;
+  JsonArray entries = findGeofenceSetting(json)["value"].as<JsonArray>();
+  for (JsonObject entry : entries) {
+    if ((uint8_t)(entry["slot"] | 255) != index) continue;
+    geofence.enabled = entry["enabled"] | false;
+    geofence.latitude = entry["lat"] | 0.0;
+    geofence.longitude = entry["lon"] | 0.0;
+    geofence.radiusMiles = entry["radius_mi"] | 0.1f;
+    geofence.name = entry["name"].as<String>();
+    return geofence.enabled;
+  }
+  return false;
+}
+
+bool Settings::saveGeofence(uint8_t index, const GeofenceConfig& geofence) {
+  if (index >= MAX_GEOFENCES || !geofence.enabled || geofence.name.length() == 0 ||
+      geofence.name.length() > GEOFENCE_NAME_MAX || !isfinite(geofence.latitude) ||
+      !isfinite(geofence.longitude) || geofence.latitude < -90.0 || geofence.latitude > 90.0 ||
+      geofence.longitude < -180.0 || geofence.longitude > 180.0 ||
+      geofence.radiusMiles < 0.1f || geofence.radiusMiles > 1.0f) return false;
+  DynamicJsonDocument json(JSON_SETTING_SIZE);
+  if (deserializeJson(json, this->json_settings_string)) return false;
+  JsonArray entries = ensureGeofenceSetting(json)["value"].as<JsonArray>();
+  JsonObject target;
+  for (JsonObject entry : entries) if ((uint8_t)(entry["slot"] | 255) == index) target = entry;
+  if (target.isNull()) target = entries.createNestedObject();
+  target["slot"] = index;
+  target["enabled"] = true;
+  target["name"] = geofence.name;
+  target["lat"] = geofence.latitude;
+  target["lon"] = geofence.longitude;
+  target["radius_mi"] = geofence.radiusMiles;
+  return writeSettingsDocument(json, this->json_settings_string);
+}
+
+bool Settings::clearGeofence(uint8_t index) {
+  if (index >= MAX_GEOFENCES) return false;
+  DynamicJsonDocument json(JSON_SETTING_SIZE);
+  if (deserializeJson(json, this->json_settings_string)) return false;
+  JsonArray entries = ensureGeofenceSetting(json)["value"].as<JsonArray>();
+  for (uint8_t i = 0; i < entries.size(); i++) {
+    if ((uint8_t)(entries[i]["slot"] | 255) == index) { entries.remove(i); break; }
+  }
+  return writeSettingsDocument(json, this->json_settings_string);
 }

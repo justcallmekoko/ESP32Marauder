@@ -20,6 +20,17 @@
 #define WDG_KEY_NAME       "wdg_key"   // WDG Wars API key (String)
 #define SAVED_WIFI_KEY_NAME "SavedWiFi"
 #define MAX_SAVED_WIFI_PROFILES 5
+#define GEOFENCES_KEY_NAME "Geofences"
+#define MAX_GEOFENCES 5
+#define GEOFENCE_NAME_MAX 32
+
+struct GeofenceConfig {
+  bool enabled = false;
+  double latitude = 0;
+  double longitude = 0;
+  float radiusMiles = 0.1f;
+  String name = "";
+};
 
 enum WifiCredentialSaveResult : uint8_t {
   WIFI_CREDENTIAL_SAVED,
@@ -74,6 +85,9 @@ class Settings {
     WifiCredentialSaveResult saveWifiCredential(const String& ssid, const String& password, int8_t replace_index = -1);
     bool removeSavedWifiCredential(uint8_t index);
     bool markSavedWifiSuccessful(uint8_t index);
+    bool loadGeofence(uint8_t index, GeofenceConfig& geofence);
+    bool saveGeofence(uint8_t index, const GeofenceConfig& geofence);
+    bool clearGeofence(uint8_t index);
     //bool createDefaultSettings(fs::FS &fs, bool spec = false, uint8_t index = 0, String typeStr = "bool", String name = "");
     bool createDefaultSettings(fs::FS &fs, bool spec = false, uint8_t index = 0, const char* typeStr = "bool", const char* name = "");
     void printJsonSettings(String json_string);
