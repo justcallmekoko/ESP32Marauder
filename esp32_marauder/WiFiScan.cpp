@@ -6276,11 +6276,33 @@ void WiFiScan::renderWardriveGeofenceState() {
     display_obj.tft.setFreeFont(NULL);
     display_obj.tft.setTextSize(1);
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
-    if (this->geofence_paused) {
-      display_obj.showCenterText("GEOFENCE PAUSED", TFT_HEIGHT / 2 - 12, false, 1);
-      display_obj.showCenterText(this->active_geofence_name.c_str(), TFT_HEIGHT / 2 + 4, false, 1);
-      display_obj.tft.setTextSize(1);
-    }
+    this->drawWardriveGeofenceBadge();
+  #endif
+}
+
+void WiFiScan::drawWardriveGeofenceBadge() {
+  #ifdef HAS_SCREEN
+    const int16_t badge_height = 12;
+    #ifdef HAS_TOUCH
+      // Keep the badge immediately above the 50 px POI touch control.
+      const int16_t badge_y = (SCREEN_HEIGHT - 64 > STATUS_BAR_WIDTH * 2) ?
+        SCREEN_HEIGHT - 64 : STATUS_BAR_WIDTH * 2;
+    #else
+      const int16_t badge_y = SCREEN_HEIGHT - badge_height;
+    #endif
+    String label = this->geofence_paused ? "GF: IN " + this->active_geofence_name : "GF: CLEAR";
+
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.tft.setTextSize(1);
+    while (label.length() > 1 && display_obj.tft.textWidth(label) > SCREEN_WIDTH - 6)
+      label.remove(label.length() - 1);
+
+    const uint16_t color = this->geofence_paused ? TFT_RED : TFT_GREEN;
+    display_obj.tft.fillRect(0, badge_y, SCREEN_WIDTH, badge_height, TFT_BLACK);
+    display_obj.tft.drawRect(0, badge_y, SCREEN_WIDTH, badge_height, color);
+    display_obj.tft.setTextColor(color, TFT_BLACK);
+    display_obj.tft.setCursor(3, badge_y + 2);
+    display_obj.tft.print(label);
   #endif
 }
 
@@ -6536,6 +6558,8 @@ void WiFiScan::displayWardriveStats() {
         display_obj.tft.setCursor((SCREEN_WIDTH - poiTextWidth) / 2, SCREEN_HEIGHT - 33);
         display_obj.tft.print(poiText);
       #endif
+
+      this->drawWardriveGeofenceBadge();
 
     #endif
   #endif
