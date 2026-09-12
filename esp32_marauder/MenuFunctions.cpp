@@ -2016,6 +2016,9 @@ void MenuFunctions::RunSetup()
   specSettingMenu.list = new LinkedList<MenuNode>();
   geofenceMenu.list = new LinkedList<MenuNode>();
   geofenceActionMenu.list = new LinkedList<MenuNode>();
+  #ifdef HAS_MINI_SCREEN
+    geofenceRadiusMenu.list = new LinkedList<MenuNode>();
+  #endif
   infoMenu.list = new LinkedList<MenuNode>();
   // WiFi menu stuff
   wifiSnifferMenu.list = new LinkedList<MenuNode>();
@@ -2089,6 +2092,9 @@ void MenuFunctions::RunSetup()
   settingsMenu.name = text_table1[18];
   geofenceMenu.name = "Geofences";
   geofenceActionMenu.name = "Geofence";
+  #ifdef HAS_MINI_SCREEN
+    geofenceRadiusMenu.name = "Radius (miles)";
+  #endif
   bluetoothMenu.name = text_table1[19];
   wifiSnifferMenu.name = text_table1[20];
   wifiScannerMenu.name = "Scanners";
@@ -3936,6 +3942,76 @@ bool MenuFunctions::editGeofence(uint8_t slot, bool use_current_location) {
   return true;
 }
 
+#ifdef HAS_MINI_SCREEN
+void MenuFunctions::beginMiniGeofenceEdit(uint8_t slot, bool use_current_location) {
+  GeofenceConfig fence;
+  fence.enabled = true;
+  fence.name = this->geofenceTextInput("Geofence name");
+  fence.name.trim();
+  if (fence.name.length() == 0 || fence.name.length() > GEOFENCE_NAME_MAX) {
+    this->buildGeofenceActionMenu(slot);
+    return;
+  }
+
+  if (use_current_location) {
+    #ifdef HAS_GPS
+      if (!gps_obj.getFixStatus()) {
+        display_obj.clearScreen();
+        display_obj.showCenterText("GPS fix needed", TFT_HEIGHT / 2);
+        delay(1200);
+        this->buildGeofenceActionMenu(slot);
+        return;
+      }
+      fence.latitude = gps_obj.getLat().toDouble();
+      fence.longitude = gps_obj.getLon().toDouble();
+    #else
+      this->buildGeofenceActionMenu(slot);
+      return;
+    #endif
+  } else {
+    String latitude = this->geofenceTextInput("Latitude (-90 to 90)");
+    String longitude = this->geofenceTextInput("Longitude (-180 to 180)");
+    if (latitude.length() == 0 || longitude.length() == 0 ||
+        !parseGeofenceNumber(latitude, fence.latitude) ||
+        !parseGeofenceNumber(longitude, fence.longitude) ||
+        fence.latitude < -90.0 || fence.latitude > 90.0 ||
+        fence.longitude < -180.0 || fence.longitude > 180.0) {
+      display_obj.clearScreen();
+      display_obj.showCenterText("Invalid coordinates", TFT_HEIGHT / 2);
+      delay(1200);
+      this->buildGeofenceActionMenu(slot);
+      return;
+    }
+  }
+
+  this->buildGeofenceRadiusMenu(slot, fence);
+}
+
+void MenuFunctions::buildGeofenceRadiusMenu(uint8_t slot, const GeofenceConfig& fence) {
+  this->pendingGeofenceSlot = slot;
+  this->pendingGeofence = fence;
+  geofenceRadiusMenu.list->clear();
+  geofenceRadiusMenu.parentMenu = &geofenceActionMenu;
+
+  for (uint8_t step = 1; step <= 10; step++) {
+    String label = String(step / 10.0f, 1) + " mi";
+    this->addNodes(&geofenceRadiusMenu, label.c_str(), TFTCYAN, GPS_MENU, [this, step]() {
+      this->pendingGeofence.radiusMiles = step / 10.0f;
+      const bool saved = settings_obj.saveGeofence(this->pendingGeofenceSlot, this->pendingGeofence);
+      if (saved) wifi_scan_obj.reloadGeofences();
+      display_obj.clearScreen();
+      display_obj.showCenterText(saved ? "Geofence saved" : "Unable to save", TFT_HEIGHT / 2);
+      delay(1200);
+      // Rebuild from the updated settings cache after the picker callback has
+      // completed. This avoids the Mini returning to a stale pre-edit list.
+      this->buildGeofenceMenu();
+    });
+  }
+
+  this->changeMenu(&geofenceRadiusMenu, false);
+}
+#endif
+
 void MenuFunctions::buildGeofenceMenu() {
   geofenceMenu.list->clear();
   geofenceMenu.parentMenu = &deviceMenu;
@@ -3961,19 +4037,27 @@ void MenuFunctions::buildGeofenceActionMenu(uint8_t slot) {
   geofenceActionMenu.parentMenu = &geofenceMenu;
   this->addNodes(&geofenceActionMenu, text09, TFTLIGHTGREY, 0, [this]() { this->buildGeofenceMenu(); });
   this->addNodes(&geofenceActionMenu, "Enter coordinates", TFTCYAN, GPS_MENU, [this, slot]() {
+    #ifdef HAS_MINI_SCREEN
+      this->beginMiniGeofenceEdit(slot, false);
+    #else
     const bool saved = this->editGeofence(slot, false);
     display_obj.clearScreen();
     display_obj.showCenterText(saved ? "Geofence saved" : "Invalid or cancelled", TFT_HEIGHT / 2);
     delay(1200);
     this->buildGeofenceMenu();
+    #endif
   });
   #ifdef HAS_GPS
     this->addNodes(&geofenceActionMenu, "Use current GPS", TFTGREEN, GPS_MENU, [this, slot]() {
+      #ifdef HAS_MINI_SCREEN
+        this->beginMiniGeofenceEdit(slot, true);
+      #else
       const bool saved = this->editGeofence(slot, true);
       display_obj.clearScreen();
       display_obj.showCenterText(saved ? "Geofence saved" : "GPS fix/input needed", TFT_HEIGHT / 2);
       delay(1200);
       this->buildGeofenceMenu();
+      #endif
     });
   #endif
   GeofenceConfig fence;
