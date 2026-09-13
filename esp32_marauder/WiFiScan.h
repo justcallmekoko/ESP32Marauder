@@ -712,6 +712,7 @@ class WiFiScan
           const char *name;
       };
 
+      static constexpr size_t WATCH_MODEL_COUNT = 17;
       WatchModel* watch_models = nullptr;
 
       static void scanCompleteCB(BLEScanResults scanResults);

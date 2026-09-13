@@ -175,7 +175,7 @@ extern "C" {
 
         AdvData_Raw = new uint8_t[15];
 
-        uint8_t model = watch_models[rand() % 25].value;
+        uint8_t model = watch_models[rand() % WATCH_MODEL_COUNT].value;
         
         AdvData_Raw[i++] = 14; // Size
         AdvData_Raw[i++] = 0xFF; // AD Type (Manufacturer Specific)
@@ -1929,7 +1929,7 @@ void WiFiScan::RunSetup() {
     mac_entry_state[i] = 0;
 
   #ifdef HAS_BT
-    watch_models = new WatchModel[17] {
+    watch_models = new WatchModel[WATCH_MODEL_COUNT] {
       {0x1A, "Fallback Watch"},
       {0x02, "Black Watch4 Classic 40m"},
       {0x03, "White Watch4 Classic 40m"},
