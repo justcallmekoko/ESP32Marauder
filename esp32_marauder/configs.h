@@ -48,7 +48,7 @@
   // five saved WiFi profiles without permanently caching their passwords.
   #define JSON_SETTING_SIZE 6144
 
-#define MARAUDER_VERSION "v1.16.1"
+#define MARAUDER_VERSION "v1.17.0"
 
   #define GRAPH_REFRESH   100
 
