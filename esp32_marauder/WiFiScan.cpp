@@ -4,6 +4,7 @@
 #include "FoxHuntTarget.h"
 #include "BeaconFrame.h"
 #include "WdgResponse.h"
+#include "UploadStreamBuffer.h"
 #include "lang_var.h"
 
 #ifdef HAS_PSRAM
@@ -677,7 +678,7 @@ extern "C" {
                   String wardrive_line = (String)advertisedDevice->getAddress().toString().c_str() + ",,[BLE]," + gps_obj.getDatetime() + ",0," + (String)advertisedDevice->getRSSI() + "," + gps_obj.getLat() + "," + gps_obj.getLon() + "," + gps_obj.getAlt() + "," + gps_obj.getAccuracy() + ",BLE\n";
                   Serial.print(wardrive_line);
 
-                  if (do_save)
+                  if (do_save && !wifi_scan_obj.isGeofencePaused())
                     buffer_obj.append(wardrive_line);
 
                   wifi_scan_obj.save_mac(mac_char);
@@ -1429,7 +1430,7 @@ extern "C" {
                   String wardrive_line = (String)mac + ",,[BLE]," + gps_obj.getDatetime() + ",0," + (String)rssi + "," + gps_obj.getLat() + "," + gps_obj.getLon() + "," + gps_obj.getAlt() + "," + gps_obj.getAccuracy() + ",BLE\n";
                   Serial.print(wardrive_line);
 
-                  if (do_save)
+                  if (do_save && !wifi_scan_obj.isGeofencePaused())
                     buffer_obj.append(wardrive_line);
                     
                   wifi_scan_obj.save_mac(mac_char);
@@ -2296,7 +2297,7 @@ void WiFiScan::finishNetworkScanDisplay(const String& result_label) {
 }
 // GCOVR_EXCL_STOP
 
-bool WiFiScan::joinWiFi(String ssid, String password, bool gui) {
+bool WiFiScan::joinWiFi(String ssid, String password, bool gui, bool save_credential) {
   static const char * btns[] ={text16, ""};
   int count = 0;
   
@@ -2370,10 +2371,160 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui) {
     #endif
   #endif
 
-  settings_obj.saveSetting<bool>("ClientSSID", ssid);
-  settings_obj.saveSetting<bool>("ClientPW", password);
+  if (save_credential) {
+    WifiCredentialSaveResult save_result = settings_obj.saveWifiCredential(ssid, password);
+    if (save_result == WIFI_CREDENTIAL_FULL) {
+      ssid.toCharArray(this->pending_wifi_ssid, sizeof(this->pending_wifi_ssid));
+      password.toCharArray(this->pending_wifi_password, sizeof(this->pending_wifi_password));
+      this->pending_wifi_credential = true;
+    }
+  }
 
   return true;
+}
+
+bool WiFiScan::joinSavedWiFi(bool gui) {
+  const uint8_t count = settings_obj.getSavedWifiCount();
+  if (count == 0) {
+    Serial.println(F("There are no saved WiFi credentials"));
+    return false;
+  }
+
+  #ifdef HAS_SCREEN
+    if (gui) {
+      display_obj.clearScreen();
+      display_obj.tft.setTextWrap(false);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+      display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+      display_obj.tft.println(F("Scanning for saved WiFi..."));
+    }
+  #endif
+
+  WiFi.disconnect(true);
+  delay(100);
+  WiFi.mode(WIFI_MODE_STA);
+  const int16_t network_count = WiFi.scanNetworks(false, true, false, 80);
+
+  // Keep only profile indexes and signal strengths. Credentials are loaded
+  // transiently when a connection is actually attempted, and scan results are
+  // released before association.
+  uint8_t visible_indexes[MAX_SAVED_WIFI_PROFILES] = {0};
+  int32_t visible_rssi[MAX_SAVED_WIFI_PROFILES] = {0};
+  bool visible[MAX_SAVED_WIFI_PROFILES] = {false};
+  uint8_t visible_count = 0;
+
+  if (network_count > 0) {
+    for (uint8_t profile_index = 0; profile_index < count; profile_index++) {
+      String saved_ssid;
+      String saved_password;
+      if (!settings_obj.loadSavedWifiCredential(profile_index, saved_ssid, saved_password))
+        continue;
+
+      int32_t best_rssi = INT32_MIN;
+      for (int16_t network_index = 0; network_index < network_count; network_index++) {
+        if (saved_ssid == WiFi.SSID(network_index) && WiFi.RSSI(network_index) > best_rssi)
+          best_rssi = WiFi.RSSI(network_index);
+      }
+      if (best_rssi == INT32_MIN)
+        continue;
+
+      visible[profile_index] = true;
+      uint8_t insert_at = visible_count;
+      while (insert_at > 0 && best_rssi > visible_rssi[insert_at - 1]) {
+        visible_indexes[insert_at] = visible_indexes[insert_at - 1];
+        visible_rssi[insert_at] = visible_rssi[insert_at - 1];
+        insert_at--;
+      }
+      visible_indexes[insert_at] = profile_index;
+      visible_rssi[insert_at] = best_rssi;
+      visible_count++;
+    }
+  }
+  WiFi.scanDelete();
+
+  auto try_profile = [this, gui](uint8_t profile_index, uint8_t attempt, uint8_t attempts, bool fallback) {
+    String ssid;
+    String password;
+    if (!settings_obj.loadSavedWifiCredential(profile_index, ssid, password))
+      return false;
+
+    Serial.println("Trying saved WiFi: " + ssid);
+    #ifdef HAS_SCREEN
+      if (gui) {
+        display_obj.clearScreen();
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+        display_obj.tft.println((fallback ? String("Fallback ") : String("Trying ")) + String(attempt) + "/" + String(attempts));
+        display_obj.tft.println(ssid);
+      }
+    #endif
+
+    if (this->joinWiFi(ssid, password, false, false)) {
+      settings_obj.markSavedWifiSuccessful(profile_index);
+      Serial.println("Connected to saved WiFi: " + ssid);
+      #ifdef HAS_SCREEN
+        if (gui) {
+          display_obj.clearScreen();
+          display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+          display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+          display_obj.tft.println(F("Connected:"));
+          display_obj.tft.println(ssid);
+          delay(1000);
+        }
+      #endif
+      return true;
+    }
+    return false;
+  };
+
+  // The usual path tries only visible profiles, strongest first. Profile order
+  // breaks equal-RSSI ties because insertion above is stable.
+  for (uint8_t i = 0; i < visible_count; i++) {
+    if (try_profile(visible_indexes[i], i + 1, visible_count, false))
+      return true;
+  }
+
+  // Preserve support for hidden SSIDs and transient scan failures. If visible
+  // candidates failed, do not retry them during this fallback pass.
+  const uint8_t fallback_count = count - visible_count;
+  uint8_t fallback_attempt = 0;
+  for (uint8_t profile_index = 0; profile_index < count; profile_index++) {
+    if (visible[profile_index])
+      continue;
+    fallback_attempt++;
+    if (try_profile(profile_index, fallback_attempt, fallback_count, true))
+      return true;
+  }
+
+  Serial.println(F("Could not connect to any saved WiFi network"));
+  return false;
+}
+
+bool WiFiScan::hasPendingWifiCredential() const {
+  return this->pending_wifi_credential;
+}
+
+bool WiFiScan::savePendingWifiCredential(uint8_t replace_index) {
+  if (!this->pending_wifi_credential)
+    return false;
+  WifiCredentialSaveResult result = settings_obj.saveWifiCredential(
+    String(this->pending_wifi_ssid),
+    String(this->pending_wifi_password),
+    replace_index
+  );
+  if (result == WIFI_CREDENTIAL_ERROR || result == WIFI_CREDENTIAL_FULL)
+    return false;
+  this->discardPendingWifiCredential();
+  return true;
+}
+
+void WiFiScan::discardPendingWifiCredential() {
+  memset(this->pending_wifi_ssid, 0, sizeof(this->pending_wifi_ssid));
+  memset(this->pending_wifi_password, 0, sizeof(this->pending_wifi_password));
+  this->pending_wifi_credential = false;
 }
 
 bool WiFiScan::startWiFi(String ssid, String password, bool gui) {
@@ -2441,8 +2592,6 @@ void WiFiScan::initWiFi(uint8_t scan_mode) {
     this->force_probe = settings_obj.loadSetting<bool>(text_table4[6]);
     this->save_pcap = settings_obj.loadSetting<bool>(text_table4[7]);
     this->ep_deauth = settings_obj.loadSetting<bool>("EPDeauth");
-    settings_obj.loadSetting<String>("ClientSSID");
-    settings_obj.loadSetting<String>("ClientPW");
     //Serial.println(F("Initialization complete"));
   }
 }
@@ -2489,10 +2638,17 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
   else if (scan_mode == WIFI_SCAN_AP)
     RunBeaconScan(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_WAR_DRIVE) {
+    this->reloadGeofences();
+    this->geofence_paused = false;
+    this->active_geofence_name = "";
     #ifdef HAS_BT
       RunBluetoothScan(scan_mode, color);
     #endif
     RunBeaconScan(scan_mode, color);
+    // Evaluate only after RunBeaconScan establishes the wardrive display.
+    // Drawing a status screen before that left its text size active and
+    // corrupted the wardrive status-bar typography.
+    this->updateGeofenceState(true);
   }
   else if (scan_mode == WIFI_SCAN_SIG_STREN)
     RunRawScan(scan_mode, color);    
@@ -4237,20 +4393,6 @@ bool WiFiScan::RunGPSInfo(bool tracker, bool display, bool poi) {
       //Serial.println(F("Refreshing GPS Data on screen..."));
       #ifdef HAS_SCREEN
         const int16_t content_top = (SCREEN_HEIGHT / 3) - 6;
-        const bool compact = SCREEN_HEIGHT <= 160 || SCREEN_WIDTH <= 160;
-        const bool expanded = SCREEN_HEIGHT >= 240 && SCREEN_WIDTH >= 200;
-        const uint32_t elapsed_seconds = this->gps_tracker_stats.elapsedMs(now_ms) / 1000;
-        const uint32_t elapsed_hours = elapsed_seconds / 3600;
-        const uint8_t elapsed_minutes = (elapsed_seconds / 60) % 60;
-        const uint8_t elapsed_secs = elapsed_seconds % 60;
-        char elapsed_text[16];
-        snprintf(elapsed_text, sizeof(elapsed_text), "%02lu:%02u:%02u",
-                 static_cast<unsigned long>(elapsed_hours), elapsed_minutes, elapsed_secs);
-        const float distance_m = this->gps_tracker_stats.distanceMeters();
-        const String distance_text = distance_m >= 1000.0f
-            ? String(distance_m / 1000.0f, 2) + " km"
-            : String(distance_m, 1) + " m";
-
         display_obj.tft.setTextWrap(false);
         display_obj.tft.setFreeFont(NULL);
         display_obj.tft.setTextSize(1);
@@ -4261,57 +4403,88 @@ bool WiFiScan::RunGPSInfo(bool tracker, bool display, bool poi) {
           return_val = false;
         }
 
-        if (compact) {
-          display_obj.tft.setCursor(0, content_top + 6);
-          display_obj.tft.setTextColor(gps_obj.getFixStatus() ? TFT_GREEN : TFT_RED);
-          display_obj.tft.print(gps_obj.getFixStatus() ? F("FIX") : F("NO FIX"));
-          display_obj.tft.setTextColor(TFT_CYAN);
-          display_obj.tft.println("  SAT " + gps_obj.getNumSatsString() + "  " + elapsed_text);
-          display_obj.tft.println("DIST " + distance_text);
-          display_obj.tft.println("LAT  " + gps_obj.getLat());
-          display_obj.tft.println("LON  " + gps_obj.getLon());
-          display_obj.tft.println("ALT " + String(gps_obj.getAlt(), 1) + "m  ACC " +
-                                  String(gps_obj.getAccuracy(), 1) + "m");
-          display_obj.tft.println("SPD " + String(this->gps_tracker_stats.speedMetersPerSecond() * 3.6f, 1) +
-                                  "km/h  PTS " + String(this->gps_tracker_stats.loggedPoints()));
+        if (tracker && !poi) {
+          const bool compact = SCREEN_HEIGHT <= 160 || SCREEN_WIDTH <= 160;
+          const bool expanded = SCREEN_HEIGHT >= 240 && SCREEN_WIDTH >= 200;
+          const uint32_t elapsed_seconds = this->gps_tracker_stats.elapsedMs(now_ms) / 1000;
+          const uint32_t elapsed_hours = elapsed_seconds / 3600;
+          const uint8_t elapsed_minutes = (elapsed_seconds / 60) % 60;
+          const uint8_t elapsed_secs = elapsed_seconds % 60;
+          char elapsed_text[16];
+          snprintf(elapsed_text, sizeof(elapsed_text), "%02lu:%02u:%02u",
+                   static_cast<unsigned long>(elapsed_hours), elapsed_minutes, elapsed_secs);
+          const float distance_m = this->gps_tracker_stats.distanceMeters();
+          const String distance_text = distance_m >= 1000.0f
+              ? String(distance_m / 1000.0f, 2) + " km"
+              : String(distance_m, 1) + " m";
+
+          if (compact) {
+            display_obj.tft.setCursor(0, content_top + 6);
+            display_obj.tft.setTextColor(gps_obj.getFixStatus() ? TFT_GREEN : TFT_RED);
+            display_obj.tft.print(gps_obj.getFixStatus() ? F("FIX") : F("NO FIX"));
+            display_obj.tft.setTextColor(TFT_CYAN);
+            display_obj.tft.println("  SAT " + gps_obj.getNumSatsString() + "  " + elapsed_text);
+            display_obj.tft.println("DIST " + distance_text);
+            display_obj.tft.println("LAT  " + gps_obj.getLat());
+            display_obj.tft.println("LON  " + gps_obj.getLon());
+            display_obj.tft.println("ALT " + String(gps_obj.getAlt(), 1) + "m  ACC " +
+                                    String(gps_obj.getAccuracy(), 1) + "m");
+            display_obj.tft.println("SPD " + String(this->gps_tracker_stats.speedMetersPerSecond() * 3.6f, 1) +
+                                    "km/h  PTS " + String(this->gps_tracker_stats.loggedPoints()));
+            display_obj.tft.println("UTC " + gps_obj.getDatetime());
+          }
+          else {
+            int16_t y = content_top + 10;
+            display_obj.tft.setCursor(8, y);
+            display_obj.tft.setTextColor(gps_obj.getFixStatus() ? TFT_GREEN : TFT_RED);
+            display_obj.tft.setTextSize(expanded ? 2 : 1);
+            display_obj.tft.print(gps_obj.getFixStatus() ? F("GPS FIX") : F("NO GPS FIX"));
+            display_obj.tft.setTextColor(TFT_CYAN);
+            display_obj.tft.setTextSize(1);
+            display_obj.tft.setCursor(SCREEN_WIDTH - 72, y + 3);
+            display_obj.tft.print("SATS " + gps_obj.getNumSatsString());
+
+            y += expanded ? 30 : 18;
+            display_obj.tft.setCursor(8, y);
+            display_obj.tft.setTextSize(expanded ? 2 : 1);
+            display_obj.tft.println(distance_text);
+            display_obj.tft.setTextSize(1);
+            display_obj.tft.setCursor(SCREEN_WIDTH / 2, y + (expanded ? 4 : 0));
+            display_obj.tft.println(elapsed_text);
+
+            y += expanded ? 28 : 16;
+            display_obj.tft.setCursor(8, y);
+            display_obj.tft.println("LAT  " + gps_obj.getLat());
+            display_obj.tft.setCursor(8, y + 16);
+            display_obj.tft.println("LON  " + gps_obj.getLon());
+            display_obj.tft.setCursor(8, y + 36);
+            display_obj.tft.println("ALT " + String(gps_obj.getAlt(), 1) + " m");
+            display_obj.tft.setCursor(SCREEN_WIDTH / 2, y + 36);
+            display_obj.tft.println("ACC " + String(gps_obj.getAccuracy(), 1) + " m");
+            display_obj.tft.setCursor(8, y + 52);
+            display_obj.tft.println("SPEED " + String(this->gps_tracker_stats.speedMetersPerSecond() * 3.6f, 1) + " km/h");
+            display_obj.tft.setCursor(SCREEN_WIDTH / 2, y + 52);
+            display_obj.tft.println("POINTS " + String(this->gps_tracker_stats.loggedPoints()));
+            if (expanded) {
+              display_obj.tft.setCursor(8, y + 72);
+              display_obj.tft.println("UTC " + gps_obj.getDatetime());
+              display_obj.tft.setCursor(8, y + 88);
+              display_obj.tft.setTextColor(TFT_GREEN);
+              display_obj.tft.println(F("GPX LOGGING ACTIVE"));
+            }
+          }
         }
         else {
-          int16_t y = content_top + 10;
-          display_obj.tft.setCursor(8, y);
-          display_obj.tft.setTextColor(gps_obj.getFixStatus() ? TFT_GREEN : TFT_RED);
-          display_obj.tft.setTextSize(expanded ? 2 : 1);
-          display_obj.tft.print(gps_obj.getFixStatus() ? F("GPS FIX") : F("NO GPS FIX"));
+          display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
           display_obj.tft.setTextColor(TFT_CYAN);
-          display_obj.tft.setTextSize(1);
-          display_obj.tft.setCursor(SCREEN_WIDTH - 72, y + 3);
-          display_obj.tft.print("SATS " + gps_obj.getNumSatsString());
-
-          y += expanded ? 30 : 18;
-          display_obj.tft.setCursor(8, y);
-          display_obj.tft.setTextSize(expanded ? 2 : 1);
-          display_obj.tft.println(distance_text);
-          display_obj.tft.setTextSize(1);
-          display_obj.tft.setCursor(SCREEN_WIDTH / 2, y + (expanded ? 4 : 0));
-          display_obj.tft.println(elapsed_text);
-
-          y += expanded ? 28 : 16;
-          display_obj.tft.setCursor(8, y);
-          display_obj.tft.println("LAT  " + gps_obj.getLat());
-          display_obj.tft.setCursor(8, y + 16);
-          display_obj.tft.println("LON  " + gps_obj.getLon());
-          display_obj.tft.setCursor(8, y + 36);
-          display_obj.tft.println("ALT " + String(gps_obj.getAlt(), 1) + " m");
-          display_obj.tft.setCursor(SCREEN_WIDTH / 2, y + 36);
-          display_obj.tft.println("ACC " + String(gps_obj.getAccuracy(), 1) + " m");
-          display_obj.tft.setCursor(8, y + 52);
-          display_obj.tft.println("SPEED " + String(this->gps_tracker_stats.speedMetersPerSecond() * 3.6f, 1) + " km/h");
-          display_obj.tft.setCursor(SCREEN_WIDTH / 2, y + 52);
-          display_obj.tft.println("POINTS " + String(this->gps_tracker_stats.loggedPoints()));
-          if (expanded) {
-            display_obj.tft.setCursor(8, y + 72);
-            display_obj.tft.setTextColor(TFT_GREEN);
-            display_obj.tft.println(F("GPX LOGGING ACTIVE"));
-          }
+          display_obj.tft.println(gps_obj.getFixStatus() ? F("  Good Fix: Yes") : F("  Good Fix: No"));
+          if (text != "") display_obj.tft.println("      Text: " + text);
+          display_obj.tft.println(" Sats: " + gps_obj.getNumSatsString());
+          display_obj.tft.println("  Acc: " + String(gps_obj.getAccuracy()));
+          display_obj.tft.println("  Lat: " + gps_obj.getLat());
+          display_obj.tft.println("  Lon: " + gps_obj.getLon());
+          display_obj.tft.println("  Alt: " + String(gps_obj.getAlt()));
+          display_obj.tft.println("  D/T: " + gps_obj.getDatetime());
         }
       #endif
 
@@ -5865,6 +6038,15 @@ void WiFiScan::setBaseMacAddress(uint8_t macAddr[6]) {
 void WiFiScan::executeWarDrive() {
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
+      if (this->updateGeofenceState()) {
+        WiFi.scanDelete();
+        #ifdef HAS_BT
+          if (pBLEScan && pBLEScan->isScanning()) pBLEScan->stop();
+          this->ble_scanning = false;
+        #endif
+        delay(10);
+        return;
+      }
       bool do_save;
       String display_string;
 
@@ -6038,6 +6220,90 @@ void WiFiScan::executeWarDrive() {
         #endif
       }
     }
+  #endif
+}
+
+void WiFiScan::reloadGeofences() {
+  for (uint8_t i = 0; i < MAX_GEOFENCES; i++)
+    settings_obj.loadGeofence(i, this->geofences[i]);
+  this->last_geofence_check = 0;
+}
+
+bool WiFiScan::updateGeofenceState(bool force) {
+  #ifdef HAS_GPS
+    const uint32_t now = millis();
+    if (!force && this->last_geofence_check && now - this->last_geofence_check < 500)
+      return this->geofence_paused;
+    this->last_geofence_check = now;
+
+    bool inside = false;
+    String matched = "";
+    if (gps_obj.getFixStatus()) {
+      const double lat = gps_obj.getLat().toDouble();
+      const double lon = gps_obj.getLon().toDouble();
+      for (uint8_t i = 0; i < MAX_GEOFENCES; i++) {
+        const GeofenceConfig& fence = this->geofences[i];
+        if (fence.enabled && GeofenceMath::distanceMiles(lat, lon, fence.latitude, fence.longitude) <= fence.radiusMiles) {
+          inside = true;
+          matched = fence.name;
+          break;
+        }
+      }
+    }
+
+    if (inside != this->geofence_paused || (inside && matched != this->active_geofence_name)) {
+      this->geofence_paused = inside;
+      this->active_geofence_name = matched;
+      if (inside) {
+        Serial.println("Wardrive paused inside geofence: " + matched);
+      } else {
+        Serial.println(F("Wardrive resumed outside geofence"));
+      }
+      this->renderWardriveGeofenceState();
+    }
+  #endif
+  return this->geofence_paused;
+}
+
+void WiFiScan::renderWardriveGeofenceState() {
+  #ifdef HAS_SCREEN
+    // Rebuild the normal wardrive chrome on both entry and exit so no font,
+    // text-size, or stale pixels leak between the overlay and scan UI.
+    this->setupScanDisplayArea(TFT_WHITE, TFT_GREEN);
+    #ifdef HAS_FULL_SCREEN
+      display_obj.tft.fillRect(0, 16, TFT_WIDTH, 16, TFT_GREEN);
+      display_obj.tft.drawCentreString("Wardrive", TFT_WIDTH / 2, 16, 2);
+    #endif
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+    this->drawWardriveGeofenceBadge();
+  #endif
+}
+
+void WiFiScan::drawWardriveGeofenceBadge() {
+  #ifdef HAS_SCREEN
+    const int16_t badge_height = 12;
+    #ifdef HAS_TOUCH
+      // Keep the badge immediately above the 50 px POI touch control.
+      const int16_t badge_y = (SCREEN_HEIGHT - 64 > STATUS_BAR_WIDTH * 2) ?
+        SCREEN_HEIGHT - 64 : STATUS_BAR_WIDTH * 2;
+    #else
+      const int16_t badge_y = SCREEN_HEIGHT - badge_height;
+    #endif
+    String label = this->geofence_paused ? "GF: IN " + this->active_geofence_name : "GF: CLEAR";
+
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.tft.setTextSize(1);
+    while (label.length() > 1 && display_obj.tft.textWidth(label) > SCREEN_WIDTH - 6)
+      label.remove(label.length() - 1);
+
+    const uint16_t color = this->geofence_paused ? TFT_RED : TFT_GREEN;
+    display_obj.tft.fillRect(0, badge_y, SCREEN_WIDTH, badge_height, TFT_BLACK);
+    display_obj.tft.drawRect(0, badge_y, SCREEN_WIDTH, badge_height, color);
+    display_obj.tft.setTextColor(color, TFT_BLACK);
+    display_obj.tft.setCursor(3, badge_y + 2);
+    display_obj.tft.print(label);
   #endif
 }
 
@@ -6293,6 +6559,8 @@ void WiFiScan::displayWardriveStats() {
         display_obj.tft.setCursor((SCREEN_WIDTH - poiTextWidth) / 2, SCREEN_HEIGHT - 33);
         display_obj.tft.print(poiText);
       #endif
+
+      this->drawWardriveGeofenceBadge();
 
     #endif
   #endif
@@ -8725,7 +8993,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
 
             Serial.print((String)wifi_scan_obj.mac_history_cursor + " | " + wardrive_line);
 
-            if (gps_obj.getFixStatus()) {
+            if (gps_obj.getFixStatus() && !wifi_scan_obj.isGeofencePaused()) {
               buffer_obj.append(wardrive_line);
             }
           #endif
@@ -11453,15 +11721,20 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
     // Send body
     client->print(part1);
 
-    const size_t CHUNK = 4096;
-    uint8_t buf[CHUNK];
+    marauder::UploadStreamBuffer uploadBuffer;
+    if (!uploadBuffer) {
+      fileToUpload.close();
+      client->stop();
+      Serial.println("[WDG] Could not allocate upload buffer");
+      return false;
+    }
     size_t totalSent = 0;
     uint8_t pct = 0;
 
     while (fileToUpload.available()) {
-      size_t n = fileToUpload.read(buf, CHUNK);
+      size_t n = fileToUpload.read(uploadBuffer.data(), uploadBuffer.size());
       totalSent += n;
-      client->write(buf, n);
+      client->write(uploadBuffer.data(), n);
       pct = (totalSent * 100) / fileToUpload.size();
       #ifdef HAS_SCREEN
       this->drawUploadProgress("WDG WARS", pct); // GCOVR_EXCL_LINE
@@ -11668,8 +11941,13 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
 
     // Send body
     client->print(part1);
-    const size_t BUFFER_SIZE = 4096; // 1KB at a time
-    uint8_t buffer[BUFFER_SIZE];
+    marauder::UploadStreamBuffer uploadBuffer;
+    if (!uploadBuffer) {
+      fileToUpload.close();
+      client->stop();
+      Serial.println("[WIGLE] Could not allocate upload buffer");
+      return false;
+    }
 
     Serial.println("Finished sending part1");
 
@@ -11677,7 +11955,7 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
 
     size_t totalBytesSent = 0;
     while (fileToUpload.available()) {
-      size_t bytesRead = fileToUpload.read(buffer, BUFFER_SIZE);
+      size_t bytesRead = fileToUpload.read(uploadBuffer.data(), uploadBuffer.size());
       totalBytesSent += bytesRead;
       Serial.print("Writing ");
       Serial.print(totalBytesSent);
@@ -11686,7 +11964,7 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
       #ifdef HAS_SCREEN
       this->drawUploadProgress("WiGLE", percent_sent); // GCOVR_EXCL_LINE
       #endif
-      client->write(buffer, bytesRead);
+      client->write(uploadBuffer.data(), bytesRead);
     }
 
     Serial.println("Uploaded file bytes: " + String(totalBytesSent));
