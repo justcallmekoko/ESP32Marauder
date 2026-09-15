@@ -671,7 +671,12 @@ void CommandLine::runCommand(String input) {
           Serial.println(evil_portal_obj.target_html_name);
         }
         else if (et_command == "sethtmlstr") {
-          evil_portal_obj.setHtmlFromSerial();
+          // `evilportal -c sethtmlstr <len>` — the host streams <len> raw HTML
+          // bytes right after this line (proto >= 2 host-side portal page).
+          int content_length = (cmd_sw + 2 < cmd_args.size())
+                                 ? cmd_args.get(cmd_sw + 2).toInt()
+                                 : 0;
+          evil_portal_obj.setHtmlFromSerial(content_length);
         }
         else if (et_command == "setap") {
           int target_ap_index = cmd_args.get(cmd_sw + 2).toInt();

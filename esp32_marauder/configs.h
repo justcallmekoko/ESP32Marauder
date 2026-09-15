@@ -40,13 +40,19 @@
 
   #define JSON_SETTING_SIZE 2048
 
-  #define MARAUDER_VERSION "v1.12.4"
+  #define MARAUDER_VERSION "v1.12.6"
 
   // JSON serial protocol version (reported by the `jsoninfo` command). Bump
   // when the machine-readable serial protocol changes.
   //   1 -> initial JSON command set (jsoninfo/jsonstatus/jsonlist/jsonmode + analyzers)
   //   2 -> length-prefixed binary capture streaming ("capstream"), jsonbaud, {"t":"drop"}
   #define MARAUDER_JSON_PROTO 2
+
+  // NimBLE TX power for BLE spam/advertising, in dBm. +9 dBm (ESP_PWR_LVL_P9) is
+  // the maximum the classic ESP32 radio supports; asking for more (the old
+  // hard-coded 20) makes NimBLE 2.x's setPower() fail and print
+  // "Failed to set NimBLE output power" on every spam iteration.
+  #define BLE_TX_POWER_DBM 9
 
   #define GRAPH_REFRESH   100
 

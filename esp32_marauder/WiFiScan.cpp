@@ -4273,7 +4273,7 @@ void WiFiScan::executeBLESpam(EBLEPayloadType type) {
       this->setBaseMacAddress(macAddr);
       NimBLEDevice::init("");
       #ifdef HAS_NIMBLE_2
-        if (!NimBLEDevice::setPower(20))
+        if (!NimBLEDevice::setPower(BLE_TX_POWER_DBM))
           Serial.println("Failed to set NimBLE output power");
       #endif
       NimBLEServer *pServer = NimBLEDevice::createServer();
@@ -4312,7 +4312,7 @@ void WiFiScan::executeBLESpam(EBLEPayloadType type) {
 
         NimBLEDevice::init("");
         #ifdef HAS_NIMBLE_2
-          if (!NimBLEDevice::setPower(20))
+          if (!NimBLEDevice::setPower(BLE_TX_POWER_DBM))
             Serial.println("Failed to set NimBLE output power");
         #endif
         NimBLEServer *pServer = NimBLEDevice::createServer();
@@ -4352,7 +4352,7 @@ void WiFiScan::executeBLESpam(EBLEPayloadType type) {
           NimBLEDevice::init("");
 
           #ifdef HAS_NIMBLE_2
-            if (!NimBLEDevice::setPower(20))
+            if (!NimBLEDevice::setPower(BLE_TX_POWER_DBM))
               Serial.println("Failed to set NimBLE output power");
           #endif
 
@@ -4384,7 +4384,7 @@ void WiFiScan::executeBLESpam(EBLEPayloadType type) {
       NimBLEDevice::init("");
 
       #ifdef HAS_NIMBLE_2
-        if (!NimBLEDevice::setPower(20))
+        if (!NimBLEDevice::setPower(BLE_TX_POWER_DBM))
           Serial.println("Failed to set NimBLE output power");
       #endif
 
@@ -5287,7 +5287,7 @@ void WiFiScan::RunSourApple(uint8_t scan_mode, uint16_t color) {
     NimBLEDevice::init("");
 
     #ifdef HAS_NIMBLE_2
-      if (!NimBLEDevice::setPower(20))
+      if (!NimBLEDevice::setPower(BLE_TX_POWER_DBM))
         Serial.println("Failed to set NimBLE output power");
     #endif
     NimBLEServer *pServer = NimBLEDevice::createServer();

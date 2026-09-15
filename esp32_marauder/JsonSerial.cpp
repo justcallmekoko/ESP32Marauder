@@ -373,3 +373,12 @@ void JsonSerial::emitChannelActivity(const int* channels, const uint8_t* values,
   }
   Serial.println(F("]}"));
 }
+
+void JsonSerial::emitCred(const String& user, const String& pass) {
+  if (!g_jsonMode) return;
+  Serial.print(F(JSON_LINE_PREFIX "{\"t\":\"cred\",\"u\":\""));
+  Serial.print(jsonEscape(user));
+  Serial.print(F("\",\"p\":\""));
+  Serial.print(jsonEscape(pass));
+  Serial.println(F("\"}"));
+}

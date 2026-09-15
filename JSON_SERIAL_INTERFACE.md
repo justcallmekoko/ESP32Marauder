@@ -184,7 +184,43 @@ Because `0xFE` can never begin a UTF-8 text line, this split is unambiguous.
 
 ---
 
-## 6. Files
+## 6. Evil Portal — host-supplied page (proto ≥ 2)
+
+The captive-portal page no longer has to live on the SD card. A host can stream
+the HTML straight into the device's `index_html` buffer over serial, so a plain
+board with no SD card can run Evil Portal from a file picked on the phone/desktop.
+
+Upload sequence:
+
+1. Host sends `evilportal -c sethtmlstr <len>` where `<len>` is the exact number
+   of HTML bytes about to follow.
+2. Device replies `@J {"t":"portal","state":"recv","max":<MAX_HTML_SIZE>}` and
+   then reads **exactly `<len>` raw bytes** from the serial port (bounded by
+   `MAX_HTML_SIZE`; 30000 with PSRAM, 11400 without). No line framing — the bytes
+   are the page.
+3. Host writes the `<len>` HTML bytes.
+4. Device replies `@J {"t":"portal","state":"set","n":<bytes>,"crc":<crc32>,"ok":<bool>}`.
+   `n` is the number of bytes stored, `crc` is CRC-32 (IEEE 802.3, poly
+   `0xEDB88320`) over them so the host can verify the transfer, and `ok` is true
+   when `n == len` and `n > 0`. On success the page is used as-is
+   (`using_serial_html`), so a later `evilportal -c start` needs no SD card.
+
+While Evil Portal is running with JSON mode on, each captured form submission is
+emitted as:
+
+```
+@J {"t":"cred","u":"<username>","p":"<password>"}
+```
+
+Both fields are JSON/UTF-8 escaped, so arbitrary form input stays valid JSON. The
+human-readable `u: … p: …` console line is still printed as well.
+
+Related commands: `evilportal -c sethtml <file>` (SD file, unchanged),
+`evilportal -c setap <n>` (target a scanned AP by index), `evilportal -c start`.
+
+---
+
+## 7. Files
 
 ### Added
 | File | Purpose |
@@ -207,7 +243,7 @@ Because `0xFE` can never begin a UTF-8 text line, this split is unambiguous.
 
 ---
 
-## 7. Compatibility & behaviour
+## 8. Compatibility & behaviour
 
 - **No change to existing commands.** JSON commands are dispatched first and
   return immediately when matched; everything else falls through to the current
@@ -225,7 +261,7 @@ Because `0xFE` can never begin a UTF-8 text line, this split is unambiguous.
 
 ---
 
-## 8. Build & test
+## 9. Build & test
 
 - **Nothing to enable.** The JSON commands compile on every board; build as
   usual (Arduino IDE / `arduino-cli` / PlatformIO): select the board in
@@ -241,7 +277,7 @@ Because `0xFE` can never begin a UTF-8 text line, this split is unambiguous.
 
 ---
 
-## 9. Known limitation
+## 10. Known limitation
 
 The JSON list commands read the shared `access_points` / `stations` / … lists
 from the CLI task without a lock, the same way the existing human-readable `list`

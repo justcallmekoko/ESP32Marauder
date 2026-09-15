@@ -125,7 +125,11 @@ class EvilPortal {
     void setup();
     bool begin(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_points);
     void main(uint8_t scan_mode);
-    void setHtmlFromSerial();
+    // Receive the portal page from the host over serial instead of the SD card
+    // (proto >= 2). contentLength is the exact number of HTML bytes the host is
+    // about to stream; the device reads exactly that many (bounded by
+    // MAX_HTML_SIZE) and confirms with an @J {"t":"portal",...} line.
+    void setHtmlFromSerial(int contentLength);
 
 };
 
