@@ -4206,6 +4206,9 @@ void MenuFunctions::buildGeofenceActionMenu(uint8_t slot) {
           display_obj.tft.drawString("L/R:char D:add", 0, 34, 1);
           display_obj.tft.drawString("U:del A:add/hold OK", 0, 44, 1);
           display_obj.tft.drawString("B:cancel", 0, 54, 1);
+          // miniKeyboard() is a blocking input loop, so the normal POOM flush
+          // at the end of loop() cannot run while this editor is open.
+          display_obj.tft.display(true);
           redraw = false;
         }
         delay(1);

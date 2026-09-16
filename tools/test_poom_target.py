@@ -65,6 +65,7 @@ class PoomTargetTests(unittest.TestCase):
         menus = (ROOT / "esp32_marauder" / "MenuFunctions.cpp").read_text()
         self.assertRegex(CONFIG, r"#ifdef MARAUDER_POOM[\s\S]*?#define HAS_MINI_KB")
         self.assertIn('drawString("B:cancel", 0, 54, 1)', menus)
+        self.assertIn("display_obj.tft.display(true);", menus)
         self.assertIn("if (b_btn.justPressed())", menus)
         self.assertIn("return wifi_scan_obj.current_mini_kb_ssid;", menus)
 
