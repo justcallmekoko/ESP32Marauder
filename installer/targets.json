@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "sourceWorkflow": ".github/workflows/build_parallel.yml",
+  "privateBuildFlags": ["MARAUDER_V8", "MARAUDER_MINI_V3", "DUAL_MINI_C5"],
   "targets": [
     {
       "id": "flipper-zero-wifi-dev-board",
@@ -183,6 +184,15 @@
       "esptoolChip": "esp32c5"
     },
     {
+      "id": "lilygo-t-dongle-c5",
+      "displayName": "LilyGo T-Dongle C5",
+      "aliases": ["T-Dongle C5", "T Dongle C5"],
+      "buildFlag": "MARAUDER_T_DONGLE_C5",
+      "assetSuffix": "t_dongle_c5",
+      "chipFamily": "ESP32-C5",
+      "esptoolChip": "esp32c5"
+    },
+    {
       "id": "m5-nano-c6",
       "displayName": "M5 Nano C6",
       "aliases": ["M5NanoC6"],
@@ -197,6 +207,33 @@
       "aliases": ["Pancake Marauder V8"],
       "buildFlag": "MARAUDER_PANCAKE",
       "assetSuffix": "pancake",
+      "chipFamily": "ESP32-C5",
+      "esptoolChip": "esp32c5"
+    },
+    {
+      "id": "marauder-v8",
+      "displayName": "Marauder v8",
+      "aliases": [],
+      "buildFlag": "MARAUDER_V8",
+      "assetSuffix": "v8",
+      "chipFamily": "ESP32-C5",
+      "esptoolChip": "esp32c5"
+    },
+    {
+      "id": "marauder-mini-v3",
+      "displayName": "Marauder Mini v3",
+      "aliases": ["Mini v3"],
+      "buildFlag": "MARAUDER_MINI_V3",
+      "assetSuffix": "mini_v3",
+      "chipFamily": "ESP32-C5",
+      "esptoolChip": "esp32c5"
+    },
+    {
+      "id": "dual-mini-c5",
+      "displayName": "Dual Mini C5",
+      "aliases": ["Dual C5 Mini"],
+      "buildFlag": "DUAL_MINI_C5",
+      "assetSuffix": "dual_mini_c5",
       "chipFamily": "ESP32-C5",
       "esptoolChip": "esp32c5"
     }

@@ -31,13 +31,18 @@ https://www.online-utility.org/image/convert/to/XBM
   #include "xiaoLED.h"
 #elif defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
   #include "stickcLED.h"
-#elif defined(HAS_NEOPIXEL_LED)
+#elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
   #include "LedInterface.h"
 #endif
 
 #include "settings.h"
 #include "CommandLine.h"
+#include "ReconMission.h"
 #include "lang_var.h"
+
+#ifdef HAS_T_DONGLE_DISPLAY
+  #include "TDongleDisplay.h"
+#endif
 
 #ifdef HAS_BATTERY
   #include "BatteryInterface.h"
@@ -74,6 +79,11 @@ EvilPortal evil_portal_obj;
 Buffer buffer_obj;
 Settings settings_obj;
 CommandLine cli_obj;
+ReconMission recon_obj;
+
+#ifdef HAS_T_DONGLE_DISPLAY
+  TDongleDisplay t_dongle_display;
+#endif
 
 #ifdef HAS_GPS
   GpsInterface gps_obj;
@@ -98,7 +108,7 @@ CommandLine cli_obj;
   xiaoLED xiao_led;
 #elif defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
   stickcLED stickc_led;
-#elif defined(HAS_NEOPIXEL_LED)
+#elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
   LedInterface led_obj;
 #endif
 
@@ -312,15 +322,7 @@ void setup()
   #endif
 
   #ifdef HAS_SCREEN
-    #if !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
-      display_obj.tft.drawCentreString("ESP32 Marauder", TFT_WIDTH/2, TFT_HEIGHT * 0.33, 1);
-      display_obj.tft.drawCentreString("JustCallMeKoko", TFT_WIDTH/2, TFT_HEIGHT * 0.5, 1);
-      display_obj.tft.drawCentreString(display_obj.version_number, TFT_WIDTH/2, TFT_HEIGHT * 0.66, 1);
-    #else
-      display_obj.tft.drawCentreString("ESP32 Marauder", TFT_HEIGHT/2, TFT_WIDTH * 0.33, 1);
-      display_obj.tft.drawCentreString("JustCallMeKoko", TFT_HEIGHT/2, TFT_WIDTH * 0.5, 1);
-      display_obj.tft.drawCentreString(display_obj.version_number, TFT_HEIGHT/2, TFT_WIDTH * 0.66, 1);
-    #endif
+    display_obj.drawBootSplash();
   #endif
 
 
@@ -359,9 +361,8 @@ void setup()
 
   wifi_scan_obj.RunSetup();
 
-  #ifdef HAS_SCREEN
-    display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
-    display_obj.tft.drawCentreString("Initializing...", TFT_WIDTH/2, TFT_HEIGHT * 0.82, 1);
+  #ifdef HAS_T_DONGLE_DISPLAY
+    t_dongle_display.begin();
   #endif
 
   evil_portal_obj.setup();
@@ -381,7 +382,7 @@ void setup()
     xiao_led.RunSetup();
   #elif defined(MARAUDER_M5STICKC)
     stickc_led.RunSetup();
-  #elif defined(HAS_NEOPIXEL_LED)
+  #elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
     led_obj.RunSetup();
   #endif
 
@@ -446,6 +447,11 @@ void loop()
   // Update all of our objects
   cli_obj.main(currentTime);
   wifi_scan_obj.main(currentTime);
+  recon_obj.main(currentTime);
+
+  #ifdef HAS_T_DONGLE_DISPLAY
+    t_dongle_display.update(currentTime, wifi_scan_obj);
+  #endif
 
   #ifdef HAS_GPS
     gps_obj.main();
@@ -469,6 +475,10 @@ void loop()
     xiao_led.main();
   #elif defined(MARAUDER_M5STICKC)
     stickc_led.main();
+  #elif defined(HAS_T_DONGLE_LED)
+    // The LED shares GPIO2/GPIO7 with the display/SD bus. Always make it the
+    // final writer so later SPI activity cannot leave it latched white.
+    led_obj.refresh();
   #elif defined(HAS_NEOPIXEL_LED)
     led_obj.main(currentTime);
   #endif

@@ -122,6 +122,7 @@ class EvilPortal {
     String get_user_name();
     String get_password();
     bool setAP(String essid);
+    bool setAPFromConfig();
     void setup();
     bool begin(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_points);
     void main(uint8_t scan_mode);
