@@ -1263,7 +1263,9 @@ void MenuFunctions::updateStatusBar()
 
   if ((current_channel != wifi_scan_obj.old_channel) || (status_changed)) {
     wifi_scan_obj.old_channel = current_channel;
-    #if defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(MARAUDER_MINI_V3)
+    #if defined(MARAUDER_POOM)
+      display_obj.tft.fillRect(0, 0, 44, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+    #elif defined(MARAUDER_MINI) || defined(MARAUDER_M5STICKC) || defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(MARAUDER_MINI_V3)
       display_obj.tft.fillRect(TFT_WIDTH/4, 0, CHAR_WIDTH * 6, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
     #elif defined(HAS_DUAL_BAND)
       display_obj.tft.fillRect(50, 0, (CHAR_WIDTH / 2) * 8, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
@@ -1274,7 +1276,9 @@ void MenuFunctions::updateStatusBar()
       display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.old_channel, 50, 0, 2);
     #endif
 
-    #ifdef HAS_MINI_SCREEN
+    #if defined(MARAUDER_POOM)
+      display_obj.tft.drawString("C" + (String)wifi_scan_obj.old_channel, 0, 0, 1);
+    #elif defined(HAS_MINI_SCREEN)
       display_obj.tft.drawString("CH:" + (String)wifi_scan_obj.old_channel, TFT_WIDTH/4, 0, 1);
     #endif
   }
@@ -1293,7 +1297,10 @@ void MenuFunctions::updateStatusBar()
     #endif
   #endif
 
-  #ifdef HAS_MINI_SCREEN
+  #if defined(MARAUDER_POOM)
+    display_obj.tft.fillRect(46, 0, 34, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+    display_obj.tft.drawString(String(getDRAMUsagePercent()) + "%", 46, 0, 1);
+  #elif defined(HAS_MINI_SCREEN)
     display_obj.tft.drawString(String(getDRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
   #endif
   }
@@ -1346,7 +1353,10 @@ void MenuFunctions::updateStatusBar()
     #endif
   #endif
 
-  #ifdef HAS_MINI_SCREEN
+  #if defined(MARAUDER_POOM)
+    display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR, true);
+    display_obj.tft.drawString("SD", 116, 0, 1);
+  #elif defined(HAS_MINI_SCREEN)
     display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR, true);
     display_obj.tft.drawString("SD", TFT_WIDTH - 12, 0, 1);
   #endif
@@ -1445,7 +1455,9 @@ void MenuFunctions::drawStatusBar()
   else
     wifi_scan_obj.old_channel = wifi_scan_obj.set_channel;
 
-  #ifdef HAS_MINI_SCREEN
+  #if defined(MARAUDER_POOM)
+    display_obj.tft.fillRect(0, 0, 44, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+  #elif defined(HAS_MINI_SCREEN)
     display_obj.tft.fillRect(43, 0, TFT_WIDTH * 0.21, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
   #else
     display_obj.tft.fillRect(50, 0, TFT_WIDTH * 0.21, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
@@ -1454,7 +1466,9 @@ void MenuFunctions::drawStatusBar()
     display_obj.tft.drawString("CH: " + (String)wifi_scan_obj.old_channel, 50, 0, 2);
   #endif
 
-  #ifdef HAS_MINI_SCREEN
+  #if defined(MARAUDER_POOM)
+    display_obj.tft.drawString("C" + (String)wifi_scan_obj.old_channel, 0, 0, 1);
+  #elif defined(HAS_MINI_SCREEN)
     display_obj.tft.drawString("CH:" + (String)wifi_scan_obj.old_channel, TFT_WIDTH/4, 0, 1);
   #endif
 
@@ -1471,7 +1485,10 @@ void MenuFunctions::drawStatusBar()
     #endif
   #endif
 
-  #ifdef HAS_MINI_SCREEN
+  #if defined(MARAUDER_POOM)
+    display_obj.tft.fillRect(46, 0, 34, STATUS_BAR_WIDTH, STATUSBAR_COLOR);
+    display_obj.tft.drawString(String(getDRAMUsagePercent()) + "%", 46, 0, 1);
+  #elif defined(HAS_MINI_SCREEN)
     display_obj.tft.drawString(String(getDRAMUsagePercent()) + "%", TFT_WIDTH/1.75, 0, 1);
   #endif
 
@@ -1525,7 +1542,10 @@ void MenuFunctions::drawStatusBar()
     #endif
   #endif
 
-  #ifdef HAS_MINI_SCREEN
+  #if defined(MARAUDER_POOM)
+    display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR);
+    display_obj.tft.drawString("SD", 116, 0, 1);
+  #elif defined(HAS_MINI_SCREEN)
     display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR);
     display_obj.tft.drawString("SD", TFT_WIDTH - 12, 0, 1);
   #endif
@@ -4912,6 +4932,17 @@ void MenuFunctions::drawGraph(int16_t *values) {
 
 void MenuFunctions::renderGraphUI(uint8_t scan_mode) {
   display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  #ifdef MARAUDER_POOM
+    display_obj.tft.fillRect(0, STATUS_BAR_WIDTH, SCREEN_WIDTH,
+                             SCREEN_HEIGHT - GRAPH_VERT_LIM - STATUS_BAR_WIDTH - 1,
+                             TFT_BLACK);
+    const char *title = scan_mode == BT_SCAN_ANALYZER ? "BLE Beacons/50ms" : "Frames/50ms";
+    display_obj.tft.drawCentreString(title, SCREEN_WIDTH / 2, STATUS_BAR_WIDTH, 1);
+    display_obj.tft.drawLine(0, SCREEN_HEIGHT - GRAPH_VERT_LIM - 1,
+                             SCREEN_WIDTH, SCREEN_HEIGHT - GRAPH_VERT_LIM - 1,
+                             TFT_WHITE);
+    return;
+  #endif
   if (scan_mode == WIFI_SCAN_CHAN_ANALYZER)
     display_obj.tft.drawCentreString("Frames/" + (String)BANNER_TIME + "ms", SCREEN_WIDTH / 2, SCREEN_HEIGHT - GRAPH_VERT_LIM - (CHAR_WIDTH * 2), 1);
   else if (scan_mode == BT_SCAN_ANALYZER)

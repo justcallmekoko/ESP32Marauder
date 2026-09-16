@@ -48,6 +48,15 @@ class PoomTargetTests(unittest.TestCase):
         self.assertIn("rmtWrite(pin_, symbols_", poom_led)
         self.assertNotIn("driver/rmt.h", poom_led)
 
+    def test_poom_compact_layout_reserves_the_status_row(self) -> None:
+        display = (ROOT / "esp32_marauder" / "Display.cpp").read_text()
+        menus = (ROOT / "esp32_marauder" / "MenuFunctions.cpp").read_text()
+        self.assertIn("STATUS_BAR_WIDTH + (i * TEXT_HEIGHT)", display)
+        self.assertIn('drawString("C" + (String)wifi_scan_obj.old_channel, 0, 0, 1)', menus)
+        self.assertIn('drawString("SD", 116, 0, 1)', menus)
+        self.assertIn("#ifdef MARAUDER_POOM\n    return;", display)
+        self.assertIn('scan_mode == BT_SCAN_ANALYZER ? "BLE Beacons/50ms" : "Frames/50ms"', menus)
+
 
 if __name__ == "__main__":
     unittest.main()
