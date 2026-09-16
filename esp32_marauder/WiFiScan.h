@@ -39,8 +39,8 @@
 #include "mbedtls/bignum.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/ecp.h"
-#include <lwip/etharp.h>
-#include <lwip/ip_addr.h>
+  #include <lwip/etharp.h>
+  #include <lwip/ip_addr.h>
 #include <lwip/netif.h>
 #include <lwip/tcpip.h>
 #ifdef HAS_IDF_3
@@ -1118,6 +1118,7 @@ class WiFiScan
     void RunLoadSSIDList();
     void RunSaveAPList(bool save_as = true);
     void RunLoadAPList();
+    void RunSortAPList();
     void RunSaveATList(bool save_as = true);
     void RunLoadATList();
     void RunSetupGPSTracker(uint8_t scan_mode);

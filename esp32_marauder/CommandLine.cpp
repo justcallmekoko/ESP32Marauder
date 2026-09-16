@@ -56,7 +56,7 @@ namespace {
 
 void CommandLine::RunSetup() {
   #ifndef MARAUDER_V8
-    Serial.println(this->ascii_art);
+  Serial.println(this->ascii_art);
   #endif
 
   Serial.println(F("\n\n--------------------------------\n"));
@@ -345,6 +345,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_SAVE_CMD);
     Serial.println(HELP_LOAD_CMD);
     Serial.println(HELP_JOIN_CMD);
+    Serial.println(HELP_SORTAP_CMD);
     Serial.println(HELP_MAC_CMD_A);
     Serial.println(HELP_MAC_CMD_B);
     Serial.println(HELP_MAC_CMD_C);
@@ -784,7 +785,7 @@ void CommandLine::runCommand(String input) {
             if (target_ap.stations->get(i) == station_index) {
               belongs_to_ap = true;
               break;
-            }
+          }
           }
           if (belongs_to_ap) {
             const Station& target = stations->get(station_index);
@@ -1501,9 +1502,9 @@ void CommandLine::runCommand(String input) {
 
     // ARP discovery uses the active station netif on both legacy and C5
     // dual-band hardware.
-    if (cmd_args.get(0) == ARP_SCAN_CMD) {
-      this->startScanFromCLI(WIFI_ARP_SCAN, TFT_CYAN, "ARP Scan");
-    }
+      if (cmd_args.get(0) == ARP_SCAN_CMD) {
+        this->startScanFromCLI(WIFI_ARP_SCAN, TFT_CYAN, "ARP Scan");
+      }
 
     // GPS POI
     if (cmd_args.get(0) == GPS_POI_CMD) {
@@ -1927,7 +1928,9 @@ void CommandLine::runCommand(String input) {
       this->showCounts(count_selected, count_unselected);
     }
   }
-  else if (cmd_args.get(0) == SAVE_CMD) {
+  else if (cmd_args.get(0) == SORTAP_CMD) {
+    wifi_scan_obj.RunSortAPList();
+  } else if (cmd_args.get(0) == SAVE_CMD) {
     int ap_sw = this->argSearch(&cmd_args, "-a");
     int st_sw = this->argSearch(&cmd_args, "-s");
 
