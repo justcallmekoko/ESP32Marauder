@@ -545,6 +545,68 @@ void ReconMission::drawDashboard(uint32_t current_time) {
     pending_churn_in = 0;
     pending_churn_out = 0;
     const uint32_t seconds = (current_time - started_at) / 1000;
+    #ifdef MARAUDER_POOM
+      // Keep the global status row intact and dedicate the remaining seven
+      // text rows to a compact dashboard designed for the 128x64 OLED.
+      display_obj.tft.fillRect(0, STATUS_BAR_WIDTH, RECON_SCREEN_WIDTH,
+                               RECON_SCREEN_HEIGHT - STATUS_BAR_WIDTH, TFT_BLACK);
+      display_obj.tft.setFreeFont(NULL);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextWrap(false);
+      display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+
+      char compact_line[24];
+      if (active_mode == ReconMode::WIFI_RECON) {
+        snprintf(compact_line, sizeof(compact_line), "W %lu:%02lu AP%lu S%lu",
+                 static_cast<unsigned long>(seconds / 60),
+                 static_cast<unsigned long>(seconds % 60),
+                 static_cast<unsigned long>(ap_count),
+                 static_cast<unsigned long>(station_count));
+        display_obj.tft.drawString(compact_line, 0, 8, 1);
+        snprintf(compact_line, sizeof(compact_line), "PRB%lu UPD%lu D!%lu",
+                 static_cast<unsigned long>(probe_count),
+                 static_cast<unsigned long>(repeat_count),
+                 static_cast<unsigned long>(deauth_count));
+        display_obj.tft.drawString(compact_line, 0, 16, 1);
+      } else {
+        snprintf(compact_line, sizeof(compact_line), "B %lu:%02lu DEV%lu",
+                 static_cast<unsigned long>(seconds / 60),
+                 static_cast<unsigned long>(seconds % 60),
+                 static_cast<unsigned long>(ble_count));
+        display_obj.tft.drawString(compact_line, 0, 8, 1);
+        snprintf(compact_line, sizeof(compact_line), "UPDATES %lu",
+                 static_cast<unsigned long>(repeat_count));
+        display_obj.tft.drawString(compact_line, 0, 16, 1);
+      }
+
+      display_obj.tft.drawFastHLine(0, 25, RECON_SCREEN_WIDTH, TFT_DARKGREY);
+      const UiEvent& latest = ui_events[(ui_event_head + 3) % 4];
+      if (active_mode == ReconMode::WIFI_RECON && ui_relationship_head) {
+        const UiRelationship& relationship =
+            ui_relationships[(ui_relationship_head + 2) % 3];
+        char ap_name[12];
+        reconTruncate(relationship.ap_name, ap_name, sizeof(ap_name));
+        snprintf(compact_line, sizeof(compact_line), "%02X:%02X > %s",
+                 relationship.station[4], relationship.station[5], ap_name);
+      } else if (latest.type == 'p') {
+        snprintf(compact_line, sizeof(compact_line), "PROBE %.15s", latest.label);
+      } else if (latest.type == 'b') {
+        snprintf(compact_line, sizeof(compact_line), "%02X:%02X > %.11s",
+                 latest.mac[4], latest.mac[5], latest.label[0] ? latest.label : "BLE");
+      } else if (latest.type) {
+        snprintf(compact_line, sizeof(compact_line), "%c %02X:%02X:%02X RSSI%d",
+                 latest.type, latest.mac[3], latest.mac[4], latest.mac[5], latest.rssi);
+      } else {
+        snprintf(compact_line, sizeof(compact_line), "Waiting for devices");
+      }
+      display_obj.tft.drawString(compact_line, 0, 28, 1);
+
+      snprintf(compact_line, sizeof(compact_line), "CHURN +%u -%u", churn_in, churn_out);
+      display_obj.tft.drawString(compact_line, 0, 40, 1);
+      display_obj.tft.drawFastHLine(0, 51, RECON_SCREEN_WIDTH, TFT_DARKGREY);
+      display_obj.tft.drawString("B: stop", 0, 54, 1);
+      return;
+    #endif
     bool gps_fix = false;
     #ifdef HAS_GPS
       gps_fix = gps_obj.getFixStatus();

@@ -39,9 +39,19 @@ void MenuFunctions::drawMiniMenuButton(int b, int x, bool selected, uint16_t tex
   display_obj.tft.setFreeFont(NULL);
   display_obj.tft.setTextSize(1);
   display_obj.tft.setTextWrap(false);
-  display_obj.tft.fillRect(button_x, button_y - 4, KEY_W, KEY_H, background);
+  #ifdef MARAUDER_POOM
+    // The POOM status bar owns rows 0-7. Mini-screen's historical -4
+    // adjustment moves the first menu item into that reserved area.
+    display_obj.tft.fillRect(button_x, button_y, KEY_W, KEY_H, background);
+  #else
+    display_obj.tft.fillRect(button_x, button_y - 4, KEY_W, KEY_H, background);
+  #endif
   display_obj.tft.setTextColor(text_color, background);
-  display_obj.tft.setCursor(button_x + BUTTON_PADDING, button_y + (KEY_H / 2) - 8);
+  #ifdef MARAUDER_POOM
+    display_obj.tft.setCursor(button_x + BUTTON_PADDING, button_y + 1);
+  #else
+    display_obj.tft.setCursor(button_x + BUTTON_PADDING, button_y + (KEY_H / 2) - 8);
+  #endif
   display_obj.tft.print(this->menuLabelWindow(current_menu->list->get(x).name, text_offset));
 }
 #endif
