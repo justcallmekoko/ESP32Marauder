@@ -623,6 +623,7 @@
   #ifdef MARAUDER_POOM
     #define HAS_BT
     #define HAS_BUTTONS
+    #define HAS_MINI_KB
     #define HAS_NEOPIXEL_LED
     #define HAS_SCREEN
     #define HAS_MINI_SCREEN

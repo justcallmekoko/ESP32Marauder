@@ -4136,6 +4136,82 @@ void MenuFunctions::buildGeofenceActionMenu(uint8_t slot) {
 
     wifi_scan_obj.current_mini_kb_ssid = "";
 
+    #ifdef MARAUDER_POOM
+      // Compact six-button editor for POOM. The generic Mini keyboard help
+      // consumes more than 64 pixels vertically and has no Back-button path.
+      this->mini_kb_index = 0;
+      const uint16_t alphabet_length = wifi_scan_obj.alfa.length();
+      bool redraw = true;
+
+      while (true) {
+        if (l_btn.justPressed()) {
+          this->mini_kb_index = this->mini_kb_index > 0
+                                  ? this->mini_kb_index - 1 : alphabet_length - 1;
+          redraw = true;
+        }
+        if (r_btn.justPressed()) {
+          this->mini_kb_index = (this->mini_kb_index + 1) % alphabet_length;
+          redraw = true;
+        }
+        if (u_btn.justPressed()) {
+          if (wifi_scan_obj.current_mini_kb_ssid.length())
+            wifi_scan_obj.current_mini_kb_ssid.remove(
+                wifi_scan_obj.current_mini_kb_ssid.length() - 1);
+          redraw = true;
+        }
+        if (d_btn.justPressed()) {
+          wifi_scan_obj.current_mini_kb_ssid.concat(
+              wifi_scan_obj.alfa.charAt(this->mini_kb_index));
+          redraw = true;
+        }
+        if (b_btn.justPressed()) {
+          while (!b_btn.justReleased()) delay(1);
+          this->changeMenu(targetMenu->parentMenu, true);
+          return "";
+        }
+        if (c_btn.justPressed()) {
+          bool submit = false;
+          while (!c_btn.justReleased()) {
+            c_btn.justPressed();
+            if (c_btn.isHeld()) {
+              submit = true;
+              break;
+            }
+            delay(1);
+          }
+          if (submit) {
+            while (!c_btn.justReleased()) delay(1);
+            this->changeMenu(targetMenu->parentMenu, true);
+            return wifi_scan_obj.current_mini_kb_ssid;
+          }
+          wifi_scan_obj.current_mini_kb_ssid.concat(
+              wifi_scan_obj.alfa.charAt(this->mini_kb_index));
+          redraw = true;
+        }
+
+        if (redraw) {
+          display_obj.clearScreen();
+          display_obj.tft.setFreeFont(NULL);
+          display_obj.tft.setTextSize(1);
+          display_obj.tft.setTextWrap(false);
+          display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+          String title = targetMenu->name;
+          if (title.length() > 21) title = title.substring(0, 21);
+          display_obj.tft.drawString(title, 0, 0, 1);
+
+          String visible = wifi_scan_obj.current_mini_kb_ssid;
+          if (visible.length() > 21) visible = visible.substring(visible.length() - 21);
+          display_obj.tft.drawString(visible + "_", 0, 10, 1);
+          display_obj.tft.drawString("Char: [" + String(wifi_scan_obj.alfa.charAt(this->mini_kb_index)) + "]", 0, 22, 1);
+          display_obj.tft.drawString("L/R:char D:add", 0, 34, 1);
+          display_obj.tft.drawString("U:del A:add/hold OK", 0, 44, 1);
+          display_obj.tft.drawString("B:cancel", 0, 54, 1);
+          redraw = false;
+        }
+        delay(1);
+      }
+    #endif
+
     #ifdef HAS_MINI_KB
       if (c_btn.isHeld()) {
         while (!c_btn.justReleased())

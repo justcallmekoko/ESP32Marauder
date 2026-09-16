@@ -61,6 +61,13 @@ class PoomTargetTests(unittest.TestCase):
         self.assertIn("RECON_SCREEN_HEIGHT - STATUS_BAR_WIDTH", recon)
         self.assertIn('drawString("B: stop", 0, 54, 1)', recon)
 
+    def test_poom_has_a_physical_button_text_editor(self) -> None:
+        menus = (ROOT / "esp32_marauder" / "MenuFunctions.cpp").read_text()
+        self.assertRegex(CONFIG, r"#ifdef MARAUDER_POOM[\s\S]*?#define HAS_MINI_KB")
+        self.assertIn('drawString("B:cancel", 0, 54, 1)', menus)
+        self.assertIn("if (b_btn.justPressed())", menus)
+        self.assertIn("return wifi_scan_obj.current_mini_kb_ssid;", menus)
+
 
 if __name__ == "__main__":
     unittest.main()
