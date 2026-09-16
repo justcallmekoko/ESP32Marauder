@@ -1,5 +1,7 @@
 #include "PoomDisplay.h"
 
+#ifdef MARAUDER_POOM
+
 #include "libraries/TFT_eSPI/Fonts/glcdfont.c"
 
 namespace {
@@ -154,3 +156,5 @@ void PoomButton::drawButton(bool inverted, String long_name) {
 }
 bool PoomButton::contains(int16_t x, int16_t y) const { return x >= x_ - w_ / 2 && x < x_ + w_ / 2 && y >= y_ - h_ / 2 && y < y_ + h_ / 2; }
 void PoomButton::press(bool pressed) { laststate_ = currstate_; currstate_ = pressed; }
+
+#endif  // MARAUDER_POOM
