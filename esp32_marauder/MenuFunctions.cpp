@@ -2953,21 +2953,50 @@ void MenuFunctions::RunSetup()
         this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, 255, [this, i](){
           // Join WiFi using mini keyboard
           #ifdef HAS_MINI_KB
+            #ifdef MARAUDER_POOM
+              // Return to the AP picker, not the adjacent WiFi actions, when
+              // the editor exits or is cancelled.
+              miniKbMenu.parentMenu = &wifiAPMenu;
+              miniKbMenu.name = "WiFi password";
+            #endif
             this->changeMenu(&miniKbMenu, true);
             String password = this->miniKeyboard(&miniKbMenu, true);
             if (password != "") {
               Serial.println("Using SSID: " + (String)access_points->get(i).essid);
-              wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
-              wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
-              wifi_scan_obj.joinWiFi(access_points->get(i).essid, password);
+              #ifndef MARAUDER_POOM
+                wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
+                wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW);
+              #else
+                display_obj.clearScreen();
+                display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+                display_obj.tft.drawString("Connecting to:", 0, 12, 1);
+                display_obj.tft.drawString(access_points->get(i).essid.substring(0, 21), 0, 24, 1);
+                display_obj.tft.display(true);
+              #endif
+              const bool connected = wifi_scan_obj.joinWiFi(access_points->get(i).essid, password);
+              #ifdef MARAUDER_POOM
+                display_obj.clearScreen();
+                display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+                display_obj.tft.drawCentreString(connected ? "Connected" : "Connection failed",
+                                                 SCREEN_WIDTH / 2, 20, 1);
+                display_obj.tft.drawCentreString(access_points->get(i).essid.substring(0, 21),
+                                                 SCREEN_WIDTH / 2, 34, 1);
+                display_obj.tft.display(true);
+                delay(1000);
+              #endif
               if (wifi_scan_obj.hasPendingWifiCredential()) {
                 this->buildSavedWifiMenu(true);
                 this->changeMenu(&savedWifiMenu, true);
               }
               else {
-                this->changeMenu(current_menu, true);
+                this->changeMenu(&wifiGeneralMenu, true);
               }
             }
+            #ifdef MARAUDER_POOM
+              else {
+                this->changeMenu(&wifiAPMenu, true);
+              }
+            #endif
           #endif
 
           // Join WiFi using touch screen keyboard

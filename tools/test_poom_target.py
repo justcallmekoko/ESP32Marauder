@@ -75,6 +75,8 @@ class PoomTargetTests(unittest.TestCase):
         self.assertIn('String(setting_enabled ? "ON: " : "OFF: ") + settingName', menus)
         self.assertIn("specSettingMenu.list->clear();", menus)
         self.assertGreaterEqual(wifi_scan.count("display_obj.tft.display(true);"), 4)
+        self.assertIn('miniKbMenu.parentMenu = &wifiAPMenu;', menus)
+        self.assertIn('connected ? "Connected" : "Connection failed"', menus)
 
 
 if __name__ == "__main__":
