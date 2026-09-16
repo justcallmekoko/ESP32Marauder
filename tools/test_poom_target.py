@@ -69,6 +69,13 @@ class PoomTargetTests(unittest.TestCase):
         self.assertIn("if (b_btn.justPressed())", menus)
         self.assertIn("return wifi_scan_obj.current_mini_kb_ssid;", menus)
 
+    def test_poom_flushes_blocking_wifi_progress_and_shows_setting_state(self) -> None:
+        menus = (ROOT / "esp32_marauder" / "MenuFunctions.cpp").read_text()
+        wifi_scan = (ROOT / "esp32_marauder" / "WiFiScan.cpp").read_text()
+        self.assertIn('String(setting_enabled ? "ON: " : "OFF: ") + settingName', menus)
+        self.assertIn("specSettingMenu.list->clear();", menus)
+        self.assertGreaterEqual(wifi_scan.count("display_obj.tft.display(true);"), 4)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -2328,6 +2328,9 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui, bool save_creden
       display_obj.tft.setTextSize(1);
       display_obj.tft.print("Connecting");
       display_obj.tft.setTextWrap(true, false);
+      #ifdef MARAUDER_POOM
+        display_obj.tft.display(true);
+      #endif
     }
   #endif
 
@@ -2338,6 +2341,9 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui, bool save_creden
     #ifdef HAS_SCREEN
       if (gui) {
         display_obj.tft.print(".");
+        #ifdef MARAUDER_POOM
+          display_obj.tft.display(true);
+        #endif
       }
     #endif
     count++;
@@ -2347,6 +2353,9 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui, bool save_creden
       #ifdef HAS_SCREEN
         if (gui) {
           display_obj.tft.println("\nFailed to connect");
+          #ifdef MARAUDER_POOM
+            display_obj.tft.display(true);
+          #endif
           delay(1000);
         }
       #endif
@@ -2398,6 +2407,9 @@ bool WiFiScan::joinSavedWiFi(bool gui) {
       display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
       display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
       display_obj.tft.println(F("Scanning for saved WiFi..."));
+      #ifdef MARAUDER_POOM
+        display_obj.tft.display(true);
+      #endif
     }
   #endif
 

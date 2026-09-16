@@ -3894,8 +3894,18 @@ void MenuFunctions::RunSetup()
     const char* type = this->callSetting(settingName.c_str());
     if (type && strcmp(type, "bool") == 0) {
       this->addNodes(&settingsMenu, settingName.c_str(), TFTLIGHTGREY, SETTINGS, [this, i, settingName]() {
-          settings_obj.toggleSetting(settingName.c_str());
+          const bool setting_enabled = settings_obj.toggleSetting(settingName.c_str());
           this->callSetting(settingName.c_str());
+          #ifdef MARAUDER_POOM
+            specSettingMenu.list->clear();
+            this->addNodes(&specSettingMenu, text09, TFTLIGHTGREY, 0, [this]() {
+              this->changeMenu(&settingsMenu, true);
+            });
+            const String state_label = String(setting_enabled ? "ON: " : "OFF: ") + settingName;
+            this->addNodes(&specSettingMenu, state_label.c_str(),
+                           setting_enabled ? TFTGREEN : TFTRED, SETTINGS, []() {},
+                           setting_enabled);
+          #endif
           this->changeMenu(&specSettingMenu, true);
           this->displaySetting(settingName.c_str(), &settingsMenu, i + 1);
           wifi_scan_obj.force_pmkid = settings_obj.loadSetting<bool>(text_table4[5]);
