@@ -118,7 +118,11 @@ ReconMission recon_obj;
 const String PROGMEM version_number = MARAUDER_VERSION;
 
 #ifdef HAS_NEOPIXEL_LED
-  Adafruit_NeoPixel strip = Adafruit_NeoPixel(Pixels, PIN, NEO_GRB + NEO_KHZ800);
+  #ifdef MARAUDER_POOM
+    PoomWs2812 strip(Pixels, PIN);
+  #else
+    Adafruit_NeoPixel strip = Adafruit_NeoPixel(Pixels, PIN, NEO_GRB + NEO_KHZ800);
+  #endif
 #endif
 
 uint32_t currentTime  = 0;

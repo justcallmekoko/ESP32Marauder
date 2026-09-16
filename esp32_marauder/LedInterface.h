@@ -7,7 +7,11 @@
 #include "settings.h"
 #include <Arduino.h>
 #ifdef HAS_NEOPIXEL_LED
-  #include <Adafruit_NeoPixel.h>
+  #ifdef MARAUDER_POOM
+    #include "PoomWs2812.h"
+  #else
+    #include <Adafruit_NeoPixel.h>
+  #endif
 #endif
 #ifdef HAS_T_DONGLE_LED
   #include <APA102.h>
@@ -22,7 +26,11 @@
 extern Settings settings_obj;
 
 #ifdef HAS_NEOPIXEL_LED
-  extern Adafruit_NeoPixel strip;
+  #ifdef MARAUDER_POOM
+    extern PoomWs2812 strip;
+  #else
+    extern Adafruit_NeoPixel strip;
+  #endif
 #endif
 
 class LedInterface {

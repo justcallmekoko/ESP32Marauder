@@ -40,6 +40,14 @@ class PoomTargetTests(unittest.TestCase):
         self.assertIn('#ifdef MARAUDER_POOM\n  #include "PoomDisplay.h"', display_header)
         self.assertIn("#else\n  #include <TFT_eSPI.h>", display_header)
 
+    def test_poom_uses_the_c5_rmt_led_backend(self) -> None:
+        led_header = (ROOT / "esp32_marauder" / "LedInterface.h").read_text()
+        poom_led = (ROOT / "esp32_marauder" / "PoomWs2812.cpp").read_text()
+        self.assertIn('#ifdef MARAUDER_POOM\n    #include "PoomWs2812.h"', led_header)
+        self.assertIn("rmtInit(pin_, RMT_TX_MODE", poom_led)
+        self.assertIn("rmtWrite(pin_, symbols_", poom_led)
+        self.assertNotIn("driver/rmt.h", poom_led)
+
 
 if __name__ == "__main__":
     unittest.main()
