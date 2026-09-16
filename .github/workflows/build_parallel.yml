@@ -251,6 +251,8 @@ jobs:
           if [[ ${{ matrix.board.tft }} == true ]]; then
             find /home/runner/ -name "*TFT_eSPI*"
             sed -i 's/^\/\/#include <${{ matrix.board.tft_file }}>/#include <${{ matrix.board.tft_file }}>/' /home/runner/work/ESP32Marauder/ESP32Marauder/CustomTFT_eSPI/User_Setup_Select.h
+	    grep -q "^#include <${{ matrix.board.tft_file }}>" .../User_Setup_Select.h \
+	      || { echo "::error::${{ matrix.board.tft_file }} not listed in User_Setup_Select.h"; exit 1; }
           fi
 
       - name: Configure LilyGo T-Dongle C5 partition table
