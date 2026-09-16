@@ -1,6 +1,7 @@
 #include "MenuFunctions.h"
 #include "MenuMarquee.h"
 #include "CommandLine.h"
+#include "OwnedListLifecycle.h"
 #include "lang_var.h"
 
 #ifdef HAS_SCREEN
@@ -12,6 +13,14 @@ extern LinkedList<AirTag>* airtags;
 extern LinkedList<Flipper>* flippers;
 extern LinkedList<BleDevice>* ble_devices;
 extern CommandLine cli_obj;
+
+namespace {
+bool parseGeofenceNumber(const String& value, double& parsed) {
+  char* end = nullptr;
+  parsed = strtod(value.c_str(), &end);
+  return end != value.c_str() && *end == '\0' && isfinite(parsed);
+}
+}
 
 #ifdef HAS_MINI_SCREEN
 void MenuFunctions::drawMiniMenuButton(int b, int x, bool selected, uint16_t text_offset) {
@@ -238,10 +247,20 @@ void MenuFunctions::displayMenuButtons() {
 // Function to check menu input
 void MenuFunctions::main(uint32_t currentTime)
 {
+  #ifdef HAS_MINI_SCREEN
+    if (geofenceMenuRefreshPending) {
+      geofenceMenuRefreshPending = false;
+      this->buildGeofenceMenu();
+    }
+  #endif
   #ifdef HAS_SD
     if (sd_browser_release_pending && current_menu != &sdDeleteMenu)
       this->releaseSDDeleteBrowserResources();
   #endif
+  if (saved_wifi_release_pending && current_menu != &savedWifiMenu) {
+    this->releaseSavedWifiMenu();
+    saved_wifi_release_pending = false;
+  }
 
   #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
     this->updateKeyboard();
@@ -2002,6 +2021,11 @@ void MenuFunctions::RunSetup()
   updateMenu.list = new LinkedList<MenuNode>();
   settingsMenu.list = new LinkedList<MenuNode>();
   specSettingMenu.list = new LinkedList<MenuNode>();
+  geofenceMenu.list = new LinkedList<MenuNode>();
+  geofenceActionMenu.list = new LinkedList<MenuNode>();
+  #ifdef HAS_MINI_SCREEN
+    geofenceRadiusMenu.list = new LinkedList<MenuNode>();
+  #endif
   infoMenu.list = new LinkedList<MenuNode>();
   // WiFi menu stuff
   wifiSnifferMenu.list = new LinkedList<MenuNode>();
@@ -2012,6 +2036,7 @@ void MenuFunctions::RunSetup()
   #endif*/
   wifiGeneralMenu.list = new LinkedList<MenuNode>();
   wifiAPMenu.list = new LinkedList<MenuNode>();
+  savedWifiMenu.list = nullptr;
   wifiIPMenu.list = new LinkedList<MenuNode>();
   apInfoMenu.list = new LinkedList<MenuNode>();
   setMacMenu.list = new LinkedList<MenuNode>();
@@ -2072,6 +2097,11 @@ void MenuFunctions::RunSetup()
   updateMenu.name = text_table1[15];
   infoMenu.name = text_table1[17];
   settingsMenu.name = text_table1[18];
+  geofenceMenu.name = "Geofences";
+  geofenceActionMenu.name = "Geofence";
+  #ifdef HAS_MINI_SCREEN
+    geofenceRadiusMenu.name = "Radius (miles)";
+  #endif
   bluetoothMenu.name = text_table1[19];
   wifiSnifferMenu.name = text_table1[20];
   wifiScannerMenu.name = "Scanners";
@@ -2889,11 +2919,17 @@ void MenuFunctions::RunSetup()
             this->changeMenu(&miniKbMenu, true);
             String password = this->miniKeyboard(&miniKbMenu, true);
             if (password != "") {
-              Serial.println("Using SSID: " + (String)access_points->get(i).essid + " Password: " + (String)password);
+              Serial.println("Using SSID: " + (String)access_points->get(i).essid);
               wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
               wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
               wifi_scan_obj.joinWiFi(access_points->get(i).essid, password);
-              this->changeMenu(current_menu, true);
+              if (wifi_scan_obj.hasPendingWifiCredential()) {
+                this->buildSavedWifiMenu(true);
+                this->changeMenu(&savedWifiMenu, true);
+              }
+              else {
+                this->changeMenu(current_menu, true);
+              }
             }
           #endif
 
@@ -2902,6 +2938,11 @@ void MenuFunctions::RunSetup()
             char passwordBuf[64] = {0};  // or prefill with existing SSID
             if (keyboardInput(passwordBuf, sizeof(passwordBuf), "Enter Password")) {
               wifi_scan_obj.joinWiFi(access_points->get(i).essid, String(passwordBuf), true);
+              if (wifi_scan_obj.hasPendingWifiCredential()) {
+                this->buildSavedWifiMenu(true);
+                this->changeMenu(&savedWifiMenu, true);
+                return;
+              }
             }
 
             this->changeMenu(&wifiGeneralMenu, true);
@@ -2912,52 +2953,13 @@ void MenuFunctions::RunSetup()
     });
 
     this->addNodes(&wifiGeneralMenu, "Join Saved WiFi", TFTWHITE, KEYBOARD_ICO, [this](){
-      String ssid = settings_obj.loadSetting<String>("ClientSSID");
-      String pw = settings_obj.loadSetting<String>("ClientPW");
+      wifi_scan_obj.joinSavedWiFi(true);
+      this->changeMenu(&wifiGeneralMenu, true);
+    });
 
-      if ((ssid != "") && (pw != "")) {
-        wifi_scan_obj.joinWiFi(ssid, pw, false);
-        this->changeMenu(&wifiGeneralMenu, true);
-      }
-      else {
-        wifiAPMenu.parentMenu = &wifiGeneralMenu;
-
-        // Add the back button
-        wifiAPMenu.list->clear();
-          this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, 0, [this]() {
-          this->changeMenu(wifiAPMenu.parentMenu, true);
-        });
-
-        // Populate the menu with buttons
-        for (int i = 0; i < access_points->size(); i++) {
-          // This is the menu node
-          this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, 255, [this, i](){
-            // Join WiFi using mini keyboard
-            #ifdef HAS_MINI_KB
-              this->changeMenu(&miniKbMenu, true);
-              String password = this->miniKeyboard(&miniKbMenu, true);
-              if (password != "") {
-                Serial.println("Using SSID: " + (String)access_points->get(i).essid + " Password: " + (String)password);
-                wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
-                wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
-                wifi_scan_obj.joinWiFi(access_points->get(i).essid, password);
-                this->changeMenu(current_menu, true);
-              }
-            #endif
-
-            // Join WiFi using touch screen keyboard
-            #ifdef HAS_TOUCH
-              char passwordBuf[64] = {0};  // or prefill with existing SSID
-              if (keyboardInput(passwordBuf, sizeof(passwordBuf), "Enter Password")) {
-                wifi_scan_obj.joinWiFi(access_points->get(i).essid, String(passwordBuf), true);
-              }
-
-              this->changeMenu(&wifiGeneralMenu, true);
-            #endif
-          });
-        }
-        this->changeMenu(&wifiAPMenu, true);
-      }
+    this->addNodes(&wifiGeneralMenu, "Manage Saved WiFi", TFTWHITE, SETTINGS, [this](){
+      this->buildSavedWifiMenu(false);
+      this->changeMenu(&savedWifiMenu, true);
     });
 
     this->addNodes(&wifiGeneralMenu, "Start AP", TFTGREEN, KEYBOARD_ICO, [this](){
@@ -2978,7 +2980,7 @@ void MenuFunctions::RunSetup()
             this->changeMenu(&miniKbMenu, true);
             String password = this->miniKeyboard(&miniKbMenu, true);
             if (password != "") {
-              Serial.println("Using SSID: " + (String)ssids->get(i).essid + " Password: " + (String)password);
+              Serial.println("Using SSID: " + (String)ssids->get(i).essid);
               wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
               wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
               wifi_scan_obj.startWiFi(ssids->get(i).essid, password);
@@ -2990,7 +2992,7 @@ void MenuFunctions::RunSetup()
           #ifdef HAS_TOUCH
             char passwordBuf[64] = {0};  // or prefill with existing SSID
             if (keyboardInput(passwordBuf, sizeof(passwordBuf), "Enter Password")) {
-              Serial.println("Using SSID: " + (String)ssids->get(i).essid + " Password: " + String(passwordBuf));
+              Serial.println("Using SSID: " + (String)ssids->get(i).essid);
               wifi_scan_obj.startWiFi(ssids->get(i).essid, String(passwordBuf));
             }
 
@@ -3044,10 +3046,7 @@ void MenuFunctions::RunSetup()
     this->addNodes(&uploadAllMenu, "WiGLE", TFTLIGHTGREY, 0, [this]() {
       display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
 
-      String ssid = settings_obj.loadSetting<String>("ClientSSID");
-      String pw = settings_obj.loadSetting<String>("ClientPW");
-
-      if ((ssid == "") && (pw == "")) {
+      if (settings_obj.getSavedWifiCount() == 0) {
         display_obj.clearScreen();
         display_obj.tft.setTextWrap(true);
         display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
@@ -3056,9 +3055,7 @@ void MenuFunctions::RunSetup()
         display_obj.tft.setTextWrap(false);
       }
       else {
-        display_obj.clearScreen();
-        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2, true);
-        if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
+        if (!wifi_scan_obj.joinSavedWiFi(true)) {
           display_obj.clearScreen();
           display_obj.tft.setTextWrap(true);
           display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
@@ -3093,12 +3090,9 @@ void MenuFunctions::RunSetup()
       this->changeMenu(uploadAllMenu.parentMenu, true);
     });
     this->addNodes(&uploadAllMenu, "WDGWars", TFTLIGHTGREY, 0, [this]() {
-      String ssid = settings_obj.loadSetting<String>("ClientSSID");
-      String pw = settings_obj.loadSetting<String>("ClientPW");
-
       display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
 
-      if ((ssid == "") && (pw == "")) {
+      if (settings_obj.getSavedWifiCount() == 0) {
         display_obj.clearScreen();
         display_obj.tft.setTextWrap(true);
         display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
@@ -3107,9 +3101,7 @@ void MenuFunctions::RunSetup()
         display_obj.tft.setTextWrap(false);
       }
       else {
-        display_obj.clearScreen();
-        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2, true);
-        if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
+        if (!wifi_scan_obj.joinSavedWiFi(true)) {
           display_obj.clearScreen();
           display_obj.tft.setTextWrap(true);
           display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
@@ -3144,12 +3136,9 @@ void MenuFunctions::RunSetup()
       this->changeMenu(uploadAllMenu.parentMenu, true);
     });
     this->addNodes(&uploadAllMenu, "Both", TFTLIGHTGREY, 0, [this]() {
-      String ssid = settings_obj.loadSetting<String>("ClientSSID");
-      String pw = settings_obj.loadSetting<String>("ClientPW");
-
       display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
 
-      if ((ssid == "") && (pw == "")) {
+      if (settings_obj.getSavedWifiCount() == 0) {
         display_obj.clearScreen();
         display_obj.tft.setTextWrap(true);
         display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
@@ -3158,9 +3147,7 @@ void MenuFunctions::RunSetup()
         display_obj.tft.setTextWrap(false);
       }
       else {
-        display_obj.clearScreen();
-        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2, true);
-        if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
+        if (!wifi_scan_obj.joinSavedWiFi(true)) {
           display_obj.clearScreen();
           display_obj.tft.setTextWrap(true);
           display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
@@ -3234,12 +3221,9 @@ void MenuFunctions::RunSetup()
       this->changeMenu(actionMenu.parentMenu, true);
     });
     this->addNodes(&actionMenu, "WiGLE", TFTLIGHTGREY, 0, [this]() {
-      String ssid = settings_obj.loadSetting<String>("ClientSSID");
-      String pw = settings_obj.loadSetting<String>("ClientPW");
-
       display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
 
-      if ((ssid == "") && (pw == "")) {
+      if (settings_obj.getSavedWifiCount() == 0) {
         display_obj.clearScreen();
         display_obj.tft.setTextWrap(true);
         display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
@@ -3248,9 +3232,7 @@ void MenuFunctions::RunSetup()
         display_obj.tft.setTextWrap(false);
       }
       else {
-        display_obj.clearScreen();
-        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2, true);
-        if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
+        if (!wifi_scan_obj.joinSavedWiFi(true)) {
           display_obj.clearScreen();
           display_obj.tft.setTextWrap(true);
           display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
@@ -3281,12 +3263,9 @@ void MenuFunctions::RunSetup()
       this->changeMenu(&actionMenu, true);
     });
     this->addNodes(&actionMenu, "WDGWars", TFTLIGHTGREY, 0, [this]() {
-      String ssid = settings_obj.loadSetting<String>("ClientSSID");
-      String pw = settings_obj.loadSetting<String>("ClientPW");
-
       display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
 
-      if ((ssid == "") && (pw == "")) {
+      if (settings_obj.getSavedWifiCount() == 0) {
         display_obj.clearScreen();
         display_obj.tft.setTextWrap(true);
         display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
@@ -3295,9 +3274,7 @@ void MenuFunctions::RunSetup()
         display_obj.tft.setTextWrap(false);
       }
       else {
-        display_obj.clearScreen();
-        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2, true);
-        if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
+        if (!wifi_scan_obj.joinSavedWiFi(true)) {
           display_obj.clearScreen();
           display_obj.tft.setTextWrap(true);
           display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
@@ -3327,12 +3304,9 @@ void MenuFunctions::RunSetup()
       this->changeMenu(&actionMenu, true);
     });
     this->addNodes(&actionMenu, "Both", TFTLIGHTGREY, 0, [this]() {
-      String ssid = settings_obj.loadSetting<String>("ClientSSID");
-      String pw = settings_obj.loadSetting<String>("ClientPW");
-
       display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
 
-      if ((ssid == "") && (pw == "")) {
+      if (settings_obj.getSavedWifiCount() == 0) {
         display_obj.clearScreen();
         display_obj.tft.setTextWrap(true);
         display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
@@ -3341,9 +3315,7 @@ void MenuFunctions::RunSetup()
         display_obj.tft.setTextWrap(false);
       }
       else {
-        display_obj.clearScreen();
-        display_obj.showCenterText(String("Connecting to " + ssid).c_str(), TFT_HEIGHT / 2, true);
-        if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
+        if (!wifi_scan_obj.joinSavedWiFi(true)) {
           display_obj.clearScreen();
           display_obj.tft.setTextWrap(true);
           display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
@@ -3726,6 +3698,9 @@ void MenuFunctions::RunSetup()
   this->addNodes(&deviceMenu, text08, TFTBLUE, SETTINGS, [this]() {
     this->changeMenu(&settingsMenu, true);
   });
+  this->addNodes(&deviceMenu, "Geofences", TFTGREEN, GPS_MENU, [this]() {
+    this->buildGeofenceMenu();
+  });
 
   #ifdef HAS_SD
     if (sd_obj.supported) {
@@ -3926,6 +3901,190 @@ void MenuFunctions::RunSetup()
   this->changeMenu(&mainMenu, true);
 
   this->initTime = millis();
+}
+
+String MenuFunctions::geofenceTextInput(const char* title) {
+  #ifdef HAS_TOUCH
+    char value[40] = {0};
+    if (keyboardInput(value, sizeof(value), title)) return String(value);
+    return "";
+  #elif defined(HAS_MINI_KB)
+    miniKbMenu.name = title;
+    miniKbMenu.parentMenu = &geofenceActionMenu;
+    this->changeMenu(&miniKbMenu, true);
+    return this->miniKeyboard(&miniKbMenu, true);
+  #else
+    return "";
+  #endif
+}
+
+bool MenuFunctions::editGeofence(uint8_t slot, bool use_current_location) {
+  GeofenceConfig fence;
+  fence.enabled = true;
+  fence.name = this->geofenceTextInput("Geofence name");
+  fence.name.trim();
+  if (fence.name.length() == 0 || fence.name.length() > GEOFENCE_NAME_MAX) return false;
+
+  if (use_current_location) {
+    #ifdef HAS_GPS
+      if (!gps_obj.getFixStatus()) return false;
+      fence.latitude = gps_obj.getLat().toDouble();
+      fence.longitude = gps_obj.getLon().toDouble();
+    #else
+      return false;
+    #endif
+  } else {
+    String latitude = this->geofenceTextInput("Latitude (-90 to 90)");
+    String longitude = this->geofenceTextInput("Longitude (-180 to 180)");
+    if (latitude.length() == 0 || longitude.length() == 0) return false;
+    if (!parseGeofenceNumber(latitude, fence.latitude) || !parseGeofenceNumber(longitude, fence.longitude)) return false;
+  }
+  String radius = this->geofenceTextInput("Radius miles (0.1-1.0)");
+  if (radius.length() == 0) return false;
+  double radius_miles = 0;
+  if (!parseGeofenceNumber(radius, radius_miles)) return false;
+  fence.radiusMiles = radius_miles;
+  if (!settings_obj.saveGeofence(slot, fence)) return false;
+  wifi_scan_obj.reloadGeofences();
+  return true;
+}
+
+#ifdef HAS_MINI_SCREEN
+void MenuFunctions::beginMiniGeofenceEdit(uint8_t slot, bool use_current_location) {
+  GeofenceConfig fence;
+  fence.enabled = true;
+  fence.name = this->geofenceTextInput("Geofence name");
+  fence.name.trim();
+  if (fence.name.length() == 0 || fence.name.length() > GEOFENCE_NAME_MAX) {
+    this->buildGeofenceActionMenu(slot);
+    return;
+  }
+
+  if (use_current_location) {
+    #ifdef HAS_GPS
+      if (!gps_obj.getFixStatus()) {
+        display_obj.clearScreen();
+        display_obj.showCenterText("GPS fix needed", TFT_HEIGHT / 2);
+        delay(1200);
+        this->buildGeofenceActionMenu(slot);
+        return;
+      }
+      fence.latitude = gps_obj.getLat().toDouble();
+      fence.longitude = gps_obj.getLon().toDouble();
+    #else
+      this->buildGeofenceActionMenu(slot);
+      return;
+    #endif
+  } else {
+    String latitude = this->geofenceTextInput("Latitude (-90 to 90)");
+    String longitude = this->geofenceTextInput("Longitude (-180 to 180)");
+    if (latitude.length() == 0 || longitude.length() == 0 ||
+        !parseGeofenceNumber(latitude, fence.latitude) ||
+        !parseGeofenceNumber(longitude, fence.longitude) ||
+        fence.latitude < -90.0 || fence.latitude > 90.0 ||
+        fence.longitude < -180.0 || fence.longitude > 180.0) {
+      display_obj.clearScreen();
+      display_obj.showCenterText("Invalid coordinates", TFT_HEIGHT / 2);
+      delay(1200);
+      this->buildGeofenceActionMenu(slot);
+      return;
+    }
+  }
+
+  this->buildGeofenceRadiusMenu(slot, fence);
+}
+
+void MenuFunctions::buildGeofenceRadiusMenu(uint8_t slot, const GeofenceConfig& fence) {
+  this->pendingGeofenceSlot = slot;
+  this->pendingGeofence = fence;
+  geofenceRadiusMenu.list->clear();
+  geofenceRadiusMenu.parentMenu = &geofenceActionMenu;
+
+  for (uint8_t step = 1; step <= 10; step++) {
+    String label = String(step / 10.0f, 1) + " mi";
+    this->addNodes(&geofenceRadiusMenu, label.c_str(), TFTCYAN, GPS_MENU, [this, step]() {
+      this->pendingGeofence.radiusMiles = step / 10.0f;
+      const bool saved = settings_obj.saveGeofence(this->pendingGeofenceSlot, this->pendingGeofence);
+      if (saved) wifi_scan_obj.reloadGeofences();
+      display_obj.clearScreen();
+      display_obj.showCenterText(saved ? "Geofence saved" : "Unable to save", TFT_HEIGHT / 2);
+      delay(1200);
+      this->deferGeofenceMenuRefresh();
+    });
+  }
+
+  this->changeMenu(&geofenceRadiusMenu, false);
+}
+
+void MenuFunctions::deferGeofenceMenuRefresh() {
+  // Menu callbacks run inside the button event that selected them. Rebuilding
+  // immediately lets the remainder of that event redraw stale button objects
+  // on Mini displays. Defer the rebuild until the next main UI cycle.
+  geofenceMenuRefreshPending = true;
+}
+#endif
+
+void MenuFunctions::buildGeofenceMenu() {
+  geofenceMenu.list->clear();
+  geofenceMenu.parentMenu = &deviceMenu;
+  this->addNodes(&geofenceMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(geofenceMenu.parentMenu, true);
+  });
+  for (uint8_t i = 0; i < MAX_GEOFENCES; i++) {
+    GeofenceConfig fence;
+    const bool configured = settings_obj.loadGeofence(i, fence);
+    String label = String(i + 1) + ": " + (configured ? fence.name : "Empty");
+    this->addNodes(&geofenceMenu, label.c_str(), configured ? TFTGREEN : TFTLIGHTGREY, GPS_MENU, [this, i]() {
+      this->buildGeofenceActionMenu(i);
+    });
+  }
+  // A full display reinitialization clears keyboard/status font state and
+  // guarantees newly persisted labels are visible immediately.
+  this->changeMenu(&geofenceMenu, false);
+}
+
+void MenuFunctions::buildGeofenceActionMenu(uint8_t slot) {
+  this->selectedGeofence = slot;
+  geofenceActionMenu.list->clear();
+  geofenceActionMenu.parentMenu = &geofenceMenu;
+  this->addNodes(&geofenceActionMenu, text09, TFTLIGHTGREY, 0, [this]() { this->buildGeofenceMenu(); });
+  this->addNodes(&geofenceActionMenu, "Enter coordinates", TFTCYAN, GPS_MENU, [this, slot]() {
+    #ifdef HAS_MINI_SCREEN
+      this->beginMiniGeofenceEdit(slot, false);
+    #else
+    const bool saved = this->editGeofence(slot, false);
+    display_obj.clearScreen();
+    display_obj.showCenterText(saved ? "Geofence saved" : "Invalid or cancelled", TFT_HEIGHT / 2);
+    delay(1200);
+    this->buildGeofenceMenu();
+    #endif
+  });
+  #ifdef HAS_GPS
+    this->addNodes(&geofenceActionMenu, "Use current GPS", TFTGREEN, GPS_MENU, [this, slot]() {
+      #ifdef HAS_MINI_SCREEN
+        this->beginMiniGeofenceEdit(slot, true);
+      #else
+      const bool saved = this->editGeofence(slot, true);
+      display_obj.clearScreen();
+      display_obj.showCenterText(saved ? "Geofence saved" : "GPS fix/input needed", TFT_HEIGHT / 2);
+      delay(1200);
+      this->buildGeofenceMenu();
+      #endif
+    });
+  #endif
+  GeofenceConfig fence;
+  if (settings_obj.loadGeofence(slot, fence)) {
+    this->addNodes(&geofenceActionMenu, "Clear geofence", TFTRED, CLEAR_ICO, [this, slot]() {
+      settings_obj.clearGeofence(slot);
+      wifi_scan_obj.reloadGeofences();
+      #ifdef HAS_MINI_SCREEN
+        this->deferGeofenceMenuRefresh();
+      #else
+        this->buildGeofenceMenu();
+      #endif
+    });
+  }
+  this->changeMenu(&geofenceActionMenu, true);
 }
 
 //#if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
@@ -4335,12 +4494,52 @@ void MenuFunctions::RunSetup()
   }
 #endif
 
+void MenuFunctions::releaseSavedWifiMenu() {
+  if (savedWifiMenu.list != nullptr) {
+    savedWifiMenu.list->clear();
+    delete savedWifiMenu.list;
+    savedWifiMenu.list = nullptr;
+  }
+}
+
+void MenuFunctions::buildSavedWifiMenu(bool replace_mode) {
+  this->releaseSavedWifiMenu();
+  savedWifiMenu.list = new LinkedList<MenuNode>();
+  savedWifiMenu.selected = 0;
+  savedWifiMenu.parentMenu = &wifiGeneralMenu;
+  savedWifiMenu.name = replace_mode ? "Replace Saved WiFi" : "Saved WiFi";
+
+  this->addNodes(&savedWifiMenu, replace_mode ? "Cancel" : text09, TFTLIGHTGREY, 0, [this, replace_mode]() {
+    if (replace_mode)
+      wifi_scan_obj.discardPendingWifiCredential();
+    this->changeMenu(savedWifiMenu.parentMenu, true);
+    saved_wifi_release_pending = true;
+  });
+
+  const uint8_t count = settings_obj.getSavedWifiCount();
+  for (uint8_t index = 0; index < count; index++) {
+    String ssid;
+    String password;
+    if (!settings_obj.loadSavedWifiCredential(index, ssid, password))
+      continue;
+    String label = replace_mode ? "Replace " + ssid : "Remove " + ssid;
+    this->addNodes(&savedWifiMenu, label.c_str(), replace_mode ? TFTORANGE : TFTRED, 0, [this, index, replace_mode]() {
+      if (replace_mode)
+        wifi_scan_obj.savePendingWifiCredential(index);
+      else
+        settings_obj.removeSavedWifiCredential(index);
+
+      // Leave before freeing the node whose callback is currently running.
+      // The menu is rebuilt on demand, so another profile can be removed by
+      // reopening Manage Saved WiFi.
+      this->changeMenu(savedWifiMenu.parentMenu, true);
+      saved_wifi_release_pending = true;
+    });
+  }
+}
+
 void MenuFunctions::setupSDFileList(bool update) {
-  sd_obj.sd_files->clear();
-
-  delete sd_obj.sd_files;
-
-  sd_obj.sd_files = new LinkedList<String>();
+  resetOwnedList(sd_obj.sd_files);
 
   if (!update)
     sd_obj.listDirToLinkedList(sd_obj.sd_files);
@@ -4356,9 +4555,7 @@ void MenuFunctions::buildSDFileMenu(bool update) {
 
   this->setupSDFileList(update);
 
-  sdDeleteMenu.list->clear();
-  delete sdDeleteMenu.list;
-  sdDeleteMenu.list = new LinkedList<MenuNode>();
+  resetOwnedList(sdDeleteMenu.list);
 
   sdDeleteMenu.name = "Bin Files";
 

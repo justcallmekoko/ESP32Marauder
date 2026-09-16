@@ -2,6 +2,11 @@
 
 // GCOVR_EXCL_START -- serial protocol output depends on Arduino Serial.
 namespace {
+  bool parseFiniteNumber(const String& value, double& parsed) {
+    char* end = nullptr;
+    parsed = strtod(value.c_str(), &end);
+    return end != value.c_str() && *end == '\0' && isfinite(parsed);
+  }
   bool validTransactionId(const String& transaction_id) {
     if (transaction_id.length() == 0 || transaction_id.length() > 40)
       return false;
@@ -272,6 +277,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_HEAD);
     Serial.println(HELP_CH_CMD);
     Serial.println(HELP_SETTINGS_CMD);
+    Serial.println(HELP_GEOFENCE_CMD);
     Serial.println(HELP_CLEARAP_CMD_A);
     Serial.println(HELP_REBOOT_CMD);
     Serial.println(HELP_UPDATE_CMD_A);
@@ -682,13 +688,8 @@ void CommandLine::runCommand(String input) {
         upload_dest = BOTH_UPLOAD;
 
       if (upload_dest > -1) {
-        String ssid = settings_obj.loadSetting<String>("ClientSSID");
-        String pw = settings_obj.loadSetting<String>("ClientPW");
-
-        Serial.println("Connecting to " + ssid);
-
-        if (!wifi_scan_obj.joinWiFi(ssid, pw, false)) {
-          Serial.println("Failed to connected to " + ssid);
+        if (!wifi_scan_obj.joinSavedWiFi(false)) {
+          Serial.println(F("Failed to connect to saved WiFi"));
           return;
         }
         delay(1000);
@@ -836,6 +837,49 @@ void CommandLine::runCommand(String input) {
     // Packet count
     else if (cmd_args.get(0) == PACKET_COUNT_CMD) {
       this->startScanFromCLI(WIFI_SCAN_PACKET_RATE, TFT_ORANGE, "Packet Count Scan");
+    }
+    // Geofence configuration
+    else if (cmd_args.get(0) == GEOFENCE_CMD) {
+      if (cmd_args.size() == 2 && cmd_args.get(1) == "list") {
+        bool any = false;
+        for (uint8_t i = 0; i < MAX_GEOFENCES; i++) {
+          GeofenceConfig fence;
+          if (!settings_obj.loadGeofence(i, fence)) continue;
+          any = true;
+          Serial.printf("%u: %s | %.6f, %.6f | %.2f mi\n", i + 1, fence.name.c_str(), fence.latitude, fence.longitude, fence.radiusMiles);
+        }
+        if (!any) Serial.println(F("No geofences configured"));
+      }
+      else if (cmd_args.size() == 3 && cmd_args.get(1) == "clear") {
+        const int slot = cmd_args.get(2).toInt();
+        if (slot < 1 || slot > MAX_GEOFENCES) Serial.println(F("Invalid slot; use 1-5"));
+        else {
+          settings_obj.clearGeofence(slot - 1);
+          wifi_scan_obj.reloadGeofences();
+          Serial.printf("Geofence %d cleared\n", slot);
+        }
+      }
+      else if (cmd_args.size() == 7 && cmd_args.get(1) == "set") {
+        const int slot = cmd_args.get(2).toInt();
+        double lat, lon, radius;
+        GeofenceConfig fence;
+        fence.enabled = true;
+        fence.name = cmd_args.get(6);
+        if (slot < 1 || slot > MAX_GEOFENCES || !parseFiniteNumber(cmd_args.get(3), lat) ||
+            !parseFiniteNumber(cmd_args.get(4), lon) || !parseFiniteNumber(cmd_args.get(5), radius)) {
+          Serial.println(HELP_GEOFENCE_CMD);
+        } else {
+          fence.latitude = lat;
+          fence.longitude = lon;
+          fence.radiusMiles = radius;
+          if (!settings_obj.saveGeofence(slot - 1, fence)) Serial.println(F("Invalid geofence: check name, coordinates, and radius"));
+          else {
+            wifi_scan_obj.reloadGeofences();
+            Serial.printf("Geofence %d saved\n", slot);
+          }
+        }
+      }
+      else Serial.println(HELP_GEOFENCE_CMD);
     }
     // Wardrive
     else if (cmd_args.get(0) == WARDRIVE_CMD) {
@@ -1684,7 +1728,7 @@ void CommandLine::runCommand(String input) {
       int index = cmd_args.get(ap_sw + 1).toInt();
       String password = cmd_args.get(pw_sw + 1);
       AccessPoint access_point = access_points->get(index);
-      Serial.println("Using SSID: " + (String)access_point.essid + " Password: " + (String)password);
+      Serial.println("Using SSID: " + (String)access_point.essid);
       //wifi_scan_obj.currentScanMode = LV_JOIN_WIFI;
       //wifi_scan_obj.StartScan(LV_JOIN_WIFI, TFT_YELLOW); 
       wifi_scan_obj.joinWiFi(access_point.essid, password, false);
@@ -1695,11 +1739,8 @@ void CommandLine::runCommand(String input) {
       #endif
     }
     else if (s_sw != -1) {
-      String ssid = settings_obj.loadSetting<String>("ClientSSID");
-      String pw = settings_obj.loadSetting<String>("ClientPW");
-
-      if ((ssid != "") && (pw != "")) {
-        wifi_scan_obj.joinWiFi(ssid, pw, false);
+      if (settings_obj.getSavedWifiCount() > 0) {
+        wifi_scan_obj.joinSavedWiFi(false);
         #ifdef HAS_SCREEN
           menu_function_obj.changeMenu(menu_function_obj.current_menu);
         #endif

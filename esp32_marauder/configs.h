@@ -44,9 +44,11 @@
   //#define DUAL_MINI_C5
   //// END BOARD TARGETS
 
-  #define JSON_SETTING_SIZE 2048
+  // Allocated only while settings are loaded or updated. This accommodates
+  // five saved WiFi profiles without permanently caching their passwords.
+  #define JSON_SETTING_SIZE 6144
 
-#define MARAUDER_VERSION "v1.16.0"
+#define MARAUDER_VERSION "v1.17.0"
 
   #define GRAPH_REFRESH   100
 
