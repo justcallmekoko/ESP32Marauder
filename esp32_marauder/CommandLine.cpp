@@ -1316,6 +1316,9 @@ void CommandLine::runCommand(String input) {
           if (bt_type == "airtag") {
             this->startScanFromCLI(BT_SCAN_AIRTAG, TFT_WHITE, "Airtag sniff");
           }
+          else if (bt_type == "ibeacon") {
+            this->startScanFromCLI(BT_SCAN_IBEACON, TFT_CYAN, "iBeacon sniff");
+          }
           else if (bt_type == "flipper") {
             this->startScanFromCLI(BT_SCAN_FLIPPER, TFT_ORANGE, "Flipper sniff");
           }

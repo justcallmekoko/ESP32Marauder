@@ -6,6 +6,7 @@
 #include "configs.h"
 #include "utils.h"
 #include "GpsTrackerStats.h"
+#include "IBeacon.h"
 
 #include <ArduinoJson.h>
 #include <algorithm>
@@ -174,6 +175,7 @@
 #define BT_ATTACK_APPLE_JUICE 82
 #define WIFI_SCAN_DISPLAY_AP_INFO 83
 #define BT_SCAN_FOX_HUNT 84
+#define BT_SCAN_IBEACON 85
 #define BT_FINDMY_SOUND 85
 #define BT_ATTACK_FINDMY_LIVE 86
 
@@ -367,6 +369,8 @@ struct BleDevice {
   bool     selected = false;
   int      rssi     = -128;
   uint32_t last_seen_ms = 0;
+  bool     is_ibeacon = false;
+  marauder::IBeaconPayload ibeacon;
 };
 
 #ifdef HAS_PSRAM

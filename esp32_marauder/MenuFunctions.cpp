@@ -482,6 +482,7 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_RICK_ROLL) ||
           (wifi_scan_obj.currentScanMode == WIFI_ATTACK_BEACON_LIST) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_ALL) ||
+          (wifi_scan_obj.currentScanMode == BT_SCAN_IBEACON) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN) ||
           (wifi_scan_obj.currentScanMode == BT_ATTACK_FINDMY_LIVE) ||
@@ -589,6 +590,7 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_RICK_ROLL) ||
             (wifi_scan_obj.currentScanMode == WIFI_ATTACK_BEACON_LIST) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_ALL) ||
+            (wifi_scan_obj.currentScanMode == BT_SCAN_IBEACON) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_RAYBAN) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_AIRTAG) ||
@@ -1780,7 +1782,8 @@ const char* MenuFunctions::foxFilterLabel() const {
 bool MenuFunctions::foxListSupportsRecent() const {
   return fox_target_list == FoxHuntListKind::AP_TARGETS ||
          fox_target_list == FoxHuntListKind::APS_WITH_STATIONS ||
-         fox_target_list == FoxHuntListKind::FINDMY_TARGETS;
+         fox_target_list == FoxHuntListKind::FINDMY_TARGETS ||
+         fox_target_list == FoxHuntListKind::IBEACON_TARGETS;
 }
 
 bool MenuFunctions::foxListSupportsBand() const {
@@ -1897,6 +1900,12 @@ void MenuFunctions::buildFoxTargetList(FoxHuntListKind type, int context_ap) {
     for (int i = 0; i < flippers->size(); i++)
       add_item(i, flippers->get(i).rssi, 0, flippers->get(i).last_seen,
                flippers->get(i).name.length() ? flippers->get(i).name : flippers->get(i).mac);
+  } else if (type == FoxHuntListKind::IBEACON_TARGETS) {
+    for (int i = 0; i < ble_devices->size(); i++) {
+      const BleDevice& device = ble_devices->get(i);
+      if (device.is_ibeacon)
+        add_item(i, device.rssi, 0, device.last_seen_ms, device.name);
+    }
   } else if (type == FoxHuntListKind::META_TARGETS || type == FoxHuntListKind::FLOCK_TARGETS) {
     const String device_type = type == FoxHuntListKind::META_TARGETS ? "Meta" : "Flock";
     for (int i = 0; i < ble_devices->size(); i++) {
@@ -1945,6 +1954,10 @@ void MenuFunctions::buildFoxTargetList(FoxHuntListKind type, int context_ap) {
     } else if (type == FoxHuntListKind::FLIPPER_TARGETS) {
       label = flippers->get(index).name.length() ? flippers->get(index).name : flippers->get(index).mac;
       color = TFTORANGE;
+    } else if (type == FoxHuntListKind::IBEACON_TARGETS) {
+      const BleDevice& device = ble_devices->get(index);
+      label = String(device.rssi) + " " + device.name;
+      color = rssiToMenuColor(device.rssi);
     } else {
       const BleDevice& device = ble_devices->get(index);
       label = String(device.rssi) + " " + (device.name.length() ? device.name : macToString(device.mac));
@@ -1979,6 +1992,9 @@ void MenuFunctions::buildFoxTargetList(FoxHuntListKind type, int context_ap) {
         convertMacStringToUint8(flippers->get(index).mac, mac);
         String name = flippers->get(index).name.length() ? flippers->get(index).name : flippers->get(index).mac;
         wifi_scan_obj.setFoxHuntTarget(mac, name, flippers->get(index).rssi, 0, true, flippers->get(index).mac);
+      } else if (type == FoxHuntListKind::IBEACON_TARGETS) {
+        const BleDevice& device = ble_devices->get(index);
+        wifi_scan_obj.setFoxHuntTarget(device.mac, device.name, device.rssi, 0, true, macToString(device.mac));
       } else if (type == FoxHuntListKind::META_TARGETS || type == FoxHuntListKind::FLOCK_TARGETS) {
         const BleDevice& device = ble_devices->get(index);
         wifi_scan_obj.setFoxHuntTarget(device.mac, device.name, device.rssi, 0, true, macToString(device.mac));
@@ -1988,6 +2004,7 @@ void MenuFunctions::buildFoxTargetList(FoxHuntListKind type, int context_ap) {
       wifi_scan_obj.StartScan(type == FoxHuntListKind::BLE_TARGETS ||
                               type == FoxHuntListKind::FINDMY_TARGETS ||
                               type == FoxHuntListKind::FLIPPER_TARGETS ||
+                              type == FoxHuntListKind::IBEACON_TARGETS ||
                               type == FoxHuntListKind::META_TARGETS ||
                               type == FoxHuntListKind::FLOCK_TARGETS
                                 ? BT_SCAN_FOX_HUNT : WIFI_SCAN_SIG_STREN, TFT_CYAN);
@@ -2014,6 +2031,7 @@ void MenuFunctions::buildBluetoothFoxHuntMenu() {
   this->addNodes(&foxHuntMenu, "BLE Devices", TFTCYAN, BLUETOOTH, [this]() { buildFoxTargetList(FoxHuntListKind::BLE_TARGETS); });
   this->addNodes(&foxHuntMenu, "FindMy", TFTWHITE, BLUETOOTH, [this]() { buildFoxTargetList(FoxHuntListKind::FINDMY_TARGETS); });
   this->addNodes(&foxHuntMenu, "Flipper Zero", TFTORANGE, FLIPPER, [this]() { buildFoxTargetList(FoxHuntListKind::FLIPPER_TARGETS); });
+  this->addNodes(&foxHuntMenu, "iBeacons", TFTCYAN, BLUETOOTH, [this]() { buildFoxTargetList(FoxHuntListKind::IBEACON_TARGETS); });
   this->addNodes(&foxHuntMenu, "Meta", TFTWHITE, BLUETOOTH, [this]() { buildFoxTargetList(FoxHuntListKind::META_TARGETS); });
   this->addNodes(&foxHuntMenu, "Flock", TFTORANGE, FLOCK, [this]() { buildFoxTargetList(FoxHuntListKind::FLOCK_TARGETS); });
   this->changeMenu(&foxHuntMenu, true);
@@ -2093,6 +2111,8 @@ void MenuFunctions::RunSetup()
   // Bluetooth menu stuff
   bluetoothSnifferMenu.list = new LinkedList<MenuNode>();
   bluetoothAttackMenu.list = new LinkedList<MenuNode>();
+  iBeaconMenu.list = new LinkedList<MenuNode>();
+  iBeaconInfoMenu.list = new LinkedList<MenuNode>();
 
   // Settings stuff
   generateSSIDsMenu.list = new LinkedList<MenuNode>();
@@ -2154,6 +2174,8 @@ void MenuFunctions::RunSetup()
 
   bluetoothSnifferMenu.name = text_table1[23];
   bluetoothAttackMenu.name = "Bluetooth Attacks";
+  iBeaconMenu.name = "iBeacon Info";
+  iBeaconInfoMenu.name = "iBeacon";
   generateSSIDsMenu.name = text_table1[27];
   clearSSIDsMenu.name = text_table1[28];
   clearAPsMenu.name = text_table1[29];
@@ -3529,6 +3551,54 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(BT_SCAN_AIRTAG, TFT_WHITE);
   });
+  this->addNodes(&bluetoothSnifferMenu, "iBeacon Sniff", TFTCYAN, BLUETOOTH_SNIFF, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(BT_SCAN_IBEACON, TFT_CYAN);
+  });
+  this->addNodes(&bluetoothSnifferMenu, "iBeacon Info", TFTCYAN, KEYBOARD_ICO, [this]() {
+    iBeaconMenu.list->clear();
+    iBeaconMenu.parentMenu = &bluetoothSnifferMenu;
+    this->addNodes(&iBeaconMenu, text09, TFTLIGHTGREY, 0, [this]() {
+      this->changeMenu(iBeaconMenu.parentMenu, true);
+    });
+    for (int i = 0; i < ble_devices->size(); i++) {
+      if (!ble_devices->get(i).is_ibeacon) continue;
+      String label = String(ble_devices->get(i).rssi) + " " + ble_devices->get(i).name;
+      this->addNodes(&iBeaconMenu, label.c_str(), rssiToMenuColor(ble_devices->get(i).rssi), 255, [this, i]() {
+        const BleDevice& device = ble_devices->get(i);
+        char uuid[37];
+        snprintf(uuid, sizeof(uuid),
+                 "%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X",
+                 device.ibeacon.uuid[0], device.ibeacon.uuid[1], device.ibeacon.uuid[2], device.ibeacon.uuid[3],
+                 device.ibeacon.uuid[4], device.ibeacon.uuid[5], device.ibeacon.uuid[6], device.ibeacon.uuid[7],
+                 device.ibeacon.uuid[8], device.ibeacon.uuid[9], device.ibeacon.uuid[10], device.ibeacon.uuid[11],
+                 device.ibeacon.uuid[12], device.ibeacon.uuid[13], device.ibeacon.uuid[14], device.ibeacon.uuid[15]);
+        iBeaconInfoMenu.list->clear();
+        iBeaconInfoMenu.parentMenu = &iBeaconMenu;
+        this->addNodes(&iBeaconInfoMenu, text09, TFTLIGHTGREY, 0, [this]() {
+          this->changeMenu(iBeaconInfoMenu.parentMenu, true);
+        });
+        String mac = "MAC: " + macToString(device.mac);
+        String uuid_a = "UUID: " + String(uuid).substring(0, 18);
+        String uuid_b = "      " + String(uuid).substring(18);
+        String major = "Major: " + String(device.ibeacon.major);
+        String minor = "Minor: " + String(device.ibeacon.minor);
+        String power = "Tx Power: " + String(device.ibeacon.measured_power) + " dBm";
+        String rssi = "RSSI: " + String(device.rssi) + " dBm";
+        auto no_action = []() {};
+        this->addNodes(&iBeaconInfoMenu, mac.c_str(), TFTCYAN, 255, no_action);
+        this->addNodes(&iBeaconInfoMenu, uuid_a.c_str(), TFTWHITE, 255, no_action);
+        this->addNodes(&iBeaconInfoMenu, uuid_b.c_str(), TFTWHITE, 255, no_action);
+        this->addNodes(&iBeaconInfoMenu, major.c_str(), TFTCYAN, 255, no_action);
+        this->addNodes(&iBeaconInfoMenu, minor.c_str(), TFTCYAN, 255, no_action);
+        this->addNodes(&iBeaconInfoMenu, power.c_str(), TFTCYAN, 255, no_action);
+        this->addNodes(&iBeaconInfoMenu, rssi.c_str(), rssiToMenuColor(device.rssi), 255, no_action);
+        this->changeMenu(&iBeaconInfoMenu, true);
+      });
+    }
+    this->changeMenu(&iBeaconMenu, true);
+  });
   this->addNodes(&bluetoothSnifferMenu, "FindMy Monitor", TFTWHITE, BLUETOOTH_SNIFF, [this]() {
     display_obj.clearScreen();
     this->drawStatusBar();
@@ -3969,6 +4039,10 @@ void MenuFunctions::RunSetup()
   this->addNodes(&infoMenu, text09, TFTLIGHTGREY, 0, [this]() {
     wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
     this->changeMenu(infoMenu.parentMenu, true);
+  });
+  iBeaconInfoMenu.parentMenu = &iBeaconMenu;
+  this->addNodes(&iBeaconInfoMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(iBeaconInfoMenu.parentMenu, true);
   });
 
   Serial.println("Changing to main menu...");

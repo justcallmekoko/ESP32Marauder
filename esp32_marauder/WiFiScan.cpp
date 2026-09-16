@@ -6,6 +6,7 @@
 #include "WdgResponse.h"
 #include "UploadStreamBuffer.h"
 #include "lang_var.h"
+#include <esp_ota_ops.h>
 
 #ifdef HAS_PSRAM
   struct mac_addr* mac_history = nullptr;
@@ -322,6 +323,8 @@ extern "C" {
           String mac = advertisedDevice->getAddress().toString().c_str();
           unsigned char mac_char[6];
           wifi_scan_obj.copyNimbleMac(advertisedDevice->getAddress(), mac_char);
+          uint8_t* payLoad = advertisedDevice->getPayload();
+          size_t len = advertisedDevice->getPayloadLength();
 
           if (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT)
             wifi_scan_obj.updateBluetoothFoxHuntRssi(mac_char, mac, rssi);
@@ -567,12 +570,21 @@ extern "C" {
             }
           }
           else if ((wifi_scan_obj.currentScanMode == BT_SCAN_ALL) ||
+                   (wifi_scan_obj.currentScanMode == BT_SCAN_IBEACON) ||
                    (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT)) {
             if (buf >= 0)
             {
               BleDevice ble_device;
-              ble_device.device_type = wifi_scan_obj.classifyBLEDevice(advertisedDevice);
-              if (name_length > 0)
+              const bool is_ibeacon = marauder::parseIBeacon(payLoad, len, ble_device.ibeacon);
+              if (wifi_scan_obj.currentScanMode == BT_SCAN_IBEACON && !is_ibeacon) {
+                wifi_scan_obj.bt_cb_busy = false;
+                return;
+              }
+              ble_device.is_ibeacon = is_ibeacon;
+              ble_device.device_type = is_ibeacon ? "iBeacon" : wifi_scan_obj.classifyBLEDevice(advertisedDevice);
+              if (is_ibeacon)
+                ble_device.name = "iBeacon " + String(ble_device.ibeacon.major) + ":" + String(ble_device.ibeacon.minor);
+              else if (name_length > 0)
                 ble_device.name = name;
               else
                 ble_device.name = mac;
@@ -586,7 +598,7 @@ extern "C" {
               int device_match_check = wifi_scan_obj.seenBLEDevice(ble_device);
 
               if (device_match_check >= 0) {
-                recon_obj.queueRepeat('B', ble_device.mac, ble_device.rssi, 0);
+                recon_obj.queueRepeat(ble_device.is_ibeacon ? 'I' : 'B', ble_device.mac, ble_device.rssi, 0);
                 ble_device.selected = ble_devices->get(device_match_check).selected;
                 ble_device.name = ble_devices->get(device_match_check).name;
                 memcpy(ble_device.mac, ble_devices->get(device_match_check).mac, sizeof(mac_char));
@@ -1270,12 +1282,21 @@ extern "C" {
             }
           }
           else if ((wifi_scan_obj.currentScanMode == BT_SCAN_ALL) ||
+                   (wifi_scan_obj.currentScanMode == BT_SCAN_IBEACON) ||
                    (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT)) {
             if (buf >= 0)
             {
               BleDevice ble_device;
-              ble_device.device_type = wifi_scan_obj.classifyBLEDevice(advertisedDevice);
-              if (name_length > 0)
+              const bool is_ibeacon = marauder::parseIBeacon(payLoad.data(), len, ble_device.ibeacon);
+              if (wifi_scan_obj.currentScanMode == BT_SCAN_IBEACON && !is_ibeacon) {
+                wifi_scan_obj.bt_cb_busy = false;
+                return;
+              }
+              ble_device.is_ibeacon = is_ibeacon;
+              ble_device.device_type = is_ibeacon ? "iBeacon" : wifi_scan_obj.classifyBLEDevice(advertisedDevice);
+              if (is_ibeacon)
+                ble_device.name = "iBeacon " + String(ble_device.ibeacon.major) + ":" + String(ble_device.ibeacon.minor);
+              else if (name_length > 0)
                 ble_device.name = name;
               else
                 ble_device.name = mac;
@@ -1289,7 +1310,7 @@ extern "C" {
               int device_match_check = wifi_scan_obj.seenBLEDevice(ble_device);
 
               if (device_match_check >= 0) {
-                recon_obj.queueRepeat('B', ble_device.mac, ble_device.rssi, 0);
+                recon_obj.queueRepeat(ble_device.is_ibeacon ? 'I' : 'B', ble_device.mac, ble_device.rssi, 0);
                 ble_device.selected = ble_devices->get(device_match_check).selected;
                 ble_device.name = ble_devices->get(device_match_check).name;
                 memcpy(ble_device.mac, ble_devices->get(device_match_check).mac, sizeof(mac_char));
@@ -2747,6 +2768,7 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
   else if (scan_mode == WIFI_ATTACK_AP_SPAM)
     this->startWiFiAttacks(scan_mode, color, " AP Beacon Spam ");
   else if ((scan_mode == BT_SCAN_ALL) ||
+          (scan_mode == BT_SCAN_IBEACON) ||
           (scan_mode == BT_SCAN_FOX_HUNT) ||
           (scan_mode == BT_SCAN_RAYBAN) ||
           (scan_mode == BT_SCAN_AIRTAG) ||
@@ -3135,6 +3157,7 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
 
 
   if ((currentScanMode == BT_SCAN_ALL) ||
+  (currentScanMode == BT_SCAN_IBEACON) ||
   (currentScanMode == BT_SCAN_FOX_HUNT) ||
   (currentScanMode == BT_SCAN_RAYBAN) ||
   (currentScanMode == BT_SCAN_AIRTAG) ||
@@ -4769,6 +4792,8 @@ void WiFiScan::RunInfo() {
 
   this->getMAC(true, sta_mac);
   this->getMAC(false, ap_mac);
+  const esp_partition_t* running_partition = esp_ota_get_running_partition();
+  const String app_partition = running_partition ? String(running_partition->label) : String("unknown");
 
   #ifdef HAS_SCREEN
     display_obj.tft.setTextWrap(false);
@@ -4779,12 +4804,14 @@ void WiFiScan::RunInfo() {
     display_obj.tft.println(text_table4[20]);
     display_obj.tft.println(text_table4[21] + display_obj.version_number);
     display_obj.tft.println("Hardware: " + (String)HARDWARE_NAME);
+    display_obj.tft.println("App partition: " + app_partition);
     display_obj.tft.println(text_table4[22] + (String)esp_get_idf_version());
   #endif
 
   Serial.println(text_table4[20]);
   Serial.println(text_table4[21] + (String)MARAUDER_VERSION);
   Serial.println("Hardware: " + (String)HARDWARE_NAME);
+  Serial.println("App partition: " + app_partition);
   Serial.println(text_table4[22] + (String)esp_get_idf_version());
 
   if (this->wsl_bypass_enabled) {
@@ -6974,6 +7001,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
     NimBLEDevice::init("");
     pBLEScan = NimBLEDevice::getScan(); //create new scan
     if ((scan_mode == BT_SCAN_ALL) ||
+        (scan_mode == BT_SCAN_IBEACON) ||
         (scan_mode == BT_SCAN_FOX_HUNT) ||
         (scan_mode == BT_SCAN_RAYBAN) ||
         (scan_mode == BT_SCAN_AIRTAG) ||
@@ -6990,6 +7018,8 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
           display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
           if (scan_mode == BT_SCAN_ALL)
             display_obj.tft.drawCentreString(text_table4[41],TFT_WIDTH / 2,16,2);
+          else if (scan_mode == BT_SCAN_IBEACON)
+            display_obj.tft.drawCentreString("iBeacon Sniff",TFT_WIDTH / 2,16,2);
           else if (scan_mode == BT_SCAN_FOX_HUNT)
             display_obj.tft.drawCentreString("Fox Hunt",TFT_WIDTH / 2,16,2);
           else if (scan_mode == BT_SCAN_AIRTAG)
@@ -7013,7 +7043,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
         #endif
         display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
       #endif
-      if (scan_mode == BT_SCAN_ALL) {
+      if ((scan_mode == BT_SCAN_ALL) || (scan_mode == BT_SCAN_IBEACON)) {
         this->clearList(CLEAR_BLE);
         #ifndef HAS_NIMBLE_2
           pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), true);
@@ -12325,6 +12355,7 @@ void WiFiScan::main(uint32_t currentTime)
     }
   }
   else if ((currentScanMode == BT_SCAN_FLOCK) ||
+          (currentScanMode == BT_SCAN_IBEACON) ||
           (currentScanMode == BT_SCAN_FLIPPER) ||
           (currentScanMode == BT_SCAN_AIRTAG) ||
           (currentScanMode == BT_SCAN_RAYBAN)) {

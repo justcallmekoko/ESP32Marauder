@@ -145,6 +145,7 @@ class MenuFunctions
       BLE_TARGETS,
       FINDMY_TARGETS,
       FLIPPER_TARGETS,
+      IBEACON_TARGETS,
       META_TARGETS,
       FLOCK_TARGETS,
     };
@@ -251,6 +252,8 @@ class MenuFunctions
     // Bluetooth menu stuff
     Menu bluetoothSnifferMenu;
     Menu bluetoothAttackMenu;
+    Menu iBeaconMenu;
+    Menu iBeaconInfoMenu;
 
     // Settings things menus
     Menu generateSSIDsMenu;

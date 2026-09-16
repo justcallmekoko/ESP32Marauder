@@ -86,6 +86,7 @@ bool ReconMission::start(ReconMode mode) {
   ap_count = 0;
   station_count = 0;
   ble_count = 0;
+  ibeacon_count = 0;
   probe_count = 0;
   repeat_count = 0;
   deauth_count = 0;
@@ -297,6 +298,7 @@ void ReconMission::writeObservation(char type, const uint8_t mac[6], int rssi,
   if (type == 'a') { ap_count++; pending_churn_in++; }
   else if (type == 's') { station_count++; pending_churn_in++; }
   else if (type == 'b') { ble_count++; pending_churn_in++; }
+  else if (type == 'i') { ble_count++; ibeacon_count++; pending_churn_in++; }
   else if (type != 'd') repeat_count++;
   recordUiEvent(type, mac, static_cast<int8_t>(rssi), label);
   recordSignal(static_cast<int8_t>(rssi), channel);
@@ -453,7 +455,7 @@ void ReconMission::drainRepeatQueue() {
     const char* label = nullptr;
     #ifdef HAS_BT
       String ble_label;
-      if (event.type == 'B' && ble_devices) {
+      if ((event.type == 'B' || event.type == 'I') && ble_devices) {
         for (int index = 0; index < ble_devices->size(); index++) {
           const BleDevice& device = ble_devices->get(index);
           if (!memcmp(device.mac, event.mac, sizeof(event.mac))) {
@@ -497,7 +499,7 @@ void ReconMission::writeManifest(bool complete) {
                              ? buffer_obj.getFileName() : "";
     manifest.printf(
       "{\"schema\":1,\"state\":\"%s\",\"mode\":\"%s\",\"start_ms\":%lu,"
-      "\"duration_ms\":%lu,\"ap\":%lu,\"station\":%lu,\"ble\":%lu,"
+      "\"duration_ms\":%lu,\"ap\":%lu,\"station\":%lu,\"ble\":%lu,\"ibeacon\":%lu,"
       "\"probe\":%lu,\"repeat\":%lu,\"deauth\":%lu,\"dropped\":%u,\"gps_fix\":%s,"
       "\"observations\":\"obs.rlog\",\"probes\":\"probes.rlog\","
       "\"relationships\":\"relations.rlog\",\"capture\":\"%s\"}\n",
@@ -508,6 +510,7 @@ void ReconMission::writeManifest(bool complete) {
       static_cast<unsigned long>(ap_count),
       static_cast<unsigned long>(station_count),
       static_cast<unsigned long>(ble_count),
+      static_cast<unsigned long>(ibeacon_count),
       static_cast<unsigned long>(probe_count),
       static_cast<unsigned long>(repeat_count),
       static_cast<unsigned long>(deauth_count),
@@ -972,7 +975,8 @@ void ReconMission::observeLists() {
         const ReconRange range = state.consume(ReconSource::BLE_LIST, ble_devices->size());
         for (size_t index = range.begin; index < range.end; index++) {
           const BleDevice& device = ble_devices->get(index);
-          writeObservation('b', device.mac, device.rssi, 0, device.device_type.c_str());
+          writeObservation(device.is_ibeacon ? 'i' : 'b', device.mac, device.rssi, 0,
+                           device.device_type.c_str());
         }
       }
     #endif
