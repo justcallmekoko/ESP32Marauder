@@ -1,6 +1,7 @@
 #include "MenuFunctions.h"
 #include "MenuMarquee.h"
 #include "CommandLine.h"
+#include "OwnedListLifecycle.h"
 #include "lang_var.h"
 
 #ifdef HAS_SCREEN
@@ -4538,11 +4539,7 @@ void MenuFunctions::buildSavedWifiMenu(bool replace_mode) {
 }
 
 void MenuFunctions::setupSDFileList(bool update) {
-  sd_obj.sd_files->clear();
-
-  delete sd_obj.sd_files;
-
-  sd_obj.sd_files = new LinkedList<String>();
+  resetOwnedList(sd_obj.sd_files);
 
   if (!update)
     sd_obj.listDirToLinkedList(sd_obj.sd_files);
@@ -4558,9 +4555,7 @@ void MenuFunctions::buildSDFileMenu(bool update) {
 
   this->setupSDFileList(update);
 
-  sdDeleteMenu.list->clear();
-  delete sdDeleteMenu.list;
-  sdDeleteMenu.list = new LinkedList<MenuNode>();
+  resetOwnedList(sdDeleteMenu.list);
 
   sdDeleteMenu.name = "Bin Files";
 
