@@ -762,6 +762,9 @@ void MenuFunctions::main(uint32_t currentTime)
             #endif
             wifi_scan_obj.drawChannelLine();
           }
+          #ifdef CYD_SOUND
+            sound_obj.click();
+          #endif
         }
         if (menu_button == DOWN_BUTTON) {
           if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
@@ -831,9 +834,15 @@ void MenuFunctions::main(uint32_t currentTime)
             #endif
             wifi_scan_obj.drawChannelLine();
           }
+          #ifdef CYD_SOUND
+            sound_obj.click();
+          #endif
         }
         if(menu_button == SELECT_BUTTON) {
           current_menu->list->get(current_menu->selected).callable();
+          #ifdef CYD_SOUND
+            sound_obj.click();
+          #endif
         }
         else {
           if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
@@ -2234,11 +2243,11 @@ void MenuFunctions::RunSetup()
   });
   // The C5 implementation uses the active station netif with lwIP core
   // locking, so dual-band hardware supports the same ARP scanner.
-  this->addNodes(&wifiScannerMenu, "ARP Scan", TFTCYAN, SCANNERS, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_ARP_SCAN, TFT_CYAN);
-  });
+    this->addNodes(&wifiScannerMenu, "ARP Scan", TFTCYAN, SCANNERS, [this]() {
+      display_obj.clearScreen();
+      this->drawStatusBar();
+      wifi_scan_obj.StartScan(WIFI_ARP_SCAN, TFT_CYAN);
+    });
   this->addNodes(&wifiScannerMenu, "Port Scan All", TFTMAGENTA, BEACON_LIST, [this](){
     // Add the back button
     wifiIPMenu.list->clear();
@@ -2928,8 +2937,8 @@ void MenuFunctions::RunSetup()
                 this->changeMenu(&savedWifiMenu, true);
               }
               else {
-                this->changeMenu(current_menu, true);
-              }
+              this->changeMenu(current_menu, true);
+            }
             }
           #endif
 
@@ -2954,8 +2963,8 @@ void MenuFunctions::RunSetup()
 
     this->addNodes(&wifiGeneralMenu, "Join Saved WiFi", TFTWHITE, KEYBOARD_ICO, [this](){
       wifi_scan_obj.joinSavedWiFi(true);
-      this->changeMenu(&wifiGeneralMenu, true);
-    });
+        this->changeMenu(&wifiGeneralMenu, true);
+        });
 
     this->addNodes(&wifiGeneralMenu, "Manage Saved WiFi", TFTWHITE, SETTINGS, [this](){
       this->buildSavedWifiMenu(false);
@@ -4557,20 +4566,20 @@ void MenuFunctions::buildSDFileMenu(bool update) {
 
   resetOwnedList(sdDeleteMenu.list);
 
-  sdDeleteMenu.name = "Bin Files";
+    sdDeleteMenu.name = "Bin Files";
 
   this->addNodes(&sdDeleteMenu, text09, TFTLIGHTGREY, 0, [this]() {
     this->changeMenu(sdDeleteMenu.parentMenu, true);
   });
 
-  for (int x = 0; x < sd_obj.sd_files->size(); x++) {
-    this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x).c_str(), TFTCYAN, SD_UPDATE, [this, x]() {
-      wifi_scan_obj.currentScanMode = OTA_UPDATE;
-      this->changeMenu(&failedUpdateMenu, true);
-      sd_obj.runUpdate("/" + sd_obj.sd_files->get(x));
-    });
+    for (int x = 0; x < sd_obj.sd_files->size(); x++) {
+      this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x).c_str(), TFTCYAN, SD_UPDATE, [this, x]() {
+        wifi_scan_obj.currentScanMode = OTA_UPDATE;
+        this->changeMenu(&failedUpdateMenu, true);
+        sd_obj.runUpdate("/" + sd_obj.sd_files->get(x));
+      });
+    }
   }
-}
 
 String MenuFunctions::parentSDPath(const String& path) const {
   if (path == "/")

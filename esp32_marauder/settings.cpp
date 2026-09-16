@@ -98,6 +98,11 @@ void Settings::_buildCache() {
       _cache.wt = json["Settings"][i]["value"].as<String>();
     else if (strcmp(name, WDG_KEY_NAME) == 0)
       _cache.wdg_key = json["Settings"][i]["value"].as<String>();
+#ifdef CYD_SOUND
+    else if (strcmp(name, "EnableSND") == 0)
+      _cache.EnableSND = json["Settings"][i]["value"].as<bool>();
+#endif
+
   }
 }
 
@@ -267,6 +272,10 @@ template <> bool Settings::loadSetting<bool>(const char* key) {
     return _cache.EPDeauth;
   if (strcmp(key, "ChanHop") == 0)
     return _cache.ChanHop;
+#ifdef CYD_SOUND
+  if (strcmp(key, "EnableSND") == 0)
+    return _cache.EnableSND;
+#endif
 
   // Unknown bool key: fall back to JSON so the setting can be auto-created.
   DynamicJsonDocument json(JSON_SETTING_SIZE);
@@ -310,6 +319,11 @@ template <> uint8_t Settings::loadSetting<uint8_t>(const char* key) {
 
   if (strcmp(key, "ChanHop") == 0)
     return (uint8_t)_cache.ChanHop;
+
+#ifdef CYD_SOUND
+  if (strcmp(key, "EnableSND") == 0)
+    return (uint8_t)_cache.EnableSND;
+#endif
 
   DynamicJsonDocument json(JSON_SETTING_SIZE);
   deserializeJson(json, this->json_settings_string);
@@ -372,6 +386,10 @@ template <> bool Settings::saveSetting<bool>(const char* key, bool value) {
         _cache.EPDeauth = value;
       else if (strcmp(key, "ChanHop") == 0)
         _cache.ChanHop = value;
+#ifdef CYD_SOUND
+      else if (strcmp(key, "EnableSND") == 0)
+        _cache.EnableSND = value;
+#endif
 
       this->printJsonSettings(settings_string);
 
@@ -508,7 +526,7 @@ void Settings::printJsonSettings(String json_string) {
     if (setting_name == "ClientPW" || setting_name == SAVED_WIFI_KEY_NAME)
       Serial.println(F("Value: [redacted]\n"));
     else
-      Serial.println("Value: " + json["Settings"][i]["value"].as<String>() + "\n");
+    Serial.println("Value: " + json["Settings"][i]["value"].as<String>() + "\n");
   }
 }
 
@@ -594,6 +612,14 @@ bool Settings::createDefaultSettings(fs::FS &fs, bool spec, uint8_t index, const
     jsonBuffer["Settings"][10]["value"] = "";
     jsonBuffer["Settings"][10]["range"]["min"] = "";
     jsonBuffer["Settings"][10]["range"]["max"] = "";
+#ifdef CYD_SOUND
+    jsonBuffer["Settings"][11]["name"] = "EnableSND";
+    jsonBuffer["Settings"][11]["type"] = "bool";
+    jsonBuffer["Settings"][11]["value"] = true;
+    jsonBuffer["Settings"][11]["range"]["min"] = false;
+    jsonBuffer["Settings"][11]["range"]["max"] = true;
+#endif
+
 
     jsonBuffer["Settings"][11]["name"] = SAVED_WIFI_KEY_NAME;
     jsonBuffer["Settings"][11]["type"] = "wifi_list";

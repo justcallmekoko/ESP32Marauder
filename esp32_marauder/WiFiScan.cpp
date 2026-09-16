@@ -623,6 +623,10 @@ extern "C" {
                 display_string.concat(advertisedDevice->getAddress().toString().c_str());
                 Serial.print(advertisedDevice->getAddress().toString().c_str());
               }
+
+              #ifdef CYD_SOUND
+                sound_obj.geigerClick();  // differnt click for stations
+              #endif
       
               #ifdef HAS_SCREEN
                 uint8_t temp_len = display_string.length();
@@ -1036,6 +1040,9 @@ extern "C" {
             }
           }
           wifi_scan_obj.bt_cb_busy = false;
+          #ifdef CYD_SOUND
+            sound_obj.geigerClick();
+          #endif
           return;
         }
     };
@@ -1326,6 +1333,10 @@ extern "C" {
                 display_string.concat(mac);
                 Serial.print(mac);
               }
+
+                #ifdef CYD_SOUND
+                  sound_obj.geigerClick();
+                #endif
       
               #ifdef HAS_SCREEN
                 uint8_t temp_len = display_string.length();
@@ -1667,6 +1678,9 @@ extern "C" {
                   }
                     
                   display_obj.display_buffer->add(display_string);
+                #endif
+                #ifdef CYD_SOUND
+                  sound_obj.geigerClick();
                 #endif
               }
             }
@@ -4402,7 +4416,7 @@ bool WiFiScan::RunGPSInfo(bool tracker, bool display, bool poi) {
         if (!gps_obj.getFixStatus()) {
           return_val = false;
         }
-
+          
         if (tracker && !poi) {
           const bool compact = SCREEN_HEIGHT <= 160 || SCREEN_WIDTH <= 160;
           const bool expanded = SCREEN_HEIGHT >= 240 && SCREEN_WIDTH >= 200;
@@ -4479,12 +4493,12 @@ bool WiFiScan::RunGPSInfo(bool tracker, bool display, bool poi) {
           display_obj.tft.setTextColor(TFT_CYAN);
           display_obj.tft.println(gps_obj.getFixStatus() ? F("  Good Fix: Yes") : F("  Good Fix: No"));
           if (text != "") display_obj.tft.println("      Text: " + text);
-          display_obj.tft.println(" Sats: " + gps_obj.getNumSatsString());
+        display_obj.tft.println(" Sats: " + gps_obj.getNumSatsString());
           display_obj.tft.println("  Acc: " + String(gps_obj.getAccuracy()));
-          display_obj.tft.println("  Lat: " + gps_obj.getLat());
-          display_obj.tft.println("  Lon: " + gps_obj.getLon());
+        display_obj.tft.println("  Lat: " + gps_obj.getLat());
+        display_obj.tft.println("  Lon: " + gps_obj.getLon());
           display_obj.tft.println("  Alt: " + String(gps_obj.getAlt()));
-          display_obj.tft.println("  D/T: " + gps_obj.getDatetime());
+        display_obj.tft.println("  D/T: " + gps_obj.getDatetime());
         }
       #endif
 
@@ -4738,14 +4752,18 @@ void WiFiScan::RunInfo() {
     display_obj.tft.setTextColor(TFT_CYAN);
     display_obj.tft.println(text_table4[20]);
     display_obj.tft.println(text_table4[21] + display_obj.version_number);
-    display_obj.tft.println("Hardware: " + (String)HARDWARE_NAME);
+    display_obj.tft.println("Build Date: " + String(__DATE__ " " __TIME__));
+    display_obj.tft.println("Hardware:   " + (String)HARDWARE_NAME);
     display_obj.tft.println(text_table4[22] + (String)esp_get_idf_version());
+    display_obj.tft.println("ESP Arduino:" + String(ESP_ARDUINO_VERSION_MAJOR) + "." + String(ESP_ARDUINO_VERSION_MINOR) + "." + String(ESP_ARDUINO_VERSION_PATCH));
   #endif
 
   Serial.println(text_table4[20]);
   Serial.println(text_table4[21] + (String)MARAUDER_VERSION);
-  Serial.println("Hardware: " + (String)HARDWARE_NAME);
+  Serial.println("Build Date: " + String(__DATE__ " " __TIME__));
+  Serial.println("Hardware:   " + (String)HARDWARE_NAME);
   Serial.println(text_table4[22] + (String)esp_get_idf_version());
+  Serial.println("ESP Arduino:" + String(ESP_ARDUINO_VERSION_MAJOR) + "." + String(ESP_ARDUINO_VERSION_MINOR) + "." + String(ESP_ARDUINO_VERSION_PATCH));
 
   if (this->wsl_bypass_enabled) {
     #ifdef HAS_SCREEN
@@ -7293,7 +7311,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
 
         #ifdef HAS_SCREEN
           if (!recon_obj.suppressScanUi())
-            display_obj.display_buffer->add(display_string);
+          display_obj.display_buffer->add(display_string);
         #endif
         
         if (essid == "") {
@@ -7345,6 +7363,10 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
 
           access_points->add(ap);
         }
+
+        #ifdef CYD_SOUND
+          sound_obj.geigerClick();   // click for AP
+        #endif
 
         Serial.println();
 
@@ -7477,6 +7499,10 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
       Serial.println(ap_addr);
     }
 
+    #ifdef CYD_SOUND
+      sound_obj.geigerClick(1);  // differnt click for stations
+    #endif
+
     //display_string.concat(replaceOUIWithManufacturer(sta_addr));
     display_string.concat(sta_addr);
 
@@ -7494,7 +7520,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
       Serial.print(F(" "));
 
       if (!recon_obj.suppressScanUi())
-        display_obj.display_buffer->add(display_string);
+      display_obj.display_buffer->add(display_string);
     #endif
 
     if (mem_check) {
@@ -8743,6 +8769,9 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
           #endif
 
           Serial.println();
+          #ifdef CYD_SOUND
+            sound_obj.geigerClick(0);
+          #endif
 
           buffer_obj.append(snifferPacket, len);
         }    
@@ -8767,6 +8796,9 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
           }
 
           probe_req_essid = wifi_scan_obj.checkEmptyProbe(probe_req_essid);
+          #ifdef CYD_SOUND
+            sound_obj.geigerClick();
+          #endif
 
           display_string.concat(probe_req_essid);
 
@@ -8847,10 +8879,10 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
     bool found = false;
     for (uint8_t offset : address_offsets) {
       if (wifi_scan_obj.updateFoxHuntRssi(&snifferPacket->payload[offset], snifferPacket->rx_ctrl.rssi, snifferPacket->rx_ctrl.channel)) {
-        found = true;
-        break;
+            found = true;
+          break;
+        }
       }
-    }
     if (!found)
       return;
 
@@ -8904,6 +8936,9 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
           #endif
 
           Serial.println(display_string);
+          #ifdef CYD_SOUND
+            sound_obj.geigerClick();
+          #endif
 
           buffer_obj.append(snifferPacket, len);
           return;
@@ -9293,7 +9328,7 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, ssid custom_ssid, bo
     memcpy(temp_frame + (38 + fullLen), post_base, post_len);
   else
     memcpy(temp_frame + (38 + fullLen), post_base_for_camera, post_len);
-
+  
   setBeaconFrameChannel(temp_frame, sizeof(temp_frame), fullLen, set_channel); // GCOVR_EXCL_LINE
   
   for (int i = 0; i < 2; i++) {
@@ -10507,55 +10542,55 @@ bool WiFiScan::filterActive() {
   void WiFiScan::packetMonitorMain(uint32_t currentTime) {
     #ifdef HAS_ILI9341
       const int8_t b = this->checkAnalyzerButtons(currentTime);
-
+    
       if (b == CHAN_MINUS_INDEX) {
-      #ifndef HAS_DUAL_BAND
+            #ifndef HAS_DUAL_BAND
         if (set_channel > 1)
-          set_channel--;
+              set_channel--;
         else
           return;
-      #else
-        if (dual_band_channel_index > 0) {
-          dual_band_channel_index--;
-          set_channel = dual_band_channels[dual_band_channel_index];
+            #else
+            if (dual_band_channel_index > 0) {
+              dual_band_channel_index--;
+              set_channel = dual_band_channels[dual_band_channel_index];
         }
         else
           return;
-      #endif
-      changeChannel();
+            #endif
+              changeChannel();
       this->drawPacketMonitorControls();
-      }
-      else if (b == CHAN_PLUS_INDEX) {
-      #ifndef HAS_DUAL_BAND
+            }
+          else if (b == CHAN_PLUS_INDEX) {
+            #ifndef HAS_DUAL_BAND
         if (set_channel < MAX_CHANNEL)
-          set_channel++;
+              set_channel++;
         else
           return;
-      #else
-        if (dual_band_channel_index < (DUAL_BAND_CHANNELS - 1)) {
-          dual_band_channel_index++;
-          set_channel = dual_band_channels[dual_band_channel_index];
-        }
+            #else
+            if (dual_band_channel_index < (DUAL_BAND_CHANNELS - 1)) {
+              dual_band_channel_index++;
+              set_channel = dual_band_channels[dual_band_channel_index];
+            }
         else
           return;
       #endif
       changeChannel();
       this->drawPacketMonitorControls();
-      }
-      else if (b == EXIT_BUTTON_INDEX) {
-        this->StartScan(WIFI_SCAN_OFF);
-        this->orient_display = true;
-        return;
-      }
+          }
+          else if (b == EXIT_BUTTON_INDEX) {
+            this->StartScan(WIFI_SCAN_OFF);
+            this->orient_display = true;
+            return;
+          }
     #endif
-
+  
     if (currentTime - initTime >= PACKET_MONITOR_REFRESH_MS) {
       initTime = currentTime;
       this->samplePacketMonitorGraph();
       this->drawPacketMonitorGraphs();
-    }
+      }
   }
-  #endif
+#endif
 #endif
 // GCOVR_EXCL_STOP
 
@@ -11194,7 +11229,7 @@ static err_t requestStationARP(struct netif* station, const ip4_addr_t* ip) {
 
     struct netif* netif_interface = getStationLwipNetif();
     if (netif_interface == nullptr)
-      return false;
+    return false;
 
     return findStationARP(netif_interface, &test_ip);
   }
@@ -11356,7 +11391,7 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
       if (this->current_scan_ip == IPAddress(0, 0, 0, 0)) {
         return;
       }
-      if (this->singleARP(this->current_scan_ip)) {
+        if (this->singleARP(this->current_scan_ip)) {
         Serial.println(this->current_scan_ip);
         this->portScan(scan_mode, targ_port);
       }
@@ -11572,7 +11607,7 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
     File f = SD.open(sidecarPath, FILE_WRITE);
     if (f) {
       #ifdef HAS_GPS
-        f.println("uploaded=" + gps_obj.getDatetime());
+      f.println("uploaded=" + gps_obj.getDatetime());
       #else
         f.println("uploaded_uptime_ms=" + String(millis()));
       #endif
@@ -11818,7 +11853,7 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
         #endif
         delay(3000);
       #else
-        delay(1000);
+    delay(1000);
       #endif
     } else {
       #ifdef HAS_SCREEN
@@ -12172,7 +12207,7 @@ void WiFiScan::runFoxHunt(uint32_t currentTime) {
 
             display_obj.tft.fillRect(0, (TFT_HEIGHT / 4) * 3, rssiToBarWidth(targ_rssi), 20, rssiToColorScaled(targ_rssi));
             display_obj.tft.fillRect(rssiToBarWidth(targ_rssi), (TFT_HEIGHT / 4) * 3, TFT_WIDTH, 20, TFT_BLACK);
-      }
+          }
     #endif
 
     if ((currentScanMode == WIFI_SCAN_SIG_STREN) && this->fox_hunt_target.active) {
@@ -12220,7 +12255,7 @@ void WiFiScan::runFoxHunt(uint32_t currentTime) {
 
           display_obj.tft.fillRect(0, (TFT_HEIGHT / 4) * 3, rssiToBarWidth(targ_rssi), 20, rssiToColorScaled(targ_rssi));
           display_obj.tft.fillRect(rssiToBarWidth(targ_rssi), (TFT_HEIGHT / 4) * 3, TFT_WIDTH, 20, TFT_BLACK);
-    }
+        }
   #endif
 }
 

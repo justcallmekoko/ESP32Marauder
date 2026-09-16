@@ -39,8 +39,8 @@
 #include "mbedtls/bignum.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/ecp.h"
-#include <lwip/etharp.h>
-#include <lwip/ip_addr.h>
+  #include <lwip/etharp.h>
+  #include <lwip/ip_addr.h>
 #include <lwip/netif.h>
 #include <lwip/tcpip.h>
 #ifdef HAS_IDF_3
@@ -62,6 +62,11 @@
 #ifdef HAS_BATTERY
   #include "BatteryInterface.h"
 #endif
+
+#ifdef CYD_SOUND
+  #include "Sound_CYD.h"
+#endif
+
 #ifdef HAS_GPS
   #include "GpsInterface.h"
 #endif
@@ -76,6 +81,10 @@
   #include "stickcLED.h"
 #elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
   #include "LedInterface.h"
+#endif
+
+#ifdef CYD_SOUND
+  extern Sound_CYD sound_obj;
 #endif
 
 #ifdef HAS_DIRECT_UPLOAD
