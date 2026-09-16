@@ -42,6 +42,9 @@
   #if (C_BTN >= 0)
     extern Switches c_btn;
   #endif
+  #ifdef MARAUDER_POOM
+    extern Switches b_btn;
+  #endif
 #endif
 
 extern WiFiScan wifi_scan_obj;

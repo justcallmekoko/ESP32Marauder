@@ -71,6 +71,9 @@ https://www.online-utility.org/image/convert/to/XBM
   #if (C_BTN >= 0)
     Switches c_btn = Switches(C_BTN, 1000, C_PULL);
   #endif
+  #if defined(MARAUDER_POOM) && (B_BTN >= 0)
+    Switches b_btn = Switches(B_BTN, 1000, B_PULL);
+  #endif
 
 #endif
 
@@ -204,9 +207,7 @@ uint32_t currentTime  = 0;
     #ifdef HAS_SCREEN
       #if defined(MARAUDER_MINI) || defined(MARAUDER_MINI_V3)
         digitalWrite(TFT_BL, LOW);
-      #endif
-    
-      #if !defined(MARAUDER_MINI) && !defined(MARAUDER_MINI_V3)
+      #elif !defined(MARAUDER_POOM)
         digitalWrite(TFT_BL, HIGH);
       #endif
     #endif
@@ -216,9 +217,7 @@ uint32_t currentTime  = 0;
     #ifdef HAS_SCREEN
       #if defined(MARAUDER_MINI) || defined(MARAUDER_MINI_V3)
         digitalWrite(TFT_BL, HIGH);
-      #endif
-    
-      #if !defined(MARAUDER_MINI) && !defined(MARAUDER_MINI_V3)
+      #elif !defined(MARAUDER_POOM)
         digitalWrite(TFT_BL, LOW);
       #endif
     #endif
@@ -263,7 +262,7 @@ void setup()
     digitalWrite(POWER_HOLD_PIN, HIGH);
   #endif
   
-  #ifdef HAS_SCREEN
+  #if defined(HAS_SCREEN) && !defined(MARAUDER_POOM)
     pinMode(TFT_BL, OUTPUT);
   #endif
   
@@ -274,7 +273,7 @@ void setup()
   #endif
   
   // Preset SPI CS pins to avoid bus conflicts
-  #ifdef HAS_SCREEN
+  #if defined(HAS_SCREEN) && !defined(MARAUDER_POOM)
     digitalWrite(TFT_CS, HIGH);
   #endif
   
@@ -481,6 +480,10 @@ void loop()
     led_obj.refresh();
   #elif defined(HAS_NEOPIXEL_LED)
     led_obj.main(currentTime);
+  #endif
+
+  #ifdef MARAUDER_POOM
+    display_obj.tft.display();
   #endif
 
   #ifdef HAS_SCREEN

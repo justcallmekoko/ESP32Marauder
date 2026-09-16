@@ -1079,6 +1079,13 @@ void MenuFunctions::main(uint32_t currentTime)
       }
       #endif
 
+      #ifdef MARAUDER_POOM
+      if (b_btn.justPressed() && wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF &&
+          current_menu->parentMenu != NULL) {
+        this->changeMenu(current_menu->parentMenu, true);
+      }
+      #endif
+
       if(c_btn_press){
         current_menu->list->get(current_menu->selected).callable();
       }

@@ -13,7 +13,11 @@
   #include <APA102.h>
 #endif
 
-#define Pixels 1
+#ifdef MARAUDER_POOM
+  #define Pixels 9
+#else
+  #define Pixels 1
+#endif
 
 extern Settings settings_obj;
 

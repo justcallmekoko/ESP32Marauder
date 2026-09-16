@@ -197,7 +197,7 @@ bool Display::isTouchHeld(uint16_t threshold) {
 void Display::init() {
   tft.init();
 
-  #if defined(HAS_DUAL_BAND) && !defined(MARAUDER_MINI_V3)
+  #if defined(HAS_DUAL_BAND) && !defined(MARAUDER_MINI_V3) && !defined(MARAUDER_POOM)
     digitalWrite(TFT_BL, HIGH);
   #endif
 }
@@ -289,6 +289,17 @@ void Display::RunSetup() {
 void Display::drawBootSplash() {
   const int16_t width = tft.width();
   const int16_t height = tft.height();
+  #ifdef MARAUDER_POOM
+    tft.fillScreen(TFT_BLACK);
+    tft.setTextWrap(false);
+    tft.setTextSize(1);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.drawCentreString("ESP32 Marauder", width / 2, 10, 1);
+    tft.drawCentreString(version_number, width / 2, 27, 1);
+    tft.drawCentreString("POOM", width / 2, 44, 1);
+    tft.display(true);
+    return;
+  #endif
   #ifdef MARAUDER_CYD_3_5_INCH
     constexpr bool half_scale_logo = true;
   #else
