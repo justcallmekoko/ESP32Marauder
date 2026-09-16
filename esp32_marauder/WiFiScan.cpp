@@ -2396,6 +2396,15 @@ bool WiFiScan::joinSavedWiFi(bool gui) {
   const uint8_t count = settings_obj.getSavedWifiCount();
   if (count == 0) {
     Serial.println(F("There are no saved WiFi credentials"));
+    #if defined(HAS_SCREEN) && defined(MARAUDER_POOM)
+      if (gui) {
+        display_obj.clearScreen();
+        display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+        display_obj.tft.drawCentreString("No saved WiFi", SCREEN_WIDTH / 2, 22, 1);
+        display_obj.tft.display(true);
+        delay(1000);
+      }
+    #endif
     return false;
   }
 
@@ -2471,6 +2480,9 @@ bool WiFiScan::joinSavedWiFi(bool gui) {
         display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
         display_obj.tft.println((fallback ? String("Fallback ") : String("Trying ")) + String(attempt) + "/" + String(attempts));
         display_obj.tft.println(ssid);
+        #ifdef MARAUDER_POOM
+          display_obj.tft.display(true);
+        #endif
       }
     #endif
 
@@ -2484,6 +2496,9 @@ bool WiFiScan::joinSavedWiFi(bool gui) {
           display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
           display_obj.tft.println(F("Connected:"));
           display_obj.tft.println(ssid);
+          #ifdef MARAUDER_POOM
+            display_obj.tft.display(true);
+          #endif
           delay(1000);
         }
       #endif
@@ -2512,6 +2527,19 @@ bool WiFiScan::joinSavedWiFi(bool gui) {
   }
 
   Serial.println(F("Could not connect to any saved WiFi network"));
+  #ifdef HAS_SCREEN
+    if (gui) {
+      display_obj.clearScreen();
+      display_obj.tft.setTextWrap(false);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+      display_obj.tft.drawCentreString("Saved WiFi failed", SCREEN_WIDTH / 2, 22, 1);
+      #ifdef MARAUDER_POOM
+        display_obj.tft.display(true);
+      #endif
+      delay(1000);
+    }
+  #endif
   return false;
 }
 

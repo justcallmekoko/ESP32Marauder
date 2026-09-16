@@ -77,6 +77,9 @@ class PoomTargetTests(unittest.TestCase):
         self.assertGreaterEqual(wifi_scan.count("display_obj.tft.display(true);"), 4)
         self.assertIn('miniKbMenu.parentMenu = &wifiAPMenu;', menus)
         self.assertIn('connected ? "Connected" : "Connection failed"', menus)
+        self.assertIn('drawCentreString("No saved WiFi"', wifi_scan)
+        self.assertIn('drawCentreString("Saved WiFi failed"', wifi_scan)
+        self.assertIn('println(F("Connected:"));', wifi_scan)
 
 
 if __name__ == "__main__":
