@@ -2,7 +2,7 @@
 
 #ifdef MARAUDER_POOM
 
-#include "libraries/TFT_eSPI/Fonts/glcdfont.c"
+#include "PoomFont.h"
 
 namespace {
 constexpr uint8_t kAddress = 0x3C;
