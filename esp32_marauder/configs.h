@@ -42,6 +42,7 @@
   //#define MARAUDER_MINI_V3
   //#define MARAUDER_M5_NANO_C6
   //#define DUAL_MINI_C5
+  //#define MARAUDER_POOM
   //// END BOARD TARGETS
 
   // Allocated only while settings are loaded or updated. This accommodates
@@ -121,6 +122,8 @@
     #define HARDWARE_NAME "Dual Mini C5"
   #elif defined(MARAUDER_M5_NANO_C6)
     #define HARDWARE_NAME "M5 Nano C6"
+  #elif defined(MARAUDER_POOM)
+    #define HARDWARE_NAME "POOM"
   #else
     #define HARDWARE_NAME "ESP32"
   #endif
@@ -617,6 +620,23 @@
     #define HAS_DIRECT_UPLOAD
   #endif
 
+  #ifdef MARAUDER_POOM
+    #define HAS_BT
+    #define HAS_BUTTONS
+    #define HAS_MINI_KB
+    #define HAS_NEOPIXEL_LED
+    #define HAS_SCREEN
+    #define HAS_MINI_SCREEN
+    #define HAS_SD
+    #define USE_SD
+    #define HAS_C5_SD
+    #define HAS_DUAL_BAND
+    #define HAS_PSRAM
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3
+    #define HAS_DIRECT_UPLOAD
+  #endif
+
   #if defined(MARAUDER_M5_NANO_C6)
     //#define FLIPPER_ZERO_HAT
     //#define HAS_MINI_KB
@@ -947,8 +967,56 @@
       #define D_PULL true
     #endif
 
+    #ifdef MARAUDER_POOM
+      #define L_BTN 3
+      #define C_BTN 28
+      #define U_BTN 7
+      #define R_BTN 23
+      #define D_BTN 24
+      #define B_BTN 9
+      #define HAS_L
+      #define HAS_R
+      #define HAS_U
+      #define HAS_D
+      #define HAS_C
+      #define HAS_B
+      #define L_PULL true
+      #define C_PULL true
+      #define U_PULL true
+      #define R_PULL true
+      #define D_PULL true
+      #define B_PULL true
+    #endif
+
   #endif
   //// END BUTTON DEFINITIONS
+
+  #ifdef MARAUDER_POOM
+    #define SCREEN_BUFFER
+    #define MENU_FONT NULL
+    #define TFT_WIDTH 128
+    #define TFT_HEIGHT 64
+    #define SCREEN_ORIENTATION 0
+    #define SCREEN_WIDTH TFT_WIDTH
+    #define SCREEN_HEIGHT TFT_HEIGHT
+    #define HEIGHT_1 TFT_WIDTH
+    #define WIDTH_1 TFT_WIDTH
+    #define GRAPH_VERT_LIM (TFT_HEIGHT / 2 - 1)
+    #define EXT_BUTTON_WIDTH 8
+    #define STATUS_BAR_WIDTH 8
+    #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH / 6)
+    #define CHAR_WIDTH 6
+    #define CHAN_PER_PAGE 7
+    #define STATUSBAR_COLOR TFT_BLACK
+    #define TEXT_HEIGHT 8
+    #define BOT_FIXED_AREA 0
+    #define TOP_FIXED_AREA 8
+    #define YMAX TFT_HEIGHT
+    #define MAX_SCREEN_BUFFER 5
+    #define BUTTON_SCREEN_LIMIT 5
+    #define BUTTON_ARRAY_LEN BUTTON_SCREEN_LIMIT
+    #define BANNER_TEXT_SIZE 1
+  #endif
 
   //// DISPLAY DEFINITIONS
   #ifdef HAS_SCREEN
@@ -2506,6 +2574,21 @@
     #define ICON_H 22
     #define BUTTON_PADDING 10
   #endif
+
+  #ifdef MARAUDER_POOM
+    #define BANNER_TIME 50
+    #define COMMAND_PREFIX "!"
+    #define KEY_X 64
+    #define KEY_Y 13
+    #define KEY_W 128
+    #define KEY_H 10
+    #define KEY_SPACING_X 0
+    #define KEY_SPACING_Y 0
+    #define KEY_TEXTSIZE 1
+    #define ICON_W 8
+    #define ICON_H 8
+    #define BUTTON_PADDING 4
+  #endif
   //// END MENU DEFINITIONS
 
   //// SD DEFINITIONS
@@ -2607,6 +2690,10 @@
 
     #ifdef MARAUDER_MINI_V3
       #define SD_CS 10
+    #endif
+
+    #ifdef MARAUDER_POOM
+      #define SD_CS 5
     #endif
 
   #endif
@@ -2742,6 +2829,8 @@
     #elif defined(MARAUDER_C5)
       #define PIN 27
     #elif defined(MARAUDER_V8)
+      #define PIN 27
+    #elif defined(MARAUDER_POOM)
       #define PIN 27
     #elif defined(MARAUDER_PANCAKE)
       #define PIN 27
@@ -3130,6 +3219,12 @@
       #define SD_MISO TFT_MISO
       #define SD_MOSI TFT_MOSI
       #define SD_SCK  TFT_SCLK
+    #endif
+
+    #ifdef MARAUDER_POOM
+      #define SD_MISO 8
+      #define SD_MOSI 4
+      #define SD_SCK  6
     #endif
   #endif
   //// END STUPID CYD STUFF

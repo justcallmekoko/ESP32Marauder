@@ -87,7 +87,13 @@ void LedInterface::refresh() {
 
 void LedInterface::setColor(int r, int g, int b) {
   #ifdef HAS_NEOPIXEL_LED
-    strip.setPixelColor(0, strip.Color(r, g, b));
+    #ifdef MARAUDER_POOM
+      for (uint8_t pixel = 0; pixel < Pixels; ++pixel) {
+        strip.setPixelColor(pixel, strip.Color(r, g, b));
+      }
+    #else
+      strip.setPixelColor(0, strip.Color(r, g, b));
+    #endif
     strip.show();
   #endif
   #ifdef HAS_T_DONGLE_LED
@@ -122,7 +128,13 @@ void LedInterface::ledOff() {
 
 void LedInterface::rainbow() {
   #ifdef HAS_NEOPIXEL_LED
-    strip.setPixelColor(0, this->Wheel((0 * 256 / 100 + this->wheel_pos) % 256));
+    #ifdef MARAUDER_POOM
+      for (uint8_t pixel = 0; pixel < Pixels; ++pixel) {
+        strip.setPixelColor(pixel, this->Wheel((pixel * 256 / Pixels + this->wheel_pos) % 256));
+      }
+    #else
+      strip.setPixelColor(0, this->Wheel((0 * 256 / 100 + this->wheel_pos) % 256));
+    #endif
     strip.show();
 
     this->current_fade_itter++;
