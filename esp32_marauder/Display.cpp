@@ -49,7 +49,7 @@ bool cleanLogoPixel(int16_t x, int16_t y, int16_t width, int16_t height,
 }  // namespace
 
 Display::Display()
-#ifdef HAS_CYD_TOUCH
+#if defined( HAS_CYD_TOUCH) || defined(MARAUDER_CYD_HMI)
   : touchscreenSPI(VSPI),
     touchscreen(XPT2046_CS, XPT2046_IRQ)
 #endif
@@ -57,9 +57,16 @@ Display::Display()
 }
 
 int8_t Display::menuButton(uint16_t *x, uint16_t *y, bool pressed, bool check_hold) {
+  // Serial.println(F("Display::menuButton()"));
+  int16_t _x = *x;
+  int16_t _y = *y;
   #ifdef HAS_ILI9341
     for (uint8_t b = BUTTON_ARRAY_LEN; b < BUTTON_ARRAY_LEN + 3; b++) {
-      if (pressed && this->key[b].contains(*x, *y)) {
+      // log_d("key %d _x1=%d _y1=%d _w=%d _h=%d _label=%s", 
+      // b, this->key[b]._x1, this->key[b]._y1, this->key[b]._w, this->key[b]._h, this->key[b]._label);
+
+      // if (pressed && this->key[b].contains(*x, *y)) {
+      if (pressed && this->key[b].contains(_x, _y)) {
         this->key[b].press(true);  // tell the button it is pressed
       } else {
         this->key[b].press(false);  // tell the button it is NOT pressed
@@ -85,9 +92,45 @@ int8_t Display::menuButton(uint16_t *x, uint16_t *y, bool pressed, bool check_ho
 }
 
 uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
-  #ifdef HAS_ILI9341
+
+
+  #ifdef HAS_CST3530
+     if (CST3530_obj.available()) {
+        
+       CST3530_obj.readData();
+       // Serial.print("Event ");
+       // Serial.println((int)CST3530_obj.data->event);
+       if (CST3530_obj.data->event == CST3530Event::DOWN) {  // Down event
+         *x = CST3530_obj.data->x;
+         *y = CST3530_obj.data->y;
+
+         // CST3530Point p = touch.getPoint(i);
+         // *x = p.x;
+         // *y = p.y;
+
+         // CST3530_obj.getTouch(x, y);
+
+         // if ( *x || *y ) { log_d("x=%d y=%d", *x, *y); }
+         return 1;
+        }
+     // } else {
+       // log_d("CST3530_obj.available : FALSE");
+     }
+     return 0;
+
+  #elif HAS_CST820
+     if (CST820_touch.available()) {
+       if (CST820_touch.data.event == 0) {  // Down event
+         *x = CST820_touch.data.x;
+         *y = CST820_touch.data.y;
+         return 1;
+       }
+     }
+     return 0;
+
+  #elif  defined(HAS_ILI9341)
     if (!this->headless_mode) {
-      #ifdef HAS_CAP_TOUCH
+      #ifdef HAS_FT6336
         // FT6336 capacitive touch: rotation-aware + edge exclusion
         {
           uint16_t raw_x, raw_y;
@@ -137,6 +180,11 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
 
           uint8_t rot = this->tft.getRotation();
 
+          // Is this the right place and way to fix inverted X?
+          #if defined(MARAUDER_CYD_HMI)
+            p.x = 4095 - p.x;   //  Temp Hack
+          #endif
+
           //#ifdef HAS_CYD_PORTRAIT
           //  rot = 0;
           //#endif
@@ -159,6 +207,7 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
               *y = map(p.x, 200, 3700, 1, TFT_HEIGHT);
               break;
           }
+          // Serial.printf("rot = %d, X = %d %d  Y = %d %d\n", rot, p.x, *x, p.y, *y);
           return 1;
         }
         else
@@ -214,6 +263,8 @@ void Display::setCalData(bool landscape) {
         uint16_t calData[5] = { 312, 3431, 191, 3456, 2 };
       #elif defined(TFT_DIY)
         uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // tft.setRotation(0); // Portrait with DIY TFT
+      #else
+        uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // DELETE
       #endif
       #ifdef HAS_ILI9341
         tft.setTouch(calData);
@@ -247,13 +298,13 @@ void Display::RunSetup() {
     screen_buffer = new LinkedList<String>();
   #endif
 
-  #ifdef HAS_CYD_TOUCH
+  #if defined( HAS_CYD_TOUCH) || defined(MARAUDER_CYD_HMI)
     this->touchscreenSPI.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
     this->touchscreen.begin(touchscreenSPI);
     this->touchscreen.setRotation(0);
   #endif
 
-  #ifdef HAS_CAP_TOUCH
+  #ifdef HAS_FT6336
     ft6336_init();
   #endif
   
