@@ -30,7 +30,13 @@
   #include <XPT2046_Touchscreen.h>
 #endif
 
-#ifdef HAS_CAP_TOUCH
+
+#ifdef HAS_CST820  // HAS_CAP_TOUCH
+   #include "CST820.hpp"
+  extern CST820 CST820_touch;
+#endif
+
+#ifdef  HAS_FT6336 // HAS_CAP_TOUCH
   #include "ft6336.h"
 #endif
 

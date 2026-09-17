@@ -236,6 +236,33 @@
       "assetSuffix": "dual_mini_c5",
       "chipFamily": "ESP32-C5",
       "esptoolChip": "esp32c5"
+    },
+    {
+      "id": "cyd-jc2432w328c",
+      "displayName": "CYD JC2432W328C GUITION",
+      "aliases": [],
+      "buildFlag": "MARAUDER_JC2432W328C",
+      "assetSuffix": "cyd_jc2432w328c",
+      "chipFamily": "ESP32",
+      "esptoolChip": "esp32"
+    },
+    {
+      "id": "cyd-2432s024",
+      "displayName": "Marauder CYD 2432S024",
+      "aliases": [],
+      "buildFlag": "MARAUDER_CYD_24",
+      "assetSuffix": "cyd_2432S024",
+      "chipFamily": "ESP32",
+      "esptoolChip": "esp32"
+    },
+    {
+      "id": "reverse-feather-s3",
+      "displayName": "ESP32-S3 Reverse Feather",
+      "aliases": ["Rev Feather S3"],
+      "buildFlag": "MARAUDER_REV_FEATHER_S3",
+      "assetSuffix": "rev_feather_s3",
+      "chipFamily": "ESP32-S3",
+      "esptoolChip": "esp32s3"
     }
   ]
 }
