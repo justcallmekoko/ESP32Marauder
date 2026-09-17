@@ -56,7 +56,7 @@ namespace {
 
 void CommandLine::RunSetup() {
   #ifndef MARAUDER_V8
-    Serial.println(this->ascii_art);
+  Serial.println(this->ascii_art);
   #endif
 
   Serial.println(F("\n\n--------------------------------\n"));
@@ -784,7 +784,7 @@ void CommandLine::runCommand(String input) {
             if (target_ap.stations->get(i) == station_index) {
               belongs_to_ap = true;
               break;
-            }
+          }
           }
           if (belongs_to_ap) {
             const Station& target = stations->get(station_index);
@@ -1501,9 +1501,9 @@ void CommandLine::runCommand(String input) {
 
     // ARP discovery uses the active station netif on both legacy and C5
     // dual-band hardware.
-    if (cmd_args.get(0) == ARP_SCAN_CMD) {
-      this->startScanFromCLI(WIFI_ARP_SCAN, TFT_CYAN, "ARP Scan");
-    }
+      if (cmd_args.get(0) == ARP_SCAN_CMD) {
+        this->startScanFromCLI(WIFI_ARP_SCAN, TFT_CYAN, "ARP Scan");
+      }
 
     // GPS POI
     if (cmd_args.get(0) == GPS_POI_CMD) {
@@ -2108,6 +2108,29 @@ void CommandLine::runCommand(String input) {
     }
     else {
       Serial.println(F("Usage: add -a -b <mac> or add -c -b <mac> -ap <index>"));
+    }
+  }
+
+    else if (cmd_args.get(0) == RESET_REASON_CMD) {
+      extern void print_reset_reason();
+      print_reset_reason();
+    }
+
+  else if (cmd_args.get(0) == WIFI_TXPWR_CMD) {
+    int8_t txpower = 20;
+    extern int8_t wifi_power;
+    if (cmd_args.size() > 1) {
+        txpower = cmd_args.get(1).toInt();
+    }
+    if (txpower < 8 || txpower > 84) {
+        Serial.println(F("Invalid level: use X value between 8>84"));
+    }
+
+    wifi_power = txpower;
+    esp_wifi_set_max_tx_power(txpower);
+
+    if (txpower == 80) {
+        Serial.println(F("Set to default level: 80 (20dBm)"));
     }
   }
 

@@ -21,6 +21,7 @@
   #endif
 #endif
 
+
 /*#ifdef HAS_IDF_3
   extern "C" {
     #include "esp_netif.h"
@@ -39,8 +40,8 @@
 #include "mbedtls/bignum.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/ecp.h"
-#include <lwip/etharp.h>
-#include <lwip/ip_addr.h>
+  #include <lwip/etharp.h>
+  #include <lwip/ip_addr.h>
 #include <lwip/netif.h>
 #include <lwip/tcpip.h>
 #ifdef HAS_IDF_3
@@ -258,6 +259,11 @@ extern Settings settings_obj;
 #elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
   extern LedInterface led_obj;
 #endif
+
+ //  WIFI_POWER_21dBm = 84,      // 21dBm
+ //  WIFI_POWER_20_5dBm = 82,    // 20.5dBm
+ //  WIFI_POWER_20dBm = 80,      // 20dBm
+int8_t wifi_power;
 
 esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx, const void *buffer, int len, bool en_sys_seq);
 

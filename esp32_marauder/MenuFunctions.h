@@ -25,6 +25,8 @@
 #include "settings.h"
 #include "MenuInputRepeat.h"
 
+extern int8_t wifi_power;
+
 #ifdef HAS_BUTTONS
   #include "Switches.h"
   #if (U_BTN >= 0)
@@ -257,6 +259,9 @@ class MenuFunctions
     Menu foxHuntMenu;
     Menu foxSortMenu;
     Menu foxFilterMenu;
+
+    Menu adminMenu;
+    Menu adminSubMenu;
 
     #ifdef HAS_DIRECT_UPLOAD
       Menu deleteAllMenu;

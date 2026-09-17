@@ -2080,10 +2080,15 @@ void MenuFunctions::RunSetup()
   evilPortalMenu.list = new LinkedList<MenuNode>();
   ssidsMenu.list = new LinkedList<MenuNode>();
 
+  adminMenu.list = new LinkedList<MenuNode>();
+  adminSubMenu.list = new LinkedList<MenuNode>();
+
   #ifdef HAS_GPS
     gpsPOIMenu.list = new LinkedList<MenuNode>();
   #endif
 
+  adminMenu.name = "Admin Tools";
+  adminSubMenu.name = "-";
   foxHuntMenu.list = new LinkedList<MenuNode>();
   reconMenu.list = new LinkedList<MenuNode>();
 
@@ -2234,11 +2239,11 @@ void MenuFunctions::RunSetup()
   });
   // The C5 implementation uses the active station netif with lwIP core
   // locking, so dual-band hardware supports the same ARP scanner.
-  this->addNodes(&wifiScannerMenu, "ARP Scan", TFTCYAN, SCANNERS, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_ARP_SCAN, TFT_CYAN);
-  });
+    this->addNodes(&wifiScannerMenu, "ARP Scan", TFTCYAN, SCANNERS, [this]() {
+      display_obj.clearScreen();
+      this->drawStatusBar();
+      wifi_scan_obj.StartScan(WIFI_ARP_SCAN, TFT_CYAN);
+    });
   this->addNodes(&wifiScannerMenu, "Port Scan All", TFTMAGENTA, BEACON_LIST, [this](){
     // Add the back button
     wifiIPMenu.list->clear();
@@ -2928,8 +2933,8 @@ void MenuFunctions::RunSetup()
                 this->changeMenu(&savedWifiMenu, true);
               }
               else {
-                this->changeMenu(current_menu, true);
-              }
+              this->changeMenu(current_menu, true);
+            }
             }
           #endif
 
@@ -2954,8 +2959,8 @@ void MenuFunctions::RunSetup()
 
     this->addNodes(&wifiGeneralMenu, "Join Saved WiFi", TFTWHITE, KEYBOARD_ICO, [this](){
       wifi_scan_obj.joinSavedWiFi(true);
-      this->changeMenu(&wifiGeneralMenu, true);
-    });
+        this->changeMenu(&wifiGeneralMenu, true);
+        });
 
     this->addNodes(&wifiGeneralMenu, "Manage Saved WiFi", TFTWHITE, SETTINGS, [this](){
       this->buildSavedWifiMenu(false);
@@ -3782,6 +3787,78 @@ void MenuFunctions::RunSetup()
     this->changeMenu(loadATsMenu.parentMenu, true);
   });
 
+
+  // Admin Menu
+  // TFT_GREENYELLOW
+  this->addNodes(&deviceMenu, "Admin Tools", TFTPINK, SD_UPDATE, [this]() {
+    this->changeMenu(&adminMenu, true);
+  });
+  adminMenu.parentMenu = &deviceMenu;
+
+  this->addNodes(&adminMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(adminMenu.parentMenu, true);
+  });
+#if defined(HAS_SD) || defined(USE_SD)
+  this->addNodes(&adminMenu, "Rescan SD", TFTPINK, SD_UPDATE, [this]() {
+    sd_obj.initSD();
+    this->changeMenu(&adminMenu, true);
+  });
+#endif
+
+  // adminSubMenu is just a blank screen a Done button
+  adminSubMenu.parentMenu = &adminMenu;
+    this->addNodes(&adminSubMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(adminSubMenu.parentMenu, true);
+  });
+
+#ifdef HAS_GPS
+      this->addNodes(&saveFileMenu, "Probe GPS", TFTSKYBLUE, SD_UPDATE, [this]() {
+        gps_obj.begin();
+       this->changeMenu(&adminMenu, true);
+      });
+#endif //  HAS_GPS
+
+  this->addNodes(&adminMenu, "WifiTx 21dBm (Max)", TFTGREEN, WIFI, [this]() {
+      // WIFI_POWER_21dBm = 84,
+      wifi_power = 84;
+      esp_wifi_set_max_tx_power(wifi_power);
+     this->changeMenu(&adminMenu, true);
+  });
+  this->addNodes(&adminMenu, "WifiTx 20dBm (Default)", TFTGREEN, WIFI, [this]() {
+      // WIFI_POWER_20dB = 80
+      wifi_power = 78;
+      esp_wifi_set_max_tx_power(wifi_power);
+     this->changeMenu(&adminMenu, true);
+     // esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P9); // Set maximum 9 dBm power
+  });
+  this->addNodes(&adminMenu, "WifiTx 15dBm", TFTGREEN, WIFI, [this]() {
+     // WIFI_POWER_15dBm = 60
+      wifi_power = 60;
+      esp_wifi_set_max_tx_power(wifi_power);
+     this->changeMenu(&adminMenu, true);
+  });
+  this->addNodes(&adminMenu, "WifiTx 8.5dBm", TFTGREEN, WIFI, [this]() {
+    // WIFI_POWER_8_5dBm = 34
+      wifi_power = 34;
+      esp_wifi_set_max_tx_power(wifi_power);
+     this->changeMenu(&adminMenu, true);
+  });
+  this->addNodes(&adminMenu, "WifiTx 5dBm", TFTGREEN, WIFI, [this]() {
+      // WIFI_POWER_5dBm = 20,
+      wifi_power = 20;
+      esp_wifi_set_max_tx_power(wifi_power);
+     this->changeMenu(&adminMenu, true);
+  });
+
+  this->addNodes(&adminMenu, "Reset Reasion", TFTRED, SETTINGS, [this]() {
+    this->changeMenu(&adminSubMenu, true);
+    extern const char *resetReasonName();
+    extern void print_reset_reason();
+    display_obj.tft.setTextColor(TFT_SKYBLUE, TFT_BLACK);
+    display_obj.tft.drawCentreString(resetReasonName(), TFT_WIDTH/2, TFT_HEIGHT * 0.33, 4);
+    print_reset_reason();
+  });
+
   // GPS Menu
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
@@ -4557,20 +4634,20 @@ void MenuFunctions::buildSDFileMenu(bool update) {
 
   resetOwnedList(sdDeleteMenu.list);
 
-  sdDeleteMenu.name = "Bin Files";
+    sdDeleteMenu.name = "Bin Files";
 
   this->addNodes(&sdDeleteMenu, text09, TFTLIGHTGREY, 0, [this]() {
     this->changeMenu(sdDeleteMenu.parentMenu, true);
   });
 
-  for (int x = 0; x < sd_obj.sd_files->size(); x++) {
-    this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x).c_str(), TFTCYAN, SD_UPDATE, [this, x]() {
-      wifi_scan_obj.currentScanMode = OTA_UPDATE;
-      this->changeMenu(&failedUpdateMenu, true);
-      sd_obj.runUpdate("/" + sd_obj.sd_files->get(x));
-    });
+    for (int x = 0; x < sd_obj.sd_files->size(); x++) {
+      this->addNodes(&sdDeleteMenu, sd_obj.sd_files->get(x).c_str(), TFTCYAN, SD_UPDATE, [this, x]() {
+        wifi_scan_obj.currentScanMode = OTA_UPDATE;
+        this->changeMenu(&failedUpdateMenu, true);
+        sd_obj.runUpdate("/" + sd_obj.sd_files->get(x));
+      });
+    }
   }
-}
 
 String MenuFunctions::parentSDPath(const String& path) const {
   if (path == "/")
@@ -4939,6 +5016,7 @@ uint16_t MenuFunctions::getColor(uint16_t color) {
   else if (color == TFTSILVER) return TFT_SILVER;
   else if (color == TFTDARKGREY) return TFT_DARKGREY;
   else if (color == TFTSKYBLUE) return TFT_SKYBLUE;
+  else if (color == TFTPINK) return TFT_PINK;
   else if (color == TFTLIME) return 0x97e0;
   else return color;
 }
