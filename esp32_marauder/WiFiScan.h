@@ -21,12 +21,17 @@
   #endif
 #endif
 
-/*#ifdef HAS_IDF_3
+#ifdef MSC_SHARE
+  #include "MSC_Share.h"
+    extern MSC_Share MSC_Share_obj;
+#endif
+
+#ifdef HAS_IDF_3
   extern "C" {
     #include "esp_netif.h"
     #include "esp_netif_net_stack.h"
   }
-#endif*/
+#endif
 
 //#include <WiFi.h>
 #include <ESP32Ping.h>
@@ -39,8 +44,8 @@
 #include "mbedtls/bignum.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/ecp.h"
-#include <lwip/etharp.h>
-#include <lwip/ip_addr.h>
+  #include <lwip/etharp.h>
+  #include <lwip/ip_addr.h>
 #include <lwip/netif.h>
 #include <lwip/tcpip.h>
 #ifdef HAS_IDF_3
@@ -1120,6 +1125,8 @@ class WiFiScan
     void RunLoadAPList();
     void RunSaveATList(bool save_as = true);
     void RunLoadATList();
+    void RunLoadAll();
+    void RunSaveAll();
     void RunSetupGPSTracker(uint8_t scan_mode);
     void channelHop(bool filtered = false, bool ranged = false);
     uint8_t currentScanMode = 0;
