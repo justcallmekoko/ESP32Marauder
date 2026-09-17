@@ -1,0 +1,170 @@
+#pragma once
+
+#ifndef Display_h
+#define Display_h
+
+#include "configs.h"
+
+#ifdef HAS_SCREEN
+
+#include <FS.h>
+#include <functional>
+#include <LinkedList.h>
+#include <SPI.h>
+#include "SPIFFS.h"
+#include "Assets.h"
+#include "BootSplash.h"
+
+#include <TFT_eSPI.h>
+
+// Reject board/display configuration mismatches at compile time. A mismatched
+// TFT setup can boot normally while driving the wrong controller and pins.
+#if defined(MARAUDER_CYD_3_5_INCH) && !defined(ST7796_DRIVER)
+  #error "MARAUDER_CYD_3_5_INCH requires User_Setup_cyd_3_5_inch.h (ST7796_DRIVER)"
+#endif
+#if (defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)) && !defined(ST7789_2_DRIVER)
+  #error "Cardputer targets require their ST7789_2_DRIVER TFT_eSPI setup"
+#endif
+
+#ifdef HAS_CYD_TOUCH
+#ifndef MARAUDER_ZLX_C5
+  #include <XPT2046_Touchscreen.h>
+#endif
+#endif
+
+#ifdef HAS_CAP_TOUCH
+  #include "ft6336.h"
+#endif
+
+// WiFi stuff
+#define OTA_UPDATE 100
+#define SHOW_INFO 101
+#define WIFI_SCAN_OFF 0
+#define WIFI_SCAN_PROBE 1
+#define WIFI_SCAN_AP 2
+#define WIFI_SCAN_PWN 3
+#define WIFI_SCAN_EAPOL 4
+#define WIFI_SCAN_DEAUTH 5
+#define WIFI_SCAN_ALL 6
+#define WIFI_PACKET_MONITOR 7
+#define WIFI_ATTACK_BEACON_SPAM 8
+#define WIFI_ATTACK_RICK_ROLL 9
+#define BT_SCAN_ALL 10
+#define BT_SCAN_SKIMMERS 11
+#define WIFI_SCAN_ESPRESSIF 12
+#define LV_JOIN_WIFI 13
+#define LV_ADD_SSID 14
+#define WIFI_ATTACK_BEACON_LIST 15
+
+#define RED_KEY ";red;"
+#define GREEN_KEY ";grn;"
+#define CYAN_KEY ";cyn;"
+#define MAGENTA_KEY ";mgn;"
+#define WHITE_KEY ";wht;"
+
+#define UP_BUTTON     0
+#define SELECT_BUTTON 1
+#define DOWN_BUTTON   2
+
+#define EXIT_BUTTON_INDEX 0 // 6
+#define CHAN_MINUS_INDEX  1 // 4
+#define CHAN_PLUS_INDEX   2 // 5
+#define CHAN_HOP_INDEX    5 // 7
+#define X_MINUS_INDEX     6
+#define X_PLUS_INDEX      7
+#define Y_MINUS_INDEX     8
+#define Y_PLUS_INDEX      9
+
+class Display
+{
+  private:
+    bool SwitchOn = false;
+    
+    bool run_setup = true;
+    
+    // For the byte we read from the serial port
+    byte data = 0;
+    
+    // A few test variables used during debugging
+    boolean change_colour = 1;
+    boolean selected = 1;
+
+    void drawFrame();
+
+    #ifdef SCREEN_BUFFER
+      void scrollScreenBuffer(bool down = false);
+    #endif
+    void processAndPrintString(TFT_eSPI& tft, const String& originalString);
+
+  public:
+    Display();
+    TFT_eSPI tft = TFT_eSPI();
+    TFT_eSPI_Button key[BUTTON_ARRAY_LEN + 4];
+    const String PROGMEM version_number = MARAUDER_VERSION;
+
+    #ifdef HAS_CYD_TOUCH
+  #ifndef MARAUDER_ZLX_C5
+    SPIClass touchscreenSPI;
+    XPT2046_Touchscreen touchscreen;
+  #endif
+#endif
+
+    bool printing = false;
+    bool loading = false;
+    bool tteBar = false;
+    bool draw_tft = false;
+    bool exit_draw = false;
+    bool headless_mode = false;
+
+    uint8_t TOP_FIXED_AREA_2 = 48;
+    uint8_t print_delay_1, print_delay_2 = 10;
+    uint8_t current_banner_pos = SCREEN_WIDTH;
+
+    LinkedList<String>* display_buffer;
+
+    #ifdef SCREEN_BUFFER
+      LinkedList<String>* screen_buffer;
+    #endif
+
+    // The initial y coordinate of the top of the bottom text line
+    uint16_t yDraw = YMAX - BOT_FIXED_AREA - TEXT_HEIGHT;
+
+    // Keep track of the drawing x coordinate
+    uint16_t xPos = 0;
+
+    // The initial y coordinate of the top of the scrolling area
+    uint16_t yStart = TOP_FIXED_AREA_2;
+    // yArea must be a integral multiple of TEXT_HEIGHT
+    uint16_t yArea = YMAX - TOP_FIXED_AREA_2 - BOT_FIXED_AREA;
+
+    // We have to blank the top line each time the display is scrolled, but this takes up to 13 milliseconds
+    // for a full width line, meanwhile the serial buffer may be filling... and overflowing
+    // We can speed up scrolling of short text lines by just blanking the character we drew
+    int blank[19]; // We keep all the strings pixel lengths to optimise the speed of the top line blanking
+
+    int8_t menuButton(uint16_t *x, uint16_t *y, bool pressed, bool check_hold = false);
+    uint8_t updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold = 600);
+    bool isTouchHeld(uint16_t threshold = 600);
+    void tftDrawGraphObjects(byte x_scale);
+    void tftDrawEapolColorKey(bool filter = false);
+    void tftDrawColorKey();
+    void tftDrawXScaleButtons(byte x_scale);
+    void tftDrawYScaleButtons(byte y_scale);
+    void tftDrawChannelScaleButtons(int set_channel, bool lnd_an = true);
+    void tftDrawExitScaleButtons(bool lnd_an = true);
+    void tftDrawChanHopButton(bool lnd_an = true, bool en = false);
+    void buildBanner(String msg, int xpos);
+    void clearScreen();
+    void displayBuffer(bool do_clear = false);
+    void drawBootSplash();
+    void getTouchWhileFunction(bool pressed);
+    void init();
+    void RunSetup();
+    void showCenterText(const char* text, int y, bool small_pp = false, uint8_t text_size = BANNER_TEXT_SIZE);
+    void touchToExit();
+    void twoPartDisplay(String center_text);
+    void updateBanner(String msg);
+    void setCalData(bool landscape = false);
+};
+#endif
+#endif
