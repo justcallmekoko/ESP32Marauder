@@ -1,4 +1,5 @@
 #include "Buffer.h"
+#include "PcapHeader.h"
 #include "lang_var.h"
 
 Buffer::Buffer(){
@@ -8,21 +9,22 @@ Buffer::Buffer(){
 
 void Buffer::createFile(const char* name, bool is_pcap, bool is_gpx){
   int i=0;
+  String prefix = directory ? String(directory) + "/" : "/";
   if (is_pcap) {
     do{
-      fileName = "/"+String(name)+"_"+(String)i+".pcap";
+      fileName = prefix+String(name)+"_"+(String)i+".pcap";
       i++;
     } while(fs->exists(fileName));
   }
   else if ((!is_pcap) && (!is_gpx)) {
     do{
-      fileName = "/"+String(name)+"_"+(String)i+".log";
+      fileName = prefix+String(name)+"_"+(String)i+".log";
       i++;
     } while(fs->exists(fileName));
   }
   else {
     do{
-      fileName = "/"+String(name)+"_"+(String)i+".gpx";
+      fileName = prefix+String(name)+"_"+(String)i+".gpx";
       i++;
     } while(fs->exists(fileName));
   }
@@ -42,18 +44,18 @@ void Buffer::open(bool is_pcap){
   writing = true;
 
   if (is_pcap) {
-    write(uint32_t(0xa1b2c3d4)); // magic number
-    write(uint16_t(2)); // major version number
-    write(uint16_t(4)); // minor version number
-    write(int32_t(0)); // GMT to local correction
-    write(uint32_t(0)); // accuracy of timestamps
-    write(uint32_t(SNAP_LEN)); // max length of captured packets, in octets
-    write(uint32_t(105)); // data link type
+    uint8_t header[marauder::kPcapGlobalHeaderSize];
+    marauder::makePcapGlobalHeader(SNAP_LEN, header);
+    write(header, sizeof(header));
   }
 }
 
 String Buffer::getFileName() {
   return this->fileName;
+}
+
+void Buffer::setDirectory(const char* path) {
+  directory = path;
 }
 
 void Buffer::openFile(const char* file_name, fs::FS* fs, bool serial, bool is_pcap, bool is_gpx) {
