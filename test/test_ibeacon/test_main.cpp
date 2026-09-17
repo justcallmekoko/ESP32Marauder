@@ -41,6 +41,24 @@ void test_finds_signature_after_advertising_headers() {
   TEST_ASSERT_EQUAL_INT8(-64, beacon.measured_power);
 }
 
+void test_identity_uses_uuid_major_and_minor_not_transmitter_mac() {
+  marauder::IBeaconPayload first;
+  marauder::IBeaconPayload clone;
+  first.uuid[0] = clone.uuid[0] = 0xaa;
+  first.uuid[15] = clone.uuid[15] = 0x55;
+  first.major = clone.major = 7;
+  first.minor = clone.minor = 42;
+  first.measured_power = -59;
+  clone.measured_power = -70;
+  TEST_ASSERT_TRUE(marauder::sameIBeacon(first, clone));
+
+  clone.uuid[8] = 1;
+  TEST_ASSERT_FALSE(marauder::sameIBeacon(first, clone));
+  clone.uuid[8] = 0;
+  clone.minor++;
+  TEST_ASSERT_FALSE(marauder::sameIBeacon(first, clone));
+}
+
 }  // namespace
 
 void setUp() {}
@@ -51,5 +69,6 @@ int main(int, char**) {
   RUN_TEST(test_parses_ibeacon_manufacturer_payload);
   RUN_TEST(test_rejects_truncated_or_wrong_company_payload);
   RUN_TEST(test_finds_signature_after_advertising_headers);
+  RUN_TEST(test_identity_uses_uuid_major_and_minor_not_transmitter_mac);
   return UNITY_END();
 }

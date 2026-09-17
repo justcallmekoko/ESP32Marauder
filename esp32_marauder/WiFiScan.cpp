@@ -43,6 +43,11 @@ LinkedList<ProbeReqSsid>* probe_req_ssids;
 LinkedList<BleDevice>* ble_devices;
 extern ReconMission recon_obj;
 
+namespace {
+constexpr size_t MAX_RETAINED_BLE_DEVICES = 128;
+constexpr uint32_t IBEACON_UI_INTERVAL_MS = 100;
+}
+
 size_t WiFiScan::retainedAccessPointCount() const {
   return access_points == nullptr ? 0 : access_points->size();
 }
@@ -604,6 +609,7 @@ extern "C" {
                 memcpy(ble_device.mac, ble_devices->get(device_match_check).mac, sizeof(mac_char));
                 ble_devices->set(device_match_check, ble_device);
                 //Serial.println(ble_devices->get(device_match_check).name + " RSSI updated: " + String(ble_devices->get(device_match_check).rssi));
+                wifi_scan_obj.bt_cb_busy = false;
                 return;
               }
 
@@ -612,7 +618,15 @@ extern "C" {
                 return;
               }
 
-              ble_devices->add(ble_device);
+              if (!wifi_scan_obj.retainBLEDevice(ble_device)) {
+                wifi_scan_obj.bt_cb_busy = false;
+                return;
+              }
+
+              if (is_ibeacon && !wifi_scan_obj.shouldRenderIBeaconEvent(ble_device.last_seen_ms)) {
+                wifi_scan_obj.bt_cb_busy = false;
+                return;
+              }
 
               #ifndef HAS_MINI_SCREEN
                 display_string.concat(text_table4[0]);
@@ -1316,6 +1330,7 @@ extern "C" {
                 memcpy(ble_device.mac, ble_devices->get(device_match_check).mac, sizeof(mac_char));
                 ble_devices->set(device_match_check, ble_device);
                 //Serial.println(ble_devices->get(device_match_check).name + " RSSI updated: " + String(ble_devices->get(device_match_check).rssi));
+                wifi_scan_obj.bt_cb_busy = false;
                 return;
               }
 
@@ -1324,7 +1339,15 @@ extern "C" {
                 return;
               }
 
-              ble_devices->add(ble_device);
+              if (!wifi_scan_obj.retainBLEDevice(ble_device)) {
+                wifi_scan_obj.bt_cb_busy = false;
+                return;
+              }
+
+              if (is_ibeacon && !wifi_scan_obj.shouldRenderIBeaconEvent(ble_device.last_seen_ms)) {
+                wifi_scan_obj.bt_cb_busy = false;
+                return;
+              }
 
               #ifndef HAS_MINI_SCREEN
                 display_string.concat(text_table4[0]);
@@ -1703,6 +1726,13 @@ extern "C" {
 
 int WiFiScan::seenBLEDevice(BleDevice ble_device) {
   for (int i = 0; i < ble_devices->size(); i++) {
+    if (ble_device.is_ibeacon) {
+      if (ble_devices->get(i).is_ibeacon &&
+          marauder::sameIBeacon(ble_devices->get(i).ibeacon, ble_device.ibeacon)) {
+        return i;
+      }
+      continue;
+    }
     //Serial.println("Comparing names " + ble_devices->get(i).name + " | " + ble_device.name);
     if ((ble_devices->get(i).name == ble_device.name) || (ble_device.name == "")) {
       //Serial.print("Comparing MACs ");
@@ -1717,6 +1747,35 @@ int WiFiScan::seenBLEDevice(BleDevice ble_device) {
     }
   }
   return -1;
+}
+
+bool WiFiScan::retainBLEDevice(const BleDevice& ble_device) {
+  if (!ble_devices) return false;
+  if (ble_devices->size() < MAX_RETAINED_BLE_DEVICES) {
+    ble_devices->add(ble_device);
+    return true;
+  }
+
+  // Keep memory and lookup time bounded under randomized-advertisement floods.
+  // Selected fox-hunt targets are never evicted.
+  int oldest_index = -1;
+  uint32_t oldest_seen = UINT32_MAX;
+  for (int index = 0; index < ble_devices->size(); index++) {
+    const BleDevice& retained = ble_devices->get(index);
+    if (!retained.selected && retained.last_seen_ms <= oldest_seen) {
+      oldest_seen = retained.last_seen_ms;
+      oldest_index = index;
+    }
+  }
+  if (oldest_index < 0) return false;
+  ble_devices->set(oldest_index, ble_device);
+  return true;
+}
+
+bool WiFiScan::shouldRenderIBeaconEvent(uint32_t current_time) {
+  if (current_time - last_ibeacon_ui_update < IBEACON_UI_INTERVAL_MS) return false;
+  last_ibeacon_ui_update = current_time;
+  return true;
 }
 
 bool WiFiScan::isFlockCamera(const uint8_t* payload, size_t len, const String& name, String* serial_out) {
@@ -12366,8 +12425,13 @@ void WiFiScan::main(uint32_t currentTime)
         if (this->ble_scanning) {
           pBLEScan->stop();
           this->bt_pending_clear = true;
-          while (bt_cb_busy)
-            delay(100);
+          const uint32_t callback_wait_started = millis();
+          while (bt_cb_busy && millis() - callback_wait_started < 500)
+            delay(1);
+          // A callback must not be allowed to wedge the UI forever. Stopping the
+          // scanner above prevents new callbacks; after the bounded drain any
+          // remaining true value is stale state from an early-return path.
+          bt_cb_busy = false;
           pBLEScan->clearResults();
           this->bt_pending_clear = false;
           this->ble_scanning = false;
