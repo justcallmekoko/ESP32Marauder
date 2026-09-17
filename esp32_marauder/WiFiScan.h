@@ -461,6 +461,7 @@ class WiFiScan
     marauder::GpsTrackerStats gps_tracker_stats;
     uint32_t last_ui_update = 0;
     uint32_t last_sour_apple_update = 0;
+    uint32_t last_ibeacon_ui_update = 0;
     bool run_setup = true;
     void initWiFi(uint8_t scan_mode);
     uint8_t bluetoothScanTime = 5;
@@ -1048,6 +1049,8 @@ class WiFiScan
     bool startWiFi(String ssid, String password, bool gui = true);
     bool isFlockCamera(const uint8_t* payload, size_t len, const String& name, String* serial_out);
     int seenBLEDevice(BleDevice ble_device);
+    bool retainBLEDevice(const BleDevice& ble_device);
+    bool shouldRenderIBeaconEvent(uint32_t current_time);
     uint16_t rssiToColor(int8_t rssi);
     bool isMetaIdentifier(uint16_t id);
     bool isBlockedIdentifier(uint16_t id);

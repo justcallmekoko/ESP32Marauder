@@ -12,6 +12,14 @@ struct IBeaconPayload {
   int8_t measured_power = 0;
 };
 
+inline bool sameIBeacon(const IBeaconPayload& lhs, const IBeaconPayload& rhs) {
+  if (lhs.major != rhs.major || lhs.minor != rhs.minor) return false;
+  for (size_t index = 0; index < sizeof(lhs.uuid); index++) {
+    if (lhs.uuid[index] != rhs.uuid[index]) return false;
+  }
+  return true;
+}
+
 inline bool parseIBeacon(const uint8_t* payload, size_t length, IBeaconPayload& beacon) {
   if (!payload || length < 25) return false;
   for (size_t offset = 0; offset + 25 <= length; offset++) {
