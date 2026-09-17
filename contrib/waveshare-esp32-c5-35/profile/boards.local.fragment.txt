@@ -1,0 +1,41 @@
+# BEGIN WAVESHARE ESP32-C5 MARAUDER
+waveshare_c5_marauder.name=Waveshare ESP32-C5 Marauder (3.5in Touch)
+
+waveshare_c5_marauder.bootloader.tool=esptool_py
+waveshare_c5_marauder.bootloader.tool.default=esptool_py
+
+waveshare_c5_marauder.upload.tool=esptool_py
+waveshare_c5_marauder.upload.tool.default=esptool_py
+waveshare_c5_marauder.upload.tool.network=esp_ota
+waveshare_c5_marauder.upload.maximum_size=3342336
+waveshare_c5_marauder.upload.maximum_data_size=327680
+waveshare_c5_marauder.upload.speed=115200
+waveshare_c5_marauder.upload.flags=--no-stub
+waveshare_c5_marauder.upload.extra_flags=
+waveshare_c5_marauder.upload.erase_cmd=
+waveshare_c5_marauder.upload.use_1200bps_touch=false
+waveshare_c5_marauder.upload.wait_for_upload_port=false
+
+waveshare_c5_marauder.serial.disableDTR=true
+waveshare_c5_marauder.serial.disableRTS=true
+waveshare_c5_marauder.monitor_port.serial.baudrate=115200
+waveshare_c5_marauder.monitor_port.serial.dtr=off
+waveshare_c5_marauder.monitor_port.serial.rts=off
+
+waveshare_c5_marauder.build.tarch=riscv32
+waveshare_c5_marauder.build.target=esp
+waveshare_c5_marauder.build.mcu=esp32c5
+waveshare_c5_marauder.build.core=esp32
+waveshare_c5_marauder.build.variant=esp32c5
+waveshare_c5_marauder.build.board=WAVESHARE_ESP32C5_MARAUDER
+waveshare_c5_marauder.build.bootloader_addr=0x2000
+waveshare_c5_marauder.build.cdc_on_boot=0
+waveshare_c5_marauder.build.f_cpu=240000000L
+waveshare_c5_marauder.build.flash_size=8MB
+waveshare_c5_marauder.build.flash_freq=80m
+waveshare_c5_marauder.build.flash_mode=dio
+waveshare_c5_marauder.build.boot=qio
+waveshare_c5_marauder.build.partitions=default_8MB
+waveshare_c5_marauder.build.defines=-DBOARD_HAS_PSRAM -DMARAUDER_WAVESHARE_C5
+waveshare_c5_marauder.compiler.c.elf.extra_flags=-Wl,-zmuldefs
+# END WAVESHARE ESP32-C5 MARAUDER
