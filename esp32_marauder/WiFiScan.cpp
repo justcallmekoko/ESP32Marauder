@@ -4402,7 +4402,7 @@ bool WiFiScan::RunGPSInfo(bool tracker, bool display, bool poi) {
         if (!gps_obj.getFixStatus()) {
           return_val = false;
         }
-
+          
         if (tracker && !poi) {
           const bool compact = SCREEN_HEIGHT <= 160 || SCREEN_WIDTH <= 160;
           const bool expanded = SCREEN_HEIGHT >= 240 && SCREEN_WIDTH >= 200;
@@ -4479,12 +4479,12 @@ bool WiFiScan::RunGPSInfo(bool tracker, bool display, bool poi) {
           display_obj.tft.setTextColor(TFT_CYAN);
           display_obj.tft.println(gps_obj.getFixStatus() ? F("  Good Fix: Yes") : F("  Good Fix: No"));
           if (text != "") display_obj.tft.println("      Text: " + text);
-          display_obj.tft.println(" Sats: " + gps_obj.getNumSatsString());
+        display_obj.tft.println(" Sats: " + gps_obj.getNumSatsString());
           display_obj.tft.println("  Acc: " + String(gps_obj.getAccuracy()));
-          display_obj.tft.println("  Lat: " + gps_obj.getLat());
-          display_obj.tft.println("  Lon: " + gps_obj.getLon());
+        display_obj.tft.println("  Lat: " + gps_obj.getLat());
+        display_obj.tft.println("  Lon: " + gps_obj.getLon());
           display_obj.tft.println("  Alt: " + String(gps_obj.getAlt()));
-          display_obj.tft.println("  D/T: " + gps_obj.getDatetime());
+        display_obj.tft.println("  D/T: " + gps_obj.getDatetime());
         }
       #endif
 
@@ -4738,14 +4738,18 @@ void WiFiScan::RunInfo() {
     display_obj.tft.setTextColor(TFT_CYAN);
     display_obj.tft.println(text_table4[20]);
     display_obj.tft.println(text_table4[21] + display_obj.version_number);
+    display_obj.tft.println("Build Date: " + String(__DATE__ " " __TIME__));
     display_obj.tft.println("Hardware: " + (String)HARDWARE_NAME);
     display_obj.tft.println(text_table4[22] + (String)esp_get_idf_version());
+    display_obj.tft.println("ESP Arduino:" + String(ESP_ARDUINO_VERSION_MAJOR) + "." + String(ESP_ARDUINO_VERSION_MINOR) + "." + String(ESP_ARDUINO_VERSION_PATCH));
   #endif
 
   Serial.println(text_table4[20]);
   Serial.println(text_table4[21] + (String)MARAUDER_VERSION);
+  Serial.println("Build Date: " + String(__DATE__ " " __TIME__));
   Serial.println("Hardware: " + (String)HARDWARE_NAME);
   Serial.println(text_table4[22] + (String)esp_get_idf_version());
+  Serial.println("ESP Arduino:" + String(ESP_ARDUINO_VERSION_MAJOR) + "." + String(ESP_ARDUINO_VERSION_MINOR) + "." + String(ESP_ARDUINO_VERSION_PATCH));
 
   if (this->wsl_bypass_enabled) {
     #ifdef HAS_SCREEN
@@ -4867,8 +4871,8 @@ void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color) {
       #endif
     
       #ifdef HAS_SCREEN
-        #ifndef HAS_CYD_TOUCH
-          display_obj.setCalData(false);
+        #if !defined(HAS_CYD_TOUCH) && !defined(HAS_ST7789)
+          display_obj.setCalData(true);
         #else
           //display_obj.touchscreen.setRotation(SCREEN_ORIENTATION);
         #endif
@@ -7293,7 +7297,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
 
         #ifdef HAS_SCREEN
           if (!recon_obj.suppressScanUi())
-            display_obj.display_buffer->add(display_string);
+          display_obj.display_buffer->add(display_string);
         #endif
         
         if (essid == "") {
@@ -7494,7 +7498,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
       Serial.print(F(" "));
 
       if (!recon_obj.suppressScanUi())
-        display_obj.display_buffer->add(display_string);
+      display_obj.display_buffer->add(display_string);
     #endif
 
     if (mem_check) {
@@ -10401,7 +10405,7 @@ bool WiFiScan::filterActive() {
       #if defined(MARAUDER_MINI_V3) || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
         const int16_t plot_top = top + 10;
       #else
-        const int16_t plot_top = top + 12;
+      const int16_t plot_top = top + 12;
       #endif
       const int16_t graph_height = bottom - plot_top;
       uint16_t max_value = 1;
@@ -10461,7 +10465,7 @@ bool WiFiScan::filterActive() {
       #if defined(MARAUDER_MINI_V3) || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
         const int16_t graph_top = 28;
       #else
-        const int16_t graph_top = 64;
+      const int16_t graph_top = 64;
       #endif
       const int16_t lane_height = (SCREEN_HEIGHT - graph_top) / 3;
       drawPacketMonitorGraph(packet_monitor_beacons, graph_top,
@@ -10476,15 +10480,15 @@ bool WiFiScan::filterActive() {
       #if defined(MARAUDER_MINI_V3) || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
         display_obj.tft.fillRect(0, 0, SCREEN_WIDTH, 28, TFT_BLACK);
       #else
-        display_obj.tft.fillRect(0, 0, SCREEN_WIDTH, 64, TFT_BLACK);
+      display_obj.tft.fillRect(0, 0, SCREEN_WIDTH, 64, TFT_BLACK);
       #endif
       display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
       #if defined(MARAUDER_MINI_V3) || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
         display_obj.tft.drawCentreString(text_table1[45], SCREEN_WIDTH / 2, 0, 1);
       #else
-        display_obj.tft.drawCentreString(text_table1[45], SCREEN_WIDTH / 2, 0, 2);
-        display_obj.tftDrawChannelScaleButtons(set_channel, false);
-        display_obj.tftDrawExitScaleButtons(false);
+      display_obj.tft.drawCentreString(text_table1[45], SCREEN_WIDTH / 2, 0, 2);
+      display_obj.tftDrawChannelScaleButtons(set_channel, false);
+      display_obj.tftDrawExitScaleButtons(false);
       #endif
       display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
       display_obj.tft.drawCentreString(String("CH ") + set_channel,
@@ -10506,9 +10510,9 @@ bool WiFiScan::filterActive() {
       defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
   void WiFiScan::packetMonitorMain(uint32_t currentTime) {
     #ifdef HAS_ILI9341
-      const int8_t b = this->checkAnalyzerButtons(currentTime);
+    const int8_t b = this->checkAnalyzerButtons(currentTime);
 
-      if (b == CHAN_MINUS_INDEX) {
+    if (b == CHAN_MINUS_INDEX) {
       #ifndef HAS_DUAL_BAND
         if (set_channel > 1)
           set_channel--;
@@ -10524,8 +10528,8 @@ bool WiFiScan::filterActive() {
       #endif
       changeChannel();
       this->drawPacketMonitorControls();
-      }
-      else if (b == CHAN_PLUS_INDEX) {
+    }
+    else if (b == CHAN_PLUS_INDEX) {
       #ifndef HAS_DUAL_BAND
         if (set_channel < MAX_CHANNEL)
           set_channel++;
@@ -10541,12 +10545,12 @@ bool WiFiScan::filterActive() {
       #endif
       changeChannel();
       this->drawPacketMonitorControls();
-      }
-      else if (b == EXIT_BUTTON_INDEX) {
-        this->StartScan(WIFI_SCAN_OFF);
-        this->orient_display = true;
-        return;
-      }
+    }
+    else if (b == EXIT_BUTTON_INDEX) {
+      this->StartScan(WIFI_SCAN_OFF);
+      this->orient_display = true;
+      return;
+    }
     #endif
 
     if (currentTime - initTime >= PACKET_MONITOR_REFRESH_MS) {
@@ -11194,7 +11198,7 @@ static err_t requestStationARP(struct netif* station, const ip4_addr_t* ip) {
 
     struct netif* netif_interface = getStationLwipNetif();
     if (netif_interface == nullptr)
-      return false;
+    return false;
 
     return findStationARP(netif_interface, &test_ip);
   }
@@ -11356,7 +11360,7 @@ void WiFiScan::pingScan(uint8_t scan_mode) {
       if (this->current_scan_ip == IPAddress(0, 0, 0, 0)) {
         return;
       }
-      if (this->singleARP(this->current_scan_ip)) {
+        if (this->singleARP(this->current_scan_ip)) {
         Serial.println(this->current_scan_ip);
         this->portScan(scan_mode, targ_port);
       }

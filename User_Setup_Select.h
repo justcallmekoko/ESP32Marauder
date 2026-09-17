@@ -39,6 +39,8 @@
 //#include <User_Setup_cyd_3_5_inch.h>
 //#include <User_Setup_marauder_pancake.h>
 //#include <User_Setup_marauder_t_dongle_c5.h>
+//#include <User_Setup_cyd_24.h>
+//#include <User_Setup_cyd_JC2432W328C.h>
 
 //#include <User_Setups/Setup1_ILI9341.h>  // Setup file configured for my ILI9341
 //#include <User_Setups/Setup2_ST7735.h>   // Setup file configured for my ST7735
