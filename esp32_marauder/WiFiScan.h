@@ -5,6 +5,7 @@
 
 #include "configs.h"
 #include "utils.h"
+#include "GpsTrackerStats.h"
 
 #include <ArduinoJson.h>
 #include <algorithm>
@@ -12,6 +13,12 @@
 
 #ifdef HAS_BT
   #include <NimBLEDevice.h> // 1.3.8, 2.3.2
+
+  #ifdef HAS_NIMBLE_2
+    using MarauderBLEAdvertisedDevice = const NimBLEAdvertisedDevice;
+  #else
+    using MarauderBLEAdvertisedDevice = NimBLEAdvertisedDevice;
+  #endif
 #endif
 
 #ifdef MSC_SHARE
@@ -37,11 +44,13 @@
 #include "mbedtls/bignum.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/ecp.h"
-#ifndef HAS_IDF_3
   #include <lwip/etharp.h>
   #include <lwip/ip_addr.h>
-#endif
+#include <lwip/netif.h>
+#include <lwip/tcpip.h>
 #ifdef HAS_IDF_3
+  #include "esp_netif.h"
+  #include "esp_netif_net_stack.h"
   #include "esp_system.h"
   #include "esp_mac.h"
 #endif
@@ -62,6 +71,7 @@
   #include "GpsInterface.h"
 #endif
 #include "settings.h"
+#include "GeofenceMath.h"
 #include "Assets.h"
 #ifdef HAS_FLIPPER_LED
   #include "flipperLED.h"
@@ -69,7 +79,7 @@
   #include "xiaoLED.h"
 #elif defined(MARAUDER_M5STICKC)
   #include "stickcLED.h"
-#elif defined(HAS_NEOPIXEL_LED)
+#elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
   #include "LedInterface.h"
 #endif
 
@@ -250,7 +260,7 @@ extern Settings settings_obj;
   extern xiaoLED xiao_led;
 #elif defined(MARAUDER_M5STICKC)
   extern stickcLED stickc_led;
-#elif defined(HAS_NEOPIXEL_LED)
+#elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
   extern LedInterface led_obj;
 #endif
 
@@ -351,13 +361,17 @@ struct AirTag {
 struct Flipper {
   String mac;
   String name;
+  int8_t rssi = -128;
+  uint32_t last_seen = 0;
 };
 
 struct BleDevice {
   uint8_t  mac[6];
   String   name;
+  String   device_type;
   bool     selected = false;
   int      rssi     = -128;
+  uint32_t last_seen_ms = 0;
 };
 
 #ifdef HAS_PSRAM
@@ -394,30 +408,58 @@ class WiFiScan
       WiFiClientSecure *client = new WiFiClientSecure();
     #endif
   
-    int x_pos; //position along the graph x axis
-    float y_pos_x; //current graph y axis position of X value
-    float y_pos_x_old = 120; //old y axis position of X value
-    float y_pos_y; //current graph y axis position of Y value
-    float y_pos_y_old = 120; //old y axis position of Y value
-    float y_pos_z; //current graph y axis position of Z value
-    float y_pos_z_old = 120; //old y axis position of Z value
-    int midway = 0;
-    byte x_scale = 1; //scale of graph x axis, controlled by touchscreen buttons
-    byte y_scale = 1;
-
-    bool do_break = false;
+    #if defined(HAS_SCREEN) && (defined(HAS_ILI9341) || \
+        (defined(MARAUDER_MINI_V3) && !defined(DUAL_MINI_C5)) || \
+        defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV))
+      static const uint8_t PACKET_MONITOR_COLUMN_WIDTH = 4;
+      #if defined(MARAUDER_MINI_V3) || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+        static const uint8_t PACKET_MONITOR_GRAPH_LEFT = 24;
+      #else
+        static const uint8_t PACKET_MONITOR_GRAPH_LEFT = 32;
+      #endif
+      static const uint16_t PACKET_MONITOR_REFRESH_MS = 200;
+      #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+        // Match the proven Mini v3 graph's 26-sample time window. The wider
+        // Cardputer panel changes only the horizontal spacing, not the data
+        // window, sampling cadence, scaling, or bar renderer.
+        static const uint16_t PACKET_MONITOR_HISTORY_LEN = (128 - 24) / 4;
+        static const uint8_t PACKET_MONITOR_COLUMN_STEP =
+            (SCREEN_WIDTH - PACKET_MONITOR_GRAPH_LEFT) / PACKET_MONITOR_HISTORY_LEN;
+      #else
+        static const uint16_t PACKET_MONITOR_HISTORY_LEN =
+            (SCREEN_WIDTH - PACKET_MONITOR_GRAPH_LEFT) / PACKET_MONITOR_COLUMN_WIDTH;
+        static const uint8_t PACKET_MONITOR_COLUMN_STEP = PACKET_MONITOR_COLUMN_WIDTH;
+      #endif
+      uint16_t packet_monitor_beacons[PACKET_MONITOR_HISTORY_LEN] = {};
+      uint16_t packet_monitor_deauths[PACKET_MONITOR_HISTORY_LEN] = {};
+      uint16_t packet_monitor_probes[PACKET_MONITOR_HISTORY_LEN] = {};
+      void resetPacketMonitorGraph();
+      void samplePacketMonitorGraph();
+      void drawPacketMonitorGraph(const uint16_t *values, int16_t top, int16_t bottom,
+                                  uint16_t color, const char *label);
+      void drawPacketMonitorGraphs();
+      void drawPacketMonitorControls();
+    #endif
 
     bool wsl_bypass_enabled = false;
 
     bool scan_complete = false;
 
     uint8_t wardrive_channel_index = 0;
+    GeofenceConfig geofences[MAX_GEOFENCES];
+    bool geofence_paused = false;
+    uint32_t last_geofence_check = 0;
+    String active_geofence_name = "";
+    bool updateGeofenceState(bool force = false);
+    void renderWardriveGeofenceState();
+    void drawWardriveGeofenceBadge();
 
     //int num_beacon = 0; // GREEN
     //int num_probe = 0; // BLUE
     //int num_deauth = 0; // RED
 
     uint32_t initTime = 0;
+    marauder::GpsTrackerStats gps_tracker_stats;
     uint32_t last_ui_update = 0;
     uint32_t last_sour_apple_update = 0;
     bool run_setup = true;
@@ -696,6 +738,9 @@ class WiFiScan
     bool wdgwarsUpload(String filePath);
     void writeSidecar(String filePath, String service);
     bool sidecarExists(String filePath, String service); 
+    #ifdef HAS_SCREEN
+      void drawUploadProgress(const char* service, uint8_t percent, bool waiting = false);
+    #endif
 
     void runFoxHunt(uint32_t currentTime);
     void throwThatShitInACircle();
@@ -707,13 +752,17 @@ class WiFiScan
     void writeNetworkInfo();
     void setupScanDisplayArea(uint16_t background, uint16_t color);
     void updateTrackerUI();
-    void showNetworkInfo();
+    void showNetworkInfo(bool show_display = true);
+    void resetNetworkScanDisplay(const String& target_line, const String& status_line);
+    void addNetworkScanDisplayResult(const String& result_line);
+    void finishNetworkScanDisplay(const String& result_label);
     void setNetworkInfo();
     void fullARP();
     bool readARP(IPAddress targ_ip);
     bool singleARP(IPAddress ip_addr);
     void pingScan(uint8_t scan_mode = WIFI_PING_SCAN);
     void portScan(uint8_t scan_mode = WIFI_PORT_SCAN_ALL, uint16_t targ_port = 22);
+    IPAddress advanceScanIP();
     bool isHostAlive(IPAddress ip);
     bool checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout = 100);
     String extractManufacturer(const uint8_t* payload);
@@ -782,10 +831,27 @@ class WiFiScan
 
 
   public:
+    struct FoxHuntTarget {
+      uint8_t mac[6] = {};
+      String name = "";
+      int8_t rssi = -128;
+      uint8_t channel = 1;
+      bool bluetooth = false;
+      bool active = false;
+      uint32_t last_seen_ms = 0;
+      String advertised_address = "";
+    };
+
+    FoxHuntTarget fox_hunt_target;
+
     volatile bool bt_cb_busy = false;
     volatile bool bt_pending_clear = false;
 
     bool send_deauth = false;
+
+    size_t retainedAccessPointCount() const;
+    size_t retainedStationCount() const;
+    size_t retainedBleDeviceCount() const;
 
     bool channel_hop = false;
     uint8_t connected_devices = 0;
@@ -905,14 +971,19 @@ class WiFiScan
     String free_ram = "";
     String old_free_ram = "";
     String connected_network = "";
+    char pending_wifi_ssid[33] = {};
+    char pending_wifi_password[64] = {};
+    bool pending_wifi_credential = false;
 
     IPAddress ip_addr;
     IPAddress gateway;
     IPAddress subnet;
 
     IPAddress current_scan_ip;
+    IPAddress last_scan_ip;
 
     uint16_t current_scan_port = 1;
+    uint16_t network_scan_result_count = 0;
 
     String dst_mac = "ff:ff:ff:ff:ff:ff";
     byte src_mac[6] = {};
@@ -981,6 +1052,24 @@ class WiFiScan
     uint16_t rssiToColor(int8_t rssi);
     bool isMetaIdentifier(uint16_t id);
     bool isBlockedIdentifier(uint16_t id);
+    #ifdef HAS_BT
+      String classifyBLEDevice(MarauderBLEAdvertisedDevice* advertised_device);
+      void retainBLEFoxHuntSubtype(MarauderBLEAdvertisedDevice* advertised_device,
+                                   const BleDevice& ble_device);
+    #endif
+    void setFoxHuntTarget(const uint8_t mac[6], const String& name, int8_t rssi, uint8_t channel, bool bluetooth, const String& advertised_address = "");
+    bool updateFoxHuntRssi(const uint8_t mac[6], int8_t rssi, uint8_t channel = 0);
+    bool updateBluetoothFoxHuntRssi(const uint8_t mac[6], const String& advertised_address, int8_t rssi);
+    size_t getPineScanCount() const;
+    String getPineScanLabel(size_t index) const;
+    int8_t getPineScanRssi(size_t index) const;
+    uint8_t getPineScanChannel(size_t index) const;
+    bool selectPineScanFoxTarget(size_t index);
+    size_t getMultiSSIDCount() const;
+    String getMultiSSIDLabel(size_t index) const;
+    int8_t getMultiSSIDRssi(size_t index) const;
+    uint8_t getMultiSSIDChannel(size_t index) const;
+    bool selectMultiSSIDFoxTarget(size_t index);
     uint32_t getCompleteEapol(int check_index = -1);
     void drawChannelLine();
     #ifdef HAS_SCREEN
@@ -1013,7 +1102,13 @@ class WiFiScan
     bool shutdownWiFi();
     bool shutdownBLE();
     bool scanning();
-    bool joinWiFi(String ssid, String password, bool gui = true);
+    bool joinWiFi(String ssid, String password, bool gui = true, bool save_credential = true);
+    bool joinSavedWiFi(bool gui = true);
+    void reloadGeofences();
+    bool isGeofencePaused() const { return geofence_paused; }
+    bool hasPendingWifiCredential() const;
+    bool savePendingWifiCredential(uint8_t replace_index);
+    void discardPendingWifiCredential();
     void getMAC(bool get_sta, uint8_t* mac);
     void changeChannel(int chan = -1);
     void RunAPInfo(uint16_t index, bool do_display = true);

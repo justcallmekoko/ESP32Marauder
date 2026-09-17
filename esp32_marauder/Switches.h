@@ -30,6 +30,7 @@ class Switches {
 		bool justPressed();
 		bool justReleased();
 		bool isHeld();
+		bool isPressedNow();
 };
 
 #endif

@@ -57,6 +57,7 @@ class InstallerManifestTests(unittest.TestCase):
         boards = load_normal_build_matrix(NORMAL_WORKFLOW, REGISTRY)
         workflow_flags = {board["flag"] for board in boards}
         registry_flags = {target["buildFlag"] for target in registry["targets"]}
+        private_flags = set(registry["privateBuildFlags"])
         normal_workflow = NORMAL_WORKFLOW.read_text(encoding="utf-8")
         installer_workflow = INSTALLER_WORKFLOW.read_text(encoding="utf-8")
 
@@ -65,9 +66,19 @@ class InstallerManifestTests(unittest.TestCase):
         self.assertIn("set-build-path: true", installer_workflow)
         self.assertIn("--show-properties=expanded", installer_workflow)
         self.assertIn("github.event_name == 'release'", installer_workflow)
-        self.assertEqual(len(registry["targets"]), 22)
-        self.assertEqual(len(boards), 22)
-        self.assertEqual(registry_flags, workflow_flags)
+        self.assertIn('marauder-installer-assets.zip', installer_workflow)
+        self.assertNotIn('release-assets/*.bin\n', installer_workflow)
+        self.assertEqual(len(registry["targets"]), 26)
+        self.assertEqual(len(boards), 23)
+        self.assertEqual(
+            private_flags,
+            {"MARAUDER_V8", "MARAUDER_MINI_V3", "DUAL_MINI_C5"},
+        )
+        self.assertEqual(registry_flags - private_flags, workflow_flags)
+        self.assertIn("MARAUDER_T_DONGLE_C5", workflow_flags)
+        c5_devkit = next(board for board in boards if board["flag"] == "MARAUDER_C5")
+        self.assertIn("FlashSize=8M", c5_devkit["fbqn"])
+        self.assertIn("PartitionScheme=default_8MB", c5_devkit["fbqn"])
         self.assertEqual(
             len(registry_flags),
             len(registry["targets"]),
@@ -180,8 +191,33 @@ class InstallerManifestTests(unittest.TestCase):
             self.assertEqual(release["metadataStatus"], "authoritative")
             self.assertEqual(release["channel"], "stable")
             self.assertEqual(release["sourceCommit"], "a" * 40)
-            self.assertEqual(len(release["targets"]), 22)
+            self.assertEqual(len(release["targets"]), 26)
             self.assertIn("/" + "a" * 40 + "/", release["$schema"])
+
+    def test_combiner_rejects_target_identity_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            build = self.make_fake_build(root)
+            output = root / "output"
+            registry = load_registry(REGISTRY)
+            for target in registry["targets"]:
+                generate_target_manifest(
+                    REGISTRY,
+                    target["buildFlag"],
+                    build,
+                    "v1.2.3",
+                    "20260731",
+                    "a" * 40,
+                    output,
+                )
+
+            drifted = output / "marauder-v8.installer.json"
+            manifest = json.loads(drifted.read_text(encoding="utf-8"))
+            manifest["target"]["aliases"] = ["v8"]
+            drifted.write_text(json.dumps(manifest), encoding="utf-8")
+
+            with self.assertRaisesRegex(ManifestError, "identity does not match registry"):
+                combine_manifests(REGISTRY, output, output / "firmware-manifest.json")
 
 
 if __name__ == "__main__":

@@ -52,6 +52,10 @@ bool Switches::getButtonState() {
 		return false;
 }
 
+bool Switches::isPressedNow() {
+	return this->getButtonState();
+}
+
 bool Switches::justPressed() {
 	bool btn_state = this->getButtonState();
 	
