@@ -90,7 +90,7 @@ void Settings::_buildCache() {
       _cache.EPDeauth = json["Settings"][i]["value"].as<bool>();
     else if (strcmp(name, "ChanHop") == 0)
       _cache.ChanHop = json["Settings"][i]["value"].as<bool>();
-    else if (strcmp(name, "Probe GPS at Boot") == 0)
+    else if (strcmp(name, "Probe GPS at Boot") == 0)            // speed startups
       _cache.ProbeGPS = json["Settings"][i]["value"].as<bool>();
     else if (strcmp(name, "ClientSSID") == 0)
       _cache.ClientSSID = json["Settings"][i]["value"].as<String>();
@@ -589,6 +589,7 @@ bool Settings::createDefaultSettings(fs::FS &fs, bool spec, uint8_t index, const
     jsonBuffer["Settings"][6]["range"]["min"] = false;
     jsonBuffer["Settings"][6]["range"]["max"] = true;
 
+    // Speed boot time
     jsonBuffer["Settings"][7]["name"] = "Probe GPS at Boot";
     jsonBuffer["Settings"][7]["type"] = "bool";
     jsonBuffer["Settings"][7]["value"] = false;

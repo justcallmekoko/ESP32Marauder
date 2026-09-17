@@ -63,7 +63,7 @@
       if (level >= BL_NUM_LEVELS) {
         level = BL_NUM_LEVELS - 1;
         bl_level_idx = level;
-      } else if (level < 0) { 
+      } else if (level < 0) {
         bl_level_idx = 0;
       } else {
         bl_level_idx = level;
@@ -189,7 +189,7 @@
   // #ifndef HAS_MINI_SCREEN
 
 
-  #elif !defined(HAS_MINI_SCREEN) 
+  #elif !defined(HAS_MINI_SCREEN)
 
   // PWM Brightness Control
   const uint8_t BL_LEVELS[] = {26, 51, 77, 102, 128, 153, 179, 204, 230, 255, 255};
@@ -281,7 +281,7 @@
     }
 
     void backlightOn() {
-      if (bl_level_idx < 3) 
+      if (bl_level_idx < 3)
         bl_level_idx = 3;
       // Serial.println("BL brightnessOn");
       BL_SET(BL_LEVELS[bl_level_idx]);
@@ -335,7 +335,7 @@
     #if defined(MARAUDER_MINI) || defined(MARAUDER_MINI_V3)
       digitalWrite(TFT_BL, HIGH);
     #endif
-  
+
     #if !defined(MARAUDER_MINI) && !defined(MARAUDER_MINI_V3)
       digitalWrite(TFT_BL, LOW);
     #endif

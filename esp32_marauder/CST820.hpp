@@ -58,8 +58,8 @@ struct data_struct {
     byte    gestureID;   // Gesture ID
     byte    points;      // Number of touch points
     byte    event;       // Event (0 = Down, 1 = Up, 2 = Contact)
-    short   x;
-    short   y;
+    int16_t   x;
+    int16_t   y;
     uint8_t version;
     uint8_t versionInfo[3]; // Chip, proj, firmware ver
 };

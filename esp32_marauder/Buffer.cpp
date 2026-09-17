@@ -37,6 +37,7 @@ void Buffer::createFile(const char* name, bool is_pcap, bool is_gpx){
 }
 #endif
 
+//  If we know what time it is, we might as well timestamp the files
 void Buffer::createFile(const char* name, bool is_pcap, bool is_gpx) {
   int i = 0;
   char buf[64];   // LFN can be up to 255 chars on FatFs

@@ -3882,6 +3882,7 @@ void MenuFunctions::RunSetup()
     this->changeMenu(&loadAPsMenu, true);
     wifi_scan_obj.RunLoadATList();
   });
+  // Save everything with one click
   this->addNodes(&saveFileMenu, "Save All", TFTPINK, SD_UPDATE, [this]() {
     this->changeMenu(&saveAPsMenu, true);
     wifi_scan_obj.RunSaveAll();
@@ -3937,7 +3938,9 @@ void MenuFunctions::RunSetup()
   this->addNodes(&adminSubMenu, text09, TFTLIGHTGREY, 0, [this]() {
     this->changeMenu(adminSubMenu.parentMenu, true);
   });
+
   #if defined(HAS_SD) || defined(USE_SD)
+    .//  So you won't have to reboot And lose your data  inserting an SD card
     this->addNodes(&adminMenu, "Rescan SD", TFTPINK, SD_UPDATE, [this]() {
       this->changeMenu(&adminMenu, true);
       sd_obj.initSD();
@@ -3945,11 +3948,13 @@ void MenuFunctions::RunSetup()
   #endif
 
   #ifdef HAS_GPS
+    //  So you won't have to reboot connecting the gps
     this->addNodes(&adminMenu, "ReProbe GPS", TFTSKYBLUE, SD_UPDATE, [this]() {
       gps_obj.begin();
     });
   #endif //  HAS_GPS
 
+  // Lower power many times means Less noise And potentially clear signals.
   this->addNodes(&adminMenu, "WifiTx 21dBm (Max)", TFTGREEN, WIFI, [this]() {
       // WIFI_POWER_21dBm = 84,
       wifi_power = 84;
@@ -4008,6 +4013,7 @@ void MenuFunctions::RunSetup()
    return;
   });
 
+  // Show reason for last reboot...
   this->addNodes(&adminMenu, "Reset Reasion", TFTMAGENTA, SETTINGS, [this]() {
     this->changeMenu(&adminSubMenu, true);
       display_obj.tft.setTextColor(TFT_SKYBLUE, TFT_BLACK);
