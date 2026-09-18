@@ -6,6 +6,7 @@ extern GpsInterface gps_obj;
 
 extern bool system_time_set;   // flag if system's time/date have been set yet..
 extern bool set_system_time(struct tm, bool setrtc = false);
+extern bool set_system_time(const String& time_str, bool setrtc = false);
 
 char nmeaBuffer[100];
 

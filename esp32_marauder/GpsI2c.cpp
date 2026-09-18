@@ -222,7 +222,7 @@ void GpsI2c::setGPSInfo() {
   this->lat = String(lat_dat.latitudeDegree, 6);
   this->lon = String(lat_dat.latitudeDegree, 6);
 
-  this->altf = static_cast<float>gnss.getAlt();
+  this->altf = static_cast<float>(gnss.getAlt());
 
   // if GPS has a good_fix and system_time_set has not been set
   if (!system_time_set) {
