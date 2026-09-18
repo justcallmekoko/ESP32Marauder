@@ -150,6 +150,13 @@ jobs:
           ref: ${{ matrix.board.nimble_ver }}
           path: CustomNimBLE-Arduino
 
+      - name: Install Adafruit_RTClib
+        uses: actions/checkout@v4
+        with:
+          repository: adafruit/rtclib
+          ref: 2.1.4
+          path: CustomAdafruit_RTClib
+
       - name: Install Adafruit_NeoPixel
         uses: actions/checkout@v4
         with:
