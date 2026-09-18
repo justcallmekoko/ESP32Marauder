@@ -141,7 +141,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: dfrobot/DFRobot_GNSS
-          ref: v1.0.0
+          ref: V1.0.0
           path: CustomDFRobot_GNSS
 
       - name: Install JPEGDecoder
