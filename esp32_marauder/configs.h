@@ -254,7 +254,7 @@
       #define USE_SD
     // #define HAS_TEMP_SENSOR
     #define HAS_GPS
-      // #define HAS_GPSI2C
+      #define HAS_GPSI2C
     #define HAS_DIRECT_UPLOAD
   #endif
 
