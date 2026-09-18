@@ -1159,7 +1159,7 @@ void MenuFunctions::battery(bool initial)
 {
   #ifdef HAS_BATTERY
     uint16_t the_color;
-    if (battery_obj.i2c_supported)
+    if (battery_obj.supported)
     {
       // Could use int compare maybe idk
       if (((String)battery_obj.battery_level != "25") && ((String)battery_obj.battery_level != "0"))
@@ -1195,6 +1195,95 @@ void MenuFunctions::battery2(bool initial)
   MenuFunctions::battery(initial);
 }
 #endif
+
+
+uint32_t clock_update = 1;
+uint32_t count_pass = 0;
+void MenuFunctions::updateClockTemperature(bool doUpdate) {
+  // #ifdef HAS_RTC
+    extern bool system_time_set;
+    uint32_t ct = initTime & (1 << 12);
+    // Serial.print("count_pass   = "); Serial.println(count_pass++);
+    // Serial.print("initTime     = "); Serial.println(initTime);
+    // Serial.print("clock_update = "); Serial.println(clock_update);
+    // Serial.print("ct           = "); Serial.println(ct);
+    if((ct != clock_update) || doUpdate) {  // we dont need to update the clock several time a sec.
+      count_pass = 0;
+      clock_update = ct;
+      char timeBuffer[16];
+      struct tm timeinfo;
+      // static uint32_t tic = 0;
+      uint16_t bg_color = STATUSBAR_COLOR;
+
+      // tic = this->initTime;
+      if (clock_update && system_time_set) {
+
+        if(getLocalTime(&timeinfo))
+          strftime(timeBuffer, sizeof(timeBuffer), "%k:%M", &timeinfo);
+        else
+          timeBuffer[0] = '\0';
+
+      } else {
+          #if defined(HAS_TEMP_SENSOR)
+            #if defined(HAS_SHTC3)
+              SHTC3_obj.read();
+              snprintf(timeBuffer, sizeof(timeBuffer), "%.1fc", SHTC3_obj._temperature);
+            #elif defined(USE_CPU_TEMP)
+              snprintf(timeBuffer, sizeof(timeBuffer), "%.1fC", get_sys_temp());
+            #else
+              snprintf(timeBuffer, sizeof(timeBuffer), "0.0C");
+            #endif
+          #else
+            return;
+          #endif
+      }
+
+        //  "%H:%M"
+
+        int tx, ty, tw, th;
+        tw = (5 * 8) - 4;
+
+        #ifdef HAS_BATTERY
+          if (battery_obj.supported) {
+            th = 15;
+            bg_color = TFT_BLACK;
+          } else
+        #endif
+          th = 0;
+
+        // log_d("timeBuffer: %s  th=%d", timeBuffer, th);
+
+        // Serial.print("TimeBuffer =");
+        // Serial.println(timeBuffer);
+
+        #ifdef HAS_MINI_SCREEN // SCREEN_ORIENTATION == 1
+          tx = TFT_HEIGHT; //  - tw;
+          // ty = TFT_WIDTH - th; // Bottom Right
+          ty = th;   // Near Top Right
+        #else
+          tx = TFT_WIDTH;  // - tw;
+          // ty = TFT_HEIGHT - th;    // Bottom Right
+          ty = th;   // Near Top Right
+        #endif
+
+        // Serial.print("time: ");
+        // Serial.println(timeBuffer);
+        // Serial.println((String) tx + " : " + (String) ty);
+
+        static int16_t  str_w = 32;
+
+        // display_obj.tft.fillRect(tx, ty, tw, th, bg_color);
+        // Serial.printf("Str width = %d\n", str_w);
+        str_w +=2;
+        display_obj.tft.fillRect(TFT_WIDTH - str_w, ty, str_w, th, bg_color);
+        display_obj.tft.setTextColor(TFT_YELLOW, bg_color, true);
+
+        str_w = display_obj.tft.drawRightString(timeBuffer, tx , ty , 2);
+
+        // restore Text color
+        display_obj.tft.setTextColor(TFT_WHITE, STATUSBAR_COLOR, true);
+  }  //  system_time_set && clock_update
+}
 
 void MenuFunctions::updateStatusBar()
 {
@@ -1271,6 +1360,9 @@ void MenuFunctions::updateStatusBar()
       display_obj.tft.drawString("CH:" + (String)wifi_scan_obj.old_channel, TFT_WIDTH/4, 0, 1);
     #endif
   }
+
+
+  updateClockTemperature(status_changed);
 
   // RAM Stuff
   wifi_scan_obj.free_ram = String(esp_get_free_heap_size());
@@ -1450,6 +1542,8 @@ void MenuFunctions::drawStatusBar()
   #ifdef HAS_MINI_SCREEN
     display_obj.tft.drawString("CH:" + (String)wifi_scan_obj.old_channel, TFT_WIDTH/4, 0, 1);
   #endif
+
+   updateClockTemperature();
 
   // RAM Stuff
   wifi_scan_obj.free_ram = String(esp_get_free_heap_size());
@@ -3797,11 +3891,13 @@ void MenuFunctions::RunSetup()
         wifi_scan_obj.StartScan(WIFI_SCAN_GPS_DATA, TFT_CYAN);
       });
 
+#ifndef HAS_GPSI2C
       this->addNodes(&gpsMenu, "NMEA Stream", TFTORANGE, GPS_MENU, [this]() {
         wifi_scan_obj.currentScanMode = WIFI_SCAN_GPS_NMEA;
         this->changeMenu(&gpsInfoMenu, true);
         wifi_scan_obj.StartScan(WIFI_SCAN_GPS_NMEA, TFT_ORANGE);
       });
+#endif
 
       this->addNodes(&gpsMenu, "GPS Tracker", TFTGREEN, GPS_MENU, [this]() {
         wifi_scan_obj.currentScanMode = GPS_TRACKER;

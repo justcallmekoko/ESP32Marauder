@@ -2750,7 +2750,7 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
     #endif
   }
   else if (scan_mode == WIFI_SCAN_GPS_NMEA){
-    #ifdef HAS_GPS
+    #if defined(HAS_GPS) && !defined(HAS_GPSI2C)
       gps_obj.enable_queue();
     #endif
   }
@@ -3149,7 +3149,7 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
     display_obj.tteBar = false;
   #endif
 
-  #ifdef HAS_GPS
+  #if defined(HAS_GPS) && !defined(HAS_GPSI2C)
     gps_obj.disable_queue();
   #endif
 }
@@ -4374,6 +4374,11 @@ void WiFiScan::RunSetupGPSTracker(uint8_t scan_mode) {
 bool WiFiScan::RunGPSInfo(bool tracker, bool display, bool poi) {
   bool return_val = true;
   #ifdef HAS_GPS
+
+    #ifdef HAS_GPSI2C
+      gps_obj.setGPSInfo();
+    #endif
+
     String text=gps_obj.getText();
     const uint32_t now_ms = millis();
 
@@ -4516,7 +4521,7 @@ bool WiFiScan::RunGPSInfo(bool tracker, bool display, bool poi) {
 }
 
 void WiFiScan::RunGPSNmea() {
-  #ifdef HAS_GPS
+  #if defined(HAS_GPS) && !defined(HAS_GPSI2C)
     LinkedList<nmea_sentence_t> *buffer=gps_obj.get_queue();
     bool queue_enabled=gps_obj.queue_enabled();
 
@@ -4791,7 +4796,7 @@ void WiFiScan::RunInfo() {
 
   #ifdef HAS_BATTERY
     battery_obj.battery_level = battery_obj.getBatteryLevel();
-    if (battery_obj.i2c_supported) {
+    if (battery_obj.supported) {
       #ifdef HAS_SCREEN
         display_obj.tft.println(text_table4[32]);
         display_obj.tft.println(text_table4[33] + (String)battery_obj.battery_level + "%");
@@ -8642,8 +8647,12 @@ String WiFiScan::checkEmptyProbe(String essid) {
 void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) {
   extern WiFiScan wifi_scan_obj;
 
-  #ifdef HAS_GPS
-    extern GpsInterface gps_obj;
+  #if defined(HAS_GPS) || defined(HAS_GPSI2C)
+    #ifdef HAS_GPSI2C
+      extern GpsI2c gps_obj;
+    #else
+      extern GpsInterface gps_obj;
+    #endif
     extern EvilPortal evil_portal_obj;
   #endif
 
@@ -12773,7 +12782,7 @@ void WiFiScan::main(uint32_t currentTime)
       packets_sent = 0;
     }
   }
-  #ifdef HAS_GPS
+  #if defined(HAS_GPS) && !defined(HAS_GPSI2C)
     else if ((currentScanMode == WIFI_SCAN_OFF))
       if(gps_obj.queue_enabled())
         gps_obj.disable_queue();
