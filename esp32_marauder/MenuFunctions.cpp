@@ -3940,7 +3940,7 @@ void MenuFunctions::RunSetup()
   });
 
   #if defined(HAS_SD) || defined(USE_SD)
-    .//  So you won't have to reboot And lose your data  inserting an SD card
+    //  So you won't have to reboot And lose your data  inserting an SD card
     this->addNodes(&adminMenu, "Rescan SD", TFTPINK, SD_UPDATE, [this]() {
       this->changeMenu(&adminMenu, true);
       sd_obj.initSD();
