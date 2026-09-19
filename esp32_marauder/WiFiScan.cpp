@@ -567,10 +567,13 @@ extern "C" {
             }
           }
           else if ((wifi_scan_obj.currentScanMode == BT_SCAN_ALL) ||
+                   (wifi_scan_obj.currentScanMode == BT_SCAN_POSTURE) ||
                    (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT)) {
             if (buf >= 0)
             {
               BleDevice ble_device;
+              ble_device.addr_type = advertisedDevice->getAddress().getType();
+              ble_device.connectable = advertisedDevice->isConnectable();
               ble_device.device_type = wifi_scan_obj.classifyBLEDevice(advertisedDevice);
               if (name_length > 0)
                 ble_device.name = name;
@@ -584,6 +587,50 @@ extern "C" {
               wifi_scan_obj.retainBLEFoxHuntSubtype(advertisedDevice, ble_device);
 
               int device_match_check = wifi_scan_obj.seenBLEDevice(ble_device);
+
+              if ((wifi_scan_obj.currentScanMode == BT_SCAN_POSTURE) && (device_match_check < 0)) {
+                #ifndef HAS_NIMBLE_2
+                  const uint8_t* p_payload = advertisedDevice->getPayload();
+                  size_t p_len = advertisedDevice->getPayloadLength();
+                #else
+                  const std::vector<unsigned char>& p_vec = advertisedDevice->getPayload();
+                  const uint8_t* p_payload = p_vec.data();
+                  size_t p_len = p_vec.size();
+                #endif
+
+                uint8_t adv_flags = 0;
+                bool has_flags = wifi_scan_obj.parseAdvFlags(p_payload, p_len, &adv_flags);
+                const char* addr_type = wifi_scan_obj.bleAddressTypeString(advertisedDevice->getAddress());
+                bool trackable = ((strcmp(addr_type, "public") == 0) ||
+                                  (strcmp(addr_type, "static-random") == 0));
+
+                Serial.print("[POSTURE] ");
+                Serial.print(advertisedDevice->getAddress().toString().c_str());
+                Serial.print(" rssi=");
+                Serial.print(rssi);
+                Serial.print(" addr=");
+                Serial.print(addr_type);
+                if (has_flags) {
+                  Serial.print(" disc=");
+                  if (adv_flags & 0x02)
+                    Serial.print("general");
+                  else if (adv_flags & 0x01)
+                    Serial.print("limited");
+                  else
+                    Serial.print("none");
+                  Serial.print(" bredr=");
+                  Serial.print((adv_flags & 0x04) ? "no" : "yes");
+                } else {
+                  Serial.print(" flags=absent");
+                }
+                if (name_length > 0) {
+                  Serial.print(" name=");
+                  Serial.print(name);
+                }
+                if (trackable)
+                  Serial.print(" [TRACKABLE]");
+                Serial.println();
+              }
 
               if (device_match_check >= 0) {
                 recon_obj.queueRepeat('B', ble_device.mac, ble_device.rssi, 0);
@@ -1270,10 +1317,13 @@ extern "C" {
             }
           }
           else if ((wifi_scan_obj.currentScanMode == BT_SCAN_ALL) ||
+                   (wifi_scan_obj.currentScanMode == BT_SCAN_POSTURE) ||
                    (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT)) {
             if (buf >= 0)
             {
               BleDevice ble_device;
+              ble_device.addr_type = advertisedDevice->getAddress().getType();
+              ble_device.connectable = advertisedDevice->isConnectable();
               ble_device.device_type = wifi_scan_obj.classifyBLEDevice(advertisedDevice);
               if (name_length > 0)
                 ble_device.name = name;
@@ -1287,6 +1337,50 @@ extern "C" {
               wifi_scan_obj.retainBLEFoxHuntSubtype(advertisedDevice, ble_device);
 
               int device_match_check = wifi_scan_obj.seenBLEDevice(ble_device);
+
+              if ((wifi_scan_obj.currentScanMode == BT_SCAN_POSTURE) && (device_match_check < 0)) {
+                #ifndef HAS_NIMBLE_2
+                  const uint8_t* p_payload = advertisedDevice->getPayload();
+                  size_t p_len = advertisedDevice->getPayloadLength();
+                #else
+                  const std::vector<unsigned char>& p_vec = advertisedDevice->getPayload();
+                  const uint8_t* p_payload = p_vec.data();
+                  size_t p_len = p_vec.size();
+                #endif
+
+                uint8_t adv_flags = 0;
+                bool has_flags = wifi_scan_obj.parseAdvFlags(p_payload, p_len, &adv_flags);
+                const char* addr_type = wifi_scan_obj.bleAddressTypeString(advertisedDevice->getAddress());
+                bool trackable = ((strcmp(addr_type, "public") == 0) ||
+                                  (strcmp(addr_type, "static-random") == 0));
+
+                Serial.print("[POSTURE] ");
+                Serial.print(advertisedDevice->getAddress().toString().c_str());
+                Serial.print(" rssi=");
+                Serial.print(rssi);
+                Serial.print(" addr=");
+                Serial.print(addr_type);
+                if (has_flags) {
+                  Serial.print(" disc=");
+                  if (adv_flags & 0x02)
+                    Serial.print("general");
+                  else if (adv_flags & 0x01)
+                    Serial.print("limited");
+                  else
+                    Serial.print("none");
+                  Serial.print(" bredr=");
+                  Serial.print((adv_flags & 0x04) ? "no" : "yes");
+                } else {
+                  Serial.print(" flags=absent");
+                }
+                if (name_length > 0) {
+                  Serial.print(" name=");
+                  Serial.print(name);
+                }
+                if (trackable)
+                  Serial.print(" [TRACKABLE]");
+                Serial.println();
+              }
 
               if (device_match_check >= 0) {
                 recon_obj.queueRepeat('B', ble_device.mac, ble_device.rssi, 0);
@@ -2707,6 +2801,7 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
   else if (scan_mode == WIFI_ATTACK_AP_SPAM)
     this->startWiFiAttacks(scan_mode, color, " AP Beacon Spam ");
   else if ((scan_mode == BT_SCAN_ALL) ||
+          (scan_mode == BT_SCAN_POSTURE) ||
           (scan_mode == BT_SCAN_FOX_HUNT) ||
           (scan_mode == BT_SCAN_RAYBAN) ||
           (scan_mode == BT_SCAN_AIRTAG) ||
@@ -3095,6 +3190,7 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
 
 
   if ((currentScanMode == BT_SCAN_ALL) ||
+  (currentScanMode == BT_SCAN_POSTURE) ||
   (currentScanMode == BT_SCAN_FOX_HUNT) ||
   (currentScanMode == BT_SCAN_RAYBAN) ||
   (currentScanMode == BT_SCAN_AIRTAG) ||
@@ -6909,6 +7005,330 @@ void WiFiScan::RunSwiftpairSpam(uint8_t scan_mode, uint16_t color) {
   #endif
 }
 
+// ---- BLE posture helpers -------------------------------------------------
+
+// Classify a BLE address. Public addresses and static random addresses never
+// change, so a device using one is trackable indefinitely. Resolvable private
+// addresses (RPA) are the privacy-preserving case. The distinction lives in
+// the top two bits of the most significant address byte.
+const char* WiFiScan::bleAddressTypeString(const NimBLEAddress& addr) {
+  uint8_t type = addr.getType();
+  if ((type == BLE_ADDR_PUBLIC) || (type == BLE_ADDR_PUBLIC_ID))
+    return "public";
+
+  const uint8_t* val = addr.getVal();
+  if (val == nullptr)
+    return "unknown";
+
+  // getVal() is little-endian; val[5] is the MSB of the address.
+  switch (val[5] & 0xC0) {
+    case 0xC0: return "static-random";
+    case 0x40: return "rpa";
+    case 0x00: return "nrpa";
+    default:   return "reserved";
+  }
+}
+
+// Walk the AD structures looking for the Flags element (type 0x01).
+// Each structure is: [length][type][data...] where length covers type+data.
+bool WiFiScan::parseAdvFlags(const uint8_t* payload, size_t len, uint8_t* flags_out) {
+  if ((payload == nullptr) || (flags_out == nullptr))
+    return false;
+
+  size_t i = 0;
+  while (i < len) {
+    uint8_t ad_len = payload[i];
+    if (ad_len == 0)
+      break;
+    if (i + 1 + ad_len > len)   // truncated structure
+      break;
+
+    uint8_t ad_type = payload[i + 1];
+    if ((ad_type == 0x01) && (ad_len >= 2)) {
+      *flags_out = payload[i + 2];
+      return true;
+    }
+    i += ad_len + 1;
+  }
+  return false;
+}
+
+// Plain-language reason for a NimBLE host error. Codes are from ble_hs.h;
+// values >= 0x200 are HCI status wrapped by BLE_HS_HCI_ERR().
+const char* WiFiScan::bleConnectErrorReason(int err) {
+  switch (err) {
+    case 7:   return "Not connected";
+    case 12:  return "Controller error";
+    case 13:  return "Connection timeout";
+    case 15:  return "Radio busy";
+    case 16:  return "Device rejected";
+    case 19:  return "HCI timeout";
+    case 22:  return "Stack not synced";
+    case 23:  return "Auth required";
+    case 24:  return "Not authorized";
+    case 25:  return "Encryption required";
+    case 520: return "Connection timeout";
+    case 522: return "Peer ended link";
+    case 525: return "Auth failure";
+    case 534: return "Conn limit reached";
+    default:  return "";
+  }
+}
+
+// ---- BLE posture: GATT assessment ---------------------------------------
+
+// Connect to a chosen device and report what an unauthenticated peer can
+// reach. Security is deliberately not requested (see createNimbleClient) --
+// the question being answered is what the device exposes with no pairing.
+int WiFiScan::connectAndAssess(NimBLEAddress& address) {
+  int svc_count = 0;
+  int chr_count = 0;
+  int open_reads = 0;
+  int open_writes = 0;
+  bool has_hid = false;
+  bool has_dfu = false;
+
+  this->assess_target = String(address.toString().c_str());
+  this->assess_connected = false;
+  this->assess_svc_count = 0;
+  this->assess_chr_count = 0;
+  this->assess_open_reads = 0;
+  this->assess_open_writes = 0;
+  this->assess_has_hid = false;
+  this->assess_has_dfu = false;
+  this->assess_manufacturer = "";
+  this->assess_model = "";
+  this->assess_dev_name = "";
+  this->assess_error = 0;
+  this->assess_refused = false;
+  this->assess_connectable = true;
+
+  this->createNimbleClient();
+
+  if (nimbleClient == nullptr) {
+    NimBLEDevice::deleteClient(nimbleClient);
+    nimbleClient = nullptr;
+    NimBLEDevice::deinit(true);
+    this->createNimbleClient();
+    if (nimbleClient == nullptr) {
+      Serial.println("[ASSESS] Failed to create NimBLE client");
+      return -2;
+    }
+  }
+
+  Serial.println("");
+  Serial.println("========================================");
+  Serial.print("[ASSESS] Target: ");
+  Serial.println(address.toString().c_str());
+  Serial.println("========================================");
+
+  nimbleClient->setConnectTimeout(15000);
+
+  if (!nimbleClient->connect(address, true, false, true)) {
+    this->assess_error = nimbleClient->getLastError();
+
+    // Only an explicit rejection tells us anything about the device's posture.
+    // A timeout means we never reached it.
+    this->assess_refused = ((this->assess_error == 16) ||   // EREJECT
+                            (this->assess_error == 23) ||   // EAUTHEN
+                            (this->assess_error == 24) ||   // EAUTHOR
+                            (this->assess_error == 25) ||   // EENCRYPT
+                            (this->assess_error == 525));   // HCI auth failure
+
+    Serial.printf("[ASSESS] Connect failed; error=%d (%s)\n",
+                  this->assess_error,
+                  this->bleConnectErrorReason(this->assess_error));
+    if (nimbleClient != nullptr) {
+      NimBLEDevice::deleteClient(nimbleClient);
+      nimbleClient = nullptr;
+    }
+    NimBLEDevice::deinit(true);
+    return -1;
+  }
+
+  Serial.println("[ASSESS] Connected without pairing");
+
+  const auto& services = nimbleClient->getServices(true);
+
+  for (NimBLERemoteService* service : services) {
+    if (service == nullptr || !nimbleClient->isConnected())
+      break;
+
+    svc_count++;
+    const NimBLEUUID serviceUuid = service->getUUID();
+    String su = String(serviceUuid.toString().c_str());
+    su.toLowerCase();
+
+    Serial.print("  [SVC] ");
+    Serial.print(su);
+
+    // 0x1812 HID over GATT; 0xfe59 Nordic DFU; 0x180a Device Information
+    if (su.indexOf("1812") != -1) { has_hid = true; Serial.print("   <-- HID"); }
+    if ((su.indexOf("fe59") != -1) || (su.indexOf("00001530") != -1)) {
+      has_dfu = true;
+      Serial.print("   <-- DFU/OTA");
+    }
+    if (su.indexOf("180a") != -1) Serial.print("   <-- Device Info");
+    Serial.println("");
+
+    const auto& characteristics = service->getCharacteristics(true);
+
+    for (NimBLERemoteCharacteristic* characteristic : characteristics) {
+      if (characteristic == nullptr || !nimbleClient->isConnected())
+        break;
+
+      chr_count++;
+      Serial.print("    [CHR] ");
+      Serial.print(characteristic->getUUID().toString().c_str());
+      Serial.print("  props=");
+      if (characteristic->canRead())            Serial.print("R");
+      if (characteristic->canWrite())           Serial.print("W");
+      if (characteristic->canWriteNoResponse()) Serial.print("w");
+      if (characteristic->canNotify())          Serial.print("N");
+      if (characteristic->canIndicate())        Serial.print("I");
+      if (characteristic->canWriteSigned())     Serial.print("S");
+
+      if (characteristic->canWrite() || characteristic->canWriteNoResponse())
+        open_writes++;
+
+      if (characteristic->canRead()) {
+        NimBLEAttValue val = characteristic->readValue();
+        if (val.length() > 0) {
+          open_reads++;
+
+          // Keep the identity strings for the on-device summary.
+          {
+            String cu = String(characteristic->getUUID().toString().c_str());
+            cu.toLowerCase();
+            if (cu.indexOf("2a29") != -1)
+              this->assess_manufacturer = String(val.c_str());
+            else if (cu.indexOf("2a24") != -1)
+              this->assess_model = String(val.c_str());
+            else if (cu.indexOf("2a00") != -1)
+              this->assess_dev_name = String(val.c_str());
+          }
+          Serial.print("  read=OK(");
+          Serial.print(val.length());
+          Serial.print("B)");
+
+          // Print short values inline; they are usually the informative ones.
+          if (val.length() <= 24) {
+            bool printable = true;
+            for (uint16_t i = 0; i < val.length(); i++) {
+              uint8_t c = val.data()[i];
+              if ((c < 0x20 || c > 0x7E) && c != 0x00) { printable = false; break; }
+            }
+            Serial.print(" ");
+            if (printable) {
+              Serial.print("\"");
+              Serial.print(val.c_str());
+              Serial.print("\"");
+            } else {
+              for (uint16_t i = 0; i < val.length(); i++)
+                Serial.printf("%02x", val.data()[i]);
+            }
+          }
+        } else {
+          Serial.print("  read=DENIED");
+        }
+      }
+      Serial.println("");
+    }
+  }
+
+  this->assess_connected = true;
+  this->assess_svc_count = svc_count;
+  this->assess_chr_count = chr_count;
+  this->assess_open_reads = open_reads;
+  this->assess_open_writes = open_writes;
+  this->assess_has_hid = has_hid;
+  this->assess_has_dfu = has_dfu;
+
+  Serial.println("----------------------------------------");
+  Serial.printf("[ASSESS] services=%d characteristics=%d\n", svc_count, chr_count);
+  Serial.printf("[ASSESS] unauthenticated reads OK: %d\n", open_reads);
+  Serial.printf("[ASSESS] writable characteristics: %d\n", open_writes);
+  if (has_hid)
+    Serial.println("[FINDING] HID service exposed to an unpaired peer");
+  if (has_dfu)
+    Serial.println("[FINDING] DFU/OTA service exposed - firmware update path reachable");
+  if (open_reads > 0)
+    Serial.printf("[FINDING] %d characteristic(s) readable with no pairing\n", open_reads);
+  if (svc_count == 0)
+    Serial.println("[ASSESS] No services enumerated (device may require pairing)");
+  Serial.println("========================================");
+  Serial.println("");
+
+  if (nimbleClient != nullptr) {
+    if (nimbleClient->isConnected())
+      nimbleClient->disconnect();
+    NimBLEDevice::deleteClient(nimbleClient);
+    nimbleClient = nullptr;
+  }
+  NimBLEDevice::deinit(true);
+
+  return svc_count > 0 ? svc_count : -3;
+}
+
+// Rebuild a connectable address from a stored BleDevice and assess it.
+void WiFiScan::assessBLEDeviceByIndex(int index) {
+  if ((ble_devices == nullptr) || (index < 0) || (index >= ble_devices->size())) {
+    Serial.println("[ASSESS] Invalid device index");
+    return;
+  }
+
+  const BleDevice& device = ble_devices->get(index);
+
+  this->assess_target = String("");
+  this->assess_connectable = device.connectable;
+
+  // A device advertising ADV_NONCONN_IND has no GATT surface to assess.
+  // Skipping saves a pointless 15 second connect timeout.
+  if (!device.connectable) {
+    uint8_t rv[6];
+    for (int b = 0; b < 6; b++)
+      rv[b] = device.mac[5 - b];
+    NimBLEAddress shown(rv, device.addr_type);
+
+    this->assess_target = String(shown.toString().c_str());
+    this->assess_connected = false;
+    this->assess_refused = false;
+    this->assess_error = 0;
+    this->assess_svc_count = 0;
+    this->assess_chr_count = 0;
+    this->assess_open_reads = 0;
+    this->assess_open_writes = 0;
+    this->assess_has_hid = false;
+    this->assess_has_dfu = false;
+    this->assess_manufacturer = "";
+    this->assess_model = "";
+    this->assess_dev_name = "";
+
+    Serial.println("");
+    Serial.println("========================================");
+    Serial.print("[ASSESS] Target: ");
+    Serial.println(this->assess_target);
+    Serial.println("[ASSESS] Advertisement is non-connectable - no GATT surface");
+    Serial.println("========================================");
+    return;
+  }
+
+  this->shutdownBLE();
+  delay(100);
+
+  uint8_t rev_mac[6];
+  for (int b = 0; b < 6; b++)
+    rev_mac[b] = device.mac[5 - b];
+
+  NimBLEAddress address(rev_mac, device.addr_type);
+
+  Serial.printf("[ASSESS] stored=%02x:%02x:%02x:%02x:%02x:%02x type=%d built=%s\r\n",
+                device.mac[0], device.mac[1], device.mac[2],
+                device.mac[3], device.mac[4], device.mac[5],
+                device.addr_type, address.toString().c_str());
+  this->connectAndAssess(address);
+}
+
 // Function to start running any BLE scan
 void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
   #ifdef HAS_BT
@@ -6934,6 +7354,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
     NimBLEDevice::init("");
     pBLEScan = NimBLEDevice::getScan(); //create new scan
     if ((scan_mode == BT_SCAN_ALL) ||
+        (scan_mode == BT_SCAN_POSTURE) ||
         (scan_mode == BT_SCAN_FOX_HUNT) ||
         (scan_mode == BT_SCAN_RAYBAN) ||
         (scan_mode == BT_SCAN_AIRTAG) ||
@@ -6950,6 +7371,8 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
           display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
           if (scan_mode == BT_SCAN_ALL)
             display_obj.tft.drawCentreString(text_table4[41],TFT_WIDTH / 2,16,2);
+          else if (scan_mode == BT_SCAN_POSTURE)
+            display_obj.tft.drawCentreString("BLE Posture",TFT_WIDTH / 2,16,2);
           else if (scan_mode == BT_SCAN_FOX_HUNT)
             display_obj.tft.drawCentreString("Fox Hunt",TFT_WIDTH / 2,16,2);
           else if (scan_mode == BT_SCAN_AIRTAG)
@@ -6973,7 +7396,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
         #endif
         display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
       #endif
-      if (scan_mode == BT_SCAN_ALL) {
+      if ((scan_mode == BT_SCAN_ALL) || (scan_mode == BT_SCAN_POSTURE)) {
         this->clearList(CLEAR_BLE);
         #ifndef HAS_NIMBLE_2
           pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), true);
