@@ -1094,6 +1094,15 @@ class WiFiScan
       void appendGattLog(const String& line);
       String assessTimestamp();
       String describeAdvFlags();
+      String assess_fw_rev = "";
+      String assess_hw_rev = "";
+      String assess_sw_rev = "";
+      String assess_serial = "";
+      String assess_pnp = "";
+      uint16_t assess_pnp_vendor = 0;
+      uint16_t assess_pnp_product = 0;
+      bool   assess_has_version = false;
+      const char* pnpVendorName(uint8_t source, uint16_t vendor);
     #endif
     bool parseAdvFlags(const uint8_t* payload, size_t len, uint8_t* flags_out);
     int seenBLEDevice(BleDevice ble_device);

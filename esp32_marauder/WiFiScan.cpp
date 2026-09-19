@@ -7188,6 +7188,36 @@ String WiFiScan::bleConnectErrorText(int err) {
 
 #define GATT_LOG_CAP 4000
 
+// ---- BLE posture: PnP vendor lookup -------------------------------------
+//
+// PnP ID (0x2A50) carries a vendor id from a real registry, which makes it a
+// stronger identification signal than an advertised name. Source byte 0x01 is
+// a Bluetooth SIG company id, 0x02 is a USB-IF vendor id.
+//
+// Only entries verifiable from observed data are listed. Add rows from
+// https://www.bluetooth.com/specifications/assigned-numbers/ (SIG) or
+// https://www.usb.org/sites/default/files/vendor_ids.pdf (USB-IF).
+static const struct {
+  uint8_t  source;     // 1 = Bluetooth SIG, 2 = USB-IF
+  uint16_t vendor;
+  const char* name;
+} ble_pnp_vendors[] = {
+  { 0x02, 0x04E8, "Samsung" },     // observed: K06 BLE Keyboard PnP ID
+  { 0x01, 0x004C, "Apple" },
+  { 0x01, 0x0006, "Microsoft" },
+  { 0x02, 0x05AC, "Apple" },
+};
+
+const char* WiFiScan::pnpVendorName(uint8_t source, uint16_t vendor) {
+  size_t n = sizeof(ble_pnp_vendors) / sizeof(ble_pnp_vendors[0]);
+  for (size_t i = 0; i < n; i++) {
+    if ((ble_pnp_vendors[i].source == source) &&
+        (ble_pnp_vendors[i].vendor == vendor))
+      return ble_pnp_vendors[i].name;
+  }
+  return nullptr;
+}
+
 // ---- BLE posture: report helpers ----------------------------------------
 
 // Bounded append so a device with a very large attribute table cannot grow
@@ -7418,8 +7448,12 @@ void WiFiScan::writeAssessReport() {
       f.println("#   oui      IEEE prefix of a public address (authoritative)");
       f.println("#   name     advertised name prefix (weak - names are editable)");
       f.println("#");
-      f.println("# Firmware versions are not readable over an unauthenticated");
-      f.println("# connection, so no specific CVE is asserted per device.");
+      f.println("# VERSION DATA");
+      f.println("#   Read from Device Information (0x180A) where the device");
+      f.println("#   publishes it unpaired. Entries without FW/SW REV lines");
+      f.println("#   did not offer it. No CVE matching is done on-device; the");
+      f.println("#   version is recorded so it can be checked against an");
+      f.println("#   advisory source afterwards.");
       f.println("########################################");
       f.println("");
       this->assess_session_logged = true;
@@ -7456,6 +7490,21 @@ void WiFiScan::writeAssessReport() {
       f.print(this->assess_identity_basis);
       f.println(")");
     }
+    if (this->assess_fw_rev.length() > 0) {
+      f.print("FW REV   : "); f.println(this->assess_fw_rev);
+    }
+    if (this->assess_sw_rev.length() > 0) {
+      f.print("SW REV   : "); f.println(this->assess_sw_rev);
+    }
+    if (this->assess_hw_rev.length() > 0) {
+      f.print("HW REV   : "); f.println(this->assess_hw_rev);
+    }
+    if (this->assess_serial.length() > 0) {
+      f.print("SERIAL   : "); f.println(this->assess_serial);
+    }
+    if (this->assess_pnp.length() > 0) {
+      f.print("PNP ID   : "); f.println(this->assess_pnp);
+    }
 
     if (!this->assess_connected) {
       if (!this->assess_connectable)
@@ -7484,6 +7533,9 @@ void WiFiScan::writeAssessReport() {
         f.println(this->assess_findings[i]);
       }
     }
+
+    if (this->assess_connected && !this->assess_has_version)
+      f.println("VERSION  : not published by device");
 
     if (this->assess_gatt_log.length() > 0) {
       f.println("GATT     :");
@@ -7528,6 +7580,14 @@ int WiFiScan::connectAndAssess(NimBLEAddress& address) {
   this->assess_identity = "";
   this->assess_identity_basis = "";
   this->assess_gatt_log = "";
+  this->assess_fw_rev = "";
+  this->assess_hw_rev = "";
+  this->assess_sw_rev = "";
+  this->assess_serial = "";
+  this->assess_pnp = "";
+  this->assess_pnp_vendor = 0;
+  this->assess_pnp_product = 0;
+  this->assess_has_version = false;
 
   this->createNimbleClient();
 
@@ -7657,6 +7717,50 @@ int WiFiScan::connectAndAssess(NimBLEAddress& address) {
               this->assess_model = String(val.c_str());
             else if (cu.indexOf("2a00") != -1)
               this->assess_dev_name = String(val.c_str());
+            else if (cu.indexOf("2a26") != -1) {
+              this->assess_fw_rev = String(val.c_str());
+              this->assess_has_version = true;
+            }
+            else if (cu.indexOf("2a27") != -1)
+              this->assess_hw_rev = String(val.c_str());
+            else if (cu.indexOf("2a28") != -1) {
+              this->assess_sw_rev = String(val.c_str());
+              this->assess_has_version = true;
+            }
+            else if (cu.indexOf("2a25") != -1)
+              this->assess_serial = String(val.c_str());
+            else if ((cu.indexOf("2a50") != -1) && (val.length() >= 7)) {
+              // PnP ID: [0] vendor id source, [1..2] vendor, [3..4] product,
+              // [5..6] product version. All little-endian.
+              const uint8_t* p = val.data();
+              uint8_t  src     = p[0];
+              uint16_t vendor  = (uint16_t)p[1] | ((uint16_t)p[2] << 8);
+              uint16_t product = (uint16_t)p[3] | ((uint16_t)p[4] << 8);
+              uint16_t pver    = (uint16_t)p[5] | ((uint16_t)p[6] << 8);
+
+              this->assess_pnp_vendor  = vendor;
+              this->assess_pnp_product = product;
+              this->assess_has_version = true;
+
+              char pnp_buf[96];
+              const char* vname = this->pnpVendorName(src, vendor);
+              snprintf(pnp_buf, sizeof(pnp_buf),
+                       "%s vendor 0x%04X%s%s%s, product 0x%04X, rev %u.%u",
+                       (src == 0x01) ? "SIG" : ((src == 0x02) ? "USB-IF" : "?"),
+                       vendor,
+                       (vname != nullptr) ? " (" : "",
+                       (vname != nullptr) ? vname : "",
+                       (vname != nullptr) ? ")" : "",
+                       product,
+                       (unsigned)(pver >> 8), (unsigned)(pver & 0xFF));
+              this->assess_pnp = String(pnp_buf);
+
+              // Fourth identification tier: a registry vendor id beats a name.
+              if ((this->assess_identity.length() == 0) && (vname != nullptr)) {
+                this->assess_identity = String(vname) + " device";
+                this->assess_identity_basis = "pnp-id";
+              }
+            }
           }
           Serial.print("  read=OK(");
           Serial.print(val.length());
@@ -7735,6 +7839,22 @@ int WiFiScan::connectAndAssess(NimBLEAddress& address) {
     uint8_t at = address.getType();
     this->resolveDeviceIdentity(ident_mac,
                                 (at == BLE_ADDR_PUBLIC) || (at == BLE_ADDR_PUBLIC_ID));
+  }
+
+  if (this->assess_has_version) {
+    if ((this->assess_fw_rev.length() > 0) ||
+        (this->assess_sw_rev.length() > 0) ||
+        (this->assess_hw_rev.length() > 0)) {
+    Serial.print("[ASSESS] Version data published:");
+    if (this->assess_fw_rev.length() > 0) { Serial.print(" fw="); Serial.print(this->assess_fw_rev); }
+    if (this->assess_sw_rev.length() > 0) { Serial.print(" sw="); Serial.print(this->assess_sw_rev); }
+    if (this->assess_hw_rev.length() > 0) { Serial.print(" hw="); Serial.print(this->assess_hw_rev); }
+    Serial.println("");
+    }
+    if (this->assess_pnp.length() > 0) {
+      Serial.print("[ASSESS] PnP: ");
+      Serial.println(this->assess_pnp);
+    }
   }
 
   if (this->assess_identity.length() > 0) {
