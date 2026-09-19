@@ -7156,6 +7156,116 @@ String WiFiScan::bleConnectErrorText(int err) {
   return "Host error " + String(err);
 }
 
+// ---- BLE posture: device identification ---------------------------------
+//
+// Three tiers, strongest first. The basis travels with the name so a guess is
+// never presented as a fact.
+
+// Vendor-specific GATT services. A device exposing one of these implements
+// that vendor's protocol -- far stronger evidence than an advertised name.
+// Match is on a prefix of the lowercased UUID string.
+static const struct {
+  const char* uuid_prefix;
+  const char* product;
+} ble_service_vendors[] = {
+  { "06aa1910-f22a-11e3", "Nespresso Vertuo" },
+  { "06aa1920-f22a-11e3", "Nespresso Vertuo" },
+  { "9b2dbc93-928b-430e", "Pura diffuser" },
+  { "0xfd44",             "Apple FindMy accessory" },
+  { "fd44",               "Apple FindMy accessory" },
+  { "7905f431-b5ce-4e99", "Apple device" },
+  { "89d3502b-0f36-433a", "Apple device" },
+  { "0xfe59",             "Nordic DFU target" },
+  { "fe59",               "Nordic DFU target" },
+};
+
+// IEEE OUI -> vendor, for PUBLIC addresses only.
+//
+// Intentionally empty. Assignments belong to the IEEE registry at
+// https://standards-oui.ieee.org/ ; entries guessed from memory would put
+// incorrect vendor names into assessment reports. Add rows as you verify
+// them, e.g.  { { 0xd8, 0x13, 0x2a }, "Some Vendor" },
+static const struct {
+  uint8_t oui[3];
+  const char* vendor;
+} ble_oui_vendors[] = {
+  { { 0x00, 0x00, 0x00 }, nullptr },   // placeholder, skipped at runtime
+};
+
+// Advertised-name prefixes. Weakest tier: names are user-editable and any
+// device can advertise anything. Always reported as "(name)".
+static const struct {
+  const char* prefix;
+  const char* product;
+} ble_name_vendors[] = {
+  { "Vertuo_",     "Nespresso Vertuo" },
+  { "ELK-BLEDOM",  "ELK-BLE RGB controller" },
+  { "Pura-",       "Pura diffuser" },
+  { "AirPods",     "Apple AirPods" },
+  { "Oura Ring",   "Oura Ring" },
+  { "Hatch Rest",  "Hatch Rest" },
+  { "[TV]",        "Samsung TV" },
+};
+
+const char* WiFiScan::matchServiceVendor(const String& uuid_lower) {
+  size_t n = sizeof(ble_service_vendors) / sizeof(ble_service_vendors[0]);
+  for (size_t i = 0; i < n; i++) {
+    if (uuid_lower.indexOf(ble_service_vendors[i].uuid_prefix) == 0)
+      return ble_service_vendors[i].product;
+  }
+  return nullptr;
+}
+
+const char* WiFiScan::matchOuiVendor(const uint8_t mac[6]) {
+  size_t n = sizeof(ble_oui_vendors) / sizeof(ble_oui_vendors[0]);
+  for (size_t i = 0; i < n; i++) {
+    if (ble_oui_vendors[i].vendor == nullptr)
+      continue;
+    if (memcmp(mac, ble_oui_vendors[i].oui, 3) == 0)
+      return ble_oui_vendors[i].vendor;
+  }
+  return nullptr;
+}
+
+const char* WiFiScan::matchNameVendor(const String& name) {
+  if (name.length() == 0)
+    return nullptr;
+
+  size_t n = sizeof(ble_name_vendors) / sizeof(ble_name_vendors[0]);
+  for (size_t i = 0; i < n; i++) {
+    if (name.indexOf(ble_name_vendors[i].prefix) == 0)
+      return ble_name_vendors[i].product;
+  }
+  return nullptr;
+}
+
+// Fill in assess_identity if it was not already set by a service match during
+// enumeration. The OUI tier applies only to public addresses; a random address
+// carries no manufacturer information.
+void WiFiScan::resolveDeviceIdentity(const uint8_t mac[6], bool public_addr) {
+  if (this->assess_identity.length() > 0)
+    return;   // a service match already won
+
+  if (public_addr) {
+    const char* by_oui = this->matchOuiVendor(mac);
+    if (by_oui != nullptr) {
+      this->assess_identity = String(by_oui);
+      this->assess_identity_basis = "oui";
+      return;
+    }
+  }
+
+  String candidate = this->assess_dev_name.length() > 0
+                       ? this->assess_dev_name
+                       : this->assess_scan_name;
+
+  const char* by_name = this->matchNameVendor(candidate);
+  if (by_name != nullptr) {
+    this->assess_identity = String(by_name);
+    this->assess_identity_basis = "name";
+  }
+}
+
 // ---- BLE posture: findings and reporting --------------------------------
 
 void WiFiScan::addAssessFinding(const String& finding) {
@@ -7219,6 +7329,13 @@ void WiFiScan::writeAssessReport() {
     }
     if (this->assess_model.length() > 0) {
       f.print("MODEL    : "); f.println(this->assess_model);
+    }
+    if (this->assess_identity.length() > 0) {
+      f.print("IDENTITY : ");
+      f.print(this->assess_identity);
+      f.print("  (basis: ");
+      f.print(this->assess_identity_basis);
+      f.println(")");
     }
 
     if (!this->assess_connected) {
@@ -7304,6 +7421,8 @@ int WiFiScan::connectAndAssess(NimBLEAddress& address) {
   this->assess_finding_count = 0;
   this->assess_vendor_open = false;
   this->assess_trackable = false;
+  this->assess_identity = "";
+  this->assess_identity_basis = "";
 
   this->createNimbleClient();
 
@@ -7373,6 +7492,17 @@ int WiFiScan::connectAndAssess(NimBLEAddress& address) {
       Serial.print("   <-- DFU/OTA");
     }
     if (su.indexOf("180a") != -1) Serial.print("   <-- Device Info");
+
+    // Strongest identification tier: the device implements this protocol.
+    if (this->assess_identity.length() == 0) {
+      const char* by_service = this->matchServiceVendor(su);
+      if (by_service != nullptr) {
+        this->assess_identity = String(by_service);
+        this->assess_identity_basis = "service";
+        Serial.print("   <-- ");
+        Serial.print(by_service);
+      }
+    }
 
     // A 128-bit UUID is vendor-specific; the 16-bit ones are SIG-assigned.
     if (su.length() > 8) {
@@ -7470,6 +7600,28 @@ int WiFiScan::connectAndAssess(NimBLEAddress& address) {
     Serial.printf("[FINDING] %d characteristic(s) readable with no pairing\n", open_reads);
   if (svc_count == 0)
     Serial.println("[ASSESS] No services enumerated (device may require pairing)");
+  {
+    uint8_t ident_mac[6];
+    const uint8_t* av = address.getVal();
+    if (av != nullptr)
+      for (int b = 0; b < 6; b++)
+        ident_mac[b] = av[b];
+    else
+      memset(ident_mac, 0, sizeof(ident_mac));
+
+    uint8_t at = address.getType();
+    this->resolveDeviceIdentity(ident_mac,
+                                (at == BLE_ADDR_PUBLIC) || (at == BLE_ADDR_PUBLIC_ID));
+  }
+
+  if (this->assess_identity.length() > 0) {
+    Serial.print("[ASSESS] Identified as: ");
+    Serial.print(this->assess_identity);
+    Serial.print(" (");
+    Serial.print(this->assess_identity_basis);
+    Serial.println(")");
+  }
+
   this->buildAssessFindings();
 
   if (this->assess_finding_count > 0) {
@@ -7501,6 +7653,7 @@ void WiFiScan::assessBLEDeviceByIndex(int index) {
 
   this->assess_target = String("");
   this->assess_connectable = device.connectable;
+  this->assess_scan_name = device.name;
 
   // A device advertising ADV_NONCONN_IND has no GATT surface to assess.
   // Skipping saves a pointless 15 second connect timeout.

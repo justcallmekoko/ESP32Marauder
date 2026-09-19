@@ -1075,6 +1075,13 @@ class WiFiScan
       void buildAssessFindings();
       void writeAssessReport();
       void releaseNimbleClient();
+      String assess_identity = "";
+      String assess_identity_basis = "";
+      String assess_scan_name = "";
+      const char* matchServiceVendor(const String& uuid_lower);
+      const char* matchOuiVendor(const uint8_t mac[6]);
+      const char* matchNameVendor(const String& name);
+      void resolveDeviceIdentity(const uint8_t mac[6], bool public_addr);
     #endif
     bool parseAdvFlags(const uint8_t* payload, size_t len, uint8_t* flags_out);
     int seenBLEDevice(BleDevice ble_device);

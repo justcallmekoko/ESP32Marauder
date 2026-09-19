@@ -3525,6 +3525,13 @@ void MenuFunctions::RunSetup()
               display_obj.tft.println("Connected unpaired");
               display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
+              if (wifi_scan_obj.assess_identity.length() > 0) {
+                display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+                display_obj.tft.println(wifi_scan_obj.assess_identity);
+                display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
+                display_obj.tft.println("via " + wifi_scan_obj.assess_identity_basis);
+                display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+              }
               if (wifi_scan_obj.assess_manufacturer.length() > 0) {
                 display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
                 display_obj.tft.println(wifi_scan_obj.assess_manufacturer);
