@@ -28,6 +28,7 @@ try:
     from colorama import Fore, Style
 except ImportError:
     ensure_package('colorama')
+    from colorama import Fore, Style
 
 # Dependency check and install if needed
 REQUIRED_PACKAGES = [
