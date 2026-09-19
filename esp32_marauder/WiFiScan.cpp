@@ -5240,6 +5240,42 @@ void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color) {
 
 #ifdef HAS_NIMBLE_2
 
+// Disconnect and delete the current client, freeing its pool slot.
+//
+// Order matters. NimBLEDevice::deleteClient() on a connected client only
+// flags it for deletion and starts an async disconnect -- the object is freed
+// later, from the disconnect callback. NimBLEDevice::deinit() stops the host
+// task BEFORE it sweeps m_pClients, so any client still connected at that
+// point can never run its callback and its pool slot is stranded for the rest
+// of the session.
+//
+// So: disconnect, wait for the link to actually drop while the stack is still
+// running, and only then delete. Safe to call with no client outstanding.
+void WiFiScan::releaseNimbleClient() {
+  if (nimbleClient == nullptr)
+    return;
+
+  if (nimbleClient->isConnected()) {
+    nimbleClient->disconnect();
+
+    // Give the host task time to process the disconnect and run the callback.
+    uint32_t wait_start = millis();
+    while (nimbleClient->isConnected() && ((millis() - wait_start) < 2000))
+      delay(10);
+
+    if (nimbleClient->isConnected())
+      Serial.println("[ASSESS] Disconnect did not complete in time");
+  }
+
+  if (!NimBLEDevice::deleteClient(nimbleClient))
+    Serial.println("[ASSESS] deleteClient() refused - pool slot may leak");
+
+  nimbleClient = nullptr;
+
+  // Let the stack settle before the caller tears it down.
+  delay(50);
+}
+
 void WiFiScan::createNimbleClient() {
   NimBLEDevice::init("Tracker-Client");
 
@@ -5252,7 +5288,30 @@ void WiFiScan::createNimbleClient() {
     false
   );
 
-  nimbleClient = NimBLEDevice::createClient();
+  // NimBLEDevice keeps a fixed-size client pool. Overwriting nimbleClient
+  // without releasing it orphans a slot, and once the pool is empty
+  // createClient() returns nullptr for the rest of the session.
+  this->releaseNimbleClient();
+
+  // Reuse a pooled client that is already disconnected before allocating.
+  nimbleClient = NimBLEDevice::getDisconnectedClient();
+
+  if (nimbleClient == nullptr)
+    nimbleClient = NimBLEDevice::createClient();
+
+  // Nothing free: sweep for disconnected clients the stack has not reclaimed,
+  // then try once more before giving up.
+  if (nimbleClient == nullptr) {
+    NimBLEClient* stale = NimBLEDevice::getDisconnectedClient();
+    while (stale != nullptr) {
+      NimBLEDevice::deleteClient(stale);
+      stale = NimBLEDevice::getDisconnectedClient();
+    }
+    nimbleClient = NimBLEDevice::createClient();
+  }
+
+  if (nimbleClient == nullptr)
+    Serial.println("NimBLE client pool exhausted - reboot required");
 }
 
 int WiFiScan::connectAndProcessTracker(NimBLEAddress& address) {
@@ -7283,11 +7342,11 @@ int WiFiScan::connectAndAssess(NimBLEAddress& address) {
     Serial.print(" (");
     Serial.print(this->bleConnectErrorText(this->assess_error));
     Serial.println(")");
-    if (nimbleClient != nullptr) {
-      NimBLEDevice::deleteClient(nimbleClient);
-      nimbleClient = nullptr;
-    }
+
+    // A failed connect can still leave the client holding a pool slot.
+    this->releaseNimbleClient();
     NimBLEDevice::deinit(true);
+    this->writeAssessReport();
     return -1;
   }
 
@@ -7425,12 +7484,7 @@ int WiFiScan::connectAndAssess(NimBLEAddress& address) {
   Serial.println("========================================");
   Serial.println("");
 
-  if (nimbleClient != nullptr) {
-    if (nimbleClient->isConnected())
-      nimbleClient->disconnect();
-    NimBLEDevice::deleteClient(nimbleClient);
-    nimbleClient = nullptr;
-  }
+  this->releaseNimbleClient();
   NimBLEDevice::deinit(true);
 
   return svc_count > 0 ? svc_count : -3;

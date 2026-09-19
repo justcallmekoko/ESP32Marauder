@@ -1074,6 +1074,7 @@ class WiFiScan
       void addAssessFinding(const String& finding);
       void buildAssessFindings();
       void writeAssessReport();
+      void releaseNimbleClient();
     #endif
     bool parseAdvFlags(const uint8_t* payload, size_t len, uint8_t* flags_out);
     int seenBLEDevice(BleDevice ble_device);
