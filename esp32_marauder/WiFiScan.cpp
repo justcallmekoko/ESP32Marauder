@@ -574,6 +574,21 @@ extern "C" {
               BleDevice ble_device;
               ble_device.addr_type = advertisedDevice->getAddress().getType();
               ble_device.connectable = advertisedDevice->isConnectable();
+              {
+                #ifndef HAS_NIMBLE_2
+                  const uint8_t* fl_payload = advertisedDevice->getPayload();
+                  size_t fl_len = advertisedDevice->getPayloadLength();
+                #else
+                  const std::vector<unsigned char>& fl_vec = advertisedDevice->getPayload();
+                  const uint8_t* fl_payload = fl_vec.data();
+                  size_t fl_len = fl_vec.size();
+                #endif
+                uint8_t fl = 0;
+                if (wifi_scan_obj.parseAdvFlags(fl_payload, fl_len, &fl)) {
+                  ble_device.adv_flags = fl;
+                  ble_device.has_adv_flags = true;
+                }
+              }
               ble_device.device_type = wifi_scan_obj.classifyBLEDevice(advertisedDevice);
               if (name_length > 0)
                 ble_device.name = name;
@@ -1324,6 +1339,21 @@ extern "C" {
               BleDevice ble_device;
               ble_device.addr_type = advertisedDevice->getAddress().getType();
               ble_device.connectable = advertisedDevice->isConnectable();
+              {
+                #ifndef HAS_NIMBLE_2
+                  const uint8_t* fl_payload = advertisedDevice->getPayload();
+                  size_t fl_len = advertisedDevice->getPayloadLength();
+                #else
+                  const std::vector<unsigned char>& fl_vec = advertisedDevice->getPayload();
+                  const uint8_t* fl_payload = fl_vec.data();
+                  size_t fl_len = fl_vec.size();
+                #endif
+                uint8_t fl = 0;
+                if (wifi_scan_obj.parseAdvFlags(fl_payload, fl_len, &fl)) {
+                  ble_device.adv_flags = fl;
+                  ble_device.has_adv_flags = true;
+                }
+              }
               ble_device.device_type = wifi_scan_obj.classifyBLEDevice(advertisedDevice);
               if (name_length > 0)
                 ble_device.name = name;
@@ -7156,6 +7186,55 @@ String WiFiScan::bleConnectErrorText(int err) {
   return "Host error " + String(err);
 }
 
+#define GATT_LOG_CAP 4000
+
+// ---- BLE posture: report helpers ----------------------------------------
+
+// Bounded append so a device with a very large attribute table cannot grow
+// this without limit.
+void WiFiScan::appendGattLog(const String& line) {
+  if (this->assess_gatt_log.length() >= GATT_LOG_CAP)
+    return;
+
+  this->assess_gatt_log += line;
+  this->assess_gatt_log += "\n";
+
+  if (this->assess_gatt_log.length() >= GATT_LOG_CAP)
+    this->assess_gatt_log += "  ... truncated\n";
+}
+
+// Prefer real time from GPS. Uptime alone resets every boot, which makes a
+// multi-session log impossible to put in order, so the fallback carries a
+// per-boot sequence number.
+String WiFiScan::assessTimestamp() {
+  #ifdef HAS_GPS
+    if (gps_obj.getFixStatus()) {
+      String dt = gps_obj.getDatetime();
+      if (dt.length() > 0)
+        return dt;
+    }
+  #endif
+  return "no-fix +" + String(millis() / 1000) + "s (entry " +
+         String(this->assess_seq) + ")";
+}
+
+String WiFiScan::describeAdvFlags() {
+  if (!this->assess_has_adv_flags)
+    return "none advertised";
+
+  String out = "";
+  if (this->assess_adv_flags & 0x02)
+    out += "general discoverable";
+  else if (this->assess_adv_flags & 0x01)
+    out += "limited discoverable";
+  else
+    out += "not discoverable";
+
+  out += (this->assess_adv_flags & 0x04) ? ", BR/EDR not supported"
+                                         : ", BR/EDR supported";
+  return out;
+}
+
 // ---- BLE posture: device identification ---------------------------------
 //
 // Three tiers, strongest first. The basis travels with the name so a guess is
@@ -7317,9 +7396,49 @@ void WiFiScan::writeAssessReport() {
       }
     }
 
+    // Legend once per session rather than repeated in every entry.
+    if (!this->assess_session_logged) {
+      f.println("########################################");
+      f.println("# BLE POSTURE SESSION");
+      f.print("# started : "); f.println(this->assessTimestamp());
+      f.println("#");
+      f.println("# FINDING CLASSES");
+      f.println("#   HID UNPAIRED    HID service reachable without pairing.");
+      f.println("#                   Unauthenticated HID is the precondition");
+      f.println("#                   for the CVE-2023-45866 injection class.");
+      f.println("#   FIRMWARE PATH   DFU/OTA service exposed unpaired.");
+      f.println("#   UNAUTH CONTROL  writable characteristics, no encryption:");
+      f.println("#                   any peer in range can issue commands.");
+      f.println("#   VENDOR OPEN     unprotected vendor-specific service.");
+      f.println("#   IDENTITY LEAK   identifiers readable with no pairing.");
+      f.println("#   TRACKABLE ADDR  address does not rotate over time.");
+      f.println("#");
+      f.println("# IDENTITY BASIS");
+      f.println("#   service  vendor GATT service the device implements (strong)");
+      f.println("#   oui      IEEE prefix of a public address (authoritative)");
+      f.println("#   name     advertised name prefix (weak - names are editable)");
+      f.println("#");
+      f.println("# Firmware versions are not readable over an unauthenticated");
+      f.println("# connection, so no specific CVE is asserted per device.");
+      f.println("########################################");
+      f.println("");
+      this->assess_session_logged = true;
+    }
+
     f.println("========================================");
+    f.print("TIME     : "); f.println(this->assessTimestamp());
     f.print("TARGET   : "); f.println(this->assess_target);
-    f.print("UPTIME_MS: "); f.println(millis());
+    f.print("RSSI     : "); f.print(this->assess_rssi); f.println(" dBm");
+    if (this->assess_addr_type.length() > 0) {
+      f.print("ADDRTYPE : ");
+      f.print(this->assess_addr_type);
+      if (this->assess_trackable || (this->assess_addr_type == "public") ||
+          (this->assess_addr_type == "static-random"))
+        f.println("  (does not rotate)");
+      else
+        f.println("  (rotates)");
+    }
+    f.print("ADVFLAGS : "); f.println(this->describeAdvFlags());
 
     if (this->assess_dev_name.length() > 0) {
       f.print("NAME     : "); f.println(this->assess_dev_name);
@@ -7364,26 +7483,11 @@ void WiFiScan::writeAssessReport() {
         f.print("  - ");
         f.println(this->assess_findings[i]);
       }
-      f.println("NOTES    :");
-      if (this->assess_has_hid) {
-        f.println("  HID reachable unpaired. Unauthenticated HID is the");
-        f.println("  precondition for the CVE-2023-45866 injection class.");
-      }
-      if (this->assess_has_dfu) {
-        f.println("  DFU/OTA service exposed - firmware replacement path.");
-      }
-      if (this->assess_open_writes > 0) {
-        f.println("  Writable characteristics with no encryption: any peer");
-        f.println("  in range can issue commands.");
-      }
-      if (this->assess_open_reads > 0) {
-        f.println("  Readable identifiers allow fingerprinting without pairing.");
-      }
-      if (this->assess_trackable) {
-        f.println("  Address does not rotate - device is trackable over time.");
-      }
-      f.println("  Firmware versions are not readable unpaired, so no");
-      f.println("  specific CVE is asserted here.");
+    }
+
+    if (this->assess_gatt_log.length() > 0) {
+      f.println("GATT     :");
+      f.print(this->assess_gatt_log);
     }
     f.println("");
     f.close();
@@ -7423,6 +7527,7 @@ int WiFiScan::connectAndAssess(NimBLEAddress& address) {
   this->assess_trackable = false;
   this->assess_identity = "";
   this->assess_identity_basis = "";
+  this->assess_gatt_log = "";
 
   this->createNimbleClient();
 
@@ -7484,6 +7589,7 @@ int WiFiScan::connectAndAssess(NimBLEAddress& address) {
 
     Serial.print("  [SVC] ");
     Serial.print(su);
+    this->appendGattLog("  [SVC] " + su);
 
     // 0x1812 HID over GATT; 0xfe59 Nordic DFU; 0x180a Device Information
     if (su.indexOf("1812") != -1) { has_hid = true; Serial.print("   <-- HID"); }
@@ -7520,13 +7626,18 @@ int WiFiScan::connectAndAssess(NimBLEAddress& address) {
       chr_count++;
       Serial.print("    [CHR] ");
       Serial.print(characteristic->getUUID().toString().c_str());
+      String props = "";
+      if (characteristic->canRead())            props += "R";
+      if (characteristic->canWrite())           props += "W";
+      if (characteristic->canWriteNoResponse()) props += "w";
+      if (characteristic->canNotify())          props += "N";
+      if (characteristic->canIndicate())        props += "I";
+      if (characteristic->canWriteSigned())     props += "S";
       Serial.print("  props=");
-      if (characteristic->canRead())            Serial.print("R");
-      if (characteristic->canWrite())           Serial.print("W");
-      if (characteristic->canWriteNoResponse()) Serial.print("w");
-      if (characteristic->canNotify())          Serial.print("N");
-      if (characteristic->canIndicate())        Serial.print("I");
-      if (characteristic->canWriteSigned())     Serial.print("S");
+      Serial.print(props);
+      String chr_line = "    [CHR] " +
+                        String(characteristic->getUUID().toString().c_str()) +
+                        "  props=" + props;
 
       if (characteristic->canWrite() || characteristic->canWriteNoResponse())
         open_writes++;
@@ -7550,6 +7661,16 @@ int WiFiScan::connectAndAssess(NimBLEAddress& address) {
           Serial.print("  read=OK(");
           Serial.print(val.length());
           Serial.print("B)");
+          chr_line += "  read=OK(" + String(val.length()) + "B)";
+          if (val.length() <= 24) {
+            bool file_printable = true;
+            for (uint16_t vi = 0; vi < val.length(); vi++) {
+              uint8_t vc = val.data()[vi];
+              if ((vc < 0x20 || vc > 0x7E) && vc != 0x00) { file_printable = false; break; }
+            }
+            if (file_printable)
+              chr_line += " \"" + String(val.c_str()) + "\"";
+          }
 
           // Print short values inline; they are usually the informative ones.
           if (val.length() <= 24) {
@@ -7570,8 +7691,10 @@ int WiFiScan::connectAndAssess(NimBLEAddress& address) {
           }
         } else {
           Serial.print("  read=DENIED");
+          chr_line += "  read=DENIED";
         }
       }
+      this->appendGattLog(chr_line);
       Serial.println("");
     }
   }
@@ -7654,6 +7777,17 @@ void WiFiScan::assessBLEDeviceByIndex(int index) {
   this->assess_target = String("");
   this->assess_connectable = device.connectable;
   this->assess_scan_name = device.name;
+  this->assess_rssi = device.rssi;
+  this->assess_adv_flags = device.adv_flags;
+  this->assess_has_adv_flags = device.has_adv_flags;
+  this->assess_seq++;
+  {
+    uint8_t rv2[6];
+    for (int b = 0; b < 6; b++)
+      rv2[b] = device.mac[5 - b];
+    NimBLEAddress shown2(rv2, device.addr_type);
+    this->assess_addr_type = String(this->bleAddressTypeString(shown2));
+  }
 
   // A device advertising ADV_NONCONN_IND has no GATT surface to assess.
   // Skipping saves a pointless 15 second connect timeout.

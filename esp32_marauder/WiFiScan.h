@@ -370,6 +370,8 @@ struct BleDevice {
   uint32_t last_seen_ms = 0;
   uint8_t  addr_type = 0;   // BLE_ADDR_* - needed to rebuild a connectable address
   bool     connectable = true;   // false for ADV_NONCONN_IND / ADV_SCAN_IND
+  uint8_t  adv_flags = 0;        // AD type 0x01 payload, when present
+  bool     has_adv_flags = false;
 };
 
 #ifdef HAS_PSRAM
@@ -1082,6 +1084,16 @@ class WiFiScan
       const char* matchOuiVendor(const uint8_t mac[6]);
       const char* matchNameVendor(const String& name);
       void resolveDeviceIdentity(const uint8_t mac[6], bool public_addr);
+      int    assess_rssi = 0;
+      String assess_addr_type = "";
+      uint8_t assess_adv_flags = 0;
+      bool   assess_has_adv_flags = false;
+      String assess_gatt_log = "";
+      bool   assess_session_logged = false;
+      uint16_t assess_seq = 0;
+      void appendGattLog(const String& line);
+      String assessTimestamp();
+      String describeAdvFlags();
     #endif
     bool parseAdvFlags(const uint8_t* payload, size_t len, uint8_t* flags_out);
     int seenBLEDevice(BleDevice ble_device);
