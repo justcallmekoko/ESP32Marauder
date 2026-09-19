@@ -3507,18 +3507,15 @@ void MenuFunctions::RunSetup()
                 display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
                 display_obj.tft.println("Refused");
                 display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-                display_obj.tft.println(wifi_scan_obj.bleConnectErrorReason(
+                display_obj.tft.println(wifi_scan_obj.bleConnectErrorText(
                                           wifi_scan_obj.assess_error));
                 display_obj.tft.println("(good posture)");
               } else {
                 display_obj.tft.setTextColor(TFT_YELLOW, TFT_BLACK);
                 display_obj.tft.println("Unreachable");
                 display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-                String why = String(wifi_scan_obj.bleConnectErrorReason(
-                                      wifi_scan_obj.assess_error));
-                if (why.length() == 0)
-                  why = "Error " + String(wifi_scan_obj.assess_error);
-                display_obj.tft.println(why);
+                display_obj.tft.println(wifi_scan_obj.bleConnectErrorText(
+                                          wifi_scan_obj.assess_error));
                 display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
                 display_obj.tft.println("No verdict - retry");
                 display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);

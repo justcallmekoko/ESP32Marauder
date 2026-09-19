@@ -7067,12 +7067,34 @@ const char* WiFiScan::bleConnectErrorReason(int err) {
     case 23:  return "Auth required";
     case 24:  return "Not authorized";
     case 25:  return "Encryption required";
+    case 26:  return "Encrypt key too short";
+    case 30:  return "Stack disabled";
+    case 517: return "Peer at conn limit";
+    case 518: return "Peer not responding";
     case 520: return "Connection timeout";
+    case 521: return "Peer terminated link";
     case 522: return "Peer ended link";
+    case 524: return "Link lost";
     case 525: return "Auth failure";
+    case 526: return "PIN or key missing";
+    case 531: return "Unsupported feature";
     case 534: return "Conn limit reached";
+    case 546: return "Peer busy";
+    case 572: return "Directed adv timeout";
+    case 574: return "Handshake failed";
+    case 575: return "MAC conn failed";
     default:  return "";
   }
+}
+
+// Never hand an empty string to the UI - an unmapped code is still useful.
+String WiFiScan::bleConnectErrorText(int err) {
+  const char* reason = this->bleConnectErrorReason(err);
+  if ((reason != nullptr) && (reason[0] != '\0'))
+    return String(reason);
+  if (err >= 512)
+    return "HCI error " + String(err - 512);
+  return "Host error " + String(err);
 }
 
 // ---- BLE posture: GATT assessment ---------------------------------------
@@ -7135,9 +7157,11 @@ int WiFiScan::connectAndAssess(NimBLEAddress& address) {
                             (this->assess_error == 25) ||   // EENCRYPT
                             (this->assess_error == 525));   // HCI auth failure
 
-    Serial.printf("[ASSESS] Connect failed; error=%d (%s)\n",
-                  this->assess_error,
-                  this->bleConnectErrorReason(this->assess_error));
+    Serial.print("[ASSESS] Connect failed; error=");
+    Serial.print(this->assess_error);
+    Serial.print(" (");
+    Serial.print(this->bleConnectErrorText(this->assess_error));
+    Serial.println(")");
     if (nimbleClient != nullptr) {
       NimBLEDevice::deleteClient(nimbleClient);
       nimbleClient = nullptr;
@@ -7321,11 +7345,6 @@ void WiFiScan::assessBLEDeviceByIndex(int index) {
     rev_mac[b] = device.mac[5 - b];
 
   NimBLEAddress address(rev_mac, device.addr_type);
-
-  Serial.printf("[ASSESS] stored=%02x:%02x:%02x:%02x:%02x:%02x type=%d built=%s\r\n",
-                device.mac[0], device.mac[1], device.mac[2],
-                device.mac[3], device.mac[4], device.mac[5],
-                device.addr_type, address.toString().c_str());
   this->connectAndAssess(address);
 }
 
