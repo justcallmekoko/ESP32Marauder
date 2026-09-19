@@ -7466,11 +7466,16 @@ void WiFiScan::writeAssessReport() {
     if (this->assess_addr_type.length() > 0) {
       f.print("ADDRTYPE : ");
       f.print(this->assess_addr_type);
-      if (this->assess_trackable || (this->assess_addr_type == "public") ||
+      // Decided by address type alone. Public and static-random are fixed for
+      // the life of the device; RPA and NRPA are regenerated periodically.
+      if ((this->assess_addr_type == "public") ||
           (this->assess_addr_type == "static-random"))
         f.println("  (does not rotate)");
-      else
+      else if ((this->assess_addr_type == "rpa") ||
+               (this->assess_addr_type == "nrpa"))
         f.println("  (rotates)");
+      else
+        f.println("");
     }
     f.print("ADVFLAGS : "); f.println(this->describeAdvFlags());
 
@@ -7930,6 +7935,25 @@ void WiFiScan::assessBLEDeviceByIndex(int index) {
     this->assess_manufacturer = "";
     this->assess_model = "";
     this->assess_dev_name = "";
+
+    // These are normally cleared at the top of connectAndAssess(), which this
+    // path never reaches. Without clearing them here the entry inherits the
+    // previous device's identity -- which produced reports claiming a
+    // "service" basis on devices that were never connected to.
+    this->assess_identity = "";
+    this->assess_identity_basis = "";
+    this->assess_trackable = false;
+    this->assess_vendor_open = false;
+    this->assess_finding_count = 0;
+    this->assess_gatt_log = "";
+    this->assess_fw_rev = "";
+    this->assess_hw_rev = "";
+    this->assess_sw_rev = "";
+    this->assess_serial = "";
+    this->assess_pnp = "";
+    this->assess_pnp_vendor = 0;
+    this->assess_pnp_product = 0;
+    this->assess_has_version = false;
 
     Serial.println("");
     Serial.println("========================================");
