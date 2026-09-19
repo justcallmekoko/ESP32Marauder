@@ -492,7 +492,8 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == BT_SCAN_WAR_DRIVE) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_WAR_DRIVE_CONT) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_SKIMMERS) ||
-          (wifi_scan_obj.currentScanMode == BT_SCAN_ANALYZER))
+          (wifi_scan_obj.currentScanMode == BT_SCAN_ANALYZER) ||
+          (wifi_scan_obj.currentScanMode == BT_SCAN_POSTURE))
       {
         wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
   
@@ -3578,16 +3579,23 @@ void MenuFunctions::RunSetup()
 
             // Hold the summary until the user dismisses it. The 3 minute
             // ceiling is a backstop so a missed press cannot strand the UI.
-            #if (C_BTN >= 0) && !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
-              delay(400);   // swallow the press that got us here
+            // Dismiss on either input. Button boards use c_btn; touch boards
+            // (CYD) have no 5-way switch, so a tap has to work too.
+            delay(400);   // swallow the input that got us here
+            {
               uint32_t assess_wait = millis();
-              while ((millis() - assess_wait) < 180000) {
-                if (c_btn.justPressed()) break;
+              uint16_t d_x = 0, d_y = 0;
+              bool dismissed = false;
+              while (!dismissed && ((millis() - assess_wait) < 180000)) {
+                #if (C_BTN >= 0) && !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
+                  if (c_btn.justPressed()) dismissed = true;
+                #endif
+                #ifdef HAS_TOUCH
+                  if (!dismissed && display_obj.updateTouch(&d_x, &d_y)) dismissed = true;
+                #endif
                 delay(20);
               }
-            #else
-              delay(8000);
-            #endif
+            }
           #endif
 
           this->changeMenu(&bluetoothPostureMenu, true);
