@@ -492,7 +492,8 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == BT_SCAN_WAR_DRIVE) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_WAR_DRIVE_CONT) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_SKIMMERS) ||
-          (wifi_scan_obj.currentScanMode == BT_SCAN_ANALYZER))
+          (wifi_scan_obj.currentScanMode == BT_SCAN_ANALYZER) ||
+          (wifi_scan_obj.currentScanMode == BT_SCAN_POSTURE))
       {
         wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
   
@@ -605,7 +606,8 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ANALYZER) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_PACKET_RATE) ||
-            (wifi_scan_obj.currentScanMode == BT_SCAN_ANALYZER))
+            (wifi_scan_obj.currentScanMode == BT_SCAN_ANALYZER) ||
+            (wifi_scan_obj.currentScanMode == BT_SCAN_POSTURE))
         {
           wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
 
@@ -2056,6 +2058,7 @@ void MenuFunctions::RunSetup()
   // Bluetooth menu stuff
   bluetoothSnifferMenu.list = new LinkedList<MenuNode>();
   bluetoothAttackMenu.list = new LinkedList<MenuNode>();
+  bluetoothPostureMenu.list = new LinkedList<MenuNode>();
 
   // Settings stuff
   generateSSIDsMenu.list = new LinkedList<MenuNode>();
@@ -2117,6 +2120,7 @@ void MenuFunctions::RunSetup()
 
   bluetoothSnifferMenu.name = text_table1[23];
   bluetoothAttackMenu.name = "Bluetooth Attacks";
+  bluetoothPostureMenu.name = "BLE Posture";
   generateSSIDsMenu.name = text_table1[27];
   clearSSIDsMenu.name = text_table1[28];
   clearAPsMenu.name = text_table1[29];
@@ -3442,6 +3446,165 @@ void MenuFunctions::RunSetup()
   this->addNodes(&bluetoothMenu, "Bluetooth Attacks", TFTRED, ATTACKS, [this]() {
     this->changeMenu(&bluetoothAttackMenu, true);
   });
+
+  this->addNodes(&bluetoothMenu, "BLE Posture", TFTGREEN, BLUETOOTH_SNIFF, [this]() {
+    this->changeMenu(&bluetoothPostureMenu, true);
+  });
+
+  // Build BLE posture Menu
+  bluetoothPostureMenu.parentMenu = &bluetoothMenu;
+  this->addNodes(&bluetoothPostureMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(bluetoothPostureMenu.parentMenu, true);
+  });
+  this->addNodes(&bluetoothPostureMenu, "Posture Scan", TFTGREEN, BLUETOOTH_SNIFF, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(BT_SCAN_POSTURE, TFT_GREEN);
+  });
+  #ifdef HAS_NIMBLE_2
+  this->addNodes(&bluetoothPostureMenu, "Inspect Device", TFTCYAN, BLUETOOTH_SNIFF, [this]() {
+    wifiAPMenu.parentMenu = &bluetoothPostureMenu;
+    wifiAPMenu.name = "Select Target";
+    wifiAPMenu.list->clear();
+    this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, 0, [this]() {
+      this->changeMenu(wifiAPMenu.parentMenu, true);
+    });
+
+    if (ble_devices != nullptr) {
+      for (int i = 0; i < ble_devices->size(); i++) {
+        const BleDevice& device = ble_devices->get(i);
+        String label = String(device.rssi) + " " +
+                       (device.name.length() ? device.name : macToString(device.mac));
+        this->addNodes(&wifiAPMenu, label.c_str(), TFTCYAN, 255, [this, i]() {
+          display_obj.clearScreen();
+          this->drawStatusBar();
+          #ifdef HAS_SCREEN
+            display_obj.tft.setCursor(0, 20);
+            display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+            display_obj.tft.println("Assessing target...");
+            display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+          #endif
+
+          wifi_scan_obj.assessBLEDeviceByIndex(i);
+
+          #ifdef HAS_SCREEN
+            display_obj.clearScreen();
+            this->drawStatusBar();
+            display_obj.tft.setCursor(0, 20);
+
+            display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+            display_obj.tft.println(wifi_scan_obj.assess_target);
+
+            if (!wifi_scan_obj.assess_connected) {
+              if (!wifi_scan_obj.assess_connectable) {
+                display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+                display_obj.tft.println("Not connectable");
+                display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+                display_obj.tft.println("No GATT surface");
+                display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
+                display_obj.tft.println("Beacon or paired");
+                display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+              } else if (wifi_scan_obj.assess_refused) {
+                display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+                display_obj.tft.println("Refused");
+                display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+                display_obj.tft.println(wifi_scan_obj.bleConnectErrorText(
+                                          wifi_scan_obj.assess_error));
+                display_obj.tft.println("(good posture)");
+              } else {
+                display_obj.tft.setTextColor(TFT_YELLOW, TFT_BLACK);
+                display_obj.tft.println("Unreachable");
+                display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+                display_obj.tft.println(wifi_scan_obj.bleConnectErrorText(
+                                          wifi_scan_obj.assess_error));
+                display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
+                display_obj.tft.println("No verdict - retry");
+                display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+              }
+            } else {
+              display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+              display_obj.tft.println("Connected unpaired");
+              display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+
+              if (wifi_scan_obj.assess_identity.length() > 0) {
+                display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+                display_obj.tft.println(wifi_scan_obj.assess_identity);
+                display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
+                display_obj.tft.println("via " + wifi_scan_obj.assess_identity_basis);
+                display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+              }
+              if (wifi_scan_obj.assess_manufacturer.length() > 0) {
+                display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+                display_obj.tft.println(wifi_scan_obj.assess_manufacturer);
+                display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+              }
+              if (wifi_scan_obj.assess_model.length() > 0) {
+                display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+                display_obj.tft.println(wifi_scan_obj.assess_model);
+                display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+              }
+              if ((wifi_scan_obj.assess_manufacturer.length() == 0) &&
+                  (wifi_scan_obj.assess_model.length() == 0) &&
+                  (wifi_scan_obj.assess_dev_name.length() > 0)) {
+                display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+                display_obj.tft.println(wifi_scan_obj.assess_dev_name);
+                display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+              }
+
+              display_obj.tft.println("Svc " + String(wifi_scan_obj.assess_svc_count) +
+                                      "  Chr " + String(wifi_scan_obj.assess_chr_count));
+
+              if (wifi_scan_obj.assess_open_reads > 0)
+                display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+              display_obj.tft.println("Open reads: " + String(wifi_scan_obj.assess_open_reads));
+              display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+
+              display_obj.tft.println("Writable:   " + String(wifi_scan_obj.assess_open_writes));
+
+              if (wifi_scan_obj.assess_finding_count == 0) {
+                display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+                display_obj.tft.println("No findings");
+                display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+              } else {
+                display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+                for (uint8_t fi = 0; fi < wifi_scan_obj.assess_finding_count; fi++)
+                  display_obj.tft.println("! " + wifi_scan_obj.assess_findings[fi]);
+                display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+              }
+            }
+            display_obj.tft.println("");
+            display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
+            display_obj.tft.println("Press select");
+            display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+
+            // Hold the summary until the user dismisses it. The 3 minute
+            // ceiling is a backstop so a missed press cannot strand the UI.
+            // Dismiss on either input. Button boards use c_btn; touch boards
+            // (CYD) have no 5-way switch, so a tap has to work too.
+            delay(400);   // swallow the input that got us here
+            {
+              uint32_t assess_wait = millis();
+              uint16_t d_x = 0, d_y = 0;
+              bool dismissed = false;
+              while (!dismissed && ((millis() - assess_wait) < 180000)) {
+                #if (C_BTN >= 0) && !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
+                  if (c_btn.justPressed()) dismissed = true;
+                #endif
+                #ifdef HAS_TOUCH
+                  if (!dismissed && display_obj.updateTouch(&d_x, &d_y)) dismissed = true;
+                #endif
+                delay(20);
+              }
+            }
+          #endif
+
+          this->changeMenu(&bluetoothPostureMenu, true);
+        });
+      }
+    }
+    this->changeMenu(&wifiAPMenu, true);
+  });
+  #endif
 
   // Build bluetooth sniffer Menu
   bluetoothSnifferMenu.parentMenu = &bluetoothMenu; // Second Menu is third menu parent

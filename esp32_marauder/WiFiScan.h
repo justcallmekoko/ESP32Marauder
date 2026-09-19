@@ -174,6 +174,7 @@
 #define BT_ATTACK_APPLE_JUICE 82
 #define WIFI_SCAN_DISPLAY_AP_INFO 83
 #define BT_SCAN_FOX_HUNT 84
+#define BT_SCAN_POSTURE 87
 #define BT_FINDMY_SOUND 85
 #define BT_ATTACK_FINDMY_LIVE 86
 
@@ -367,6 +368,10 @@ struct BleDevice {
   bool     selected = false;
   int      rssi     = -128;
   uint32_t last_seen_ms = 0;
+  uint8_t  addr_type = 0;   // BLE_ADDR_* - needed to rebuild a connectable address
+  bool     connectable = true;   // false for ADV_NONCONN_IND / ADV_SCAN_IND
+  uint8_t  adv_flags = 0;        // AD type 0x01 payload, when present
+  bool     has_adv_flags = false;
 };
 
 #ifdef HAS_PSRAM
@@ -1043,6 +1048,63 @@ class WiFiScan
     bool checkFlockOUI(const uint8_t mac[6]);
     bool startWiFi(String ssid, String password, bool gui = true);
     bool isFlockCamera(const uint8_t* payload, size_t len, const String& name, String* serial_out);
+    const char* bleAddressTypeString(const NimBLEAddress& addr);
+    #ifdef HAS_NIMBLE_2
+      int connectAndAssess(NimBLEAddress& address);
+      void assessBLEDeviceByIndex(int index);
+      // Result of the most recent assessment, for the UI to render.
+      String assess_target = "";
+      bool   assess_connected = false;
+      int    assess_svc_count = 0;
+      int    assess_chr_count = 0;
+      int    assess_open_reads = 0;
+      int    assess_open_writes = 0;
+      bool   assess_has_hid = false;
+      bool   assess_has_dfu = false;
+      String assess_manufacturer = "";
+      String assess_model = "";
+      String assess_dev_name = "";
+      int    assess_error = 0;
+      bool   assess_refused = false;   // true only for a genuine rejection
+      bool   assess_connectable = true;   // did the advertisement invite connections
+      const char* bleConnectErrorReason(int err);
+      String bleConnectErrorText(int err);
+      String assess_findings[6];
+      uint8_t assess_finding_count = 0;
+      bool   assess_vendor_open = false;
+      bool   assess_trackable = false;
+      void addAssessFinding(const String& finding);
+      void buildAssessFindings();
+      void writeAssessReport();
+      void releaseNimbleClient();
+      String assess_identity = "";
+      String assess_identity_basis = "";
+      String assess_scan_name = "";
+      const char* matchServiceVendor(const String& uuid_lower);
+      const char* matchOuiVendor(const uint8_t mac[6]);
+      const char* matchNameVendor(const String& name);
+      void resolveDeviceIdentity(const uint8_t mac[6], bool public_addr);
+      int    assess_rssi = 0;
+      String assess_addr_type = "";
+      uint8_t assess_adv_flags = 0;
+      bool   assess_has_adv_flags = false;
+      String assess_gatt_log = "";
+      bool   assess_session_logged = false;
+      uint16_t assess_seq = 0;
+      void appendGattLog(const String& line);
+      String assessTimestamp();
+      String describeAdvFlags();
+      String assess_fw_rev = "";
+      String assess_hw_rev = "";
+      String assess_sw_rev = "";
+      String assess_serial = "";
+      String assess_pnp = "";
+      uint16_t assess_pnp_vendor = 0;
+      uint16_t assess_pnp_product = 0;
+      bool   assess_has_version = false;
+      const char* pnpVendorName(uint8_t source, uint16_t vendor);
+    #endif
+    bool parseAdvFlags(const uint8_t* payload, size_t len, uint8_t* flags_out);
     int seenBLEDevice(BleDevice ble_device);
     uint16_t rssiToColor(int8_t rssi);
     bool isMetaIdentifier(uint16_t id);
