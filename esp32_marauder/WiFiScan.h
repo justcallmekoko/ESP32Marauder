@@ -1067,6 +1067,13 @@ class WiFiScan
       bool   assess_connectable = true;   // did the advertisement invite connections
       const char* bleConnectErrorReason(int err);
       String bleConnectErrorText(int err);
+      String assess_findings[6];
+      uint8_t assess_finding_count = 0;
+      bool   assess_vendor_open = false;
+      bool   assess_trackable = false;
+      void addAssessFinding(const String& finding);
+      void buildAssessFindings();
+      void writeAssessReport();
     #endif
     bool parseAdvFlags(const uint8_t* payload, size_t len, uint8_t* flags_out);
     int seenBLEDevice(BleDevice ble_device);

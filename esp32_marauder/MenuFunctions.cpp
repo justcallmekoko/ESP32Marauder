@@ -3553,21 +3553,14 @@ void MenuFunctions::RunSetup()
 
               display_obj.tft.println("Writable:   " + String(wifi_scan_obj.assess_open_writes));
 
-              if (wifi_scan_obj.assess_has_hid) {
-                display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
-                display_obj.tft.println("! HID exposed");
-                display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-              }
-              if (wifi_scan_obj.assess_has_dfu) {
-                display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
-                display_obj.tft.println("! DFU/OTA exposed");
-                display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-              }
-              if ((wifi_scan_obj.assess_open_reads == 0) &&
-                  (!wifi_scan_obj.assess_has_hid) &&
-                  (!wifi_scan_obj.assess_has_dfu)) {
+              if (wifi_scan_obj.assess_finding_count == 0) {
                 display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
                 display_obj.tft.println("No findings");
+                display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+              } else {
+                display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+                for (uint8_t fi = 0; fi < wifi_scan_obj.assess_finding_count; fi++)
+                  display_obj.tft.println("! " + wifi_scan_obj.assess_findings[fi]);
                 display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
               }
             }

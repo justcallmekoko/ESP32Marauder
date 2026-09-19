@@ -7097,6 +7097,124 @@ String WiFiScan::bleConnectErrorText(int err) {
   return "Host error " + String(err);
 }
 
+// ---- BLE posture: findings and reporting --------------------------------
+
+void WiFiScan::addAssessFinding(const String& finding) {
+  if (this->assess_finding_count < 6) {
+    this->assess_findings[this->assess_finding_count] = finding;
+    this->assess_finding_count++;
+  }
+}
+
+// Derive exposure classes from what was actually observed. Nothing here is
+// inferred from the device name or type -- only from enumeration results.
+void WiFiScan::buildAssessFindings() {
+  this->assess_finding_count = 0;
+
+  if (this->assess_has_hid)
+    this->addAssessFinding("HID UNPAIRED");
+
+  if (this->assess_has_dfu)
+    this->addAssessFinding("FIRMWARE PATH");
+
+  if (this->assess_open_writes > 0)
+    this->addAssessFinding("UNAUTH CONTROL x" + String(this->assess_open_writes));
+
+  if (this->assess_vendor_open)
+    this->addAssessFinding("VENDOR OPEN");
+
+  if (this->assess_open_reads > 0)
+    this->addAssessFinding("IDENTITY LEAK x" + String(this->assess_open_reads));
+
+  if (this->assess_trackable)
+    this->addAssessFinding("TRACKABLE ADDR");
+}
+
+// Append the full assessment to the SD card. Silent no-op with no card.
+void WiFiScan::writeAssessReport() {
+  #ifdef HAS_SD
+    if (!sd_obj.supported)
+      return;
+
+    if (!SD.exists("/ble_posture"))
+      SD.mkdir("/ble_posture");
+
+    File f = SD.open("/ble_posture/assessments.txt", FILE_APPEND);
+    if (!f) {
+      f = SD.open("/ble_posture/assessments.txt", FILE_WRITE);
+      if (!f) {
+        Serial.println("[ASSESS] SD write failed");
+        return;
+      }
+    }
+
+    f.println("========================================");
+    f.print("TARGET   : "); f.println(this->assess_target);
+    f.print("UPTIME_MS: "); f.println(millis());
+
+    if (this->assess_dev_name.length() > 0) {
+      f.print("NAME     : "); f.println(this->assess_dev_name);
+    }
+    if (this->assess_manufacturer.length() > 0) {
+      f.print("VENDOR   : "); f.println(this->assess_manufacturer);
+    }
+    if (this->assess_model.length() > 0) {
+      f.print("MODEL    : "); f.println(this->assess_model);
+    }
+
+    if (!this->assess_connected) {
+      if (!this->assess_connectable)
+        f.println("RESULT   : not connectable - no GATT surface");
+      else if (this->assess_refused)
+        f.println("RESULT   : refused - " + this->bleConnectErrorText(this->assess_error));
+      else
+        f.println("RESULT   : unreachable - " + this->bleConnectErrorText(this->assess_error));
+      f.println("");
+      f.close();
+      return;
+    }
+
+    f.println("RESULT   : connected without pairing");
+    f.print("SERVICES : "); f.println(this->assess_svc_count);
+    f.print("CHARS    : "); f.println(this->assess_chr_count);
+    f.print("OPEN RD  : "); f.println(this->assess_open_reads);
+    f.print("WRITABLE : "); f.println(this->assess_open_writes);
+
+    if (this->assess_finding_count == 0) {
+      f.println("FINDINGS : none");
+    } else {
+      f.println("FINDINGS :");
+      for (uint8_t i = 0; i < this->assess_finding_count; i++) {
+        f.print("  - ");
+        f.println(this->assess_findings[i]);
+      }
+      f.println("NOTES    :");
+      if (this->assess_has_hid) {
+        f.println("  HID reachable unpaired. Unauthenticated HID is the");
+        f.println("  precondition for the CVE-2023-45866 injection class.");
+      }
+      if (this->assess_has_dfu) {
+        f.println("  DFU/OTA service exposed - firmware replacement path.");
+      }
+      if (this->assess_open_writes > 0) {
+        f.println("  Writable characteristics with no encryption: any peer");
+        f.println("  in range can issue commands.");
+      }
+      if (this->assess_open_reads > 0) {
+        f.println("  Readable identifiers allow fingerprinting without pairing.");
+      }
+      if (this->assess_trackable) {
+        f.println("  Address does not rotate - device is trackable over time.");
+      }
+      f.println("  Firmware versions are not readable unpaired, so no");
+      f.println("  specific CVE is asserted here.");
+    }
+    f.println("");
+    f.close();
+    Serial.println("[ASSESS] Report appended to /ble_posture/assessments.txt");
+  #endif
+}
+
 // ---- BLE posture: GATT assessment ---------------------------------------
 
 // Connect to a chosen device and report what an unauthenticated peer can
@@ -7124,6 +7242,9 @@ int WiFiScan::connectAndAssess(NimBLEAddress& address) {
   this->assess_error = 0;
   this->assess_refused = false;
   this->assess_connectable = true;
+  this->assess_finding_count = 0;
+  this->assess_vendor_open = false;
+  this->assess_trackable = false;
 
   this->createNimbleClient();
 
@@ -7193,6 +7314,12 @@ int WiFiScan::connectAndAssess(NimBLEAddress& address) {
       Serial.print("   <-- DFU/OTA");
     }
     if (su.indexOf("180a") != -1) Serial.print("   <-- Device Info");
+
+    // A 128-bit UUID is vendor-specific; the 16-bit ones are SIG-assigned.
+    if (su.length() > 8) {
+      this->assess_vendor_open = true;
+      Serial.print("   <-- vendor");
+    }
     Serial.println("");
 
     const auto& characteristics = service->getCharacteristics(true);
@@ -7262,6 +7389,10 @@ int WiFiScan::connectAndAssess(NimBLEAddress& address) {
 
   this->assess_connected = true;
   this->assess_svc_count = svc_count;
+  this->assess_trackable = ((address.getType() == BLE_ADDR_PUBLIC) ||
+                            (address.getType() == BLE_ADDR_PUBLIC_ID) ||
+                            ((address.getVal() != nullptr) &&
+                             ((address.getVal()[5] & 0xC0) == 0xC0)));
   this->assess_chr_count = chr_count;
   this->assess_open_reads = open_reads;
   this->assess_open_writes = open_writes;
@@ -7280,6 +7411,17 @@ int WiFiScan::connectAndAssess(NimBLEAddress& address) {
     Serial.printf("[FINDING] %d characteristic(s) readable with no pairing\n", open_reads);
   if (svc_count == 0)
     Serial.println("[ASSESS] No services enumerated (device may require pairing)");
+  this->buildAssessFindings();
+
+  if (this->assess_finding_count > 0) {
+    Serial.println("[ASSESS] Exposure classes:");
+    for (uint8_t fi = 0; fi < this->assess_finding_count; fi++) {
+      Serial.print("  - ");
+      Serial.println(this->assess_findings[fi]);
+    }
+  }
+  this->writeAssessReport();
+
   Serial.println("========================================");
   Serial.println("");
 
@@ -7334,6 +7476,8 @@ void WiFiScan::assessBLEDeviceByIndex(int index) {
     Serial.println(this->assess_target);
     Serial.println("[ASSESS] Advertisement is non-connectable - no GATT surface");
     Serial.println("========================================");
+    this->assess_finding_count = 0;
+    this->writeAssessReport();
     return;
   }
 
