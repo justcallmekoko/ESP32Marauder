@@ -241,18 +241,20 @@
 
   #ifdef MARAUDER_REV_FEATHER
     //#define FLIPPER_ZERO_HAT
-    //#define HAS_BATTERY
+    #define HAS_BATTERY
+      #define HAS_MAX1704X
     //#define HAS_BT
     #define HAS_MINI_KB
     #define HAS_BUTTONS
     #define HAS_NEOPIXEL_LED
     //#define HAS_PWR_MGMT
     #define HAS_SCREEN
-    #define HAS_MINI_SCREEN
+      #define HAS_MINI_SCREEN
     #define HAS_SD
-    #define USE_SD
-    #define HAS_TEMP_SENSOR
+      #define USE_SD
+    // #define HAS_TEMP_SENSOR
     #define HAS_GPS
+      #define HAS_GPSI2C
     #define HAS_DIRECT_UPLOAD
   #endif
 
@@ -2048,7 +2050,12 @@
       #define TFT_RST 41
       #define TFT_BL 45
       //#define TOUCH_CS 21
-      #define SD_CS 4
+      #define SD_CS 10
+
+      #define I2C_SCL 4
+      #define I2C_SDA 3
+      #define GPS_ICL I2C_SCL
+      #define GPS_SDA I2C_SDA
 
       #define SCREEN_BUFFER
 
@@ -2556,7 +2563,7 @@
     #endif
 
     #ifdef MARAUDER_REV_FEATHER
-      #define SD_CS 5
+      #define SD_CS 10
     #endif
 
     #ifdef MARAUDER_M5STICKC
@@ -2767,14 +2774,62 @@
   //// END EVIL PORTAL STUFF
 
   //// GPS STUFF
-  #ifdef HAS_GPS
+  #if defined(HAS_GPS) || defined(HAS_GPSI2C)
     #ifdef HAS_PSRAM
       #define mac_history_len 500
     #else
       #define mac_history_len 100
     #endif
-
     #define mac_history_len_half (mac_history_len / 2)
+  #endif
+
+  #if defined(HAS_GPSI2C)
+
+    #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
+      #define GPS_SDA 32
+      #define GPS_SCL 33       // Wire2
+
+    #elif defined(MARAUDER_REV_FEATHER) || defined(MARAUDER_REV_FEATHER_S3)
+      #define GPS_SDA 3
+      #define GPS_SCL 4       // Wire
+
+    #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+      #define GPS_SDA 2
+      #define GPS_SCL 1       // Wire2
+
+    #elif defined(MARAUDER_CYD_MICRO) || defined(MARAUDER_CYD_2USB)  \
+        || defined(MARAUDER_CYD_GUITION) || defined(MARAUDER_CYD_3_5_INCH)
+      #define GPS_SDA 22    // Wire1
+      #define GPS_SCL 27
+
+    #elif defined(MARAUDER_M5_NANO_C6)
+      #define GPS_SDA 2
+      #define GPS_SCL 1       // Wire1
+
+    #elif defined(MARAUDER_CYD_24)
+      #define GPS_SDA 27
+      #define GPS_SCL 22     // Wire1
+
+    #elif defined(MARAUDER_REV_FEATHER)
+      #define GPS_SCL 4
+      #define GPS_SDA 3     // Wire1
+
+    #elif defined(MARAUDER_CYD_HMI) // Grove 1 : 16 & 15
+      #define GPS_SDA 17   // Grove 2
+      #define GPS_SCL 18
+
+    #elif defined(MARAUDER_JC2432W328C)
+      #define GP2_SDA 21    // Wire2
+      #define GPS_SCL 22
+
+    #elif defined(MARAUDER_CYD_HMI)
+      #define GP2_SDA 0     // Wire 1
+      #define GPS_SCL 1
+
+    #endif
+  #endif
+
+  #if defined(HAS_GPS) && !defined(HAS_GPSI2C)
 
     #if defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
       #define GPS_SERIAL_INDEX 2
@@ -3192,5 +3247,41 @@
     #endif
 
   #endif
+
+  // CONFIGS LOGIC
+
+  // I2C based GPS
+  #if defined(HAS_GPSI2C) && !defined(HAS_GPS)
+    #define HAS_GPS
+  #endif
+
+  // UART based GPS
+  #if !defined(HAS_GPSI2C)
+    #if defined(HAS_GPS) && ( !defined(GPS_TX) || !defined(GPS_SERIAL_INDEX) )
+      #warning "HAS_GPS defined without serial port, check 'GPS STUFF' section"
+    #endif
+  #endif
+
+  #if defined(HAS_C5_SD) && ( !defined(USE_SD) || !defined(HAS_SD) )
+    #warning "HAS_C5_SD defined without USE_SD/HAS_SD, check 'BOARD FEATURES' section"
+    #define HAS_SD
+    #define USE_SD
+  #endif
+
+  // LED Stuff
+  #if defined(HAS_FLIPPER_LED) && (!defined(B_PIN) || !defined(G_PIN) || !defined(R_PIN) )
+    #warning "HAS_FLIPPER_LED has no LED PINS defined"
+    #undef HAS_FLIPPER_LED
+  #endif
+
+  #if defined(HAS_FLIPPER_LED) || defined(XIAO_ESP32_S3) || defined(HAS_XIAO_LED) \
+    || defined(HAS_STICKC_LED) || defined(HAS_NEOPIXEL_LED)
+      #define HAS_LED
+  #endif
+
+
+  // END CONFIGS LOGIC
+
+
 
 #endif

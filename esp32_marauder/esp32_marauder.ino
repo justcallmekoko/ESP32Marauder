@@ -14,7 +14,9 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #include <stdio.h>
 
-#ifdef HAS_GPS
+#if defined(HAS_GPSI2C)
+  #include "GpsI2c.h"
+#elif defined(HAS_GPS)
   #include "GpsInterface.h"
 #endif
 
@@ -85,7 +87,9 @@ ReconMission recon_obj;
   TDongleDisplay t_dongle_display;
 #endif
 
-#ifdef HAS_GPS
+#if defined(HAS_GPSI2C)
+  GpsI2c gps_obj;
+#elif defined(HAS_GPS)
   GpsInterface gps_obj;
 #endif
 
@@ -386,8 +390,15 @@ void setup()
     led_obj.RunSetup();
   #endif
 
-  #ifdef HAS_GPS
-    gps_obj.begin();
+  #if defined(HAS_GPSI2C) 
+      #if defined(GPS_SDA) &&  defined(I2C_SDA) && GPS_SDA != I2C_SDA
+	Wire1.begin(GPS_SDA, GPS_SCL, 10000);
+	gps_obj.begin(&Wire1);
+      #else
+	gps_obj.begin(&Wire);
+      #endif
+  #elif defined(HAS_GPS)
+      gps_obj.begin();
   #endif
 
   #ifdef HAS_SCREEN  
@@ -453,8 +464,10 @@ void loop()
     t_dongle_display.update(currentTime, wifi_scan_obj);
   #endif
 
-  #ifdef HAS_GPS
-    gps_obj.main();
+  #if defined(HAS_GPS) || defined(HAS_GPSI2C)
+    if (gps_obj.gps_enabled) {
+      gps_obj.main(currentTime);
+    }
   #endif
 
   // Save buffer to SD and/or serial

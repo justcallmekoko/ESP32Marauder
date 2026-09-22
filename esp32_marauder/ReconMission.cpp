@@ -5,9 +5,13 @@
 #ifdef HAS_SCREEN
   #include "Display.h"
 #endif
-#ifdef HAS_GPS
+
+#if defined(HAS_GPS) && !defined(HAS_GPSI2C)
   #include "GpsInterface.h"
+#elif defined(HAS_GPSI2C)
+  #include "GpsI2c.h"
 #endif
+
 #ifdef HAS_SD
   #include "SDInterface.h"
 #endif
@@ -24,9 +28,13 @@ extern Buffer buffer_obj;
 #ifdef HAS_SCREEN
   extern Display display_obj;
 #endif
-#ifdef HAS_GPS
+
+#if defined(HAS_GPSI2C)
+  extern GpsI2c gps_obj;
+#elif defined(HAS_GPS)
   extern GpsInterface gps_obj;
 #endif
+
 #ifdef HAS_SD
   extern SDInterface sd_obj;
 #endif

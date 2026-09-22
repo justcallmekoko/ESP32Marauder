@@ -136,6 +136,13 @@ jobs:
           ref: 3.0.0
           path: Customlv_arduino
 
+      - name: Install DFRobot_GNSS
+        uses: actions/checkout@v2
+        with:
+          repository: dfrobot/DFRobot_GNSS
+          ref: V1.0.0
+          path: CustomDFRobot_GNSS
+
       - name: Install JPEGDecoder
         uses: actions/checkout@v4
         with:
