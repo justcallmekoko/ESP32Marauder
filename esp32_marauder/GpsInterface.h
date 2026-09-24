@@ -3,11 +3,13 @@
 #ifndef GpsInterface_h
 #define GpsInterface_h
 
+#include "configs.h"
+
+#if defined(HAS_GPS) && !defined(HAS_GPSI2)
+
 #include <MicroNMEA.h>
 #include <SoftwareSerial.h>
 #include <LinkedList.h>
-
-#include "configs.h"
 
 //#define GPS_TEXT_MAXLINES 5 //default:5 lines in the buffer maximum
 //#define GPS_TEXT_MAXCYCLES 1 //default:1
@@ -15,6 +17,11 @@
 //#define GPS_NMEA_SCRNLINES TEXT_HEIGHT //default: defined TEXT_HEIGHT from configs.h
 //#define GPS_NMEA_SCRNWRAP true //default:true, except on MARAUDER_MINI where false
 //#define GPS_NMEA_MAXQUEUE 30 //default:30 messages max in queue
+
+// from system_time.cpp
+extern bool system_time_set;   // flag if system's time/date have been set yet..
+extern bool set_system_time(struct tm, bool setrt);
+extern bool set_system_time(const String& time_str, bool setrtc);
 
 #if defined(MARAUDER_MINI) || defined(MARAUDER_MINI_V3)
   #ifndef GPS_NMEA_SCRNWRAP
@@ -58,6 +65,8 @@ class GpsInterface {
     String getNmeaNotimp();
     String getNmeaNotparsed();
 
+    void GetTimeInfo(struct tm *timeInfo);
+
     void setType(String t);
 
     void enqueue(MicroNMEA& nmea);
@@ -74,6 +83,9 @@ class GpsInterface {
 
     String generateGXgga();
     String generateGXrmc();
+
+
+    bool gps_enabled = false;
 
   private:
     enum type_t {
@@ -101,7 +113,6 @@ class GpsInterface {
     float accuracy = 0.0;
     String datetime = "";
     
-    bool gps_enabled = false;
     bool good_fix = false;
     char nav_system='\0';
     uint8_t num_sats = 0;
@@ -126,4 +137,5 @@ class GpsInterface {
     uint32_t initGpsBaudAndForce115200();
 };
 
-#endif
+#endif    // HAS_GPS && !HAS_GPSI2
+#endif  // GpsInterface_h

@@ -78,6 +78,11 @@
   #include "LedInterface.h"
 #endif
 
+//  WIFI_POWER_21dBm = 84,      // 21dBm
+//  WIFI_POWER_20_5dBm = 82,    // 20.5dBm
+//  WIFI_POWER_20dBm = 80,      // 20dBm
+int8_t wifi_power = 80;
+
 #ifdef HAS_DIRECT_UPLOAD
   #include <WiFiClientSecure.h>
   #include <HTTPClient.h>
@@ -1114,10 +1119,13 @@ class WiFiScan
     void RunClearSSIDs();
     void RunClearAPs();
     void RunClearStations();
+    void RunSaveAll();
+    void RunLoadAll();
     void RunSaveSSIDList(bool save_as = true);
     void RunLoadSSIDList();
     void RunSaveAPList(bool save_as = true);
     void RunLoadAPList();
+    void RunSortAPList();
     void RunSaveATList(bool save_as = true);
     void RunLoadATList();
     void RunSetupGPSTracker(uint8_t scan_mode);

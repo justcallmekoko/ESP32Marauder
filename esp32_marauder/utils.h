@@ -156,6 +156,7 @@ inline const char* generateRandomName() {
   int len = rand() % 10 + 1; // Generate a random length between 1 and 10
   char* randomName = (char*)malloc((len + 1) * sizeof(char)); // Allocate memory for the random name
   for (int i = 0; i < len; ++i) {
+    // cppcheck-suppress nullPointerOutOfMemory
     randomName[i] = charset[rand() % strlen(charset)]; // Select random characters from the charset
   }
   randomName[len] = '\0'; // Null-terminate the string

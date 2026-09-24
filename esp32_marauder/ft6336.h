@@ -1,14 +1,24 @@
 #pragma once
+
 #ifndef ft6336_h
 #define ft6336_h
 
-#ifdef HAS_CAP_TOUCH
+#ifdef HAS_FT6336
 
 #include <Wire.h>
 
 #define FT6336_ADDR      0x38
 #define FT6336_TD_STATUS 0x02
 #define FT6336_T1_XH     0x03
+
+#ifndef TP_SDA
+  #define TP_SDA I2C_SDA
+  #define TP_SSL I2C_SSL
+#endif
+
+#ifndef TP_FREQ
+  #define TP_FREQ 400000U
+#endif
 
 static bool _ft6336_read(uint8_t reg, uint8_t *buf, uint8_t len) {
     Wire.beginTransmission(FT6336_ADDR);
@@ -21,12 +31,12 @@ static bool _ft6336_read(uint8_t reg, uint8_t *buf, uint8_t len) {
 }
 
 static void ft6336_init() {
-    pinMode(CTP_RST, OUTPUT);
-    digitalWrite(CTP_RST, LOW);
+    pinMode(TP_RST, OUTPUT);
+    digitalWrite(TP_RST, LOW);
     delay(10);
-    digitalWrite(CTP_RST, HIGH);
+    digitalWrite(TP_RST, HIGH);
     delay(300);
-    Wire.begin(CTP_SDA, CTP_SCL, 400000U);
+    Wire.begin(TP_SDA, TP_SCL, 400000U);
 
     uint8_t chipId = 0;
     Wire.beginTransmission(FT6336_ADDR);
@@ -68,5 +78,5 @@ static uint8_t ft6336_update(uint16_t *x, uint16_t *y) {
     return 1;
 }
 
-#endif // HAS_CAP_TOUCH
+#endif // HAS_FT6336
 #endif // ft6336_h
