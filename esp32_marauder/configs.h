@@ -253,22 +253,27 @@
   #endif
 
   #ifdef MARAUDER_REV_FEATHER
-    //#define FLIPPER_ZERO_HAT
+    #ifdef MARAUDER_REV_FEATHER_S3
+      #define MARAUDER_REV_FEATHER
+      #define HAS_BT
+        #define HAS_NIMBLE_2
+      #define HAS_IDF_3
+    #endif   // REV_FEATHER S3
     #define HAS_BATTERY
-    //#define HAS_BT
-    #define HAS_RTC
-      #define HAS_PCF8523
+      #define HAS_MAX1704X
     #define HAS_MINI_KB
     #define HAS_BUTTONS
-    #define HAS_NEOPIXEL_LED
-    //#define HAS_PWR_MGMT
+    #define HAS_LED
+      #define HAS_NEOPIXEL_LED
     #define HAS_SCREEN
-    #define HAS_MINI_SCREEN
-    #define HAS_SD
-    #define USE_SD
+      #define HAS_MINI_SCREEN
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
     #define HAS_DIRECT_UPLOAD
+    #define HAS_SD    // Adalogger provides SD & RTC
+      #define USE_SD
+    #define HAS_RTC
+      #define HAS_PCF8523
   #endif
 
   #ifdef MARAUDER_V4
@@ -531,25 +536,24 @@
       #define BK_LIGHT_PIN 38
       #define TFT_BL 38
       #define HAS_AW9364        // Backlight controller
+      // #define HAS_CYD_PORTRAIT
     #define HAS_SDMMC
       #define HAS_SD
       #define USE_SD
     #define HAS_TOUCH
       #define HAS_CYD_TOUCH
       #define HAS_XPT2046
-    #define HAS_PSRAM
-    /// #define HAS_GPS
-    /// #define HAS_GPSI2C
-    ///   #define I2C_SDA 17   // Grove 2
-    ///   #define I2C_SCL 18
-    ///   #define HAS_GPSI2C_ADDR 0x20
-
-    #define HAS_CYD_PORTRAIT
+    #define HAS_GPS
+    // #define HAS_GPSI2C
+    //   #define I2C_SDA 17   // Grove 2
+    //   #define I2C_SCL 18
+    //   #define HAS_GPSI2C_ADDR 0x20
     #define HAS_IDF_3
+    #define HAS_PSRAM
     #define HAS_PWR_MGMT
       #define PWR_EN_PIN  10
       #define PWR_ON_PIN  14
-  #endif
+  #endif  // MARAUDER_CYD_HMI
 
     /*
     #ifdef ESP_ARDUINO_VERSION
@@ -703,27 +707,19 @@
 
       // I2C bus (shared by touch CST3530, CH32V003, QMI8658, SHTC3, PCF85063A)
     #if defined(MARAUDER_WS_C5_28)
-      #define HAS_TOUCH
-        #define HAS_CAP_TOUCH
-        #define HAS_CST3530 1      // distinguish from CST820
       #define HAS_BT
         #define HAS_NIMBLE_2
-      
       #define HAS_BUTTONS
-
       #define HAS_SCREEN
         #define HAS_FULL_SCREEN
-        #define TFT_WIDTH         240
-        #define TFT_HEIGHT        320
-        #define PORTRAIT
         #define HAS_ILI9341
 
       #define HAS_SD
         #define USE_SD
         #define HAS_C5_SD
-
-      #define I2C_SDA           0
-      #define I2C_SCL           1
+      #define HAS_TOUCH
+        #define HAS_CAP_TOUCH
+        #define HAS_CST3530 1      // distinguish from CST820
       #define HAS_CH32V003         // CH32V003 IO expander
         #define CH32V003_I2C_ADDR 0x24
       #define HAS_TEMP_SENSOR
@@ -733,12 +729,11 @@
         #define BOARD_HAS_PSRAM
       #define HAS_DUAL_BAND     // C5 dual-band WiFi
       #define HAS_BATTERY    // ADC is through IO expander
-          #define BATTERY_ADC_PIN 0x06    // CH32V003 Reg Id
+        #define BATTERY_ADC_PIN 0x06    // CH32V003 Reg Id
       #define HAS_RTC
         #define HAS_PCF85063         // i2c real-time clock (RTC)
-
-      // #define HAS_GPS
-      #define HAS_GPSI2C
+      #define HAS_GPS
+        #define HAS_GPSI2C
       // #define HAS_CYD_PORTRAIT
       #define HAS_IDF_3
       // HAS_MIC
@@ -2911,6 +2906,9 @@
       #define SD_CS 4
 
     #elif defined(MARAUDER_REV_FEATHER)
+      #define SD_MISO 37
+      #define SD_MOSI 35
+      #define SD_SCLK 36
       #define SD_CS 10
 
     #elif defined(MARAUDER_M5STICKC)
@@ -3227,391 +3225,383 @@
   //// END GPS STUFF
 
 
-  //// BATTERY STUFF
-  #ifdef HAS_BATTERY
+    //// BATTERY STUFF
+    #ifdef HAS_BATTERY
 
-    #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
-      #define I2C_SDA 21
-      #define I2C_SCL 22
+      #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
+        #define I2C_SDA 21
+        #define I2C_SCL 22
 
-    #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_KIT)
-      #define I2C_SDA 33
-      #define I2C_SCL 22
-      #define HAS_MAX1704X
-      #undef HAS_AXP2101
-      #undef HAS_IP5306
+      #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_KIT)
+        #define I2C_SDA 33
+        #define I2C_SCL 22
+        #define HAS_MAX1704X
+        #undef HAS_AXP2101
+        #undef HAS_IP5306
 
-    #elif defined(MARAUDER_MINI)
-      #define I2C_SDA 33
-      #define I2C_SCL 26
+      #elif defined(MARAUDER_MINI)
+        #define I2C_SDA 33
+        #define I2C_SCL 26
 
-    #elif defined(MARAUDER_V7)
-      #define I2C_SDA 33
-      #define I2C_SCL 16
-      #define HAS_MAX1704X
-      #undef HAS_AXP2101
-      #undef HAS_IP5306
+      #elif defined(MARAUDER_V7)
+        #define I2C_SDA 33
+        #define I2C_SCL 16
+        #define HAS_MAX1704X
+        #undef HAS_AXP2101
+        #undef HAS_IP5306
 
-    #elif defined(MARAUDER_V7_1)
-      #define I2C_SDA 33
-      #define I2C_SCL 27
-      #define HAS_MAX1704X
-      #undef HAS_AXP2101
-      #undef HAS_IP5306
+      #elif defined(MARAUDER_V7_1)
+        #define I2C_SDA 33
+        #define I2C_SCL 27
+        #define HAS_MAX1704X
+        #undef HAS_AXP2101
+        #undef HAS_IP5306
 
-    #elif defined(MARAUDER_CYD_MICRO) || defined(MARAUDER_CYD_2USB)
-      #define I2C_SDA 22
-      #define I2C_SCL 27
+      #elif defined(MARAUDER_CYD_MICRO) || defined(MARAUDER_CYD_2USB)
+        #define I2C_SDA 22
+        #define I2C_SCL 27
 
-    #elif defined(MARAUDER_CYD_3_5_INCH)
-      #define I2C_SDA 32
-      #define I2C_SCL 25
+      #elif defined(MARAUDER_CYD_3_5_INCH)
+        #define I2C_SDA 32
+        #define I2C_SCL 25
 
-    #elif defined(MARAUDER_CYD_GUITION)
-      #define I2C_SDA 22
-      #define I2C_SCL 21
+      #elif defined(MARAUDER_CYD_GUITION)
+        #define I2C_SDA 22
+        #define I2C_SCL 21
 
-  #elif defined(MARAUDER_V8)
-      #define I2C_SCL 4
-      #define I2C_SDA 5
+    #elif defined(MARAUDER_V8)
+        #define I2C_SCL 4
+        #define I2C_SDA 5
 
-    #elif defined(MARAUDER_REV_FEATHER)
-      #define I2C_SCL 4
-      #define I2C_SDA 3
-      #define HAS_MAX1704X
-      #undef HAS_AXP2101
-      #undef HAS_IP5306
+      #elif defined(MARAUDER_REV_FEATHER)
+        #define I2C_SCL 4
+        #define I2C_SDA 3
+        #define HAS_MAX1704X
+        #undef HAS_AXP2101
+        #undef HAS_IP5306
 
-    #elif defined(MARAUDER_PANCAKE)
-      #define I2C_SDA 9
-      #define I2C_SCL 10
-      #define HAS_MAX1704X
-      // FT6336 cap touch - shares I2C bus with MAX17048
-      #define TP_RST 8
-      #define TP_SDA I2C_SDA
-      #define TP_SCL I2C_SCL
+      #elif defined(MARAUDER_PANCAKE)
+        #define I2C_SDA 9
+        #define I2C_SCL 10
+        #define HAS_MAX1704X
+        // FT6336 cap touch - shares I2C bus with MAX17048
+        #define TP_RST 8
+        #define TP_SDA I2C_SDA
+        #define TP_SCL I2C_SCL
 
-    #elif defined(MARAUDER_WS_C5_28)    // ADC is through IO expander
-      #define I2C_SDA 0
-      #define I2C_SCL 1
-    #endif
+      #elif defined(MARAUDER_WS_C5_28)    // ADC is through IO expander
+        #define I2C_SDA 0
+        #define I2C_SCL 1
+      #endif
 
-    #ifdef MARAUDER_CYD_HMI
-      #define BATTERY_ADC_PIN 5
-    #endif
+      #ifdef MARAUDER_CYD_HMI
+        #define BATTERY_ADC_PIN 5
+      #endif
 
-    //  If we know what we have, we can delete what we're not using
-    #if defined(BATTERY_ADC_PIN) || defined(HAS_CH32V003)
-      #undef HAS_AXP2101
-      #undef HAS_IP5306
-      #undef HAS_MAX1704X
-      #undef HAS_AXP192
+      //  If we know what we have, we can delete what we're not using
+      #if defined(BATTERY_ADC_PIN) || defined(HAS_CH32V003)
+        #undef HAS_AXP2101
+        #undef HAS_IP5306
+        #undef HAS_MAX1704X
+        #undef HAS_AXP192
 
-    // No driver for this LiPo charger
-    #elif defined(HAS_TP4057)
-      #undef HAS_AXP2101
-      #undef HAS_IP5306
-      #undef HAS_MAX1704X
-      #undef HAS_AXP192
-      #undef HAS_BATTERY
+      // No driver for this LiPo charger
+      #elif defined(HAS_TP4057)
+        #undef HAS_AXP2101
+        #undef HAS_IP5306
+        #undef HAS_MAX1704X
+        #undef HAS_AXP192
+        #undef HAS_BATTERY
 
-    #elif defined(HAS_IP5306)
-      #undef HAS_AXP2101
-      #undef HAS_MAX1704X
-      #undef HAS_AXP192
+      #elif defined(HAS_IP5306)
+        #undef HAS_AXP2101
+        #undef HAS_MAX1704X
+        #undef HAS_AXP192
 
-    #elif defined(HAS_AXP192)
-      #undef HAS_AXP2101
-      #undef HAS_IP5306
-      #undef HAS_MAX1704X
+      #elif defined(HAS_AXP192)
+        #undef HAS_AXP2101
+        #undef HAS_IP5306
+        #undef HAS_MAX1704X
 
-    #elif defined(HAS_AXP2101)
-      #undef HAS_IP5306
-      #undef HAS_MAX1704X
-      #undef HAS_AXP192
+      #elif defined(HAS_AXP2101)
+        #undef HAS_IP5306
+        #undef HAS_MAX1704X
+        #undef HAS_AXP192
 
-    #elif defined(HAS_MAX1704X)
-      #undef HAS_AXP2101
-      #undef HAS_IP5306
-      #undef HAS_AXP192
+      #elif defined(HAS_MAX1704X)
+        #undef HAS_AXP2101
+        #undef HAS_IP5306
+        #undef HAS_AXP192
 
-    #else       // punt
-       // #define HAS_AXP2101
-       #warning "HAS_BATTERY defined without hardware type,  see 'BATTERY STUFF' section"
-       #define HAS_IP5306
-       #define HAS_MAX1704X
-       #define HAS_AXP192
-    #endif
+      #else       // punt
+         // #define HAS_AXP2101
+         #warning "HAS_BATTERY defined without hardware type,  see 'BATTERY STUFF' section"
+         #define HAS_IP5306
+         #define HAS_MAX1704X
+         #define HAS_AXP192
+      #endif
 
-  #endif  // HAS_BATTERY
-  //// END BATTERY STUFF
+    #endif  // HAS_BATTERY
+    //// END BATTERY STUFF
 
-  //// MARAUDER TITLE STUFF
-  #ifdef MARAUDER_V4
-    #define MARAUDER_TITLE_BYTES 13578
-  #elif defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
-    #define MARAUDER_TITLE_BYTES 13578
-  #elif defined(MARAUDER_CYD_MICRO)
-    #define MARAUDER_TITLE_BYTES 13578
-  #elif defined(MARAUDER_CYD_2USB)
-    #define MARAUDER_TITLE_BYTES 13578
-  #elif defined(MARAUDER_CYD_3_5_INCH)
-    #define MARAUDER_TITLE_BYTES 13578
-  #elif defined(MARAUDER_CYD_GUITION)
-    #define MARAUDER_TITLE_BYTES 13578
-  #elif defined(MARAUDER_KIT)
-    #define MARAUDER_TITLE_BYTES 13578
-  #elif defined(MARAUDER_MINI)
-    #define MARAUDER_TITLE_BYTES 13578
-  #elif defined(MARAUDER_V7)
-    #define MARAUDER_TITLE_BYTES 13578
-  #elif defined(MARAUDER_V7_1)
-    #define MARAUDER_TITLE_BYTES 13578
-  #elif defined(MARAUDER_REV_FEATHER)
-    #define MARAUDER_TITLE_BYTES 13578
-  #elif defined(MARAUDER_CYD_HMI)
-    #define MARAUDER_TITLE_BYTES 13578
-  #elif defined(MARAUDER_C5)
-    #define MARAUDER_TITLE_BYTES 13578
-  #elif defined(MARAUDER_V8)
-    #define MARAUDER_TITLE_BYTES 13578
-  #elif defined(MARAUDER_MINI_V3)
-    #define MARAUDER_TITLE_BYTES 13578
-  #else
-    #define MARAUDER_TITLE_BYTES 13578
-  #endif
-  //// END MARAUDER TITLE STUFF
-
-  //// PCAP BUFFER STUFF
-
-  #ifdef HAS_PSRAM
-    #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
-    #define SNAP_LEN 1 * 4096 // max len of each recieved packet
-  //#elif !defined(HAS_ILI9341)
-  //  #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
-  //  #define SNAP_LEN 4096 // max len of each recieved packet
-  #else
-    #define BUF_SIZE 3 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
-    #define SNAP_LEN 2324 // max len of each recieved packet
-  #endif
-
-  //// END PCAP BUFFER STUFF
-
-  //// STUPID CYD STUFF
-  #if defined(HAS_CYD_TOUCH) || defined(HAS_C5_SD) || defined(HAS_SEPARATE_SD)
-    #ifdef MARAUDER_CYD_MICRO
-      #define XPT2046_IRQ  36
-      #define XPT2046_MOSI 32
-      #define XPT2046_MISO 39
-      #define XPT2046_CLK  25
-      #define XPT2046_CS   33
-
-      #define SD_MISO      19
-      #define SD_MOSI      23
-      #define SD_SCK       18
-    #endif
-
-    #ifdef MARAUDER_CYD_HMI
-      #define XPT2046_IRQ  9
-      #define XPT2046_MOSI 3
-      #define XPT2046_MISO 4
-      #define XPT2046_CLK  1
-      #define XPT2046_CS   2
-    #endif
-
-    #ifdef MARAUDER_CYD_2USB
-      #define XPT2046_IRQ  36
-      #define XPT2046_MOSI 32
-      #define XPT2046_MISO 39
-      #define XPT2046_CLK  25
-      #define XPT2046_CS   33
-
-      #define SD_MISO      19
-      #define SD_MOSI      23
-      #define SD_SCK       18
-    #endif
-
-    #ifdef MARAUDER_CYD_3_5_INCH
-      #define SD_MISO      19
-      #define SD_MOSI      23
-      #define SD_SCK       18
-    #endif
-
-    #if defined(MARAUDER_C5)
-      #define SD_MISO 2
-      #define SD_MOSI 7
-      #define SD_SCK  6
-    #elif defined(MARAUDER_T_DONGLE_C5)
-      #define SD_MISO 7
-      #define SD_MOSI 2
-      #define SD_SCK  6
-    #endif
-
-    #ifdef MARAUDER_V8
-      #define SD_MOSI TFT_MOSI
-      #define SD_SCK  TFT_SCLK
-    #endif
-
+    //// MARAUDER TITLE STUFF
     #ifdef MARAUDER_V4
-      #define SD_MISO TFT_MISO
-      #define SD_MOSI TFT_MOSI
-      #define SD_SCK  TFT_SCLK
-    #endif
-
-    #ifdef MARAUDER_V6
-      #define SD_MISO TFT_MISO
-      #define SD_MOSI TFT_MOSI
-      #define SD_SCK  TFT_SCLK
-    #endif
-
-    #ifdef MARAUDER_V6_1
-      #define SD_MISO TFT_MISO
-      #define SD_MOSI TFT_MOSI
-      #define SD_SCK  TFT_SCLK
-    #endif
-
-    #ifdef MARAUDER_KIT
-      #define SD_MISO TFT_MISO
-      #define SD_MOSI TFT_MOSI
-      #define SD_SCK  TFT_SCLK
-    #endif
-
-    #ifdef MARAUDER_MINI
-      #define SD_MISO TFT_MISO
-      #define SD_MOSI TFT_MOSI
-      #define SD_SCK  TFT_SCLK
-    #endif
-
-    #ifdef MARAUDER_V7
-      #define SD_MISO TFT_MISO
-      #define SD_MOSI TFT_MOSI
-      #define SD_SCK  TFT_SCLK
-    #endif
-
-    #ifdef MARAUDER_MINI_V3
-      #define SD_MISO TFT_MISO
-      #define SD_MOSI TFT_MOSI
-      #define SD_SCK  TFT_SCLK
-    #endif
-  #endif
-  //// END STUPID CYD STUFF
-
-  //// FUNNY FLIPPER LED STUFF
-
-  #ifdef HAS_FLIPPER_LED
-    #ifdef MARAUDER_FLIPPER
-      #define B_PIN 4
-      #define G_PIN 5
-      #define R_PIN 6
-    #endif
-
-    #ifdef MARAUDER_MULTIBOARD_S3
-      #define B_PIN 4
-      #define G_PIN 5
-      #define R_PIN 6
-    #endif
-
-    #ifdef MARAUDER_CYD_MICRO
-      #define B_PIN 17
-      #define G_PIN 16
-      #define R_PIN 4
-    #endif
-
-    #ifdef MARAUDER_CYD_2USB
-      #define B_PIN 17
-      #define G_PIN 16
-      #define R_PIN 4
-    #endif
-
-    #ifdef MARAUDER_CYD_3_5_INCH
-      #define B_PIN 17
-      #define G_PIN 16
-      #define R_PIN 22
-    #endif
-
-    #ifdef MARAUDER_CYD_GUITION
-      #define B_PIN 17
-      #define G_PIN 16
-      #define R_PIN 4
-    #endif
-  #endif
-
-  //// END FUNNY FLIPPER LED STUFF
-
-  //// WIFI STUFF
-
-  #ifndef HAS_DUAL_BAND
-    #define HOP_DELAY 1000
-  #else
-    #define HOP_DELAY 250
-  #endif
-
-  //// ACT LED STUFF
-  #ifdef HAS_ACT_LED
-
-    #ifdef MARAUDER_V8
-      #define ACT_LED_PIN 28
-    #endif
-
-  #endif
-
-  // CONFIG LOGIC
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic warning "-Wcpp"
-
-
-  //  I2C Touch Screens
-  #if defined(HAS_CST820) || defined(HAS_AXS5106L) || defined(HAS_FT6336) || defined(HAS_CST3530)
-    #define HAS_CAP_TOUCH 1
-  #endif
-
-  //  define HAS_RTC if we have RTC hardware
-  #if defined(HAS_PCF8523) || defined(HAS_DS1307) || defined(HAS_PCF85063) || defined(HAS_PCF8563)
-    #define HAS_RTC 1
-  #endif
-
-  #if defined(HAS_NIMBLE_2) && !defined(HAS_BT)
-    #warning "HAS_NIMBLE_2 defined without HAS_BT, check 'BOARD FEATURES' section"
-    #define HAS_BT 1
-  #endif
-
-  #if defined(HAS_FULL_SCREEN) && !defined(HAS_SCREEN)
-    #warning "HAS_FULL_SCREEN defined without HAS_SCREEN, check 'BOARD FEATURES' section"
-    #define HAS_SCREEN 1
-  #endif
-
-  #if defined(HAS_MINI_SCREEN) && !defined(HAS_SCREEN)
-    #warning "HAS_MINI_SCREEN defined without HAS_SCREEN, check 'BOARD FEATURES' section"
-    #define HAS_SCREEN 1
-  #endif
-
-  #if defined(USE_SD) && !defined(SD_CS)
-    #warning "USE_SD defined without SD_CS, check 'SD DEFINITIONS' section"
-  #endif
-
-  #if defined(HAS_C5_SD) && ( !defined(USE_SD) || !defined(HAS_SD) )
-    #warning "HAS_C5_SD defined without USE_SD/HAS_SD, check 'BOARD FEATURES' section"
-    #define HAS_SD
-    #define USE_SD
-  #endif
-
-  #if defined(HAS_FLIPPER_LED) || defined(XIAO_ESP32_S3) || defined(HAS_XIAO_LED) \
-    || defined(HAS_STICKC_LED) || defined(HAS_NEOPIXEL_LED)
-      #define HAS_LED
-  #endif
-
-  #ifdef HAS_TEMP_SENSOR
-
-    // ESP_IDF_VERSION_MAJOR ESP_ARDUINO_VERSION_MAJOR
-    #if (defined(ESP_IDF_VERSION_MAJOR) && (ESP_IDF_VERSION_MAJOR >= 5)) && \
-          (defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32S3) \
-          || defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32C5) \
-          || defined(CONFIG_IDF_TARGET_ESP32C6) || defined(CONFIG_IDF_TARGET_ESP32H2) )
-      #define HAS_CPU_TEMP
+      #define MARAUDER_TITLE_BYTES 13578
+    #elif defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
+      #define MARAUDER_TITLE_BYTES 13578
+    #elif defined(MARAUDER_CYD_MICRO)
+      #define MARAUDER_TITLE_BYTES 13578
+    #elif defined(MARAUDER_CYD_2USB)
+      #define MARAUDER_TITLE_BYTES 13578
+    #elif defined(MARAUDER_CYD_3_5_INCH)
+      #define MARAUDER_TITLE_BYTES 13578
+    #elif defined(MARAUDER_CYD_GUITION)
+      #define MARAUDER_TITLE_BYTES 13578
+    #elif defined(MARAUDER_KIT)
+      #define MARAUDER_TITLE_BYTES 13578
+    #elif defined(MARAUDER_MINI)
+      #define MARAUDER_TITLE_BYTES 13578
+    #elif defined(MARAUDER_V7)
+      #define MARAUDER_TITLE_BYTES 13578
+    #elif defined(MARAUDER_V7_1)
+      #define MARAUDER_TITLE_BYTES 13578
+    #elif defined(MARAUDER_REV_FEATHER)
+      #define MARAUDER_TITLE_BYTES 13578
+    #elif defined(MARAUDER_CYD_HMI)
+      #define MARAUDER_TITLE_BYTES 13578
+    #elif defined(MARAUDER_C5)
+      #define MARAUDER_TITLE_BYTES 13578
+    #elif defined(MARAUDER_V8)
+      #define MARAUDER_TITLE_BYTES 13578
+    #elif defined(MARAUDER_MINI_V3)
+      #define MARAUDER_TITLE_BYTES 13578
     #else
-      #undef HAS_CPU_TEMP
+      #define MARAUDER_TITLE_BYTES 13578
     #endif
+    //// END MARAUDER TITLE STUFF
+
+    //// PCAP BUFFER STUFF
+
+    #ifdef HAS_PSRAM
+      #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
+      #define SNAP_LEN 1 * 4096 // max len of each recieved packet
+    //#elif !defined(HAS_ILI9341)
+    //  #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
+    //  #define SNAP_LEN 4096 // max len of each recieved packet
+    #else
+      #define BUF_SIZE 3 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
+      #define SNAP_LEN 2324 // max len of each recieved packet
+    #endif
+
+    //// END PCAP BUFFER STUFF
+
+    //// STUPID CYD STUFF
+    #if defined(HAS_CYD_TOUCH) || defined(HAS_C5_SD) || defined(HAS_SEPARATE_SD)
+      #ifdef MARAUDER_CYD_MICRO
+        #define XPT2046_IRQ  36
+        #define XPT2046_MOSI 32
+        #define XPT2046_MISO 39
+        #define XPT2046_CLK  25
+        #define XPT2046_CS   33
+
+        #define SD_MISO      19
+        #define SD_MOSI      23
+        #define SD_SCK       18
+      #endif
+
+      #ifdef MARAUDER_CYD_HMI
+        #define XPT2046_IRQ  9
+        #define XPT2046_MOSI 3
+        #define XPT2046_MISO 4
+        #define XPT2046_CLK  1
+        #define XPT2046_CS   2
+      #endif
+
+      #ifdef MARAUDER_CYD_2USB
+        #define XPT2046_IRQ  36
+        #define XPT2046_MOSI 32
+        #define XPT2046_MISO 39
+        #define XPT2046_CLK  25
+        #define XPT2046_CS   33
+
+        #define SD_MISO      19
+        #define SD_MOSI      23
+        #define SD_SCK       18
+      #endif
+
+      #ifdef MARAUDER_CYD_3_5_INCH
+        #define SD_MISO      19
+        #define SD_MOSI      23
+        #define SD_SCK       18
+      #endif
+
+      #if defined(MARAUDER_C5)
+        #define SD_MISO 2
+        #define SD_MOSI 7
+        #define SD_SCK  6
+      #elif defined(MARAUDER_T_DONGLE_C5)
+        #define SD_MISO 7
+        #define SD_MOSI 2
+        #define SD_SCK  6
+      #endif
+
+      #ifdef MARAUDER_V8
+        #define SD_MOSI TFT_MOSI
+        #define SD_SCK  TFT_SCLK
+      #endif
+
+      #ifdef MARAUDER_V4
+        #define SD_MISO TFT_MISO
+        #define SD_MOSI TFT_MOSI
+        #define SD_SCK  TFT_SCLK
+      #endif
+
+      #ifdef MARAUDER_V6
+        #define SD_MISO TFT_MISO
+        #define SD_MOSI TFT_MOSI
+        #define SD_SCK  TFT_SCLK
+      #endif
+
+      #ifdef MARAUDER_V6_1
+        #define SD_MISO TFT_MISO
+        #define SD_MOSI TFT_MOSI
+        #define SD_SCK  TFT_SCLK
+      #endif
+
+      #ifdef MARAUDER_KIT
+        #define SD_MISO TFT_MISO
+        #define SD_MOSI TFT_MOSI
+        #define SD_SCK  TFT_SCLK
+      #endif
+
+      #ifdef MARAUDER_MINI
+        #define SD_MISO TFT_MISO
+        #define SD_MOSI TFT_MOSI
+        #define SD_SCK  TFT_SCLK
+      #endif
+
+      #ifdef MARAUDER_V7
+        #define SD_MISO TFT_MISO
+        #define SD_MOSI TFT_MOSI
+        #define SD_SCK  TFT_SCLK
+      #endif
+
+      #ifdef MARAUDER_MINI_V3
+        #define SD_MISO TFT_MISO
+        #define SD_MOSI TFT_MOSI
+        #define SD_SCK  TFT_SCLK
+      #endif
+    #endif
+    //// END STUPID CYD STUFF
+
+    //// FUNNY FLIPPER LED STUFF
+
+    #ifdef HAS_FLIPPER_LED
+      #ifdef MARAUDER_FLIPPER
+        #define B_PIN 4
+        #define G_PIN 5
+        #define R_PIN 6
+      #endif
+
+      #ifdef MARAUDER_MULTIBOARD_S3
+        #define B_PIN 4
+        #define G_PIN 5
+        #define R_PIN 6
+      #endif
+
+      #ifdef MARAUDER_CYD_MICRO
+        #define B_PIN 17
+        #define G_PIN 16
+        #define R_PIN 4
+      #endif
+
+      #ifdef MARAUDER_CYD_2USB
+        #define B_PIN 17
+        #define G_PIN 16
+        #define R_PIN 4
+      #endif
+
+      #ifdef MARAUDER_CYD_3_5_INCH
+        #define B_PIN 17
+        #define G_PIN 16
+        #define R_PIN 22
+      #endif
+
+      #ifdef MARAUDER_CYD_GUITION
+        #define B_PIN 17
+        #define G_PIN 16
+        #define R_PIN 4
+      #endif
+    #endif
+
+    //// END FUNNY FLIPPER LED STUFF
+
+    //// WIFI STUFF
+
+    #ifndef HAS_DUAL_BAND
+      #define HOP_DELAY 1000
+    #else
+      #define HOP_DELAY 250
+    #endif
+
+    //// ACT LED STUFF
+    #ifdef HAS_ACT_LED
+
+      #ifdef MARAUDER_V8
+        #define ACT_LED_PIN 28
+      #endif
+
+    #endif
+
+
+    #ifdef HAS_RTC
+
+      #if defined(MARAUDER_WS_C5_28)    // ADC is through IO expander
+        #define HAS_PCF85063         // i2c real-time clock (RTC)
+        #define I2C_SDA 0
+        #define I2C_SCL 1
+        #define RTC_SDA           I2C_SDA
+        #define RTC_SCL           I2C_SCL
+        #define I2C_ADDR_PCF85063  0x51 // NOT 0x1A : CST3530 differs from CST820
+
+      #elif defined(MARAUDER_REV_FEATHER)
+        #define HAS_PCF8523         // i2c real-time clock (RTC) in Adalogger
+        #define I2C_SCL 4
+        #define I2C_SDA 3
+        #define RTC_SDA           I2C_SDA
+        #define RTC_SCL           I2C_SCL
+
+      #elif defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
+        #define HAS_PCF8563       // SAMWE AS BM8563
+        #define I2C_SDA 21
+        #define I2C_SCL 22
+        #define RTC_SDA           I2C_SDA
+        #define RTC_SCL           I2C_SCL
+        #define I2C_ADDR_PCF8563 0x51
+      #endif
+
+    #endif   // HAS_RTC
+
+    #ifdef HAS_TEMP_SENSOR
+
+      #if defined(MARAUDER_WS_C5_28)
+        #define HAS_SHTC3
+        #define I2C_SDA 0
+        #define I2C_SCL 1
+        #define I2C_ADDR_SHTC3  0x70 // NOT 0x1A 
+      #endif
+
+      // ESP_IDF_VERSION_MAJOR ESP_ARDUINO_VERSION_MAJOR
+      #if (defined(ESP_IDF_VERSION_MAJOR) && (ESP_IDF_VERSION_MAJOR >= 5)) && \
+            (defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32S3) \
+            || defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32C5) \
+            || defined(CONFIG_IDF_TARGET_ESP32C6) || defined(CONFIG_IDF_TARGET_ESP32H2) )
+        #define HAS_CPU_TEMP
+      #else
+        #undef HAS_CPU_TEMP
+      #endif
+
+    #endif  // HAS_TEMP_SENSOR
 
     //do we have a SENSOR?
     #if !( defined(USE_CPU_TEMP) || defined(HAS_SHTC3) || defined(HAS_AHT20) )
@@ -3619,11 +3609,102 @@
       #undef HAS_TEMP_SENSOR
     #endif
 
-  #endif   // HAS_TEMP_SENSOR
 
-#pragma GCC diagnostic pop
+    #ifdef HAS_CAP_TOUCH
+
+      #if defined(MARAUDER_JC2432W328C)
+        #define HAS_CST820
+        #define I2C_SDA 33
+        #define I2C_SCL 32
+        #define I2C_FREQ 10000    // 10K instead of 100K
+        #define TP_SDA I2C_SDA
+        #define TP_SCL I2C_SCL
+        #define TP_FREQ 10000    // 10K instead of 100K
+        #define TP_RST 25
+        #define TP_INT -1  // ?22? / 21 ?
+        #define I2C_ADDR_CST820 0x15
+
+      #elif defined(MARAUDER_PANCAKE)
+        #define HAS_FT6336
+        #define I2C_SDA 9
+        #define I2C_SCL 10
+        #define TP_SDA I2C_SDA
+        #define TP_SCL I2C_SCL
+        #define TP_RST 8
+        #define I2C_FT6336_ADDR      0x38
+
+      #elif defined(MARAUDER_LCDWIKI_28)
+        #define HAS_FT6336
+        #define TP_SDA 16
+        #define TP_SCL 15
+        #define TP_RST 18
+        #define I2C_FT6336_ADDR      0x38
+
+      #elif defined(MARAUDER_WS_C5_28)    // ADC is through IO expander
+        #define HAS_CST3530 1      // distinguish from CST820
+        #define I2C_SDA 0
+        #define I2C_SCL 1
+        #define TP_SDA           I2C_SDA
+        #define TP_SCL           I2C_SCL
+        #define TP_INT           5
+        #define TP_RST           -1   // CH32V003 EXIO0
+        #define TP_FREQ          100000  // 100 kHz (Standard-mode) 400 kHz (Fast-mode)
+        #define I2C_ADDR_CST3530  0x58 // NOT 0x1A : CST3530 differs from CST820
+
+      #elif defined(MARAUDER_CYD_3_5_INCH_CAP) 
+        #define HAS_GT911 1 
+        #define TP_SDA 33
+        #define TP_SCL 32
+        #define TP_INT 21
+        #define TP_RST 25
+        #define I2C_ADDR_GT911 0x38
+      #endif
+
+    #endif  // HAS_CAP_TOUCH
+    // CONFIG LOGIC
+
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic warning "-Wcpp"
 
 
-  // END CONFIG LOGIC
+    //  I2C Touch Screens
+    #if defined(HAS_CST820) || defined(HAS_AXS5106L) || defined(HAS_FT6336) || defined(HAS_CST3530)
+      #define HAS_CAP_TOUCH 1
+    #endif
+
+    #if defined(HAS_NIMBLE_2) && !defined(HAS_BT)
+      #warning "HAS_NIMBLE_2 defined without HAS_BT, check 'BOARD FEATURES' section"
+      #define HAS_BT 1
+    #endif
+
+    #if defined(HAS_FULL_SCREEN) && !defined(HAS_SCREEN)
+      #warning "HAS_FULL_SCREEN defined without HAS_SCREEN, check 'BOARD FEATURES' section"
+      #define HAS_SCREEN 1
+    #endif
+
+    #if defined(HAS_MINI_SCREEN) && !defined(HAS_SCREEN)
+      #warning "HAS_MINI_SCREEN defined without HAS_SCREEN, check 'BOARD FEATURES' section"
+      #define HAS_SCREEN 1
+    #endif
+
+    #if defined(USE_SD) && !defined(SD_CS)
+      #warning "USE_SD defined without SD_CS, check 'SD DEFINITIONS' section"
+    #endif
+
+    #if defined(HAS_C5_SD) && ( !defined(USE_SD) || !defined(HAS_SD) )
+      #warning "HAS_C5_SD defined without USE_SD/HAS_SD, check 'BOARD FEATURES' section"
+      #define HAS_SD
+      #define USE_SD
+    #endif
+
+    #if defined(HAS_FLIPPER_LED) || defined(HAS_XIAO_LED) || defined(HAS_STICKC_LED) || defined(HAS_NEOPIXEL_LED)
+        #define HAS_LED
+    #endif
+
+
+  #pragma GCC diagnostic pop
+
+
+    // END CONFIG LOGIC
 
 #endif

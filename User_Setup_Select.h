@@ -39,6 +39,8 @@
 //#include <User_Setup_cyd_3_5_inch.h>
 //#include <User_Setup_marauder_pancake.h>
 //#include <User_Setup_marauder_t_dongle_c5.h>
+//#include <User_Setup_cyd_24.h>
+//#include <User_Setup_cyd_JC2432W328C.h>
 //#include <User_Setup_marauder_ws_c5_28.h>
 //#include <User_Setup_LilyGo_T_HMI.h>
 
