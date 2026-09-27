@@ -9,6 +9,8 @@
 #include <FS.h>
 #include <ArduinoJson.h>
 
+#include "SettingsCache.h"
+
 #define FORMAT_SPIFFS_IF_FAILED true
 
 #ifdef HAS_SCREEN
@@ -46,19 +48,9 @@ class Settings {
 
     // Flat cache populated once at begin() and kept in sync by saveSetting().
     // All loadSetting<T>() reads hit this struct — zero heap, zero JSON parse.
-    struct SettingsCache {
-      bool  ForcePMKID    = false;
-      bool  ForceProbe    = false;
-      bool  SavePCAP      = true;
-      bool  EnableLED     = true;
-      bool  EPDeauth      = false;
-      bool  ChanHop       = false;
-      String ClientSSID   = "";
-      String ClientPW     = "";
-      String wu           = "";
-      String wt           = "";
-      String wdg_key      = "";
-    } _cache;
+    // The struct and its parse/sync helpers live in SettingsCache.{h,cpp} so
+    // they can be unit tested natively (see test/test_settings_cache).
+    SettingsCache _cache;
 
     void _buildCache();  // parse json_settings_string -> _cache
 
