@@ -730,6 +730,7 @@ class WiFiScan
       bool sendFmnaSoundCommand(NimBLEClient* currentClient);
       bool sendDultSoundCommand(NimBLEClient* currentClient);
       bool enableTrackerResponses(NimBLERemoteCharacteristic* characteristic);
+      void releaseNimbleClient();
       void createNimbleClient();
       void initializeFindMyScan();
     #endif
