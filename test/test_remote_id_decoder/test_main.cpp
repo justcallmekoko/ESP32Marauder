@@ -1,0 +1,134 @@
+#include <unity.h>
+
+#include <cstring>
+
+#include "RemoteIdDecoder.h"
+
+void setUp() {}
+void tearDown() {}
+
+static void writeI32Le(uint8_t* output, int32_t value) {
+  const uint32_t raw = static_cast<uint32_t>(value);
+  output[0] = raw & 0xFF;
+  output[1] = (raw >> 8) & 0xFF;
+  output[2] = (raw >> 16) & 0xFF;
+  output[3] = (raw >> 24) & 0xFF;
+}
+
+static void writeU16Le(uint8_t* output, uint16_t value) {
+  output[0] = value & 0xFF;
+  output[1] = value >> 8;
+}
+
+static void makeBasicId(uint8_t* message) {
+  std::memset(message, 0, RemoteIdDecoder::kMessageSize);
+  message[0] = 0x02;
+  message[1] = 0x14;
+  std::memcpy(message + 2, "USS-Enterprise", 14);
+}
+
+static void makeLocation(uint8_t* message) {
+  std::memset(message, 0, RemoteIdDecoder::kMessageSize);
+  message[0] = 0x12;
+  message[1] = 0x20;
+  message[2] = 90;
+  message[3] = 40;
+  message[4] = static_cast<uint8_t>(-4);
+  writeI32Le(message + 5, 407123456);
+  writeI32Le(message + 9, -740123456);
+  writeU16Le(message + 13, 2200);
+  writeU16Le(message + 15, 2300);
+  writeU16Le(message + 17, 2100);
+}
+
+void test_decodes_message_pack_fields() {
+  uint8_t payload[3 + 4 * RemoteIdDecoder::kMessageSize] = {};
+  payload[0] = 0xF2;
+  payload[1] = RemoteIdDecoder::kMessageSize;
+  payload[2] = 4;
+  makeBasicId(payload + 3);
+  makeLocation(payload + 28);
+  uint8_t* system = payload + 53;
+  system[0] = 0x42;
+  system[1] = 0x01;
+  writeI32Le(system + 2, 407000000);
+  writeI32Le(system + 6, -740000000);
+  uint8_t* operatorId = payload + 78;
+  operatorId[0] = 0x52;
+  operatorId[1] = 0;
+  std::memcpy(operatorId + 2, "OPERATOR-42", 11);
+
+  RemoteIdRecord record;
+  RemoteIdDecoder decoder;
+  TEST_ASSERT_EQUAL_UINT8(
+      static_cast<uint8_t>(RemoteIdDecodeResult::Decoded),
+      static_cast<uint8_t>(decoder.decodePayload(payload, sizeof(payload), record)));
+  TEST_ASSERT_EQUAL_STRING("USS-Enterprise", record.uasId);
+  TEST_ASSERT_EQUAL_UINT8(1, record.idType);
+  TEST_ASSERT_EQUAL_UINT8(4, record.uaType);
+  TEST_ASSERT_EQUAL_INT32(407123456, record.latitudeE7);
+  TEST_ASSERT_EQUAL_INT32(-740123456, record.longitudeE7);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 10.0f, record.horizontalSpeedMps);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, -2.0f, record.verticalSpeedMps);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 150.0f, record.altitudeGeoM);
+  TEST_ASSERT_EQUAL_INT32(407000000, record.operatorLatitudeE7);
+  TEST_ASSERT_EQUAL_STRING("OPERATOR-42", record.operatorId);
+}
+
+void test_decodes_wifi_beacon_vendor_element() {
+  uint8_t frame[36 + 2 + 5 + RemoteIdDecoder::kMessageSize] = {};
+  frame[0] = 0x80;
+  const size_t offset = 36;
+  frame[offset] = 221;
+  frame[offset + 1] = 5 + RemoteIdDecoder::kMessageSize;
+  frame[offset + 2] = 0xFA;
+  frame[offset + 3] = 0x0B;
+  frame[offset + 4] = 0xBC;
+  frame[offset + 5] = 0x0D;
+  frame[offset + 6] = 7;
+  makeBasicId(frame + offset + 7);
+
+  RemoteIdRecord record;
+  RemoteIdDecoder decoder;
+  TEST_ASSERT_EQUAL_UINT8(
+      static_cast<uint8_t>(RemoteIdDecodeResult::Decoded),
+      static_cast<uint8_t>(decoder.decodeWifiBeacon(frame, sizeof(frame), record)));
+  TEST_ASSERT_EQUAL_STRING("USS-Enterprise", record.uasId);
+}
+
+void test_decodes_ble_service_data() {
+  uint8_t data[3 + RemoteIdDecoder::kMessageSize] = {0xFA, 0xFF, 9};
+  makeLocation(data + 3);
+  RemoteIdRecord record;
+  RemoteIdDecoder decoder;
+  TEST_ASSERT_EQUAL_UINT8(
+      static_cast<uint8_t>(RemoteIdDecodeResult::Decoded),
+      static_cast<uint8_t>(decoder.decodeBleServiceData(data, sizeof(data), record)));
+  TEST_ASSERT_TRUE(record.hasLocation);
+}
+
+void test_rejects_truncated_pack_and_ie() {
+  RemoteIdRecord record;
+  RemoteIdDecoder decoder;
+  const uint8_t shortPack[] = {0xF2, 25, 2, 0x02};
+  TEST_ASSERT_EQUAL_UINT8(
+      static_cast<uint8_t>(RemoteIdDecodeResult::Malformed),
+      static_cast<uint8_t>(decoder.decodePayload(shortPack, sizeof(shortPack), record)));
+
+  uint8_t frame[38] = {};
+  frame[0] = 0x80;
+  frame[36] = 221;
+  frame[37] = 20;
+  TEST_ASSERT_EQUAL_UINT8(
+      static_cast<uint8_t>(RemoteIdDecodeResult::Malformed),
+      static_cast<uint8_t>(decoder.decodeWifiBeacon(frame, sizeof(frame), record)));
+}
+
+int main(int, char**) {
+  UNITY_BEGIN();
+  RUN_TEST(test_decodes_message_pack_fields);
+  RUN_TEST(test_decodes_wifi_beacon_vendor_element);
+  RUN_TEST(test_decodes_ble_service_data);
+  RUN_TEST(test_rejects_truncated_pack_and_ie);
+  return UNITY_END();
+}
