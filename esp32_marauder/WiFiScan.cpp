@@ -5270,6 +5270,29 @@ void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color) {
 
 #ifdef HAS_NIMBLE_2
 
+void WiFiScan::releaseNimbleClient() {
+  if (nimbleClient == nullptr)
+    return;
+
+  if (nimbleClient->isConnected()) {
+    nimbleClient->disconnect();
+
+    // deleteClient() defers deletion for connected clients until the
+    // disconnect callback runs. Keep the host alive until that can happen.
+    uint32_t wait_start = millis();
+    while (nimbleClient->isConnected() && ((millis() - wait_start) < 2000))
+      delay(10);
+
+    if (nimbleClient->isConnected())
+      Serial.println("NimBLE client disconnect timed out");
+  }
+
+  if (!NimBLEDevice::deleteClient(nimbleClient))
+    Serial.println("NimBLE client deletion was deferred");
+
+  nimbleClient = nullptr;
+}
+
 void WiFiScan::createNimbleClient() {
   NimBLEDevice::init("Tracker-Client");
 
@@ -5282,7 +5305,15 @@ void WiFiScan::createNimbleClient() {
     false
   );
 
-  nimbleClient = NimBLEDevice::createClient();
+  // Releasing before replacement prevents orphaning a fixed client-pool slot.
+  this->releaseNimbleClient();
+
+  nimbleClient = NimBLEDevice::getDisconnectedClient();
+  if (nimbleClient == nullptr)
+    nimbleClient = NimBLEDevice::createClient();
+
+  if (nimbleClient == nullptr)
+    Serial.println("NimBLE client pool exhausted");
 }
 
 int WiFiScan::connectAndProcessTracker(NimBLEAddress& address) {
@@ -5731,17 +5762,7 @@ bool WiFiScan::backendFindMySound(NimBLEAddress& address, bool gui) {
     #endif
   }
 
-  if (nimbleClient != nullptr) {
-    if (nimbleClient->isConnected()) {
-      Serial.println("Disconnecting locally...");
-
-      nimbleClient->disconnect();
-    }
-
-    NimBLEDevice::deleteClient(nimbleClient);
-    nimbleClient = nullptr;
-  }
-
+  this->releaseNimbleClient();
   NimBLEDevice::deinit(true);
 
   return send_success;
