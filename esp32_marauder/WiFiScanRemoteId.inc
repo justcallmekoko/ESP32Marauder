@@ -133,7 +133,11 @@ void WiFiScan::RunRemoteIdScan(uint8_t scan_mode, uint16_t color) {
 
   #ifdef HAS_SCREEN
     setupScanDisplayArea(TFT_BLACK, color);
-    display_obj.tft.fillScreen(TFT_BLACK);
+    // Preserve the status bar at the top of the display. Clearing the entire
+    // screen erases its background, while periodic status updates repaint only
+    // individual fields and leave the bar looking fragmented.
+    display_obj.tft.fillRect(0, STATUS_BAR_WIDTH, SCREEN_WIDTH,
+                             SCREEN_HEIGHT - STATUS_BAR_WIDTH, TFT_BLACK);
     display_obj.tft.setTextWrap(false);
     display_obj.tft.setTextSize(1);
     display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
