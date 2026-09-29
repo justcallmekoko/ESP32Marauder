@@ -345,7 +345,8 @@ extern "C" {
 
           if ((wifi_scan_obj.currentScanMode == REMOTE_ID_SCAN_ALL) ||
               (wifi_scan_obj.currentScanMode == REMOTE_ID_SCAN_TARGET)) {
-            wifi_scan_obj.processRemoteIdBlePayload(payLoad, len, mac_char, rssi);
+            wifi_scan_obj.processRemoteIdBlePayload(payLoad, len, mac_char, rssi,
+                RemoteIdTransport::BleLegacy);
             wifi_scan_obj.bt_cb_busy = false;
             return;
           }
@@ -1104,7 +1105,10 @@ extern "C" {
 
           if ((wifi_scan_obj.currentScanMode == REMOTE_ID_SCAN_ALL) ||
               (wifi_scan_obj.currentScanMode == REMOTE_ID_SCAN_TARGET)) {
-            wifi_scan_obj.processRemoteIdBlePayload(payLoad.data(), len, mac_char, rssi);
+            wifi_scan_obj.processRemoteIdBlePayload(payLoad.data(), len, mac_char, rssi,
+                advertisedDevice->isLegacyAdvertisement()
+                    ? RemoteIdTransport::BleLegacy
+                    : RemoteIdTransport::BleExtended);
             wifi_scan_obj.bt_cb_busy = false;
             return;
           }
@@ -12486,8 +12490,11 @@ void WiFiScan::main(uint32_t currentTime)
            (currentScanMode == REMOTE_ID_SCAN_TARGET)) {
     if (currentTime - initTime >= this->channel_hop_delay * HOP_DELAY) {
       initTime = currentTime;
-      channelHop();
+      hopRemoteIdChannel();
     }
+    remote_id_store.pruneStale(currentTime, REMOTE_ID_EXPIRE_MS,
+        remote_id_target_has_uas ? remote_id_target_uas : nullptr,
+        remote_id_target_selected ? remote_id_target_mac : nullptr);
     if (currentTime - remote_id_last_render_ms >= 500) {
       remote_id_last_render_ms = currentTime;
       if (currentScanMode == REMOTE_ID_SCAN_TARGET)

@@ -35,6 +35,12 @@ void WiFiScan::mergeRemoteIdRecord(RemoteIdRecord& destination,
     destination.verticalSpeedMps = source.verticalSpeedMps;
     destination.directionDeg = source.directionDeg;
     destination.operationalStatus = source.operationalStatus;
+    destination.horizontalAccuracy = source.horizontalAccuracy;
+    destination.verticalAccuracy = source.verticalAccuracy;
+    destination.speedAccuracy = source.speedAccuracy;
+    destination.locationTimestampDeciseconds =
+        source.locationTimestampDeciseconds;
+    destination.heightIsAboveGround = source.heightIsAboveGround;
   }
   if (source.hasOperatorLocation) {
     destination.hasOperatorLocation = true;
@@ -45,7 +51,8 @@ void WiFiScan::mergeRemoteIdRecord(RemoteIdRecord& destination,
 }
 
 bool WiFiScan::processRemoteIdWifiFrame(const uint8_t* frame, size_t length,
-                                        const uint8_t mac[6], int8_t rssi) {
+                                        const uint8_t mac[6], int8_t rssi,
+                                        uint8_t channel) {
   RemoteIdRecord decoded;
   RemoteIdDecodeResult result = remote_id_decoder.decodeWifiBeacon(frame, length, decoded);
   RemoteIdTransport transport = RemoteIdTransport::WifiBeacon;
@@ -63,18 +70,21 @@ bool WiFiScan::processRemoteIdWifiFrame(const uint8_t* frame, size_t length,
     record = &remote_id_store.observe(mac, transport,
                                       rssi, millis());
   else {
+    memcpy(record->mac, mac, sizeof(record->mac));
     record->transportMask |= static_cast<uint8_t>(transport);
     record->rssi = rssi;
     record->lastSeenMs = millis();
     ++record->packetCount;
   }
   mergeRemoteIdRecord(*record, decoded);
+  record->lastWifiChannel = channel;
   logRemoteIdRecord(*record);
   return true;
 }
 
 bool WiFiScan::processRemoteIdBlePayload(const uint8_t* payload, size_t length,
-                                        const uint8_t mac[6], int8_t rssi) {
+                                        const uint8_t mac[6], int8_t rssi,
+                                        RemoteIdTransport transport) {
   if (payload == nullptr) return false;
   size_t offset = 0;
   while (offset < length) {
@@ -91,10 +101,11 @@ bool WiFiScan::processRemoteIdBlePayload(const uint8_t* payload, size_t length,
             ? remote_id_store.findByUasId(decoded.uasId)
             : nullptr;
         if (record == nullptr)
-          record = &remote_id_store.observe(mac, RemoteIdTransport::BleLegacy,
+          record = &remote_id_store.observe(mac, transport,
                                             rssi, millis());
         else {
-          record->transportMask |= static_cast<uint8_t>(RemoteIdTransport::BleLegacy);
+          memcpy(record->mac, mac, sizeof(record->mac));
+          record->transportMask |= static_cast<uint8_t>(transport);
           record->rssi = rssi;
           record->lastSeenMs = millis();
           ++record->packetCount;
@@ -118,7 +129,8 @@ void WiFiScan::remoteIdWifiCallback(void* buf, wifi_promiscuous_pkt_type_t type)
   if (length < 24 || (packet->payload[0] != 0x80 && packet->payload[0] != 0xD0)) return;
   wifi_scan_obj.processRemoteIdWifiFrame(packet->payload, length,
                                         packet->payload + 10,
-                                        packet->rx_ctrl.rssi);
+                                        packet->rx_ctrl.rssi,
+                                        packet->rx_ctrl.channel);
 }
 
 void WiFiScan::RunRemoteIdScan(uint8_t scan_mode, uint16_t color) {
@@ -128,7 +140,7 @@ void WiFiScan::RunRemoteIdScan(uint8_t scan_mode, uint16_t color) {
 
   #ifdef HAS_SD
     startLog("remoteid");
-    buffer_obj.append("millis,uas_id,operator_id,transport,rssi,lat,lon,alt_geo,height,speed,heading,operator_lat,operator_lon\n");
+    buffer_obj.append("millis,uas_id,operator_id,transport,channel,rssi,packets,lat,lon,alt_geo,height,speed,heading,operator_lat,operator_lon\n");
   #endif
 
   #ifdef HAS_SCREEN
@@ -156,7 +168,7 @@ void WiFiScan::RunRemoteIdScan(uint8_t scan_mode, uint16_t color) {
     esp_event_loop_create_default();
   #endif
   setWiFiMode(WIFI_MODE_NULL, remoteIdWifiCallback);
-  changeChannel(set_channel);
+  changeChannel(6);
   wifi_initialized = true;
 
   setupRemoteIdBle();
@@ -164,13 +176,63 @@ void WiFiScan::RunRemoteIdScan(uint8_t scan_mode, uint16_t color) {
   setLEDMode(MODE_SNIFF);
   initTime = millis();
   remote_id_last_render_ms = 0;
+  remote_id_schedule_step = 0;
+  remote_id_beacon_channel_index = 0;
 }
 
 String WiFiScan::remoteIdLabel(size_t index) const {
   const RemoteIdRecord* record = remote_id_store.at(index);
   if (record == nullptr) return "";
   String id = record->hasUasId ? String(record->uasId) : macToString(record->mac);
-  return String(record->rssi) + " " + id;
+  String label = String(record->rssi) + " " + id;
+  #ifdef HAS_GPS
+    if (gps_obj.getFixStatus() && record->hasLocation) {
+      char distance[16];
+      remoteIdFormatDistanceKm(remoteIdDistanceMeters(
+          gps_obj.getLatInt() * 10, gps_obj.getLonInt() * 10,
+          record->latitudeE7, record->longitudeE7),
+          distance, sizeof(distance));
+      if (distance[0] != '\0') label += " " + String(distance);
+    }
+  #endif
+  return label;
+}
+
+void WiFiScan::hopRemoteIdChannel() {
+  // Reserve three out of every four dwell periods for the ASTM preferred NAN
+  // channels. The remaining period advances through the legal board channel
+  // plan so Wi-Fi Beacon transmitters on other channels remain discoverable.
+  const uint8_t phase = remote_id_schedule_step++ & 0x03;
+  if (phase == 3 && currentScanMode == REMOTE_ID_SCAN_TARGET &&
+      remote_id_target_selected) {
+    const RemoteIdRecord* target = remote_id_target_has_uas
+        ? remote_id_store.findByUasId(remote_id_target_uas)
+        : remote_id_store.findByMac(remote_id_target_mac);
+    if (target != nullptr && target->lastWifiChannel != 0 &&
+        !remoteIdIsStale(millis(), target->lastSeenMs, REMOTE_ID_STALE_MS)) {
+      changeChannel(target->lastWifiChannel);
+      return;
+    }
+  }
+  if (phase == 0 || phase == 2) {
+    changeChannel(6);
+    return;
+  }
+  #ifdef HAS_DUAL_BAND
+    if (phase == 1) {
+      changeChannel(149);
+      return;
+    }
+    remote_id_beacon_channel_index =
+        (remote_id_beacon_channel_index + 1) % DUAL_BAND_CHANNELS;
+    changeChannel(dual_band_channels[remote_id_beacon_channel_index]);
+  #else
+    ++remote_id_beacon_channel_index;
+    if (remote_id_beacon_channel_index == 0 ||
+        remote_id_beacon_channel_index > MAX_CHANNEL)
+      remote_id_beacon_channel_index = 1;
+    changeChannel(remote_id_beacon_channel_index);
+  #endif
 }
 
 bool WiFiScan::selectRemoteIdTarget(size_t index) {
@@ -194,14 +256,16 @@ void WiFiScan::clearRemoteIds() {
   memset(remote_id_target_mac, 0, sizeof(remote_id_target_mac));
 }
 
-void WiFiScan::logRemoteIdRecord(const RemoteIdRecord& record) {
+void WiFiScan::logRemoteIdRecord(RemoteIdRecord& record) {
   const uint32_t now = millis();
-  if (now - remote_id_last_log_ms < 1000) return;
-  remote_id_last_log_ms = now;
+  if (now - record.lastLoggedMs < 1000) return;
+  record.lastLoggedMs = now;
   String line = String(now) + "," +
                 (record.hasUasId ? String(record.uasId) : macToString(record.mac)) + "," +
                 (record.hasOperatorId ? String(record.operatorId) : "") + "," +
-                String(record.transportMask) + "," + String(record.rssi) + "," +
+                String(record.transportMask) + "," +
+                String(record.lastWifiChannel) + "," + String(record.rssi) + "," +
+                String(record.packetCount) + "," +
                 String(record.latitudeE7 / 1e7, 7) + "," +
                 String(record.longitudeE7 / 1e7, 7) + "," +
                 String(record.altitudeGeoM, 1) + "," + String(record.heightM, 1) + "," +
@@ -226,7 +290,8 @@ void WiFiScan::renderRemoteIdGlobal() {
     display_obj.tft.setTextSize(1);
     display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
     display_obj.tft.setCursor(2, top + 2);
-    display_obj.tft.print("RID devices: " + String(remote_id_store.size()));
+    display_obj.tft.print("RID devices: " + String(remote_id_store.size()) +
+                          " CH:" + String(set_channel));
     const size_t rows = layout == RemoteIdLayout::Compact ? 5 :
                         static_cast<size_t>((listHeight - 14) / 10);
     const size_t first = remote_id_store.size() > rows
@@ -318,6 +383,11 @@ void WiFiScan::renderRemoteIdTarget() {
     if (record->hasDescription) line("DESC " + String(record->description));
     line("RSSI " + String(record->rssi) + "  AGE " +
          String((millis() - record->lastSeenMs) / 1000) + "s");
+    if (remoteIdIsStale(millis(), record->lastSeenMs, REMOTE_ID_STALE_MS))
+      line("STATUS LOST", TFT_RED);
+    else
+      line("PKT " + String(record->packetCount) + " CH " +
+           String(record->lastWifiChannel), TFT_GREEN);
     if (record->hasLocation) {
       line("LAT " + String(record->latitudeE7 / 1e7, 7));
       line("LON " + String(record->longitudeE7 / 1e7, 7));

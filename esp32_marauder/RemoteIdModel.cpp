@@ -1,6 +1,7 @@
 #include "RemoteIdModel.h"
 
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 
 namespace {
@@ -97,6 +98,31 @@ const RemoteIdRecord* RemoteIdStore::at(size_t index) const {
 size_t RemoteIdStore::size() const { return size_; }
 size_t RemoteIdStore::capacity() const { return capacity_; }
 
+size_t RemoteIdStore::pruneStale(uint32_t nowMs, uint32_t staleAfterMs,
+                                 const char* preservedUasId,
+                                 const uint8_t* preservedMac) {
+  size_t removed = 0;
+  size_t index = 0;
+  while (index < size_) {
+    const bool preserveUas = preservedUasId != nullptr &&
+        records_[index].hasUasId &&
+        std::strncmp(records_[index].uasId, preservedUasId, 21) == 0;
+    const bool preserveMac = preservedMac != nullptr &&
+        sameMac(records_[index].mac, preservedMac);
+    if (!preserveUas && !preserveMac &&
+        remoteIdIsStale(nowMs, records_[index].lastSeenMs, staleAfterMs)) {
+      for (size_t move = index + 1; move < size_; ++move)
+        records_[move - 1] = records_[move];
+      records_[size_ - 1] = RemoteIdRecord{};
+      --size_;
+      ++removed;
+      continue;
+    }
+    ++index;
+  }
+  return removed;
+}
+
 void RemoteIdStore::clear() {
   for (size_t i = 0; i < size_; ++i) records_[i] = RemoteIdRecord{};
   size_ = 0;
@@ -133,6 +159,28 @@ float remoteIdBearingDegrees(int32_t latAE7, int32_t lonAE7,
   double bearing = std::atan2(y, x) / kDegToRad;
   if (bearing < 0.0) bearing += 360.0;
   return static_cast<float>(bearing);
+}
+
+bool remoteIdIsStale(uint32_t nowMs, uint32_t lastSeenMs,
+                     uint32_t staleAfterMs) {
+  return static_cast<uint32_t>(nowMs - lastSeenMs) >= staleAfterMs;
+}
+
+bool remoteIdCoordinatesValid(int32_t latitudeE7, int32_t longitudeE7) {
+  if (latitudeE7 < -900000000 || latitudeE7 > 900000000 ||
+      longitudeE7 < -1800000000 || longitudeE7 > 1800000000)
+    return false;
+  return latitudeE7 != 0 || longitudeE7 != 0;
+}
+
+void remoteIdFormatDistanceKm(float distanceM, char* output,
+                              size_t outputSize) {
+  if (output == nullptr || outputSize == 0) return;
+  if (!std::isfinite(distanceM) || distanceM < 0.0f) {
+    output[0] = '\0';
+    return;
+  }
+  std::snprintf(output, outputSize, "%.2fkm", distanceM / 1000.0f);
 }
 
 float remoteIdGridScaleMeters(const RemoteIdRecord* records, size_t count,

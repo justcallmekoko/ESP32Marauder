@@ -58,6 +58,7 @@ RemoteIdDecodeResult RemoteIdDecoder::decodeMessage(
       record.operationalStatus = message[1] >> 4;
       const bool highSpeed = (message[1] & 0x01) != 0;
       const bool westDirection = (message[1] & 0x02) != 0;
+      record.heightIsAboveGround = (message[1] & 0x04) != 0;
       record.directionDeg = static_cast<uint16_t>(message[2]) +
                             (westDirection ? 180U : 0U);
       record.horizontalSpeedMps = highSpeed
@@ -72,7 +73,12 @@ RemoteIdDecodeResult RemoteIdDecoder::decodeMessage(
                             kAltitudeOffsetM;
       record.heightM = readU16Le(message + 17) * kAltitudeScaleM -
                        kAltitudeOffsetM;
-      record.hasLocation = record.latitudeE7 != 0 || record.longitudeE7 != 0;
+      record.horizontalAccuracy = message[19] >> 4;
+      record.verticalAccuracy = message[19] & 0x0F;
+      record.speedAccuracy = message[20] & 0x0F;
+      record.locationTimestampDeciseconds = readU16Le(message + 21);
+      record.hasLocation = remoteIdCoordinatesValid(record.latitudeE7,
+                                                     record.longitudeE7);
       return RemoteIdDecodeResult::Decoded;
     }
 
@@ -85,8 +91,8 @@ RemoteIdDecodeResult RemoteIdDecoder::decodeMessage(
       record.operatorLocationType = message[1] & 0x03;
       record.operatorLatitudeE7 = readI32Le(message + 2);
       record.operatorLongitudeE7 = readI32Le(message + 6);
-      record.hasOperatorLocation = record.operatorLatitudeE7 != 0 ||
-                                   record.operatorLongitudeE7 != 0;
+      record.hasOperatorLocation = remoteIdCoordinatesValid(
+          record.operatorLatitudeE7, record.operatorLongitudeE7);
       return RemoteIdDecodeResult::Decoded;
 
     case kMessageOperatorId:

@@ -86,6 +86,46 @@ void test_distance_and_bearing() {
   TEST_ASSERT_FLOAT_WITHIN(0.1f, 0.0f, bearing);
 }
 
+void test_distance_formatter_uses_kilometers() {
+  char text[16] = {};
+  remoteIdFormatDistanceKm(1234.0f, text, sizeof(text));
+  TEST_ASSERT_EQUAL_STRING("1.23km", text);
+  remoteIdFormatDistanceKm(42.0f, text, sizeof(text));
+  TEST_ASSERT_EQUAL_STRING("0.04km", text);
+}
+
+void test_stale_detection_handles_millis_wrap() {
+  TEST_ASSERT_FALSE(remoteIdIsStale(500, 0xFFFFFF00U, 1000));
+  TEST_ASSERT_TRUE(remoteIdIsStale(1000, 0xFFFFFF00U, 1000));
+}
+
+void test_store_prunes_expired_records_and_preserves_target() {
+  RemoteIdRecord records[3];
+  RemoteIdStore store(records, 3);
+  const uint8_t expired[6] = {1, 0, 0, 0, 0, 0};
+  const uint8_t target[6] = {2, 0, 0, 0, 0, 0};
+  const uint8_t active[6] = {3, 0, 0, 0, 0, 0};
+  store.observe(expired, RemoteIdTransport::WifiBeacon, -80, 100);
+  RemoteIdRecord& selected =
+      store.observe(target, RemoteIdTransport::WifiBeacon, -70, 100);
+  std::strncpy(selected.uasId, "TARGET", sizeof(selected.uasId) - 1);
+  selected.hasUasId = true;
+  store.observe(active, RemoteIdTransport::BleLegacy, -60, 950);
+
+  TEST_ASSERT_EQUAL_UINT32(1, store.pruneStale(1100, 500, "TARGET"));
+  TEST_ASSERT_EQUAL_UINT32(2, store.size());
+  TEST_ASSERT_NOT_NULL(store.findByUasId("TARGET"));
+  TEST_ASSERT_NOT_NULL(store.findByMac(active));
+  TEST_ASSERT_NULL(store.findByMac(expired));
+}
+
+void test_coordinate_validation_rejects_unavailable_and_out_of_range() {
+  TEST_ASSERT_TRUE(remoteIdCoordinatesValid(407123456, -740123456));
+  TEST_ASSERT_FALSE(remoteIdCoordinatesValid(0, 0));
+  TEST_ASSERT_FALSE(remoteIdCoordinatesValid(900000001, 0));
+  TEST_ASSERT_FALSE(remoteIdCoordinatesValid(0, 1800000001));
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_layout_profiles);
@@ -94,5 +134,9 @@ int main(int, char**) {
   RUN_TEST(test_projection_is_true_north_and_east_right);
   RUN_TEST(test_scale_includes_aircraft_and_operator);
   RUN_TEST(test_distance_and_bearing);
+  RUN_TEST(test_distance_formatter_uses_kilometers);
+  RUN_TEST(test_stale_detection_handles_millis_wrap);
+  RUN_TEST(test_store_prunes_expired_records_and_preserves_target);
+  RUN_TEST(test_coordinate_validation_rejects_unavailable_and_out_of_range);
   return UNITY_END();
 }

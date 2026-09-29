@@ -39,6 +39,9 @@ static void makeLocation(uint8_t* message) {
   writeU16Le(message + 13, 2200);
   writeU16Le(message + 15, 2300);
   writeU16Le(message + 17, 2100);
+  message[19] = 0xA7;
+  message[20] = 0x04;
+  writeU16Le(message + 21, 1234);
 }
 
 void test_decodes_message_pack_fields() {
@@ -71,6 +74,10 @@ void test_decodes_message_pack_fields() {
   TEST_ASSERT_FLOAT_WITHIN(0.01f, 10.0f, record.horizontalSpeedMps);
   TEST_ASSERT_FLOAT_WITHIN(0.01f, -2.0f, record.verticalSpeedMps);
   TEST_ASSERT_FLOAT_WITHIN(0.01f, 150.0f, record.altitudeGeoM);
+  TEST_ASSERT_EQUAL_UINT8(10, record.horizontalAccuracy);
+  TEST_ASSERT_EQUAL_UINT8(7, record.verticalAccuracy);
+  TEST_ASSERT_EQUAL_UINT8(4, record.speedAccuracy);
+  TEST_ASSERT_EQUAL_UINT16(1234, record.locationTimestampDeciseconds);
   TEST_ASSERT_EQUAL_INT32(407000000, record.operatorLatitudeE7);
   TEST_ASSERT_EQUAL_STRING("OPERATOR-42", record.operatorId);
 }
@@ -124,6 +131,18 @@ void test_rejects_truncated_pack_and_ie() {
       static_cast<uint8_t>(decoder.decodeWifiBeacon(frame, sizeof(frame), record)));
 }
 
+void test_rejects_out_of_range_location_for_plotting() {
+  uint8_t message[RemoteIdDecoder::kMessageSize] = {};
+  makeLocation(message);
+  writeI32Le(message + 5, 900000001);
+  RemoteIdRecord record;
+  RemoteIdDecoder decoder;
+  TEST_ASSERT_EQUAL_UINT8(
+      static_cast<uint8_t>(RemoteIdDecodeResult::Decoded),
+      static_cast<uint8_t>(decoder.decodeMessage(message, sizeof(message), record)));
+  TEST_ASSERT_FALSE(record.hasLocation);
+}
+
 void test_decodes_wifi_nan_action_frame() {
   uint8_t frame[44 + RemoteIdDecoder::kMessageSize] = {};
   frame[0] = 0xD0;
@@ -162,6 +181,7 @@ int main(int, char**) {
   RUN_TEST(test_decodes_wifi_beacon_vendor_element);
   RUN_TEST(test_decodes_ble_service_data);
   RUN_TEST(test_rejects_truncated_pack_and_ie);
+  RUN_TEST(test_rejects_out_of_range_location_for_plotting);
   RUN_TEST(test_decodes_wifi_nan_action_frame);
   return UNITY_END();
 }

@@ -21,6 +21,10 @@ struct RemoteIdRecord {
   uint8_t uaType = 0;
   uint8_t operationalStatus = 0;
   uint8_t operatorLocationType = 0;
+  uint8_t horizontalAccuracy = 0;
+  uint8_t verticalAccuracy = 0;
+  uint8_t speedAccuracy = 0;
+  uint8_t lastWifiChannel = 0;
   bool hasUasId = false;
   bool hasOperatorId = false;
   bool hasDescription = false;
@@ -36,10 +40,13 @@ struct RemoteIdRecord {
   float horizontalSpeedMps = 0.0f;
   float verticalSpeedMps = 0.0f;
   uint16_t directionDeg = 0;
+  uint16_t locationTimestampDeciseconds = 0;
+  bool heightIsAboveGround = false;
   int8_t rssi = 0;
   uint32_t firstSeenMs = 0;
   uint32_t lastSeenMs = 0;
   uint32_t packetCount = 0;
+  uint32_t lastLoggedMs = 0;
 };
 
 struct RemoteIdGridPoint {
@@ -68,6 +75,9 @@ class RemoteIdStore {
   const RemoteIdRecord* at(size_t index) const;
   size_t size() const;
   size_t capacity() const;
+  size_t pruneStale(uint32_t nowMs, uint32_t staleAfterMs,
+                    const char* preservedUasId = nullptr,
+                    const uint8_t* preservedMac = nullptr);
   void clear();
 
  private:
@@ -81,6 +91,11 @@ float remoteIdDistanceMeters(int32_t latAE7, int32_t lonAE7,
                              int32_t latBE7, int32_t lonBE7);
 float remoteIdBearingDegrees(int32_t latAE7, int32_t lonAE7,
                              int32_t latBE7, int32_t lonBE7);
+bool remoteIdIsStale(uint32_t nowMs, uint32_t lastSeenMs,
+                     uint32_t staleAfterMs);
+bool remoteIdCoordinatesValid(int32_t latitudeE7, int32_t longitudeE7);
+void remoteIdFormatDistanceKm(float distanceM, char* output,
+                              size_t outputSize);
 float remoteIdGridScaleMeters(const RemoteIdRecord* records, size_t count,
                               int32_t originLatE7, int32_t originLonE7,
                               float minimumRadiusM = 50.0f);

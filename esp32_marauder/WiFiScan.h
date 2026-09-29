@@ -402,14 +402,18 @@ class WiFiScan
     bool remote_id_target_has_uas = false;
     bool remote_id_target_selected = false;
     uint32_t remote_id_last_render_ms = 0;
-    uint32_t remote_id_last_log_ms = 0;
+    uint8_t remote_id_schedule_step = 0;
+    uint8_t remote_id_beacon_channel_index = 0;
+    static constexpr uint32_t REMOTE_ID_STALE_MS = 30000;
+    static constexpr uint32_t REMOTE_ID_EXPIRE_MS = 120000;
     void RunRemoteIdScan(uint8_t scan_mode, uint16_t color);
     void setupRemoteIdBle();
     void renderRemoteIdGlobal();
     void renderRemoteIdTarget();
-    void logRemoteIdRecord(const RemoteIdRecord& record);
+    void logRemoteIdRecord(RemoteIdRecord& record);
     void mergeRemoteIdRecord(RemoteIdRecord& destination,
                              const RemoteIdRecord& source);
+    void hopRemoteIdChannel();
     static void remoteIdWifiCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     // Wardriver thanks to https://github.com/JosephHewitt
     int arp_count = 0;
@@ -876,9 +880,12 @@ class WiFiScan
     bool send_deauth = false;
 
     bool processRemoteIdWifiFrame(const uint8_t* frame, size_t length,
-                                  const uint8_t mac[6], int8_t rssi);
+                                  const uint8_t mac[6], int8_t rssi,
+                                  uint8_t channel);
     bool processRemoteIdBlePayload(const uint8_t* payload, size_t length,
-                                  const uint8_t mac[6], int8_t rssi);
+                                   const uint8_t mac[6], int8_t rssi,
+                                   RemoteIdTransport transport =
+                                       RemoteIdTransport::BleLegacy);
     size_t remoteIdCount() const { return remote_id_store.size(); }
     String remoteIdLabel(size_t index) const;
     bool selectRemoteIdTarget(size_t index);
