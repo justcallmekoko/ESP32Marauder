@@ -254,6 +254,7 @@ class MenuFunctions
     Menu bluetoothAttackMenu;
     Menu iBeaconMenu;
     Menu iBeaconInfoMenu;
+    Menu remoteIdMenu;
 
     // Settings things menus
     Menu generateSSIDsMenu;

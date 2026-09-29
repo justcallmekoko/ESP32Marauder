@@ -343,6 +343,13 @@ extern "C" {
             
           String display_string = "";
 
+          if ((wifi_scan_obj.currentScanMode == REMOTE_ID_SCAN_ALL) ||
+              (wifi_scan_obj.currentScanMode == REMOTE_ID_SCAN_TARGET)) {
+            wifi_scan_obj.processRemoteIdBlePayload(payLoad, len, mac_char, rssi);
+            wifi_scan_obj.bt_cb_busy = false;
+            return;
+          }
+
           if (wifi_scan_obj.currentScanMode == BT_ATTACK_FINDMY_LIVE) {
             if (connectionPending) {
               wifi_scan_obj.bt_cb_busy = false;
@@ -1094,6 +1101,13 @@ extern "C" {
           int buf = 0;
             
           String display_string = "";
+
+          if ((wifi_scan_obj.currentScanMode == REMOTE_ID_SCAN_ALL) ||
+              (wifi_scan_obj.currentScanMode == REMOTE_ID_SCAN_TARGET)) {
+            wifi_scan_obj.processRemoteIdBlePayload(payLoad.data(), len, mac_char, rssi);
+            wifi_scan_obj.bt_cb_busy = false;
+            return;
+          }
 
           if (wifi_scan_obj.currentScanMode == BT_ATTACK_FINDMY_LIVE) {
             if (connectionPending) {
@@ -2747,6 +2761,10 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
     #endif
     RunProbeScan(scan_mode, color);
   }
+  else if ((scan_mode == REMOTE_ID_SCAN_ALL) ||
+           (scan_mode == REMOTE_ID_SCAN_TARGET)) {
+    RunRemoteIdScan(scan_mode, color);
+  }
   else if (scan_mode == WIFI_SCAN_EVIL_PORTAL)
     RunEvilPortal(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_EAPOL)
@@ -3156,6 +3174,8 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
   (currentScanMode == WIFI_CONNECTED) ||
   (currentScanMode == BT_SCAN_FLOCK) ||
   (currentScanMode == WIFI_SCAN_DETECT_FOLLOW) ||
+  (currentScanMode == REMOTE_ID_SCAN_ALL) ||
+  (currentScanMode == REMOTE_ID_SCAN_TARGET) ||
   (currentScanMode == LV_JOIN_WIFI) ||
   (this->wifi_initialized))
   {
@@ -3237,7 +3257,9 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
   (currentScanMode == BT_SCAN_SIMPLE) ||
   (currentScanMode == WIFI_SCAN_WAR_DRIVE) ||
   (currentScanMode == BT_SCAN_SIMPLE_TWO) ||
-  (currentScanMode == WIFI_SCAN_DETECT_FOLLOW))
+  (currentScanMode == WIFI_SCAN_DETECT_FOLLOW) ||
+  (currentScanMode == REMOTE_ID_SCAN_ALL) ||
+  (currentScanMode == REMOTE_ID_SCAN_TARGET))
   {
     #ifdef HAS_BT
       #ifdef HAS_SCREEN
@@ -7224,6 +7246,32 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
     this->setLEDMode(MODE_SNIFF);
 
     initTime = millis();
+  #endif
+}
+
+void WiFiScan::setupRemoteIdBle() {
+  #ifdef HAS_BT
+    NimBLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DEVICE);
+    NimBLEDevice::setScanDuplicateCacheSize(0);
+    NimBLEDevice::init("");
+    pBLEScan = NimBLEDevice::getScan();
+    #ifndef HAS_NIMBLE_2
+      pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), false);
+    #else
+      pBLEScan->setScanCallbacks(new bluetoothScanAllCallback(), false);
+    #endif
+    pBLEScan->setActiveScan(false);
+    pBLEScan->setInterval(80);
+    pBLEScan->setWindow(40);
+    pBLEScan->setMaxResults(0);
+    pBLEScan->setDuplicateFilter(false);
+    #ifdef HAS_NIMBLE_2
+      pBLEScan->start(0, false, false);
+    #else
+      pBLEScan->start(0, scanCompleteCB, false);
+    #endif
+    ble_initialized = true;
+    ble_scanning = true;
   #endif
 }
 
@@ -12434,6 +12482,20 @@ void WiFiScan::main(uint32_t currentTime)
       this->updateTrackerUI();
     }
   }
+  else if ((currentScanMode == REMOTE_ID_SCAN_ALL) ||
+           (currentScanMode == REMOTE_ID_SCAN_TARGET)) {
+    if (currentTime - initTime >= this->channel_hop_delay * HOP_DELAY) {
+      initTime = currentTime;
+      channelHop();
+    }
+    if (currentTime - remote_id_last_render_ms >= 500) {
+      remote_id_last_render_ms = currentTime;
+      if (currentScanMode == REMOTE_ID_SCAN_TARGET)
+        renderRemoteIdTarget();
+      else
+        renderRemoteIdGlobal();
+    }
+  }
   else if ((currentScanMode == BT_SCAN_FLOCK) ||
           (currentScanMode == BT_SCAN_IBEACON) ||
           (currentScanMode == BT_SCAN_FLIPPER) ||
@@ -12943,3 +13005,5 @@ void WiFiScan::main(uint32_t currentTime)
     this->wifi_connected = false;
   }
 }
+
+#include "WiFiScanRemoteId.inc"

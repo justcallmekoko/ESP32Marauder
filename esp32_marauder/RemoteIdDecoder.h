@@ -24,6 +24,8 @@ class RemoteIdDecoder {
   // Accepts a complete 802.11 management frame (without the radio metadata).
   RemoteIdDecodeResult decodeWifiBeacon(const uint8_t* frame, size_t length,
                                         RemoteIdRecord& record) const;
+  RemoteIdDecodeResult decodeWifiNan(const uint8_t* frame, size_t length,
+                                     RemoteIdRecord& record) const;
 
   // Accepts the value of a BLE Service Data AD structure, including UUID.
   RemoteIdDecodeResult decodeBleServiceData(const uint8_t* serviceData,

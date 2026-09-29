@@ -124,11 +124,44 @@ void test_rejects_truncated_pack_and_ie() {
       static_cast<uint8_t>(decoder.decodeWifiBeacon(frame, sizeof(frame), record)));
 }
 
+void test_decodes_wifi_nan_action_frame() {
+  uint8_t frame[44 + RemoteIdDecoder::kMessageSize] = {};
+  frame[0] = 0xD0;
+  const uint8_t destination[] = {0x51, 0x6F, 0x9A, 0x01, 0x00, 0x00};
+  std::memcpy(frame + 4, destination, sizeof(destination));
+  frame[24] = 0x04;
+  frame[25] = 0x09;
+  frame[26] = 0x50;
+  frame[27] = 0x6F;
+  frame[28] = 0x9A;
+  frame[29] = 0x13;
+  frame[30] = 0x03;
+  frame[31] = 36;
+  frame[33] = 0x88;
+  frame[34] = 0x69;
+  frame[35] = 0x19;
+  frame[36] = 0x9D;
+  frame[37] = 0x92;
+  frame[38] = 0x09;
+  frame[39] = 0x01;
+  frame[41] = 0x10;
+  frame[42] = 1 + RemoteIdDecoder::kMessageSize;
+  frame[43] = 4;
+  makeBasicId(frame + 44);
+  RemoteIdRecord record;
+  RemoteIdDecoder decoder;
+  TEST_ASSERT_EQUAL_UINT8(
+      static_cast<uint8_t>(RemoteIdDecodeResult::Decoded),
+      static_cast<uint8_t>(decoder.decodeWifiNan(frame, sizeof(frame), record)));
+  TEST_ASSERT_EQUAL_STRING("USS-Enterprise", record.uasId);
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_decodes_message_pack_fields);
   RUN_TEST(test_decodes_wifi_beacon_vendor_element);
   RUN_TEST(test_decodes_ble_service_data);
   RUN_TEST(test_rejects_truncated_pack_and_ie);
+  RUN_TEST(test_decodes_wifi_nan_action_frame);
   return UNITY_END();
 }

@@ -152,3 +152,30 @@ RemoteIdDecodeResult RemoteIdDecoder::decodeBleServiceData(
   if (length < 3 + kMessageSize) return RemoteIdDecodeResult::Malformed;
   return decodePayload(serviceData + 3, length - 3, record);
 }
+
+RemoteIdDecodeResult RemoteIdDecoder::decodeWifiNan(
+    const uint8_t* frame, size_t length, RemoteIdRecord& record) const {
+  static constexpr uint8_t kNanDestination[] = {0x51, 0x6F, 0x9A, 0x01, 0x00, 0x00};
+  static constexpr uint8_t kWifiAllianceOui[] = {0x50, 0x6F, 0x9A};
+  static constexpr uint8_t kRemoteIdService[] = {0x88, 0x69, 0x19, 0x9D, 0x92, 0x09};
+  if (frame == nullptr || length < 44) return RemoteIdDecodeResult::Malformed;
+  if ((frame[0] & 0xFC) != 0xD0) return RemoteIdDecodeResult::Ignored;
+  if (std::memcmp(frame + 4, kNanDestination, sizeof(kNanDestination)) != 0)
+    return RemoteIdDecodeResult::Ignored;
+  const size_t nan = 24;
+  if (frame[nan] != 0x04 || frame[nan + 1] != 0x09 ||
+      std::memcmp(frame + nan + 2, kWifiAllianceOui, sizeof(kWifiAllianceOui)) != 0 ||
+      frame[nan + 5] != 0x13)
+    return RemoteIdDecodeResult::Ignored;
+  const size_t descriptor = nan + 6;
+  if (frame[descriptor] != 0x03 ||
+      std::memcmp(frame + descriptor + 3, kRemoteIdService,
+                  sizeof(kRemoteIdService)) != 0 ||
+      frame[descriptor + 9] != 0x01 || frame[descriptor + 11] != 0x10)
+    return RemoteIdDecodeResult::Ignored;
+  const size_t serviceLength = frame[descriptor + 12];
+  const size_t serviceInfo = descriptor + 13;
+  if (serviceLength < 1 || serviceInfo + serviceLength > length)
+    return RemoteIdDecodeResult::Malformed;
+  return decodePayload(frame + serviceInfo + 1, serviceLength - 1, record);
+}

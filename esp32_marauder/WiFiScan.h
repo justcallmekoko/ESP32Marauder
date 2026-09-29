@@ -7,6 +7,7 @@
 #include "utils.h"
 #include "GpsTrackerStats.h"
 #include "IBeacon.h"
+#include "RemoteIdDecoder.h"
 
 #include <ArduinoJson.h>
 #include <algorithm>
@@ -178,6 +179,8 @@
 #define BT_SCAN_IBEACON 85
 #define BT_FINDMY_SOUND 85
 #define BT_ATTACK_FINDMY_LIVE 86
+#define REMOTE_ID_SCAN_ALL 87
+#define REMOTE_ID_SCAN_TARGET 88
 
 #define WIFI_ATTACK_FUNNY_BEACON 99 
 
@@ -386,6 +389,25 @@ enum class MacSortMode : uint8_t {
 class WiFiScan
 {
   private:
+#ifdef HAS_PSRAM
+    static constexpr size_t REMOTE_ID_CAPACITY = 48;
+#else
+    static constexpr size_t REMOTE_ID_CAPACITY = 12;
+#endif
+    RemoteIdRecord remote_id_records[REMOTE_ID_CAPACITY];
+    RemoteIdStore remote_id_store{remote_id_records, REMOTE_ID_CAPACITY};
+    RemoteIdDecoder remote_id_decoder;
+    int16_t remote_id_target = -1;
+    uint32_t remote_id_last_render_ms = 0;
+    uint32_t remote_id_last_log_ms = 0;
+    void RunRemoteIdScan(uint8_t scan_mode, uint16_t color);
+    void setupRemoteIdBle();
+    void renderRemoteIdGlobal();
+    void renderRemoteIdTarget();
+    void logRemoteIdRecord(const RemoteIdRecord& record);
+    void mergeRemoteIdRecord(RemoteIdRecord& destination,
+                             const RemoteIdRecord& source);
+    static void remoteIdWifiCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     // Wardriver thanks to https://github.com/JosephHewitt
     int arp_count = 0;
     #ifndef HAS_PSRAM
@@ -849,6 +871,15 @@ class WiFiScan
     volatile bool bt_pending_clear = false;
 
     bool send_deauth = false;
+
+    bool processRemoteIdWifiFrame(const uint8_t* frame, size_t length,
+                                  const uint8_t mac[6], int8_t rssi);
+    bool processRemoteIdBlePayload(const uint8_t* payload, size_t length,
+                                  const uint8_t mac[6], int8_t rssi);
+    size_t remoteIdCount() const { return remote_id_store.size(); }
+    String remoteIdLabel(size_t index) const;
+    bool selectRemoteIdTarget(size_t index);
+    void clearRemoteIds();
 
     size_t retainedAccessPointCount() const;
     size_t retainedStationCount() const;
