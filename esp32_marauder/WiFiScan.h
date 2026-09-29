@@ -397,7 +397,10 @@ class WiFiScan
     RemoteIdRecord remote_id_records[REMOTE_ID_CAPACITY];
     RemoteIdStore remote_id_store{remote_id_records, REMOTE_ID_CAPACITY};
     RemoteIdDecoder remote_id_decoder;
-    int16_t remote_id_target = -1;
+    char remote_id_target_uas[21] = {};
+    uint8_t remote_id_target_mac[6] = {};
+    bool remote_id_target_has_uas = false;
+    bool remote_id_target_selected = false;
     uint32_t remote_id_last_render_ms = 0;
     uint32_t remote_id_last_log_ms = 0;
     void RunRemoteIdScan(uint8_t scan_mode, uint16_t color);

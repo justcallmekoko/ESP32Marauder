@@ -124,7 +124,6 @@ void WiFiScan::remoteIdWifiCallback(void* buf, wifi_promiscuous_pkt_type_t type)
 void WiFiScan::RunRemoteIdScan(uint8_t scan_mode, uint16_t color) {
   if (scan_mode == REMOTE_ID_SCAN_ALL) {
     clearRemoteIds();
-    remote_id_target = -1;
   }
 
   #ifdef HAS_SD
@@ -171,14 +170,24 @@ String WiFiScan::remoteIdLabel(size_t index) const {
 }
 
 bool WiFiScan::selectRemoteIdTarget(size_t index) {
-  if (remote_id_store.at(index) == nullptr) return false;
-  remote_id_target = static_cast<int16_t>(index);
+  const RemoteIdRecord* record = remote_id_store.at(index);
+  if (record == nullptr) return false;
+  memcpy(remote_id_target_mac, record->mac, sizeof(remote_id_target_mac));
+  remote_id_target_has_uas = record->hasUasId;
+  memset(remote_id_target_uas, 0, sizeof(remote_id_target_uas));
+  if (record->hasUasId)
+    strncpy(remote_id_target_uas, record->uasId,
+            sizeof(remote_id_target_uas) - 1);
+  remote_id_target_selected = true;
   return true;
 }
 
 void WiFiScan::clearRemoteIds() {
   remote_id_store.clear();
-  remote_id_target = -1;
+  remote_id_target_selected = false;
+  remote_id_target_has_uas = false;
+  memset(remote_id_target_uas, 0, sizeof(remote_id_target_uas));
+  memset(remote_id_target_mac, 0, sizeof(remote_id_target_mac));
 }
 
 void WiFiScan::logRemoteIdRecord(const RemoteIdRecord& record) {
@@ -280,9 +289,13 @@ void WiFiScan::renderRemoteIdGlobal() {
 }
 
 void WiFiScan::renderRemoteIdTarget() {
-  const RemoteIdRecord* record = remote_id_target >= 0
-      ? remote_id_store.at(static_cast<size_t>(remote_id_target))
-      : nullptr;
+  const RemoteIdRecord* record = nullptr;
+  if (remote_id_target_selected) {
+    if (remote_id_target_has_uas)
+      record = remote_id_store.findByUasId(remote_id_target_uas);
+    if (record == nullptr)
+      record = remote_id_store.findByMac(remote_id_target_mac);
+  }
   if (record == nullptr) return;
   #ifdef HAS_SCREEN
     display_obj.tft.fillRect(0, 34, SCREEN_WIDTH, SCREEN_HEIGHT - 34, TFT_BLACK);

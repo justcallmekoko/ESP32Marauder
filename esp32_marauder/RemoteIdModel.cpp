@@ -74,6 +74,18 @@ const RemoteIdRecord* RemoteIdStore::findByUasId(const char* uasId) const {
   return const_cast<RemoteIdStore*>(this)->findByUasId(uasId);
 }
 
+RemoteIdRecord* RemoteIdStore::findByMac(const uint8_t mac[6]) {
+  if (mac == nullptr) return nullptr;
+  for (size_t i = 0; i < size_; ++i) {
+    if (sameMac(records_[i].mac, mac)) return &records_[i];
+  }
+  return nullptr;
+}
+
+const RemoteIdRecord* RemoteIdStore::findByMac(const uint8_t mac[6]) const {
+  return const_cast<RemoteIdStore*>(this)->findByMac(mac);
+}
+
 RemoteIdRecord* RemoteIdStore::at(size_t index) {
   return index < size_ ? &records_[index] : nullptr;
 }

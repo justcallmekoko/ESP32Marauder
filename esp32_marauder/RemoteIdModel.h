@@ -62,6 +62,8 @@ class RemoteIdStore {
                           int8_t rssi, uint32_t nowMs);
   RemoteIdRecord* findByUasId(const char* uasId);
   const RemoteIdRecord* findByUasId(const char* uasId) const;
+  RemoteIdRecord* findByMac(const uint8_t mac[6]);
+  const RemoteIdRecord* findByMac(const uint8_t mac[6]) const;
   RemoteIdRecord* at(size_t index);
   const RemoteIdRecord* at(size_t index) const;
   size_t size() const;

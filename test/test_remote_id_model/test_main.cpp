@@ -33,6 +33,7 @@ void test_store_deduplicates_and_merges_transports() {
   TEST_ASSERT_EQUAL_INT8(-55, second.rssi);
   TEST_ASSERT_EQUAL_UINT8(5, second.transportMask);
   TEST_ASSERT_EQUAL_PTR(&second, store.findByUasId("TEST-123"));
+  TEST_ASSERT_EQUAL_PTR(&second, store.findByMac(mac));
 }
 
 void test_store_evicts_oldest_record() {
