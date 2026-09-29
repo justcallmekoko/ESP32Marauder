@@ -503,6 +503,8 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == BT_SCAN_WAR_DRIVE) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_WAR_DRIVE_CONT) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_SKIMMERS) ||
+          (wifi_scan_obj.currentScanMode == REMOTE_ID_SCAN_ALL) ||
+          (wifi_scan_obj.currentScanMode == REMOTE_ID_SCAN_TARGET) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_ANALYZER))
       {
         wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
@@ -617,6 +619,8 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ANALYZER) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_PACKET_RATE) ||
+            (wifi_scan_obj.currentScanMode == REMOTE_ID_SCAN_ALL) ||
+            (wifi_scan_obj.currentScanMode == REMOTE_ID_SCAN_TARGET) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_ANALYZER))
         {
           wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
