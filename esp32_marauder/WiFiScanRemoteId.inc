@@ -340,6 +340,16 @@ void WiFiScan::renderRemoteIdGlobal() {
       display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
       display_obj.tft.setCursor(SCREEN_WIDTH / 2 - 3, gridTop + 2);
       display_obj.tft.print("N");
+      const int16_t legendY = gridTop + 12;
+      display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+      display_obj.tft.setCursor(3, legendY);
+      display_obj.tft.print("M Marauder");
+      display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+      display_obj.tft.setCursor(SCREEN_WIDTH / 2 - 30, legendY);
+      display_obj.tft.print("A Aircraft");
+      display_obj.tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
+      display_obj.tft.setCursor(SCREEN_WIDTH - 62, legendY);
+      display_obj.tft.print("O Operator");
       #ifdef HAS_GPS
         if (gps_obj.getFixStatus()) {
           const int32_t originLat = gps_obj.getLatInt() * 10;
