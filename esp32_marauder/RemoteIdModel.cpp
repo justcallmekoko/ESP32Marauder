@@ -183,6 +183,19 @@ void remoteIdFormatDistanceKm(float distanceM, char* output,
   std::snprintf(output, outputSize, "%.2fkm", distanceM / 1000.0f);
 }
 
+void remoteIdFormatGridRadius(float radiusM, char* output,
+                              size_t outputSize) {
+  if (output == nullptr || outputSize == 0) return;
+  if (!std::isfinite(radiusM) || radiusM < 0.0f) {
+    output[0] = '\0';
+    return;
+  }
+  if (radiusM >= 1000.0f)
+    std::snprintf(output, outputSize, "%.1fkm", radiusM / 1000.0f);
+  else
+    std::snprintf(output, outputSize, "%.0fm", radiusM);
+}
+
 float remoteIdGridScaleMeters(const RemoteIdRecord* records, size_t count,
                               int32_t originLatE7, int32_t originLonE7,
                               float minimumRadiusM) {

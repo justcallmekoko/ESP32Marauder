@@ -342,7 +342,9 @@ void WiFiScan::renderRemoteIdGlobal() {
           }
           display_obj.tft.setCursor(3, SCREEN_HEIGHT - 10);
           display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-          display_obj.tft.print("R " + String(radius, 0) + "m");
+          char radiusLabel[16];
+          remoteIdFormatGridRadius(radius, radiusLabel, sizeof(radiusLabel));
+          display_obj.tft.print("R " + String(radiusLabel));
         } else {
           display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
           display_obj.tft.drawCentreString("NO GPS FIX", SCREEN_WIDTH / 2,

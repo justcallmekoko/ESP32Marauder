@@ -94,6 +94,16 @@ void test_distance_formatter_uses_kilometers() {
   TEST_ASSERT_EQUAL_STRING("0.04km", text);
 }
 
+void test_grid_radius_formatter_switches_to_kilometers() {
+  char text[16] = {};
+  remoteIdFormatGridRadius(999.4f, text, sizeof(text));
+  TEST_ASSERT_EQUAL_STRING("999m", text);
+  remoteIdFormatGridRadius(1000.0f, text, sizeof(text));
+  TEST_ASSERT_EQUAL_STRING("1.0km", text);
+  remoteIdFormatGridRadius(2450.0f, text, sizeof(text));
+  TEST_ASSERT_EQUAL_STRING("2.5km", text);
+}
+
 void test_stale_detection_handles_millis_wrap() {
   TEST_ASSERT_FALSE(remoteIdIsStale(500, 0xFFFFFF00U, 1000));
   TEST_ASSERT_TRUE(remoteIdIsStale(1000, 0xFFFFFF00U, 1000));
@@ -135,6 +145,7 @@ int main(int, char**) {
   RUN_TEST(test_scale_includes_aircraft_and_operator);
   RUN_TEST(test_distance_and_bearing);
   RUN_TEST(test_distance_formatter_uses_kilometers);
+  RUN_TEST(test_grid_radius_formatter_switches_to_kilometers);
   RUN_TEST(test_stale_detection_handles_millis_wrap);
   RUN_TEST(test_store_prunes_expired_records_and_preserves_target);
   RUN_TEST(test_coordinate_validation_rejects_unavailable_and_out_of_range);
