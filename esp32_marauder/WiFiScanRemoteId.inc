@@ -306,8 +306,9 @@ void WiFiScan::renderRemoteIdGlobal() {
     const RemoteIdLayout layout = remoteIdLayoutForDisplay(SCREEN_WIDTH, SCREEN_HEIGHT);
     const int16_t top = 34;
     const int16_t contentHeight = SCREEN_HEIGHT - top;
+    const int16_t legendHeight = layout == RemoteIdLayout::SplitListGrid ? 12 : 0;
     const int16_t listHeight = layout == RemoteIdLayout::SplitListGrid
-                                   ? contentHeight / 2
+                                   ? (contentHeight - legendHeight) / 2
                                    : contentHeight;
     display_obj.tft.fillRect(0, top, SCREEN_WIDTH, contentHeight, TFT_BLACK);
     display_obj.tft.setTextSize(1);
@@ -330,7 +331,17 @@ void WiFiScan::renderRemoteIdGlobal() {
     }
 
     if (layout == RemoteIdLayout::SplitListGrid) {
-      const int16_t gridTop = top + listHeight;
+      const int16_t legendTop = top + listHeight;
+      display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+      display_obj.tft.setCursor(3, legendTop + 1);
+      display_obj.tft.print("M Marauder");
+      display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+      display_obj.tft.setCursor(SCREEN_WIDTH / 2 - 30, legendTop + 1);
+      display_obj.tft.print("A Aircraft");
+      display_obj.tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
+      display_obj.tft.setCursor(SCREEN_WIDTH - 62, legendTop + 1);
+      display_obj.tft.print("O Operator");
+      const int16_t gridTop = legendTop + legendHeight;
       const int16_t gridHeight = SCREEN_HEIGHT - gridTop;
       display_obj.tft.drawRect(0, gridTop, SCREEN_WIDTH, gridHeight, TFT_DARKGREY);
       display_obj.tft.drawFastVLine(SCREEN_WIDTH / 2, gridTop + 2,
@@ -340,16 +351,6 @@ void WiFiScan::renderRemoteIdGlobal() {
       display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
       display_obj.tft.setCursor(SCREEN_WIDTH / 2 - 3, gridTop + 2);
       display_obj.tft.print("N");
-      const int16_t legendY = gridTop + 12;
-      display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
-      display_obj.tft.setCursor(3, legendY);
-      display_obj.tft.print("M Marauder");
-      display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-      display_obj.tft.setCursor(SCREEN_WIDTH / 2 - 30, legendY);
-      display_obj.tft.print("A Aircraft");
-      display_obj.tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
-      display_obj.tft.setCursor(SCREEN_WIDTH - 62, legendY);
-      display_obj.tft.print("O Operator");
       #ifdef HAS_GPS
         if (gps_obj.getFixStatus()) {
           const int32_t originLat = gps_obj.getLatInt() * 10;
