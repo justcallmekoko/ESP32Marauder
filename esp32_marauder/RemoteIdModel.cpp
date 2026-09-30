@@ -34,10 +34,24 @@ RemoteIdRecord& RemoteIdStore::observe(const uint8_t mac[6],
                                         int8_t rssi, uint32_t nowMs) {
   for (size_t i = 0; i < size_; ++i) {
     if (sameMac(records_[i].mac, mac)) {
+      if (records_[i].isLost) {
+        records_[i].isLost = false;
+        ++records_[i].reacquiredCount;
+      }
       records_[i].transportMask |= transportBit(transport);
       records_[i].rssi = rssi;
       records_[i].lastSeenMs = nowMs;
       ++records_[i].packetCount;
+      if (records_[i].rateWindowStartedMs == 0)
+        records_[i].rateWindowStartedMs = nowMs;
+      ++records_[i].rateWindowPackets;
+      const uint32_t elapsed = nowMs - records_[i].rateWindowStartedMs;
+      if (elapsed >= 1000) {
+        records_[i].packetRateHz = records_[i].rateWindowPackets * 1000.0f /
+                                   static_cast<float>(elapsed);
+        records_[i].rateWindowStartedMs = nowMs;
+        records_[i].rateWindowPackets = 0;
+      }
       return records_[i];
     }
   }
@@ -59,6 +73,8 @@ RemoteIdRecord& RemoteIdStore::observe(const uint8_t mac[6],
   records_[slot].firstSeenMs = nowMs;
   records_[slot].lastSeenMs = nowMs;
   records_[slot].packetCount = 1;
+  records_[slot].rateWindowStartedMs = nowMs;
+  records_[slot].rateWindowPackets = 1;
   return records_[slot];
 }
 
@@ -121,6 +137,33 @@ size_t RemoteIdStore::pruneStale(uint32_t nowMs, uint32_t staleAfterMs,
     ++index;
   }
   return removed;
+}
+
+size_t RemoteIdStore::updateLifecycle(uint32_t nowMs, uint32_t lostAfterMs) {
+  size_t newlyLost = 0;
+  for (size_t i = 0; i < size_; ++i) {
+    const bool lost = remoteIdIsStale(nowMs, records_[i].lastSeenMs, lostAfterMs);
+    if (lost && !records_[i].isLost) {
+      records_[i].isLost = true;
+      ++records_[i].lostCount;
+      ++newlyLost;
+    }
+  }
+  return newlyLost;
+}
+
+bool RemoteIdStore::eraseByMac(const uint8_t mac[6],
+                               const RemoteIdRecord* except) {
+  if (mac == nullptr) return false;
+  for (size_t i = 0; i < size_; ++i) {
+    if (&records_[i] == except || !sameMac(records_[i].mac, mac)) continue;
+    for (size_t move = i + 1; move < size_; ++move)
+      records_[move - 1] = records_[move];
+    records_[size_ - 1] = RemoteIdRecord{};
+    --size_;
+    return true;
+  }
+  return false;
 }
 
 void RemoteIdStore::clear() {

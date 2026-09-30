@@ -66,10 +66,20 @@ bool WiFiScan::processRemoteIdWifiFrame(const uint8_t* frame, size_t length,
   RemoteIdRecord* record = decoded.hasUasId
       ? remote_id_store.findByUasId(decoded.uasId)
       : nullptr;
+  RemoteIdRecord* provisional = remote_id_store.findByMac(mac);
   if (record == nullptr)
     record = &remote_id_store.observe(mac, transport,
                                       rssi, millis());
   else {
+    if (provisional != nullptr && provisional != record) {
+      mergeRemoteIdRecord(*record, *provisional);
+      record->transportMask |= provisional->transportMask;
+      record->packetCount += provisional->packetCount;
+      record->lostCount += provisional->lostCount;
+      record->reacquiredCount += provisional->reacquiredCount;
+      remote_id_store.eraseByMac(mac, record);
+      record = remote_id_store.findByUasId(decoded.uasId);
+    }
     memcpy(record->mac, mac, sizeof(record->mac));
     record->transportMask |= static_cast<uint8_t>(transport);
     record->rssi = rssi;
@@ -100,10 +110,20 @@ bool WiFiScan::processRemoteIdBlePayload(const uint8_t* payload, size_t length,
         RemoteIdRecord* record = decoded.hasUasId
             ? remote_id_store.findByUasId(decoded.uasId)
             : nullptr;
+        RemoteIdRecord* provisional = remote_id_store.findByMac(mac);
         if (record == nullptr)
           record = &remote_id_store.observe(mac, transport,
                                             rssi, millis());
         else {
+          if (provisional != nullptr && provisional != record) {
+            mergeRemoteIdRecord(*record, *provisional);
+            record->transportMask |= provisional->transportMask;
+            record->packetCount += provisional->packetCount;
+            record->lostCount += provisional->lostCount;
+            record->reacquiredCount += provisional->reacquiredCount;
+            remote_id_store.eraseByMac(mac, record);
+            record = remote_id_store.findByUasId(decoded.uasId);
+          }
           memcpy(record->mac, mac, sizeof(record->mac));
           record->transportMask |= static_cast<uint8_t>(transport);
           record->rssi = rssi;
@@ -140,7 +160,7 @@ void WiFiScan::RunRemoteIdScan(uint8_t scan_mode, uint16_t color) {
 
   #ifdef HAS_SD
     startLog("remoteid");
-    buffer_obj.append("millis,uas_id,operator_id,transport,channel,rssi,packets,lat,lon,alt_geo,height,speed,heading,operator_lat,operator_lon\n");
+    buffer_obj.append("millis,uas_id,operator_id,transport,channel,rssi,packets,packet_rate_hz,state,lost_count,reacquired_count,lat,lon,alt_geo,height,speed,heading,operator_lat,operator_lon\n");
   #endif
 
   #ifdef HAS_SCREEN
@@ -266,6 +286,9 @@ void WiFiScan::logRemoteIdRecord(RemoteIdRecord& record) {
                 String(record.transportMask) + "," +
                 String(record.lastWifiChannel) + "," + String(record.rssi) + "," +
                 String(record.packetCount) + "," +
+                String(record.packetRateHz, 1) + "," +
+                String(record.isLost ? "lost" : "active") + "," +
+                String(record.lostCount) + "," + String(record.reacquiredCount) + "," +
                 String(record.latitudeE7 / 1e7, 7) + "," +
                 String(record.longitudeE7 / 1e7, 7) + "," +
                 String(record.altitudeGeoM, 1) + "," + String(record.heightM, 1) + "," +
@@ -385,10 +408,11 @@ void WiFiScan::renderRemoteIdTarget() {
     if (record->hasDescription) line("DESC " + String(record->description));
     line("RSSI " + String(record->rssi) + "  AGE " +
          String((millis() - record->lastSeenMs) / 1000) + "s");
-    if (remoteIdIsStale(millis(), record->lastSeenMs, REMOTE_ID_STALE_MS))
-      line("STATUS LOST", TFT_RED);
+    if (record->isLost)
+      line("STATUS LOST  RATE " + String(record->packetRateHz, 1) + "/s", TFT_RED);
     else
-      line("PKT " + String(record->packetCount) + " CH " +
+      line("PKT " + String(record->packetCount) + " " +
+           String(record->packetRateHz, 1) + "/s CH " +
            String(record->lastWifiChannel), TFT_GREEN);
     if (record->hasLocation) {
       line("LAT " + String(record->latitudeE7 / 1e7, 7));

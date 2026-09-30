@@ -47,6 +47,12 @@ struct RemoteIdRecord {
   uint32_t lastSeenMs = 0;
   uint32_t packetCount = 0;
   uint32_t lastLoggedMs = 0;
+  uint32_t rateWindowStartedMs = 0;
+  uint16_t rateWindowPackets = 0;
+  float packetRateHz = 0.0f;
+  bool isLost = false;
+  uint16_t lostCount = 0;
+  uint16_t reacquiredCount = 0;
 };
 
 struct RemoteIdGridPoint {
@@ -78,6 +84,8 @@ class RemoteIdStore {
   size_t pruneStale(uint32_t nowMs, uint32_t staleAfterMs,
                     const char* preservedUasId = nullptr,
                     const uint8_t* preservedMac = nullptr);
+  size_t updateLifecycle(uint32_t nowMs, uint32_t lostAfterMs);
+  bool eraseByMac(const uint8_t mac[6], const RemoteIdRecord* except = nullptr);
   void clear();
 
  private:

@@ -129,6 +129,34 @@ void test_store_prunes_expired_records_and_preserves_target() {
   TEST_ASSERT_NULL(store.findByMac(expired));
 }
 
+void test_lifecycle_marks_lost_and_reacquired() {
+  RemoteIdRecord records[1];
+  RemoteIdStore store(records, 1);
+  const uint8_t mac[6] = {1, 2, 3, 4, 5, 6};
+  store.observe(mac, RemoteIdTransport::WifiBeacon, -70, 100);
+  TEST_ASSERT_EQUAL_UINT32(1, store.updateLifecycle(1100, 1000));
+  TEST_ASSERT_TRUE(store.at(0)->isLost);
+  TEST_ASSERT_EQUAL_UINT16(1, store.at(0)->lostCount);
+  store.observe(mac, RemoteIdTransport::BleLegacy, -60, 1200);
+  TEST_ASSERT_FALSE(store.at(0)->isLost);
+  TEST_ASSERT_EQUAL_UINT16(1, store.at(0)->reacquiredCount);
+}
+
+void test_store_tracks_packet_rate_and_can_erase_duplicate_mac() {
+  RemoteIdRecord records[2];
+  RemoteIdStore store(records, 2);
+  const uint8_t first[6] = {1, 0, 0, 0, 0, 0};
+  const uint8_t second[6] = {2, 0, 0, 0, 0, 0};
+  store.observe(first, RemoteIdTransport::WifiBeacon, -70, 100);
+  store.observe(first, RemoteIdTransport::WifiBeacon, -70, 600);
+  RemoteIdRecord& rated = store.observe(first, RemoteIdTransport::WifiBeacon, -70, 1100);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 3.0f, rated.packetRateHz);
+  RemoteIdRecord& kept = store.observe(second, RemoteIdTransport::BleLegacy, -60, 1200);
+  TEST_ASSERT_TRUE(store.eraseByMac(first, &kept));
+  TEST_ASSERT_EQUAL_UINT32(1, store.size());
+  TEST_ASSERT_EQUAL_PTR(&records[0], store.findByMac(second));
+}
+
 void test_coordinate_validation_rejects_unavailable_and_out_of_range() {
   TEST_ASSERT_TRUE(remoteIdCoordinatesValid(407123456, -740123456));
   TEST_ASSERT_FALSE(remoteIdCoordinatesValid(0, 0));
@@ -148,6 +176,8 @@ int main(int, char**) {
   RUN_TEST(test_grid_radius_formatter_switches_to_kilometers);
   RUN_TEST(test_stale_detection_handles_millis_wrap);
   RUN_TEST(test_store_prunes_expired_records_and_preserves_target);
+  RUN_TEST(test_lifecycle_marks_lost_and_reacquired);
+  RUN_TEST(test_store_tracks_packet_rate_and_can_erase_duplicate_mac);
   RUN_TEST(test_coordinate_validation_rejects_unavailable_and_out_of_range);
   return UNITY_END();
 }
