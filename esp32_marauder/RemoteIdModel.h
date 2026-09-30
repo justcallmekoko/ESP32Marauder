@@ -21,6 +21,9 @@ struct RemoteIdRecord {
   uint8_t uaType = 0;
   uint8_t operationalStatus = 0;
   uint8_t operatorLocationType = 0;
+  uint8_t classificationType = 0;
+  uint8_t categoryEu = 0;
+  uint8_t classEu = 0;
   uint8_t horizontalAccuracy = 0;
   uint8_t verticalAccuracy = 0;
   uint8_t speedAccuracy = 0;
@@ -30,6 +33,28 @@ struct RemoteIdRecord {
   bool hasDescription = false;
   bool hasLocation = false;
   bool hasOperatorLocation = false;
+  bool hasAuthentication = false;
+  bool directionValid = false;
+  bool horizontalSpeedValid = false;
+  bool verticalSpeedValid = false;
+  bool altitudePressureValid = false;
+  bool altitudeGeoValid = false;
+  bool heightValid = false;
+  bool locationTimestampValid = false;
+  bool areaCeilingValid = false;
+  bool areaFloorValid = false;
+  bool operatorAltitudeValid = false;
+  uint8_t authenticationType = 0;
+  uint8_t authenticationPage = 0;
+  uint8_t authenticationLastPage = 0;
+  uint8_t authenticationLength = 0;
+  uint32_t authenticationTimestamp = 0;
+  uint16_t areaCount = 0;
+  uint16_t areaRadiusM = 0;
+  float areaCeilingM = 0.0f;
+  float areaFloorM = 0.0f;
+  float operatorAltitudeGeoM = 0.0f;
+  uint32_t systemTimestamp = 0;
   int32_t latitudeE7 = 0;
   int32_t longitudeE7 = 0;
   int32_t operatorLatitudeE7 = 0;
@@ -53,12 +78,15 @@ struct RemoteIdRecord {
   bool isLost = false;
   uint16_t lostCount = 0;
   uint16_t reacquiredCount = 0;
+  uint32_t lastLostMs = 0;
+  uint32_t lastReacquiredMs = 0;
 };
 
 struct RemoteIdGridPoint {
   int16_t x = 0;
   int16_t y = 0;
   bool visible = false;
+  bool offGrid = false;
 };
 
 enum class RemoteIdLayout : uint8_t {

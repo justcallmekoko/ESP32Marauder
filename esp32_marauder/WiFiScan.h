@@ -397,6 +397,7 @@ class WiFiScan
     RemoteIdRecord remote_id_records[REMOTE_ID_CAPACITY];
     RemoteIdStore remote_id_store{remote_id_records, REMOTE_ID_CAPACITY};
     RemoteIdDecoder remote_id_decoder;
+    mutable portMUX_TYPE remote_id_mux = portMUX_INITIALIZER_UNLOCKED;
     char remote_id_target_uas[21] = {};
     uint8_t remote_id_target_mac[6] = {};
     bool remote_id_target_has_uas = false;
@@ -410,10 +411,12 @@ class WiFiScan
     void setupRemoteIdBle();
     void renderRemoteIdGlobal();
     void renderRemoteIdTarget();
-    void logRemoteIdRecord(RemoteIdRecord& record);
+    void logRemoteIdRecord(const RemoteIdRecord& record);
     void mergeRemoteIdRecord(RemoteIdRecord& destination,
                              const RemoteIdRecord& source);
     void hopRemoteIdChannel();
+    size_t snapshotRemoteIds(RemoteIdRecord* records, size_t capacity) const;
+    bool snapshotRemoteIdTarget(RemoteIdRecord& record) const;
     static void remoteIdWifiCallback(void* buf, wifi_promiscuous_pkt_type_t type);
     // Wardriver thanks to https://github.com/JosephHewitt
     int arp_count = 0;
@@ -886,7 +889,7 @@ class WiFiScan
                                    const uint8_t mac[6], int8_t rssi,
                                    RemoteIdTransport transport =
                                        RemoteIdTransport::BleLegacy);
-    size_t remoteIdCount() const { return remote_id_store.size(); }
+    size_t remoteIdCount() const;
     String remoteIdLabel(size_t index) const;
     bool selectRemoteIdTarget(size_t index);
     void clearRemoteIds();

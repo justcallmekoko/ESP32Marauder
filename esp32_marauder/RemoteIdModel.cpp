@@ -37,6 +37,7 @@ RemoteIdRecord& RemoteIdStore::observe(const uint8_t mac[6],
       if (records_[i].isLost) {
         records_[i].isLost = false;
         ++records_[i].reacquiredCount;
+        records_[i].lastReacquiredMs = nowMs;
       }
       records_[i].transportMask |= transportBit(transport);
       records_[i].rssi = rssi;
@@ -146,6 +147,7 @@ size_t RemoteIdStore::updateLifecycle(uint32_t nowMs, uint32_t lostAfterMs) {
     if (lost && !records_[i].isLost) {
       records_[i].isLost = true;
       ++records_[i].lostCount;
+      records_[i].lastLostMs = nowMs;
       ++newlyLost;
     }
   }
@@ -271,5 +273,12 @@ RemoteIdGridPoint remoteIdProjectToGrid(int32_t pointLatE7, int32_t pointLonE7,
   point.y = static_cast<int16_t>(std::lround(height * 0.5 - northM / radiusM * halfH));
   point.visible = point.x >= padding && point.x < width - padding &&
                   point.y >= padding && point.y < height - padding;
+  point.offGrid = !point.visible;
+  if (point.offGrid) {
+    if (point.x < padding) point.x = padding;
+    if (point.x >= width - padding) point.x = width - padding - 1;
+    if (point.y < padding) point.y = padding;
+    if (point.y >= height - padding) point.y = height - padding - 1;
+  }
   return point;
 }

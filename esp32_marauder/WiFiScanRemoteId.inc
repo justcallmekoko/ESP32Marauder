@@ -7,6 +7,31 @@ void copyIfPresent(char* destination, size_t destinationSize,
   std::strncpy(destination, source, destinationSize - 1);
   destination[destinationSize - 1] = '\0';
 }
+
+void updateKnownRemoteIdObservation(RemoteIdRecord& record,
+                                    const uint8_t mac[6],
+                                    RemoteIdTransport transport,
+                                    int8_t rssi, uint32_t now) {
+  memcpy(record.mac, mac, sizeof(record.mac));
+  record.transportMask |= static_cast<uint8_t>(transport);
+  record.rssi = rssi;
+  if (record.isLost) {
+    record.isLost = false;
+    ++record.reacquiredCount;
+    record.lastReacquiredMs = now;
+  }
+  record.lastSeenMs = now;
+  ++record.packetCount;
+  if (record.rateWindowStartedMs == 0) record.rateWindowStartedMs = now;
+  ++record.rateWindowPackets;
+  const uint32_t elapsed = now - record.rateWindowStartedMs;
+  if (elapsed >= 1000) {
+    record.packetRateHz = record.rateWindowPackets * 1000.0f /
+                          static_cast<float>(elapsed);
+    record.rateWindowStartedMs = now;
+    record.rateWindowPackets = 0;
+  }
+}
 }
 
 void WiFiScan::mergeRemoteIdRecord(RemoteIdRecord& destination,
@@ -41,12 +66,39 @@ void WiFiScan::mergeRemoteIdRecord(RemoteIdRecord& destination,
     destination.locationTimestampDeciseconds =
         source.locationTimestampDeciseconds;
     destination.heightIsAboveGround = source.heightIsAboveGround;
+    destination.directionValid = source.directionValid;
+    destination.horizontalSpeedValid = source.horizontalSpeedValid;
+    destination.verticalSpeedValid = source.verticalSpeedValid;
+    destination.altitudePressureValid = source.altitudePressureValid;
+    destination.altitudeGeoValid = source.altitudeGeoValid;
+    destination.heightValid = source.heightValid;
+    destination.locationTimestampValid = source.locationTimestampValid;
+  }
+  if (source.hasAuthentication) {
+    destination.hasAuthentication = true;
+    destination.authenticationType = source.authenticationType;
+    destination.authenticationPage = source.authenticationPage;
+    destination.authenticationLastPage = source.authenticationLastPage;
+    destination.authenticationLength = source.authenticationLength;
+    destination.authenticationTimestamp = source.authenticationTimestamp;
   }
   if (source.hasOperatorLocation) {
     destination.hasOperatorLocation = true;
     destination.operatorLatitudeE7 = source.operatorLatitudeE7;
     destination.operatorLongitudeE7 = source.operatorLongitudeE7;
     destination.operatorLocationType = source.operatorLocationType;
+    destination.classificationType = source.classificationType;
+    destination.areaCount = source.areaCount;
+    destination.areaRadiusM = source.areaRadiusM;
+    destination.areaCeilingM = source.areaCeilingM;
+    destination.areaFloorM = source.areaFloorM;
+    destination.areaCeilingValid = source.areaCeilingValid;
+    destination.areaFloorValid = source.areaFloorValid;
+    destination.categoryEu = source.categoryEu;
+    destination.classEu = source.classEu;
+    destination.operatorAltitudeGeoM = source.operatorAltitudeGeoM;
+    destination.operatorAltitudeValid = source.operatorAltitudeValid;
+    destination.systemTimestamp = source.systemTimestamp;
   }
 }
 
@@ -63,13 +115,16 @@ bool WiFiScan::processRemoteIdWifiFrame(const uint8_t* frame, size_t length,
   if (result != RemoteIdDecodeResult::Decoded)
     return false;
 
+  const uint32_t now = millis();
+  RemoteIdRecord snapshot;
+  bool shouldLog = false;
+  portENTER_CRITICAL(&remote_id_mux);
   RemoteIdRecord* record = decoded.hasUasId
       ? remote_id_store.findByUasId(decoded.uasId)
       : nullptr;
   RemoteIdRecord* provisional = remote_id_store.findByMac(mac);
   if (record == nullptr)
-    record = &remote_id_store.observe(mac, transport,
-                                      rssi, millis());
+    record = &remote_id_store.observe(mac, transport, rssi, now);
   else {
     if (provisional != nullptr && provisional != record) {
       mergeRemoteIdRecord(*record, *provisional);
@@ -80,15 +135,15 @@ bool WiFiScan::processRemoteIdWifiFrame(const uint8_t* frame, size_t length,
       remote_id_store.eraseByMac(mac, record);
       record = remote_id_store.findByUasId(decoded.uasId);
     }
-    memcpy(record->mac, mac, sizeof(record->mac));
-    record->transportMask |= static_cast<uint8_t>(transport);
-    record->rssi = rssi;
-    record->lastSeenMs = millis();
-    ++record->packetCount;
+    updateKnownRemoteIdObservation(*record, mac, transport, rssi, now);
   }
   mergeRemoteIdRecord(*record, decoded);
   record->lastWifiChannel = channel;
-  logRemoteIdRecord(*record);
+  shouldLog = now - record->lastLoggedMs >= 1000;
+  if (shouldLog) record->lastLoggedMs = now;
+  snapshot = *record;
+  portEXIT_CRITICAL(&remote_id_mux);
+  if (shouldLog) logRemoteIdRecord(snapshot);
   return true;
 }
 
@@ -107,13 +162,16 @@ bool WiFiScan::processRemoteIdBlePayload(const uint8_t* payload, size_t length,
       if (remote_id_decoder.decodeBleServiceData(payload + offset + 2,
                                                   adLength - 1, decoded) ==
           RemoteIdDecodeResult::Decoded) {
+        const uint32_t now = millis();
+        RemoteIdRecord snapshot;
+        bool shouldLog = false;
+        portENTER_CRITICAL(&remote_id_mux);
         RemoteIdRecord* record = decoded.hasUasId
             ? remote_id_store.findByUasId(decoded.uasId)
             : nullptr;
         RemoteIdRecord* provisional = remote_id_store.findByMac(mac);
         if (record == nullptr)
-          record = &remote_id_store.observe(mac, transport,
-                                            rssi, millis());
+          record = &remote_id_store.observe(mac, transport, rssi, now);
         else {
           if (provisional != nullptr && provisional != record) {
             mergeRemoteIdRecord(*record, *provisional);
@@ -124,14 +182,14 @@ bool WiFiScan::processRemoteIdBlePayload(const uint8_t* payload, size_t length,
             remote_id_store.eraseByMac(mac, record);
             record = remote_id_store.findByUasId(decoded.uasId);
           }
-          memcpy(record->mac, mac, sizeof(record->mac));
-          record->transportMask |= static_cast<uint8_t>(transport);
-          record->rssi = rssi;
-          record->lastSeenMs = millis();
-          ++record->packetCount;
+          updateKnownRemoteIdObservation(*record, mac, transport, rssi, now);
         }
         mergeRemoteIdRecord(*record, decoded);
-        logRemoteIdRecord(*record);
+        shouldLog = now - record->lastLoggedMs >= 1000;
+        if (shouldLog) record->lastLoggedMs = now;
+        snapshot = *record;
+        portEXIT_CRITICAL(&remote_id_mux);
+        if (shouldLog) logRemoteIdRecord(snapshot);
         return true;
       }
     }
@@ -160,7 +218,7 @@ void WiFiScan::RunRemoteIdScan(uint8_t scan_mode, uint16_t color) {
 
   #ifdef HAS_SD
     startLog("remoteid");
-    buffer_obj.append("millis,uas_id,operator_id,transport,channel,rssi,packets,packet_rate_hz,state,lost_count,reacquired_count,lat,lon,alt_geo,height,speed,heading,operator_lat,operator_lon\n");
+    buffer_obj.append("millis,uas_id,operator_id,transport,channel,rssi,packets,packet_rate_hz,state,lost_count,reacquired_count,last_lost_ms,last_reacquired_ms,lat,lon,alt_geo,alt_geo_valid,height,height_valid,speed,speed_valid,heading,heading_valid,operator_lat,operator_lon,auth_type,auth_page,auth_last_page,auth_length,auth_timestamp\n");
   #endif
 
   #ifdef HAS_SCREEN
@@ -190,6 +248,7 @@ void WiFiScan::RunRemoteIdScan(uint8_t scan_mode, uint16_t color) {
   setWiFiMode(WIFI_MODE_NULL, remoteIdWifiCallback);
   changeChannel(6);
   wifi_initialized = true;
+  Serial.println("RID scheduler: NAN dwell CH6/CH149 when supported; beacon sweep constrained by configured radio plan");
 
   setupRemoteIdBle();
 
@@ -201,16 +260,20 @@ void WiFiScan::RunRemoteIdScan(uint8_t scan_mode, uint16_t color) {
 }
 
 String WiFiScan::remoteIdLabel(size_t index) const {
+  RemoteIdRecord snapshot;
+  portENTER_CRITICAL(&remote_id_mux);
   const RemoteIdRecord* record = remote_id_store.at(index);
+  if (record != nullptr) snapshot = *record;
+  portEXIT_CRITICAL(&remote_id_mux);
   if (record == nullptr) return "";
-  String id = record->hasUasId ? String(record->uasId) : macToString(record->mac);
-  String label = String(record->rssi) + " " + id;
+  String id = snapshot.hasUasId ? String(snapshot.uasId) : macToString(snapshot.mac);
+  String label = String(snapshot.rssi) + " " + id;
   #ifdef HAS_GPS
-    if (gps_obj.getFixStatus() && record->hasLocation) {
+    if (gps_obj.getFixStatus() && snapshot.hasLocation) {
       char distance[16];
       remoteIdFormatDistanceKm(remoteIdDistanceMeters(
           gps_obj.getLatInt() * 10, gps_obj.getLonInt() * 10,
-          record->latitudeE7, record->longitudeE7),
+          snapshot.latitudeE7, snapshot.longitudeE7),
           distance, sizeof(distance));
       if (distance[0] != '\0') label += " " + String(distance);
     }
@@ -225,12 +288,16 @@ void WiFiScan::hopRemoteIdChannel() {
   const uint8_t phase = remote_id_schedule_step++ & 0x03;
   if (phase == 3 && currentScanMode == REMOTE_ID_SCAN_TARGET &&
       remote_id_target_selected) {
+    portENTER_CRITICAL(&remote_id_mux);
     const RemoteIdRecord* target = remote_id_target_has_uas
         ? remote_id_store.findByUasId(remote_id_target_uas)
         : remote_id_store.findByMac(remote_id_target_mac);
-    if (target != nullptr && target->lastWifiChannel != 0 &&
-        !remoteIdIsStale(millis(), target->lastSeenMs, REMOTE_ID_STALE_MS)) {
-      changeChannel(target->lastWifiChannel);
+    RemoteIdRecord snapshot;
+    if (target != nullptr) snapshot = *target;
+    portEXIT_CRITICAL(&remote_id_mux);
+    if (target != nullptr && snapshot.lastWifiChannel != 0 &&
+        !remoteIdIsStale(millis(), snapshot.lastSeenMs, REMOTE_ID_STALE_MS)) {
+      changeChannel(snapshot.lastWifiChannel);
       return;
     }
   }
@@ -256,8 +323,12 @@ void WiFiScan::hopRemoteIdChannel() {
 }
 
 bool WiFiScan::selectRemoteIdTarget(size_t index) {
+  portENTER_CRITICAL(&remote_id_mux);
   const RemoteIdRecord* record = remote_id_store.at(index);
-  if (record == nullptr) return false;
+  if (record == nullptr) {
+    portEXIT_CRITICAL(&remote_id_mux);
+    return false;
+  }
   memcpy(remote_id_target_mac, record->mac, sizeof(remote_id_target_mac));
   remote_id_target_has_uas = record->hasUasId;
   memset(remote_id_target_uas, 0, sizeof(remote_id_target_uas));
@@ -265,21 +336,22 @@ bool WiFiScan::selectRemoteIdTarget(size_t index) {
     strncpy(remote_id_target_uas, record->uasId,
             sizeof(remote_id_target_uas) - 1);
   remote_id_target_selected = true;
+  portEXIT_CRITICAL(&remote_id_mux);
   return true;
 }
 
 void WiFiScan::clearRemoteIds() {
+  portENTER_CRITICAL(&remote_id_mux);
   remote_id_store.clear();
   remote_id_target_selected = false;
   remote_id_target_has_uas = false;
   memset(remote_id_target_uas, 0, sizeof(remote_id_target_uas));
   memset(remote_id_target_mac, 0, sizeof(remote_id_target_mac));
+  portEXIT_CRITICAL(&remote_id_mux);
 }
 
-void WiFiScan::logRemoteIdRecord(RemoteIdRecord& record) {
+void WiFiScan::logRemoteIdRecord(const RemoteIdRecord& record) {
   const uint32_t now = millis();
-  if (now - record.lastLoggedMs < 1000) return;
-  record.lastLoggedMs = now;
   String line = String(now) + "," +
                 (record.hasUasId ? String(record.uasId) : macToString(record.mac)) + "," +
                 (record.hasOperatorId ? String(record.operatorId) : "") + "," +
@@ -289,20 +361,63 @@ void WiFiScan::logRemoteIdRecord(RemoteIdRecord& record) {
                 String(record.packetRateHz, 1) + "," +
                 String(record.isLost ? "lost" : "active") + "," +
                 String(record.lostCount) + "," + String(record.reacquiredCount) + "," +
+                String(record.lastLostMs) + "," + String(record.lastReacquiredMs) + "," +
                 String(record.latitudeE7 / 1e7, 7) + "," +
                 String(record.longitudeE7 / 1e7, 7) + "," +
-                String(record.altitudeGeoM, 1) + "," + String(record.heightM, 1) + "," +
-                String(record.horizontalSpeedMps, 1) + "," + String(record.directionDeg) + "," +
+                String(record.altitudeGeoM, 1) + "," + String(record.altitudeGeoValid ? 1 : 0) + "," +
+                String(record.heightM, 1) + "," + String(record.heightValid ? 1 : 0) + "," +
+                String(record.horizontalSpeedMps, 1) + "," + String(record.horizontalSpeedValid ? 1 : 0) + "," +
+                String(record.directionDeg) + "," + String(record.directionValid ? 1 : 0) + "," +
                 String(record.operatorLatitudeE7 / 1e7, 7) + "," +
-                String(record.operatorLongitudeE7 / 1e7, 7);
+                String(record.operatorLongitudeE7 / 1e7, 7) + "," +
+                String(record.hasAuthentication ? record.authenticationType : 0) + "," +
+                String(record.hasAuthentication ? record.authenticationPage : 0) + "," +
+                String(record.hasAuthentication ? record.authenticationLastPage : 0) + "," +
+                String(record.hasAuthentication ? record.authenticationLength : 0) + "," +
+                String(record.hasAuthentication ? record.authenticationTimestamp : 0);
   Serial.println("RID," + line);
   #ifdef HAS_SD
     buffer_obj.append(line + "\n");
   #endif
 }
 
+size_t WiFiScan::snapshotRemoteIds(RemoteIdRecord* records,
+                                   size_t capacity) const {
+  if (records == nullptr || capacity == 0) return 0;
+  portENTER_CRITICAL(&remote_id_mux);
+  const size_t count = std::min(capacity, remote_id_store.size());
+  for (size_t i = 0; i < count; ++i) records[i] = *remote_id_store.at(i);
+  portEXIT_CRITICAL(&remote_id_mux);
+  return count;
+}
+
+size_t WiFiScan::remoteIdCount() const {
+  portENTER_CRITICAL(&remote_id_mux);
+  const size_t count = remote_id_store.size();
+  portEXIT_CRITICAL(&remote_id_mux);
+  return count;
+}
+
+bool WiFiScan::snapshotRemoteIdTarget(RemoteIdRecord& record) const {
+  portENTER_CRITICAL(&remote_id_mux);
+  const RemoteIdRecord* selected = nullptr;
+  if (remote_id_target_selected) {
+    selected = remote_id_target_has_uas
+        ? remote_id_store.findByUasId(remote_id_target_uas)
+        : remote_id_store.findByMac(remote_id_target_mac);
+    if (selected == nullptr)
+      selected = remote_id_store.findByMac(remote_id_target_mac);
+  }
+  if (selected != nullptr) record = *selected;
+  portEXIT_CRITICAL(&remote_id_mux);
+  return selected != nullptr;
+}
+
 void WiFiScan::renderRemoteIdGlobal() {
   #ifdef HAS_SCREEN
+    // Keep the full render snapshot off the task stack on PSRAM targets.
+    static RemoteIdRecord records[REMOTE_ID_CAPACITY];
+    const size_t recordCount = snapshotRemoteIds(records, REMOTE_ID_CAPACITY);
     const RemoteIdLayout layout = remoteIdLayoutForDisplay(SCREEN_WIDTH, SCREEN_HEIGHT);
     const int16_t top = 34;
     const int16_t contentHeight = SCREEN_HEIGHT - top;
@@ -314,20 +429,26 @@ void WiFiScan::renderRemoteIdGlobal() {
     display_obj.tft.setTextSize(1);
     display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
     display_obj.tft.setCursor(2, top + 2);
-    display_obj.tft.print("RID devices: " + String(remote_id_store.size()) +
+    display_obj.tft.print("RID devices: " + String(recordCount) +
                           " CH:" + String(set_channel));
     const size_t rows = layout == RemoteIdLayout::Compact ? 5 :
                         static_cast<size_t>((listHeight - 14) / 10);
-    const size_t first = remote_id_store.size() > rows
-                             ? remote_id_store.size() - rows
+    const size_t first = recordCount > rows
+                             ? recordCount - rows
                              : 0;
     int16_t y = top + 13;
-    for (size_t i = first; i < remote_id_store.size(); ++i) {
-      const RemoteIdRecord* record = remote_id_store.at(i);
+    for (size_t i = first; i < recordCount; ++i) {
+      const RemoteIdRecord* record = &records[i];
       display_obj.tft.setCursor(2, y);
       display_obj.tft.setTextColor(rssiToColor(record->rssi), TFT_BLACK);
-      display_obj.tft.print(remoteIdLabel(i));
+      String id = record->hasUasId ? String(record->uasId) : macToString(record->mac);
+      display_obj.tft.print(String(i) + ":" + String(record->rssi) + " " + id);
       y += 10;
+    }
+    if (first > 0) {
+      display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
+      display_obj.tft.setCursor(SCREEN_WIDTH - 58, top + 2);
+      display_obj.tft.print("+" + String(first) + " older");
     }
 
     if (layout == RemoteIdLayout::SplitListGrid) {
@@ -355,23 +476,29 @@ void WiFiScan::renderRemoteIdGlobal() {
         if (gps_obj.getFixStatus()) {
           const int32_t originLat = gps_obj.getLatInt() * 10;
           const int32_t originLon = gps_obj.getLonInt() * 10;
-          const float radius = remoteIdGridScaleMeters(remote_id_records,
-              remote_id_store.size(), originLat, originLon, 50.0f);
+          const float radius = remoteIdGridScaleMeters(records,
+              recordCount, originLat, originLon, 50.0f);
           display_obj.tft.fillCircle(SCREEN_WIDTH / 2,
               gridTop + gridHeight / 2, 3, TFT_GREEN);
-          for (size_t i = 0; i < remote_id_store.size(); ++i) {
-            const RemoteIdRecord* record = remote_id_store.at(i);
+          for (size_t i = 0; i < recordCount; ++i) {
+            const RemoteIdRecord* record = &records[i];
             if (record->hasLocation) {
               RemoteIdGridPoint p = remoteIdProjectToGrid(record->latitudeE7,
                   record->longitudeE7, originLat, originLon,
                   SCREEN_WIDTH, gridHeight, radius, 8);
-              if (p.visible) display_obj.tft.fillCircle(p.x, gridTop + p.y, 3, TFT_CYAN);
+              if (p.visible)
+                display_obj.tft.fillCircle(p.x, gridTop + p.y, 3, TFT_CYAN);
+              else if (p.offGrid)
+                display_obj.tft.drawCircle(p.x, gridTop + p.y, 4, TFT_CYAN);
             }
             if (record->hasOperatorLocation) {
               RemoteIdGridPoint p = remoteIdProjectToGrid(record->operatorLatitudeE7,
                   record->operatorLongitudeE7, originLat, originLon,
                   SCREEN_WIDTH, gridHeight, radius, 8);
-              if (p.visible) display_obj.tft.fillCircle(p.x, gridTop + p.y, 3, TFT_MAGENTA);
+              if (p.visible)
+                display_obj.tft.fillCircle(p.x, gridTop + p.y, 3, TFT_MAGENTA);
+              else if (p.offGrid)
+                display_obj.tft.drawCircle(p.x, gridTop + p.y, 4, TFT_MAGENTA);
             }
           }
           display_obj.tft.setCursor(3, SCREEN_HEIGHT - 10);
@@ -394,14 +521,9 @@ void WiFiScan::renderRemoteIdGlobal() {
 }
 
 void WiFiScan::renderRemoteIdTarget() {
-  const RemoteIdRecord* record = nullptr;
-  if (remote_id_target_selected) {
-    if (remote_id_target_has_uas)
-      record = remote_id_store.findByUasId(remote_id_target_uas);
-    if (record == nullptr)
-      record = remote_id_store.findByMac(remote_id_target_mac);
-  }
-  if (record == nullptr) return;
+  RemoteIdRecord snapshot;
+  if (!snapshotRemoteIdTarget(snapshot)) return;
+  const RemoteIdRecord* record = &snapshot;
   #ifdef HAS_SCREEN
     display_obj.tft.fillRect(0, 34, SCREEN_WIDTH, SCREEN_HEIGHT - 34, TFT_BLACK);
     display_obj.tft.setTextSize(1);
@@ -421,6 +543,9 @@ void WiFiScan::renderRemoteIdTarget() {
          String((millis() - record->lastSeenMs) / 1000) + "s");
     if (record->isLost)
       line("STATUS LOST  RATE " + String(record->packetRateHz, 1) + "/s", TFT_RED);
+    else if (record->lastReacquiredMs != 0 &&
+             millis() - record->lastReacquiredMs < 10000)
+      line("STATUS REACQUIRED  " + String(record->packetRateHz, 1) + "/s", TFT_YELLOW);
     else
       line("PKT " + String(record->packetCount) + " " +
            String(record->packetRateHz, 1) + "/s CH " +
@@ -428,11 +553,21 @@ void WiFiScan::renderRemoteIdTarget() {
     if (record->hasLocation) {
       line("LAT " + String(record->latitudeE7 / 1e7, 7));
       line("LON " + String(record->longitudeE7 / 1e7, 7));
-      line("ALT " + String(record->altitudeGeoM, 1) + "m  H " +
-           String(record->heightM, 1) + "m");
-      line("SPD " + String(record->horizontalSpeedMps, 1) + "m/s  HDG " +
-           String(record->directionDeg));
+      String altitude = record->altitudeGeoValid
+          ? String(record->altitudeGeoM, 1) + "m" : "N/A";
+      String height = record->heightValid
+          ? String(record->heightM, 1) + "m" : "N/A";
+      line("ALT " + altitude + "  H " + height);
+      String speed = record->horizontalSpeedValid
+          ? String(record->horizontalSpeedMps, 1) + "m/s" : "N/A";
+      String heading = record->directionValid
+          ? String(record->directionDeg) : "N/A";
+      line("SPD " + speed + "  HDG " + heading);
     }
+    if (record->hasAuthentication)
+      line("AUTH " + String(record->authenticationType) + " PAGE " +
+           String(record->authenticationPage) + "/" +
+           String(record->authenticationLastPage), TFT_YELLOW);
     if (record->hasOperatorLocation) {
       line("OPLAT " + String(record->operatorLatitudeE7 / 1e7, 7), TFT_MAGENTA);
       line("OPLON " + String(record->operatorLongitudeE7 / 1e7, 7), TFT_MAGENTA);

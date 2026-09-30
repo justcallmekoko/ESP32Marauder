@@ -65,6 +65,15 @@ void test_projection_is_true_north_and_east_right() {
   TEST_ASSERT_INT_WITHIN(1, 50, east.y);
 }
 
+void test_projection_clamps_off_grid_points_to_edge() {
+  RemoteIdGridPoint point = remoteIdProjectToGrid(
+      410000000, -740000000, 400000000, -740000000, 200, 100, 50.0f, 8);
+  TEST_ASSERT_FALSE(point.visible);
+  TEST_ASSERT_TRUE(point.offGrid);
+  TEST_ASSERT_EQUAL_INT16(8, point.y);
+  TEST_ASSERT_TRUE(point.x >= 8 && point.x < 192);
+}
+
 void test_scale_includes_aircraft_and_operator() {
   RemoteIdRecord records[1];
   records[0].hasLocation = true;
@@ -137,9 +146,11 @@ void test_lifecycle_marks_lost_and_reacquired() {
   TEST_ASSERT_EQUAL_UINT32(1, store.updateLifecycle(1100, 1000));
   TEST_ASSERT_TRUE(store.at(0)->isLost);
   TEST_ASSERT_EQUAL_UINT16(1, store.at(0)->lostCount);
+  TEST_ASSERT_EQUAL_UINT32(1100, store.at(0)->lastLostMs);
   store.observe(mac, RemoteIdTransport::BleLegacy, -60, 1200);
   TEST_ASSERT_FALSE(store.at(0)->isLost);
   TEST_ASSERT_EQUAL_UINT16(1, store.at(0)->reacquiredCount);
+  TEST_ASSERT_EQUAL_UINT32(1200, store.at(0)->lastReacquiredMs);
 }
 
 void test_store_tracks_packet_rate_and_can_erase_duplicate_mac() {
@@ -170,6 +181,7 @@ int main(int, char**) {
   RUN_TEST(test_store_deduplicates_and_merges_transports);
   RUN_TEST(test_store_evicts_oldest_record);
   RUN_TEST(test_projection_is_true_north_and_east_right);
+  RUN_TEST(test_projection_clamps_off_grid_points_to_edge);
   RUN_TEST(test_scale_includes_aircraft_and_operator);
   RUN_TEST(test_distance_and_bearing);
   RUN_TEST(test_distance_formatter_uses_kilometers);

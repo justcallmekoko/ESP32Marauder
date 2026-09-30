@@ -12492,10 +12492,12 @@ void WiFiScan::main(uint32_t currentTime)
       initTime = currentTime;
       hopRemoteIdChannel();
     }
+    portENTER_CRITICAL(&remote_id_mux);
     remote_id_store.updateLifecycle(currentTime, REMOTE_ID_STALE_MS);
     remote_id_store.pruneStale(currentTime, REMOTE_ID_EXPIRE_MS,
         remote_id_target_has_uas ? remote_id_target_uas : nullptr,
         remote_id_target_selected ? remote_id_target_mac : nullptr);
+    portEXIT_CRITICAL(&remote_id_mux);
     if (currentTime - remote_id_last_render_ms >= 500) {
       remote_id_last_render_ms = currentTime;
       if (currentScanMode == REMOTE_ID_SCAN_TARGET)

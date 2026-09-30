@@ -20,6 +20,13 @@ static void writeU16Le(uint8_t* output, uint16_t value) {
   output[1] = value >> 8;
 }
 
+static void writeU32Le(uint8_t* output, uint32_t value) {
+  output[0] = value & 0xFF;
+  output[1] = (value >> 8) & 0xFF;
+  output[2] = (value >> 16) & 0xFF;
+  output[3] = (value >> 24) & 0xFF;
+}
+
 static void makeBasicId(uint8_t* message) {
   std::memset(message, 0, RemoteIdDecoder::kMessageSize);
   message[0] = 0x02;
@@ -56,6 +63,13 @@ void test_decodes_message_pack_fields() {
   system[1] = 0x01;
   writeI32Le(system + 2, 407000000);
   writeI32Le(system + 6, -740000000);
+  writeU16Le(system + 10, 3);
+  system[12] = 12;
+  writeU16Le(system + 13, 2400);
+  writeU16Le(system + 15, 2200);
+  system[17] = 0x21;
+  writeU16Le(system + 18, 2300);
+  writeU32Le(system + 20, 987654);
   uint8_t* operatorId = payload + 78;
   operatorId[0] = 0x52;
   operatorId[1] = 0;
@@ -79,6 +93,12 @@ void test_decodes_message_pack_fields() {
   TEST_ASSERT_EQUAL_UINT8(4, record.speedAccuracy);
   TEST_ASSERT_EQUAL_UINT16(1234, record.locationTimestampDeciseconds);
   TEST_ASSERT_EQUAL_INT32(407000000, record.operatorLatitudeE7);
+  TEST_ASSERT_EQUAL_UINT16(3, record.areaCount);
+  TEST_ASSERT_EQUAL_UINT16(120, record.areaRadiusM);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 200.0f, record.areaCeilingM);
+  TEST_ASSERT_EQUAL_UINT8(2, record.categoryEu);
+  TEST_ASSERT_EQUAL_UINT8(1, record.classEu);
+  TEST_ASSERT_EQUAL_UINT32(987654, record.systemTimestamp);
   TEST_ASSERT_EQUAL_STRING("OPERATOR-42", record.operatorId);
 }
 
@@ -131,6 +151,18 @@ void test_rejects_truncated_pack_and_ie() {
       static_cast<uint8_t>(decoder.decodeWifiBeacon(frame, sizeof(frame), record)));
 }
 
+void test_all_truncated_message_lengths_are_rejected() {
+  uint8_t message[RemoteIdDecoder::kMessageSize] = {};
+  makeBasicId(message);
+  RemoteIdDecoder decoder;
+  for (size_t length = 0; length < RemoteIdDecoder::kMessageSize; ++length) {
+    RemoteIdRecord record;
+    TEST_ASSERT_EQUAL_UINT8(
+        static_cast<uint8_t>(RemoteIdDecodeResult::Malformed),
+        static_cast<uint8_t>(decoder.decodeMessage(message, length, record)));
+  }
+}
+
 void test_rejects_out_of_range_location_for_plotting() {
   uint8_t message[RemoteIdDecoder::kMessageSize] = {};
   makeLocation(message);
@@ -141,6 +173,42 @@ void test_rejects_out_of_range_location_for_plotting() {
       static_cast<uint8_t>(RemoteIdDecodeResult::Decoded),
       static_cast<uint8_t>(decoder.decodeMessage(message, sizeof(message), record)));
   TEST_ASSERT_FALSE(record.hasLocation);
+}
+
+void test_decodes_authentication_and_location_sentinels() {
+  uint8_t auth[RemoteIdDecoder::kMessageSize] = {};
+  auth[0] = 0x22;
+  auth[1] = 0x30;
+  auth[2] = 2;
+  auth[3] = 40;
+  writeU32Le(auth + 4, 123456);
+  RemoteIdRecord record;
+  RemoteIdDecoder decoder;
+  TEST_ASSERT_EQUAL_UINT8(
+      static_cast<uint8_t>(RemoteIdDecodeResult::Decoded),
+      static_cast<uint8_t>(decoder.decodeMessage(auth, sizeof(auth), record)));
+  TEST_ASSERT_TRUE(record.hasAuthentication);
+  TEST_ASSERT_EQUAL_UINT8(3, record.authenticationType);
+  TEST_ASSERT_EQUAL_UINT8(2, record.authenticationLastPage);
+  TEST_ASSERT_EQUAL_UINT32(123456, record.authenticationTimestamp);
+
+  uint8_t location[RemoteIdDecoder::kMessageSize] = {};
+  makeLocation(location);
+  location[1] |= 0x03;
+  location[2] = 181;
+  location[3] = 255;
+  location[4] = 126;
+  writeU16Le(location + 15, 0);
+  writeU16Le(location + 17, 0);
+  writeU16Le(location + 21, 0xFFFF);
+  record = RemoteIdRecord{};
+  decoder.decodeMessage(location, sizeof(location), record);
+  TEST_ASSERT_FALSE(record.directionValid);
+  TEST_ASSERT_FALSE(record.horizontalSpeedValid);
+  TEST_ASSERT_FALSE(record.verticalSpeedValid);
+  TEST_ASSERT_FALSE(record.altitudeGeoValid);
+  TEST_ASSERT_FALSE(record.heightValid);
+  TEST_ASSERT_FALSE(record.locationTimestampValid);
 }
 
 void test_decodes_wifi_nan_action_frame() {
@@ -181,7 +249,9 @@ int main(int, char**) {
   RUN_TEST(test_decodes_wifi_beacon_vendor_element);
   RUN_TEST(test_decodes_ble_service_data);
   RUN_TEST(test_rejects_truncated_pack_and_ie);
+  RUN_TEST(test_all_truncated_message_lengths_are_rejected);
   RUN_TEST(test_rejects_out_of_range_location_for_plotting);
+  RUN_TEST(test_decodes_authentication_and_location_sentinels);
   RUN_TEST(test_decodes_wifi_nan_action_frame);
   return UNITY_END();
 }

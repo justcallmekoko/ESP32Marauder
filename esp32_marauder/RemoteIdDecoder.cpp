@@ -5,6 +5,7 @@
 namespace {
 constexpr uint8_t kMessageBasicId = 0;
 constexpr uint8_t kMessageLocation = 1;
+constexpr uint8_t kMessageAuthentication = 2;
 constexpr uint8_t kMessageSelfId = 3;
 constexpr uint8_t kMessageSystem = 4;
 constexpr uint8_t kMessageOperatorId = 5;
@@ -14,6 +15,13 @@ constexpr uint8_t kAsdStanOui[] = {0xFA, 0x0B, 0xBC};
 constexpr uint8_t kOpenDroneIdVendorType = 0x0D;
 constexpr float kAltitudeOffsetM = 1000.0f;
 constexpr float kAltitudeScaleM = 0.5f;
+
+uint32_t readU32Le(const uint8_t* bytes) {
+  return static_cast<uint32_t>(bytes[0]) |
+         (static_cast<uint32_t>(bytes[1]) << 8) |
+         (static_cast<uint32_t>(bytes[2]) << 16) |
+         (static_cast<uint32_t>(bytes[3]) << 24);
+}
 }
 
 int32_t RemoteIdDecoder::readI32Le(const uint8_t* bytes) {
@@ -77,10 +85,31 @@ RemoteIdDecodeResult RemoteIdDecoder::decodeMessage(
       record.verticalAccuracy = message[19] & 0x0F;
       record.speedAccuracy = message[20] & 0x0F;
       record.locationTimestampDeciseconds = readU16Le(message + 21);
+      record.directionValid = record.directionDeg <= 360;
+      record.horizontalSpeedValid = record.horizontalSpeedMps <= 254.25f;
+      record.verticalSpeedValid = record.verticalSpeedMps >= -62.0f &&
+                                  record.verticalSpeedMps <= 62.0f;
+      record.altitudePressureValid = record.altitudePressureM > -1000.0f;
+      record.altitudeGeoValid = record.altitudeGeoM > -1000.0f;
+      record.heightValid = record.heightM > -1000.0f;
+      record.locationTimestampValid = record.locationTimestampDeciseconds != 0xFFFF;
       record.hasLocation = remoteIdCoordinatesValid(record.latitudeE7,
                                                      record.longitudeE7);
       return RemoteIdDecodeResult::Decoded;
     }
+
+    case kMessageAuthentication:
+      record.authenticationType = message[1] >> 4;
+      record.authenticationPage = message[1] & 0x0F;
+      if (record.authenticationPage == 0) {
+        record.authenticationLastPage = message[2];
+        record.authenticationLength = message[3];
+        record.authenticationTimestamp = readU32Le(message + 4);
+        if (record.authenticationLastPage > 15)
+          return RemoteIdDecodeResult::Malformed;
+      }
+      record.hasAuthentication = true;
+      return RemoteIdDecodeResult::Decoded;
 
     case kMessageSelfId:
       copyText(record.description, sizeof(record.description), message + 2, 23);
@@ -89,8 +118,23 @@ RemoteIdDecodeResult RemoteIdDecoder::decodeMessage(
 
     case kMessageSystem:
       record.operatorLocationType = message[1] & 0x03;
+      record.classificationType = (message[1] >> 2) & 0x07;
       record.operatorLatitudeE7 = readI32Le(message + 2);
       record.operatorLongitudeE7 = readI32Le(message + 6);
+      record.areaCount = readU16Le(message + 10);
+      record.areaRadiusM = static_cast<uint16_t>(message[12]) * 10U;
+      record.areaCeilingM = readU16Le(message + 13) * kAltitudeScaleM -
+                            kAltitudeOffsetM;
+      record.areaFloorM = readU16Le(message + 15) * kAltitudeScaleM -
+                          kAltitudeOffsetM;
+      record.classEu = message[17] & 0x0F;
+      record.categoryEu = message[17] >> 4;
+      record.operatorAltitudeGeoM = readU16Le(message + 18) *
+                                    kAltitudeScaleM - kAltitudeOffsetM;
+      record.systemTimestamp = readU32Le(message + 20);
+      record.areaCeilingValid = record.areaCeilingM > -1000.0f;
+      record.areaFloorValid = record.areaFloorM > -1000.0f;
+      record.operatorAltitudeValid = record.operatorAltitudeGeoM > -1000.0f;
       record.hasOperatorLocation = remoteIdCoordinatesValid(
           record.operatorLatitudeE7, record.operatorLongitudeE7);
       return RemoteIdDecodeResult::Decoded;
