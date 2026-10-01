@@ -439,6 +439,9 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_DISPLAY_AP_INFO) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_EVIL_PORTAL) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA) ||
+          #ifdef HAS_ZIGBEE
+            (wifi_scan_obj.currentScanMode == ZIGBEE_SCAN_ALL) ||
+          #endif
           (wifi_scan_obj.currentScanMode == WIFI_PING_SCAN) ||
           (wifi_scan_obj.currentScanMode == WIFI_ARP_SCAN) ||
           (wifi_scan_obj.currentScanMode == WIFI_PORT_SCAN_ALL) ||
@@ -545,6 +548,9 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN) ||
             (wifi_scan_obj.currentScanMode == BT_ATTACK_FINDMY_LIVE) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA) ||
+            #ifdef HAS_ZIGBEE
+              (wifi_scan_obj.currentScanMode == ZIGBEE_SCAN_ALL) ||
+            #endif
             (wifi_scan_obj.currentScanMode == WIFI_PING_SCAN) ||
             (wifi_scan_obj.currentScanMode == WIFI_ARP_SCAN) ||
             (wifi_scan_obj.currentScanMode == WIFI_PORT_SCAN_ALL) ||
@@ -1255,9 +1261,9 @@ void MenuFunctions::update_time_temp_batt(bool update) {
             #ifdef HAS_TEMP_SENSOR
               if (TempSensor_obj.supported) {
                   float t_lev = TempSensor_obj.temperature();
-                  if (t_lev >= 60) {
+                  if (t_lev >= 75) {
                       txt_color = TFT_RED;
-                  } else if (t_lev >= 55) {
+                  } else if (t_lev >= 65) {
                       txt_color = TFT_ORANGE;
                   }
                   snprintf(timeBuffer, sizeof(timeBuffer), "%.1fC", t_lev);
@@ -1270,7 +1276,7 @@ void MenuFunctions::update_time_temp_batt(bool update) {
           #ifdef HAS_BATTERY
             if (battery_obj.supported) {
                 uint8_t b_lev = battery_obj.getBatteryLevel();
-                if (b_lev <= 25) {
+                if (b_lev <= 20) {
                     txt_color = TFT_RED;
                   } else if (b_lev <= 33) {
                     txt_color = TFT_ORANGE;
@@ -1360,13 +1366,22 @@ void MenuFunctions::updateStatusBar()
 
   // WiFi Channel Stuff
   uint8_t primaryChannel;
+  uint8_t current_channel;
   wifi_second_chan_t secondChannel;
-  esp_err_t err = esp_wifi_get_channel(&primaryChannel, &secondChannel);
 
-  uint8_t current_channel = wifi_scan_obj.set_channel;
 
-  if (err == ESP_OK)
-    current_channel = primaryChannel;
+  if (wifi_scan_obj.currentScanMode != ZIGBEE_SCAN_ALL) {
+    esp_err_t err = esp_wifi_get_channel(&primaryChannel, &secondChannel);
+    if (err == ESP_OK)
+      current_channel = primaryChannel;
+    else
+      current_channel = wifi_scan_obj.set_channel;
+  } else {
+    #if defined(HAS_ZIGBEE)
+      current_channel = wifi_scan_obj.getZigbeeChannel();
+    #endif
+  }
+
 
   if ((current_channel != wifi_scan_obj.old_channel) || (status_changed)) {
     wifi_scan_obj.old_channel = current_channel;
@@ -2124,6 +2139,9 @@ void MenuFunctions::RunSetup()
 #ifdef HAS_BT
   bluetoothMenu.list = new LinkedList<MenuNode>(); // Get list in third menu ready
 #endif
+  #ifdef HAS_ZIGBEE
+    zigbeeMenu.list = new LinkedList<MenuNode>();
+  #endif
   deviceMenu.list = new LinkedList<MenuNode>();
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
@@ -2223,6 +2241,9 @@ void MenuFunctions::RunSetup()
     geofenceRadiusMenu.name = "Radius (miles)";
   #endif
   bluetoothMenu.name = text_table1[19];
+  #ifdef HAS_ZIGBEE
+    zigbeeMenu.name = "Zigbee";
+  #endif
   wifiSnifferMenu.name = text_table1[20];
   wifiScannerMenu.name = "Scanners";
   wifiAttackMenu.name = text_table1[21];
@@ -2306,6 +2327,11 @@ void MenuFunctions::RunSetup()
   #ifdef HAS_BT
     this->addNodes(&mainMenu, text_table1[19], TFTCYAN, BLUETOOTH, [this]() {
       this->changeMenu(&bluetoothMenu, true);
+    });
+  #endif
+  #ifdef HAS_ZIGBEE
+    this->addNodes(&mainMenu, "Zigbee", TFTGREEN, SNIFFERS, [this]() {
+      this->changeMenu(&zigbeeMenu, true);
     });
   #endif
   #ifdef HAS_GPS
@@ -3676,6 +3702,31 @@ void MenuFunctions::RunSetup()
     wifi_scan_obj.StartScan(BT_ATTACK_SPAM_ALL, TFT_MAGENTA);
   });
 
+#endif
+
+#ifdef HAS_ZIGBEE
+  // Build Zigbee / 802.15.4 Menu (ESP32-C5 / C6 / H2)
+  zigbeeMenu.parentMenu = &mainMenu;
+  this->addNodes(&zigbeeMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(zigbeeMenu.parentMenu, true);
+  });
+  this->addNodes(&zigbeeMenu, "Zigbee Sniff", TFTGREEN, SNIFFERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(ZIGBEE_SCAN_ALL, TFT_GREEN);
+  });
+  #ifdef HAS_SD
+    this->addNodes(&zigbeeMenu, "Save Nodes", TFTNAVY, SD_UPDATE, [this]() {
+      display_obj.clearScreen();
+      this->drawStatusBar();
+      wifi_scan_obj.RunSaveZBList(true);
+    });
+    this->addNodes(&zigbeeMenu, "Load Nodes", TFTBLUE, SD_UPDATE, [this]() {
+      display_obj.clearScreen();
+      this->drawStatusBar();
+      wifi_scan_obj.RunLoadZBList();
+    });
+  #endif
 #endif
 
   //#ifndef HAS_ILI9341

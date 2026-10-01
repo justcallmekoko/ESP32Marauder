@@ -321,6 +321,9 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_SCAN_ALL_CMD);
     //Serial.println(HELP_SCANSTA_CMD);
     Serial.println(HELP_SNIFF_RAW_CMD);
+    #ifdef HAS_ZIGBEE
+      Serial.println(HELP_SNIFF_ZIGBEE_CMD);
+    #endif
     Serial.println(HELP_SNIFF_BEACON_CMD);
     Serial.println(HELP_SNIFF_PROBE_CMD);
     Serial.println(HELP_SNIFF_PWN_CMD);
@@ -1003,6 +1006,21 @@ void CommandLine::runCommand(String input) {
     // Raw sniff
     else if (cmd_args.get(0) == SNIFF_RAW_CMD)
       this->startScanFromCLI(WIFI_SCAN_RAW_CAPTURE, TFT_WHITE, "Raw sniff");
+    // Zigbee / 802.15.4 sniff (ESP32-C5 / ESP32-C6 / ESP32-H2 only)
+    else if (cmd_args.get(0) == SNIFF_ZIGBEE_CMD) {
+      #ifdef HAS_ZIGBEE
+        // Optional channel argument: "sniffzb 26" locks to channel 26; bare
+        // "sniffzb" hops the whole 11-26 band.
+        int zb_ch = cmd_args.get(1).toInt();
+        if (zb_ch >= ZIGBEE_MIN_CHANNEL && zb_ch <= ZIGBEE_MAX_CHANNEL)
+          wifi_scan_obj.setZigbeeStartChannel((uint8_t)zb_ch);
+        else
+          wifi_scan_obj.setZigbeeStartChannel(0);
+        this->startScanFromCLI(ZIGBEE_SCAN_ALL, TFT_GREEN, "Zigbee sniff");
+      #else
+        Serial.println(F("Zigbee sniffing requires an ESP32-C5 / ESP32-C6 / ESP32-H2"));
+      #endif
+    }
     // Beacon sniff
     else if (cmd_args.get(0) == SNIFF_BEACON_CMD) {
       this->startScanFromCLI(WIFI_SCAN_AP, TFT_MAGENTA, "Beacon sniff");
@@ -1968,6 +1986,9 @@ void CommandLine::runCommand(String input) {
   else if (cmd_args.get(0) == SAVE_CMD) {
     int ap_sw = this->argSearch(&cmd_args, "-a");
     int st_sw = this->argSearch(&cmd_args, "-s");
+    #ifdef HAS_ZIGBEE
+      int zb_sw = this->argSearch(&cmd_args, "-z");
+    #endif
 
     if (ap_sw != -1) {
       #ifdef HAS_SCREEN
@@ -1981,10 +2002,18 @@ void CommandLine::runCommand(String input) {
       #endif
       wifi_scan_obj.RunSaveSSIDList(true);
     }
+    #ifdef HAS_ZIGBEE
+    else if (zb_sw != -1) {
+      wifi_scan_obj.RunSaveZBList(true);
+    }
+    #endif
   }
   else if (cmd_args.get(0) == LOAD_CMD) {
     int ap_sw = this->argSearch(&cmd_args, "-a");
     int st_sw = this->argSearch(&cmd_args, "-s");
+    #ifdef HAS_ZIGBEE
+      int zb_sw = this->argSearch(&cmd_args, "-z");
+    #endif
 
     if (ap_sw != -1) {
       #ifdef HAS_SCREEN
@@ -1998,6 +2027,11 @@ void CommandLine::runCommand(String input) {
       #endif
       wifi_scan_obj.RunLoadSSIDList();
     }
+    #ifdef HAS_ZIGBEE
+    else if (zb_sw != -1) {
+      wifi_scan_obj.RunLoadZBList();
+    }
+    #endif
   }
 
   // Add AP or station manually

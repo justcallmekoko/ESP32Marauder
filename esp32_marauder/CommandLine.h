@@ -92,6 +92,7 @@ const char PROGMEM SIGSTREN_CMD[] = "foxhunt";
 const char PROGMEM SCAN_ALL_CMD[] = "scanall";
 //const char PROGMEM SCANSTA_CMD[] = "scansta";
 const char PROGMEM SNIFF_RAW_CMD[] = "sniffraw";
+const char PROGMEM SNIFF_ZIGBEE_CMD[] = "sniffzb";
 const char PROGMEM SNIFF_BEACON_CMD[] = "sniffbeacon";
 const char PROGMEM SNIFF_PROBE_CMD[] = "sniffprobe";
 const char PROGMEM SNIFF_PWN_CMD[] = "sniffpwn";
@@ -181,6 +182,7 @@ const char PROGMEM HELP_SIGSTREN_CMD[] = "foxhunt -w <ap>/-s <ap> <station>/-b <
 const char PROGMEM HELP_SCAN_ALL_CMD[] = "scanall";
 //const char PROGMEM HELP_SCANSTA_CMD[] = "scansta";
 const char PROGMEM HELP_SNIFF_RAW_CMD[] = "sniffraw";
+const char PROGMEM HELP_SNIFF_ZIGBEE_CMD[] = "sniffzb [channel 11-26] (ESP32-C5/C6/H2 only)";
 const char PROGMEM HELP_SNIFF_BEACON_CMD[] = "sniffbeacon";
 const char PROGMEM HELP_SNIFF_PROBE_CMD[] = "sniffprobe";
 const char PROGMEM HELP_SNIFF_PWN_CMD[] = "sniffpwn";
@@ -215,8 +217,13 @@ const char PROGMEM HELP_INFO_CMD[] = "info [-a <index>]";
 const char PROGMEM HELP_SEL_CMD_A[] = "select -a/-s/-c <index (comma separated)>/-f \"equals <String> or contains <String>\"";
 const char PROGMEM HELP_SSID_CMD_A[] = "ssid -a [-g <count>/-n <name>]";
 const char PROGMEM HELP_SSID_CMD_B[] = "ssid -r <index>";
-const char PROGMEM HELP_SAVE_CMD[] = "save -a/-s";
-const char PROGMEM HELP_LOAD_CMD[] = "load -a/-s";
+#ifdef HAS_ZIGBEE
+  const char PROGMEM HELP_SAVE_CMD[] = "save -a/-s/-z";
+  const char PROGMEM HELP_LOAD_CMD[] = "load -a/-s/-z";
+#else
+  const char PROGMEM HELP_SAVE_CMD[] = "save -a/-s";
+  const char PROGMEM HELP_LOAD_CMD[] = "load -a/-s";
+#endif
 const char PROGMEM HELP_JOIN_CMD[] = "join (-a <index> -n <network>) -p <password>/-s";
 const char PROGMEM HELP_MAC_CMD_A[] = "randapmac";
 const char PROGMEM HELP_MAC_CMD_B[] = "randstamac";

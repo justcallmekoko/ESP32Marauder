@@ -2753,6 +2753,38 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
       RunBluetoothScan(scan_mode, color);
     #endif
   }
+  else if (scan_mode == ZIGBEE_SCAN_ALL) {
+    #ifdef HAS_ZIGBEE
+      // The 802.15.4 radio shares the 2.4GHz front end with WiFi; the two
+      // cannot run promiscuously at once. If WiFi is actively connected (portal,
+      // uploads, port scans) refuse rather than silently drop the link; if WiFi
+      // is only mid-scan, shut it down first to free the radio.
+      if (this->wifi_connected) {
+        Serial.println(F("[ZBScan] WiFi is connected - disconnect before Zigbee sniffing"));
+        #ifdef HAS_SCREEN
+          display_obj.clearScreen();
+          display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+          display_obj.showCenterText("WiFi active - can't sniff Zigbee", TFT_HEIGHT / 2);
+        #endif
+        this->currentScanMode = WIFI_SCAN_OFF;
+        return;
+      }
+      if (this->wifi_initialized)
+        this->shutdownWiFi();
+
+      #ifdef HAS_SCREEN
+        this->setupScanDisplayArea(TFT_BLACK, color);
+        #ifdef HAS_FULL_SCREEN
+          display_obj.tft.fillRect(0, 16, TFT_WIDTH, 16, color);
+          display_obj.tft.setTextColor(TFT_BLACK, color);
+          display_obj.tft.drawCentreString("Scan Zigbee", TFT_WIDTH / 2, 16, 2);
+        #endif
+        this->prepareScanStage(TFT_GREEN, TFT_BLACK);
+      #endif
+      this->setLEDMode(MODE_SNIFF);
+      this->RunZigbeeScan(scan_mode, color);
+    #endif
+  }
   else if (scan_mode == WIFI_SCAN_GPS_NMEA){
     #ifdef HAS_GPS
       gps_obj.enable_queue();
@@ -3144,13 +3176,29 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
     #endif
   }
 
+  #ifdef HAS_ZIGBEE
+    if (currentScanMode == ZIGBEE_SCAN_ALL) {
+      this->StopZigbeeScan();
+      #ifdef HAS_ACT_LED
+        digitalWrite(ACT_LED_PIN, LOW);
+      #endif
+      for (int i = 0; i < zigbee_nodes->size(); i++) {
+        if (zigbee_nodes->get(i).selected) {
+          ZigbeeNode node = zigbee_nodes->get(i);
+          node.selected = false;
+          zigbee_nodes->set(i, node);
+        }
+      }
+    }
+  #endif
+
   #ifdef HAS_SCREEN
     display_obj.display_buffer->clear();
     #ifdef SCREEN_BUFFER
       display_obj.screen_buffer->clear();
     #endif
     Serial.println(display_obj.display_buffer->size());
-  
+
     display_obj.tteBar = false;
   #endif
 
@@ -3860,8 +3908,12 @@ void WiFiScan::RunSaveAll() {
 
     RunSaveSSIDList();
 
+    #ifdef HAS_ZIGBEE
+      RunSaveZBList();
+    #endif
+
   #if defined(MSC_SHARE)
-    if (msc_active) 
+    if (msc_active)
       MSC_Share_obj.msc_start();
   #endif
 }
@@ -4125,6 +4177,147 @@ void WiFiScan::RunSaveAPList(bool save_as) {
     }
   #endif
 }
+
+#ifdef HAS_ZIGBEE
+// Load Zigbee nodes (and their peer connections) from /ZBs_0.log, mirroring
+// RunLoadAPList. Extended (EUI64) addresses are stored as 16-hex-digit strings.
+void WiFiScan::RunLoadZBList() {
+  #ifdef HAS_SD
+    File file = sd_obj.getFile(F("/ZBs_0.log"));
+    if (!file) {
+      Serial.println(F("Could not open /ZBs_0.log"));
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setFreeFont(NULL);
+        display_obj.tft.setCursor(0, 100);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_CYAN);
+        display_obj.tft.println(F("Could not open /ZBs_0.log"));
+      #endif
+      return;
+    }
+
+    DynamicJsonDocument doc(10048);
+    DeserializationError error = deserializeJson(doc, file);
+    if (error) {
+      Serial.println(error.c_str());
+      file.close();
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setFreeFont(NULL);
+        display_obj.tft.setCursor(0, 100);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_CYAN);
+        display_obj.tft.println(error.c_str());
+      #endif
+      return;
+    }
+
+    if (zigbee_nodes == nullptr)
+      zigbee_nodes = new LinkedList<ZigbeeNode>();
+
+    JsonArray array = doc.as<JsonArray>();
+    for (JsonObject obj : array) {
+      ZigbeeNode node;
+      node.short_addr   = obj.containsKey("short")   ? (uint16_t)obj["short"].as<uint32_t>()   : 0xFFFF;
+      node.pan_id       = obj.containsKey("pan")     ? (uint16_t)obj["pan"].as<uint32_t>()      : 0xFFFF;
+      node.ext_addr     = obj.containsKey("ext")     ? strtoull(obj["ext"].as<const char*>(), nullptr, 16) : 0;
+      node.rssi         = obj.containsKey("rssi")    ? obj["rssi"].as<int>()                    : -127;
+      node.lqi          = obj.containsKey("lqi")     ? obj["lqi"].as<uint8_t>()                 : 0;
+      node.channel      = obj.containsKey("channel") ? obj["channel"].as<uint8_t>()             : 0;
+      node.device_type  = obj.containsKey("type")    ? (ZbDeviceType)obj["type"].as<uint8_t>()  : ZB_DEV_UNKNOWN;
+      node.beacon_seen  = obj.containsKey("beacon")  ? obj["beacon"].as<bool>()                 : false;
+      node.assoc_permit = obj.containsKey("join")    ? obj["join"].as<bool>()                   : false;
+      node.packets      = obj.containsKey("packets") ? obj["packets"].as<uint16_t>()            : 0;
+      node.selected     = false;
+      node.first_seen_ms = millis();
+      node.last_seen_ms  = millis();
+
+      node.connections = new LinkedList<uint16_t>();
+      JsonArray conns = obj["conns"].as<JsonArray>();
+      for (JsonVariant c : conns)
+        node.connections->add((uint16_t)c.as<uint32_t>());
+
+      zigbee_nodes->add(node);
+    }
+
+    file.close();
+
+    #ifdef HAS_SCREEN
+      display_obj.tft.setTextWrap(false);
+      display_obj.tft.setFreeFont(NULL);
+      display_obj.tft.setCursor(0, 110);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextColor(TFT_CYAN);
+      display_obj.tft.print(F("Loaded Zigbee nodes: "));
+      display_obj.tft.println((String)zigbee_nodes->size());
+    #endif
+    Serial.print(F("Loaded Zigbee nodes:"));
+    Serial.println((String)zigbee_nodes->size());
+  #endif
+}
+
+// Save Zigbee nodes (and their peer connections) to /ZBs_0.log, mirroring
+// RunSaveAPList.
+void WiFiScan::RunSaveZBList(bool save_as) {
+  #ifdef HAS_SD
+    if (save_as) {
+      sd_obj.removeFile(F("/ZBs_0.log"));
+
+      this->startLog("ZBs");
+
+      DynamicJsonDocument jsonDocument(4096);
+      JsonArray jsonArray = jsonDocument.to<JsonArray>();
+
+      int node_count = (zigbee_nodes != nullptr) ? zigbee_nodes->size() : 0;
+      for (int i = 0; i < node_count; i++) {
+        const ZigbeeNode& node = zigbee_nodes->get(i);
+        JsonObject jsonNode = jsonArray.createNestedObject();
+        jsonNode["short"]   = node.short_addr;
+        jsonNode["pan"]     = node.pan_id;
+
+        if (node.ext_addr) {
+          char ext[17];
+          snprintf(ext, sizeof(ext), "%08X%08X",
+                   (uint32_t)(node.ext_addr >> 32), (uint32_t)node.ext_addr);
+          jsonNode["ext"] = ext;
+        }
+
+        jsonNode["rssi"]    = node.rssi;
+        jsonNode["lqi"]     = node.lqi;
+        jsonNode["channel"] = node.channel;
+        jsonNode["type"]    = (uint8_t)node.device_type;
+        jsonNode["beacon"]  = node.beacon_seen;
+        jsonNode["join"]    = node.assoc_permit;
+        jsonNode["packets"] = node.packets;
+
+        JsonArray conn_array = jsonNode["conns"].to<JsonArray>();
+        if (node.connections != nullptr) {
+          for (int j = 0; j < node.connections->size(); j++)
+            conn_array.add(node.connections->get(j));
+        }
+      }
+
+      String jsonString;
+      serializeJson(jsonArray, jsonString);
+
+      buffer_obj.append(jsonString);
+
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextWrap(false);
+        display_obj.tft.setFreeFont(NULL);
+        display_obj.tft.setCursor(0, 110);
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_CYAN);
+        display_obj.tft.print(F("Saved Zigbee nodes: "));
+        display_obj.tft.println((String)node_count);
+      #endif
+      Serial.print(F("Saved Zigbee nodes:"));
+      Serial.println((String)node_count);
+    }
+  #endif
+}
+#endif // HAS_ZIGBEE
 
 void WiFiScan::RunLoadSSIDList() {
   #ifdef HAS_SD
@@ -12850,6 +13043,11 @@ void WiFiScan::main(uint32_t currentTime)
       packets_sent = 0;
     }
   }
+  #ifdef HAS_ZIGBEE
+    else if (currentScanMode == ZIGBEE_SCAN_ALL) {
+      this->zigbeeLoop(currentTime);
+    }
+  #endif
   #ifdef HAS_GPS
     else if ((currentScanMode == WIFI_SCAN_OFF))
       if(gps_obj.queue_enabled())

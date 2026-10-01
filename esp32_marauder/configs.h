@@ -533,9 +533,9 @@
     #define HAS_BUTTONS
     #define HAS_SCREEN
       #define HAS_FULL_SCREEN
-      #define BK_LIGHT_PIN 38
       #define TFT_BL 38
       #define HAS_AW9364        // Backlight controller
+      #define BK_LIGHT_PIN 38
       // #define HAS_CYD_PORTRAIT
     #define HAS_SDMMC
       #define HAS_SD
@@ -543,8 +543,8 @@
     #define HAS_TOUCH
       #define HAS_CYD_TOUCH
       #define HAS_XPT2046
-    #define HAS_GPS
-    // #define HAS_GPSI2C
+    // #define HAS_GPS
+    //   #define HAS_GPSI2C
     //   #define I2C_SDA 17   // Grove 2
     //   #define I2C_SCL 18
     //   #define HAS_GPSI2C_ADDR 0x20
@@ -708,12 +708,11 @@
       // I2C bus (shared by touch CST3530, CH32V003, QMI8658, SHTC3, PCF85063A)
     #if defined(MARAUDER_WS_C5_28)
       #define HAS_BT
-        #define HAS_NIMBLE_2
+      //  #define HAS_NIMBLE_2
       #define HAS_BUTTONS
       #define HAS_SCREEN
         #define HAS_FULL_SCREEN
         #define HAS_ILI9341
-
       #define HAS_SD
         #define USE_SD
         #define HAS_C5_SD
@@ -732,12 +731,13 @@
         #define BATTERY_ADC_PIN 0x06    // CH32V003 Reg Id
       #define HAS_RTC
         #define HAS_PCF85063         // i2c real-time clock (RTC)
-      #define HAS_GPS
-        #define HAS_GPSI2C
+      // #define HAS_GPS
+      //   #define HAS_GPSI2C
       // #define HAS_CYD_PORTRAIT
       #define HAS_IDF_3
       // HAS_MIC
       #define DEEPSLEEP
+      #define HAS_ZIGBEE
     #endif     // MARAUDER_WS_C5_28
 
   //// END BOARD FEATURES
@@ -3542,6 +3542,18 @@
       #define HOP_DELAY 1000
     #else
       #define HOP_DELAY 250
+    #endif
+
+    //// 802.15.4 / ZIGBEE STUFF
+    // The ESP32-C5, ESP32-C6 and ESP32-H2 carry an IEEE 802.15.4 radio, which
+    // is what the Zigbee/Thread sniffer (ZBScan) needs. On every other target
+    // ZBScan compiles to harmless no-ops so the rest of the firmware is
+    // unaffected.
+    #if defined(CONFIG_IDF_TARGET_ESP32C5) || defined(CONFIG_IDF_TARGET_ESP32C6) \
+          || defined(CONFIG_IDF_TARGET_ESP32H2)
+      #ifndef HAS_ZIGBEE
+        #define HAS_ZIGBEE
+      #endif
     #endif
 
     //// ACT LED STUFF

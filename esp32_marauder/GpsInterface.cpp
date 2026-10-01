@@ -1,6 +1,6 @@
 #include "GpsInterface.h"
 
-#if defined(HAS_GPS) && !defined(HAS_GPSI2)
+#if defined(HAS_GPS) && !defined(HAS_GPSI2C)
 
 extern GpsInterface gps_obj;
 

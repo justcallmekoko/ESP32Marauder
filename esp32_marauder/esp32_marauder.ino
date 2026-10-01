@@ -264,7 +264,7 @@ void setup()
     // perimanSetPinBusExtraType(ACT_LED_PIN, "ACT_LED_PIN");
   #endif
 
-  #if defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT == 1
+  #if MARAUDER_WS_C5_28 || (defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT == 1)
     while(!Serial && millis() < 2000) {
       delay(500);
     }

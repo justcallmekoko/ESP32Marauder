@@ -6,6 +6,9 @@
 #include "configs.h"
 #include "utils.h"
 #include "GpsTrackerStats.h"
+#ifdef HAS_ZIGBEE
+  #include "ZBScan.h"
+#endif
 
 #include <ArduinoJson.h>
 #include <algorithm>
@@ -181,6 +184,10 @@ int8_t wifi_power = 80;
 #define BT_SCAN_FOX_HUNT 84
 #define BT_FINDMY_SOUND 85
 #define BT_ATTACK_FINDMY_LIVE 86
+
+#ifndef ZIGBEE_SCAN_ALL
+  #define ZIGBEE_SCAN_ALL 200
+#endif
 
 #define WIFI_ATTACK_FUNNY_BEACON 99 
 
@@ -384,7 +391,14 @@ enum class MacSortMode : uint8_t {
   HIGH_RSSI
 };
 
-class WiFiScan
+// WiFiScan gains Zigbee / 802.15.4 sniffing by inheriting from ZBScan, in the
+// same spirit as it already mixes WiFi and Bluetooth scanning. Additional base
+// classes can be added here following the same multiple-inheritance pattern.
+#ifdef HAS_ZIGBEE
+  class WiFiScan : public ZBScan
+#else
+  class WiFiScan
+#endif
 {
   private:
     // Wardriver thanks to https://github.com/JosephHewitt
@@ -1126,6 +1140,10 @@ class WiFiScan
     void RunSaveAPList(bool save_as = true);
     void RunLoadAPList();
     void RunSortAPList();
+    #ifdef HAS_ZIGBEE
+      void RunSaveZBList(bool save_as = true);
+      void RunLoadZBList();
+    #endif
     void RunSaveATList(bool save_as = true);
     void RunLoadATList();
     void RunSetupGPSTracker(uint8_t scan_mode);
