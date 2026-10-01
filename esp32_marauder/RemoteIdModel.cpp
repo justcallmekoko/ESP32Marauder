@@ -252,6 +252,34 @@ void remoteIdFormatGridRadius(float radiusM, char* output,
     std::snprintf(output, outputSize, "%.0fm", radiusM);
 }
 
+void remoteIdFormatTransports(uint8_t transportMask, char* output,
+                              size_t outputSize) {
+  if (output == nullptr || outputSize == 0) return;
+  output[0] = '\0';
+  const struct {
+    uint8_t bit;
+    const char* label;
+  } transports[] = {
+      {static_cast<uint8_t>(RemoteIdTransport::WifiBeacon), "WB"},
+      {static_cast<uint8_t>(RemoteIdTransport::WifiNan), "WN"},
+      {static_cast<uint8_t>(RemoteIdTransport::BleLegacy), "B4"},
+      {static_cast<uint8_t>(RemoteIdTransport::BleExtended), "B5"},
+  };
+  size_t used = 0;
+  for (const auto& transport : transports) {
+    if ((transportMask & transport.bit) == 0) continue;
+    const int written = std::snprintf(output + used, outputSize - used,
+                                      used == 0 ? "%s" : "+%s",
+                                      transport.label);
+    if (written < 0 || static_cast<size_t>(written) >= outputSize - used) {
+      output[outputSize - 1] = '\0';
+      return;
+    }
+    used += static_cast<size_t>(written);
+  }
+  if (used == 0) std::snprintf(output, outputSize, "--");
+}
+
 float remoteIdGridScaleMeters(const RemoteIdRecord* records, size_t count,
                               int32_t originLatE7, int32_t originLonE7,
                               float minimumRadiusM) {

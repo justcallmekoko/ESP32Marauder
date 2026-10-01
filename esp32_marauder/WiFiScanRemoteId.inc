@@ -442,10 +442,14 @@ void WiFiScan::renderRemoteIdGlobal() {
     int16_t y = top + 13;
     for (size_t i = first; i < recordCount; ++i) {
       const RemoteIdRecord* record = &records[i];
+      char transports[16];
+      remoteIdFormatTransports(record->transportMask, transports,
+                               sizeof(transports));
       display_obj.tft.setCursor(2, y);
       display_obj.tft.setTextColor(rssiToColor(record->rssi), TFT_BLACK);
       String id = record->hasUasId ? String(record->uasId) : macToString(record->mac);
-      display_obj.tft.print(String(i) + ":" + String(record->rssi) + " " + id);
+      display_obj.tft.print(String(i) + ":" + String(record->rssi) +
+                            " [" + String(transports) + "] " + id);
       y += 10;
     }
     if (first > 0) {
@@ -542,6 +546,10 @@ void WiFiScan::renderRemoteIdTarget() {
                           : "MAC " + macToString(record->mac), TFT_CYAN);
     if (record->hasOperatorId) line("OP " + String(record->operatorId), TFT_MAGENTA);
     if (record->hasDescription) line("DESC " + String(record->description));
+    char transports[16];
+    remoteIdFormatTransports(record->transportMask, transports,
+                             sizeof(transports));
+    line("TRANSPORT: " + String(transports), TFT_CYAN);
     line("RSSI " + String(record->rssi) + "  AGE " +
          String((millis() - record->lastSeenMs) / 1000) + "s");
     if (record->isLost)

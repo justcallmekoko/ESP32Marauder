@@ -182,6 +182,20 @@ void test_basic_id_selection_prefers_stable_device_serial() {
   TEST_ASSERT_TRUE(remoteIdShouldReplaceBasicId(1, true, 1));
 }
 
+void test_transport_formatter_handles_single_and_combined_methods() {
+  char output[16];
+  remoteIdFormatTransports(static_cast<uint8_t>(RemoteIdTransport::BleLegacy),
+                           output, sizeof(output));
+  TEST_ASSERT_EQUAL_STRING("B4", output);
+  remoteIdFormatTransports(
+      static_cast<uint8_t>(RemoteIdTransport::WifiBeacon) |
+          static_cast<uint8_t>(RemoteIdTransport::BleLegacy),
+      output, sizeof(output));
+  TEST_ASSERT_EQUAL_STRING("WB+B4", output);
+  remoteIdFormatTransports(0, output, sizeof(output));
+  TEST_ASSERT_EQUAL_STRING("--", output);
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_layout_profiles);
@@ -199,5 +213,6 @@ int main(int, char**) {
   RUN_TEST(test_store_tracks_packet_rate_and_can_erase_duplicate_mac);
   RUN_TEST(test_coordinate_validation_rejects_unavailable_and_out_of_range);
   RUN_TEST(test_basic_id_selection_prefers_stable_device_serial);
+  RUN_TEST(test_transport_formatter_handles_single_and_combined_methods);
   return UNITY_END();
 }

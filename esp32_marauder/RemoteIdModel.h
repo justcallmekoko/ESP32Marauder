@@ -136,6 +136,8 @@ void remoteIdFormatDistanceKm(float distanceM, char* output,
                               size_t outputSize);
 void remoteIdFormatGridRadius(float radiusM, char* output,
                               size_t outputSize);
+void remoteIdFormatTransports(uint8_t transportMask, char* output,
+                              size_t outputSize);
 float remoteIdGridScaleMeters(const RemoteIdRecord* records, size_t count,
                               int32_t originLatE7, int32_t originLonE7,
                               float minimumRadiusM = 50.0f);
