@@ -36,13 +36,16 @@ void updateKnownRemoteIdObservation(RemoteIdRecord& record,
 
 void WiFiScan::mergeRemoteIdRecord(RemoteIdRecord& destination,
                                    const RemoteIdRecord& source) {
+  const bool acceptUasId = source.hasUasId &&
+      remoteIdShouldReplaceBasicId(destination.idType, destination.hasUasId,
+                                   source.idType);
   copyIfPresent(destination.uasId, sizeof(destination.uasId), source.uasId,
-                source.hasUasId);
+                acceptUasId);
   copyIfPresent(destination.operatorId, sizeof(destination.operatorId),
                 source.operatorId, source.hasOperatorId);
   copyIfPresent(destination.description, sizeof(destination.description),
                 source.description, source.hasDescription);
-  if (source.hasUasId) {
+  if (acceptUasId) {
     destination.hasUasId = true;
     destination.idType = source.idType;
     destination.uaType = source.uaType;

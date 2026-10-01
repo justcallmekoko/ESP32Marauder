@@ -175,6 +175,13 @@ void test_coordinate_validation_rejects_unavailable_and_out_of_range() {
   TEST_ASSERT_FALSE(remoteIdCoordinatesValid(0, 1800000001));
 }
 
+void test_basic_id_selection_prefers_stable_device_serial() {
+  TEST_ASSERT_TRUE(remoteIdShouldReplaceBasicId(0, false, 2));
+  TEST_ASSERT_TRUE(remoteIdShouldReplaceBasicId(2, true, 1));
+  TEST_ASSERT_FALSE(remoteIdShouldReplaceBasicId(1, true, 2));
+  TEST_ASSERT_TRUE(remoteIdShouldReplaceBasicId(1, true, 1));
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_layout_profiles);
@@ -191,5 +198,6 @@ int main(int, char**) {
   RUN_TEST(test_lifecycle_marks_lost_and_reacquired);
   RUN_TEST(test_store_tracks_packet_rate_and_can_erase_duplicate_mac);
   RUN_TEST(test_coordinate_validation_rejects_unavailable_and_out_of_range);
+  RUN_TEST(test_basic_id_selection_prefers_stable_device_serial);
   return UNITY_END();
 }

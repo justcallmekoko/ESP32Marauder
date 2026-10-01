@@ -218,6 +218,17 @@ bool remoteIdCoordinatesValid(int32_t latitudeE7, int32_t longitudeE7) {
   return latitudeE7 != 0 || longitudeE7 != 0;
 }
 
+bool remoteIdShouldReplaceBasicId(uint8_t currentType, bool hasCurrent,
+                                  uint8_t candidateType) {
+  if (!hasCurrent || candidateType == currentType) return true;
+  // ASTM permits multiple Basic IDs. Prefer the module's serial/device ID over
+  // a CAA registration so an alternating transmitter has one stable identity.
+  const uint8_t currentPriority = currentType == 1 ? 3 : currentType == 2 ? 2 : 1;
+  const uint8_t candidatePriority =
+      candidateType == 1 ? 3 : candidateType == 2 ? 2 : 1;
+  return candidatePriority > currentPriority;
+}
+
 void remoteIdFormatDistanceKm(float distanceM, char* output,
                               size_t outputSize) {
   if (output == nullptr || outputSize == 0) return;

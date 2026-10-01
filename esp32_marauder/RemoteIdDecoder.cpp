@@ -13,6 +13,7 @@ constexpr uint8_t kMessagePack = 15;
 constexpr uint8_t kVendorSpecificElement = 221;
 constexpr uint8_t kAsdStanOui[] = {0xFA, 0x0B, 0xBC};
 constexpr uint8_t kOpenDroneIdVendorType = 0x0D;
+constexpr uint8_t kOpenDroneIdBleApplicationCode = 0x0D;
 constexpr float kAltitudeOffsetM = 1000.0f;
 constexpr float kAltitudeScaleM = 0.5f;
 
@@ -81,8 +82,10 @@ RemoteIdDecodeResult RemoteIdDecoder::decodeMessage(
                             kAltitudeOffsetM;
       record.heightM = readU16Le(message + 17) * kAltitudeScaleM -
                        kAltitudeOffsetM;
-      record.horizontalAccuracy = message[19] >> 4;
-      record.verticalAccuracy = message[19] & 0x0F;
+      // ASTM packs horizontal accuracy in the low nibble and vertical
+      // accuracy in the high nibble.
+      record.horizontalAccuracy = message[19] & 0x0F;
+      record.verticalAccuracy = message[19] >> 4;
       record.speedAccuracy = message[20] & 0x0F;
       record.locationTimestampDeciseconds = readU16Le(message + 21);
       record.directionValid = record.directionDeg <= 360;
@@ -198,9 +201,14 @@ RemoteIdDecodeResult RemoteIdDecoder::decodeBleServiceData(
     const uint8_t* serviceData, size_t length, RemoteIdRecord& record) const {
   if (serviceData == nullptr || length < 2) return RemoteIdDecodeResult::Malformed;
   if (readU16Le(serviceData) != kBleServiceUuid) return RemoteIdDecodeResult::Ignored;
-  // ASTM Bluetooth 4 Service Data has UUID + one-byte message counter.
-  if (length < 3 + kMessageSize) return RemoteIdDecodeResult::Malformed;
-  return decodePayload(serviceData + 3, length - 3, record);
+  // ASTM Bluetooth 4 Service Data is UUID, application code (0x0D), message
+  // counter, then the 25-byte Open Drone ID message. Skipping only the counter
+  // shifts every decoded field by one byte and can still yield plausible but
+  // entirely false telemetry.
+  if (length < 4 + kMessageSize) return RemoteIdDecodeResult::Malformed;
+  if (serviceData[2] != kOpenDroneIdBleApplicationCode)
+    return RemoteIdDecodeResult::Ignored;
+  return decodePayload(serviceData + 4, length - 4, record);
 }
 
 RemoteIdDecodeResult RemoteIdDecoder::decodeWifiNan(

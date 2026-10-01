@@ -88,8 +88,8 @@ void test_decodes_message_pack_fields() {
   TEST_ASSERT_FLOAT_WITHIN(0.01f, 10.0f, record.horizontalSpeedMps);
   TEST_ASSERT_FLOAT_WITHIN(0.01f, -2.0f, record.verticalSpeedMps);
   TEST_ASSERT_FLOAT_WITHIN(0.01f, 150.0f, record.altitudeGeoM);
-  TEST_ASSERT_EQUAL_UINT8(10, record.horizontalAccuracy);
-  TEST_ASSERT_EQUAL_UINT8(7, record.verticalAccuracy);
+  TEST_ASSERT_EQUAL_UINT8(7, record.horizontalAccuracy);
+  TEST_ASSERT_EQUAL_UINT8(10, record.verticalAccuracy);
   TEST_ASSERT_EQUAL_UINT8(4, record.speedAccuracy);
   TEST_ASSERT_EQUAL_UINT16(1234, record.locationTimestampDeciseconds);
   TEST_ASSERT_EQUAL_INT32(407000000, record.operatorLatitudeE7);
@@ -124,14 +124,27 @@ void test_decodes_wifi_beacon_vendor_element() {
 }
 
 void test_decodes_ble_service_data() {
-  uint8_t data[3 + RemoteIdDecoder::kMessageSize] = {0xFA, 0xFF, 9};
-  makeLocation(data + 3);
+  uint8_t data[4 + RemoteIdDecoder::kMessageSize] = {0xFA, 0xFF, 0x0D, 9};
+  makeLocation(data + 4);
   RemoteIdRecord record;
   RemoteIdDecoder decoder;
   TEST_ASSERT_EQUAL_UINT8(
       static_cast<uint8_t>(RemoteIdDecodeResult::Decoded),
       static_cast<uint8_t>(decoder.decodeBleServiceData(data, sizeof(data), record)));
   TEST_ASSERT_TRUE(record.hasLocation);
+  TEST_ASSERT_EQUAL_INT32(407123456, record.latitudeE7);
+  TEST_ASSERT_EQUAL_INT32(-740123456, record.longitudeE7);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 10.0f, record.horizontalSpeedMps);
+}
+
+void test_rejects_ble_service_data_without_open_drone_id_app_code() {
+  uint8_t data[4 + RemoteIdDecoder::kMessageSize] = {0xFA, 0xFF, 0x01, 9};
+  makeLocation(data + 4);
+  RemoteIdRecord record;
+  RemoteIdDecoder decoder;
+  TEST_ASSERT_EQUAL_UINT8(
+      static_cast<uint8_t>(RemoteIdDecodeResult::Ignored),
+      static_cast<uint8_t>(decoder.decodeBleServiceData(data, sizeof(data), record)));
 }
 
 void test_rejects_truncated_pack_and_ie() {
@@ -248,6 +261,7 @@ int main(int, char**) {
   RUN_TEST(test_decodes_message_pack_fields);
   RUN_TEST(test_decodes_wifi_beacon_vendor_element);
   RUN_TEST(test_decodes_ble_service_data);
+  RUN_TEST(test_rejects_ble_service_data_without_open_drone_id_app_code);
   RUN_TEST(test_rejects_truncated_pack_and_ie);
   RUN_TEST(test_all_truncated_message_lengths_are_rejected);
   RUN_TEST(test_rejects_out_of_range_location_for_plotting);
