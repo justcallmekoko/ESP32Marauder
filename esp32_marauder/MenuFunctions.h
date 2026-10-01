@@ -220,6 +220,9 @@ class MenuFunctions
 
     Menu wifiMenu;
     Menu bluetoothMenu;
+    #ifdef HAS_IEEE802154
+      Menu zigbeeMenu;   // Zigbee / 802.15.4 (ESP32-C5 / C6 / H2)
+    #endif
     #ifdef HAS_GPS
       Menu gpsMenu;   // H4W9 Added GPS Menu option to Main Menu
     #endif

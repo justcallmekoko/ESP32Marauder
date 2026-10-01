@@ -439,6 +439,9 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_DISPLAY_AP_INFO) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_EVIL_PORTAL) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA) ||
+          #ifdef HAS_IEEE802154
+            (wifi_scan_obj.currentScanMode == ZIGBEE_SCAN_ALL) ||
+          #endif
           (wifi_scan_obj.currentScanMode == WIFI_PING_SCAN) ||
           (wifi_scan_obj.currentScanMode == WIFI_ARP_SCAN) ||
           (wifi_scan_obj.currentScanMode == WIFI_PORT_SCAN_ALL) ||
@@ -545,6 +548,9 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_SIG_STREN) ||
             (wifi_scan_obj.currentScanMode == BT_ATTACK_FINDMY_LIVE) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA) ||
+            #ifdef HAS_IEEE802154
+              (wifi_scan_obj.currentScanMode == ZIGBEE_SCAN_ALL) ||
+            #endif
             (wifi_scan_obj.currentScanMode == WIFI_PING_SCAN) ||
             (wifi_scan_obj.currentScanMode == WIFI_ARP_SCAN) ||
             (wifi_scan_obj.currentScanMode == WIFI_PORT_SCAN_ALL) ||
@@ -2124,6 +2130,9 @@ void MenuFunctions::RunSetup()
 #ifdef HAS_BT
   bluetoothMenu.list = new LinkedList<MenuNode>(); // Get list in third menu ready
 #endif
+  #ifdef HAS_IEEE802154
+    zigbeeMenu.list = new LinkedList<MenuNode>();
+  #endif
   deviceMenu.list = new LinkedList<MenuNode>();
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
@@ -2223,6 +2232,9 @@ void MenuFunctions::RunSetup()
     geofenceRadiusMenu.name = "Radius (miles)";
   #endif
   bluetoothMenu.name = text_table1[19];
+  #ifdef HAS_IEEE802154
+    zigbeeMenu.name = "Zigbee";
+  #endif
   wifiSnifferMenu.name = text_table1[20];
   wifiScannerMenu.name = "Scanners";
   wifiAttackMenu.name = text_table1[21];
@@ -2306,6 +2318,11 @@ void MenuFunctions::RunSetup()
   #ifdef HAS_BT
     this->addNodes(&mainMenu, text_table1[19], TFTCYAN, BLUETOOTH, [this]() {
       this->changeMenu(&bluetoothMenu, true);
+    });
+  #endif
+  #ifdef HAS_IEEE802154
+    this->addNodes(&mainMenu, "Zigbee", TFTGREEN, SNIFFERS, [this]() {
+      this->changeMenu(&zigbeeMenu, true);
     });
   #endif
   #ifdef HAS_GPS
@@ -3676,6 +3693,19 @@ void MenuFunctions::RunSetup()
     wifi_scan_obj.StartScan(BT_ATTACK_SPAM_ALL, TFT_MAGENTA);
   });
 
+#endif
+
+#ifdef HAS_IEEE802154
+  // Build Zigbee / 802.15.4 Menu (ESP32-C5 / C6 / H2)
+  zigbeeMenu.parentMenu = &mainMenu;
+  this->addNodes(&zigbeeMenu, text09, TFTLIGHTGREY, 0, [this]() {
+    this->changeMenu(zigbeeMenu.parentMenu, true);
+  });
+  this->addNodes(&zigbeeMenu, "Zigbee Sniff", TFTGREEN, SNIFFERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(ZIGBEE_SCAN_ALL, TFT_GREEN);
+  });
 #endif
 
   //#ifndef HAS_ILI9341
