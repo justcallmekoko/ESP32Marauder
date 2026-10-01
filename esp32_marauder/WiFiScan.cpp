@@ -2753,6 +2753,21 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
       RunBluetoothScan(scan_mode, color);
     #endif
   }
+  else if (scan_mode == ZIGBEE_SCAN_ALL) {
+    #ifdef HAS_IEEE802154
+      #ifdef HAS_SCREEN
+        this->setupScanDisplayArea(TFT_BLACK, color);
+        #ifdef HAS_FULL_SCREEN
+          display_obj.tft.fillRect(0, 16, TFT_WIDTH, 16, color);
+          display_obj.tft.setTextColor(TFT_BLACK, color);
+          display_obj.tft.drawCentreString("Scan Zigbee", TFT_WIDTH / 2, 16, 2);
+        #endif
+        this->prepareScanStage(TFT_GREEN, TFT_BLACK);
+      #endif
+      this->setLEDMode(MODE_SNIFF);
+      this->RunZigbeeScan(scan_mode, color);
+    #endif
+  }
   else if (scan_mode == WIFI_SCAN_GPS_NMEA){
     #ifdef HAS_GPS
       gps_obj.enable_queue();
@@ -3144,13 +3159,29 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
     #endif
   }
 
+  #ifdef HAS_IEEE802154
+    if (currentScanMode == ZIGBEE_SCAN_ALL) {
+      this->StopZigbeeScan();
+      #ifdef HAS_ACT_LED
+        digitalWrite(ACT_LED_PIN, LOW);
+      #endif
+      for (int i = 0; i < zigbee_nodes->size(); i++) {
+        if (zigbee_nodes->get(i).selected) {
+          ZigbeeNode node = zigbee_nodes->get(i);
+          node.selected = false;
+          zigbee_nodes->set(i, node);
+        }
+      }
+    }
+  #endif
+
   #ifdef HAS_SCREEN
     display_obj.display_buffer->clear();
     #ifdef SCREEN_BUFFER
       display_obj.screen_buffer->clear();
     #endif
     Serial.println(display_obj.display_buffer->size());
-  
+
     display_obj.tteBar = false;
   #endif
 
@@ -12850,6 +12881,11 @@ void WiFiScan::main(uint32_t currentTime)
       packets_sent = 0;
     }
   }
+  #ifdef HAS_IEEE802154
+    else if (currentScanMode == ZIGBEE_SCAN_ALL) {
+      this->zigbeeLoop(currentTime);
+    }
+  #endif
   #ifdef HAS_GPS
     else if ((currentScanMode == WIFI_SCAN_OFF))
       if(gps_obj.queue_enabled())

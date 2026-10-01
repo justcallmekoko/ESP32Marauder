@@ -321,6 +321,9 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_SCAN_ALL_CMD);
     //Serial.println(HELP_SCANSTA_CMD);
     Serial.println(HELP_SNIFF_RAW_CMD);
+    #ifdef HAS_IEEE802154
+      Serial.println(HELP_SNIFF_ZIGBEE_CMD);
+    #endif
     Serial.println(HELP_SNIFF_BEACON_CMD);
     Serial.println(HELP_SNIFF_PROBE_CMD);
     Serial.println(HELP_SNIFF_PWN_CMD);
@@ -1003,6 +1006,14 @@ void CommandLine::runCommand(String input) {
     // Raw sniff
     else if (cmd_args.get(0) == SNIFF_RAW_CMD)
       this->startScanFromCLI(WIFI_SCAN_RAW_CAPTURE, TFT_WHITE, "Raw sniff");
+    // Zigbee / 802.15.4 sniff (ESP32-C5 / ESP32-C6 / ESP32-H2 only)
+    else if (cmd_args.get(0) == SNIFF_ZIGBEE_CMD) {
+      #ifdef HAS_IEEE802154
+        this->startScanFromCLI(ZIGBEE_SCAN_ALL, TFT_GREEN, "Zigbee sniff");
+      #else
+        Serial.println(F("Zigbee sniffing requires an ESP32-C5 / ESP32-C6 / ESP32-H2"));
+      #endif
+    }
     // Beacon sniff
     else if (cmd_args.get(0) == SNIFF_BEACON_CMD) {
       this->startScanFromCLI(WIFI_SCAN_AP, TFT_MAGENTA, "Beacon sniff");

@@ -6,6 +6,7 @@
 #include "configs.h"
 #include "utils.h"
 #include "GpsTrackerStats.h"
+#include "ZBScan.h"
 
 #include <ArduinoJson.h>
 #include <algorithm>
@@ -384,7 +385,10 @@ enum class MacSortMode : uint8_t {
   HIGH_RSSI
 };
 
-class WiFiScan
+// WiFiScan gains Zigbee / 802.15.4 sniffing by inheriting from ZBScan, in the
+// same spirit as it already mixes WiFi and Bluetooth scanning. Additional base
+// classes can be added here following the same multiple-inheritance pattern.
+class WiFiScan : public ZBScan
 {
   private:
     // Wardriver thanks to https://github.com/JosephHewitt

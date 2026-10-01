@@ -3544,6 +3544,18 @@
       #define HOP_DELAY 250
     #endif
 
+    //// 802.15.4 / ZIGBEE STUFF
+    // The ESP32-C5, ESP32-C6 and ESP32-H2 carry an IEEE 802.15.4 radio, which
+    // is what the Zigbee/Thread sniffer (ZBScan) needs. On every other target
+    // ZBScan compiles to harmless no-ops so the rest of the firmware is
+    // unaffected.
+    #if defined(CONFIG_IDF_TARGET_ESP32C5) || defined(CONFIG_IDF_TARGET_ESP32C6) \
+          || defined(CONFIG_IDF_TARGET_ESP32H2)
+      #ifndef HAS_IEEE802154
+        #define HAS_IEEE802154
+      #endif
+    #endif
+
     //// ACT LED STUFF
     #ifdef HAS_ACT_LED
 
