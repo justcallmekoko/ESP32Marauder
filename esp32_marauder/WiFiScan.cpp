@@ -13016,4 +13016,4 @@ void WiFiScan::main(uint32_t currentTime)
   }
 }
 
-#include "WiFiScanRemoteId.inc"
+#include "WiFiScanRemoteId.h"
