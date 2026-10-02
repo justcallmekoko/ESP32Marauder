@@ -405,6 +405,13 @@ class WiFiScan
     uint32_t remote_id_last_render_ms = 0;
     uint8_t remote_id_schedule_step = 0;
     uint8_t remote_id_beacon_channel_index = 0;
+    #ifdef HAS_SD
+      String remote_id_gpx_file_name;
+      bool remote_id_gpx_active = false;
+      void startRemoteIdGpx();
+      void logRemoteIdGpxPositions(uint32_t nowMs);
+      void finishRemoteIdGpx();
+    #endif
     static constexpr uint32_t REMOTE_ID_STALE_MS = 30000;
     static constexpr uint32_t REMOTE_ID_EXPIRE_MS = 120000;
     void RunRemoteIdScan(uint8_t scan_mode, uint16_t color);

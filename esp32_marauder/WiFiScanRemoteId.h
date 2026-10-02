@@ -8,6 +8,17 @@ void copyIfPresent(char* destination, size_t destinationSize,
   destination[destinationSize - 1] = '\0';
 }
 
+#ifdef HAS_SD
+String remoteIdXmlEscape(String value) {
+  value.replace("&", "&amp;");
+  value.replace("<", "&lt;");
+  value.replace(">", "&gt;");
+  value.replace("\"", "&quot;");
+  value.replace("'", "&apos;");
+  return value;
+}
+#endif
+
 void updateKnownRemoteIdObservation(RemoteIdRecord& record,
                                     const uint8_t mac[6],
                                     RemoteIdTransport transport,
@@ -53,9 +64,11 @@ void WiFiScan::mergeRemoteIdRecord(RemoteIdRecord& destination,
   if (source.hasOperatorId) destination.hasOperatorId = true;
   if (source.hasDescription) destination.hasDescription = true;
   if (source.hasLocation) {
-    destination.hasLocation = true;
-    destination.latitudeE7 = source.latitudeE7;
-    destination.longitudeE7 = source.longitudeE7;
+    if (!destination.hasLocation && source.historyCount != 0) {
+      memcpy(destination.history, source.history, sizeof(destination.history));
+      destination.historyCount = source.historyCount;
+    }
+    remoteIdUpdateLocation(destination, source.latitudeE7, source.longitudeE7);
     destination.altitudeGeoM = source.altitudeGeoM;
     destination.altitudePressureM = source.altitudePressureM;
     destination.heightM = source.heightM;
@@ -222,6 +235,7 @@ void WiFiScan::RunRemoteIdScan(uint8_t scan_mode, uint16_t color) {
   #ifdef HAS_SD
     startLog("remoteid");
     buffer_obj.append("millis,uas_id,operator_id,transport,channel,rssi,packets,packet_rate_hz,state,lost_count,reacquired_count,last_lost_ms,last_reacquired_ms,lat,lon,alt_geo,alt_geo_valid,height,height_valid,speed,speed_valid,heading,heading_valid,operator_lat,operator_lon,auth_type,auth_page,auth_last_page,auth_length,auth_timestamp\n");
+    startRemoteIdGpx();
   #endif
 
   #ifdef HAS_SCREEN
@@ -384,6 +398,93 @@ void WiFiScan::logRemoteIdRecord(const RemoteIdRecord& record) {
   #endif
 }
 
+#ifdef HAS_SD
+void WiFiScan::startRemoteIdGpx() {
+  remote_id_gpx_active = false;
+  remote_id_gpx_file_name = "";
+  if (!sd_obj.supported || !settings_obj.loadSetting<bool>("SavePCAP")) return;
+  for (uint16_t index = 0; index < 10000; ++index) {
+    const String candidate = "/remoteid_" + String(index) + ".gpx";
+    if (!SD.exists(candidate)) {
+      remote_id_gpx_file_name = candidate;
+      break;
+    }
+  }
+  if (remote_id_gpx_file_name.length() == 0) return;
+  File file = SD.open(remote_id_gpx_file_name, FILE_WRITE);
+  if (!file) return;
+  file.print("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+  file.print("<gpx version=\"1.1\" creator=\"ESP32 Marauder Remote ID\" ");
+  file.print("xmlns=\"http://www.topografix.com/GPX/1/1\">\n");
+  file.close();
+  remote_id_gpx_active = true;
+  Serial.println("Remote ID GPX: " + remote_id_gpx_file_name);
+}
+
+void WiFiScan::logRemoteIdGpxPositions(uint32_t nowMs) {
+  if (!remote_id_gpx_active) return;
+  static RemoteIdRecord snapshots[REMOTE_ID_CAPACITY];
+  size_t count = 0;
+  portENTER_CRITICAL(&remote_id_mux);
+  for (size_t i = 0; i < remote_id_store.size() && count < REMOTE_ID_CAPACITY; ++i) {
+    RemoteIdRecord* record = remote_id_store.at(i);
+    if (record == nullptr || !record->hasLocation ||
+        record->lastGpxRevision == record->locationRevision ||
+        nowMs - record->lastGpxLoggedMs < 1000)
+      continue;
+    record->lastGpxLoggedMs = nowMs;
+    record->lastGpxRevision = record->locationRevision;
+    snapshots[count++] = *record;
+  }
+  portEXIT_CRITICAL(&remote_id_mux);
+  if (count == 0) return;
+
+  File file = SD.open(remote_id_gpx_file_name, FILE_APPEND);
+  if (!file) {
+    remote_id_gpx_active = false;
+    return;
+  }
+  for (size_t i = 0; i < count; ++i) {
+    const RemoteIdRecord& record = snapshots[i];
+    const String name = remoteIdXmlEscape(record.hasUasId
+        ? String(record.uasId) : macToString(record.mac));
+    char transports[16];
+    remoteIdFormatTransports(record.transportMask, transports, sizeof(transports));
+    String description = "Transport: " + String(transports) +
+                         "; RSSI: " + String(record.rssi) +
+                         "; Session ms: " + String(nowMs);
+    if (record.hasOperatorId)
+      description += "; Operator ID: " + String(record.operatorId);
+    file.print("  <wpt lat=\"");
+    file.print(record.latitudeE7 / 1e7, 7);
+    file.print("\" lon=\"");
+    file.print(record.longitudeE7 / 1e7, 7);
+    file.print("\">\n");
+    if (record.altitudeGeoValid) {
+      file.print("    <ele>");
+      file.print(record.altitudeGeoM, 1);
+      file.print("</ele>\n");
+    }
+    file.print("    <name>");
+    file.print(name);
+    file.print("</name>\n    <desc>");
+    file.print(remoteIdXmlEscape(description));
+    file.print("</desc>\n  </wpt>\n");
+  }
+  file.close();
+}
+
+void WiFiScan::finishRemoteIdGpx() {
+  if (!remote_id_gpx_active) return;
+  File file = SD.open(remote_id_gpx_file_name, FILE_APPEND);
+  if (file) {
+    file.print("</gpx>\n");
+    file.close();
+  }
+  remote_id_gpx_active = false;
+}
+#endif
+
 size_t WiFiScan::snapshotRemoteIds(RemoteIdRecord* records,
                                    size_t capacity) const {
   if (records == nullptr || capacity == 0) return 0;
@@ -490,6 +591,13 @@ void WiFiScan::renderRemoteIdGlobal() {
           for (size_t i = 0; i < recordCount; ++i) {
             const RemoteIdRecord* record = &records[i];
             if (record->hasLocation) {
+              for (size_t h = 0; h < record->historyCount; ++h) {
+                const RemoteIdGridPoint tail = remoteIdProjectHistoryToGrid(
+                    *record, record->history[h], originLat, originLon,
+                    SCREEN_WIDTH, gridHeight, radius, 8);
+                if (tail.visible)
+                  display_obj.tft.drawPixel(tail.x, gridTop + tail.y, TFT_RED);
+              }
               RemoteIdGridPoint p = remoteIdProjectToGrid(record->latitudeE7,
                   record->longitudeE7, originLat, originLon,
                   SCREEN_WIDTH, gridHeight, radius, 8);
