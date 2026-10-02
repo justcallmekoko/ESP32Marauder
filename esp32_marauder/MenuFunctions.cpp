@@ -503,6 +503,8 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == BT_SCAN_WAR_DRIVE) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_WAR_DRIVE_CONT) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_SKIMMERS) ||
+          (wifi_scan_obj.currentScanMode == REMOTE_ID_SCAN_ALL) ||
+          (wifi_scan_obj.currentScanMode == REMOTE_ID_SCAN_TARGET) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_ANALYZER))
       {
         wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
@@ -617,6 +619,8 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ANALYZER) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) ||
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_PACKET_RATE) ||
+            (wifi_scan_obj.currentScanMode == REMOTE_ID_SCAN_ALL) ||
+            (wifi_scan_obj.currentScanMode == REMOTE_ID_SCAN_TARGET) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_ANALYZER))
         {
           wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
@@ -2113,6 +2117,7 @@ void MenuFunctions::RunSetup()
   bluetoothAttackMenu.list = new LinkedList<MenuNode>();
   iBeaconMenu.list = new LinkedList<MenuNode>();
   iBeaconInfoMenu.list = new LinkedList<MenuNode>();
+  remoteIdMenu.list = new LinkedList<MenuNode>();
 
   // Settings stuff
   generateSSIDsMenu.list = new LinkedList<MenuNode>();
@@ -2176,6 +2181,7 @@ void MenuFunctions::RunSetup()
   bluetoothAttackMenu.name = "Bluetooth Attacks";
   iBeaconMenu.name = "iBeacon Info";
   iBeaconInfoMenu.name = "iBeacon";
+  remoteIdMenu.name = "Remote ID Devices";
   generateSSIDsMenu.name = text_table1[27];
   clearSSIDsMenu.name = text_table1[28];
   clearAPsMenu.name = text_table1[29];
@@ -2373,6 +2379,28 @@ void MenuFunctions::RunSetup()
     display_obj.clearScreen();
     this->drawStatusBar();
     wifi_scan_obj.StartScan(WIFI_SCAN_DEAUTH, TFT_RED);
+  });
+  this->addNodes(&wifiSnifferMenu, "Remote ID Scan", TFTCYAN, SCANNERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.StartScan(REMOTE_ID_SCAN_ALL, TFT_CYAN);
+  });
+  this->addNodes(&wifiSnifferMenu, "Remote ID Devices", TFTMAGENTA, SCANNERS, [this]() {
+    remoteIdMenu.list->clear();
+    remoteIdMenu.parentMenu = &wifiSnifferMenu;
+    this->addNodes(&remoteIdMenu, text09, TFTLIGHTGREY, 0, [this]() {
+      this->changeMenu(remoteIdMenu.parentMenu, true);
+    });
+    for (size_t i = 0; i < wifi_scan_obj.remoteIdCount(); ++i) {
+      String label = wifi_scan_obj.remoteIdLabel(i);
+      this->addNodes(&remoteIdMenu, label.c_str(), TFTCYAN, SCANNERS, [this, i]() {
+        if (!wifi_scan_obj.selectRemoteIdTarget(i)) return;
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(REMOTE_ID_SCAN_TARGET, TFT_MAGENTA);
+      });
+    }
+    this->changeMenu(&remoteIdMenu, true);
   });
   this->addNodes(&wifiSnifferMenu, "Packet Count", TFTORANGE, PACKET_MONITOR, [this]() {
     display_obj.clearScreen();
