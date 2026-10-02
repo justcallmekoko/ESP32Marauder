@@ -6,6 +6,7 @@
 #include "WdgResponse.h"
 #include "UploadStreamBuffer.h"
 #include "lang_var.h"
+#include <esp_ota_ops.h>
 
 #ifdef HAS_PSRAM
   struct mac_addr* mac_history = nullptr;
@@ -41,6 +42,11 @@ LinkedList<IPAddress>* ipList;
 LinkedList<ProbeReqSsid>* probe_req_ssids;
 LinkedList<BleDevice>* ble_devices;
 extern ReconMission recon_obj;
+
+namespace {
+constexpr size_t MAX_RETAINED_BLE_DEVICES = 128;
+constexpr uint32_t IBEACON_UI_INTERVAL_MS = 100;
+}
 
 size_t WiFiScan::retainedAccessPointCount() const {
   return access_points == nullptr ? 0 : access_points->size();
@@ -322,6 +328,8 @@ extern "C" {
           String mac = advertisedDevice->getAddress().toString().c_str();
           unsigned char mac_char[6];
           wifi_scan_obj.copyNimbleMac(advertisedDevice->getAddress(), mac_char);
+          uint8_t* payLoad = advertisedDevice->getPayload();
+          size_t len = advertisedDevice->getPayloadLength();
 
           if (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT)
             wifi_scan_obj.updateBluetoothFoxHuntRssi(mac_char, mac, rssi);
@@ -334,6 +342,14 @@ extern "C" {
           int buf = 0;
             
           String display_string = "";
+
+          if ((wifi_scan_obj.currentScanMode == REMOTE_ID_SCAN_ALL) ||
+              (wifi_scan_obj.currentScanMode == REMOTE_ID_SCAN_TARGET)) {
+            wifi_scan_obj.processRemoteIdBlePayload(payLoad, len, mac_char, rssi,
+                RemoteIdTransport::BleLegacy);
+            wifi_scan_obj.bt_cb_busy = false;
+            return;
+          }
 
           if (wifi_scan_obj.currentScanMode == BT_ATTACK_FINDMY_LIVE) {
             if (connectionPending) {
@@ -567,12 +583,21 @@ extern "C" {
             }
           }
           else if ((wifi_scan_obj.currentScanMode == BT_SCAN_ALL) ||
+                   (wifi_scan_obj.currentScanMode == BT_SCAN_IBEACON) ||
                    (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT)) {
             if (buf >= 0)
             {
               BleDevice ble_device;
-              ble_device.device_type = wifi_scan_obj.classifyBLEDevice(advertisedDevice);
-              if (name_length > 0)
+              const bool is_ibeacon = marauder::parseIBeacon(payLoad, len, ble_device.ibeacon);
+              if (wifi_scan_obj.currentScanMode == BT_SCAN_IBEACON && !is_ibeacon) {
+                wifi_scan_obj.bt_cb_busy = false;
+                return;
+              }
+              ble_device.is_ibeacon = is_ibeacon;
+              ble_device.device_type = is_ibeacon ? "iBeacon" : wifi_scan_obj.classifyBLEDevice(advertisedDevice);
+              if (is_ibeacon)
+                ble_device.name = "iBeacon " + String(ble_device.ibeacon.major) + ":" + String(ble_device.ibeacon.minor);
+              else if (name_length > 0)
                 ble_device.name = name;
               else
                 ble_device.name = mac;
@@ -586,12 +611,13 @@ extern "C" {
               int device_match_check = wifi_scan_obj.seenBLEDevice(ble_device);
 
               if (device_match_check >= 0) {
-                recon_obj.queueRepeat('B', ble_device.mac, ble_device.rssi, 0);
+                recon_obj.queueRepeat(ble_device.is_ibeacon ? 'I' : 'B', ble_device.mac, ble_device.rssi, 0);
                 ble_device.selected = ble_devices->get(device_match_check).selected;
                 ble_device.name = ble_devices->get(device_match_check).name;
                 memcpy(ble_device.mac, ble_devices->get(device_match_check).mac, sizeof(mac_char));
                 ble_devices->set(device_match_check, ble_device);
                 //Serial.println(ble_devices->get(device_match_check).name + " RSSI updated: " + String(ble_devices->get(device_match_check).rssi));
+                wifi_scan_obj.bt_cb_busy = false;
                 return;
               }
 
@@ -600,7 +626,15 @@ extern "C" {
                 return;
               }
 
-              ble_devices->add(ble_device);
+              if (!wifi_scan_obj.retainBLEDevice(ble_device)) {
+                wifi_scan_obj.bt_cb_busy = false;
+                return;
+              }
+
+              if (is_ibeacon && !wifi_scan_obj.shouldRenderIBeaconEvent(ble_device.last_seen_ms)) {
+                wifi_scan_obj.bt_cb_busy = false;
+                return;
+              }
 
               #ifndef HAS_MINI_SCREEN
                 display_string.concat(text_table4[0]);
@@ -1069,6 +1103,16 @@ extern "C" {
             
           String display_string = "";
 
+          if ((wifi_scan_obj.currentScanMode == REMOTE_ID_SCAN_ALL) ||
+              (wifi_scan_obj.currentScanMode == REMOTE_ID_SCAN_TARGET)) {
+            wifi_scan_obj.processRemoteIdBlePayload(payLoad.data(), len, mac_char, rssi,
+                advertisedDevice->isLegacyAdvertisement()
+                    ? RemoteIdTransport::BleLegacy
+                    : RemoteIdTransport::BleExtended);
+            wifi_scan_obj.bt_cb_busy = false;
+            return;
+          }
+
           if (wifi_scan_obj.currentScanMode == BT_ATTACK_FINDMY_LIVE) {
             if (connectionPending) {
               wifi_scan_obj.bt_cb_busy = false;
@@ -1270,12 +1314,21 @@ extern "C" {
             }
           }
           else if ((wifi_scan_obj.currentScanMode == BT_SCAN_ALL) ||
+                   (wifi_scan_obj.currentScanMode == BT_SCAN_IBEACON) ||
                    (wifi_scan_obj.currentScanMode == BT_SCAN_FOX_HUNT)) {
             if (buf >= 0)
             {
               BleDevice ble_device;
-              ble_device.device_type = wifi_scan_obj.classifyBLEDevice(advertisedDevice);
-              if (name_length > 0)
+              const bool is_ibeacon = marauder::parseIBeacon(payLoad.data(), len, ble_device.ibeacon);
+              if (wifi_scan_obj.currentScanMode == BT_SCAN_IBEACON && !is_ibeacon) {
+                wifi_scan_obj.bt_cb_busy = false;
+                return;
+              }
+              ble_device.is_ibeacon = is_ibeacon;
+              ble_device.device_type = is_ibeacon ? "iBeacon" : wifi_scan_obj.classifyBLEDevice(advertisedDevice);
+              if (is_ibeacon)
+                ble_device.name = "iBeacon " + String(ble_device.ibeacon.major) + ":" + String(ble_device.ibeacon.minor);
+              else if (name_length > 0)
                 ble_device.name = name;
               else
                 ble_device.name = mac;
@@ -1289,12 +1342,13 @@ extern "C" {
               int device_match_check = wifi_scan_obj.seenBLEDevice(ble_device);
 
               if (device_match_check >= 0) {
-                recon_obj.queueRepeat('B', ble_device.mac, ble_device.rssi, 0);
+                recon_obj.queueRepeat(ble_device.is_ibeacon ? 'I' : 'B', ble_device.mac, ble_device.rssi, 0);
                 ble_device.selected = ble_devices->get(device_match_check).selected;
                 ble_device.name = ble_devices->get(device_match_check).name;
                 memcpy(ble_device.mac, ble_devices->get(device_match_check).mac, sizeof(mac_char));
                 ble_devices->set(device_match_check, ble_device);
                 //Serial.println(ble_devices->get(device_match_check).name + " RSSI updated: " + String(ble_devices->get(device_match_check).rssi));
+                wifi_scan_obj.bt_cb_busy = false;
                 return;
               }
 
@@ -1303,7 +1357,15 @@ extern "C" {
                 return;
               }
 
-              ble_devices->add(ble_device);
+              if (!wifi_scan_obj.retainBLEDevice(ble_device)) {
+                wifi_scan_obj.bt_cb_busy = false;
+                return;
+              }
+
+              if (is_ibeacon && !wifi_scan_obj.shouldRenderIBeaconEvent(ble_device.last_seen_ms)) {
+                wifi_scan_obj.bt_cb_busy = false;
+                return;
+              }
 
               #ifndef HAS_MINI_SCREEN
                 display_string.concat(text_table4[0]);
@@ -1682,6 +1744,13 @@ extern "C" {
 
 int WiFiScan::seenBLEDevice(BleDevice ble_device) {
   for (int i = 0; i < ble_devices->size(); i++) {
+    if (ble_device.is_ibeacon) {
+      if (ble_devices->get(i).is_ibeacon &&
+          marauder::sameIBeacon(ble_devices->get(i).ibeacon, ble_device.ibeacon)) {
+        return i;
+      }
+      continue;
+    }
     //Serial.println("Comparing names " + ble_devices->get(i).name + " | " + ble_device.name);
     if ((ble_devices->get(i).name == ble_device.name) || (ble_device.name == "")) {
       //Serial.print("Comparing MACs ");
@@ -1696,6 +1765,35 @@ int WiFiScan::seenBLEDevice(BleDevice ble_device) {
     }
   }
   return -1;
+}
+
+bool WiFiScan::retainBLEDevice(const BleDevice& ble_device) {
+  if (!ble_devices) return false;
+  if (ble_devices->size() < MAX_RETAINED_BLE_DEVICES) {
+    ble_devices->add(ble_device);
+    return true;
+  }
+
+  // Keep memory and lookup time bounded under randomized-advertisement floods.
+  // Selected fox-hunt targets are never evicted.
+  int oldest_index = -1;
+  uint32_t oldest_seen = UINT32_MAX;
+  for (int index = 0; index < ble_devices->size(); index++) {
+    const BleDevice& retained = ble_devices->get(index);
+    if (!retained.selected && retained.last_seen_ms <= oldest_seen) {
+      oldest_seen = retained.last_seen_ms;
+      oldest_index = index;
+    }
+  }
+  if (oldest_index < 0) return false;
+  ble_devices->set(oldest_index, ble_device);
+  return true;
+}
+
+bool WiFiScan::shouldRenderIBeaconEvent(uint32_t current_time) {
+  if (current_time - last_ibeacon_ui_update < IBEACON_UI_INTERVAL_MS) return false;
+  last_ibeacon_ui_update = current_time;
+  return true;
 }
 
 bool WiFiScan::isFlockCamera(const uint8_t* payload, size_t len, const String& name, String* serial_out) {
@@ -2328,6 +2426,9 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui, bool save_creden
       display_obj.tft.setTextSize(1);
       display_obj.tft.print("Connecting");
       display_obj.tft.setTextWrap(true, false);
+      #ifdef MARAUDER_POOM
+        display_obj.tft.display(true);
+      #endif
     }
   #endif
 
@@ -2338,6 +2439,9 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui, bool save_creden
     #ifdef HAS_SCREEN
       if (gui) {
         display_obj.tft.print(".");
+        #ifdef MARAUDER_POOM
+          display_obj.tft.display(true);
+        #endif
       }
     #endif
     count++;
@@ -2347,6 +2451,9 @@ bool WiFiScan::joinWiFi(String ssid, String password, bool gui, bool save_creden
       #ifdef HAS_SCREEN
         if (gui) {
           display_obj.tft.println("\nFailed to connect");
+          #ifdef MARAUDER_POOM
+            display_obj.tft.display(true);
+          #endif
           delay(1000);
         }
       #endif
@@ -2387,6 +2494,15 @@ bool WiFiScan::joinSavedWiFi(bool gui) {
   const uint8_t count = settings_obj.getSavedWifiCount();
   if (count == 0) {
     Serial.println(F("There are no saved WiFi credentials"));
+    #if defined(HAS_SCREEN) && defined(MARAUDER_POOM)
+      if (gui) {
+        display_obj.clearScreen();
+        display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+        display_obj.tft.drawCentreString("No saved WiFi", SCREEN_WIDTH / 2, 22, 1);
+        display_obj.tft.display(true);
+        delay(1000);
+      }
+    #endif
     return false;
   }
 
@@ -2398,6 +2514,9 @@ bool WiFiScan::joinSavedWiFi(bool gui) {
       display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
       display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
       display_obj.tft.println(F("Scanning for saved WiFi..."));
+      #ifdef MARAUDER_POOM
+        display_obj.tft.display(true);
+      #endif
     }
   #endif
 
@@ -2459,6 +2578,9 @@ bool WiFiScan::joinSavedWiFi(bool gui) {
         display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
         display_obj.tft.println((fallback ? String("Fallback ") : String("Trying ")) + String(attempt) + "/" + String(attempts));
         display_obj.tft.println(ssid);
+        #ifdef MARAUDER_POOM
+          display_obj.tft.display(true);
+        #endif
       }
     #endif
 
@@ -2472,6 +2594,9 @@ bool WiFiScan::joinSavedWiFi(bool gui) {
           display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
           display_obj.tft.println(F("Connected:"));
           display_obj.tft.println(ssid);
+          #ifdef MARAUDER_POOM
+            display_obj.tft.display(true);
+          #endif
           delay(1000);
         }
       #endif
@@ -2500,6 +2625,19 @@ bool WiFiScan::joinSavedWiFi(bool gui) {
   }
 
   Serial.println(F("Could not connect to any saved WiFi network"));
+  #ifdef HAS_SCREEN
+    if (gui) {
+      display_obj.clearScreen();
+      display_obj.tft.setTextWrap(false);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+      display_obj.tft.drawCentreString("Saved WiFi failed", SCREEN_WIDTH / 2, 22, 1);
+      #ifdef MARAUDER_POOM
+        display_obj.tft.display(true);
+      #endif
+      delay(1000);
+    }
+  #endif
   return false;
 }
 
@@ -2627,6 +2765,10 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
     #endif
     RunProbeScan(scan_mode, color);
   }
+  else if ((scan_mode == REMOTE_ID_SCAN_ALL) ||
+           (scan_mode == REMOTE_ID_SCAN_TARGET)) {
+    RunRemoteIdScan(scan_mode, color);
+  }
   else if (scan_mode == WIFI_SCAN_EVIL_PORTAL)
     RunEvilPortal(scan_mode, color);
   else if (scan_mode == WIFI_SCAN_EAPOL)
@@ -2707,6 +2849,7 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
   else if (scan_mode == WIFI_ATTACK_AP_SPAM)
     this->startWiFiAttacks(scan_mode, color, " AP Beacon Spam ");
   else if ((scan_mode == BT_SCAN_ALL) ||
+          (scan_mode == BT_SCAN_IBEACON) ||
           (scan_mode == BT_SCAN_FOX_HUNT) ||
           (scan_mode == BT_SCAN_RAYBAN) ||
           (scan_mode == BT_SCAN_AIRTAG) ||
@@ -3035,6 +3178,8 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
   (currentScanMode == WIFI_CONNECTED) ||
   (currentScanMode == BT_SCAN_FLOCK) ||
   (currentScanMode == WIFI_SCAN_DETECT_FOLLOW) ||
+  (currentScanMode == REMOTE_ID_SCAN_ALL) ||
+  (currentScanMode == REMOTE_ID_SCAN_TARGET) ||
   (currentScanMode == LV_JOIN_WIFI) ||
   (this->wifi_initialized))
   {
@@ -3095,6 +3240,7 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
 
 
   if ((currentScanMode == BT_SCAN_ALL) ||
+  (currentScanMode == BT_SCAN_IBEACON) ||
   (currentScanMode == BT_SCAN_FOX_HUNT) ||
   (currentScanMode == BT_SCAN_RAYBAN) ||
   (currentScanMode == BT_SCAN_AIRTAG) ||
@@ -3115,7 +3261,9 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
   (currentScanMode == BT_SCAN_SIMPLE) ||
   (currentScanMode == WIFI_SCAN_WAR_DRIVE) ||
   (currentScanMode == BT_SCAN_SIMPLE_TWO) ||
-  (currentScanMode == WIFI_SCAN_DETECT_FOLLOW))
+  (currentScanMode == WIFI_SCAN_DETECT_FOLLOW) ||
+  (currentScanMode == REMOTE_ID_SCAN_ALL) ||
+  (currentScanMode == REMOTE_ID_SCAN_TARGET))
   {
     #ifdef HAS_BT
       #ifdef HAS_SCREEN
@@ -4729,6 +4877,8 @@ void WiFiScan::RunInfo() {
 
   this->getMAC(true, sta_mac);
   this->getMAC(false, ap_mac);
+  const esp_partition_t* running_partition = esp_ota_get_running_partition();
+  const String app_partition = running_partition ? String(running_partition->label) : String("unknown");
 
   #ifdef HAS_SCREEN
     display_obj.tft.setTextWrap(false);
@@ -4739,12 +4889,14 @@ void WiFiScan::RunInfo() {
     display_obj.tft.println(text_table4[20]);
     display_obj.tft.println(text_table4[21] + display_obj.version_number);
     display_obj.tft.println("Hardware: " + (String)HARDWARE_NAME);
+    display_obj.tft.println("App partition: " + app_partition);
     display_obj.tft.println(text_table4[22] + (String)esp_get_idf_version());
   #endif
 
   Serial.println(text_table4[20]);
   Serial.println(text_table4[21] + (String)MARAUDER_VERSION);
   Serial.println("Hardware: " + (String)HARDWARE_NAME);
+  Serial.println("App partition: " + app_partition);
   Serial.println(text_table4[22] + (String)esp_get_idf_version());
 
   if (this->wsl_bypass_enabled) {
@@ -5144,6 +5296,29 @@ void WiFiScan::RunPwnScan(uint8_t scan_mode, uint16_t color) {
 
 #ifdef HAS_NIMBLE_2
 
+void WiFiScan::releaseNimbleClient() {
+  if (nimbleClient == nullptr)
+    return;
+
+  if (nimbleClient->isConnected()) {
+    nimbleClient->disconnect();
+
+    // deleteClient() defers deletion for connected clients until the
+    // disconnect callback runs. Keep the host alive until that can happen.
+    uint32_t wait_start = millis();
+    while (nimbleClient->isConnected() && ((millis() - wait_start) < 2000))
+      delay(10);
+
+    if (nimbleClient->isConnected())
+      Serial.println("NimBLE client disconnect timed out");
+  }
+
+  if (!NimBLEDevice::deleteClient(nimbleClient))
+    Serial.println("NimBLE client deletion was deferred");
+
+  nimbleClient = nullptr;
+}
+
 void WiFiScan::createNimbleClient() {
   NimBLEDevice::init("Tracker-Client");
 
@@ -5156,7 +5331,15 @@ void WiFiScan::createNimbleClient() {
     false
   );
 
-  nimbleClient = NimBLEDevice::createClient();
+  // Releasing before replacement prevents orphaning a fixed client-pool slot.
+  this->releaseNimbleClient();
+
+  nimbleClient = NimBLEDevice::getDisconnectedClient();
+  if (nimbleClient == nullptr)
+    nimbleClient = NimBLEDevice::createClient();
+
+  if (nimbleClient == nullptr)
+    Serial.println("NimBLE client pool exhausted");
 }
 
 int WiFiScan::connectAndProcessTracker(NimBLEAddress& address) {
@@ -5605,17 +5788,7 @@ bool WiFiScan::backendFindMySound(NimBLEAddress& address, bool gui) {
     #endif
   }
 
-  if (nimbleClient != nullptr) {
-    if (nimbleClient->isConnected()) {
-      Serial.println("Disconnecting locally...");
-
-      nimbleClient->disconnect();
-    }
-
-    NimBLEDevice::deleteClient(nimbleClient);
-    nimbleClient = nullptr;
-  }
-
+  this->releaseNimbleClient();
   NimBLEDevice::deinit(true);
 
   return send_success;
@@ -6934,6 +7107,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
     NimBLEDevice::init("");
     pBLEScan = NimBLEDevice::getScan(); //create new scan
     if ((scan_mode == BT_SCAN_ALL) ||
+        (scan_mode == BT_SCAN_IBEACON) ||
         (scan_mode == BT_SCAN_FOX_HUNT) ||
         (scan_mode == BT_SCAN_RAYBAN) ||
         (scan_mode == BT_SCAN_AIRTAG) ||
@@ -6950,6 +7124,8 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
           display_obj.tft.fillRect(0,16,TFT_WIDTH,16, color);
           if (scan_mode == BT_SCAN_ALL)
             display_obj.tft.drawCentreString(text_table4[41],TFT_WIDTH / 2,16,2);
+          else if (scan_mode == BT_SCAN_IBEACON)
+            display_obj.tft.drawCentreString("iBeacon Sniff",TFT_WIDTH / 2,16,2);
           else if (scan_mode == BT_SCAN_FOX_HUNT)
             display_obj.tft.drawCentreString("Fox Hunt",TFT_WIDTH / 2,16,2);
           else if (scan_mode == BT_SCAN_AIRTAG)
@@ -6973,7 +7149,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
         #endif
         display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
       #endif
-      if (scan_mode == BT_SCAN_ALL) {
+      if ((scan_mode == BT_SCAN_ALL) || (scan_mode == BT_SCAN_IBEACON)) {
         this->clearList(CLEAR_BLE);
         #ifndef HAS_NIMBLE_2
           pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), true);
@@ -7074,6 +7250,32 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
     this->setLEDMode(MODE_SNIFF);
 
     initTime = millis();
+  #endif
+}
+
+void WiFiScan::setupRemoteIdBle() {
+  #ifdef HAS_BT
+    NimBLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DEVICE);
+    NimBLEDevice::setScanDuplicateCacheSize(0);
+    NimBLEDevice::init("");
+    pBLEScan = NimBLEDevice::getScan();
+    #ifndef HAS_NIMBLE_2
+      pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), false);
+    #else
+      pBLEScan->setScanCallbacks(new bluetoothScanAllCallback(), false);
+    #endif
+    pBLEScan->setActiveScan(false);
+    pBLEScan->setInterval(80);
+    pBLEScan->setWindow(40);
+    pBLEScan->setMaxResults(0);
+    pBLEScan->setDuplicateFilter(false);
+    #ifdef HAS_NIMBLE_2
+      pBLEScan->start(0, false, false);
+    #else
+      pBLEScan->start(0, scanCompleteCB, false);
+    #endif
+    ble_initialized = true;
+    ble_scanning = true;
   #endif
 }
 
@@ -12284,7 +12486,28 @@ void WiFiScan::main(uint32_t currentTime)
       this->updateTrackerUI();
     }
   }
+  else if ((currentScanMode == REMOTE_ID_SCAN_ALL) ||
+           (currentScanMode == REMOTE_ID_SCAN_TARGET)) {
+    if (currentTime - initTime >= this->channel_hop_delay * HOP_DELAY) {
+      initTime = currentTime;
+      hopRemoteIdChannel();
+    }
+    portENTER_CRITICAL(&remote_id_mux);
+    remote_id_store.updateLifecycle(currentTime, REMOTE_ID_STALE_MS);
+    remote_id_store.pruneStale(currentTime, REMOTE_ID_EXPIRE_MS,
+        remote_id_target_has_uas ? remote_id_target_uas : nullptr,
+        remote_id_target_selected ? remote_id_target_mac : nullptr);
+    portEXIT_CRITICAL(&remote_id_mux);
+    if (currentTime - remote_id_last_render_ms >= 500) {
+      remote_id_last_render_ms = currentTime;
+      if (currentScanMode == REMOTE_ID_SCAN_TARGET)
+        renderRemoteIdTarget();
+      else
+        renderRemoteIdGlobal();
+    }
+  }
   else if ((currentScanMode == BT_SCAN_FLOCK) ||
+          (currentScanMode == BT_SCAN_IBEACON) ||
           (currentScanMode == BT_SCAN_FLIPPER) ||
           (currentScanMode == BT_SCAN_AIRTAG) ||
           (currentScanMode == BT_SCAN_RAYBAN)) {
@@ -12295,8 +12518,13 @@ void WiFiScan::main(uint32_t currentTime)
         if (this->ble_scanning) {
           pBLEScan->stop();
           this->bt_pending_clear = true;
-          while (bt_cb_busy)
-            delay(100);
+          const uint32_t callback_wait_started = millis();
+          while (bt_cb_busy && millis() - callback_wait_started < 500)
+            delay(1);
+          // A callback must not be allowed to wedge the UI forever. Stopping the
+          // scanner above prevents new callbacks; after the bounded drain any
+          // remaining true value is stale state from an early-return path.
+          bt_cb_busy = false;
           pBLEScan->clearResults();
           this->bt_pending_clear = false;
           this->ble_scanning = false;
@@ -12787,3 +13015,5 @@ void WiFiScan::main(uint32_t currentTime)
     this->wifi_connected = false;
   }
 }
+
+#include "WiFiScanRemoteId.h"

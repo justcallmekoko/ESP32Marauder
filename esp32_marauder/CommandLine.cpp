@@ -317,6 +317,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_SNIFF_DEAUTH_CMD);
     Serial.println(HELP_SNIFF_PMKID_CMD);
     Serial.println(HELP_SNIFF_SAE_CMD);
+    Serial.println(HELP_REMOTE_ID_CMD);
     Serial.println(HELP_STOPSCAN_CMD);
     #ifdef HAS_GPS
       Serial.println(HELP_WARDRIVE_CMD);
@@ -1300,6 +1301,35 @@ void CommandLine::runCommand(String input) {
       }
     }
 
+    if (cmd_args.get(0) == REMOTE_ID_CMD) {
+      String action = cmd_args.size() > 1 ? cmd_args.get(1) : "scan";
+      action.toLowerCase();
+      if (action == "scan") {
+        this->startScanFromCLI(REMOTE_ID_SCAN_ALL, TFT_CYAN, " Remote ID scan");
+      }
+      else if (action == "list") {
+        Serial.println(F("Remote ID devices:"));
+        for (size_t i = 0; i < wifi_scan_obj.remoteIdCount(); ++i)
+          Serial.println(String(i) + " " + wifi_scan_obj.remoteIdLabel(i));
+      }
+      else if (action == "track" && cmd_args.size() > 2) {
+        const int index = cmd_args.get(2).toInt();
+        if (index < 0 || !wifi_scan_obj.selectRemoteIdTarget(index)) {
+          Serial.println(F("Invalid Remote ID index"));
+        } else {
+          this->startScanFromCLI(REMOTE_ID_SCAN_TARGET, TFT_MAGENTA,
+                                 " Remote ID target scan");
+        }
+      }
+      else if (action == "clear") {
+        wifi_scan_obj.clearRemoteIds();
+        Serial.println(F("Remote ID list cleared"));
+      }
+      else {
+        Serial.println(HELP_REMOTE_ID_CMD);
+      }
+    }
+
     //// Bluetooth scan/attack commands
     // Bluetooth scan
     if (cmd_args.get(0) == BT_SNIFF_CMD) {
@@ -1315,6 +1345,9 @@ void CommandLine::runCommand(String input) {
           // Airtag sniff
           if (bt_type == "airtag") {
             this->startScanFromCLI(BT_SCAN_AIRTAG, TFT_WHITE, "Airtag sniff");
+          }
+          else if (bt_type == "ibeacon") {
+            this->startScanFromCLI(BT_SCAN_IBEACON, TFT_CYAN, "iBeacon sniff");
           }
           else if (bt_type == "flipper") {
             this->startScanFromCLI(BT_SCAN_FLIPPER, TFT_ORANGE, "Flipper sniff");

@@ -15,7 +15,11 @@
 #include "Assets.h"
 #include "BootSplash.h"
 
-#include <TFT_eSPI.h>
+#ifdef MARAUDER_POOM
+  #include "PoomDisplay.h"
+#else
+  #include <TFT_eSPI.h>
+#endif
 
 // Reject board/display configuration mismatches at compile time. A mismatched
 // TFT setup can boot normally while driving the wrong controller and pins.
