@@ -247,6 +247,14 @@ bool remoteIdCoordinatesValid(int32_t latitudeE7, int32_t longitudeE7) {
   return latitudeE7 != 0 || longitudeE7 != 0;
 }
 
+bool remoteIdIdentityMatches(const char* knownUasId, const uint8_t knownMac[6],
+                             const RemoteIdRecord& record) {
+  if (record.hasUasId && knownUasId != nullptr && knownUasId[0] != '\0')
+    return std::strncmp(knownUasId, record.uasId, sizeof(record.uasId)) == 0;
+  return knownMac != nullptr &&
+         std::memcmp(knownMac, record.mac, sizeof(record.mac)) == 0;
+}
+
 bool remoteIdUpdateLocation(RemoteIdRecord& record, int32_t latitudeE7,
                             int32_t longitudeE7) {
   if (!remoteIdCoordinatesValid(latitudeE7, longitudeE7)) return false;

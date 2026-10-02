@@ -402,11 +402,13 @@ void WiFiScan::logRemoteIdRecord(const RemoteIdRecord& record) {
 void WiFiScan::startRemoteIdGpx() {
   remote_id_gpx_active = false;
   remote_id_gpx_file_name = "";
+  memset(remote_id_gpx_tracks, 0, sizeof(remote_id_gpx_tracks));
   if (!sd_obj.supported || !settings_obj.loadSetting<bool>("SavePCAP")) return;
   for (uint16_t index = 0; index < 10000; ++index) {
     const String candidate = "/remoteid_" + String(index) + ".gpx";
     if (!SD.exists(candidate)) {
       remote_id_gpx_file_name = candidate;
+      remote_id_gpx_session_index = index;
       break;
     }
   }
@@ -439,48 +441,89 @@ void WiFiScan::logRemoteIdGpxPositions(uint32_t nowMs) {
   portEXIT_CRITICAL(&remote_id_mux);
   if (count == 0) return;
 
-  File file = SD.open(remote_id_gpx_file_name, FILE_APPEND);
-  if (!file) {
-    remote_id_gpx_active = false;
-    return;
-  }
   for (size_t i = 0; i < count; ++i) {
     const RemoteIdRecord& record = snapshots[i];
-    const String name = remoteIdXmlEscape(record.hasUasId
-        ? String(record.uasId) : macToString(record.mac));
-    char transports[16];
-    remoteIdFormatTransports(record.transportMask, transports, sizeof(transports));
-    String description = "Transport: " + String(transports) +
-                         "; RSSI: " + String(record.rssi) +
-                         "; Session ms: " + String(nowMs);
-    if (record.hasOperatorId)
-      description += "; Operator ID: " + String(record.operatorId);
-    file.print("  <wpt lat=\"");
-    file.print(record.latitudeE7 / 1e7, 7);
-    file.print("\" lon=\"");
-    file.print(record.longitudeE7 / 1e7, 7);
-    file.print("\">\n");
-    if (record.altitudeGeoValid) {
-      file.print("    <ele>");
-      file.print(record.altitudeGeoM, 1);
-      file.print("</ele>\n");
+    size_t trackIndex = REMOTE_ID_CAPACITY;
+    for (size_t track = 0; track < REMOTE_ID_CAPACITY; ++track) {
+      RemoteIdGpxTrack& candidate = remote_id_gpx_tracks[track];
+      if (!candidate.used) continue;
+      if (remoteIdIdentityMatches(candidate.uasId, candidate.mac, record)) {
+        trackIndex = track;
+        if (record.hasUasId && candidate.uasId[0] == '\0') {
+          strncpy(candidate.uasId, record.uasId, sizeof(candidate.uasId) - 1);
+          strncpy(candidate.name, record.uasId, sizeof(candidate.name) - 1);
+        }
+        break;
+      }
     }
-    file.print("    <name>");
-    file.print(name);
-    file.print("</name>\n    <desc>");
-    file.print(remoteIdXmlEscape(description));
-    file.print("</desc>\n  </wpt>\n");
+    if (trackIndex == REMOTE_ID_CAPACITY) {
+      for (size_t track = 0; track < REMOTE_ID_CAPACITY; ++track) {
+        if (remote_id_gpx_tracks[track].used) continue;
+        trackIndex = track;
+        RemoteIdGpxTrack& created = remote_id_gpx_tracks[track];
+        created.used = true;
+        memcpy(created.mac, record.mac, sizeof(created.mac));
+        if (record.hasUasId) {
+          strncpy(created.uasId, record.uasId, sizeof(created.uasId) - 1);
+          strncpy(created.name, record.uasId, sizeof(created.name) - 1);
+        } else {
+          macToString(record.mac).toCharArray(created.name, sizeof(created.name));
+        }
+        break;
+      }
+    }
+    if (trackIndex == REMOTE_ID_CAPACITY) continue;
+
+    char fragmentPath[40];
+    snprintf(fragmentPath, sizeof(fragmentPath), "/remoteid_%u_%u.tmp",
+             remote_id_gpx_session_index, static_cast<unsigned>(trackIndex));
+    File fragment = SD.open(fragmentPath, FILE_APPEND);
+    if (!fragment) continue;
+    fragment.print("      <trkpt lat=\"");
+    fragment.print(record.latitudeE7 / 1e7, 7);
+    fragment.print("\" lon=\"");
+    fragment.print(record.longitudeE7 / 1e7, 7);
+    fragment.print("\">\n");
+    if (record.altitudeGeoValid) {
+      fragment.print("        <ele>");
+      fragment.print(record.altitudeGeoM, 1);
+      fragment.print("</ele>\n");
+    }
+    fragment.print("      </trkpt>\n");
+    fragment.close();
+    ++remote_id_gpx_tracks[trackIndex].pointCount;
   }
-  file.close();
 }
 
 void WiFiScan::finishRemoteIdGpx() {
   if (!remote_id_gpx_active) return;
   File file = SD.open(remote_id_gpx_file_name, FILE_APPEND);
   if (file) {
+    uint8_t copyBuffer[256];
+    for (size_t trackIndex = 0; trackIndex < REMOTE_ID_CAPACITY; ++trackIndex) {
+      const RemoteIdGpxTrack& track = remote_id_gpx_tracks[trackIndex];
+      if (!track.used || track.pointCount == 0) continue;
+      char fragmentPath[40];
+      snprintf(fragmentPath, sizeof(fragmentPath), "/remoteid_%u_%u.tmp",
+               remote_id_gpx_session_index, static_cast<unsigned>(trackIndex));
+      File fragment = SD.open(fragmentPath, FILE_READ);
+      if (!fragment) continue;
+      file.print("  <trk>\n    <name>");
+      file.print(remoteIdXmlEscape(String(track.name)));
+      file.print("</name>\n    <desc>Remote ID device route</desc>\n    <trkseg>\n");
+      while (fragment.available()) {
+        const size_t bytesRead = fragment.read(copyBuffer, sizeof(copyBuffer));
+        if (bytesRead == 0) break;
+        file.write(copyBuffer, bytesRead);
+      }
+      fragment.close();
+      file.print("    </trkseg>\n  </trk>\n");
+      SD.remove(fragmentPath);
+    }
     file.print("</gpx>\n");
     file.close();
   }
+  memset(remote_id_gpx_tracks, 0, sizeof(remote_id_gpx_tracks));
   remote_id_gpx_active = false;
 }
 #endif
