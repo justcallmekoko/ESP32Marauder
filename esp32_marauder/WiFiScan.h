@@ -407,7 +407,16 @@ class WiFiScan
     uint8_t remote_id_schedule_step = 0;
     uint8_t remote_id_beacon_channel_index = 0;
     #ifdef HAS_SD
+      struct RemoteIdGpxTrack {
+        char uasId[21] = {};
+        uint8_t mac[6] = {};
+        char name[22] = {};
+        uint16_t pointCount = 0;
+        bool used = false;
+      };
       String remote_id_gpx_file_name;
+      uint16_t remote_id_gpx_session_index = 0;
+      RemoteIdGpxTrack remote_id_gpx_tracks[REMOTE_ID_CAPACITY];
       bool remote_id_gpx_active = false;
       void startRemoteIdGpx();
       void logRemoteIdGpxPositions(uint32_t nowMs);

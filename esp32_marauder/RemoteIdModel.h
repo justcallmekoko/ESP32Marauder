@@ -142,6 +142,8 @@ float remoteIdBearingDegrees(int32_t latAE7, int32_t lonAE7,
 bool remoteIdIsStale(uint32_t nowMs, uint32_t lastSeenMs,
                      uint32_t staleAfterMs);
 bool remoteIdCoordinatesValid(int32_t latitudeE7, int32_t longitudeE7);
+bool remoteIdIdentityMatches(const char* knownUasId, const uint8_t knownMac[6],
+                             const RemoteIdRecord& record);
 bool remoteIdUpdateLocation(RemoteIdRecord& record, int32_t latitudeE7,
                             int32_t longitudeE7);
 bool remoteIdShouldReplaceBasicId(uint8_t currentType, bool hasCurrent,
