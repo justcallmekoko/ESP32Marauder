@@ -793,7 +793,7 @@ class WiFiScan
     #endif
 
     void runFoxHunt(uint32_t currentTime);
-    void throwThatShitInACircle();
+    bool throwThatShitInACircle();
     void displayTargetFilter();
     void displayTransmitRate();
     void prepareScanStage(uint16_t color_1, uint16_t color_2);

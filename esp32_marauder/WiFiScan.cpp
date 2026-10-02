@@ -6353,13 +6353,28 @@ void WiFiScan::executeWarDrive() {
         if ((this->wardrive_channel_index + 1) % 4 == 0) {
           this->wifi_initialized = true;
           this->shutdownWiFi();
-          esp_wifi_init(&cfg2);
+          esp_err_t init_err = esp_wifi_init(&cfg2);
+          if (init_err != ESP_OK) {
+            Serial.print(F("Wardrive probe WiFi init failed: err=0x"));
+            Serial.println(init_err, HEX);
+            this->startWardriverWiFi();
+            this->wifi_initialized = true;
+            delay(100);
+            return;
+          }
+          this->wifi_initialized = true;
           #ifdef HAS_IDF_3
             esp_wifi_set_country(&country);
             esp_event_loop_create_default();
           #endif
-          this->throwThatShitInACircle();
           this->setWiFiMode(WIFI_MODE_AP, beaconSnifferCallback);
+          if (!this->throwThatShitInACircle()) {
+            this->shutdownWiFi();
+            this->startWardriverWiFi();
+            this->wifi_initialized = true;
+            delay(100);
+            return;
+          }
           this->changeChannel(1);
           uint8_t ap_mac[6];
           esp_read_mac(ap_mac, ESP_MAC_WIFI_SOFTAP);
@@ -6933,9 +6948,9 @@ void WiFiScan::RunSAEScan(uint8_t scan_mode, uint16_t color) {
   initTime = millis();
 }
 
-void WiFiScan::throwThatShitInACircle() {
+bool WiFiScan::throwThatShitInACircle() {
   esp_err_t err;
-  wifi_config_t conf;
+  wifi_config_t conf = {};
   #ifndef HAS_DUAL_BAND
     err = esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N | WIFI_PROTOCOL_LR);
   #else
@@ -6947,7 +6962,18 @@ void WiFiScan::throwThatShitInACircle() {
     err = esp_wifi_set_protocols(WIFI_IF_AP, &p);
   #endif
 
-  esp_wifi_get_config((wifi_interface_t)WIFI_IF_AP, &conf);
+  if (err != ESP_OK) {
+    Serial.print(F("AP protocol set error: err=0x"));
+    Serial.println(err, HEX);
+    return false;
+  }
+
+  err = esp_wifi_get_config((wifi_interface_t)WIFI_IF_AP, &conf);
+  if (err != ESP_OK) {
+    Serial.print(F("AP config get error: err=0x"));
+    Serial.println(err, HEX);
+    return false;
+  }
   conf.ap.ssid[0] = '\0';
   conf.ap.ssid_len = 0;
   conf.ap.channel = this->set_channel;
@@ -6960,7 +6986,9 @@ void WiFiScan::throwThatShitInACircle() {
   {
     Serial.print(F("AP config set error, Maurauder SSID might visible : err=0x"));
     Serial.println(err, HEX);
+    return false;
   }
+  return true;
 }
 
 // Function for running probe request scan
