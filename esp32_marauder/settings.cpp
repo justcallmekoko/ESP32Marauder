@@ -66,39 +66,8 @@ static bool writeSettingsDocument(DynamicJsonDocument& json, String& cache) {
 // All loadSetting<T>() reads hit the cache; no heap is allocated on read.
 // ---------------------------------------------------------------------------
 void Settings::_buildCache() {
-  DynamicJsonDocument json(JSON_SETTING_SIZE);
-
-  if (deserializeJson(json, this->json_settings_string)) {
+  if (!buildSettingsCache(this->json_settings_string.c_str(), this->_cache, JSON_SETTING_SIZE))
     Serial.println(F("_buildCache: could not parse json"));
-    return;
-  }
-
-  for (int i = 0; i < (int)json["Settings"].size(); i++) {
-    const char* name = json["Settings"][i]["name"] | "";
-
-    if (strcmp(name, "ForcePMKID") == 0)
-      _cache.ForcePMKID = json["Settings"][i]["value"].as<bool>();
-    else if (strcmp(name, "ForceProbe") == 0)
-      _cache.ForceProbe = json["Settings"][i]["value"].as<bool>();
-    else if (strcmp(name, "SavePCAP") == 0)
-      _cache.SavePCAP = json["Settings"][i]["value"].as<bool>();
-    else if (strcmp(name, "EnableLED") == 0)
-      _cache.EnableLED = json["Settings"][i]["value"].as<bool>();
-    else if (strcmp(name, "EPDeauth") == 0)
-      _cache.EPDeauth = json["Settings"][i]["value"].as<bool>();
-    else if (strcmp(name, "ChanHop") == 0)
-      _cache.ChanHop = json["Settings"][i]["value"].as<bool>();
-    else if (strcmp(name, "ClientSSID") == 0)
-      _cache.ClientSSID = json["Settings"][i]["value"].as<String>();
-    else if (strcmp(name, "ClientPW") == 0)
-      _cache.ClientPW = json["Settings"][i]["value"].as<String>();
-    else if (strcmp(name, "wu") == 0)
-      _cache.wu = json["Settings"][i]["value"].as<String>();
-    else if (strcmp(name, "wt") == 0)
-      _cache.wt = json["Settings"][i]["value"].as<String>();
-    else if (strcmp(name, WDG_KEY_NAME) == 0)
-      _cache.wdg_key = json["Settings"][i]["value"].as<String>();
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -360,18 +329,7 @@ template <> bool Settings::saveSetting<bool>(const char* key, bool value) {
       this->json_settings_string = settings_string;
 
       // Keep the cache in sync — no re-parse needed, just update the field.
-      if (strcmp(key, "ForcePMKID") == 0)
-        _cache.ForcePMKID = value;
-      else if (strcmp(key, "ForceProbe") == 0)
-        _cache.ForceProbe = value;
-      else if (strcmp(key, "SavePCAP") == 0)
-        _cache.SavePCAP = value;
-      else if (strcmp(key, "EnableLED") == 0)
-        _cache.EnableLED = value;
-      else if (strcmp(key, "EPDeauth") == 0)
-        _cache.EPDeauth = value;
-      else if (strcmp(key, "ChanHop") == 0)
-        _cache.ChanHop = value;
+      applyCachedBool(_cache, key, value);
 
       this->printJsonSettings(settings_string);
 
@@ -414,16 +372,7 @@ template <> bool Settings::saveSetting<bool>(const char* key, String value) {
       this->json_settings_string = settings_string;
 
       // Keep the cache in sync for String fields.
-      if (strcmp(key, "ClientSSID") == 0)
-        _cache.ClientSSID = value;
-      else if (strcmp(key, "ClientPW") == 0)
-        _cache.ClientPW = value;
-      else if (strcmp(key, "wu") == 0)
-        _cache.wu = value;
-      else if (strcmp(key, "wt") == 0)
-        _cache.wt = value;
-      else if (strcmp(key, WDG_KEY_NAME) == 0)
-        _cache.wdg_key = value;
+      applyCachedString(_cache, key, value);
 
       this->printJsonSettings(settings_string);
 
