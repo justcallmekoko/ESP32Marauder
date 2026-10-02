@@ -3127,6 +3127,11 @@ bool WiFiScan::shutdownBLE() {
 
 // Function to stop all wifi scans
 void WiFiScan::StopScan(uint8_t scan_mode) {
+  #ifdef HAS_SD
+    if ((currentScanMode == REMOTE_ID_SCAN_ALL) ||
+        (currentScanMode == REMOTE_ID_SCAN_TARGET))
+      finishRemoteIdGpx();
+  #endif
   if ((currentScanMode == WIFI_SCAN_PROBE) ||
   (currentScanMode == WIFI_SCAN_SAE_COMMIT) ||
   (currentScanMode == WIFI_SCAN_AP) ||
@@ -12498,6 +12503,9 @@ void WiFiScan::main(uint32_t currentTime)
         remote_id_target_has_uas ? remote_id_target_uas : nullptr,
         remote_id_target_selected ? remote_id_target_mac : nullptr);
     portEXIT_CRITICAL(&remote_id_mux);
+    #ifdef HAS_SD
+      logRemoteIdGpxPositions(currentTime);
+    #endif
     if (currentTime - remote_id_last_render_ms >= 500) {
       remote_id_last_render_ms = currentTime;
       if (currentScanMode == REMOTE_ID_SCAN_TARGET)
