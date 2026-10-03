@@ -396,6 +396,9 @@ class WiFiScan
     static constexpr size_t REMOTE_ID_CAPACITY = 12;
 #endif
     RemoteIdRecord remote_id_records[REMOTE_ID_CAPACITY];
+    // GPX logging and display rendering are serialized on the main loop, so
+    // they can safely reuse one stable snapshot workspace.
+    RemoteIdRecord remote_id_snapshots[REMOTE_ID_CAPACITY];
     RemoteIdStore remote_id_store{remote_id_records, REMOTE_ID_CAPACITY};
     RemoteIdDecoder remote_id_decoder;
     mutable portMUX_TYPE remote_id_mux = portMUX_INITIALIZER_UNLOCKED;
