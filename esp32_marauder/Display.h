@@ -14,6 +14,7 @@
 #include "SPIFFS.h"
 #include "Assets.h"
 #include "BootSplash.h"
+#include "MemoryGuard.h"
 
 #ifdef MARAUDER_POOM
   #include "PoomDisplay.h"
@@ -115,6 +116,8 @@ class Display
     bool draw_tft = false;
     bool exit_draw = false;
     bool headless_mode = false;
+    marauder::QueueBackpressureState display_queue_pressure{
+        DISPLAY_BUFFER_LIMIT};
 
     uint8_t TOP_FIXED_AREA_2 = 48;
     uint8_t print_delay_1, print_delay_2 = 10;
@@ -155,6 +158,7 @@ class Display
     void tftDrawChanHopButton(bool lnd_an = true, bool en = false);
     void buildBanner(String msg, int xpos);
     void clearScreen();
+    bool queueLine(const String& line);
     void displayBuffer(bool do_clear = false);
     void drawBootSplash();
     void getTouchWhileFunction(bool pressed);

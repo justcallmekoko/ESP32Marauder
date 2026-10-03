@@ -278,8 +278,9 @@ bool remoteIdUpdateLocation(RemoteIdRecord& record, int32_t latitudeE7,
     record.history[i].northM =
         clampMeters(static_cast<double>(record.history[i].northM) + oldNorthM);
   }
-  const RemoteIdHistoryPoint previous =
-      {clampMeters(oldEastM), clampMeters(oldNorthM)};
+  RemoteIdHistoryPoint previous;
+  previous.eastM = clampMeters(oldEastM);
+  previous.northM = clampMeters(oldNorthM);
   if (previous.eastM != 0 || previous.northM != 0) {
     if (record.historyCount == REMOTE_ID_HISTORY_CAPACITY) {
       for (size_t i = 1; i < REMOTE_ID_HISTORY_CAPACITY; ++i)

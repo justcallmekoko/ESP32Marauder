@@ -425,7 +425,6 @@ void WiFiScan::startRemoteIdGpx() {
 
 void WiFiScan::logRemoteIdGpxPositions(uint32_t nowMs) {
   if (!remote_id_gpx_active) return;
-  static RemoteIdRecord snapshots[REMOTE_ID_CAPACITY];
   size_t count = 0;
   portENTER_CRITICAL(&remote_id_mux);
   for (size_t i = 0; i < remote_id_store.size() && count < REMOTE_ID_CAPACITY; ++i) {
@@ -436,13 +435,13 @@ void WiFiScan::logRemoteIdGpxPositions(uint32_t nowMs) {
       continue;
     record->lastGpxLoggedMs = nowMs;
     record->lastGpxRevision = record->locationRevision;
-    snapshots[count++] = *record;
+    remote_id_snapshots[count++] = *record;
   }
   portEXIT_CRITICAL(&remote_id_mux);
   if (count == 0) return;
 
   for (size_t i = 0; i < count; ++i) {
-    const RemoteIdRecord& record = snapshots[i];
+    const RemoteIdRecord& record = remote_id_snapshots[i];
     size_t trackIndex = REMOTE_ID_CAPACITY;
     for (size_t track = 0; track < REMOTE_ID_CAPACITY; ++track) {
       RemoteIdGpxTrack& candidate = remote_id_gpx_tracks[track];
@@ -562,9 +561,8 @@ bool WiFiScan::snapshotRemoteIdTarget(RemoteIdRecord& record) const {
 
 void WiFiScan::renderRemoteIdGlobal() {
   #ifdef HAS_SCREEN
-    // Keep the full render snapshot off the task stack on PSRAM targets.
-    static RemoteIdRecord records[REMOTE_ID_CAPACITY];
-    const size_t recordCount = snapshotRemoteIds(records, REMOTE_ID_CAPACITY);
+    const size_t recordCount =
+        snapshotRemoteIds(remote_id_snapshots, REMOTE_ID_CAPACITY);
     const RemoteIdLayout layout = remoteIdLayoutForDisplay(SCREEN_WIDTH, SCREEN_HEIGHT);
     const int16_t top = 34;
     const int16_t contentHeight = SCREEN_HEIGHT - top;
@@ -585,7 +583,7 @@ void WiFiScan::renderRemoteIdGlobal() {
                              : 0;
     int16_t y = top + 13;
     for (size_t i = first; i < recordCount; ++i) {
-      const RemoteIdRecord* record = &records[i];
+      const RemoteIdRecord* record = &remote_id_snapshots[i];
       char transports[16];
       remoteIdFormatTransports(record->transportMask, transports,
                                sizeof(transports));
@@ -627,12 +625,12 @@ void WiFiScan::renderRemoteIdGlobal() {
         if (gps_obj.getFixStatus()) {
           const int32_t originLat = gps_obj.getLatInt() * 10;
           const int32_t originLon = gps_obj.getLonInt() * 10;
-          const float radius = remoteIdGridScaleMeters(records,
+          const float radius = remoteIdGridScaleMeters(remote_id_snapshots,
               recordCount, originLat, originLon, 50.0f);
           display_obj.tft.fillCircle(SCREEN_WIDTH / 2,
               gridTop + gridHeight / 2, 3, TFT_GREEN);
           for (size_t i = 0; i < recordCount; ++i) {
-            const RemoteIdRecord* record = &records[i];
+            const RemoteIdRecord* record = &remote_id_snapshots[i];
             if (record->hasLocation) {
               for (size_t h = 0; h < record->historyCount; ++h) {
                 const RemoteIdGridPoint tail = remoteIdProjectHistoryToGrid(

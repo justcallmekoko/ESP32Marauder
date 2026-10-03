@@ -61,6 +61,7 @@
   #include "SDInterface.h"
 #endif
 #include "Buffer.h"
+#include "MemoryGuard.h"
 #ifdef HAS_BATTERY
   #include "BatteryInterface.h"
 #endif
@@ -390,11 +391,14 @@ class WiFiScan
 {
   private:
 #ifdef HAS_PSRAM
-    static constexpr size_t REMOTE_ID_CAPACITY = 48;
+    static constexpr size_t REMOTE_ID_CAPACITY = 24;
 #else
     static constexpr size_t REMOTE_ID_CAPACITY = 12;
 #endif
     RemoteIdRecord remote_id_records[REMOTE_ID_CAPACITY];
+    // GPX logging and display rendering are serialized on the main loop, so
+    // they can safely reuse one stable snapshot workspace.
+    RemoteIdRecord remote_id_snapshots[REMOTE_ID_CAPACITY];
     RemoteIdStore remote_id_store{remote_id_records, REMOTE_ID_CAPACITY};
     RemoteIdDecoder remote_id_decoder;
     mutable portMUX_TYPE remote_id_mux = portMUX_INITIALIZER_UNLOCKED;
@@ -792,7 +796,7 @@ class WiFiScan
     #endif
 
     void runFoxHunt(uint32_t currentTime);
-    void throwThatShitInACircle();
+    bool throwThatShitInACircle();
     void displayTargetFilter();
     void displayTransmitRate();
     void prepareScanStage(uint16_t color_1, uint16_t color_2);
@@ -872,7 +876,7 @@ class WiFiScan
     void RunEvilPortal(uint8_t scan_mode, uint16_t color);
     void RunPingScan(uint8_t scan_mode, uint16_t color);
     void RunPortScanAll(uint8_t scan_mode, uint16_t color);
-    bool checkMem();
+    bool checkMem(size_t requestedBytes = 0);
     void writeHeader(bool poi = false);
     void writeFooter(bool poi = false);
     void displayWardriveStats();

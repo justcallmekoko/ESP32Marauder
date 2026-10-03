@@ -701,6 +701,14 @@ void Display::processAndPrintString(TFT_eSPI& tft, const String& originalString)
   tft.print(line);
 }
 
+bool Display::queueLine(const String& line) {
+  if (display_buffer == nullptr) return false;
+  if (!display_queue_pressure.allow(display_buffer->size())) return false;
+  if (!marauder::RuntimeMemoryGuard::instance().allow(line.length() + 48))
+    return false;
+  return display_buffer->add(line);
+}
+
 void Display::displayBuffer(bool do_clear)
 {
   if (this->display_buffer->size() > 0)
