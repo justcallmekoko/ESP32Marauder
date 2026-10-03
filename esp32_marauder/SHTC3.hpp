@@ -22,11 +22,13 @@ class SHTC3 {
 public:
     inline SHTC3() : _wire(nullptr) {
       suppoorted = false;
+      log_d("SHTC3 instantiated");
     }
     bool suppoorted;
 
     /// Start the I2C bus and check the sensor is there.
     inline bool begin(int sdaPin, int sclPin, uint32_t frequency = 400000) {
+        log_d("SHTC3 begin sda=%d scl=%d", sdaPin, sclPin);
         if (sdaPin >= 0 && sclPin >= 0) {
             Wire.begin(sdaPin, sclPin);
         } else {
@@ -41,6 +43,7 @@ public:
 
     /// Same, but for a bus you already called Wire.begin() on.
     inline bool begin(TwoWire *wireInstance = &Wire) {
+        log_d("SHTC3 begin &Wire");
         _wire = wireInstance;
 
         _wire->beginTransmission(SHTC3_ADDRESS); // Start transmission to address
@@ -167,7 +170,7 @@ private:
     TwoWire *_wire;
     // float _temperature = 0.0f;
     // float _humidity = 0.0f;
-};
+};  // class SHTC3
 
 inline SHTC3 SHTC3_obj;
 

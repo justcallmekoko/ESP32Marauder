@@ -58,11 +58,12 @@
 
 
 #if !defined(HAS_SHTC3) && !defined(HAS_CPU_TEMP)
-  inline void TempSensor::RunSetup(TwoWire *wireInstance) {}
+  inline void TempSensor::RunSetup(TwoWire *wireInstance) { log_d("!! TempSensor::RunSetup"); }
   inline float TempSensor::temperature() { return 0.0; }
 #else
 
   inline void TempSensor::RunSetup(TwoWire *wireInstance) {
+    log_d("TempSensor::RunSetup *wire");
     if (wireInstance == nullptr)
       _wire = &Wire;
     else

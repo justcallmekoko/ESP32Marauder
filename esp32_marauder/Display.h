@@ -30,24 +30,33 @@
   #include <XPT2046_Touchscreen.h>
 #endif
 
-#ifdef HAS_FT6336
-  #include "ft6336.h"
-#endif
-
 // #ifdef MARAUDER_WS_C5_28
 //   #include <CH32V003_IOExpander.hpp>
 //   extern CH32V003_IOExpander CH32V003_obj;
 // #endif
 
+
+
+/*
+// we don't need the constructors called for ever include "Display.h
+
+#ifdef HAS_CST820  // HAS_CAP_TOUCH
+   #include "CST820.hpp"
+  extern CST820 CST820_touch;
+#endif
+#ifdef  HAS_FT6336 // HAS_CAP_TOUCH
+  #include "ft6336.h"
+#endif
+
 #ifdef HAS_CST3530
   #include <CST3530.hpp>
-  CST3530 CST3530_obj;
 #endif
 
 #ifdef HAS_CST820
   #include <CST820.hpp>
   // extern CST820 CST820_touch;
 #endif
+*/
 
 // WiFi stuff
 #define OTA_UPDATE 100

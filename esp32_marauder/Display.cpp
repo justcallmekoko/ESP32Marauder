@@ -5,6 +5,19 @@
 
 #ifdef HAS_SCREEN
 
+// we don't need the constructors called for ever include "Display.h
+
+// HAS_CAP_TOUCH
+#ifdef  HAS_FT6336
+  #include "ft6336.h"
+#elif defined( HAS_CST3530
+  #include "CST3530.hpp"
+#elif defined( HAS_CST820
+  #include "CST820.hpp"
+#elif defined( HAS_CST820
+   #include "CST820.hpp"
+#endif
+
 namespace {
 
 uint8_t readLogoAlpha(uint16_t x, uint16_t y) {
@@ -60,7 +73,7 @@ int8_t Display::menuButton(uint16_t *x, uint16_t *y, bool pressed, bool check_ho
   // Serial.println(F("Display::menuButton()"));
   int16_t _x = *x;
   int16_t _y = *y;
-  #ifdef HAS_ILI9341
+  #if defined(HAS_ILI9341)
     for (uint8_t b = BUTTON_ARRAY_LEN; b < BUTTON_ARRAY_LEN + 3; b++) {
       // log_d("key %d _x1=%d _y1=%d _w=%d _h=%d _label=%s", 
       // b, this->key[b]._x1, this->key[b]._y1, this->key[b]._w, this->key[b]._h, this->key[b]._label);
@@ -91,12 +104,12 @@ int8_t Display::menuButton(uint16_t *x, uint16_t *y, bool pressed, bool check_ho
   return -1;
 }
 
+
 uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
 
 
   #ifdef HAS_CST3530
      if (CST3530_obj.available()) {
-        
        CST3530_obj.readData();
        // Serial.print("Event ");
        // Serial.println((int)CST3530_obj.data->event);
@@ -109,16 +122,13 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
          // *y = p.y;
 
          // CST3530_obj.getTouch(x, y);
-
          // if ( *x || *y ) { log_d("x=%d y=%d", *x, *y); }
          return 1;
-        }
-     // } else {
-       // log_d("CST3530_obj.available : FALSE");
+       }
      }
      return 0;
 
-  #elif HAS_CST820
+  #elif defined(HAS_CST820)
      if (CST820_touch.available()) {
        if (CST820_touch.data.event == 0) {  // Down event
          *x = CST820_touch.data.x;
@@ -130,7 +140,7 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
 
   #elif  defined(HAS_ILI9341)
     if (!this->headless_mode) {
-      #ifdef HAS_FT6336
+      #ifdef HAS_FT6336  // HAS_CAP_TOUCH
         // FT6336 capacitive touch: rotation-aware + edge exclusion
         {
           uint16_t raw_x, raw_y;
@@ -263,10 +273,13 @@ void Display::setCalData(bool landscape) {
         uint16_t calData[5] = { 312, 3431, 191, 3456, 2 };
       #elif defined(TFT_DIY)
         uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // tft.setRotation(0); // Portrait with DIY TFT
+      #elif defined(MARAUDER_CYD_24)
+        uint16_t calData[5] = { 378, 3288, 526, 3311, 3 };
+        log_d("setCalData");
       #else
         uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // DELETE
       #endif
-      #ifdef HAS_ILI9341
+      #if defined(HAS_ILI9341)
         tft.setTouch(calData);
       #endif
     }
@@ -280,7 +293,7 @@ void Display::setCalData(bool landscape) {
       #else if defined(TFT_DIY)
         uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
       #endif
-      #ifdef HAS_ILI9341
+      #if defined(HAS_ILI9341)
         tft.setTouch(calData);
       #endif
     }
@@ -298,7 +311,7 @@ void Display::RunSetup() {
     screen_buffer = new LinkedList<String>();
   #endif
 
-  #if defined( HAS_CYD_TOUCH) || defined(MARAUDER_CYD_HMI)
+  #if defined(HAS_CYD_TOUCH) || defined(MARAUDER_CYD_HMI)   // !HAS_FT6336 !HAS_CST820
     this->touchscreenSPI.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
     this->touchscreen.begin(touchscreenSPI);
     this->touchscreen.setRotation(0);
@@ -313,7 +326,8 @@ void Display::RunSetup() {
       #define TP_RST -1
     #endif
 
-    CST820_touch.begin(&Wire, TP_INT, TP_RST);
+    // CST820_touch.begin(&Wire, TP_INT, TP_RST);
+    CST820_touch.begin(&Wire);
   #endif
 
   #ifdef HAS_CST3530
@@ -324,9 +338,7 @@ void Display::RunSetup() {
       // CST3530_obj.begin(&Wire, TP_INT, TP_RST, TP_FREQ);
       // CST3530_obj.begin(TP_SDA, TO_SCL, TP_INT, TP_RST,f TP_FREQ)
       log_d("CST3530_obj.begin done");
-    #else
-      log_d("HAS_CST3530 False");
-    #endif
+  #endif
 
   #ifdef HAS_FT6336
     ft6336_init();
@@ -338,7 +350,7 @@ void Display::RunSetup() {
 
   tft.setCursor(0, 0);
 
-  #ifdef HAS_ILI9341
+  #if defined(HAS_ILI9341)
 
     #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH)
       this->setCalData();
@@ -859,4 +871,4 @@ void Display::buildBanner(String msg, int xpos)
   this->showCenterText(msg.c_str(), banner_y);
 }
 
-#endif
+#endif  //  HAS_SCREEN

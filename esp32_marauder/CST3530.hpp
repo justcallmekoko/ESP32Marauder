@@ -91,6 +91,7 @@ public:
         , _rstActiveLevel(rstActiveLevel), _interruptEnabled(false)
         , _pointCount(0), _callback(nullptr)
     {
+        log_d("CST3530 instantiated");
         memset(_points,    0, sizeof(_points));
         memset(_prev,      0, sizeof(_prev));
         memset(_prevValid, 0, sizeof(_prevValid));
@@ -98,6 +99,7 @@ public:
     }
 
     inline bool begin(TwoWire &wire = Wire) {
+        log_d("CST3530 begin");
         log_d("_intPin=%d  _rstPin=%d", _intPin, _rstPin);
         log_d("CST3530 I2C Cap Touch addr=%d", _addr);
         if (_intPin >= 0) ::pinMode(_intPin, INPUT);
@@ -183,10 +185,10 @@ public:
             uint8_t base = 4 + i * 5;
 
             CST3530Point p;
-            p.x        = (uint16_t)(buf[base + 0]) | (uint16_t)((buf[base + 3] & 0x0F) << 8);
-            p.y        = (uint16_t)(buf[base + 1]) | (uint16_t)((buf[base + 3] & 0xF0) << 4);
-            p.strength = (uint16_t)(buf[base + 2]);
-            p.trackId  = (uint8_t) (buf[base + 4] & 0x0F);
+            p.x        = static_cast<uint16_t>(buf[base + 0]) | static_cast<uint16_t>(((buf[base + 3] & 0x0F) << 8);
+            p.y        = static_cast<uint16_t>(buf[base + 1]) | static_cast<uint16_t>((buf[base + 3] & 0xF0) << 4);
+            p.strength = static_cast<uint16_t>(buf[base + 2]);
+            p.trackId  = static_cast<uint8_t>(buf[base + 4] & 0x0F);
             p.event    = (CST3530Event)((buf[base + 4] >> 4) & 0x0F); // bits[7:4]
 
             // Deduplicate: suppress if x, y, and event all match previous read
@@ -335,6 +337,8 @@ private:
 
     static void IRAM_ATTR _isrHandler() { _isrFlag = true; }
 };
+
+inline CST3530 CST3530_obj;
 
 #endif   //  CST3530_hpp
 

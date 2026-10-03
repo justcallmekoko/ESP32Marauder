@@ -810,6 +810,7 @@ inline bool RTC_PCF8563::writeRegisters(uint8_t reg, const uint8_t *buf,
     @return true if the chip acknowledged its address.
 */
 inline bool RTC_PCF8563::begin(TwoWire *wireInstance, uint8_t addr) {
+  log_d("RTC_PCF8563 begin addr=%02x", addr);
   _wire = wireInstance;
   _addr = addr;
   _wire->beginTransmission(_addr);
@@ -828,6 +829,7 @@ inline bool RTC_PCF8563::begin(TwoWire *wireInstance, uint8_t addr) {
 */
 inline bool RTC_PCF8563::begin(TwoWire &wireInstance, int sda, int scl,
                                uint8_t addr) {
+  log_d("RTC_PCF8563 begin sda=%d scl=%d addr=%02x", sda, scl, addr );
   _wire = &wireInstance;
   _addr = addr;
   if (sda >= 0 && scl >= 0) {

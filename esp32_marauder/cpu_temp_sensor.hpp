@@ -32,13 +32,12 @@ esp_err_t x = 0;
 
     // Install and enable the internal sensor
     x = temperature_sensor_install(&temp_sensor_config, &temp_handle);
-    ESP_ERROR_CHECK(x);
+    x = ESP_ERROR_CHECK_WITHOUT_ABORT(temperature_sensor_install(&temp_sensor_config, &temp_handle));
 
     log_d("temperature_sensor_install: x = %d", x);
     if (x != ESP_OK) return false;
 
-    x = temperature_sensor_enable(temp_handle);
-    ESP_ERROR_CHECK(x);
+    x = ESP_ERROR_CHECK_WITHOUT_ABORT(temperature_sensor_enable(temp_handle));
 
     log_d("temperature_sensor_enable: x = %d", x);
     log_d("x = %d", x);
@@ -50,7 +49,7 @@ esp_err_t x = 0;
   inline float read_sys_temp() {
     // Read the temperature in Celsius
     if (temperature_sensor_get_celsius(temp_handle, &_celsius) == ESP_OK) {
-      log_d("Chip Temperature: %f", _celsius);
+      // log_d("Chip Temperature: %f", _celsius);
       return _celsius;
     } else {
       log_d("Error reading temperature");

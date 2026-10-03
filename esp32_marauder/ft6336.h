@@ -3,7 +3,7 @@
 #ifndef ft6336_h
 #define ft6336_h
 
-#ifdef HAS_FT6336
+#ifdef HAS_FT6336 // HAS_CAP_TOUCH
 
 #include <Wire.h>
 
@@ -31,6 +31,7 @@ static bool _ft6336_read(uint8_t reg, uint8_t *buf, uint8_t len) {
 }
 
 static void ft6336_init() {
+    log_d("ft6336 init");
     pinMode(TP_RST, OUTPUT);
     digitalWrite(TP_RST, LOW);
     delay(10);
@@ -78,5 +79,5 @@ static uint8_t ft6336_update(uint16_t *x, uint16_t *y) {
     return 1;
 }
 
-#endif // HAS_FT6336
+#endif // HAS_FT6336 HAS_CAP_TOUCH
 #endif // ft6336_h
