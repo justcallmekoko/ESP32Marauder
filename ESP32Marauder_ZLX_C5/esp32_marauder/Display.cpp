@@ -1,0 +1,989 @@
+#include "Display.h"
+#include "BootSplashBitmap.h"
+#include "DisplayLine.h"
+#include "lang_var.h"
+
+#ifdef HAS_SCREEN
+
+namespace {
+
+uint8_t readLogoAlpha(uint16_t x, uint16_t y) {
+  const uint32_t pixel_index = static_cast<uint32_t>(y) * JCMK_LOGO_WIDTH + x;
+  const uint8_t packed = pgm_read_byte(JCMK_LOGO_BITMAP + pixel_index / 2);
+  return pixel_index & 1 ? packed & 0x0F : packed >> 4;
+}
+
+uint8_t sampleLogoAlpha(uint32_t source_x, uint32_t source_y) {
+  const uint16_t x0 = source_x >> 8;
+  const uint16_t y0 = source_y >> 8;
+  const uint16_t x1 = x0 + 1 < JCMK_LOGO_WIDTH ? x0 + 1 : x0;
+  const uint16_t y1 = y0 + 1 < JCMK_LOGO_HEIGHT ? y0 + 1 : y0;
+  const uint8_t x_fraction = source_x & 0xFF;
+  const uint8_t y_fraction = source_y & 0xFF;
+
+  const uint16_t top = readLogoAlpha(x0, y0) * (256 - x_fraction) +
+                       readLogoAlpha(x1, y0) * x_fraction;
+  const uint16_t bottom = readLogoAlpha(x0, y1) * (256 - x_fraction) +
+                          readLogoAlpha(x1, y1) * x_fraction;
+  return ((top * (256 - y_fraction) + bottom * y_fraction) + 32768) >> 16;
+}
+
+bool cleanLogoPixel(int16_t x, int16_t y, int16_t width, int16_t height,
+                    uint32_t source_x_step, uint32_t source_y_step) {
+  uint8_t white_neighbors = 0;
+  for (int8_t y_offset = -1; y_offset <= 1; ++y_offset) {
+    const int16_t sample_y = y + y_offset;
+    if (sample_y < 0 || sample_y >= height) continue;
+    for (int8_t x_offset = -1; x_offset <= 1; ++x_offset) {
+      const int16_t sample_x = x + x_offset;
+      if (sample_x < 0 || sample_x >= width) continue;
+      if (sampleLogoAlpha(sample_x * source_x_step,
+                          sample_y * source_y_step) >= 8) {
+        ++white_neighbors;
+      }
+    }
+  }
+  return white_neighbors >= 5;
+}
+
+}  // namespace
+
+Display::Display()
+#ifdef HAS_CYD_TOUCH
+#ifndef MARAUDER_ZLX_C5
+  : touchscreenSPI(VSPI),
+    touchscreen(XPT2046_CS, XPT2046_IRQ)
+#endif
+#endif
+{
+}
+
+#ifdef MARAUDER_ZLX_C5
+namespace {
+// Copied from ZLX factory test V29 XPT2046Soft: independent bit-bang SPI.
+//
+// ZLX C5 touch tuning:
+// - PRESS_Z: pressure required to begin a new touch.
+// - RELEASE_Z: lower release threshold (hysteresis) so small pressure noise does
+//   not repeatedly create press/release events while the finger is still down.
+// - Coordinates are latched for the whole press. This prevents a single finger
+//   press from drifting from UP -> SELECT -> DOWN as the resistive panel jitters.
+constexpr uint16_t ZLX_TOUCH_PRESS_Z = 350;
+constexpr uint16_t ZLX_TOUCH_RELEASE_Z = 180;
+constexpr uint8_t ZLX_TOUCH_SAMPLES = 7;
+constexpr uint8_t ZLX_TOUCH_PRESS_CONFIRM = 2;
+constexpr uint8_t ZLX_TOUCH_RELEASE_CONFIRM = 3;
+constexpr uint16_t ZLX_TOUCH_STABLE_DELTA = 24;
+
+constexpr int32_t ZLX_RAW_MIN = 220;
+constexpr int32_t ZLX_RAW_MAX = 3880;
+
+void zlxTouchBegin() {
+  pinMode(XPT2046_CLK, OUTPUT);
+  pinMode(XPT2046_MOSI, OUTPUT);
+  pinMode(XPT2046_MISO, INPUT);
+  pinMode(XPT2046_CS, OUTPUT);
+  pinMode(XPT2046_IRQ, INPUT_PULLUP);
+  digitalWrite(XPT2046_CS, HIGH);
+  digitalWrite(XPT2046_CLK, LOW);
+}
+
+uint8_t zlxTransferByte(uint8_t value) {
+  uint8_t result = 0;
+  for (int bit = 7; bit >= 0; --bit) {
+    digitalWrite(XPT2046_MOSI, (value >> bit) & 1);
+    delayMicroseconds(1);
+    digitalWrite(XPT2046_CLK, HIGH);
+    result = (uint8_t)((result << 1) | digitalRead(XPT2046_MISO));
+    delayMicroseconds(1);
+    digitalWrite(XPT2046_CLK, LOW);
+  }
+  return result;
+}
+
+uint16_t zlxRead12(uint8_t command) {
+  zlxTransferByte(command);
+  const uint16_t value = ((uint16_t)zlxTransferByte(0) << 8) | zlxTransferByte(0);
+  return (value >> 3) & 0x0FFF;
+}
+
+bool zlxTouchRead(uint16_t *x, uint16_t *y) {
+  // Keep touch state here instead of changing Display.h. Marauder's menu logic
+  // expects a continuous "pressed" state followed by one real release.
+  static bool touch_active = false;
+  static uint8_t press_confirm = 0;
+  static uint8_t release_confirm = 0;
+  static uint16_t candidate_x = 0;
+  static uint16_t candidate_y = 0;
+  static uint16_t latched_x = 0;
+  static uint16_t latched_y = 0;
+
+  // IRQ can bounce for a few loops when the finger is being released. Do not
+  // turn that short glitch into a menu click/re-click.
+  if (digitalRead(XPT2046_IRQ) != LOW) {
+    press_confirm = 0;
+
+    if (!touch_active)
+      return false;
+
+    *x = latched_x;
+    *y = latched_y;
+
+    if (++release_confirm < ZLX_TOUCH_RELEASE_CONFIRM)
+      return true;
+
+    touch_active = false;
+    release_confirm = 0;
+    return false;
+  }
+
+  // Seven samples with min/max rejection are much steadier than a plain
+  // five-sample average on a resistive XPT2046 panel.
+  long sumX = 0;
+  long sumY = 0;
+  long sumZ = 0;
+
+  uint16_t minX = 0xFFFF;
+  uint16_t maxX = 0;
+  uint16_t minY = 0xFFFF;
+  uint16_t maxY = 0;
+  long minZ = 0x7FFFFFFF;
+  long maxZ = -0x7FFFFFFF;
+
+  for (uint8_t i = 0; i < ZLX_TOUCH_SAMPLES; ++i) {
+    digitalWrite(XPT2046_CS, LOW);
+    const uint16_t raw_x = zlxRead12(0xD0);
+    const uint16_t raw_y = zlxRead12(0x90);
+    const uint16_t z1 = zlxRead12(0xB0);
+    const uint16_t z2 = zlxRead12(0xC0);
+    digitalWrite(XPT2046_CS, HIGH);
+
+    const long pressure = (long)z1 + 4095 - z2;
+
+    sumX += raw_x;
+    sumY += raw_y;
+    sumZ += pressure;
+
+    if (raw_x < minX) minX = raw_x;
+    if (raw_x > maxX) maxX = raw_x;
+    if (raw_y < minY) minY = raw_y;
+    if (raw_y > maxY) maxY = raw_y;
+    if (pressure < minZ) minZ = pressure;
+    if (pressure > maxZ) maxZ = pressure;
+  }
+
+  constexpr uint8_t ZLX_TOUCH_FILTERED_SAMPLES = ZLX_TOUCH_SAMPLES - 2;
+  const int32_t raw_x = (sumX - minX - maxX) / ZLX_TOUCH_FILTERED_SAMPLES;
+  const int32_t raw_y = (sumY - minY - maxY) / ZLX_TOUCH_FILTERED_SAMPLES;
+  const int32_t pressure = (sumZ - minZ - maxZ) / ZLX_TOUCH_FILTERED_SAMPLES;
+
+  // Factory UI is landscape (rot 1, SWAP_XY → 320x240).
+  // Marauder is portrait (rot 0, 240x320):
+  //   portrait_x = TFT_WIDTH-1 - landscape_y
+  //   portrait_y = landscape_x
+  const uint16_t mapped_x = (uint16_t)constrain(
+      map(raw_x, ZLX_RAW_MIN, ZLX_RAW_MAX, TFT_WIDTH - 1, 0),
+      0, TFT_WIDTH - 1);
+  const uint16_t mapped_y = (uint16_t)constrain(
+      map(raw_y, ZLX_RAW_MIN, ZLX_RAW_MAX, 0, TFT_HEIGHT - 1),
+      0, TFT_HEIGHT - 1);
+
+  if (!touch_active) {
+    release_confirm = 0;
+
+    if (pressure < ZLX_TOUCH_PRESS_Z) {
+      press_confirm = 0;
+      return false;
+    }
+
+    // Require two consecutive nearby readings before starting a new press.
+    // This rejects a noisy first contact without adding a noticeable delay.
+    if (press_confirm == 0) {
+      candidate_x = mapped_x;
+      candidate_y = mapped_y;
+      press_confirm = 1;
+      return false;
+    }
+
+    const int32_t dx = (int32_t)mapped_x - candidate_x;
+    const int32_t dy = (int32_t)mapped_y - candidate_y;
+    if (abs(dx) > ZLX_TOUCH_STABLE_DELTA ||
+        abs(dy) > ZLX_TOUCH_STABLE_DELTA) {
+      candidate_x = mapped_x;
+      candidate_y = mapped_y;
+      press_confirm = 1;
+      return false;
+    }
+
+    if (++press_confirm < ZLX_TOUCH_PRESS_CONFIRM)
+      return false;
+
+    latched_x = (uint16_t)(((uint32_t)candidate_x + mapped_x) / 2);
+    latched_y = (uint16_t)(((uint32_t)candidate_y + mapped_y) / 2);
+    touch_active = true;
+    press_confirm = 0;
+
+    *x = latched_x;
+    *y = latched_y;
+    return true;
+  }
+
+  // Once a press has started, keep returning the original coordinate until a
+  // stable release. Finger movement/jitter cannot migrate into another button.
+  *x = latched_x;
+  *y = latched_y;
+
+  if (pressure >= ZLX_TOUCH_RELEASE_Z) {
+    release_confirm = 0;
+    return true;
+  }
+
+  if (++release_confirm < ZLX_TOUCH_RELEASE_CONFIRM)
+    return true;
+
+  touch_active = false;
+  release_confirm = 0;
+  return false;
+}
+}  // namespace
+#endif
+
+int8_t Display::menuButton(uint16_t *x, uint16_t *y, bool pressed, bool check_hold) {
+  #ifdef HAS_ILI9341
+    for (uint8_t b = BUTTON_ARRAY_LEN; b < BUTTON_ARRAY_LEN + 3; b++) {
+      if (pressed && this->key[b].contains(*x, *y)) {
+        this->key[b].press(true);  // tell the button it is pressed
+      } else {
+        this->key[b].press(false);  // tell the button it is NOT pressed
+      }
+    }
+
+    for (uint8_t b = BUTTON_ARRAY_LEN; b < BUTTON_ARRAY_LEN + 3; b++) {
+      if (!check_hold) {
+        if ((this->key[b].justReleased()) && (!pressed)) {
+          return b - BUTTON_ARRAY_LEN;
+        }
+      }
+      else {
+        if ((this->key[b].isPressed())) {
+          return b - BUTTON_ARRAY_LEN;
+        }
+      }
+    }
+
+  #endif
+
+  return -1;
+}
+
+uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
+  #ifdef HAS_ILI9341
+    if (!this->headless_mode) {
+      #ifdef HAS_CAP_TOUCH
+        // FT6336 capacitive touch: rotation-aware + edge exclusion
+        {
+          uint16_t raw_x, raw_y;
+          if (!ft6336_read_raw(&raw_x, &raw_y)) return 0;
+
+          // Discard touches within PANCAKE_TOUCH_MARGIN pixels of any panel edge
+          #define PANCAKE_PANEL_W TFT_WIDTH
+          #define PANCAKE_PANEL_H TFT_HEIGHT
+          #define PANCAKE_TOUCH_MARGIN 5
+          if (raw_x < PANCAKE_TOUCH_MARGIN || raw_x >= (PANCAKE_PANEL_W - PANCAKE_TOUCH_MARGIN)) return 0;
+          if (raw_y < PANCAKE_TOUCH_MARGIN || raw_y >= (PANCAKE_PANEL_H - PANCAKE_TOUCH_MARGIN)) return 0;
+
+          // Transform panel-native portrait coords to screen coords per rotation
+          uint8_t rot = this->tft.getRotation();
+          switch (rot) {
+            case 0: // Portrait
+              *x = raw_x;
+              *y = raw_y;
+              break;
+            case 1: // Landscape 90 CW
+              *x = raw_y;
+              *y = (PANCAKE_PANEL_W - 1) - raw_x;
+              break;
+            case 2: // Portrait 180
+              *x = (PANCAKE_PANEL_W - 1) - raw_x;
+              *y = (PANCAKE_PANEL_H - 1) - raw_y;
+              break;
+            case 3: // Landscape 270 CW
+              *x = (PANCAKE_PANEL_H - 1) - raw_y;
+              *y = raw_x;
+              break;
+            default:
+              *x = raw_x;
+              *y = raw_y;
+              break;
+          }
+          return 1;
+        }
+      #elif !defined(HAS_CYD_TOUCH)
+        return this->tft.getTouch(x, y, threshold);
+      #else
+        #ifdef MARAUDER_ZLX_C5
+          if (zlxTouchRead(x, y))
+            return 1;
+          return 0;
+        #else
+        if (this->touchscreen.tirqTouched() && this->touchscreen.touched()) {
+          TS_Point p = this->touchscreen.getPoint();
+
+          //*x = map(p.x, 200, 3700, 1, TFT_WIDTH);
+          //*y = map(p.y, 240, 3800, 1, TFT_HEIGHT);
+
+          uint8_t rot = this->tft.getRotation();
+
+          //#ifdef HAS_CYD_PORTRAIT
+          //  rot = 0;
+          //#endif
+
+          switch (rot) {
+            case 0: // Standard Protrait
+              *x = map(p.x, 200, 3700, 1, TFT_WIDTH);
+              *y = map(p.y, 240, 3800, 1, TFT_HEIGHT);
+              break;
+            case 1:
+              *x = map(p.y, 143, 3715, 0, TFT_HEIGHT);     // Horizontal (Y axis in touch, X on screen)
+              *y = map(p.x, 3786, 216, 0, TFT_WIDTH);    // Vertical (X axis in touch, Y on screen)
+              break;
+            case 2:
+              *x = map(p.x, 3700, 200, 1, TFT_WIDTH);
+              *y = map(p.y, 3800, 240, 1, TFT_HEIGHT);
+              break;
+            case 3:
+              *x = map(p.y, 3800, 240, 1, TFT_WIDTH);
+              *y = map(p.x, 200, 3700, 1, TFT_HEIGHT);
+              break;
+          }
+          return 1;
+        }
+        else
+          return 0;
+        #endif
+      #endif
+    } else {
+      return !this->headless_mode;
+    }
+  #endif
+
+  return 0;
+}
+
+bool Display::isTouchHeld(uint16_t threshold) {
+  static unsigned long touchStartTime = 0;
+  static bool touchHeld = false;
+  uint16_t x, y;
+
+  if (this->updateTouch(&x, &y, threshold)) {
+    // Touch detected
+    if (touchStartTime == 0) {
+      touchStartTime = millis();  // First touch timestamp
+    } else if (!touchHeld && millis() - touchStartTime >= 1000) {
+      touchHeld = true;  // Held for at least 1000ms
+      return true;
+    }
+  } else {
+    // Touch released
+    touchStartTime = 0;
+    touchHeld = false;
+  }
+
+  return false;
+}
+
+void Display::init() {
+  tft.init();
+
+  #if defined(HAS_DUAL_BAND) && !defined(MARAUDER_MINI_V3)
+    digitalWrite(TFT_BL, HIGH);
+  #endif
+}
+
+void Display::setCalData(bool landscape) {
+  #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH)
+    if (!landscape) {
+      #ifdef TFT_SHIELD
+        uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield
+      #elif defined(MARAUDER_CYD_3_5_INCH)
+        uint16_t calData[5] = { 239, 3560, 262, 3643, 4 };
+      #elif defined(MARAUDER_V8)
+        //uint16_t calData[5] = { 351, 3279, 214, 3394, 2 };
+        uint16_t calData[5] = { 312, 3431, 191, 3456, 2 };
+      #elif defined(TFT_DIY)
+        uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // tft.setRotation(0); // Portrait with DIY TFT
+      #endif
+      #ifdef HAS_ILI9341
+        tft.setTouch(calData);
+      #endif
+    }
+    else {
+      #ifdef TFT_SHIELD
+        uint16_t calData[5] = { 391, 3491, 266, 3505, 7 }; // Landscape TFT Shield
+      #elif defined(MARAUDER_CYD_3_5_INCH)
+        uint16_t calData[5] = { 272, 3648, 234, 3565, 7 };
+      #elif defined(MARAUDER_V8)
+        uint16_t calData[5] = { 213, 3396, 350, 3275, 1 };
+      #else if defined(TFT_DIY)
+        uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
+      #endif
+      #ifdef HAS_ILI9341
+        tft.setTouch(calData);
+      #endif
+    }
+  #endif
+}
+
+// Function to prepare the display and the menus
+void Display::RunSetup() {
+  run_setup = false;
+
+  // Need to declare new
+  display_buffer = new LinkedList<String>();
+
+  #ifdef SCREEN_BUFFER
+    screen_buffer = new LinkedList<String>();
+  #endif
+
+  #ifdef HAS_CYD_TOUCH
+    #ifdef MARAUDER_ZLX_C5
+      zlxTouchBegin();
+    #else
+      this->touchscreenSPI.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
+      this->touchscreen.begin(touchscreenSPI);
+      this->touchscreen.setRotation(0);
+    #endif
+  #endif
+
+  #ifdef HAS_CAP_TOUCH
+    ft6336_init();
+  #endif
+  
+  tft.init();
+
+  tft.setRotation(SCREEN_ORIENTATION);
+
+  tft.setCursor(0, 0);
+
+  #ifdef HAS_ILI9341
+
+    #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH)
+      this->setCalData();
+    #endif
+
+  #endif
+
+  clearScreen();
+
+  #ifdef KIT
+    pinMode(KIT_LED_BUILTIN, OUTPUT);
+  #endif
+
+  #ifdef MARAUDER_REV_FEATHER
+    pinMode(7, OUTPUT);
+
+    delay(10);
+
+    digitalWrite(7, HIGH);
+  #endif
+}
+
+void Display::drawBootSplash() {
+  const int16_t width = tft.width();
+  const int16_t height = tft.height();
+  #ifdef MARAUDER_CYD_3_5_INCH
+    constexpr bool half_scale_logo = true;
+  #else
+    constexpr bool half_scale_logo = false;
+  #endif
+  const marauder::BootSplashLayout layout =
+      marauder::bootSplashLayout(width, height, half_scale_logo);
+
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextWrap(false);
+  tft.setFreeFont(NULL);
+  tft.setTextSize(layout.text_size);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.drawCentreString("ESP32 Marauder", width / 2, layout.title_y, 1);
+
+  const uint32_t source_x_step = layout.logo_width > 1
+      ? (static_cast<uint32_t>(JCMK_LOGO_WIDTH - 1) << 8) /
+            (layout.logo_width - 1)
+      : 0;
+  const uint32_t source_y_step = layout.logo_height > 1
+      ? (static_cast<uint32_t>(JCMK_LOGO_HEIGHT - 1) << 8) /
+            (layout.logo_height - 1)
+      : 0;
+  for (int16_t y = 0; y < layout.logo_height; ++y) {
+    int16_t run_start = -1;
+    for (int16_t x = 0; x <= layout.logo_width; ++x) {
+      const bool white = x < layout.logo_width &&
+          cleanLogoPixel(x, y, layout.logo_width, layout.logo_height,
+                         source_x_step, source_y_step);
+      if (white && run_start < 0) run_start = x;
+      if (!white && run_start >= 0) {
+        tft.drawFastHLine(layout.logo_x + run_start, layout.logo_y + y,
+                          x - run_start, TFT_WHITE);
+        run_start = -1;
+      }
+    }
+  }
+
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.drawCentreString(version_number, width / 2, layout.version_y, 1);
+  tft.setTextColor(TFT_GREEN, TFT_BLACK);
+  tft.drawCentreString("Initializing...", width / 2, layout.status_y, 1);
+  tft.setTextSize(1);
+}
+
+void Display::tftDrawGraphObjects(byte x_scale)
+{
+  //draw the graph objects
+  tft.fillRect(11, 5, x_scale+1, PKT_HALF, TFT_BLACK); // positive start point
+  tft.fillRect(11, PKT_HALF + 1, x_scale+1, PKT_HALF - 1, TFT_BLACK); // negative start point
+  tft.drawFastVLine(10, 5, PKT_HALF * 2 - 10, TFT_WHITE); // y axis
+  tft.drawFastHLine(10, HEIGHT_1 - 1, PKT_AXIS_W, TFT_WHITE); // x axis
+  tft.setTextColor(TFT_YELLOW); tft.setTextSize(1); // set parameters for y axis labels
+  tft.setCursor(3, 6); tft.print("+"); // '+' at top of y axis
+  tft.setCursor(3, PKT_HALF * 2 - 12); tft.print("0"); // "0" near baseline
+}
+
+void Display::tftDrawEapolColorKey(bool filter)
+{
+  //Display color key
+  tft.setTextSize(1); tft.setTextColor(TFT_WHITE);
+  tft.fillRect(14, 0, 15, 8, TFT_CYAN); tft.setCursor(30, 0); tft.println(" - EAPOL"); 
+  if (filter) {
+    uint16_t y = tft.getCursorY();
+    tft.setCursor(14, y);
+    tft.println("Filter Active");
+  }
+}
+
+void Display::tftDrawColorKey()
+{
+  //Display color key
+  tft.setTextSize(1); tft.setTextColor(TFT_WHITE);
+  tft.fillRect(14, 0, 15, 8, TFT_GREEN); tft.setCursor(30, 0); tft.print(" - Beacons"); 
+  tft.fillRect(14, 8, 15, 8, TFT_RED); tft.setCursor(30, 8); tft.print(" - Deauths");
+  tft.fillRect(14, 16, 15, 8, TFT_BLUE); tft.setCursor(30, 16); tft.print(" - Probes");
+}
+
+void Display::tftDrawXScaleButtons(byte x_scale) {
+  tft.drawFastVLine(234, 0, 20, TFT_WHITE);
+  tft.setCursor(208, 21); tft.setTextColor(TFT_WHITE); tft.setTextSize(1); tft.print("X Scale:"); tft.print(x_scale);
+
+  key[X_MINUS_INDEX].initButton(&tft, // x - box
+                        220,
+                        10, // x, y, w, h, outline, fill, text
+                        20,
+                        20,
+                        TFT_BLACK, // Outline
+                        TFT_CYAN, // Fill
+                        TFT_BLACK, // Text
+                        "-",
+                        2);
+  key[X_PLUS_INDEX].initButton(&tft, // x + box
+                        249,
+                        10, // x, y, w, h, outline, fill, text
+                        20,
+                        20,
+                        TFT_BLACK, // Outline
+                        TFT_CYAN, // Fill
+                        TFT_BLACK, // Text
+                        "+",
+                        2);
+
+  key[X_PLUS_INDEX].setLabelDatum(1, 5, MC_DATUM);
+  key[X_MINUS_INDEX].setLabelDatum(1, 5, MC_DATUM);
+
+  key[X_PLUS_INDEX].drawButton();
+  key[X_MINUS_INDEX].drawButton();
+}
+
+void Display::tftDrawYScaleButtons(byte y_scale)
+{
+  tft.drawFastVLine(290, 0, 20, TFT_WHITE);
+  tft.setCursor(265, 21); tft.setTextColor(TFT_WHITE); tft.setTextSize(1); tft.print("Y Scale:"); tft.print(y_scale);
+
+  key[Y_MINUS_INDEX].initButton(&tft, // y - box
+                        276,
+                        10, // x, y, w, h, outline, fill, text
+                        20,
+                        20,
+                        TFT_BLACK, // Outline
+                        TFT_MAGENTA, // Fill
+                        TFT_BLACK, // Text
+                        "-",
+                        2);
+  key[Y_PLUS_INDEX].initButton(&tft, // y + box
+                        305,
+                        10, // x, y, w, h, outline, fill, text
+                        20,
+                        20,
+                        TFT_BLACK, // Outline
+                        TFT_MAGENTA, // Fill
+                        TFT_BLACK, // Text
+                        "+",
+                        2);
+
+  key[Y_MINUS_INDEX].setLabelDatum(1, 5, MC_DATUM);
+  key[Y_PLUS_INDEX].setLabelDatum(1, 5, MC_DATUM);
+
+  key[Y_MINUS_INDEX].drawButton();
+  key[Y_PLUS_INDEX].drawButton();
+}
+
+void Display::tftDrawChannelScaleButtons(int set_channel, bool lnd_an) {
+  #ifdef MARAUDER_PANCAKE
+    TOP_FIXED_AREA_2 = lnd_an ? 48 : 64;
+  #endif
+  if (lnd_an) {
+    tft.drawFastVLine(178, 0, 20, TFT_WHITE);
+    tft.setCursor(145, 21); tft.setTextColor(TFT_WHITE); tft.setTextSize(1); tft.print(text10); tft.print(set_channel);
+
+    key[CHAN_MINUS_INDEX].initButton(&tft, // channel - box
+                          164,
+                          10, // x, y, w, h, outline, fill, text
+                          EXT_BUTTON_WIDTH - (EXT_BUTTON_WIDTH * 0.33),
+                          EXT_BUTTON_WIDTH - (EXT_BUTTON_WIDTH * 0.33),
+                          TFT_BLACK, // Outline
+                          TFT_BLUE, // Fill
+                          TFT_BLACK, // Text
+                          "-",
+                          2);
+    key[CHAN_PLUS_INDEX].initButton(&tft, // channel + box
+                          193,
+                          10, // x, y, w, h, outline, fill, text
+                          EXT_BUTTON_WIDTH - (EXT_BUTTON_WIDTH * 0.33),
+                          EXT_BUTTON_WIDTH - (EXT_BUTTON_WIDTH * 0.33),
+                          TFT_BLACK, // Outline
+                          TFT_BLUE, // Fill
+                          TFT_BLACK, // Text
+                          "+",
+                          2);
+  }
+
+  else {
+    key[CHAN_MINUS_INDEX].initButton(&tft, // channel - box
+                          (EXT_BUTTON_WIDTH / 2) * 6,
+                          (STATUS_BAR_WIDTH * 2) + (EXT_BUTTON_WIDTH / 2), // x, y, w, h, outline, fill, text
+                          EXT_BUTTON_WIDTH,
+                          EXT_BUTTON_WIDTH,
+                          TFT_BLACK, // Outline
+                          TFT_BLUE, // Fill
+                          TFT_BLACK, // Text
+                          "-",
+                          1);
+    key[CHAN_PLUS_INDEX].initButton(&tft, // channel + box
+                          (EXT_BUTTON_WIDTH / 2) * 10,
+                          (STATUS_BAR_WIDTH * 2) + (EXT_BUTTON_WIDTH / 2), // x, y, w, h, outline, fill, text
+                          EXT_BUTTON_WIDTH,
+                          EXT_BUTTON_WIDTH,
+                          TFT_BLACK, // Outline
+                          TFT_BLUE, // Fill
+                          TFT_BLACK, // Text
+                          "+",
+                          1);
+  }
+
+  key[CHAN_MINUS_INDEX].setLabelDatum(1, 5, MC_DATUM);
+  key[CHAN_PLUS_INDEX].setLabelDatum(1, 5, MC_DATUM);
+
+  key[CHAN_MINUS_INDEX].drawButton();
+  key[CHAN_PLUS_INDEX].drawButton();
+}
+
+void Display::tftDrawChanHopButton(bool lnd_an, bool en) {
+  #ifdef MARAUDER_PANCAKE
+    TOP_FIXED_AREA_2 = lnd_an ? 48 : 64;
+  #endif
+  if (lnd_an) {
+    if (!en) {
+      key[CHAN_HOP_INDEX].initButton(&tft, // Exit box
+                        137,
+                        10, // x, y, w, h, outline, fill, text
+                        EXT_BUTTON_WIDTH,
+                        EXT_BUTTON_WIDTH,
+                        TFT_ORANGE, // Outline
+                        TFT_RED, // Fill
+                        TFT_BLACK, // Text
+                        "X",
+                        2);
+    } else {
+      key[CHAN_HOP_INDEX].initButton(&tft, // Exit box
+                        137,
+                        10, // x, y, w, h, outline, fill, text
+                        EXT_BUTTON_WIDTH,
+                        EXT_BUTTON_WIDTH,
+                        TFT_WHITE, // Outline
+                        TFT_GREEN, // Fill
+                        TFT_BLACK, // Text
+                        "O",
+                        2);
+    }
+  }
+
+  else {
+    if (!en) {
+      key[CHAN_HOP_INDEX].initButton(&tft, // Exit box
+                        (EXT_BUTTON_WIDTH / 2) * 14,
+                        (STATUS_BAR_WIDTH * 2) + (EXT_BUTTON_WIDTH / 2), // x, y, w, h, outline, fill, text
+                        EXT_BUTTON_WIDTH,
+                        EXT_BUTTON_WIDTH,
+                        TFT_ORANGE, // Outline
+                        TFT_RED, // Fill
+                        TFT_BLACK, // Text
+                        "HOP",
+                        1);
+    } else {
+      key[CHAN_HOP_INDEX].initButton(&tft, // Exit box
+                        (EXT_BUTTON_WIDTH / 2) * 14,
+                        (STATUS_BAR_WIDTH * 2) + (EXT_BUTTON_WIDTH / 2), // x, y, w, h, outline, fill, text
+                        EXT_BUTTON_WIDTH,
+                        EXT_BUTTON_WIDTH,
+                        TFT_WHITE, // Outline
+                        TFT_GREEN, // Fill
+                        TFT_BLACK, // Text
+                        "HOP",
+                        1);
+    }
+  }
+
+  key[CHAN_HOP_INDEX].setLabelDatum(1, 5, MC_DATUM);
+
+  key[CHAN_HOP_INDEX].drawButton();
+}
+
+void Display::tftDrawExitScaleButtons(bool lnd_an) {
+  #ifdef MARAUDER_PANCAKE
+    TOP_FIXED_AREA_2 = lnd_an ? 48 : 64;
+  #endif
+  //tft.drawFastVLine(178, 0, 20, TFT_WHITE);
+  //tft.setCursor(145, 21); tft.setTextColor(TFT_WHITE); tft.setTextSize(1); tft.print("Channel:"); tft.print(set_channel);
+
+  if (lnd_an) {
+
+    key[EXIT_BUTTON_INDEX].initButton(&tft, // Exit box
+                      137,
+                      10, // x, y, w, h, outline, fill, text
+                      EXT_BUTTON_WIDTH - (EXT_BUTTON_WIDTH * 0.33),
+                      EXT_BUTTON_WIDTH - (EXT_BUTTON_WIDTH * 0.33),
+                      TFT_ORANGE, // Outline
+                      TFT_RED, // Fill
+                      TFT_BLACK, // Text
+                      "X",
+                      2);
+  }
+
+  else {
+    key[EXIT_BUTTON_INDEX].initButton(&tft, // Exit box
+                      EXT_BUTTON_WIDTH,
+                      (STATUS_BAR_WIDTH * 2) + (EXT_BUTTON_WIDTH / 2), // x, y, w, h, outline, fill, text
+                      EXT_BUTTON_WIDTH,
+                      EXT_BUTTON_WIDTH,
+                      TFT_ORANGE, // Outline
+                      TFT_RED, // Fill
+                      TFT_BLACK, // Text
+                      "X",
+                      1);
+  }
+
+  key[EXIT_BUTTON_INDEX].setLabelDatum(1, 5, MC_DATUM);
+
+  key[EXIT_BUTTON_INDEX].drawButton();
+}
+
+void Display::twoPartDisplay(String center_text)
+{
+  tft.setTextColor(TFT_BLACK, TFT_YELLOW);
+  tft.fillRect(0,16,HEIGHT_1,144, TFT_YELLOW);
+  //tft.drawCentreString(center_text,120,82,1);
+  tft.setTextWrap(true);
+  tft.setFreeFont(NULL);
+  //showCenterText(center_text, 82);
+  //tft.drawCentreString(center_text,120,82,1);
+  tft.setCursor(0, 82);
+  tft.println(center_text);
+  tft.setFreeFont(MENU_FONT);
+  tft.setTextWrap(false);
+}
+
+void Display::touchToExit()
+{
+  tft.setTextColor(TFT_BLACK, TFT_LIGHTGREY);
+  tft.fillRect(0,32,HEIGHT_1,16, TFT_LIGHTGREY);
+  tft.drawCentreString(text11,TFT_WIDTH / 2,32,2);
+}
+
+
+// Function to just draw the screen black
+void Display::clearScreen()
+{
+  #ifdef MARAUDER_PANCAKE
+    TOP_FIXED_AREA_2 = 48;
+  #endif
+  //Serial.println(F("clearScreen()"));
+  #ifndef MARAUDER_V7
+    tft.fillScreen(TFT_BLACK);
+    tft.setCursor(0, 0);
+  #elif defined(MARAUDER_MINI) || defined(MARAUDER_MINI_V3)
+    tft.fillRect(0, 0, TFT_WIDTH, TFT_HEIGHT, TFT_BLACK);
+    tft.setCursor(0, 0);
+  #else
+    tft.fillRect(0, 0, TFT_WIDTH, TFT_HEIGHT, TFT_BLACK);
+    tft.setCursor(0, 0);
+  #endif
+}
+
+#ifdef SCREEN_BUFFER
+void Display::scrollScreenBuffer(bool down) {
+  // Scroll screen normal direction (Up)
+  if (!down) {
+    this->screen_buffer->shift();
+  }
+}
+#endif
+
+void Display::processAndPrintString(TFT_eSPI& tft, const String& originalString) {
+  // Define colors
+  uint16_t text_color = TFT_GREEN; // Default text color
+  uint16_t background_color = TFT_BLACK; // Default background color
+
+  String new_string = originalString;
+
+  // Check for color macros at the start of the string
+  if (new_string.startsWith(";")) {
+    if (new_string.startsWith(RED_KEY)) {
+      text_color = TFT_RED;
+      new_string.remove(0, strlen(RED_KEY)); // Remove the macro
+    } else if (new_string.startsWith(GREEN_KEY)) {
+      text_color = TFT_GREEN;
+      new_string.remove(0, strlen(GREEN_KEY)); // Remove the macro
+    } else if (new_string.startsWith(CYAN_KEY)) {
+      text_color = TFT_CYAN;
+      new_string.remove(0, strlen(CYAN_KEY)); // Remove the macro
+    } else if (new_string.startsWith(WHITE_KEY)) {
+      text_color = TFT_WHITE;
+      new_string.remove(0, strlen(WHITE_KEY)); // Remove the macro
+    } else if (new_string.startsWith(MAGENTA_KEY)) {
+      text_color = TFT_MAGENTA;
+      new_string.remove(0, strlen(MAGENTA_KEY)); // Remove the macro
+    }
+  }
+
+  // Scan output uses the built-in 6-pixel font. CHAR_WIDTH describes larger
+  // menu/layout cells on full-size displays, so using it here cut their line
+  // capacity in half and truncated values such as MAC addresses.
+  char line[STANDARD_FONT_CHAR_LIMIT + 1];
+  fitDisplayLine(line, sizeof(line), new_string.c_str()); // GCOVR_EXCL_LINE
+
+  // Set text color and print the string
+  tft.setTextColor(text_color, background_color);
+  tft.print(line);
+}
+
+void Display::displayBuffer(bool do_clear)
+{
+  if (this->display_buffer->size() > 0)
+  {
+
+    int print_count = 2;
+
+    while ((display_buffer->size() > 0) && (print_count > 0))
+    {
+      // Freeze adding to display buffer
+      if (display_buffer->size() > DISPLAY_BUFFER_LIMIT)
+        this->printing = true;
+
+      /*#ifndef SCREEN_BUFFER
+        xPos = 0;
+        if ((display_buffer->size() > 0) && (!loading))
+        {
+          //printing = true;
+          delay(print_delay_1);
+          yDraw = scroll_line(TFT_RED);
+          tft.setCursor(xPos, yDraw);
+          tft.setTextColor(TFT_GREEN, TFT_BLACK);
+          tft.print(display_buffer->shift());
+          //printing = false;
+          delay(print_delay_2);
+        }
+        if (!tteBar)
+          blank[(18+(yStart - TOP_FIXED_AREA) / TEXT_HEIGHT)%19] = xPos;
+        else
+          blank[(18+(yStart - TOP_FIXED_AREA_2) / TEXT_HEIGHT)%19] = xPos;
+      #else*/
+        xPos = 0;
+        if (this->screen_buffer->size() >= MAX_SCREEN_BUFFER)
+          this->scrollScreenBuffer();
+
+        screen_buffer->add(display_buffer->shift());
+
+        for (int i = 0; i < this->screen_buffer->size(); i++) {
+		  #ifdef MARAUDER_PANCAKE
+			tft.setCursor(xPos, (i * TEXT_HEIGHT) + TOP_FIXED_AREA_2);
+		  #else
+			#ifdef HAS_TOUCH
+			  tft.setCursor(xPos, (i * 12) + ((TFT_HEIGHT / 6) * 1.3));
+			#else
+			  tft.setCursor(xPos, (i * 12) + (TFT_HEIGHT / 6));
+			#endif
+		  #endif
+
+          this->processAndPrintString(tft, this->screen_buffer->get(i));
+        }
+      //#endif
+
+      print_count--;
+    }
+
+    this->printing = false;
+  }
+}
+
+void Display::showCenterText(const char* text, int y, bool small_pp, uint8_t text_size)
+{
+  if (!text)
+    text = "";
+
+  // Centering already assumes either the 1x bitmap font or text_size scaling.
+  // Apply that size here as well so callers never inherit a previous UI's
+  // text scale (for example, the 2x upload percentage display).
+  const uint8_t effective_text_size = resolveDisplayTextSize(small_pp, text_size);
+  tft.setTextSize(effective_text_size);
+
+  size_t len = strlen(text);
+
+  if (!small_pp)
+    tft.setCursor((SCREEN_WIDTH - (len * (6 * effective_text_size))) / 2, y);
+  else
+    tft.setCursor((SCREEN_WIDTH - (len * 6)) / 2, y);
+
+  tft.println(text);
+}
+
+
+void Display::updateBanner(String msg)
+{
+  this->buildBanner(msg, current_banner_pos);
+}
+
+
+void Display::buildBanner(String msg, int xpos)
+{
+  int h = TEXT_HEIGHT;
+
+  #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+    int banner_y = STATUS_BAR_WIDTH + 8;
+  #else
+    int banner_y = STATUS_BAR_WIDTH;
+  #endif
+  this->tft.fillRect(0, STATUS_BAR_WIDTH, SCREEN_WIDTH, TEXT_HEIGHT + (banner_y - STATUS_BAR_WIDTH), TFT_BLACK);
+  this->tft.setFreeFont(NULL);           // Font 4 selected
+  this->tft.setTextSize(BANNER_TEXT_SIZE);           // Font size scaling is x1
+  this->tft.setTextColor(TFT_WHITE, TFT_BLACK);  // Black text, no background colour
+  this->showCenterText(msg.c_str(), banner_y);
+}
+
+#endif
