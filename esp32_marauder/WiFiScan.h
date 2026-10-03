@@ -391,7 +391,7 @@ class WiFiScan
 {
   private:
 #ifdef HAS_PSRAM
-    static constexpr size_t REMOTE_ID_CAPACITY = 48;
+    static constexpr size_t REMOTE_ID_CAPACITY = 24;
 #else
     static constexpr size_t REMOTE_ID_CAPACITY = 12;
 #endif
