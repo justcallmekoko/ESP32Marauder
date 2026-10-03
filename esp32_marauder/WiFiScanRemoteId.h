@@ -8,6 +8,17 @@ void copyIfPresent(char* destination, size_t destinationSize,
   destination[destinationSize - 1] = '\0';
 }
 
+#ifdef HAS_SD
+String remoteIdXmlEscape(String value) {
+  value.replace("&", "&amp;");
+  value.replace("<", "&lt;");
+  value.replace(">", "&gt;");
+  value.replace("\"", "&quot;");
+  value.replace("'", "&apos;");
+  return value;
+}
+#endif
+
 void updateKnownRemoteIdObservation(RemoteIdRecord& record,
                                     const uint8_t mac[6],
                                     RemoteIdTransport transport,
@@ -53,9 +64,11 @@ void WiFiScan::mergeRemoteIdRecord(RemoteIdRecord& destination,
   if (source.hasOperatorId) destination.hasOperatorId = true;
   if (source.hasDescription) destination.hasDescription = true;
   if (source.hasLocation) {
-    destination.hasLocation = true;
-    destination.latitudeE7 = source.latitudeE7;
-    destination.longitudeE7 = source.longitudeE7;
+    if (!destination.hasLocation && source.historyCount != 0) {
+      memcpy(destination.history, source.history, sizeof(destination.history));
+      destination.historyCount = source.historyCount;
+    }
+    remoteIdUpdateLocation(destination, source.latitudeE7, source.longitudeE7);
     destination.altitudeGeoM = source.altitudeGeoM;
     destination.altitudePressureM = source.altitudePressureM;
     destination.heightM = source.heightM;
@@ -222,6 +235,7 @@ void WiFiScan::RunRemoteIdScan(uint8_t scan_mode, uint16_t color) {
   #ifdef HAS_SD
     startLog("remoteid");
     buffer_obj.append("millis,uas_id,operator_id,transport,channel,rssi,packets,packet_rate_hz,state,lost_count,reacquired_count,last_lost_ms,last_reacquired_ms,lat,lon,alt_geo,alt_geo_valid,height,height_valid,speed,speed_valid,heading,heading_valid,operator_lat,operator_lon,auth_type,auth_page,auth_last_page,auth_length,auth_timestamp\n");
+    startRemoteIdGpx();
   #endif
 
   #ifdef HAS_SCREEN
@@ -384,6 +398,135 @@ void WiFiScan::logRemoteIdRecord(const RemoteIdRecord& record) {
   #endif
 }
 
+#ifdef HAS_SD
+void WiFiScan::startRemoteIdGpx() {
+  remote_id_gpx_active = false;
+  remote_id_gpx_file_name = "";
+  memset(remote_id_gpx_tracks, 0, sizeof(remote_id_gpx_tracks));
+  if (!sd_obj.supported || !settings_obj.loadSetting<bool>("SavePCAP")) return;
+  for (uint16_t index = 0; index < 10000; ++index) {
+    const String candidate = "/remoteid_" + String(index) + ".gpx";
+    if (!SD.exists(candidate)) {
+      remote_id_gpx_file_name = candidate;
+      remote_id_gpx_session_index = index;
+      break;
+    }
+  }
+  if (remote_id_gpx_file_name.length() == 0) return;
+  File file = SD.open(remote_id_gpx_file_name, FILE_WRITE);
+  if (!file) return;
+  file.print("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+  file.print("<gpx version=\"1.1\" creator=\"ESP32 Marauder Remote ID\" ");
+  file.print("xmlns=\"http://www.topografix.com/GPX/1/1\">\n");
+  file.close();
+  remote_id_gpx_active = true;
+  Serial.println("Remote ID GPX: " + remote_id_gpx_file_name);
+}
+
+void WiFiScan::logRemoteIdGpxPositions(uint32_t nowMs) {
+  if (!remote_id_gpx_active) return;
+  size_t count = 0;
+  portENTER_CRITICAL(&remote_id_mux);
+  for (size_t i = 0; i < remote_id_store.size() && count < REMOTE_ID_CAPACITY; ++i) {
+    RemoteIdRecord* record = remote_id_store.at(i);
+    if (record == nullptr || !record->hasLocation ||
+        record->lastGpxRevision == record->locationRevision ||
+        nowMs - record->lastGpxLoggedMs < 1000)
+      continue;
+    record->lastGpxLoggedMs = nowMs;
+    record->lastGpxRevision = record->locationRevision;
+    remote_id_snapshots[count++] = *record;
+  }
+  portEXIT_CRITICAL(&remote_id_mux);
+  if (count == 0) return;
+
+  for (size_t i = 0; i < count; ++i) {
+    const RemoteIdRecord& record = remote_id_snapshots[i];
+    size_t trackIndex = REMOTE_ID_CAPACITY;
+    for (size_t track = 0; track < REMOTE_ID_CAPACITY; ++track) {
+      RemoteIdGpxTrack& candidate = remote_id_gpx_tracks[track];
+      if (!candidate.used) continue;
+      if (remoteIdIdentityMatches(candidate.uasId, candidate.mac, record)) {
+        trackIndex = track;
+        if (record.hasUasId && candidate.uasId[0] == '\0') {
+          strncpy(candidate.uasId, record.uasId, sizeof(candidate.uasId) - 1);
+          strncpy(candidate.name, record.uasId, sizeof(candidate.name) - 1);
+        }
+        break;
+      }
+    }
+    if (trackIndex == REMOTE_ID_CAPACITY) {
+      for (size_t track = 0; track < REMOTE_ID_CAPACITY; ++track) {
+        if (remote_id_gpx_tracks[track].used) continue;
+        trackIndex = track;
+        RemoteIdGpxTrack& created = remote_id_gpx_tracks[track];
+        created.used = true;
+        memcpy(created.mac, record.mac, sizeof(created.mac));
+        if (record.hasUasId) {
+          strncpy(created.uasId, record.uasId, sizeof(created.uasId) - 1);
+          strncpy(created.name, record.uasId, sizeof(created.name) - 1);
+        } else {
+          macToString(record.mac).toCharArray(created.name, sizeof(created.name));
+        }
+        break;
+      }
+    }
+    if (trackIndex == REMOTE_ID_CAPACITY) continue;
+
+    char fragmentPath[40];
+    snprintf(fragmentPath, sizeof(fragmentPath), "/remoteid_%u_%u.tmp",
+             remote_id_gpx_session_index, static_cast<unsigned>(trackIndex));
+    File fragment = SD.open(fragmentPath, FILE_APPEND);
+    if (!fragment) continue;
+    fragment.print("      <trkpt lat=\"");
+    fragment.print(record.latitudeE7 / 1e7, 7);
+    fragment.print("\" lon=\"");
+    fragment.print(record.longitudeE7 / 1e7, 7);
+    fragment.print("\">\n");
+    if (record.altitudeGeoValid) {
+      fragment.print("        <ele>");
+      fragment.print(record.altitudeGeoM, 1);
+      fragment.print("</ele>\n");
+    }
+    fragment.print("      </trkpt>\n");
+    fragment.close();
+    ++remote_id_gpx_tracks[trackIndex].pointCount;
+  }
+}
+
+void WiFiScan::finishRemoteIdGpx() {
+  if (!remote_id_gpx_active) return;
+  File file = SD.open(remote_id_gpx_file_name, FILE_APPEND);
+  if (file) {
+    uint8_t copyBuffer[256];
+    for (size_t trackIndex = 0; trackIndex < REMOTE_ID_CAPACITY; ++trackIndex) {
+      const RemoteIdGpxTrack& track = remote_id_gpx_tracks[trackIndex];
+      if (!track.used || track.pointCount == 0) continue;
+      char fragmentPath[40];
+      snprintf(fragmentPath, sizeof(fragmentPath), "/remoteid_%u_%u.tmp",
+               remote_id_gpx_session_index, static_cast<unsigned>(trackIndex));
+      File fragment = SD.open(fragmentPath, FILE_READ);
+      if (!fragment) continue;
+      file.print("  <trk>\n    <name>");
+      file.print(remoteIdXmlEscape(String(track.name)));
+      file.print("</name>\n    <desc>Remote ID device route</desc>\n    <trkseg>\n");
+      while (fragment.available()) {
+        const size_t bytesRead = fragment.read(copyBuffer, sizeof(copyBuffer));
+        if (bytesRead == 0) break;
+        file.write(copyBuffer, bytesRead);
+      }
+      fragment.close();
+      file.print("    </trkseg>\n  </trk>\n");
+      SD.remove(fragmentPath);
+    }
+    file.print("</gpx>\n");
+    file.close();
+  }
+  memset(remote_id_gpx_tracks, 0, sizeof(remote_id_gpx_tracks));
+  remote_id_gpx_active = false;
+}
+#endif
+
 size_t WiFiScan::snapshotRemoteIds(RemoteIdRecord* records,
                                    size_t capacity) const {
   if (records == nullptr || capacity == 0) return 0;
@@ -418,9 +561,8 @@ bool WiFiScan::snapshotRemoteIdTarget(RemoteIdRecord& record) const {
 
 void WiFiScan::renderRemoteIdGlobal() {
   #ifdef HAS_SCREEN
-    // Keep the full render snapshot off the task stack on PSRAM targets.
-    static RemoteIdRecord records[REMOTE_ID_CAPACITY];
-    const size_t recordCount = snapshotRemoteIds(records, REMOTE_ID_CAPACITY);
+    const size_t recordCount =
+        snapshotRemoteIds(remote_id_snapshots, REMOTE_ID_CAPACITY);
     const RemoteIdLayout layout = remoteIdLayoutForDisplay(SCREEN_WIDTH, SCREEN_HEIGHT);
     const int16_t top = 34;
     const int16_t contentHeight = SCREEN_HEIGHT - top;
@@ -441,7 +583,7 @@ void WiFiScan::renderRemoteIdGlobal() {
                              : 0;
     int16_t y = top + 13;
     for (size_t i = first; i < recordCount; ++i) {
-      const RemoteIdRecord* record = &records[i];
+      const RemoteIdRecord* record = &remote_id_snapshots[i];
       char transports[16];
       remoteIdFormatTransports(record->transportMask, transports,
                                sizeof(transports));
@@ -483,13 +625,20 @@ void WiFiScan::renderRemoteIdGlobal() {
         if (gps_obj.getFixStatus()) {
           const int32_t originLat = gps_obj.getLatInt() * 10;
           const int32_t originLon = gps_obj.getLonInt() * 10;
-          const float radius = remoteIdGridScaleMeters(records,
+          const float radius = remoteIdGridScaleMeters(remote_id_snapshots,
               recordCount, originLat, originLon, 50.0f);
           display_obj.tft.fillCircle(SCREEN_WIDTH / 2,
               gridTop + gridHeight / 2, 3, TFT_GREEN);
           for (size_t i = 0; i < recordCount; ++i) {
-            const RemoteIdRecord* record = &records[i];
+            const RemoteIdRecord* record = &remote_id_snapshots[i];
             if (record->hasLocation) {
+              for (size_t h = 0; h < record->historyCount; ++h) {
+                const RemoteIdGridPoint tail = remoteIdProjectHistoryToGrid(
+                    *record, record->history[h], originLat, originLon,
+                    SCREEN_WIDTH, gridHeight, radius, 8);
+                if (tail.visible)
+                  display_obj.tft.drawPixel(tail.x, gridTop + tail.y, TFT_RED);
+              }
               RemoteIdGridPoint p = remoteIdProjectToGrid(record->latitudeE7,
                   record->longitudeE7, originLat, originLon,
                   SCREEN_WIDTH, gridHeight, radius, 8);

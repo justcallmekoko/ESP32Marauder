@@ -11,6 +11,13 @@ enum class RemoteIdTransport : uint8_t {
   BleExtended = 1 << 3,
 };
 
+static constexpr size_t REMOTE_ID_HISTORY_CAPACITY = 10;
+
+struct RemoteIdHistoryPoint {
+  int16_t eastM = 0;
+  int16_t northM = 0;
+};
+
 struct RemoteIdRecord {
   char uasId[21] = {};
   char operatorId[21] = {};
@@ -72,6 +79,9 @@ struct RemoteIdRecord {
   uint32_t lastSeenMs = 0;
   uint32_t packetCount = 0;
   uint32_t lastLoggedMs = 0;
+  uint32_t lastGpxLoggedMs = 0;
+  uint16_t locationRevision = 0;
+  uint16_t lastGpxRevision = 0;
   uint32_t rateWindowStartedMs = 0;
   uint16_t rateWindowPackets = 0;
   float packetRateHz = 0.0f;
@@ -80,6 +90,8 @@ struct RemoteIdRecord {
   uint16_t reacquiredCount = 0;
   uint32_t lastLostMs = 0;
   uint32_t lastReacquiredMs = 0;
+  RemoteIdHistoryPoint history[REMOTE_ID_HISTORY_CAPACITY] = {};
+  uint8_t historyCount = 0;
 };
 
 struct RemoteIdGridPoint {
@@ -130,6 +142,10 @@ float remoteIdBearingDegrees(int32_t latAE7, int32_t lonAE7,
 bool remoteIdIsStale(uint32_t nowMs, uint32_t lastSeenMs,
                      uint32_t staleAfterMs);
 bool remoteIdCoordinatesValid(int32_t latitudeE7, int32_t longitudeE7);
+bool remoteIdIdentityMatches(const char* knownUasId, const uint8_t knownMac[6],
+                             const RemoteIdRecord& record);
+bool remoteIdUpdateLocation(RemoteIdRecord& record, int32_t latitudeE7,
+                            int32_t longitudeE7);
 bool remoteIdShouldReplaceBasicId(uint8_t currentType, bool hasCurrent,
                                   uint8_t candidateType);
 void remoteIdFormatDistanceKm(float distanceM, char* output,
@@ -145,3 +161,7 @@ RemoteIdGridPoint remoteIdProjectToGrid(int32_t pointLatE7, int32_t pointLonE7,
                                         int32_t originLatE7, int32_t originLonE7,
                                         int16_t width, int16_t height,
                                         float radiusM, int16_t padding = 6);
+RemoteIdGridPoint remoteIdProjectHistoryToGrid(
+    const RemoteIdRecord& record, const RemoteIdHistoryPoint& historyPoint,
+    int32_t originLatE7, int32_t originLonE7, int16_t width, int16_t height,
+    float radiusM, int16_t padding = 6);

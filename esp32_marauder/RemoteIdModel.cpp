@@ -1,6 +1,7 @@
 #include "RemoteIdModel.h"
 
 #include <cmath>
+#include <climits>
 #include <cstdio>
 #include <cstring>
 
@@ -23,6 +24,34 @@ void relativeMeters(int32_t latE7, int32_t lonE7,
   northM = static_cast<double>(latE7 - originLatE7) * 1e-7 * kDegToRad * kEarthRadiusM;
   eastM = static_cast<double>(lonE7 - originLonE7) * 1e-7 * kDegToRad *
           kEarthRadiusM * std::cos(originLatRad);
+}
+
+int16_t clampMeters(double value) {
+  if (value > INT16_MAX) return INT16_MAX;
+  if (value < INT16_MIN) return INT16_MIN;
+  return static_cast<int16_t>(std::lround(value));
+}
+
+RemoteIdGridPoint projectMetersToGrid(double eastM, double northM,
+                                      int16_t width, int16_t height,
+                                      float radiusM, int16_t padding) {
+  RemoteIdGridPoint point;
+  if (width <= padding * 2 || height <= padding * 2 || radiusM <= 0.0f)
+    return point;
+  const double halfW = (width - padding * 2) * 0.5;
+  const double halfH = (height - padding * 2) * 0.5;
+  point.x = static_cast<int16_t>(std::lround(width * 0.5 + eastM / radiusM * halfW));
+  point.y = static_cast<int16_t>(std::lround(height * 0.5 - northM / radiusM * halfH));
+  point.visible = point.x >= padding && point.x < width - padding &&
+                  point.y >= padding && point.y < height - padding;
+  point.offGrid = !point.visible;
+  if (point.offGrid) {
+    if (point.x < padding) point.x = padding;
+    if (point.x >= width - padding) point.x = width - padding - 1;
+    if (point.y < padding) point.y = padding;
+    if (point.y >= height - padding) point.y = height - padding - 1;
+  }
+  return point;
 }
 }  // namespace
 
@@ -218,6 +247,54 @@ bool remoteIdCoordinatesValid(int32_t latitudeE7, int32_t longitudeE7) {
   return latitudeE7 != 0 || longitudeE7 != 0;
 }
 
+bool remoteIdIdentityMatches(const char* knownUasId, const uint8_t knownMac[6],
+                             const RemoteIdRecord& record) {
+  if (record.hasUasId && knownUasId != nullptr && knownUasId[0] != '\0')
+    return std::strncmp(knownUasId, record.uasId, sizeof(record.uasId)) == 0;
+  return knownMac != nullptr &&
+         std::memcmp(knownMac, record.mac, sizeof(record.mac)) == 0;
+}
+
+bool remoteIdUpdateLocation(RemoteIdRecord& record, int32_t latitudeE7,
+                            int32_t longitudeE7) {
+  if (!remoteIdCoordinatesValid(latitudeE7, longitudeE7)) return false;
+  if (!record.hasLocation) {
+    record.latitudeE7 = latitudeE7;
+    record.longitudeE7 = longitudeE7;
+    record.hasLocation = true;
+    ++record.locationRevision;
+    return true;
+  }
+  if (record.latitudeE7 == latitudeE7 && record.longitudeE7 == longitudeE7)
+    return false;
+
+  double oldEastM = 0.0;
+  double oldNorthM = 0.0;
+  relativeMeters(record.latitudeE7, record.longitudeE7, latitudeE7, longitudeE7,
+                 oldEastM, oldNorthM);
+  for (size_t i = 0; i < record.historyCount; ++i) {
+    record.history[i].eastM =
+        clampMeters(static_cast<double>(record.history[i].eastM) + oldEastM);
+    record.history[i].northM =
+        clampMeters(static_cast<double>(record.history[i].northM) + oldNorthM);
+  }
+  RemoteIdHistoryPoint previous;
+  previous.eastM = clampMeters(oldEastM);
+  previous.northM = clampMeters(oldNorthM);
+  if (previous.eastM != 0 || previous.northM != 0) {
+    if (record.historyCount == REMOTE_ID_HISTORY_CAPACITY) {
+      for (size_t i = 1; i < REMOTE_ID_HISTORY_CAPACITY; ++i)
+        record.history[i - 1] = record.history[i];
+      --record.historyCount;
+    }
+    record.history[record.historyCount++] = previous;
+  }
+  record.latitudeE7 = latitudeE7;
+  record.longitudeE7 = longitudeE7;
+  ++record.locationRevision;
+  return true;
+}
+
 bool remoteIdShouldReplaceBasicId(uint8_t currentType, bool hasCurrent,
                                   uint8_t candidateType) {
   if (!hasCurrent || candidateType == currentType) return true;
@@ -289,6 +366,17 @@ float remoteIdGridScaleMeters(const RemoteIdRecord* records, size_t count,
     if (record.hasLocation)
       farthest = std::fmax(farthest, remoteIdDistanceMeters(
           originLatE7, originLonE7, record.latitudeE7, record.longitudeE7));
+    if (record.hasLocation && record.historyCount != 0) {
+      double currentEastM = 0.0;
+      double currentNorthM = 0.0;
+      relativeMeters(record.latitudeE7, record.longitudeE7,
+                     originLatE7, originLonE7, currentEastM, currentNorthM);
+      for (size_t j = 0; j < record.historyCount; ++j) {
+        farthest = std::fmax(farthest, std::hypot(
+            currentEastM + record.history[j].eastM,
+            currentNorthM + record.history[j].northM));
+      }
+    }
     if (record.hasOperatorLocation)
       farthest = std::fmax(farthest, remoteIdDistanceMeters(
           originLatE7, originLonE7, record.operatorLatitudeE7,
@@ -301,23 +389,22 @@ RemoteIdGridPoint remoteIdProjectToGrid(int32_t pointLatE7, int32_t pointLonE7,
                                         int32_t originLatE7, int32_t originLonE7,
                                         int16_t width, int16_t height,
                                         float radiusM, int16_t padding) {
-  RemoteIdGridPoint point;
-  if (width <= padding * 2 || height <= padding * 2 || radiusM <= 0.0f) return point;
   double eastM = 0.0;
   double northM = 0.0;
   relativeMeters(pointLatE7, pointLonE7, originLatE7, originLonE7, eastM, northM);
-  const double halfW = (width - padding * 2) * 0.5;
-  const double halfH = (height - padding * 2) * 0.5;
-  point.x = static_cast<int16_t>(std::lround(width * 0.5 + eastM / radiusM * halfW));
-  point.y = static_cast<int16_t>(std::lround(height * 0.5 - northM / radiusM * halfH));
-  point.visible = point.x >= padding && point.x < width - padding &&
-                  point.y >= padding && point.y < height - padding;
-  point.offGrid = !point.visible;
-  if (point.offGrid) {
-    if (point.x < padding) point.x = padding;
-    if (point.x >= width - padding) point.x = width - padding - 1;
-    if (point.y < padding) point.y = padding;
-    if (point.y >= height - padding) point.y = height - padding - 1;
-  }
-  return point;
+  return projectMetersToGrid(eastM, northM, width, height, radiusM, padding);
+}
+
+RemoteIdGridPoint remoteIdProjectHistoryToGrid(
+    const RemoteIdRecord& record, const RemoteIdHistoryPoint& historyPoint,
+    int32_t originLatE7, int32_t originLonE7, int16_t width, int16_t height,
+    float radiusM, int16_t padding) {
+  if (!record.hasLocation) return RemoteIdGridPoint{};
+  double eastM = 0.0;
+  double northM = 0.0;
+  relativeMeters(record.latitudeE7, record.longitudeE7,
+                 originLatE7, originLonE7, eastM, northM);
+  return projectMetersToGrid(eastM + historyPoint.eastM,
+                             northM + historyPoint.northM,
+                             width, height, radiusM, padding);
 }

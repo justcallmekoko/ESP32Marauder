@@ -182,6 +182,20 @@ void test_basic_id_selection_prefers_stable_device_serial() {
   TEST_ASSERT_TRUE(remoteIdShouldReplaceBasicId(1, true, 1));
 }
 
+void test_route_identity_keeps_one_track_across_transport_macs() {
+  RemoteIdRecord record;
+  std::strncpy(record.uasId, "186975016595", sizeof(record.uasId) - 1);
+  record.hasUasId = true;
+  const uint8_t firstMac[6] = {1, 2, 3, 4, 5, 6};
+  const uint8_t secondMac[6] = {6, 5, 4, 3, 2, 1};
+  std::memcpy(record.mac, secondMac, sizeof(record.mac));
+
+  TEST_ASSERT_TRUE(remoteIdIdentityMatches("186975016595", firstMac, record));
+  TEST_ASSERT_FALSE(remoteIdIdentityMatches("OTHER", firstMac, record));
+  TEST_ASSERT_FALSE(remoteIdIdentityMatches("OTHER", secondMac, record));
+  TEST_ASSERT_TRUE(remoteIdIdentityMatches(nullptr, secondMac, record));
+}
+
 void test_transport_formatter_handles_single_and_combined_methods() {
   char output[16];
   remoteIdFormatTransports(static_cast<uint8_t>(RemoteIdTransport::BleLegacy),
@@ -194,6 +208,49 @@ void test_transport_formatter_handles_single_and_combined_methods() {
   TEST_ASSERT_EQUAL_STRING("WB+B4", output);
   remoteIdFormatTransports(0, output, sizeof(output));
   TEST_ASSERT_EQUAL_STRING("--", output);
+}
+
+void test_location_history_uses_ten_compact_meter_offsets() {
+  TEST_ASSERT_EQUAL_UINT32(4, sizeof(RemoteIdHistoryPoint));
+  RemoteIdRecord record;
+  const int32_t startLat = 400000000;
+  const int32_t lon = -740000000;
+  TEST_ASSERT_TRUE(remoteIdUpdateLocation(record, startLat, lon));
+  for (int i = 1; i <= 12; ++i)
+    TEST_ASSERT_TRUE(remoteIdUpdateLocation(record, startLat + i * 1000, lon));
+
+  TEST_ASSERT_EQUAL_UINT8(REMOTE_ID_HISTORY_CAPACITY, record.historyCount);
+  TEST_ASSERT_INT_WITHIN(1, -11, record.history[9].northM);
+  TEST_ASSERT_INT_WITHIN(2, -111, record.history[0].northM);
+  TEST_ASSERT_EQUAL_INT16(0, record.history[9].eastM);
+}
+
+void test_history_reprojects_with_current_grid_scale() {
+  RemoteIdRecord record;
+  remoteIdUpdateLocation(record, 400000000, -740000000);
+  remoteIdUpdateLocation(record, 400010000, -740000000);
+  const RemoteIdGridPoint near = remoteIdProjectHistoryToGrid(
+      record, record.history[0], 400000000, -740000000,
+      200, 100, 200.0f);
+  const RemoteIdGridPoint zoomedOut = remoteIdProjectHistoryToGrid(
+      record, record.history[0], 400000000, -740000000,
+      200, 100, 400.0f);
+  TEST_ASSERT_INT_WITHIN(1, 50, near.y);
+  TEST_ASSERT_INT_WITHIN(1, 50, zoomedOut.y);
+  TEST_ASSERT_INT_WITHIN(1, 100, near.x);
+  TEST_ASSERT_INT_WITHIN(1, 100, zoomedOut.x);
+}
+
+void test_scale_includes_history_tail() {
+  RemoteIdRecord record;
+  record.hasLocation = true;
+  record.latitudeE7 = 400000000;
+  record.longitudeE7 = -740000000;
+  record.historyCount = 1;
+  record.history[0].eastM = 400;
+  const float radius = remoteIdGridScaleMeters(
+      &record, 1, 400000000, -740000000, 50.0f);
+  TEST_ASSERT_TRUE(radius > 450.0f);
 }
 
 int main(int, char**) {
@@ -213,6 +270,10 @@ int main(int, char**) {
   RUN_TEST(test_store_tracks_packet_rate_and_can_erase_duplicate_mac);
   RUN_TEST(test_coordinate_validation_rejects_unavailable_and_out_of_range);
   RUN_TEST(test_basic_id_selection_prefers_stable_device_serial);
+  RUN_TEST(test_route_identity_keeps_one_track_across_transport_macs);
   RUN_TEST(test_transport_formatter_handles_single_and_combined_methods);
+  RUN_TEST(test_location_history_uses_ten_compact_meter_offsets);
+  RUN_TEST(test_history_reprojects_with_current_grid_scale);
+  RUN_TEST(test_scale_includes_history_tail);
   return UNITY_END();
 }

@@ -2045,6 +2045,11 @@ void CommandLine::runCommand(String input) {
       if (essid_sw != -1 && this->checkValueExists(&cmd_args, essid_sw))
         essid = cmd_args.get(essid_sw + 1);
 
+      if (!marauder::RuntimeMemoryGuard::instance().allow(
+              sizeof(AccessPoint) + sizeof(LinkedList<uint16_t>) + 128)) {
+        Serial.println(F("Memory pressure: AP not added"));
+        return;
+      }
       AccessPoint ap;
       ap.essid = essid;
       ap.channel = channel;
@@ -2063,7 +2068,11 @@ void CommandLine::runCommand(String input) {
       ap.has_msg_3 = false;
       ap.has_msg_4 = false;
 
-      access_points->add(ap);
+      if (!marauder::memoryGuardedAdd(access_points, ap)) {
+        delete ap.stations;
+        Serial.println(F("Memory pressure: AP not added"));
+        return;
+      }
 
       Serial.print(F("Added AP ["));
       Serial.print(access_points->size() - 1);
@@ -2124,11 +2133,18 @@ void CommandLine::runCommand(String input) {
       sta.packets = 0;
       sta.ap = ap_index;
 
-      stations->add(sta);
+      if (!marauder::memoryGuardedAdd(stations, sta)) {
+        Serial.println(F("Memory pressure: station not added"));
+        return;
+      }
 
       // Link station to AP
       AccessPoint ap = access_points->get(ap_index);
-      ap.stations->add(stations->size() - 1);
+      if (!marauder::memoryGuardedAdd(ap.stations, stations->size() - 1)) {
+        stations->pop();
+        Serial.println(F("Memory pressure: station not added"));
+        return;
+      }
       access_points->set(ap_index, ap);
 
       Serial.print(F("Added station ["));
