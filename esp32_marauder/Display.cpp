@@ -300,7 +300,7 @@ void Display::drawBootSplash() {
     tft.display(true);
     return;
   #endif
-  #ifdef MARAUDER_CYD_3_5_INCH
+  #if defined(MARAUDER_CYD_3_5_INCH) || defined(MARAUDER_PANCAKE)
     constexpr bool half_scale_logo = true;
   #else
     constexpr bool half_scale_logo = false;
