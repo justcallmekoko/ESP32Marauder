@@ -27,7 +27,7 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #ifdef HAS_FLIPPER_LED
   #include "flipperLED.h"
-#elif defined(XIAO_ESP32_S3)
+#elif defined(XIAO_ESP32_S3) || defined(XIAO_ESP32_C5)
   #include "xiaoLED.h"
 #elif defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
   #include "stickcLED.h"
@@ -107,7 +107,7 @@ ReconMission recon_obj;
 
 #ifdef HAS_FLIPPER_LED
   flipperLED flipper_led;
-#elif defined(XIAO_ESP32_S3)
+#elif defined(XIAO_ESP32_S3) || defined(XIAO_ESP32_C5)
   xiaoLED xiao_led;
 #elif defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
   stickcLED stickc_led;
@@ -377,7 +377,7 @@ void setup()
   // Do some LED stuff
   #ifdef HAS_FLIPPER_LED
     flipper_led.RunSetup();
-  #elif defined(XIAO_ESP32_S3)
+  #elif defined(XIAO_ESP32_S3) || defined(XIAO_ESP32_C5)
     xiao_led.RunSetup();
   #elif defined(MARAUDER_M5STICKC)
     stickc_led.RunSetup();
@@ -470,7 +470,7 @@ void loop()
   }
   #ifdef HAS_FLIPPER_LED
     flipper_led.main();
-  #elif defined(XIAO_ESP32_S3)
+  #elif defined(XIAO_ESP32_S3) || defined(XIAO_ESP32_C5)
     xiao_led.main();
   #elif defined(MARAUDER_M5STICKC)
     stickc_led.main();
