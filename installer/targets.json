@@ -211,6 +211,15 @@
       "esptoolChip": "esp32c5"
     },
     {
+      "id": "poom",
+      "displayName": "POOM",
+      "aliases": ["Stellar IoT POOM"],
+      "buildFlag": "MARAUDER_POOM",
+      "assetSuffix": "poom",
+      "chipFamily": "ESP32-C5",
+      "esptoolChip": "esp32c5"
+    },
+    {
       "id": "marauder-v8",
       "displayName": "Marauder v8",
       "aliases": [],

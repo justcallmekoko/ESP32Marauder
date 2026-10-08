@@ -185,7 +185,7 @@ public:
             uint8_t base = 4 + i * 5;
 
             CST3530Point p;
-            p.x        = static_cast<uint16_t>(buf[base + 0]) | static_cast<uint16_t>(((buf[base + 3] & 0x0F) << 8);
+            p.x        = static_cast<uint16_t>(buf[base + 0]) | static_cast<uint16_t>((buf[base + 3] & 0x0F) << 8);
             p.y        = static_cast<uint16_t>(buf[base + 1]) | static_cast<uint16_t>((buf[base + 3] & 0xF0) << 4);
             p.strength = static_cast<uint16_t>(buf[base + 2]);
             p.trackId  = static_cast<uint8_t>(buf[base + 4] & 0x0F);

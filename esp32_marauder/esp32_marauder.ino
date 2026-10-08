@@ -79,6 +79,9 @@ https://www.online-utility.org/image/convert/to/XBM
     Switches c_btn = Switches(C_BTN, 1000, C_PULL);
     // perimanSetPinBusExtraType(C_BTN, "C_BTN");
   #endif
+  #if defined(MARAUDER_POOM) && (B_BTN >= 0)
+    Switches b_btn = Switches(B_BTN, 1000, B_PULL);
+  #endif
 
 #endif
 
@@ -137,7 +140,11 @@ extern void init_system_time();
 const String PROGMEM version_number = MARAUDER_VERSION;
 
 #ifdef HAS_NEOPIXEL_LED
-  Adafruit_NeoPixel strip = Adafruit_NeoPixel(Pixels, PIN, NEO_GRB + NEO_KHZ800);
+  #ifdef MARAUDER_POOM
+    PoomWs2812 strip(Pixels, PIN);
+  #else
+    Adafruit_NeoPixel strip = Adafruit_NeoPixel(Pixels, PIN, NEO_GRB + NEO_KHZ800);
+  #endif
 #endif
 
 uint32_t currentTime  = 0;
@@ -236,9 +243,9 @@ void setup()
     esp_log_level_set("*", ESP_LOG_NONE);
   #endif
 
-  #ifndef HAS_IDF_3
-    esp_spiram_init();
-  #endif
+//  #ifndef HAS_IDF_3
+//    esp_spiram_init();
+//  #endif
 
   Serial.begin(115200);
 
@@ -325,7 +332,7 @@ void setup()
 
   // Preset SPI CS pins to avoid bus conflicts
   // Beware of "unsigned promotion rules" where -1 == maxint
-  #if defined(HAS_SCREEN) && defined(TFT_CS) && TFT_CS != -1
+  #if defined(HAS_SCREEN) && defined(TFT_CS) && TFT_CS != -1 && !defined(MARAUDER_POOM)
     digitalWrite(TFT_CS, HIGH);
   #endif
 
@@ -559,6 +566,10 @@ void loop()
     led_obj.refresh();
   #elif defined(HAS_NEOPIXEL_LED)
     led_obj.main(currentTime);
+  #endif
+
+  #ifdef MARAUDER_POOM
+    display_obj.tft.display();
   #endif
 
   #ifdef HAS_SCREEN
