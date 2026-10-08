@@ -92,6 +92,7 @@ const char PROGMEM PORT_SCAN_CMD[] = "portscan";
 const char PROGMEM ARP_SCAN_CMD[] = "arpscan";
 const char PROGMEM MAC_TRACK_CMD[] = "mactrack";
 const char PROGMEM SNIFF_SAE_CMD[] = "sniffsae";
+const char PROGMEM REMOTE_ID_CMD[] = "remoteid";
 
 // WiFi attack
 const char PROGMEM ATTACK_CMD[] = "attack";
@@ -176,6 +177,7 @@ const char PROGMEM HELP_PORT_SCAN_CMD[] = "portscan [-a -t <ip index>]/[-s <ssh/
 const char PROGMEM HELP_ARP_SCAN_CMD[] = "arpscan [-f]";
 const char PROGMEM HELP_MAC_TRACK_CMD[] = "mactrack";
 const char PROGMEM HELP_SNIFF_SAE_CMD[] = "sniffsae";
+const char PROGMEM HELP_REMOTE_ID_CMD[] = "remoteid <scan/list/track/clear> [index]";
 
 // WiFi attack
 const char PROGMEM HELP_ATTACK_CMD[] = "attack -t <quiet/csa/sae/beacon [-l/-r/-a]/deauth [-c]/[-s <src mac>] [-d <dst mac>]/probe/rickroll/badmsg [-c]/sleep [-c]>";
@@ -207,7 +209,7 @@ const char PROGMEM HELP_ADD_CMD_B[] = "add -c -b <mac> -ap <ap_index>";
 const char PROGMEM HELP_UPLOAD_CMD[] = "upload -d <wdg/wigle/both>";
 
 // Bluetooth sniff/scan
-const char PROGMEM HELP_BT_SNIFF_CMD[] = "sniffbt [-t] <airtag/flipper/flock/meta>";
+const char PROGMEM HELP_BT_SNIFF_CMD[] = "sniffbt [-t] <airtag/ibeacon/flipper/flock/meta>";
 const char PROGMEM HELP_BT_FINDMY_CMD[] = "findmy -t <index>";
 const char PROGMEM HELP_BT_SPAM_CMD[] = "blespam -t <sourapple/applejuice/google/samsung/windows/flipper/all>";
 const char PROGMEM HELP_BT_SPOOFAT_CMD[] = "spoofat -t <index>";

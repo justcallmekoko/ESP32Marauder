@@ -62,6 +62,7 @@ class ReconMission {
   uint32_t ap_count = 0;
   uint32_t station_count = 0;
   uint32_t ble_count = 0;
+  uint32_t ibeacon_count = 0;
   uint32_t probe_count = 0;
   uint32_t repeat_count = 0;
   uint32_t deauth_count = 0;
