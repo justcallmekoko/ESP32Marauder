@@ -8,6 +8,7 @@
 #ifdef HAS_SCREEN
   #include "MenuFunctions.h"
   #include "Display.h"
+  #include "BackLight.hpp"
 #endif 
 
 #include "WiFiScan.h"
@@ -20,6 +21,13 @@
 #if defined(HAS_NEOPIXEL_LED)
   #include "LedInterface.h"
 #endif
+
+#if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
+  #include "shutdown.hpp"
+#endif
+
+// If system time/date has been set
+extern bool system_time_set;
 
 #ifdef HAS_SCREEN
   extern MenuFunctions menu_function_obj;
@@ -68,6 +76,12 @@ const char PROGMEM GPS_CMD[] = "gps";
 const char PROGMEM NMEA_CMD[] = "nmea";
 const char PROGMEM GPS_POI_CMD[] = "gpspoi";
 const char PROGMEM GPS_TRACKER_CMD[] = "gpstracker";
+#if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
+  const char PROGMEM SHUTDOWN_CMD[] = "shutdown";
+#endif
+const char PROGMEM NTP_SYNC_CMD[] = "ntp_sync";
+const char PROGMEM DATE_CMD[] = "date";
+const char PROGMEM SETDATE_CMD[] = "setdate";
 const char PROGMEM RECON_CMD[] = "recon";
 
 // WiFi sniff/scan
@@ -78,6 +92,7 @@ const char PROGMEM SIGSTREN_CMD[] = "foxhunt";
 const char PROGMEM SCAN_ALL_CMD[] = "scanall";
 //const char PROGMEM SCANSTA_CMD[] = "scansta";
 const char PROGMEM SNIFF_RAW_CMD[] = "sniffraw";
+const char PROGMEM SNIFF_ZIGBEE_CMD[] = "sniffzb";
 const char PROGMEM SNIFF_BEACON_CMD[] = "sniffbeacon";
 const char PROGMEM SNIFF_PROBE_CMD[] = "sniffprobe";
 const char PROGMEM SNIFF_PWN_CMD[] = "sniffpwn";
@@ -153,6 +168,12 @@ const char PROGMEM HELP_GPS_POI_CMD[] = "gpspoi -s/-m/-e";
 const char PROGMEM HELP_GPS_TRACKER_CMD[] = "gpstracker -c <start/stop>";
 const char PROGMEM HELP_RECON_CMD[] = "recon wifi|ble|status|stop";
 const char PROGMEM HELP_NMEA_CMD[] = "nmea";
+#if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
+  const char PROGMEM HELP_SHUTDOWN_CMD[] = "shutdown";
+#endif
+const char PROGMEM HELP_NTP_SYNC[] = "ntp_sync";
+const char PROGMEM HELP_SETDATE[] = "setdate YY-MM-DD HH:MM:SS";
+const char PROGMEM HELP_DATE[] = "print system time/date";
 
 // WiFi sniff/scan
 const char PROGMEM HELP_EVIL_PORTAL_CMD[] = "evilportal [-c start [-w html.html]/sethtml <html.html>]";
@@ -162,6 +183,7 @@ const char PROGMEM HELP_SIGSTREN_CMD[] = "foxhunt -w <ap>/-s <ap> <station>/-b <
 const char PROGMEM HELP_SCAN_ALL_CMD[] = "scanall";
 //const char PROGMEM HELP_SCANSTA_CMD[] = "scansta";
 const char PROGMEM HELP_SNIFF_RAW_CMD[] = "sniffraw";
+const char PROGMEM HELP_SNIFF_ZIGBEE_CMD[] = "sniffzb [channel 11-26] (ESP32-C5/C6/H2 only)";
 const char PROGMEM HELP_SNIFF_BEACON_CMD[] = "sniffbeacon";
 const char PROGMEM HELP_SNIFF_PROBE_CMD[] = "sniffprobe";
 const char PROGMEM HELP_SNIFF_PWN_CMD[] = "sniffpwn";
@@ -197,9 +219,14 @@ const char PROGMEM HELP_INFO_CMD[] = "info [-a <index>]";
 const char PROGMEM HELP_SEL_CMD_A[] = "select -a/-s/-c <index (comma separated)>/-f \"equals <String> or contains <String>\"";
 const char PROGMEM HELP_SSID_CMD_A[] = "ssid -a [-g <count>/-n <name>]";
 const char PROGMEM HELP_SSID_CMD_B[] = "ssid -r <index>";
-const char PROGMEM HELP_SAVE_CMD[] = "save -a/-s";
-const char PROGMEM HELP_LOAD_CMD[] = "load -a/-s";
-const char PROGMEM HELP_JOIN_CMD[] = "join -a <index> -p <password>/-s";
+#ifdef HAS_ZIGBEE
+  const char PROGMEM HELP_SAVE_CMD[] = "save -a/-s/-z";
+  const char PROGMEM HELP_LOAD_CMD[] = "load -a/-s/-z";
+#else
+  const char PROGMEM HELP_SAVE_CMD[] = "save -a/-s";
+  const char PROGMEM HELP_LOAD_CMD[] = "load -a/-s";
+#endif
+const char PROGMEM HELP_JOIN_CMD[] = "join (-a <index> -n <network>) -p <password>/-s";
 const char PROGMEM HELP_MAC_CMD_A[] = "randapmac";
 const char PROGMEM HELP_MAC_CMD_B[] = "randstamac";
 const char PROGMEM HELP_MAC_CMD_C[] = "cloneapmac [-a <index>]";

@@ -9,7 +9,15 @@
 #ifdef HAS_C5_SD
   #include "FS.h"
 #endif
-#include "SD.h"
+
+#ifdef HAS_SDMMC
+  #include <SD_MMC.h>
+//  extern fs::SDMMCFS& SD = SD_MMC;
+  #define SD SD_MMC    // preprocessor substitution, not a variable definition
+#else
+  #include "SD.h"
+#endif
+
 #include "SPIFFS.h"
 #ifdef HAS_C5_SD
   #include "SPI.h"
@@ -46,16 +54,16 @@ class SDInterface {
   private:
   #if (defined(MARAUDER_M5STICKC) || defined(HAS_CYD_TOUCH) || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV))
     SPIClass *spiExt;
-  #elif defined(HAS_C5_SD)
+  #elif defined(HAS_C5_SD) && defined(HAS_SCREEN)
     SPIClass* _spi;
-    int _cs;
   #endif
 
     bool validateUpdate(File &updateBin);
 
   public:
-    #ifdef HAS_C5_SD
-      SDInterface(SPIClass* spi, int cs);
+    #ifdef HAS_C5_SD  && defined(HAS_SCREEN)
+      SDInterface(SPIClass* spi);
+      void setSPI(SPIClass* spi) { _spi = spi; }   // Fix SPI after Display_obj fuckers it
     #endif
 
     uint8_t cardType;

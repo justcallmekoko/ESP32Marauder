@@ -3,6 +3,7 @@
 #ifndef MenuFunctions_h
 #define MenuFunctions_h
 
+
 #include "configs.h"
 
 #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
@@ -15,6 +16,8 @@
 
 #ifdef HAS_SCREEN
 
+#include "BackLight.hpp"
+
 #define BATTERY_ANALOG_ON 0
 
 #include "WiFiScan.h"
@@ -24,6 +27,27 @@
 #include "SDInterface.h"
 #include "settings.h"
 #include "MenuInputRepeat.h"
+
+#if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
+  #include "shutdown.hpp"
+#endif
+
+
+#ifdef HAS_TEMP_SENSOR
+  #include "temp_sensor.hpp"
+  #define USE_TEMP TempSensor_obj.supported
+#else
+  #define USE_TEMP false
+#endif
+
+
+// If system time/date has been set
+extern bool system_time_set;
+
+extern void print_reset_reason();
+extern const char *resetReasonName();
+
+extern int8_t wifi_power;
 
 #ifdef HAS_BUTTONS
   #include "Switches.h"
@@ -50,10 +74,17 @@
 extern WiFiScan wifi_scan_obj;
 extern ReconMission recon_obj;
 extern SDInterface sd_obj;
-// #ifdef HAS_BATTERY
-extern BatteryInterface battery_obj;
-// #endif
+#ifdef HAS_BATTERY
+  extern BatteryInterface battery_obj;
+  #define USE_BATT battery_obj.supported
+#else
+  #define USE_BATT false
+#endif
 extern Settings settings_obj;
+
+// extern void shutdown();
+// extern void DeepSleep(int8_t);
+
 
 #define FLASH_BUTTON 0
 
@@ -168,6 +199,9 @@ class MenuFunctions
     MenuInputRepeat menu_down_repeat;
     int8_t menu_touch_button = -1;
 
+
+    void RamStuff(bool update = false);
+    void update_time_temp_batt(bool update = false);
     void buildWiFiFoxHuntMenu();
     void buildBluetoothFoxHuntMenu();
     void buildFoxTargetList(FoxHuntListKind type, int context_ap = -1);
@@ -187,8 +221,12 @@ class MenuFunctions
     Menu mainMenu;
     Menu reconMenu;
 
+
     Menu wifiMenu;
     Menu bluetoothMenu;
+    #ifdef HAS_ZIGBEE
+      Menu zigbeeMenu;   // Zigbee / 802.15.4 (ESP32-C5 / C6 / H2)
+    #endif
     #ifdef HAS_GPS
       Menu gpsMenu;   // H4W9 Added GPS Menu option to Main Menu
     #endif
@@ -260,6 +298,10 @@ class MenuFunctions
     Menu generateSSIDsMenu;
 
     Menu evilPortalMenu;
+
+    // Admin
+    Menu adminMenu;
+    Menu adminSubMenu;
 
     Menu foxHuntMenu;
     Menu foxSortMenu;

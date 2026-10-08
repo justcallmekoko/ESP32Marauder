@@ -82,12 +82,16 @@ void Settings::_buildCache() {
       _cache.ForceProbe = json["Settings"][i]["value"].as<bool>();
     else if (strcmp(name, "SavePCAP") == 0)
       _cache.SavePCAP = json["Settings"][i]["value"].as<bool>();
+    else if (strcmp(name, "Timestamp PCAP files") == 0)
+      _cache.TimeStPCAP = json["Settings"][i]["value"].as<bool>();
     else if (strcmp(name, "EnableLED") == 0)
       _cache.EnableLED = json["Settings"][i]["value"].as<bool>();
     else if (strcmp(name, "EPDeauth") == 0)
       _cache.EPDeauth = json["Settings"][i]["value"].as<bool>();
     else if (strcmp(name, "ChanHop") == 0)
       _cache.ChanHop = json["Settings"][i]["value"].as<bool>();
+    else if (strcmp(name, "Probe GPS at Boot") == 0)            // speed startups
+      _cache.ProbeGPS = json["Settings"][i]["value"].as<bool>();
     else if (strcmp(name, "ClientSSID") == 0)
       _cache.ClientSSID = json["Settings"][i]["value"].as<String>();
     else if (strcmp(name, "ClientPW") == 0)
@@ -261,12 +265,16 @@ template <> bool Settings::loadSetting<bool>(const char* key) {
     return _cache.ForceProbe;
   if (strcmp(key, "SavePCAP") == 0)
     return _cache.SavePCAP;
+  if (strcmp(key, "Timestamp PCAP files") == 0)
+    return _cache.TimeStPCAP;
   if (strcmp(key, "EnableLED") == 0)
     return _cache.EnableLED;
   if (strcmp(key, "EPDeauth") == 0)
     return _cache.EPDeauth;
   if (strcmp(key, "ChanHop") == 0)
     return _cache.ChanHop;
+  if (strcmp(key, "Probe GPS at Boot") == 0)
+    return _cache.ProbeGPS;
 
   // Unknown bool key: fall back to JSON so the setting can be auto-created.
   DynamicJsonDocument json(JSON_SETTING_SIZE);
@@ -302,6 +310,9 @@ template <> uint8_t Settings::loadSetting<uint8_t>(const char* key) {
   if (strcmp(key, "SavePCAP") == 0)
     return (uint8_t)_cache.SavePCAP;
 
+  if (strcmp(key, "Timestamp PCAP files") == 0)
+    return (uint8_t)_cache.TimeStPCAP;
+
   if (strcmp(key, "EnableLED") == 0)
     return (uint8_t)_cache.EnableLED;
 
@@ -310,6 +321,9 @@ template <> uint8_t Settings::loadSetting<uint8_t>(const char* key) {
 
   if (strcmp(key, "ChanHop") == 0)
     return (uint8_t)_cache.ChanHop;
+
+  if (strcmp(key, "Probe GPS at Boot") == 0)
+    return (uint8_t)_cache.ProbeGPS;
 
   DynamicJsonDocument json(JSON_SETTING_SIZE);
   deserializeJson(json, this->json_settings_string);
@@ -366,12 +380,16 @@ template <> bool Settings::saveSetting<bool>(const char* key, bool value) {
         _cache.ForceProbe = value;
       else if (strcmp(key, "SavePCAP") == 0)
         _cache.SavePCAP = value;
+      else if (strcmp(key, "Timestamp PCAP files") == 0)
+        _cache.TimeStPCAP = value;
       else if (strcmp(key, "EnableLED") == 0)
         _cache.EnableLED = value;
       else if (strcmp(key, "EPDeauth") == 0)
         _cache.EPDeauth = value;
       else if (strcmp(key, "ChanHop") == 0)
         _cache.ChanHop = value;
+      else if (strcmp(key, "Probe GPS at Boot") == 0)
+        _cache.ProbeGPS = value;
 
       this->printJsonSettings(settings_string);
 
@@ -547,65 +565,78 @@ bool Settings::createDefaultSettings(fs::FS &fs, bool spec, uint8_t index, const
     jsonBuffer["Settings"][2]["range"]["min"] = false;
     jsonBuffer["Settings"][2]["range"]["max"] = true;
 
-    jsonBuffer["Settings"][3]["name"] = "EnableLED";
+    jsonBuffer["Settings"][3]["name"] = "Timestamp PCAP files";
     jsonBuffer["Settings"][3]["type"] = "bool";
     jsonBuffer["Settings"][3]["value"] = true;
     jsonBuffer["Settings"][3]["range"]["min"] = false;
     jsonBuffer["Settings"][3]["range"]["max"] = true;
 
-    jsonBuffer["Settings"][4]["name"] = "EPDeauth";
+    jsonBuffer["Settings"][4]["name"] = "EnableLED";
     jsonBuffer["Settings"][4]["type"] = "bool";
-    jsonBuffer["Settings"][4]["value"] = false;
+    jsonBuffer["Settings"][4]["value"] = true;
     jsonBuffer["Settings"][4]["range"]["min"] = false;
     jsonBuffer["Settings"][4]["range"]["max"] = true;
 
-    jsonBuffer["Settings"][5]["name"] = "ChanHop";
+    jsonBuffer["Settings"][5]["name"] = "EPDeauth";
     jsonBuffer["Settings"][5]["type"] = "bool";
     jsonBuffer["Settings"][5]["value"] = false;
     jsonBuffer["Settings"][5]["range"]["min"] = false;
     jsonBuffer["Settings"][5]["range"]["max"] = true;
 
-    jsonBuffer["Settings"][6]["name"] = "ClientSSID";
-    jsonBuffer["Settings"][6]["type"] = "String";
-    jsonBuffer["Settings"][6]["value"] = "";
-    jsonBuffer["Settings"][6]["range"]["min"] = "";
-    jsonBuffer["Settings"][6]["range"]["max"] = "";
+    jsonBuffer["Settings"][6]["name"] = "ChanHop";
+    jsonBuffer["Settings"][6]["type"] = "bool";
+    jsonBuffer["Settings"][6]["value"] = false;
+    jsonBuffer["Settings"][6]["range"]["min"] = false;
+    jsonBuffer["Settings"][6]["range"]["max"] = true;
 
-    jsonBuffer["Settings"][7]["name"] = "ClientPW";
-    jsonBuffer["Settings"][7]["type"] = "String";
-    jsonBuffer["Settings"][7]["value"] = "";
-    jsonBuffer["Settings"][7]["range"]["min"] = "";
-    jsonBuffer["Settings"][7]["range"]["max"] = "";
+    // Speed boot time
+    jsonBuffer["Settings"][7]["name"] = "Probe GPS at Boot";
+    jsonBuffer["Settings"][7]["type"] = "bool";
+    jsonBuffer["Settings"][7]["value"] = false;
+    jsonBuffer["Settings"][7]["range"]["min"] = false;
+    jsonBuffer["Settings"][7]["range"]["max"] = true;
 
-    jsonBuffer["Settings"][8]["name"] = "wu";
+    jsonBuffer["Settings"][8]["name"] = "ClientSSID";
     jsonBuffer["Settings"][8]["type"] = "String";
     jsonBuffer["Settings"][8]["value"] = "";
     jsonBuffer["Settings"][8]["range"]["min"] = "";
     jsonBuffer["Settings"][8]["range"]["max"] = "";
 
-    jsonBuffer["Settings"][9]["name"] = "wt";
+    jsonBuffer["Settings"][9]["name"] = "ClientPW";
     jsonBuffer["Settings"][9]["type"] = "String";
     jsonBuffer["Settings"][9]["value"] = "";
     jsonBuffer["Settings"][9]["range"]["min"] = "";
     jsonBuffer["Settings"][9]["range"]["max"] = "";
 
-    jsonBuffer["Settings"][10]["name"] = WDG_KEY_NAME;
+    jsonBuffer["Settings"][10]["name"] = "wu";
     jsonBuffer["Settings"][10]["type"] = "String";
     jsonBuffer["Settings"][10]["value"] = "";
     jsonBuffer["Settings"][10]["range"]["min"] = "";
     jsonBuffer["Settings"][10]["range"]["max"] = "";
 
-    jsonBuffer["Settings"][11]["name"] = SAVED_WIFI_KEY_NAME;
-    jsonBuffer["Settings"][11]["type"] = "wifi_list";
-    jsonBuffer["Settings"][11].createNestedArray("value");
-    jsonBuffer["Settings"][11]["range"]["min"] = 0;
-    jsonBuffer["Settings"][11]["range"]["max"] = MAX_SAVED_WIFI_PROFILES;
+    jsonBuffer["Settings"][11]["name"] = "wt";
+    jsonBuffer["Settings"][11]["type"] = "String";
+    jsonBuffer["Settings"][11]["value"] = "";
+    jsonBuffer["Settings"][11]["range"]["min"] = "";
+    jsonBuffer["Settings"][11]["range"]["max"] = "";
 
-    jsonBuffer["Settings"][12]["name"] = GEOFENCES_KEY_NAME;
-    jsonBuffer["Settings"][12]["type"] = "geofence_list";
-    jsonBuffer["Settings"][12].createNestedArray("value");
-    jsonBuffer["Settings"][12]["range"]["min"] = 0;
-    jsonBuffer["Settings"][12]["range"]["max"] = MAX_GEOFENCES;
+    jsonBuffer["Settings"][12]["name"] = WDG_KEY_NAME;
+    jsonBuffer["Settings"][12]["type"] = "String";
+    jsonBuffer["Settings"][12]["value"] = "";
+    jsonBuffer["Settings"][12]["range"]["min"] = "";
+    jsonBuffer["Settings"][12]["range"]["max"] = "";
+
+    jsonBuffer["Settings"][13]["name"] = SAVED_WIFI_KEY_NAME;
+    jsonBuffer["Settings"][13]["type"] = "wifi_list";
+    jsonBuffer["Settings"][13].createNestedArray("value");
+    jsonBuffer["Settings"][13]["range"]["min"] = 0;
+    jsonBuffer["Settings"][13]["range"]["max"] = MAX_SAVED_WIFI_PROFILES;
+
+    jsonBuffer["Settings"][14]["name"] = GEOFENCES_KEY_NAME;
+    jsonBuffer["Settings"][14]["type"] = "geofence_list";
+    jsonBuffer["Settings"][14].createNestedArray("value");
+    jsonBuffer["Settings"][14]["range"]["min"] = 0;
+    jsonBuffer["Settings"][14]["range"]["max"] = MAX_GEOFENCES;
 
     serializeJson(jsonBuffer, settingsFile);
     serializeJson(jsonBuffer, settings_string);
