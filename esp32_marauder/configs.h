@@ -49,13 +49,14 @@
   //#define MARAUDER_M5_NANO_C6
   //#define DUAL_MINI_C5
   //#define MARAUDER_WS_C5_28
+  //#define MARAUDER_POOM
   //// END BOARD TARGETS
 
   // Allocated only while settings are loaded or updated. This accommodates
   // five saved WiFi profiles without permanently caching their passwords.
   #define JSON_SETTING_SIZE 6144
 
-#define MARAUDER_VERSION "v1.17.0"
+#define MARAUDER_VERSION "v1.18.0"
 
   #define GRAPH_REFRESH   100
 
@@ -132,6 +133,8 @@
     #define HARDWARE_NAME "M5 Nano C6"
   #elif defined(MARAUDER_WS_C5_28)
     #define HARDWARE_NAME "Waveshare ESP32-C5-Touch-LCD-2.8"
+  #elif defined(MARAUDER_POOM)
+    #define HARDWARE_NAME "POOM"
   #else
     #define HARDWARE_NAME "ESP32"
   #endif
@@ -679,27 +682,6 @@
     #define HAS_DIRECT_UPLOAD
   #endif
 
-      #if defined(MARAUDER_M5_NANO_C6)
-        //#define FLIPPER_ZERO_HAT
-        //#define HAS_MINI_KB
-        //#define HAS_BATTERY
-        #define HAS_BT
-        //#define HAS_BUTTONS
-        #define HAS_NEOPIXEL_LED
-        //#define HAS_PWR_MGMT
-        //#define HAS_SCREEN
-        //#define HAS_MINI_SCREEN
-        //#define HAS_SD
-        //#define USE_SD
-        //#define HAS_TEMP_SENSOR
-        //#define HAS_GPS
-        #define HAS_NIMBLE_2
-        #define HAS_IDF_3
-        //#define HAS_DIRECT_UPLOAD
-      #endif
-
-
-
 
       // Waveshare ESP32-C5-Touch-LCD-2.8
       // ESP32-C5, ST7789 240x320, CST3530 capacitive touch, CH32V003 IO expander
@@ -739,6 +721,42 @@
       #define DEEPSLEEP
       #define HAS_ZIGBEE
     #endif     // MARAUDER_WS_C5_28
+
+  #ifdef MARAUDER_POOM
+    #define HAS_BT
+    #define HAS_BUTTONS
+    #define HAS_MINI_KB
+    #define HAS_NEOPIXEL_LED
+    #define HAS_SCREEN
+    #define HAS_MINI_SCREEN
+    #define HAS_SD
+    #define USE_SD
+    #define HAS_C5_SD
+    #define HAS_DUAL_BAND
+    #define HAS_PSRAM
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3
+    #define HAS_DIRECT_UPLOAD
+  #endif
+
+  #if defined(MARAUDER_M5_NANO_C6)
+    //#define FLIPPER_ZERO_HAT
+    //#define HAS_MINI_KB
+    //#define HAS_BATTERY
+    #define HAS_BT
+    //#define HAS_BUTTONS
+    #define HAS_NEOPIXEL_LED
+    //#define HAS_PWR_MGMT
+    //#define HAS_SCREEN
+    //#define HAS_MINI_SCREEN
+    //#define HAS_SD
+    //#define USE_SD
+    //#define HAS_TEMP_SENSOR
+    //#define HAS_GPS
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3
+    //#define HAS_DIRECT_UPLOAD
+  #endif
 
   //// END BOARD FEATURES
 
@@ -1081,7 +1099,6 @@
       #define D_PULL true
     #endif
 
-
     #ifdef MARAUDER_WS_C5_28
       #define L_BTN -1
       #define R_BTN -1
@@ -1096,8 +1113,56 @@
       #define D_PULL true
     #endif
 
+    #ifdef MARAUDER_POOM
+      #define L_BTN 3
+      #define C_BTN 28
+      #define U_BTN 7
+      #define R_BTN 23
+      #define D_BTN 24
+      #define B_BTN 9
+      #define HAS_L
+      #define HAS_R
+      #define HAS_U
+      #define HAS_D
+      #define HAS_C
+      #define HAS_B
+      #define L_PULL true
+      #define C_PULL true
+      #define U_PULL true
+      #define R_PULL true
+      #define D_PULL true
+      #define B_PULL true
+    #endif
+
   #endif
   //// END BUTTON DEFINITIONS
+
+  #ifdef MARAUDER_POOM
+    #define SCREEN_BUFFER
+    #define MENU_FONT NULL
+    #define TFT_WIDTH 128
+    #define TFT_HEIGHT 64
+    #define SCREEN_ORIENTATION 0
+    #define SCREEN_WIDTH TFT_WIDTH
+    #define SCREEN_HEIGHT TFT_HEIGHT
+    #define HEIGHT_1 TFT_WIDTH
+    #define WIDTH_1 TFT_WIDTH
+    #define GRAPH_VERT_LIM (TFT_HEIGHT / 2 - 1)
+    #define EXT_BUTTON_WIDTH 8
+    #define STATUS_BAR_WIDTH 8
+    #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH / 6)
+    #define CHAR_WIDTH 6
+    #define CHAN_PER_PAGE 7
+    #define STATUSBAR_COLOR TFT_BLACK
+    #define TEXT_HEIGHT 8
+    #define BOT_FIXED_AREA 0
+    #define TOP_FIXED_AREA 8
+    #define YMAX TFT_HEIGHT
+    #define MAX_SCREEN_BUFFER 5
+    #define BUTTON_SCREEN_LIMIT 5
+    #define BUTTON_ARRAY_LEN BUTTON_SCREEN_LIMIT
+    #define BANNER_TEXT_SIZE 1
+  #endif
 
   //// DISPLAY DEFINITIONS
   #ifdef HAS_SCREEN
@@ -2872,6 +2937,20 @@
     //#define BUTTON_ARRAY_LEN 5
   #endif
 
+  #ifdef MARAUDER_POOM
+    #define BANNER_TIME 50
+    #define COMMAND_PREFIX "!"
+    #define KEY_X 64
+    #define KEY_Y 13
+    #define KEY_W 128
+    #define KEY_H 10
+    #define KEY_SPACING_X 0
+    #define KEY_SPACING_Y 0
+    #define KEY_TEXTSIZE 1
+    #define ICON_W 8
+    #define ICON_H 8
+    #define BUTTON_PADDING 4
+  #endif
   //// END MENU DEFINITIONS
 
 
@@ -2952,6 +3031,10 @@
       #define SD_MOSI           7    // shared
       #define SD_MISO           8    // dedicated MISO for SD
       #define SD_CS             23
+    #endif
+
+    #ifdef MARAUDER_POOM
+      #define SD_CS 5
     #endif
 
   #endif
@@ -3091,6 +3174,8 @@
     #elif defined(MARAUDER_C5)
       #define PIN 27
     #elif defined(MARAUDER_V8)
+      #define PIN 27
+    #elif defined(MARAUDER_POOM)
       #define PIN 27
     #elif defined(MARAUDER_PANCAKE)
       #define PIN 27
@@ -3491,6 +3576,13 @@
         #define SD_MOSI TFT_MOSI
         #define SD_SCK  TFT_SCLK
       #endif
+
+
+      #ifdef MARAUDER_POOM
+        #define SD_MISO 8
+        #define SD_MOSI 4
+        #define SD_SCK  6
+      #endif
     #endif
     //// END STUPID CYD STUFF
 
@@ -3549,12 +3641,12 @@
     // is what the Zigbee/Thread sniffer (ZBScan) needs. On every other target
     // ZBScan compiles to harmless no-ops so the rest of the firmware is
     // unaffected.
-    #if defined(CONFIG_IDF_TARGET_ESP32C5) || defined(CONFIG_IDF_TARGET_ESP32C6) \
-          || defined(CONFIG_IDF_TARGET_ESP32H2)
-      #ifndef HAS_ZIGBEE
-        #define HAS_ZIGBEE
-      #endif
-    #endif
+//    #if defined(CONFIG_IDF_TARGET_ESP32C5) || defined(CONFIG_IDF_TARGET_ESP32C6) \
+//          || defined(CONFIG_IDF_TARGET_ESP32H2)
+//      #ifndef HAS_ZIGBEE
+//        #define HAS_ZIGBEE
+//      #endif
+//    #endif
 
     //// ACT LED STUFF
     #ifdef HAS_ACT_LED
@@ -3683,6 +3775,8 @@
     #if defined(HAS_CST820) || defined(HAS_AXS5106L) || defined(HAS_FT6336) || defined(HAS_CST3530)
       #define HAS_CAP_TOUCH 1
     #endif
+
+
 
     #if defined(HAS_NIMBLE_2) && !defined(HAS_BT)
       #warning "HAS_NIMBLE_2 defined without HAS_BT, check 'BOARD FEATURES' section"

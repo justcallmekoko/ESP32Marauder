@@ -142,7 +142,7 @@ public:
                       + y + y / 4
                       + 6 * (y / 100)
                       + y / 400) % 7;
-        return (uint8_t)(v == 0 ? 6 : v - 1);
+        return static_cast<uint8_t>(v == 0 ? 6 : v - 1);
     }
 
     // Unix timestamp (seconds since 1970-01-01 00:00:00 UTC)
@@ -156,7 +156,7 @@ public:
         t.tm_sec  = _second;
         log_d("Datetime unixtime:  tm_y=%d _y=%d: ", t.tm_year, _year);
         Serial.println(&t, "%F %T");
-        return (uint32_t)mktime(&t);
+        return static_cast<uint32_t>(mktime(&t));
     }
 
     // Populate a struct tm
@@ -187,10 +187,11 @@ private:
 // -- PCF85063 - RTClib RTC_PCF8523-compatible interface -----------------------
 class PCF85063 {
 public:
-    PCF85063() : _wire(&Wire) {}
+    PCF85063() : _wire(&Wire) {log_d("PCF85063 instantiated"); }
 
     // RTClib-compatible begin - takes TwoWire pointer
     bool begin(TwoWire *wire = &Wire) {
+        log_d("PCF85063 begin(&wire)");
         _wire = wire ? wire : &Wire;
         return _initImpl();
     }
@@ -198,6 +199,7 @@ public:
     // Extended begin - takes TwoWire reference + optional SDA/SCL pins
     // Matches Waveshare BSP: rtc.begin(Wire, SDA, SCL)
     bool begin(TwoWire &wire, int sda = -1, int scl = -1) {
+        log_d("PCF85063 begin &wire sda=%d scl=%d");
         _wire = &wire;
         if (sda != -1 && scl != -1) {
             _wire->setPins(sda, scl);

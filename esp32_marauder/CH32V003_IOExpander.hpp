@@ -19,6 +19,9 @@
 #include <Arduino.h>
 #include <Wire.h>
 
+#ifndef __CH32V003_IOEXPANDER_HPP__
+#define __CH32V003_IOEXPANDER_HPP__
+
 // Default I2C address
 #define CH32V003_DEFAULT_ADDR   (0x24)
 
@@ -63,10 +66,11 @@ public:
         , _dirReg(CH32V003_DIR_DEFAULT)
         , _outReg(CH32V003_OUT_DEFAULT)
         , _invertPWM(false)
-    {}
+    { log_d("CH32V003_IOExpander instantiated"); }
 
     // Call once after Wire.begin(). Returns false if device not ACK-ing.
     inline bool begin() {
+        log_d("CH32V003_IOExpander begin");
         log_d("using addr: %d", _addr);
         _wire.beginTransmission(_addr);
 
@@ -88,6 +92,22 @@ public:
         _outReg = CH32V003_OUT_DEFAULT;
         log_d("reset true");
         return true;
+    }
+
+
+    inline int GetAudio(uint8_t level) {
+        log_d("GetAudio");
+        return this->digitalRead(CH32V003_PIN_3);
+    }
+
+    inline void SetAudio(uint8_t level) {
+        log_d("SetAudio = %d", level);
+        this->pinMode(CH32V003_PIN_3, OUTPUT);
+        if (level == HIGH) {
+            this->digitalWrite(CH32V003_PIN_3, HIGH);
+        } else {
+            this->digitalWrite(CH32V003_PIN_3, LOW);
+        }
     }
 
     inline void lcdReset() {
@@ -158,7 +178,7 @@ public:
         // Waveshare source: temp[1] << 8 | temp[0]  - little-endian, 2 bytes
         uint8_t buf[2] = {0, 0};
         if (!readReg2(CH32V003_REG_ADC, buf, 2)) return -1;
-        return (int)((buf[1] << 8) | buf[0]);
+        return static_cast<int>((buf[1] << 8) | buf[0]);
     }
 
     // Converts raw reading to voltage assuming Waveshare's 3:1 resistor divider.
@@ -166,7 +186,7 @@ public:
         int raw = readADCRaw();
         if (raw < 0) return -1.0f;
         // 10-bit ADC (0-1023), 3:1 resistor divider on Waveshare boards
-        return ((float)raw / 1023.0f) * vref * 3.0f;
+        return (static_cast<float>(raw) / 1023.0f) * vref * 3.0f;
     }
 
     // -- Interrupt / RTC status ---------------------------------------------------
@@ -199,12 +219,16 @@ public:
         return true;
     }
 
+#if defined(CORE_DEBUG_LEVEL) && CORE_DEBUG_LEVEL >2
     // Dump all registers to Serial.
     inline void printState() {
         Serial.println("-- CH32V003 IO Expander --");
         Serial.printf("  DIR (0x%02X): 0x%02X %06b  (1=in 0=out per bit)\n",
                       CH32V003_REG_DIR, _dirReg, _dirReg);
         Serial.printf("  OUT (0x%02X): 0x%02X\n", CH32V003_REG_OUT, _outReg);
+        int iout = readReg(CH32V003_REG_OUT);
+        Serial.printf(" IOUT (0x%02X): 0x%02X\n", CH32V003_REG_OUT,
+                      iout  >= 0 ? (uint8_t)iout  : 0xFF);
         int in  = readReg(CH32V003_REG_IN);
         Serial.printf("  IN  (0x%02X): 0x%02X\n", CH32V003_REG_IN,
                       in  >= 0 ? (uint8_t)in  : 0xFF);
@@ -220,6 +244,7 @@ public:
                       intr >= 0 ? (uint8_t)intr : 0xFF);
         Serial.println("--------------------------");
     }
+#endif 
 
 private:
     TwoWire &_wire;
@@ -230,3 +255,5 @@ private:
 };
 
 inline CH32V003_IOExpander CH32V003_obj;
+
+#endif   //  __CH32V003_IOEXPANDER_HPP__

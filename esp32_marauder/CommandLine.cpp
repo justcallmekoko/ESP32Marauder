@@ -332,6 +332,7 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_SNIFF_DEAUTH_CMD);
     Serial.println(HELP_SNIFF_PMKID_CMD);
     Serial.println(HELP_SNIFF_SAE_CMD);
+    Serial.println(HELP_REMOTE_ID_CMD);
     Serial.println(HELP_STOPSCAN_CMD);
     #ifdef HAS_GPS
       Serial.println(HELP_WARDRIVE_CMD);
@@ -1336,6 +1337,35 @@ void CommandLine::runCommand(String input) {
       }
     }
 
+    if (cmd_args.get(0) == REMOTE_ID_CMD) {
+      String action = cmd_args.size() > 1 ? cmd_args.get(1) : "scan";
+      action.toLowerCase();
+      if (action == "scan") {
+        this->startScanFromCLI(REMOTE_ID_SCAN_ALL, TFT_CYAN, " Remote ID scan");
+      }
+      else if (action == "list") {
+        Serial.println(F("Remote ID devices:"));
+        for (size_t i = 0; i < wifi_scan_obj.remoteIdCount(); ++i)
+          Serial.println(String(i) + " " + wifi_scan_obj.remoteIdLabel(i));
+      }
+      else if (action == "track" && cmd_args.size() > 2) {
+        const int index = cmd_args.get(2).toInt();
+        if (index < 0 || !wifi_scan_obj.selectRemoteIdTarget(index)) {
+          Serial.println(F("Invalid Remote ID index"));
+        } else {
+          this->startScanFromCLI(REMOTE_ID_SCAN_TARGET, TFT_MAGENTA,
+                                 " Remote ID target scan");
+        }
+      }
+      else if (action == "clear") {
+        wifi_scan_obj.clearRemoteIds();
+        Serial.println(F("Remote ID list cleared"));
+      }
+      else {
+        Serial.println(HELP_REMOTE_ID_CMD);
+      }
+    }
+
     //// Bluetooth scan/attack commands
     // Bluetooth scan
     if (cmd_args.get(0) == BT_SNIFF_CMD) {
@@ -1351,6 +1381,9 @@ void CommandLine::runCommand(String input) {
           // Airtag sniff
           if (bt_type == "airtag") {
             this->startScanFromCLI(BT_SCAN_AIRTAG, TFT_WHITE, "Airtag sniff");
+          }
+          else if (bt_type == "ibeacon") {
+            this->startScanFromCLI(BT_SCAN_IBEACON, TFT_CYAN, "iBeacon sniff");
           }
           else if (bt_type == "flipper") {
             this->startScanFromCLI(BT_SCAN_FLIPPER, TFT_ORANGE, "Flipper sniff");
@@ -2084,6 +2117,11 @@ void CommandLine::runCommand(String input) {
       if (essid_sw != -1 && this->checkValueExists(&cmd_args, essid_sw))
         essid = cmd_args.get(essid_sw + 1);
 
+      if (!marauder::RuntimeMemoryGuard::instance().allow(
+              sizeof(AccessPoint) + sizeof(LinkedList<uint16_t>) + 128)) {
+        Serial.println(F("Memory pressure: AP not added"));
+        return;
+      }
       AccessPoint ap;
       ap.essid = essid;
       ap.channel = channel;
@@ -2102,7 +2140,11 @@ void CommandLine::runCommand(String input) {
       ap.has_msg_3 = false;
       ap.has_msg_4 = false;
 
-      access_points->add(ap);
+      if (!marauder::memoryGuardedAdd(access_points, ap)) {
+        delete ap.stations;
+        Serial.println(F("Memory pressure: AP not added"));
+        return;
+      }
 
       Serial.print(F("Added AP ["));
       Serial.print(access_points->size() - 1);
@@ -2163,11 +2205,18 @@ void CommandLine::runCommand(String input) {
       sta.packets = 0;
       sta.ap = ap_index;
 
-      stations->add(sta);
+      if (!marauder::memoryGuardedAdd(stations, sta)) {
+        Serial.println(F("Memory pressure: station not added"));
+        return;
+      }
 
       // Link station to AP
       AccessPoint ap = access_points->get(ap_index);
-      ap.stations->add(stations->size() - 1);
+      if (!marauder::memoryGuardedAdd(ap.stations, stations->size() - 1)) {
+        stations->pop();
+        Serial.println(F("Memory pressure: station not added"));
+        return;
+      }
       access_points->set(ap_index, ap);
 
       Serial.print(F("Added station ["));

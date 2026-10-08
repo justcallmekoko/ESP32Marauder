@@ -5,6 +5,19 @@
 
 #ifdef HAS_SCREEN
 
+// we don't need the constructors called for ever include "Display.h
+
+// HAS_CAP_TOUCH
+#ifdef  HAS_FT6336
+  #include "ft6336.h"
+#elif defined(HAS_CST3530)
+  #include "CST3530.hpp"
+#elif defined(HAS_CST820)
+  #include "CST820.hpp"
+#elif defined(HAS_CST820)
+   #include "CST820.hpp"
+#endif
+
 namespace {
 
 uint8_t readLogoAlpha(uint16_t x, uint16_t y) {
@@ -60,7 +73,7 @@ int8_t Display::menuButton(uint16_t *x, uint16_t *y, bool pressed, bool check_ho
   // Serial.println(F("Display::menuButton()"));
   int16_t _x = *x;
   int16_t _y = *y;
-  #ifdef HAS_ILI9341
+  #if defined(HAS_ILI9341)
     for (uint8_t b = BUTTON_ARRAY_LEN; b < BUTTON_ARRAY_LEN + 3; b++) {
       // log_d("key %d _x1=%d _y1=%d _w=%d _h=%d _label=%s", 
       // b, this->key[b]._x1, this->key[b]._y1, this->key[b]._w, this->key[b]._h, this->key[b]._label);
@@ -91,12 +104,12 @@ int8_t Display::menuButton(uint16_t *x, uint16_t *y, bool pressed, bool check_ho
   return -1;
 }
 
+
 uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
 
 
   #ifdef HAS_CST3530
      if (CST3530_obj.available()) {
-        
        CST3530_obj.readData();
        // Serial.print("Event ");
        // Serial.println((int)CST3530_obj.data->event);
@@ -109,16 +122,13 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
          // *y = p.y;
 
          // CST3530_obj.getTouch(x, y);
-
          // if ( *x || *y ) { log_d("x=%d y=%d", *x, *y); }
          return 1;
-        }
-     // } else {
-       // log_d("CST3530_obj.available : FALSE");
+       }
      }
      return 0;
 
-  #elif HAS_CST820
+  #elif defined(HAS_CST820)
      if (CST820_touch.available()) {
        if (CST820_touch.data.event == 0) {  // Down event
          *x = CST820_touch.data.x;
@@ -130,7 +140,7 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
 
   #elif  defined(HAS_ILI9341)
     if (!this->headless_mode) {
-      #ifdef HAS_FT6336
+      #ifdef HAS_FT6336  // HAS_CAP_TOUCH
         // FT6336 capacitive touch: rotation-aware + edge exclusion
         {
           uint16_t raw_x, raw_y;
@@ -246,7 +256,7 @@ bool Display::isTouchHeld(uint16_t threshold) {
 void Display::init() {
   tft.init();
 
-  #if defined(HAS_DUAL_BAND) && !defined(MARAUDER_MINI_V3)
+  #if defined(HAS_DUAL_BAND) && !defined(MARAUDER_MINI_V3) && !defined(MARAUDER_POOM)
     digitalWrite(TFT_BL, HIGH);
   #endif
 }
@@ -263,10 +273,13 @@ void Display::setCalData(bool landscape) {
         uint16_t calData[5] = { 312, 3431, 191, 3456, 2 };
       #elif defined(TFT_DIY)
         uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // tft.setRotation(0); // Portrait with DIY TFT
+      #elif defined(MARAUDER_CYD_24)
+        uint16_t calData[5] = { 378, 3288, 526, 3311, 3 };
+        log_d("setCalData");
       #else
         uint16_t calData[5] = { 339, 3470, 237, 3438, 2 }; // DELETE
       #endif
-      #ifdef HAS_ILI9341
+      #if defined(HAS_ILI9341)
         tft.setTouch(calData);
       #endif
     }
@@ -280,7 +293,7 @@ void Display::setCalData(bool landscape) {
       #else if defined(TFT_DIY)
         uint16_t calData[5] = { 213, 3469, 320, 3446, 1 }; // Landscape TFT DIY
       #endif
-      #ifdef HAS_ILI9341
+      #if defined(HAS_ILI9341)
         tft.setTouch(calData);
       #endif
     }
@@ -298,7 +311,7 @@ void Display::RunSetup() {
     screen_buffer = new LinkedList<String>();
   #endif
 
-  #if defined( HAS_CYD_TOUCH) || defined(MARAUDER_CYD_HMI)
+  #if defined(HAS_CYD_TOUCH) || defined(MARAUDER_CYD_HMI)   // !HAS_FT6336 !HAS_CST820
     this->touchscreenSPI.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
     this->touchscreen.begin(touchscreenSPI);
     this->touchscreen.setRotation(0);
@@ -313,7 +326,8 @@ void Display::RunSetup() {
       #define TP_RST -1
     #endif
 
-    CST820_touch.begin(&Wire, TP_INT, TP_RST);
+    // CST820_touch.begin(&Wire, TP_INT, TP_RST);
+    CST820_touch.begin(&Wire);
   #endif
 
   #ifdef HAS_CST3530
@@ -324,9 +338,7 @@ void Display::RunSetup() {
       // CST3530_obj.begin(&Wire, TP_INT, TP_RST, TP_FREQ);
       // CST3530_obj.begin(TP_SDA, TO_SCL, TP_INT, TP_RST,f TP_FREQ)
       log_d("CST3530_obj.begin done");
-    #else
-      log_d("HAS_CST3530 False");
-    #endif
+  #endif
 
   #ifdef HAS_FT6336
     ft6336_init();
@@ -338,7 +350,7 @@ void Display::RunSetup() {
 
   tft.setCursor(0, 0);
 
-  #ifdef HAS_ILI9341
+  #if defined(HAS_ILI9341)
 
     #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH)
       this->setCalData();
@@ -364,7 +376,18 @@ void Display::RunSetup() {
 void Display::drawBootSplash() {
   const int16_t width = tft.width();
   const int16_t height = tft.height();
-  #ifdef MARAUDER_CYD_3_5_INCH
+  #ifdef MARAUDER_POOM
+    tft.fillScreen(TFT_BLACK);
+    tft.setTextWrap(false);
+    tft.setTextSize(1);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.drawCentreString("ESP32 Marauder", width / 2, 10, 1);
+    tft.drawCentreString(version_number, width / 2, 27, 1);
+    tft.drawCentreString("POOM", width / 2, 44, 1);
+    tft.display(true);
+    return;
+  #endif
+  #if defined(MARAUDER_CYD_3_5_INCH) || defined(MARAUDER_PANCAKE)
     constexpr bool half_scale_logo = true;
   #else
     constexpr bool half_scale_logo = false;
@@ -508,6 +531,9 @@ void Display::tftDrawYScaleButtons(byte y_scale)
 }
 
 void Display::tftDrawChannelScaleButtons(int set_channel, bool lnd_an) {
+  #ifdef MARAUDER_POOM
+    return;
+  #endif
   #ifdef MARAUDER_PANCAKE
     TOP_FIXED_AREA_2 = lnd_an ? 48 : 64;
   #endif
@@ -568,6 +594,9 @@ void Display::tftDrawChannelScaleButtons(int set_channel, bool lnd_an) {
 }
 
 void Display::tftDrawChanHopButton(bool lnd_an, bool en) {
+  #ifdef MARAUDER_POOM
+    return;
+  #endif
   #ifdef MARAUDER_PANCAKE
     TOP_FIXED_AREA_2 = lnd_an ? 48 : 64;
   #endif
@@ -629,6 +658,9 @@ void Display::tftDrawChanHopButton(bool lnd_an, bool en) {
 }
 
 void Display::tftDrawExitScaleButtons(bool lnd_an) {
+  #ifdef MARAUDER_POOM
+    return;
+  #endif
   #ifdef MARAUDER_PANCAKE
     TOP_FIXED_AREA_2 = lnd_an ? 48 : 64;
   #endif
@@ -756,6 +788,14 @@ void Display::processAndPrintString(TFT_eSPI& tft, const String& originalString)
   tft.print(line);
 }
 
+bool Display::queueLine(const String& line) {
+  if (display_buffer == nullptr) return false;
+  if (!display_queue_pressure.allow(display_buffer->size())) return false;
+  if (!marauder::RuntimeMemoryGuard::instance().allow(line.length() + 48))
+    return false;
+  return display_buffer->add(line);
+}
+
 void Display::displayBuffer(bool do_clear)
 {
   if (this->display_buffer->size() > 0)
@@ -794,7 +834,9 @@ void Display::displayBuffer(bool do_clear)
         screen_buffer->add(display_buffer->shift());
 
         for (int i = 0; i < this->screen_buffer->size(); i++) {
-		  #ifdef MARAUDER_PANCAKE
+		  #ifdef MARAUDER_POOM
+			tft.setCursor(xPos, STATUS_BAR_WIDTH + (i * TEXT_HEIGHT));
+		  #elif defined(MARAUDER_PANCAKE)
 			tft.setCursor(xPos, (i * TEXT_HEIGHT) + TOP_FIXED_AREA_2);
 		  #else
 			#ifdef HAS_TOUCH
@@ -859,4 +901,4 @@ void Display::buildBanner(String msg, int xpos)
   this->showCenterText(msg.c_str(), banner_y);
 }
 
-#endif
+#endif  //  HAS_SCREEN

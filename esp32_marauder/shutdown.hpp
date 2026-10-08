@@ -21,6 +21,11 @@
       esp_bt_controller_deinit();
     #endif
 
+    #if defined(MARAUDER_WS_C5_28)
+      CH32V003_obj.SetAudio(0);
+    #endif
+      
+
     // Should we isolate  pins with external pull-up resistors
     // to minimize current consumption.
     // #ifdef I2C_SDA
