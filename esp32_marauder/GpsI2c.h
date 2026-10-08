@@ -31,12 +31,26 @@
 
 class GpsI2c {
  public:
+
+    GpsI2c(TwoWire* wirePort = nullptr)  {
+        log_d("GpsI2c Initializer");
+
+      #ifdef GPS_SDA
+        if (wirePort != nullptr) {
+          _wire = wirePort;
+          _wire->begin(GPS_SDA, GPS_SCL);
+          log_d("GpsI2c: GPS_SDA=%d GPS_SCL=%d", GPS_SDA, GPS_SCL);
+        }
+      #endif
+
+    }
+
     TwoWire *_wire;
     DFRobot_GNSS_I2C gnss;
 
     void begin(int sdaPin, int sclPin, uint32_t frequency = 400000);
 
-    void begin(TwoWire *wireInstance = &Wire);
+    void begin(TwoWire *wireInstance = nullptr);
 
     // void begin();
     void main(uint32_t current = 0, uint16_t scanMode = 1);
@@ -89,7 +103,8 @@ class GpsI2c {
     bool queue_enabled_flag = 0;
     // LinkedList<nmea_sentence_t> *queue=NULL;
 
-    String GetGNSSType();
+    const char *GetGNSSType();
+    uint8_t GetGNSSTypeCode();
 
     unsigned int text_cycles = 0;
     // LinkedList<String> *text_in=NULL;
@@ -129,6 +144,7 @@ class GpsI2c {
     bool good_fix = false;
     // char nav_system = '\0';
     String nav_system = "";
+    uint8_t nav_mode = 0;
     uint8_t num_sats = 0;
 };
 

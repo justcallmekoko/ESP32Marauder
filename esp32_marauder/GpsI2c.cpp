@@ -41,7 +41,9 @@ void GpsI2c::begin(int sdaPin, int sclPin, uint32_t frequency) {
 }
 
 void GpsI2c::begin(TwoWire *wireInstance) {
-  _wire = wireInstance;
+  if (_wire == nullptr)
+    _wire = wireInstance ? wireInstance : &Wire;
+
 
   delay(500);
   // describeAllPins();
@@ -58,7 +60,7 @@ void GpsI2c::begin(TwoWire *wireInstance) {
      log_d("GpsI2c::begin fail");
      Serial.println("GpsI2c::begin Fail");
      // describeAllPins();
-     if ( (millis() - lastq) > 4400)
+     if ( (millis() - lastq) > 2500)
        return;
      delay(1050);
   }
@@ -100,21 +102,24 @@ void GpsI2c::begin(TwoWire *wireInstance) {
 */
 
 void GpsI2c::setType(uint8_t t) {
-log_d("setType(i) called");
-  if (t > 0 && t < 8)
-      gnss.setGnss((eGnssMode_t) t);
+  log_d("setType(i) called");
+  // x = std::clamp(t, 1, 7);
+  uint8_t x = std::min<uint8_t>(std::max<uint8_t>(t, 1), 7);
+
+
+  gnss.setGnss((eGnssMode_t) x);
 }
 
 void GpsI2c::setType(String t) {
-log_d("setType(S) called");
+  log_d("setType(S) called");
 
-    if (t ==  "gps") gnss.setGnss(eGPS);
-    else if (t ==  "beidou") gnss.setGnss(eBeiDou);
-    else if (t ==  "gps + beidou") gnss.setGnss(eGPS_BeiDou);
-    else if (t ==  "glonass") gnss.setGnss(eGLONASS);
-    else if (t ==  "gps + glonass") gnss.setGnss(eGPS_GLONASS);
-    else if (t ==  "beidou + glonass") gnss.setGnss(eBeiDou_GLONASS);
-    else if (t ==  "gps + beidou + glonass") gnss.setGnss(eGPS_BeiDou_GLONASS);
+  if (t ==  "gps") gnss.setGnss(eGPS);
+  else if (t == "beidou") gnss.setGnss(eBeiDou);
+  else if (t == "gps + beidou") gnss.setGnss(eGPS_BeiDou);
+  else if (t == "glonass") gnss.setGnss(eGLONASS);
+  else if (t == "gps + glonass") gnss.setGnss(eGPS_GLONASS);
+  else if (t == "beidou + glonass") gnss.setGnss(eBeiDou_GLONASS);
+  else if (t == "gps + beidou + glonass") gnss.setGnss(eGPS_BeiDou_GLONASS);
 }
 
 
@@ -139,21 +144,27 @@ String GpsI2c::generateType() {
 }
 
 
-String GpsI2c::GetGNSSType() {
+uint8_t GpsI2c::GetGNSSTypeCode() { return(this->nav_mode); }
+
+static constexpr const char* gnss_type_names[] = {
+    "??",
+    "gps",
+    "beidou",
+    "gps + beidou",
+    "glonass",
+    "gps + glonass",
+    "beidou +glonass",
+    "gps + beidou + glonass"
+};
+
+
+const char *GpsI2c::GetGNSSType() {
   log_d("GetGNSSType called");
-  /*
-  switch (this->nav_system) {
-    case eGPS: return "gps";
-    case eBeiDou: return "beidou";
-    case eGPS_BeiDou: return "gps + beidou";
-    case eGLONASS: return "glonass";
-    case eGPS_GLONASS: return "gps + glonass";
-    case eBeiDou_GLONASS: return "beidou + glonass";
-    case eGPS_BeiDou_GLONASS: return "gps + beidou + glonass";
-    default: return "??";
-  };
-  */
-  return "gps + beidou + glonass";
+
+  // std::clamp(gnss.getGnssMode(), 1, 7);
+  uint8_t mode = this->nav_mode;
+  if (mode > 7) mode = 0;          // unknown -> "??"
+    return gnss_type_names[mode];
 }
 
 struct tm GpsI2c::GetTimeInfo() {
@@ -211,7 +222,8 @@ void GpsI2c::setGPSInfo() {
     log_d("GPS fix extablished");
 
   this->good_fix = (num_sats >= 3) ? true : false;
-  this->nav_system = gnss.getGnssMode();
+  this->nav_mode = gnss.getGnssMode();
+  this->nav_system = gnss_type_names[this->nav_mode];
 
   lat_dat = gnss.getLat();
   lon_dat = gnss.getLon();

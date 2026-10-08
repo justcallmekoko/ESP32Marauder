@@ -15,6 +15,7 @@
 
 #ifdef HAS_BT
   #include <NimBLEDevice.h> // 1.3.8, 2.3.2
+  #include <NimBLEClient.h>
 
   #ifdef HAS_NIMBLE_2
     using MarauderBLEAdvertisedDevice = const NimBLEAdvertisedDevice;

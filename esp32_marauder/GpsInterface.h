@@ -12,7 +12,6 @@
 #include <LinkedList.h>
 #include <time.h>
 
-
 //#define GPS_TEXT_MAXLINES 5 //default:5 lines in the buffer maximum
 //#define GPS_TEXT_MAXCYCLES 1 //default:1
 
@@ -20,6 +19,10 @@
 //#define GPS_NMEA_SCRNWRAP true //default:true, except on MARAUDER_MINI where false
 //#define GPS_NMEA_MAXQUEUE 30 //default:30 messages max in queue
 
+// from system_time.cpp
+extern bool system_time_set;   // flag if system's time/date have been set yet..
+extern bool set_system_time(struct tm, bool setrt);
+extern bool set_system_time(const String& time_str, bool setrtc);
 
 #if defined(MARAUDER_MINI) || defined(MARAUDER_MINI_V3)
   #ifndef GPS_NMEA_SCRNWRAP
@@ -62,6 +65,8 @@ class GpsInterface {
     String getNmea();
     String getNmeaNotimp();
     String getNmeaNotparsed();
+
+    void GetTimeInfo(struct tm *timeInfo);
 
     void setType(String t);
 
@@ -134,5 +139,5 @@ class GpsInterface {
     uint32_t initGpsBaudAndForce115200();
 };
 
-#endif  // HAS_GPSI2C && !HAS_GPS
-#endif
+#endif    // HAS_GPS && !HAS_GPSI2
+#endif  // GpsInterface_h
