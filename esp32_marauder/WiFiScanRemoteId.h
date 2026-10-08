@@ -632,16 +632,27 @@ void WiFiScan::renderRemoteIdGlobal() {
           for (size_t i = 0; i < recordCount; ++i) {
             const RemoteIdRecord* record = &remote_id_snapshots[i];
             if (record->hasLocation) {
+              RemoteIdGridPoint previousTail;
+              bool hasPreviousTail = false;
               for (size_t h = 0; h < record->historyCount; ++h) {
                 const RemoteIdGridPoint tail = remoteIdProjectHistoryToGrid(
                     *record, record->history[h], originLat, originLon,
                     SCREEN_WIDTH, gridHeight, radius, 8);
-                if (tail.visible)
-                  display_obj.tft.drawPixel(tail.x, gridTop + tail.y, TFT_RED);
+                if (tail.visible) {
+                  if (hasPreviousTail)
+                    display_obj.tft.drawLine(previousTail.x,
+                        gridTop + previousTail.y, tail.x,
+                        gridTop + tail.y, TFT_RED);
+                  previousTail = tail;
+                  hasPreviousTail = true;
+                }
               }
               RemoteIdGridPoint p = remoteIdProjectToGrid(record->latitudeE7,
                   record->longitudeE7, originLat, originLon,
                   SCREEN_WIDTH, gridHeight, radius, 8);
+              if (hasPreviousTail && p.visible)
+                display_obj.tft.drawLine(previousTail.x,
+                    gridTop + previousTail.y, p.x, gridTop + p.y, TFT_RED);
               if (p.visible)
                 display_obj.tft.fillCircle(p.x, gridTop + p.y, 3, TFT_CYAN);
               else if (p.offGrid)

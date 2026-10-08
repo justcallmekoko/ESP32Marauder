@@ -8,7 +8,9 @@
 
 #include <Arduino.h>
 
-#define XIAO_LED_PIN 21
+#ifndef XIAO_LED_PIN
+  #define XIAO_LED_PIN 21
+#endif
 
 extern Settings settings_obj;
 

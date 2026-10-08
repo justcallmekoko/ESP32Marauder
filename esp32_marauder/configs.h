@@ -28,6 +28,7 @@
   //#define ESP32_LDDB
   //#define MARAUDER_DEV_BOARD_PRO
   //#define XIAO_ESP32_S3
+  //#define XIAO_ESP32_C5
   //#define MARAUDER_REV_FEATHER
   //#define MARAUDER_CYD_MICRO // 2432S028
   //#define MARAUDER_CYD_2USB // Another 2432S028 but it has tWo UsBs OoOoOoO
@@ -44,6 +45,13 @@
   //#define DUAL_MINI_C5
   //#define MARAUDER_POOM
   //// END BOARD TARGETS
+
+  // The official Arduino board package supplies this identifier for the XIAO
+  // ESP32-C5. Auto-select the matching Marauder profile so every translation
+  // unit receives the same hardware contract, including the generated sketch.
+  #if defined(ARDUINO_XIAO_ESP32C5) && !defined(XIAO_ESP32_C5)
+    #define XIAO_ESP32_C5
+  #endif
 
   // Allocated only while settings are loaded or updated. This accommodates
   // five saved WiFi profiles without permanently caching their passwords.
@@ -108,6 +116,8 @@
     #define HARDWARE_NAME "Flipper Zero Dev Board Pro"
   #elif defined(XIAO_ESP32_S3)
     #define HARDWARE_NAME "XIAO ESP32 S3"
+  #elif defined(XIAO_ESP32_C5)
+    #define HARDWARE_NAME "Seeed Studio XIAO ESP32-C5"
   #elif defined(MARAUDER_C5)
     #define HARDWARE_NAME "ESP32-C5 DevKit"
   #elif defined(MARAUDER_T_DONGLE_C5)
@@ -505,6 +515,17 @@
     //#define HAS_GPS
   #endif
 
+  #ifdef XIAO_ESP32_C5
+    // Headless native-USB target. GPIO13/GPIO14 are reserved for USB D-/D+.
+    #define HAS_BT
+    #define HAS_GPS
+    #define HAS_DUAL_BAND
+    #define HAS_PSRAM
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3
+    #define XIAO_LED_PIN 27
+  #endif
+
   #ifdef MARAUDER_C5
     //#define HAS_FLIPPER_LED
     //#define FLIPPER_ZERO_HAT
@@ -654,6 +675,14 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     //#define HAS_DIRECT_UPLOAD
+  #endif
+
+  // The bare XIAO carrier has no SD hardware. Keep the capability absent even
+  // when another build-time definition is present in a shared build setup.
+  #ifdef XIAO_ESP32_C5
+    #undef HAS_C5_SD
+    #undef HAS_SD
+    #undef USE_SD
   #endif
   //// END BOARD FEATURES
 
@@ -2796,6 +2825,8 @@
     #define MEM_LOWER_LIM 10000
   #elif defined(XIAO_ESP32_S3)
     #define MEM_LOWER_LIM 10000
+  #elif defined(XIAO_ESP32_C5)
+    #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_C5)
     #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_T_DONGLE_C5)
@@ -2937,6 +2968,10 @@
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 12 // External GPS TX -> T-Dongle UART0 RX
       #define GPS_RX 11 // External GPS RX -> T-Dongle UART0 TX
+    #elif defined(XIAO_ESP32_C5)
+      #define GPS_SERIAL_INDEX 1
+      #define GPS_TX 12 // External GPS TX -> XIAO D7 / UART RX
+      #define GPS_RX 11 // External GPS RX -> XIAO D6 / UART TX
     #elif defined(MARAUDER_C5)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 14
@@ -3098,6 +3133,8 @@
   #elif defined(MARAUDER_REV_FEATHER)
     #define MARAUDER_TITLE_BYTES 13578
   #elif defined(MARAUDER_C5)
+    #define MARAUDER_TITLE_BYTES 13578
+  #elif defined(XIAO_ESP32_C5)
     #define MARAUDER_TITLE_BYTES 13578
   #elif defined(MARAUDER_V8)
     #define MARAUDER_TITLE_BYTES 13578

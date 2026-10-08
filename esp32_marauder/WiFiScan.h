@@ -73,7 +73,7 @@
 #include "Assets.h"
 #ifdef HAS_FLIPPER_LED
   #include "flipperLED.h"
-#elif defined(XIAO_ESP32_S3)
+#elif defined(XIAO_ESP32_S3) || defined(XIAO_ESP32_C5)
   #include "xiaoLED.h"
 #elif defined(MARAUDER_M5STICKC)
   #include "stickcLED.h"
@@ -257,7 +257,7 @@ extern Buffer buffer_obj;
 extern Settings settings_obj;
 #ifdef HAS_FLIPPER_LED
   extern flipperLED flipper_led;
-#elif defined(XIAO_ESP32_S3)
+#elif defined(XIAO_ESP32_S3) || defined(XIAO_ESP32_C5)
   extern xiaoLED xiao_led;
 #elif defined(MARAUDER_M5STICKC)
   extern stickcLED stickc_led;
