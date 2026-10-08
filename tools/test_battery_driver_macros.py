@@ -1,5 +1,6 @@
 from pathlib import Path
 import re
+import subprocess
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -10,6 +11,48 @@ class BatteryDriverMacroTests(unittest.TestCase):
     def setUpClass(cls):
         configs_path = ROOT / "esp32_marauder" / "configs.h"
         cls.configs = configs_path.read_text(encoding="utf-8")
+
+    def resolved_macros(self, target):
+        result = subprocess.run(
+            [
+                "gcc",
+                "-E",
+                "-dM",
+                "-x",
+                "c++",
+                f"-D{target}",
+                str(ROOT / "esp32_marauder" / "configs.h"),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return {
+            line.split(maxsplit=2)[1]
+            for line in result.stdout.splitlines()
+            if line.startswith("#define ")
+        }
+
+    def test_board_targets_resolve_expected_battery_driver(self):
+        expected = {
+            "MARAUDER_V4": "HAS_IP5306",
+            "MARAUDER_V6": "HAS_IP5306",
+            "MARAUDER_V6_1": "HAS_IP5306",
+            "MARAUDER_KIT": "HAS_MAX1704X",
+            "MARAUDER_V7": "HAS_MAX1704X",
+            "MARAUDER_V7_1": "HAS_MAX1704X",
+        }
+        battery_drivers = {
+            "HAS_AXP192",
+            "HAS_AXP2101",
+            "HAS_IP5306",
+            "HAS_MAX1704X",
+        }
+
+        for target, expected_driver in expected.items():
+            with self.subTest(target=target):
+                resolved = self.resolved_macros(target) & battery_drivers
+                self.assertEqual(resolved, {expected_driver})
 
     def test_v6_maintains_ip5306_support(self):
         pattern = re.compile(
