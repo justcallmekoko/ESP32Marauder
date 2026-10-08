@@ -3009,12 +3009,14 @@
       #undef HAS_AXP2101
       #undef HAS_IP5306
 
-    // V4, V6 and V6.1 declare HAS_IP5306 in their own board blocks (lines 257
-    // and 278). Let that stand rather than overriding it here -- the dedup
-    // ladder below resolves the rest.
+    // V4, V6 and V6.1 are also used by compatible third-party boards that may
+    // have a MAX17048 expansion instead of an IP5306. Compile both probes and
+    // select the gauge that responds at runtime.
     #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
       #define I2C_SDA 33
       #define I2C_SCL 22
+      #define HAS_IP5306
+      #define HAS_MAX1704X
       #undef HAS_AXP2101
 
     #elif defined(MARAUDER_MINI)
@@ -3085,6 +3087,11 @@
       #undef HAS_AXP2101
       #undef HAS_IP5306
       #undef HAS_MAX1704X
+      #undef HAS_AXP192
+
+    // These targets cover mixed hardware and intentionally retain both probes.
+    #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
+      #undef HAS_AXP2101
       #undef HAS_AXP192
 
     #elif defined(HAS_IP5306)

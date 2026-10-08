@@ -35,12 +35,12 @@ class BatteryDriverMacroTests(unittest.TestCase):
 
     def test_board_targets_resolve_expected_battery_driver(self):
         expected = {
-            "MARAUDER_V4": "HAS_IP5306",
-            "MARAUDER_V6": "HAS_IP5306",
-            "MARAUDER_V6_1": "HAS_IP5306",
-            "MARAUDER_KIT": "HAS_MAX1704X",
-            "MARAUDER_V7": "HAS_MAX1704X",
-            "MARAUDER_V7_1": "HAS_MAX1704X",
+            "MARAUDER_V4": {"HAS_IP5306", "HAS_MAX1704X"},
+            "MARAUDER_V6": {"HAS_IP5306", "HAS_MAX1704X"},
+            "MARAUDER_V6_1": {"HAS_IP5306", "HAS_MAX1704X"},
+            "MARAUDER_KIT": {"HAS_MAX1704X"},
+            "MARAUDER_V7": {"HAS_MAX1704X"},
+            "MARAUDER_V7_1": {"HAS_MAX1704X"},
         }
         battery_drivers = {
             "HAS_AXP192",
@@ -49,10 +49,10 @@ class BatteryDriverMacroTests(unittest.TestCase):
             "HAS_MAX1704X",
         }
 
-        for target, expected_driver in expected.items():
+        for target, expected_drivers in expected.items():
             with self.subTest(target=target):
                 resolved = self.resolved_macros(target) & battery_drivers
-                self.assertEqual(resolved, {expected_driver})
+                self.assertEqual(resolved, expected_drivers)
 
     def test_v6_maintains_ip5306_support(self):
         pattern = re.compile(
@@ -63,6 +63,17 @@ class BatteryDriverMacroTests(unittest.TestCase):
             self.configs,
             pattern,
             "MARAUDER_V6/MARAUDER_V6_1 must keep IP5306 battery support enabled.",
+        )
+
+    def test_mixed_v4_v6_targets_retain_both_i2c_gauge_drivers(self):
+        pattern = re.compile(
+            r"#elif defined\(MARAUDER_V4\) \|\| defined\(MARAUDER_V6\) \|\| defined\(MARAUDER_V6_1\).*?#define HAS_IP5306.*?#define HAS_MAX1704X",
+            re.DOTALL,
+        )
+        self.assertRegex(
+            self.configs,
+            pattern,
+            "V4/V6/V6.1 must compile both IP5306 and MAX17048 runtime probes.",
         )
 
     def test_v7_selects_max1704x_and_disables_ip5306(self):
