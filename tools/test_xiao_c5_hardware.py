@@ -29,6 +29,7 @@ class XiaoC5HardwareTests(unittest.TestCase):
             contents = (ROOT / ".github" / "workflows" / workflow).read_text()
             self.assertIn(expected, contents)
             self.assertIn('file_name: "xiao_esp32c5"', contents)
+            self.assertIn('build_dir: "XIAO_ESP32C5"', contents)
 
     def test_target_uses_native_usb_safe_uart_pins(self):
         configs = (ROOT / "esp32_marauder" / "configs.h").read_text()
