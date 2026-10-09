@@ -1,0 +1,45 @@
+{
+  "build": {
+    "arduino": {
+      "memory_type": "qio_qspi",
+      "partitions": "default_8MB.csv"
+    },
+    "core": "esp32",
+    "extra_flags": [
+      "-DARDUINO_ESP32C5_DEV",
+      "-DBOARD_HAS_PSRAM",
+      "-DARDUINO_USB_MODE=1",
+      "-DARDUINO_USB_CDC_ON_BOOT=0"
+    ],
+    "f_cpu": "240000000L",
+    "f_flash": "80000000L",
+    "flash_mode": "qio",
+    "mcu": "esp32c5",
+    "variant": "esp32c5"
+  },
+  "connectivity": [
+    "bluetooth",
+    "wifi"
+  ],
+  "debug": {
+    "default_tool": "esp-builtin",
+    "onboard_tools": [
+      "esp-builtin"
+    ],
+    "openocd_target": "esp32c5.cfg"
+  },
+  "frameworks": [
+    "arduino",
+    "espidf"
+  ],
+  "name": "ZLX ESP32-C5-WROOM-1U-N8R8 (8MB Flash + 8MB Quad PSRAM)",
+  "upload": {
+    "flash_size": "8MB",
+    "maximum_ram_size": 327680,
+    "maximum_size": 8388608,
+    "require_upload_port": true,
+    "speed": 460800
+  },
+  "url": "https://www.espressif.com/en/products/modules/esp32-c5",
+  "vendor": "ZLX / Espressif"
+}
