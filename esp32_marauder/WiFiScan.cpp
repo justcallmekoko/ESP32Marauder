@@ -7362,13 +7362,15 @@ int WiFiScan::checkMatchAP(char addr[], bool update_ap) {
   return -1;
 }
 
-String WiFiScan::extractManufacturer(const uint8_t* payload) {
+String WiFiScan::extractManufacturer(const uint8_t* payload, size_t payload_len) {
   const int fixedHeaderSize = 36; // 802.11 mgmt header (24) + fixed fields (12)
-  int pos = fixedHeaderSize;
+  size_t pos = fixedHeaderSize;
 
-  while (pos < 512) { // safety bounds
+  while (pos + 2 <= payload_len) {
     uint8_t tagNumber = payload[pos];
     uint8_t tagLength = payload[pos + 1];
+    const size_t tagEnd = pos + 2 + tagLength;
+    if (tagEnd > payload_len) break;
 
     // Check for vendor-specific IE (Tag number 221)
     if (tagNumber == 0xdd && tagLength >= 4) {
@@ -7376,13 +7378,14 @@ String WiFiScan::extractManufacturer(const uint8_t* payload) {
       
       // Check if OUI is 00:50:F2 (Microsoft WPS)
       if (oui[0] == 0x00 && oui[1] == 0x50 && oui[2] == 0xF2) {
-        int wpsPos = pos + 6; // Skip: tag + len + OUI (2 + 1 + 3)
-        int end = pos + 2 + tagLength;
+        size_t wpsPos = pos + 6; // Skip: tag + len + OUI (2 + 1 + 3)
+        const size_t end = tagEnd;
 
         // Iterate through WPS sub-TLVs
         while (wpsPos + 4 <= end) {
           uint16_t type = (payload[wpsPos] << 8) | payload[wpsPos + 1];
           uint16_t len = (payload[wpsPos + 2] << 8) | payload[wpsPos + 3];
+          if (len > end - (wpsPos + 4)) break;
 
           if (type == 0x1021) { // Manufacturer
             char buffer[65]; // reasonable max
@@ -7453,17 +7456,15 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
     // We got a probe resp. Check for WPS configs
     if (snifferPacket->payload[0] == 0x50) {
 
-      String man = wifi_scan_obj.extractManufacturer(snifferPacket->payload);
-
-
       int index = wifi_scan_obj.checkMatchAP(addr);
-
-      AccessPoint access_point = access_points->get(index);
-
-      if ((index > 0) && (!access_point.wps)) {
+      if (index >= 0) {
+        AccessPoint access_point = access_points->get(index);
+        String man = wifi_scan_obj.extractManufacturer(snifferPacket->payload, len);
+        if (!access_point.wps) {
         //new_ap.wps = true;
-        access_point.man = man;
-        access_points->set(index, access_point);
+          access_point.man = man;
+          access_points->set(index, access_point);
+        }
       }
       //}
     }
