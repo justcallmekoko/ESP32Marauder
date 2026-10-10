@@ -3435,7 +3435,7 @@ int WiFiScan::update_mac_entry(const uint8_t mac[6], int8_t rssi, bool bt) {
   }
 
   // Table full: evict something (simple policy: overwrite first tombstone or oldest)
-  evict_and_insert(mac, now_ms);
+  evict_and_insert(mac, now_ms, rssi, bt);
 
   return TOMBSTONE_ENTRY;
 }
@@ -3462,13 +3462,13 @@ inline void WiFiScan::insert_mac_entry(uint32_t idx, const uint8_t mac[6], uint3
   mac_entry_state[idx] = VALID_ENTRY;
 }
 
-void WiFiScan::evict_and_insert(const uint8_t mac[6], uint32_t now_ms) {
+void WiFiScan::evict_and_insert(const uint8_t mac[6], uint32_t now_ms, int8_t rssi, bool bt) {
   const uint32_t EVICT_AGE_MS = TRACK_EVICT_SEC * 1000UL;
 
   // 1) Prefer reusing a tombstone if any exist.
   for (uint32_t i = 0; i < mac_history_len_half; i++) {
     if (mac_entry_state[i] == TOMBSTONE_ENTRY) {
-      insert_mac_entry(i, mac, now_ms);
+      insert_mac_entry(i, mac, now_ms, rssi, bt);
       return;
     }
   }
@@ -3519,14 +3519,14 @@ void WiFiScan::evict_and_insert(const uint8_t mac[6], uint32_t now_ms) {
     memcpy(evicted_mac, mac_entries[victim].mac, 6);
 
     // Overwrite victim with new entry
-    insert_mac_entry((uint32_t)victim, mac, now_ms);
+    insert_mac_entry((uint32_t)victim, mac, now_ms, rssi, bt);
 
     //Serial.println(macToString(evicted_mac) + " expired");
     return;
   }
 
   // If table is somehow inconsistent, just insert at 0.
-  insert_mac_entry(0, mac, now_ms);
+  insert_mac_entry(0, mac, now_ms, rssi, bt);
 }
 
 static inline uint32_t age_ms(uint32_t now_ms, uint32_t last_seen_ms) {

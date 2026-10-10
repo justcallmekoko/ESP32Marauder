@@ -1145,7 +1145,7 @@ class WiFiScan
     bool seen_mac(unsigned char* mac, bool simple = true);
     int update_mac_entry(const uint8_t mac[6], int8_t rssi = 0, bool bt = false);
     inline void insert_mac_entry(uint32_t idx, const uint8_t mac[6], uint32_t now_ms, int8_t rssi = 0, bool bt = false);
-    void evict_and_insert(const uint8_t mac[6], uint32_t now_ms);
+    void evict_and_insert(const uint8_t mac[6], uint32_t now_ms, int8_t rssi, bool bt);
     uint8_t build_top10_for_ui(MacEntry* out_top10, MacSortMode mode);
     void save_mac(unsigned char* mac);
     #ifdef HAS_BT
