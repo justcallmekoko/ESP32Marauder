@@ -818,7 +818,7 @@ class WiFiScan
     IPAddress advanceScanIP();
     bool isHostAlive(IPAddress ip);
     bool checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout = 100);
-    String extractManufacturer(const uint8_t* payload);
+    String extractManufacturer(const uint8_t* payload, size_t payload_len);
     int checkMatchAP(char addr[], bool update_ap = true);
     uint8_t getSecurityType(const uint8_t* beacon, uint16_t len);
     void addAnalyzerValue(int16_t value, int rssi_avg, int16_t target_array[], int array_size);
