@@ -1740,6 +1740,7 @@ extern "C" {
         }
     };
   #endif
+  static bluetoothScanAllCallback bluetoothScanCallbacks;
 #endif
 
 int WiFiScan::seenBLEDevice(BleDevice ble_device) {
@@ -5871,9 +5872,9 @@ void WiFiScan::initializeFindMyScan() {
   pBLEScan = NimBLEDevice::getScan();
 
   #ifndef HAS_NIMBLE_2
-    pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), true);
+    pBLEScan->setAdvertisedDeviceCallbacks(&bluetoothScanCallbacks, true);
   #else
-    pBLEScan->setScanCallbacks(new bluetoothScanAllCallback(), true);
+    pBLEScan->setScanCallbacks(&bluetoothScanCallbacks, true);
   #endif
 
   pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
@@ -7194,16 +7195,16 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
       if ((scan_mode == BT_SCAN_ALL) || (scan_mode == BT_SCAN_IBEACON)) {
         this->clearList(CLEAR_BLE);
         #ifndef HAS_NIMBLE_2
-          pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), true);
+          pBLEScan->setAdvertisedDeviceCallbacks(&bluetoothScanCallbacks, true);
         #else
-          pBLEScan->setScanCallbacks(new bluetoothScanAllCallback(), true);
+          pBLEScan->setScanCallbacks(&bluetoothScanCallbacks, true);
         #endif
       }
       else if (scan_mode == BT_SCAN_FOX_HUNT) {
         #ifndef HAS_NIMBLE_2
-          pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), true);
+          pBLEScan->setAdvertisedDeviceCallbacks(&bluetoothScanCallbacks, true);
         #else
-          pBLEScan->setScanCallbacks(new bluetoothScanAllCallback(), true);
+          pBLEScan->setScanCallbacks(&bluetoothScanCallbacks, true);
         #endif
       }
       else if ((scan_mode == BT_SCAN_FLIPPER) ||
@@ -7219,9 +7220,9 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
           this->clearList(CLEAR_AT);
 
         #ifndef HAS_NIMBLE_2
-          pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), true);
+          pBLEScan->setAdvertisedDeviceCallbacks(&bluetoothScanCallbacks, true);
         #else
-          pBLEScan->setScanCallbacks(new bluetoothScanAllCallback(), true);
+          pBLEScan->setScanCallbacks(&bluetoothScanCallbacks, true);
         #endif
       }
     }
@@ -7239,9 +7240,9 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
 		display_obj.tft.setFreeFont(NULL);
       #endif
       #ifndef HAS_NIMBLE_2
-        pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), false);
+        pBLEScan->setAdvertisedDeviceCallbacks(&bluetoothScanCallbacks, false);
       #else
-        pBLEScan->setScanCallbacks(new bluetoothScanAllCallback(), false);
+        pBLEScan->setScanCallbacks(&bluetoothScanCallbacks, false);
       #endif
     }
     else if (scan_mode == BT_SCAN_ANALYZER) {
@@ -7258,18 +7259,18 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
         display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
       #endif
       #ifndef HAS_NIMBLE_2
-        pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), false);
+        pBLEScan->setAdvertisedDeviceCallbacks(&bluetoothScanCallbacks, false);
       #else
-        pBLEScan->setScanCallbacks(new bluetoothScanAllCallback(), false);
+        pBLEScan->setScanCallbacks(&bluetoothScanCallbacks, false);
       #endif
 
     }
     else if ((scan_mode == WIFI_SCAN_WAR_DRIVE) ||
             (scan_mode == WIFI_SCAN_DETECT_FOLLOW)) {
       #ifndef HAS_NIMBLE_2
-        pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), true);
+        pBLEScan->setAdvertisedDeviceCallbacks(&bluetoothScanCallbacks, true);
       #else
-        pBLEScan->setScanCallbacks(new bluetoothScanAllCallback(), true);
+        pBLEScan->setScanCallbacks(&bluetoothScanCallbacks, true);
       #endif
     }
     pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
@@ -7302,9 +7303,9 @@ void WiFiScan::setupRemoteIdBle() {
     NimBLEDevice::init("");
     pBLEScan = NimBLEDevice::getScan();
     #ifndef HAS_NIMBLE_2
-      pBLEScan->setAdvertisedDeviceCallbacks(new bluetoothScanAllCallback(), false);
+      pBLEScan->setAdvertisedDeviceCallbacks(&bluetoothScanCallbacks, false);
     #else
-      pBLEScan->setScanCallbacks(new bluetoothScanAllCallback(), false);
+      pBLEScan->setScanCallbacks(&bluetoothScanCallbacks, false);
     #endif
     pBLEScan->setActiveScan(false);
     pBLEScan->setInterval(80);
