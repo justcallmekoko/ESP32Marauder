@@ -16,6 +16,15 @@
 //#define GPS_NMEA_SCRNWRAP true //default:true, except on MARAUDER_MINI where false
 //#define GPS_NMEA_MAXQUEUE 30 //default:30 messages max in queue
 
+// New defines for gsv
+#ifndef GPS_GSV_MAX_SAMPLES
+  #define GPS_GSV_MAX_SAMPLES 32
+#endif
+
+#ifndef GPS_GSV_STRONG_SNR_THRESHOLD
+  #define GPS_GSV_STRONG_SNR_THRESHOLD 35
+#endif
+
 #if defined(MARAUDER_MINI) || defined(MARAUDER_MINI_V3)
   #ifndef GPS_NMEA_SCRNWRAP
     #define GPS_NMEA_SCRNWRAP false
@@ -57,6 +66,15 @@ class GpsInterface {
     String getNmea();
     String getNmeaNotimp();
     String getNmeaNotparsed();
+
+    // New gett'ers for gsv
+    float getAvgSnr();
+    float getMaxSnr();
+    uint8_t getGsvSampleCount();
+    uint8_t getStrongSignals();
+    uint8_t getGsvSentenceTotal();
+    uint8_t getGsvSentenceIndex();
+    bool getGsvValid();
 
     void setType(String t);
 
@@ -106,6 +124,16 @@ class GpsInterface {
     char nav_system='\0';
     uint8_t num_sats = 0;
 
+    // New GSV function - signal quality tracking
+    uint8_t gsv_sample_count = 0;
+    uint8_t gsv_strong_signals = 0;
+    uint8_t gsv_sentence_total = 0;
+    uint8_t gsv_sentence_index = 0;
+    float gsv_avg_snr = 0.0f;
+    float gsv_max_snr = 0.0f;
+    bool gsv_valid = false;
+    uint8_t gsv_snr_values[GPS_GSV_MAX_SAMPLES] = {0};
+
     type_t type_flag = GPSTYPE_NATIVE;
 
     bool queue_enabled_flag=0;
@@ -124,6 +152,11 @@ class GpsInterface {
     bool probeBaud(uint32_t baud);
     void setGpsTo115200From9600();
     uint32_t initGpsBaudAndForce115200();
+
+    // New voids for gsv
+    void resetGsvStats();
+    void recalculateGsvStats();
+    void parseGsvSentence(const String& sentence);
 };
 
 #endif
