@@ -1916,8 +1916,10 @@ void WiFiScan::RunSetup() {
     this->wsl_bypass_enabled = false;
 
   #ifdef HAS_PSRAM
-    ssids = new (ps_malloc(sizeof(LinkedList<ssid>))) LinkedList<ssid>();
-    new (ssids) LinkedList<ssid>();
+    void* ssid_storage = ps_malloc(sizeof(LinkedList<ssid>));
+    ssids = ssid_storage
+        ? new (ssid_storage) LinkedList<ssid>()
+        : new LinkedList<ssid>();
   #else
     ssids = new LinkedList<ssid>();
   #endif
