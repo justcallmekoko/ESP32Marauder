@@ -90,7 +90,6 @@ public:
         _minute = (uint8_t)  ti->tm_min;
         _second = (uint8_t)  ti->tm_sec;
         log_d("Class::DateTime unix_epoch: tm=%d _year=%d", ti->tm_year, _year);
-        Serial.println(ti, "%F %T");
     }
 
     // DateTime(struct tm*)
@@ -102,7 +101,6 @@ public:
         _minute = (uint8_t)  ti->tm_min;
         _second = (uint8_t)  ti->tm_sec;
         log_d("Class::DateTime struct tm: tm=%d _year=%d", ti->tm_year, _year);
-        Serial.println(ti, "%F %T");
     }
 
     // DateTime from ISO8601 string "2026-10-11 13:24:43" or T separator
@@ -155,7 +153,6 @@ public:
         t.tm_min  = _minute;
         t.tm_sec  = _second;
         log_d("Datetime unixtime:  tm_y=%d _y=%d: ", t.tm_year, _year);
-        Serial.println(&t, "%F %T");
         return static_cast<uint32_t>(mktime(&t));
     }
 
@@ -170,7 +167,6 @@ public:
         t.tm_sec  = _second;
         t.tm_wday = dayOfTheWeek();
         log_d("Datetime toTm tm_y=%d _y=%d: ", t.tm_year, _year);
-        Serial.println(&t, "%F %T");
         return t;
     }
 

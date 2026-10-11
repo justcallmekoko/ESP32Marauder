@@ -11,6 +11,8 @@
   #include "BackLight.hpp"
 #endif 
 
+#include "time_fmt.h"
+
 #include "WiFiScan.h"
 //#include "Web.h"
 #ifdef HAS_SD

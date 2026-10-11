@@ -715,7 +715,7 @@
       #define HAS_RTC
         #define HAS_PCF85063         // i2c real-time clock (RTC)
       #define HAS_GPS
-        #define HAS_GPSI2C
+        // #define HAS_GPSI2C
       // #define HAS_CYD_PORTRAIT
       #define HAS_IDF_3
       // HAS_MIC
@@ -3302,6 +3302,10 @@
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 15         // Gover 1
       #define GPS_RX 16
+    #elif defined(MARAUDER_WS_C5_28)
+      #define GPS_SERIAL_INDEX 1
+      #define GPS_TX 12
+      #define GPS_RX 11
     #endif
   #else
     #define mac_history_len 100

@@ -3,6 +3,8 @@
 #if defined(HAS_RTC) && (defined(HAS_DS1307) || defined(HAS_PCF8523) || defined(HAS_PCF85063) || defined(HAS_PCF8563))
 
 #include "RTC.h"
+#include "time_fmt.h"
+
 
 // -- I2C pin resolution --------------------------------------------------------
 // #if !defined(RTC_SDA) && defined(I2C_SDA)
@@ -111,7 +113,7 @@ bool RTC::setup() {
  //  struct tm timeinfo;
  //  if (getLocalTime(&timeinfo)) {
  //    Serial.print("RTC::setup: getLocalTime=");
- //    Serial.println(&timeinfo, "%F %T");
+ //    print_datetime(ti);
  //  } else {
  //    log_w("getLocalTime Fail");
  //  }
@@ -185,7 +187,7 @@ void RTC::adjust_rtc(const char *time_str) {
 void RTC::adjust_rtc(struct tm ti) {
   log_d("RTC::adjust_rtc struct tm: %d", ti.tm_year, ti.tm_year + 1900);
   Serial.print("RTC::adjust_rtc ");
-  Serial.println(&ti, "%F %T");
+  print_datetime(ti);
 
   rtclock.adjust(DateTime(
     (uint16_t)(ti.tm_year) + 1900,
@@ -225,7 +227,7 @@ bool RTC::sync_rtc_ntp(const char *ntpServer) {
   Serial.printf("sync_rtc_ntp getLocalTime timeinfo.tm_year=%d\n", timeinfo.tm_year);
   system_time_set = true;
   // Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
-  Serial.println(&timeinfo, "%F %T");
+  print_datetime(ti);
   Serial.println(F("RTC successfully set via NTP"));
 
   adjust_rtc(timeinfo);

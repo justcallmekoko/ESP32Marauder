@@ -3,6 +3,7 @@
 #include "CommandLine.h"
 #include "OwnedListLifecycle.h"
 #include "lang_var.h"
+#include "time_fmt.h"
 
 #ifdef HAS_SCREEN
 
@@ -1312,7 +1313,8 @@ void MenuFunctions::update_time_temp_batt(bool update) {
               if (system_time_set) {
                   struct tm timeinfo;
                   if(getLocalTime(&timeinfo)) {
-                      strftime(timeBuffer, sizeof(timeBuffer), "%k:%M", &timeinfo);
+                      // strftime(timeBuffer, sizeof(timeBuffer), "%k:%M", &timeinfo);
+                      snprintf(timeBuffer, sizeof(timeBuffer), "%2d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
                   }
               } else {
                 return;
@@ -2141,7 +2143,8 @@ void do_menu_sync_ntp() {
    sync_ntp();
    struct tm timeinfo;
    if (getLocalTime(&timeinfo)) {
-     Serial.println(&timeinfo, "%F %T");
+     print_datetime(timeinfo);
+     // Serial.println(&timeinfo, "%F %T");
      //display_obj.tft.setCursor(0, 110);
      //display_obj.tft.println(&timeinfo, "%F %T");
    } else {
