@@ -112,6 +112,13 @@ extern Settings settings_obj;
 
 struct Menu;
 
+enum class MenuBuildKind : uint8_t {
+  EAGER,
+  MAIN,
+  RECON,
+  WIFI_ROOT,
+};
+
 // Individual Nodes of a menu
 
 struct MenuNode {
@@ -126,9 +133,10 @@ struct MenuNode {
 // Full Menus
 struct Menu {
   String name;
-  LinkedList<MenuNode>* list;
-  Menu                * parentMenu;
+  LinkedList<MenuNode>* list = nullptr;
+  Menu                * parentMenu = nullptr;
   uint16_t               selected = 0;
+  MenuBuildKind          buildKind = MenuBuildKind::EAGER;
 };
 
 
@@ -309,6 +317,9 @@ class MenuFunctions
     void drawGraphSmall(uint8_t *values);
     void renderGraphUI(uint8_t scan_mode = 0);
     void addNodes(Menu* menu, const char* name, uint8_t color, int place, std::function<void()> callable, bool selected = false);
+    void buildLazyMenu(Menu* menu);
+    void releaseLazyMenu(Menu* menu);
+    Menu* lazy_menu_release_pending = nullptr;
     void battery(bool initial = false);
     void battery2(bool initial = false);
     const char* callSetting(const char* key);

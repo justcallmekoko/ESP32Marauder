@@ -257,6 +257,11 @@ void MenuFunctions::displayMenuButtons() {
 // Function to check menu input
 void MenuFunctions::main(uint32_t currentTime)
 {
+  if (lazy_menu_release_pending && lazy_menu_release_pending != current_menu) {
+    this->releaseLazyMenu(lazy_menu_release_pending);
+    lazy_menu_release_pending = nullptr;
+  }
+
   #ifdef HAS_MINI_SCREEN
     if (geofenceMenuRefreshPending) {
       geofenceMenuRefreshPending = false;
@@ -2059,10 +2064,10 @@ void MenuFunctions::RunSetup()
   #endif
    
   // root menu stuff
-  mainMenu.list = new LinkedList<MenuNode>(); // Get list in first menu ready
+  mainMenu.buildKind = MenuBuildKind::MAIN;
 
   // Main menu stuff
-  wifiMenu.list = new LinkedList<MenuNode>(); // Get list in second menu ready
+  wifiMenu.buildKind = MenuBuildKind::WIFI_ROOT;
 #ifdef HAS_BT
   bluetoothMenu.list = new LinkedList<MenuNode>(); // Get list in third menu ready
 #endif
@@ -2147,7 +2152,7 @@ void MenuFunctions::RunSetup()
   #endif
 
   foxHuntMenu.list = new LinkedList<MenuNode>();
-  reconMenu.list = new LinkedList<MenuNode>();
+  reconMenu.buildKind = MenuBuildKind::RECON;
 
   // Work menu names
   mainMenu.name = text_table1[6];
@@ -2221,71 +2226,14 @@ void MenuFunctions::RunSetup()
 
   foxHuntMenu.name = "Fox Hunt";
 
-  // Build Main Menu
+  // The root navigation menus are populated only while active. Their node
+  // storage is released on the next UI cycle after navigation, once the
+  // selecting callback has returned.
   mainMenu.parentMenu = NULL;
   reconMenu.parentMenu = &mainMenu;
-  this->addNodes(&reconMenu, text09, TFTLIGHTGREY, 0, [this]() {
-    this->changeMenu(&mainMenu, true);
-  });
-  this->addNodes(&reconMenu, "Start WiFi", TFTGREEN, WIFI, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    recon_obj.start(ReconMode::WIFI_RECON);
-  });
-  #ifdef HAS_BT
-    this->addNodes(&reconMenu, "Start BLE", TFTCYAN, BLUETOOTH, [this]() {
-      display_obj.clearScreen();
-      this->drawStatusBar();
-      recon_obj.start(ReconMode::BLE_RECON);
-    });
-  #endif
-  this->addNodes(&mainMenu, "Recon", TFTMAGENTA, GENERAL_APPS, [this]() {
-    this->changeMenu(&reconMenu, true);
-  });
-  this->addNodes(&mainMenu, text_table1[7], TFTGREEN, WIFI, [this]() {
-    this->changeMenu(&wifiMenu, true);
-  });
-  #ifdef HAS_BT
-    this->addNodes(&mainMenu, text_table1[19], TFTCYAN, BLUETOOTH, [this]() {
-      this->changeMenu(&bluetoothMenu, true);
-    });
-  #endif
-  #ifdef HAS_GPS
-	if (gps_obj.getGpsModuleStatus()) {
-    	this->addNodes(&mainMenu, text1_66, TFTRED, GPS_MENU, [this]() {
-      	this->changeMenu(&gpsMenu, true);
-    	});
-	}
-  #endif
-  this->addNodes(&mainMenu, text_table1[9], TFTBLUE, DEVICE, [this]() {
-    this->changeMenu(&deviceMenu, true);
-  });
-  this->addNodes(&mainMenu, text_table1[30], TFTLIGHTGREY, REBOOT, []() {
-    ESP.restart();
-  });
 
   // Build WiFi Menu
   wifiMenu.parentMenu = &mainMenu; // Main Menu is second menu parent
-  this->addNodes(&wifiMenu, text09, TFTLIGHTGREY, 0, [this]() {
-    this->changeMenu(wifiMenu.parentMenu, true);
-  });
-  this->addNodes(&wifiMenu, text_table1[31], TFTYELLOW, SNIFFERS, [this]() {
-    this->changeMenu(&wifiSnifferMenu, true);
-  });
-  this->addNodes(&wifiMenu, "Scanners", TFTORANGE, SCANNERS, [this]() {
-    this->changeMenu(&wifiScannerMenu, true);
-  });
-  /*#ifdef HAS_GPS
-    this->addNodes(&wifiMenu, "Wardriving", TFTGREEN, NULL, BEACON_SNIFF, [this]() {
-      this->changeMenu(&wardrivingMenu, true);
-    });
-  #endif*/
-  this->addNodes(&wifiMenu, text_table1[32], TFTRED, ATTACKS, [this]() {
-    this->changeMenu(&wifiAttackMenu, true);
-  });
-  this->addNodes(&wifiMenu, text_table1[33], TFTPURPLE, GENERAL_APPS, [this]() {
-    this->changeMenu(&wifiGeneralMenu, true);
-  });
 
   // Build WiFi scanner Menu
   wifiScannerMenu.parentMenu = &wifiMenu; // Main Menu is second menu parent
@@ -4980,6 +4928,93 @@ void MenuFunctions::buildSDDeleteBrowser(const String& path, bool reset_selectio
 
 
 // Function to add MenuNodes to a menu
+void MenuFunctions::buildLazyMenu(Menu* menu)
+{
+  if (!menu || menu->buildKind == MenuBuildKind::EAGER)
+    return;
+
+  this->releaseLazyMenu(menu);
+  menu->list = new LinkedList<MenuNode>();
+
+  switch (menu->buildKind) {
+    case MenuBuildKind::MAIN:
+      this->addNodes(menu, "Recon", TFTMAGENTA, GENERAL_APPS, [this]() {
+        this->changeMenu(&reconMenu, true);
+      });
+      this->addNodes(menu, text_table1[7], TFTGREEN, WIFI, [this]() {
+        this->changeMenu(&wifiMenu, true);
+      });
+      #ifdef HAS_BT
+        this->addNodes(menu, text_table1[19], TFTCYAN, BLUETOOTH, [this]() {
+          this->changeMenu(&bluetoothMenu, true);
+        });
+      #endif
+      #ifdef HAS_GPS
+        if (gps_obj.getGpsModuleStatus()) {
+          this->addNodes(menu, text1_66, TFTRED, GPS_MENU, [this]() {
+            this->changeMenu(&gpsMenu, true);
+          });
+        }
+      #endif
+      this->addNodes(menu, text_table1[9], TFTBLUE, DEVICE, [this]() {
+        this->changeMenu(&deviceMenu, true);
+      });
+      this->addNodes(menu, text_table1[30], TFTLIGHTGREY, REBOOT, []() {
+        ESP.restart();
+      });
+      break;
+
+    case MenuBuildKind::RECON:
+      this->addNodes(menu, text09, TFTLIGHTGREY, 0, [this]() {
+        this->changeMenu(&mainMenu, true);
+      });
+      this->addNodes(menu, "Start WiFi", TFTGREEN, WIFI, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        recon_obj.start(ReconMode::WIFI_RECON);
+      });
+      #ifdef HAS_BT
+        this->addNodes(menu, "Start BLE", TFTCYAN, BLUETOOTH, [this]() {
+          display_obj.clearScreen();
+          this->drawStatusBar();
+          recon_obj.start(ReconMode::BLE_RECON);
+        });
+      #endif
+      break;
+
+    case MenuBuildKind::WIFI_ROOT:
+      this->addNodes(menu, text09, TFTLIGHTGREY, 0, [this]() {
+        this->changeMenu(wifiMenu.parentMenu, true);
+      });
+      this->addNodes(menu, text_table1[31], TFTYELLOW, SNIFFERS, [this]() {
+        this->changeMenu(&wifiSnifferMenu, true);
+      });
+      this->addNodes(menu, "Scanners", TFTORANGE, SCANNERS, [this]() {
+        this->changeMenu(&wifiScannerMenu, true);
+      });
+      this->addNodes(menu, text_table1[32], TFTRED, ATTACKS, [this]() {
+        this->changeMenu(&wifiAttackMenu, true);
+      });
+      this->addNodes(menu, text_table1[33], TFTPURPLE, GENERAL_APPS, [this]() {
+        this->changeMenu(&wifiGeneralMenu, true);
+      });
+      break;
+
+    case MenuBuildKind::EAGER:
+      break;
+  }
+}
+
+void MenuFunctions::releaseLazyMenu(Menu* menu)
+{
+  if (!menu || menu->buildKind == MenuBuildKind::EAGER || !menu->list)
+    return;
+
+  menu->list->clear();
+  delete menu->list;
+  menu->list = nullptr;
+}
+
 void MenuFunctions::addNodes(Menu * menu, const char* name, uint8_t color, int place, std::function<void()> callable, bool selected)
 {
   //Serial.println("Building node: " + name);
@@ -5213,6 +5248,14 @@ uint16_t MenuFunctions::getColor(uint16_t color) {
 
 // Function to change menu
 void MenuFunctions::changeMenu(Menu* menu, bool simple_change) {
+  if (!menu)
+    return;
+
+  Menu* previous_menu = current_menu;
+
+  if (menu->buildKind != MenuBuildKind::EAGER)
+    this->buildLazyMenu(menu);
+
   #ifdef HAS_SD
     const bool leaving_sd_browser = current_menu == &sdDeleteMenu && menu != &sdDeleteMenu;
   #endif
@@ -5228,6 +5271,10 @@ void MenuFunctions::changeMenu(Menu* menu, bool simple_change) {
     #endif
   }
   current_menu = menu;
+
+  if (previous_menu && previous_menu != current_menu &&
+      previous_menu->buildKind != MenuBuildKind::EAGER)
+    lazy_menu_release_pending = previous_menu;
 
   current_menu->selected = 0;
   marquee_menu = nullptr;
