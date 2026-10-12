@@ -123,7 +123,9 @@ enum class MenuBuildKind : uint8_t {
   WIFI_SCANNER,
   WIFI_SNIFFER,
   WIFI_ATTACK,
+  WIFI_GENERAL,
   BLUETOOTH_SNIFFER,
+  BLUETOOTH_ATTACK,
 };
 
 // Individual Nodes of a menu
@@ -325,6 +327,11 @@ class MenuFunctions
     void renderGraphUI(uint8_t scan_mode = 0);
     void addNodes(Menu* menu, const char* name, uint8_t color, int place, std::function<void()> callable, bool selected = false);
     void buildLazyMenu(Menu* menu);
+    void buildWiFiGeneralMenu();
+    #ifdef HAS_BT
+      void buildBluetoothAttackMenu();
+    #endif
+    bool wifi_general_dependents_initialized = false;
     void releaseLazyMenu(Menu* menu);
     Menu* lazy_menu_release_pending = nullptr;
     void battery(bool initial = false);
