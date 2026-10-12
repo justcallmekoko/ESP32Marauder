@@ -38,7 +38,7 @@ https://www.online-utility.org/image/convert/to/XBM
 #include "settings.h"
 #include "CommandLine.h"
 #include "ReconMission.h"
-#if defined(MARAUDER_V8)
+#if defined(HAS_CSI_MOTION)
   #include "CsiMotionMonitor.h"
 #endif
 #include "lang_var.h"
@@ -86,7 +86,7 @@ Buffer buffer_obj;
 Settings settings_obj;
 CommandLine cli_obj;
 ReconMission recon_obj;
-#if defined(MARAUDER_V8)
+#if defined(HAS_CSI_MOTION)
   CsiMotionMonitor csi_motion_obj;
 #endif
 
@@ -451,7 +451,7 @@ void loop()
   cli_obj.main(currentTime);
   wifi_scan_obj.main(currentTime);
   recon_obj.main(currentTime);
-  #if defined(MARAUDER_V8)
+  #if defined(HAS_CSI_MOTION)
     csi_motion_obj.main(currentTime);
   #endif
 

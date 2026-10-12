@@ -1,6 +1,6 @@
 #include "esp_random.h"
 #include "WiFiScan.h"
-#if defined(MARAUDER_V8)
+#if defined(HAS_CSI_MOTION)
   #include "CsiMotionMonitor.h"
 #endif
 #include "ReconMission.h"
@@ -2768,7 +2768,7 @@ bool WiFiScan::scanning() {
 
 // Function to prepare to run a specific scan
 void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {  
-  #if defined(MARAUDER_V8)
+  #if defined(HAS_CSI_MOTION)
     if (scan_mode == WIFI_SCAN_OFF &&
         currentScanMode == WIFI_SCAN_CSI_MOTION) {
       csi_motion_obj.stop();

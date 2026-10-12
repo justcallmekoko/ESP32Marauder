@@ -2,7 +2,7 @@
 
 #include "configs.h"
 
-#if defined(MARAUDER_V8)
+#if defined(HAS_CSI_MOTION)
 
 #include <Arduino.h>
 #include "esp_wifi.h"

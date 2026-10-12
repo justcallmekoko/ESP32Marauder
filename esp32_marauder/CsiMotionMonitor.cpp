@@ -1,6 +1,6 @@
 #include "CsiMotionMonitor.h"
 
-#if defined(MARAUDER_V8)
+#if defined(HAS_CSI_MOTION)
 
 #include <string.h>
 #include <new>
@@ -202,9 +202,14 @@ const char* CsiMotionMonitor::stateLabel() const {
 }
 
 void CsiMotionMonitor::drawGraph() {
-  const int content_height = SCREEN_HEIGHT - STATUS_BAR_WIDTH;
-  const int graph_y = STATUS_BAR_WIDTH + content_height / 2;
-  const int graph_h = SCREEN_HEIGHT - graph_y - 18;
+  #if defined(MARAUDER_MINI_V3)
+    const int graph_y = STATUS_BAR_WIDTH + 62;
+    const int graph_h = SCREEN_HEIGHT - graph_y;
+  #else
+    const int content_height = SCREEN_HEIGHT - STATUS_BAR_WIDTH;
+    const int graph_y = STATUS_BAR_WIDTH + content_height / 2;
+    const int graph_h = SCREEN_HEIGHT - graph_y - 18;
+  #endif
   display_obj.tft.fillRect(0, graph_y, SCREEN_WIDTH, graph_h, TFT_BLACK);
   display_obj.tft.drawRect(0, graph_y, SCREEN_WIDTH, graph_h, TFT_DARKGREY);
   const uint8_t* history = history_;
@@ -230,6 +235,36 @@ void CsiMotionMonitor::drawGraph() {
 }
 
 void CsiMotionMonitor::draw(uint32_t now_ms) {
+  #if defined(MARAUDER_MINI_V3)
+  const int graph_y = STATUS_BAR_WIDTH + 62;
+  const int title_y = STATUS_BAR_WIDTH + 1;
+  display_obj.tft.fillRect(0, STATUS_BAR_WIDTH, SCREEN_WIDTH,
+                           graph_y - STATUS_BAR_WIDTH, TFT_BLACK);
+  display_obj.tft.setTextSize(1);
+  display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+  display_obj.tft.setCursor(2, title_y);
+  display_obj.tft.print("CSI Motion");
+  display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  display_obj.tft.setCursor(2, title_y + 10);
+  const String display_target = csiScreenName(target_name_);
+  display_obj.tft.printf("AP:%.12s C:%u", display_target.c_str(), channel_);
+  display_obj.tft.setCursor(2, title_y + 20);
+  if (now_ms - started_ms_ < 30000) {
+    display_obj.tft.printf("M:%u R:%u CAL:%u%%", motion_score_, reliability_,
+        static_cast<unsigned>((now_ms - started_ms_) * 100U / 30000U));
+  } else {
+    display_obj.tft.printf("M:%u R:%u %s", motion_score_, reliability_, stateLabel());
+  }
+  display_obj.tft.setCursor(2, title_y + 30);
+  display_obj.tft.printf("A:%u P:%u C:%u", amplitude_score_, phase_score_,
+      correlation_score_);
+  display_obj.tft.setCursor(2, title_y + 40);
+  display_obj.tft.printf("Rate:%u D:%lu", samples_per_second_,
+      static_cast<unsigned long>(dropped_));
+  display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
+  display_obj.tft.setCursor(2, title_y + 50);
+  display_obj.tft.print("Up=Cal C=Stop");
+  #else
   const int content_height = SCREEN_HEIGHT - STATUS_BAR_WIDTH;
   const int graph_y = STATUS_BAR_WIDTH + content_height / 2;
   const int title_y = STATUS_BAR_WIDTH + 2;
@@ -261,6 +296,7 @@ void CsiMotionMonitor::draw(uint32_t now_ms) {
   display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
   display_obj.tft.setCursor(2, graph_y - 12);
   display_obj.tft.print("Top=Recalibrate Bottom=Stop");
+  #endif
   drawGraph();
 }
 

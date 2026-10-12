@@ -141,8 +141,12 @@
   //// END HARDWARE NAMES
 
  //// BOARD FEATURES
-  #if defined(DUAL_MINI_C5)
+ #if defined(DUAL_MINI_C5)
     #define MARAUDER_MINI_V3
+  #endif
+
+  #if defined(MARAUDER_V8) || (defined(MARAUDER_MINI_V3) && !defined(DUAL_MINI_C5))
+    #define HAS_CSI_MOTION
   #endif
 
   #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)

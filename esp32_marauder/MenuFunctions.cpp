@@ -4,7 +4,7 @@
 #include "OwnedListLifecycle.h"
 #include "CensorText.h"
 #include "lang_var.h"
-#if defined(MARAUDER_V8)
+#if defined(HAS_CSI_MOTION)
   #include "CsiMotionMonitor.h"
 #endif
 
@@ -473,7 +473,7 @@ void MenuFunctions::main(uint32_t currentTime)
         (wifi_scan_obj.currentScanMode != GPS_TRACKER) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_GPS_NMEA))
     {
-      #if defined(MARAUDER_V8)
+      #if defined(HAS_CSI_MOTION)
         if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CSI_MOTION) {
           if (t_y < SCREEN_HEIGHT / 2) {
             csi_motion_obj.recalibrate();
@@ -983,6 +983,11 @@ void MenuFunctions::main(uint32_t currentTime)
                   wifi_scan_obj.changeChannel(wifi_scan_obj.dual_band_channels[wifi_scan_obj.dual_band_channel_index]);
                 #endif
               }
+              #if defined(MARAUDER_MINI_V3) && defined(HAS_CSI_MOTION)
+                else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CSI_MOTION) {
+                  csi_motion_obj.recalibrate();
+                }
+              #endif
               else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CHAN_ACT) {
                 #ifndef HAS_DUAL_BAND
                   if (wifi_scan_obj.activity_page < MAX_CHANNEL / CHAN_PER_PAGE) {
@@ -4722,7 +4727,7 @@ void MenuFunctions::buildLazyMenu(Menu* menu)
         this->drawStatusBar();
         wifi_scan_obj.StartScan(WIFI_SCAN_SAE_COMMIT, TFT_GREEN);
       });
-      #if defined(MARAUDER_V8)
+      #if defined(HAS_CSI_MOTION)
         this->addNodes(menu, "CSI Motion Monitor", TFTCYAN, PACKET_MONITOR, [this]() {
           wifiAPMenu.list->clear();
           wifiAPMenu.parentMenu = &wifiSnifferMenu;

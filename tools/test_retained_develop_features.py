@@ -98,5 +98,20 @@ class RetainedDevelopFeatureTests(unittest.TestCase):
         self.assertIn("Serial.begin(115200);", sketch)
         self.assertNotIn("Serial.begin(921600);", sketch)
 
+    def test_csi_motion_is_available_on_mini_v3_with_compact_controls(self):
+        config = (ROOT / "esp32_marauder" / "configs.h").read_text()
+        monitor = (ROOT / "esp32_marauder" / "CsiMotionMonitor.cpp").read_text()
+        menu = (ROOT / "esp32_marauder" / "MenuFunctions.cpp").read_text()
+        self.assertIn(
+            "defined(MARAUDER_MINI_V3) && !defined(DUAL_MINI_C5)",
+            config,
+        )
+        self.assertIn('display_obj.tft.print("Up=Cal C=Stop");', monitor)
+        self.assertIn(
+            "else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CSI_MOTION)",
+            menu,
+        )
+        self.assertIn("csi_motion_obj.recalibrate();", menu)
+
 if __name__ == "__main__":
     unittest.main()
