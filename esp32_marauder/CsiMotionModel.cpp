@@ -88,7 +88,9 @@ void CsiMotionModel::addSample(const int8_t* iq, size_t length, int8_t rssi,
   }
   if (calibrated_) {
     const float raw = disturbance / static_cast<float>(carriers);
-    const float mapped = clampf((raw - 1.2f) * 28.0f, 0.0f, 100.0f);
+    // Hardware testing on ESP32-C5 showed useful motion separation in a much
+    // narrower raw range than the original conservative mapping exposed.
+    const float mapped = clampf((raw - 1.18f) * 220.0f, 0.0f, 100.0f);
     smoothed_score_ += (mapped - smoothed_score_) * 0.18f;
     motion_score_ = static_cast<uint8_t>(smoothed_score_ + 0.5f);
     if (motion_score_ < 12) {
@@ -118,10 +120,14 @@ void CsiMotionModel::tick(uint32_t now_ms, uint32_t accepted, uint32_t dropped) 
     quality += rssi_mean_ > -75 ? 20 : rssi_mean_ > -85 ? 12 : 4;
     quality += rssi_deviation_ < 3.0f ? 20 : rssi_deviation_ < 7.0f ? 12 : 3;
     const uint32_t received = new_samples + new_drops;
-    quality += received == 0 ? 0 :
-        static_cast<int>((new_samples * 15U) / received);
+    if (received != 0) {
+      quality += static_cast<int>((new_samples * 15U) / received);
+      quality -= static_cast<int>((new_drops * 60U) / received);
+    }
     if (samples_per_second_ < 2 && quality > 20)
       quality = 20;
+    if (quality < 0)
+      quality = 0;
     reliability_ = calibrated_ ? static_cast<uint8_t>(quality > 100 ? 100 : quality)
                                : calibrationPercent(now_ms) / 4;
 
@@ -129,11 +135,11 @@ void CsiMotionModel::tick(uint32_t now_ms, uint32_t accepted, uint32_t dropped) 
       state_ = State::CALIBRATING;
     } else if (samples_per_second_ < 2 || reliability_ < 25) {
       state_ = State::INSUFFICIENT_SAMPLES;
-    } else if (motion_score_ >= 55) {
+    } else if (motion_score_ >= kMotionThreshold) {
       motion_votes_ = motion_votes_ < 5 ? motion_votes_ + 1 : 5;
       still_votes_ = 0;
       state_ = motion_votes_ >= 2 ? State::MOTION : State::POSSIBLE_MOTION;
-    } else if (motion_score_ >= 28) {
+    } else if (motion_score_ >= kPossibleMotionThreshold) {
       motion_votes_ = 0;
       still_votes_ = 0;
       state_ = State::POSSIBLE_MOTION;

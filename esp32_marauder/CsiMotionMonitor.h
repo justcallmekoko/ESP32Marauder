@@ -17,7 +17,7 @@ class CsiMotionMonitor {
   void recalibrate();
 
  private:
-  static constexpr uint8_t kQueueSize = 16;
+  static constexpr uint8_t kQueueSize = 64;
   static constexpr uint16_t kMaxCsiBytes = 256;
   struct Sample {
     uint16_t length;

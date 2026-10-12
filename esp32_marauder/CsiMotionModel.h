@@ -7,6 +7,8 @@ class CsiMotionModel {
  public:
   static constexpr size_t kMaxCarriers = 128;
   static constexpr size_t kHistorySize = 160;
+  static constexpr uint8_t kPossibleMotionThreshold = 12;
+  static constexpr uint8_t kMotionThreshold = 28;
 
   enum class State : uint8_t {
     CALIBRATING,

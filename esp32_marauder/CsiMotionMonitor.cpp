@@ -150,9 +150,11 @@ void CsiMotionMonitor::drawGraph() {
     int y1 = graph_y + graph_h - 2 - (history[a] * (graph_h - 4) / 100);
     int y2 = graph_y + graph_h - 2 - (history[b] * (graph_h - 4) / 100);
     display_obj.tft.drawLine(x - 1, y1, x, y2,
-                            history[b] >= 55 ? TFT_RED : TFT_CYAN);
+                            history[b] >= CsiMotionModel::kMotionThreshold
+                                ? TFT_RED : TFT_CYAN);
   }
-  int threshold_y = graph_y + graph_h - 2 - (55 * (graph_h - 4) / 100);
+  int threshold_y = graph_y + graph_h - 2 -
+      (CsiMotionModel::kMotionThreshold * (graph_h - 4) / 100);
   display_obj.tft.drawFastHLine(1, threshold_y, SCREEN_WIDTH - 2, TFT_ORANGE);
 }
 
@@ -200,7 +202,7 @@ void CsiMotionMonitor::main(uint32_t now_ms) {
     read_index_ = static_cast<uint8_t>((read_index_ + 1) % kQueueSize);
   }
   model_.tick(now_ms, accepted_, dropped_);
-  if (now_ms - last_draw_ms_ >= 250) {
+  if (now_ms - last_draw_ms_ >= 500) {
     last_draw_ms_ = now_ms;
     draw(now_ms);
   }
