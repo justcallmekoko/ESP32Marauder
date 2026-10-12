@@ -117,6 +117,9 @@ enum class MenuBuildKind : uint8_t {
   MAIN,
   RECON,
   WIFI_ROOT,
+  BLUETOOTH_ROOT,
+  DEVICE_ROOT,
+  GPS_ROOT,
 };
 
 // Individual Nodes of a menu

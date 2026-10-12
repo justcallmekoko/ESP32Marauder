@@ -2069,12 +2069,12 @@ void MenuFunctions::RunSetup()
   // Main menu stuff
   wifiMenu.buildKind = MenuBuildKind::WIFI_ROOT;
 #ifdef HAS_BT
-  bluetoothMenu.list = new LinkedList<MenuNode>(); // Get list in third menu ready
+  bluetoothMenu.buildKind = MenuBuildKind::BLUETOOTH_ROOT;
 #endif
-  deviceMenu.list = new LinkedList<MenuNode>();
+  deviceMenu.buildKind = MenuBuildKind::DEVICE_ROOT;
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
-      gpsMenu.list = new LinkedList<MenuNode>();
+      gpsMenu.buildKind = MenuBuildKind::GPS_ROOT;
       gpsInfoMenu.list = new LinkedList<MenuNode>();
     }
   #endif
@@ -3497,15 +3497,6 @@ void MenuFunctions::RunSetup()
 #ifdef HAS_BT
   // Build Bluetooth Menu
   bluetoothMenu.parentMenu = &mainMenu; // Second Menu is third menu parent
-  this->addNodes(&bluetoothMenu, text09, TFTLIGHTGREY, 0, [this]() {
-    this->changeMenu(bluetoothMenu.parentMenu, true);
-  });
-  this->addNodes(&bluetoothMenu, text_table1[31], TFTYELLOW, SNIFFERS, [this]() {
-    this->changeMenu(&bluetoothSnifferMenu, true);
-  });
-  this->addNodes(&bluetoothMenu, "Bluetooth Attacks", TFTRED, ATTACKS, [this]() {
-    this->changeMenu(&bluetoothAttackMenu, true);
-  });
 
   // Build bluetooth sniffer Menu
   bluetoothSnifferMenu.parentMenu = &bluetoothMenu; // Second Menu is third menu parent
@@ -3759,80 +3750,6 @@ void MenuFunctions::RunSetup()
 
   // Device menu
   deviceMenu.parentMenu = &mainMenu;
-  this->addNodes(&deviceMenu, text09, TFTLIGHTGREY, 0, [this]() {
-    this->changeMenu(deviceMenu.parentMenu, true);
-  });
-
-  #ifdef HAS_SD
-    if (sd_obj.supported) {
-
-      sdDeleteMenu.parentMenu = &deviceMenu;
-
-      this->addNodes(&deviceMenu, "Update Firmware", TFTORANGE, SD_UPDATE, [this]() {
-        display_obj.clearScreen();
-        display_obj.tft.setTextWrap(false);
-        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-        display_obj.tft.println("Loading...");
-
-        // Clear menu and lists
-        this->buildSDFileMenu(true);
-
-        this->changeMenu(&sdDeleteMenu, true);
-      });
-
-      this->addNodes(&deviceMenu, "Backup SPIFFS", TFTGREEN, SD_UPDATE, [this]() {
-        cli_obj.runCommand(BACKUP_SPIFFS_CMD);
-      });
-
-      this->addNodes(&deviceMenu, "Restore SPIFFS", TFTORANGE, SD_UPDATE, [this]() {
-        cli_obj.runCommand(RESTORE_SPIFFS_CMD);
-      });
-
-    }
-  #endif
-
-  this->addNodes(&deviceMenu, "Save/Load Files", TFTCYAN, SD_UPDATE, [this]() {
-    this->changeMenu(&saveFileMenu, true);
-  });
-
-  #ifndef HAS_MINI_SCREEN
-    this->addNodes(&deviceMenu, "Brightness", TFTYELLOW, BRIGHTNESS, [this]() {
-      this->brightnessMode();
-    });
-  #endif
-
-  this->addNodes(&deviceMenu, text_table1[17], TFTWHITE, DEVICE_INFO, [this]() {
-    wifi_scan_obj.currentScanMode = SHOW_INFO;
-    this->changeMenu(&infoMenu, true);
-    wifi_scan_obj.RunInfo();
-  });
-  this->addNodes(&deviceMenu, text08, TFTBLUE, SETTINGS, [this]() {
-    this->changeMenu(&settingsMenu, true);
-  });
-  this->addNodes(&deviceMenu, "Geofences", TFTGREEN, GPS_MENU, [this]() {
-    this->buildGeofenceMenu();
-  });
-
-  #ifdef HAS_SD
-    if (sd_obj.supported) {
-
-      sdDeleteMenu.parentMenu = &deviceMenu;
-
-      this->addNodes(&deviceMenu, "SD File Browser", TFTCYAN, SD_UPDATE, [this]() {
-        display_obj.clearScreen();
-        display_obj.tft.setTextWrap(false);
-        display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
-        display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-        display_obj.tft.println("Loading...");
-
-        // Clear menu and lists
-        this->buildSDDeleteBrowser("/", true);
-
-        this->changeMenu(&sdDeleteMenu, true);
-      });
-    }
-  #endif
 
   // Save Files Menu
   saveFileMenu.parentMenu = &deviceMenu;
@@ -3898,34 +3815,6 @@ void MenuFunctions::RunSetup()
   #ifdef HAS_GPS
     if (gps_obj.getGpsModuleStatus()) {
       gpsMenu.parentMenu = &mainMenu; // Main Menu is second menu parent
-
-      this->addNodes(&gpsMenu, text09, TFTLIGHTGREY, 0, [this]() {
-        this->changeMenu(gpsMenu.parentMenu, true);
-      });
-
-      this->addNodes(&gpsMenu, "GPS Data", TFTRED, GPS_MENU, [this]() {
-        wifi_scan_obj.currentScanMode = WIFI_SCAN_GPS_DATA;
-        this->changeMenu(&gpsInfoMenu, true);
-        wifi_scan_obj.StartScan(WIFI_SCAN_GPS_DATA, TFT_CYAN);
-      });
-
-      this->addNodes(&gpsMenu, "NMEA Stream", TFTORANGE, GPS_MENU, [this]() {
-        wifi_scan_obj.currentScanMode = WIFI_SCAN_GPS_NMEA;
-        this->changeMenu(&gpsInfoMenu, true);
-        wifi_scan_obj.StartScan(WIFI_SCAN_GPS_NMEA, TFT_ORANGE);
-      });
-
-      this->addNodes(&gpsMenu, "GPS Tracker", TFTGREEN, GPS_MENU, [this]() {
-        wifi_scan_obj.currentScanMode = GPS_TRACKER;
-        this->changeMenu(&gpsInfoMenu, true);
-        wifi_scan_obj.StartScan(GPS_TRACKER, TFT_CYAN);
-      });
-
-      this->addNodes(&gpsMenu, "GPS POI", TFTCYAN, GPS_MENU, [this]() {
-        wifi_scan_obj.StartScan(GPS_POI, TFT_CYAN);
-        wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
-        this->changeMenu(&gpsPOIMenu, true);
-      });
 
       // GPS POI Menu
       gpsPOIMenu.parentMenu = &gpsMenu;
@@ -4999,6 +4888,107 @@ void MenuFunctions::buildLazyMenu(Menu* menu)
         this->changeMenu(&wifiGeneralMenu, true);
       });
       break;
+
+    #ifdef HAS_BT
+      case MenuBuildKind::BLUETOOTH_ROOT:
+        this->addNodes(menu, text09, TFTLIGHTGREY, 0, [this]() {
+          this->changeMenu(bluetoothMenu.parentMenu, true);
+        });
+        this->addNodes(menu, text_table1[31], TFTYELLOW, SNIFFERS, [this]() {
+          this->changeMenu(&bluetoothSnifferMenu, true);
+        });
+        this->addNodes(menu, "Bluetooth Attacks", TFTRED, ATTACKS, [this]() {
+          this->changeMenu(&bluetoothAttackMenu, true);
+        });
+        break;
+    #endif
+
+    case MenuBuildKind::DEVICE_ROOT:
+      this->addNodes(menu, text09, TFTLIGHTGREY, 0, [this]() {
+        this->changeMenu(deviceMenu.parentMenu, true);
+      });
+      #ifdef HAS_SD
+        if (sd_obj.supported) {
+          sdDeleteMenu.parentMenu = &deviceMenu;
+          this->addNodes(menu, "Update Firmware", TFTORANGE, SD_UPDATE, [this]() {
+            display_obj.clearScreen();
+            display_obj.tft.setTextWrap(false);
+            display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+            display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+            display_obj.tft.println("Loading...");
+            this->buildSDFileMenu(true);
+            this->changeMenu(&sdDeleteMenu, true);
+          });
+          this->addNodes(menu, "Backup SPIFFS", TFTGREEN, SD_UPDATE, [this]() {
+            cli_obj.runCommand(BACKUP_SPIFFS_CMD);
+          });
+          this->addNodes(menu, "Restore SPIFFS", TFTORANGE, SD_UPDATE, [this]() {
+            cli_obj.runCommand(RESTORE_SPIFFS_CMD);
+          });
+        }
+      #endif
+      this->addNodes(menu, "Save/Load Files", TFTCYAN, SD_UPDATE, [this]() {
+        this->changeMenu(&saveFileMenu, true);
+      });
+      #ifndef HAS_MINI_SCREEN
+        this->addNodes(menu, "Brightness", TFTYELLOW, BRIGHTNESS, [this]() {
+          this->brightnessMode();
+        });
+      #endif
+      this->addNodes(menu, text_table1[17], TFTWHITE, DEVICE_INFO, [this]() {
+        wifi_scan_obj.currentScanMode = SHOW_INFO;
+        this->changeMenu(&infoMenu, true);
+        wifi_scan_obj.RunInfo();
+      });
+      this->addNodes(menu, text08, TFTBLUE, SETTINGS, [this]() {
+        this->changeMenu(&settingsMenu, true);
+      });
+      this->addNodes(menu, "Geofences", TFTGREEN, GPS_MENU, [this]() {
+        this->buildGeofenceMenu();
+      });
+      #ifdef HAS_SD
+        if (sd_obj.supported) {
+          sdDeleteMenu.parentMenu = &deviceMenu;
+          this->addNodes(menu, "SD File Browser", TFTCYAN, SD_UPDATE, [this]() {
+            display_obj.clearScreen();
+            display_obj.tft.setTextWrap(false);
+            display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+            display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
+            display_obj.tft.println("Loading...");
+            this->buildSDDeleteBrowser("/", true);
+            this->changeMenu(&sdDeleteMenu, true);
+          });
+        }
+      #endif
+      break;
+
+    #ifdef HAS_GPS
+      case MenuBuildKind::GPS_ROOT:
+        this->addNodes(menu, text09, TFTLIGHTGREY, 0, [this]() {
+          this->changeMenu(gpsMenu.parentMenu, true);
+        });
+        this->addNodes(menu, "GPS Data", TFTRED, GPS_MENU, [this]() {
+          wifi_scan_obj.currentScanMode = WIFI_SCAN_GPS_DATA;
+          this->changeMenu(&gpsInfoMenu, true);
+          wifi_scan_obj.StartScan(WIFI_SCAN_GPS_DATA, TFT_CYAN);
+        });
+        this->addNodes(menu, "NMEA Stream", TFTORANGE, GPS_MENU, [this]() {
+          wifi_scan_obj.currentScanMode = WIFI_SCAN_GPS_NMEA;
+          this->changeMenu(&gpsInfoMenu, true);
+          wifi_scan_obj.StartScan(WIFI_SCAN_GPS_NMEA, TFT_ORANGE);
+        });
+        this->addNodes(menu, "GPS Tracker", TFTGREEN, GPS_MENU, [this]() {
+          wifi_scan_obj.currentScanMode = GPS_TRACKER;
+          this->changeMenu(&gpsInfoMenu, true);
+          wifi_scan_obj.StartScan(GPS_TRACKER, TFT_CYAN);
+        });
+        this->addNodes(menu, "GPS POI", TFTCYAN, GPS_MENU, [this]() {
+          wifi_scan_obj.StartScan(GPS_POI, TFT_CYAN);
+          wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
+          this->changeMenu(&gpsPOIMenu, true);
+        });
+        break;
+    #endif
 
     case MenuBuildKind::EAGER:
       break;
