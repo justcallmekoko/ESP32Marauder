@@ -78,7 +78,8 @@ bool CsiMotionMonitor::start(const uint8_t target[6], const String& name,
   }
   active_ = true;
   wifi_scan_obj.currentScanMode = WIFI_SCAN_CSI_MOTION;
-  display_obj.clearScreen();
+  display_obj.tft.fillRect(0, STATUS_BAR_WIDTH, SCREEN_WIDTH,
+                           SCREEN_HEIGHT - STATUS_BAR_WIDTH, TFT_BLACK);
   draw(millis());
   return true;
 }
@@ -130,7 +131,8 @@ const char* CsiMotionMonitor::stateLabel() const {
 }
 
 void CsiMotionMonitor::drawGraph() {
-  const int graph_y = SCREEN_HEIGHT / 2;
+  const int content_height = SCREEN_HEIGHT - STATUS_BAR_WIDTH;
+  const int graph_y = STATUS_BAR_WIDTH + content_height / 2;
   const int graph_h = SCREEN_HEIGHT - graph_y - 18;
   display_obj.tft.fillRect(0, graph_y, SCREEN_WIDTH, graph_h, TFT_BLACK);
   display_obj.tft.drawRect(0, graph_y, SCREEN_WIDTH, graph_h, TFT_DARKGREY);
@@ -155,32 +157,36 @@ void CsiMotionMonitor::drawGraph() {
 }
 
 void CsiMotionMonitor::draw(uint32_t now_ms) {
-  display_obj.tft.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT / 2, TFT_BLACK);
+  const int content_height = SCREEN_HEIGHT - STATUS_BAR_WIDTH;
+  const int graph_y = STATUS_BAR_WIDTH + content_height / 2;
+  const int title_y = STATUS_BAR_WIDTH + 2;
+  display_obj.tft.fillRect(0, STATUS_BAR_WIDTH, SCREEN_WIDTH,
+                           graph_y - STATUS_BAR_WIDTH, TFT_BLACK);
   display_obj.tft.setTextSize(1);
   display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-  display_obj.tft.setCursor(2, 2);
+  display_obj.tft.setCursor(2, title_y);
   display_obj.tft.print("CSI Motion Monitor");
   display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  display_obj.tft.setCursor(2, 16);
+  display_obj.tft.setCursor(2, title_y + 14);
   display_obj.tft.printf("AP: %.20s", target_name_.c_str());
-  display_obj.tft.setCursor(2, 28);
+  display_obj.tft.setCursor(2, title_y + 26);
   display_obj.tft.printf("%02X:%02X:%02X:%02X:%02X:%02X CH:%u",
       target_[0], target_[1], target_[2], target_[3], target_[4], target_[5],
       channel_);
-  display_obj.tft.setCursor(2, 40);
+  display_obj.tft.setCursor(2, title_y + 38);
   display_obj.tft.printf("RSSI:%d Rate:%u/s Drop:%lu", model_.rssi(),
       model_.samplesPerSecond(), static_cast<unsigned long>(dropped_));
-  display_obj.tft.setCursor(2, 52);
+  display_obj.tft.setCursor(2, title_y + 50);
   display_obj.tft.printf("Motion:%u Reliability:%u", model_.motionScore(),
       model_.reliability());
-  display_obj.tft.setCursor(2, 64);
+  display_obj.tft.setCursor(2, title_y + 62);
   display_obj.tft.printf("State: %s", stateLabel());
   if (!model_.calibrated()) {
-    display_obj.tft.setCursor(2, 76);
+    display_obj.tft.setCursor(2, title_y + 74);
     display_obj.tft.printf("Keep still: %u%%", model_.calibrationPercent(now_ms));
   }
   display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
-  display_obj.tft.setCursor(2, SCREEN_HEIGHT / 2 - 12);
+  display_obj.tft.setCursor(2, graph_y - 12);
   display_obj.tft.print("Top=Recalibrate Bottom=Stop");
   drawGraph();
 }
