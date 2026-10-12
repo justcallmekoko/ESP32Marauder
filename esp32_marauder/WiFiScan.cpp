@@ -1,5 +1,8 @@
 #include "esp_random.h"
 #include "WiFiScan.h"
+#if defined(MARAUDER_V8)
+  #include "CsiMotionMonitor.h"
+#endif
 #include "ReconMission.h"
 #include "FoxHuntTarget.h"
 #include "BeaconFrame.h"
@@ -2743,6 +2746,14 @@ bool WiFiScan::scanning() {
 
 // Function to prepare to run a specific scan
 void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {  
+  #if defined(MARAUDER_V8)
+    if (scan_mode == WIFI_SCAN_OFF &&
+        currentScanMode == WIFI_SCAN_CSI_MOTION) {
+      csi_motion_obj.stop();
+      currentScanMode = WIFI_SCAN_OFF;
+      return;
+    }
+  #endif
   this->initWiFi(scan_mode);
   if (scan_mode == WIFI_SCAN_OFF) {
     #ifdef HAS_ACT_LED

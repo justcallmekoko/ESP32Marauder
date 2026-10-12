@@ -1,0 +1,152 @@
+#include "CsiMotionModel.h"
+
+#include <math.h>
+
+namespace {
+float clampf(float value, float low, float high) {
+  return value < low ? low : (value > high ? high : value);
+}
+}
+
+void CsiMotionModel::reset(uint32_t now_ms, uint32_t calibration_ms) {
+  for (size_t i = 0; i < kMaxCarriers; ++i) {
+    baseline_[i] = 0.0f;
+    noise_[i] = 0.02f;
+  }
+  for (size_t i = 0; i < kHistorySize; ++i)
+    history_[i] = 0;
+  carrier_count_ = 0;
+  history_head_ = 0;
+  started_ms_ = now_ms;
+  calibration_ms_ = calibration_ms;
+  last_tick_ms_ = now_ms;
+  last_history_ms_ = now_ms;
+  previous_accepted_ = 0;
+  previous_dropped_ = 0;
+  rssi_mean_ = -100.0f;
+  rssi_deviation_ = 0.0f;
+  smoothed_score_ = 0.0f;
+  samples_per_second_ = 0;
+  last_rssi_ = -127;
+  motion_score_ = 0;
+  reliability_ = 0;
+  motion_votes_ = 0;
+  still_votes_ = 0;
+  calibrated_ = false;
+  state_ = State::CALIBRATING;
+}
+
+uint8_t CsiMotionModel::calibrationPercent(uint32_t now_ms) const {
+  if (calibrated_ || calibration_ms_ == 0)
+    return 100;
+  const uint32_t elapsed = now_ms - started_ms_;
+  return elapsed >= calibration_ms_ ? 100 :
+      static_cast<uint8_t>((elapsed * 100U) / calibration_ms_);
+}
+
+void CsiMotionModel::addSample(const int8_t* iq, size_t length, int8_t rssi,
+                               uint32_t now_ms) {
+  if (!iq || length < 16)
+    return;
+  size_t carriers = length / 2;
+  if (carriers > kMaxCarriers)
+    carriers = kMaxCarriers;
+  carrier_count_ = carriers;
+  last_rssi_ = rssi;
+  const float rssi_delta = static_cast<float>(rssi) - rssi_mean_;
+  rssi_mean_ += rssi_delta * 0.03f;
+  rssi_deviation_ += (fabsf(rssi_delta) - rssi_deviation_) * 0.03f;
+
+  float magnitudes[kMaxCarriers];
+  float total = 0.0f;
+  for (size_t i = 0; i < carriers; ++i) {
+    const float real = static_cast<float>(iq[i * 2]);
+    const float imag = static_cast<float>(iq[i * 2 + 1]);
+    magnitudes[i] = sqrtf(real * real + imag * imag);
+    total += magnitudes[i];
+  }
+  if (total < 1.0f)
+    return;
+  const float scale = static_cast<float>(carriers) / total;
+  float disturbance = 0.0f;
+  for (size_t i = 0; i < carriers; ++i) {
+    const float normalized = magnitudes[i] * scale;
+    if (!calibrated_) {
+      const float alpha = baseline_[i] == 0.0f ? 1.0f : 0.025f;
+      const float delta = normalized - baseline_[i];
+      baseline_[i] += delta * alpha;
+      noise_[i] += (fabsf(delta) - noise_[i]) * 0.025f;
+    } else {
+      const float deviation = fabsf(normalized - baseline_[i]);
+      disturbance += deviation / (noise_[i] + 0.025f);
+    }
+  }
+
+  if (!calibrated_ && now_ms - started_ms_ >= calibration_ms_) {
+    calibrated_ = true;
+    state_ = State::INSUFFICIENT_SAMPLES;
+  }
+  if (calibrated_) {
+    const float raw = disturbance / static_cast<float>(carriers);
+    const float mapped = clampf((raw - 1.2f) * 28.0f, 0.0f, 100.0f);
+    smoothed_score_ += (mapped - smoothed_score_) * 0.18f;
+    motion_score_ = static_cast<uint8_t>(smoothed_score_ + 0.5f);
+    if (motion_score_ < 12) {
+      for (size_t i = 0; i < carriers; ++i) {
+        const float normalized = magnitudes[i] * scale;
+        baseline_[i] += (normalized - baseline_[i]) * 0.001f;
+      }
+    }
+  }
+}
+
+void CsiMotionModel::tick(uint32_t now_ms, uint32_t accepted, uint32_t dropped) {
+  const uint32_t elapsed = now_ms - last_tick_ms_;
+  if (elapsed >= 1000) {
+    const uint32_t new_samples = accepted - previous_accepted_;
+    const uint32_t new_drops = dropped - previous_dropped_;
+    samples_per_second_ = static_cast<uint16_t>(
+        new_samples > 65535 ? 65535 : (new_samples * 1000U) / elapsed);
+    previous_accepted_ = accepted;
+    previous_dropped_ = dropped;
+    last_tick_ms_ = now_ms;
+
+    int quality = samples_per_second_ >= 20 ? 45 :
+                  samples_per_second_ >= 10 ? 35 :
+                  samples_per_second_ >= 5 ? 24 :
+                  samples_per_second_ >= 2 ? 12 : 0;
+    quality += rssi_mean_ > -75 ? 20 : rssi_mean_ > -85 ? 12 : 4;
+    quality += rssi_deviation_ < 3.0f ? 20 : rssi_deviation_ < 7.0f ? 12 : 3;
+    const uint32_t received = new_samples + new_drops;
+    quality += received == 0 ? 0 :
+        static_cast<int>((new_samples * 15U) / received);
+    if (samples_per_second_ < 2 && quality > 20)
+      quality = 20;
+    reliability_ = calibrated_ ? static_cast<uint8_t>(quality > 100 ? 100 : quality)
+                               : calibrationPercent(now_ms) / 4;
+
+    if (!calibrated_) {
+      state_ = State::CALIBRATING;
+    } else if (samples_per_second_ < 2 || reliability_ < 25) {
+      state_ = State::INSUFFICIENT_SAMPLES;
+    } else if (motion_score_ >= 55) {
+      motion_votes_ = motion_votes_ < 5 ? motion_votes_ + 1 : 5;
+      still_votes_ = 0;
+      state_ = motion_votes_ >= 2 ? State::MOTION : State::POSSIBLE_MOTION;
+    } else if (motion_score_ >= 28) {
+      motion_votes_ = 0;
+      still_votes_ = 0;
+      state_ = State::POSSIBLE_MOTION;
+    } else {
+      motion_votes_ = 0;
+      still_votes_ = still_votes_ < 3 ? still_votes_ + 1 : 3;
+      if (still_votes_ >= 2)
+        state_ = State::STILL;
+    }
+  }
+  if (now_ms - last_history_ms_ >= 250) {
+    last_history_ms_ = now_ms;
+    history_[history_head_] = reliability_ < 15 ? 255 : motion_score_;
+    history_head_ = (history_head_ + 1) % kHistorySize;
+  }
+}

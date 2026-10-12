@@ -3,6 +3,9 @@
 #include "CommandLine.h"
 #include "OwnedListLifecycle.h"
 #include "lang_var.h"
+#if defined(MARAUDER_V8)
+  #include "CsiMotionMonitor.h"
+#endif
 
 #ifdef HAS_SCREEN
 
@@ -356,6 +359,9 @@ void MenuFunctions::main(uint32_t currentTime)
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_MIMIC) &&
 	  (wifi_scan_obj.currentScanMode != WIFI_ATTACK_FUNNY_BEACON) &&
       (wifi_scan_obj.currentScanMode != WIFI_ATTACK_RICK_ROLL))
+    #if defined(MARAUDER_V8)
+      if (wifi_scan_obj.currentScanMode != WIFI_SCAN_CSI_MOTION)
+    #endif
     display_obj.displayBuffer();
 
 
@@ -445,6 +451,20 @@ void MenuFunctions::main(uint32_t currentTime)
         (wifi_scan_obj.currentScanMode != GPS_TRACKER) &&
         (wifi_scan_obj.currentScanMode != WIFI_SCAN_GPS_NMEA))
     {
+      #if defined(MARAUDER_V8)
+        if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CSI_MOTION) {
+          if (t_y < SCREEN_HEIGHT / 2) {
+            csi_motion_obj.recalibrate();
+          } else {
+            wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+            display_obj.init();
+            changeMenu(current_menu, true);
+          }
+          x = -1;
+          y = -1;
+          return;
+        }
+      #endif
       // Stop the current scan
       if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_SAE_COMMIT) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_DETECT_FOLLOW) ||
@@ -510,6 +530,7 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == BT_SCAN_SKIMMERS) ||
           (wifi_scan_obj.currentScanMode == REMOTE_ID_SCAN_ALL) ||
           (wifi_scan_obj.currentScanMode == REMOTE_ID_SCAN_TARGET) ||
+          (wifi_scan_obj.currentScanMode == WIFI_SCAN_CSI_MOTION) ||
           (wifi_scan_obj.currentScanMode == BT_SCAN_ANALYZER))
       {
         wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
@@ -626,6 +647,7 @@ void MenuFunctions::main(uint32_t currentTime)
             (wifi_scan_obj.currentScanMode == WIFI_SCAN_PACKET_RATE) ||
             (wifi_scan_obj.currentScanMode == REMOTE_ID_SCAN_ALL) ||
             (wifi_scan_obj.currentScanMode == REMOTE_ID_SCAN_TARGET) ||
+            (wifi_scan_obj.currentScanMode == WIFI_SCAN_CSI_MOTION) ||
             (wifi_scan_obj.currentScanMode == BT_SCAN_ANALYZER))
         {
           wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
@@ -4668,6 +4690,32 @@ void MenuFunctions::buildLazyMenu(Menu* menu)
         this->drawStatusBar();
         wifi_scan_obj.StartScan(WIFI_SCAN_SAE_COMMIT, TFT_GREEN);
       });
+      #if defined(MARAUDER_V8)
+        this->addNodes(menu, "CSI Motion Monitor", TFTCYAN, PACKET_MONITOR, [this]() {
+          wifiAPMenu.list->clear();
+          wifiAPMenu.parentMenu = &wifiSnifferMenu;
+          this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, 0, [this]() {
+            this->changeMenu(&wifiSnifferMenu, true);
+          });
+          if (access_points->size() == 0) {
+            this->addNodes(&wifiAPMenu, "Run AP Scan First", TFTORANGE, 255, []() {});
+          }
+          for (int i = 0; i < access_points->size(); ++i) {
+            const String label = access_points->get(i).essid.length() ?
+                access_points->get(i).essid : macToString(access_points->get(i).bssid);
+            this->addNodes(&wifiAPMenu, label.c_str(), TFTCYAN, 255, [this, i]() {
+              const AccessPoint& ap = access_points->get(i);
+              if (!csi_motion_obj.start(ap.bssid, ap.essid, ap.channel)) {
+                display_obj.clearScreen();
+                display_obj.showCenterText("CSI start failed", SCREEN_HEIGHT / 2);
+                delay(1500);
+                this->changeMenu(&wifiSnifferMenu, true);
+              }
+            });
+          }
+          this->changeMenu(&wifiAPMenu, true);
+        });
+      #endif
       #ifdef HAS_GPS
         if (gps_obj.getGpsModuleStatus()) {
           this->addNodes(menu, "Wardrive", TFTGREEN, BEACON_SNIFF, [this]() {
