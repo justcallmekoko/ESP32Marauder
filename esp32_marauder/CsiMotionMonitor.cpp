@@ -4,7 +4,6 @@
 
 #include <string.h>
 #include <new>
-#include "mbedtls/base64.h"
 #include "WiFiScan.h"
 #include "Display.h"
 #include "settings.h"
@@ -94,7 +93,7 @@ bool CsiMotionMonitor::start(const uint8_t target[6], const String& name,
   target_state->accepted = target_state->dropped = 0;
   target_state->model.reset(millis(), 30000);
   write_index_ = read_index_ = 0;
-  accepted_ = dropped_ = sequence_ = 0;
+  accepted_ = dropped_ = 0;
   started_ms_ = millis();
   last_fusion_ms_ = started_ms_;
   motion_score_ = amplitude_score_ = phase_score_ = correlation_score_ = 0;
@@ -111,7 +110,6 @@ bool CsiMotionMonitor::start(const uint8_t target[6], const String& name,
   }
   active_ = true;
   wifi_scan_obj.currentScanMode = WIFI_SCAN_CSI_MOTION;
-  writeSessionRecord("START", started_ms_);
   display_obj.tft.fillRect(0, STATUS_BAR_WIDTH, SCREEN_WIDTH,
                            SCREEN_HEIGHT - STATUS_BAR_WIDTH, TFT_BLACK);
   draw(millis());
@@ -119,8 +117,6 @@ bool CsiMotionMonitor::start(const uint8_t target[6], const String& name,
 }
 
 void CsiMotionMonitor::stop() {
-  if (active_)
-    writeSessionRecord("STOP", millis());
   active_ = false;
   releaseWiFi();
   releaseTargets();
@@ -130,7 +126,7 @@ void CsiMotionMonitor::stop() {
 
 void CsiMotionMonitor::recalibrate() {
   write_index_ = read_index_ = 0;
-  accepted_ = dropped_ = sequence_ = 0;
+  accepted_ = dropped_ = 0;
   started_ms_ = millis();
   for (uint16_t i = 0; i < target_count_; ++i) {
     targets_[i].accepted = targets_[i].dropped = 0;
@@ -142,7 +138,6 @@ void CsiMotionMonitor::recalibrate() {
   state_ = CsiMotionModel::State::CALIBRATING;
   memset(history_, 0, sizeof(history_));
   history_head_ = 0;
-  writeSessionRecord("RECALIBRATE", started_ms_);
 }
 
 void CsiMotionMonitor::callback(void* context, wifi_csi_info_t* info) {
@@ -156,7 +151,6 @@ void CsiMotionMonitor::enqueue(wifi_csi_info_t* info) {
   const int target_index = findTarget(info->mac);
   if (target_index < 0)
     return;
-  const uint32_t sequence = sequence_++;
   const uint8_t next = static_cast<uint8_t>((write_index_ + 1) % kQueueSize);
   if (next == read_index_) {
     ++dropped_;
@@ -167,60 +161,12 @@ void CsiMotionMonitor::enqueue(wifi_csi_info_t* info) {
   sample.target_index = static_cast<uint16_t>(target_index);
   sample.length = info->len > kMaxCsiBytes ? kMaxCsiBytes : info->len;
   sample.rssi = info->rx_ctrl.rssi;
-  sample.noise_floor = info->rx_ctrl.noise_floor;
-  sample.rate = info->rx_ctrl.rate;
-  sample.format = info->rx_ctrl.cur_bb_format;
-  sample.channel = info->rx_ctrl.channel;
-  sample.secondary_channel = info->rx_ctrl.second;
-  sample.rx_state = info->rx_ctrl.rx_state;
   sample.first_word_invalid = info->first_word_invalid;
-  sample.signal_length = info->rx_ctrl.sig_len;
   sample.timestamp = millis();
-  sample.rx_timestamp = info->rx_ctrl.timestamp;
-  sample.sequence = sequence;
   memcpy(sample.iq, info->buf, sample.length);
   write_index_ = next;
   ++accepted_;
   ++targets_[target_index].accepted;
-}
-
-void CsiMotionMonitor::writeRawRecord(const Sample& sample) {
-  // Base64 keeps a complete signed I/Q byte vector while using substantially
-  // less serial bandwidth than hexadecimal or decimal CSV.
-  unsigned char encoded[((kMaxCsiBytes + 2) / 3) * 4 + 1];
-  size_t encoded_length = 0;
-  if (mbedtls_base64_encode(encoded, sizeof(encoded) - 1, &encoded_length,
-          reinterpret_cast<const unsigned char*>(sample.iq), sample.length) != 0)
-    return;
-  encoded[encoded_length] = '\0';
-  Serial.printf("CSI_RAW,2,%lu,%lu,%lu,%d,%d,%u,%u,%u,%u,%u,%u,%u,%u,%lu,%lu,",
-      static_cast<unsigned long>(sample.sequence),
-      static_cast<unsigned long>(sample.rx_timestamp),
-      static_cast<unsigned long>(sample.timestamp), sample.rssi, sample.noise_floor,
-      sample.rate, sample.format, sample.channel, sample.secondary_channel,
-      sample.signal_length, sample.rx_state, sample.first_word_invalid ? 1 : 0,
-      sample.length,
-      static_cast<unsigned long>(accepted_),
-      static_cast<unsigned long>(dropped_));
-  Serial.write(encoded, encoded_length);
-  Serial.println();
-}
-
-void CsiMotionMonitor::writeMetricRecord(uint32_t now_ms) {
-  Serial.printf("CSI_METRIC,1,%lu,%u,%lu,%u,%u,%u,%u,%u,%s\n",
-      static_cast<unsigned long>(now_ms), samples_per_second_,
-      static_cast<unsigned long>(dropped_), reliability_, amplitude_score_,
-      phase_score_, correlation_score_, motion_score_, stateLabel());
-}
-
-void CsiMotionMonitor::writeSessionRecord(const char* event, uint32_t now_ms) {
-  Serial.printf("CSI_SESSION,1,%s,%lu,%02X:%02X:%02X:%02X:%02X:%02X,%u\n",
-      event, static_cast<unsigned long>(now_ms), target_[0], target_[1],
-      target_[2], target_[3], target_[4], target_[5], channel_);
-  if (strcmp(event, "START") == 0) {
-    Serial.println("CSI_SCHEMA,2,RAW,seq,rx_us,capture_ms,rssi,noise,rate,format,channel,secondary,sig_len,rx_state,first_word_invalid,csi_len,accepted,dropped,iq_base64");
-    Serial.println("CSI_SCHEMA,1,METRIC,ms,rate_hz,dropped,reliability,amp,phase,corr,motion,state");
-  }
 }
 
 int CsiMotionMonitor::findTarget(const uint8_t mac[6]) const {
@@ -379,7 +325,6 @@ void CsiMotionMonitor::updateFusion(uint32_t now_ms) {
   }
   history_[history_head_] = reliability_ < 15 ? 255 : motion_score_;
   history_head_ = (history_head_ + 1) % CsiMotionModel::kHistorySize;
-  writeMetricRecord(now_ms);
 }
 
 void CsiMotionMonitor::main(uint32_t now_ms) {
@@ -388,7 +333,6 @@ void CsiMotionMonitor::main(uint32_t now_ms) {
   while (read_index_ != write_index_) {
     Sample& sample = queue_[read_index_];
     if (sample.target_index < target_count_) {
-      writeRawRecord(sample);
       targets_[sample.target_index].model.addSample(
           sample.iq, sample.length, sample.rssi, sample.timestamp,
           sample.first_word_invalid);

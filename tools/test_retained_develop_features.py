@@ -87,5 +87,16 @@ class RetainedDevelopFeatureTests(unittest.TestCase):
             settings_menu,
         )
 
+    def test_csi_monitor_does_not_stream_serial_data(self):
+        monitor = (ROOT / "esp32_marauder" / "CsiMotionMonitor.cpp").read_text()
+        sketch = (ROOT / "esp32_marauder" / "esp32_marauder.ino").read_text()
+        self.assertNotIn("CSI_RAW", monitor)
+        self.assertNotIn("CSI_METRIC", monitor)
+        self.assertNotIn("CSI_SESSION", monitor)
+        self.assertNotIn("CSI_SCHEMA", monitor)
+        self.assertNotIn("writeRawRecord", monitor)
+        self.assertIn("Serial.begin(115200);", sketch)
+        self.assertNotIn("Serial.begin(921600);", sketch)
+
 if __name__ == "__main__":
     unittest.main()
