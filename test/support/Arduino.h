@@ -1,6 +1,27 @@
 #pragma once
 
 #include <stdint.h>
+#include <stddef.h>
+#include <string>
+
+// Minimal Arduino String for native (host) unit tests. Enough surface for the
+// firmware logic under test and for ArduinoJson's `.as<const char*>()` path
+// (ArduinoJson fills std::string / const char*, not an arbitrary String stub).
+class String {
+  std::string s;
+public:
+  String() {}
+  String(const char* c) : s(c ? c : "") {}
+  String(const std::string& c) : s(c) {}
+
+  const char* c_str() const { return s.c_str(); }
+  size_t length() const { return s.size(); }
+
+  bool operator==(const String& o) const { return s == o.s; }
+  bool operator==(const char* o) const { return s == (o ? o : ""); }
+  bool operator!=(const char* o) const { return !(*this == o); }
+  String& operator=(const char* c) { s = c ? c : ""; return *this; }
+};
 
 constexpr int LOW = 0;
 constexpr int HIGH = 1;
