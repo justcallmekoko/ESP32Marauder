@@ -120,6 +120,8 @@ enum class MenuBuildKind : uint8_t {
   BLUETOOTH_ROOT,
   DEVICE_ROOT,
   GPS_ROOT,
+  WIFI_SCANNER,
+  WIFI_SNIFFER,
 };
 
 // Individual Nodes of a menu

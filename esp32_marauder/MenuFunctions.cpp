@@ -2092,8 +2092,8 @@ void MenuFunctions::RunSetup()
   #endif
   infoMenu.list = new LinkedList<MenuNode>();
   // WiFi menu stuff
-  wifiSnifferMenu.list = new LinkedList<MenuNode>();
-  wifiScannerMenu.list = new LinkedList<MenuNode>();
+  wifiSnifferMenu.buildKind = MenuBuildKind::WIFI_SNIFFER;
+  wifiScannerMenu.buildKind = MenuBuildKind::WIFI_SCANNER;
   wifiAttackMenu.list = new LinkedList<MenuNode>();
   /*#ifdef HAS_GPS
     wardrivingMenu.list = new LinkedList<MenuNode>();
@@ -2237,229 +2237,9 @@ void MenuFunctions::RunSetup()
 
   // Build WiFi scanner Menu
   wifiScannerMenu.parentMenu = &wifiMenu; // Main Menu is second menu parent
-  this->addNodes(&wifiScannerMenu, text09, TFTLIGHTGREY, 0, [this]() {
-    this->changeMenu(wifiScannerMenu.parentMenu, true);
-  });
-  this->addNodes(&wifiScannerMenu, "Ping Scan", TFTGREEN, SCANNERS, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_PING_SCAN, TFT_CYAN);
-  });
-  // The C5 implementation uses the active station netif with lwIP core
-  // locking, so dual-band hardware supports the same ARP scanner.
-  this->addNodes(&wifiScannerMenu, "ARP Scan", TFTCYAN, SCANNERS, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_ARP_SCAN, TFT_CYAN);
-  });
-  this->addNodes(&wifiScannerMenu, "Port Scan All", TFTMAGENTA, BEACON_LIST, [this](){
-    // Add the back button
-    wifiIPMenu.list->clear();
-      this->addNodes(&wifiIPMenu, text09, TFTLIGHTGREY, 0, [this]() {
-      this->changeMenu(wifiIPMenu.parentMenu, true);
-    });
-
-    // Populate the menu with buttons
-    for (int i = 0; i < ipList->size(); i++) {
-      // This is the menu node
-      this->addNodes(&wifiIPMenu, ipList->get(i).toString().c_str(), TFTBLUE, 255, [this, i](){
-        Serial.println("Selected: " + ipList->get(i).toString());
-        wifi_scan_obj.current_scan_ip = ipList->get(i);
-        display_obj.clearScreen();
-        this->drawStatusBar();
-        wifi_scan_obj.StartScan(WIFI_PORT_SCAN_ALL, TFT_BLUE);
-      });
-    }
-    this->changeMenu(&wifiIPMenu, true);
-  });
-  this->addNodes(&wifiScannerMenu, "SSH Scan", TFTORANGE, SCANNERS, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_SSH, TFT_CYAN);
-  });
-  this->addNodes(&wifiScannerMenu, "Telnet Scan", TFTRED, SCANNERS, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_TELNET, TFT_CYAN);
-  });
-  this->addNodes(&wifiScannerMenu, "SMTP Scan", TFTWHITE, SCANNERS, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_SMTP, TFT_CYAN);
-  });
-  this->addNodes(&wifiScannerMenu, "DNS Scan", TFTLIME, SCANNERS, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_DNS, TFT_CYAN);
-  });
-  this->addNodes(&wifiScannerMenu, "HTTP Scan", TFTSKYBLUE, SCANNERS, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_HTTP, TFT_CYAN);
-  });
-  this->addNodes(&wifiScannerMenu, "HTTPS Scan", TFTYELLOW, SCANNERS, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_HTTPS, TFT_CYAN);
-  });
-  this->addNodes(&wifiScannerMenu, "RDP Scan", TFTPURPLE, SCANNERS, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_RDP, TFT_CYAN);
-  });
 
   // Build WiFi sniffer Menu
   wifiSnifferMenu.parentMenu = &wifiMenu; // Main Menu is second menu parent
-  this->addNodes(&wifiSnifferMenu, text09, TFTLIGHTGREY, 0, [this]() {
-    this->changeMenu(wifiSnifferMenu.parentMenu, true);
-  });
-  this->addNodes(&wifiSnifferMenu, text_table1[42], TFTCYAN, PROBE_SNIFF, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_PROBE, TFT_CYAN);
-  });
-  this->addNodes(&wifiSnifferMenu, text_table1[43], TFTMAGENTA, BEACON_SNIFF, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_AP, TFT_MAGENTA);
-  });
-  this->addNodes(&wifiSnifferMenu, text_table1[44], TFTRED, DEAUTH_SNIFF, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_DEAUTH, TFT_RED);
-  });
-  this->addNodes(&wifiSnifferMenu, "Remote ID Scan", TFTCYAN, SCANNERS, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(REMOTE_ID_SCAN_ALL, TFT_CYAN);
-  });
-  this->addNodes(&wifiSnifferMenu, "Remote ID Devices", TFTMAGENTA, SCANNERS, [this]() {
-    remoteIdMenu.list->clear();
-    remoteIdMenu.parentMenu = &wifiSnifferMenu;
-    this->addNodes(&remoteIdMenu, text09, TFTLIGHTGREY, 0, [this]() {
-      this->changeMenu(remoteIdMenu.parentMenu, true);
-    });
-    for (size_t i = 0; i < wifi_scan_obj.remoteIdCount(); ++i) {
-      String label = wifi_scan_obj.remoteIdLabel(i);
-      this->addNodes(&remoteIdMenu, label.c_str(), TFTCYAN, SCANNERS, [this, i]() {
-        if (!wifi_scan_obj.selectRemoteIdTarget(i)) return;
-        display_obj.clearScreen();
-        this->drawStatusBar();
-        wifi_scan_obj.StartScan(REMOTE_ID_SCAN_TARGET, TFT_MAGENTA);
-      });
-    }
-    this->changeMenu(&remoteIdMenu, true);
-  });
-  this->addNodes(&wifiSnifferMenu, "Packet Count", TFTORANGE, PACKET_MONITOR, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_PACKET_RATE, TFT_ORANGE);
-    wifi_scan_obj.renderPacketRate();
-  });
-  #ifdef HAS_ILI9341
-    this->addNodes(&wifiSnifferMenu, text_table1[46], TFTVIOLET, EAPOL, [this]() {
-      display_obj.clearScreen();
-      this->drawStatusBar();
-      wifi_scan_obj.StartScan(WIFI_SCAN_EAPOL, TFT_VIOLET);
-    });
-    this->addNodes(&wifiSnifferMenu, text_table1[45], TFTBLUE, PACKET_MONITOR, [this]() {
-      wifi_scan_obj.StartScan(WIFI_PACKET_MONITOR, TFT_BLUE);
-    });
-  #else // No touch
-    this->addNodes(&wifiSnifferMenu, text_table1[46], TFTVIOLET, EAPOL, [this]() {
-      display_obj.clearScreen();
-      this->drawStatusBar();
-      wifi_scan_obj.StartScan(WIFI_SCAN_EAPOL, TFT_VIOLET);
-    });
-    this->addNodes(&wifiSnifferMenu, text_table1[45], TFTBLUE, PACKET_MONITOR, [this]() {
-      display_obj.clearScreen();
-      this->drawStatusBar();
-      wifi_scan_obj.StartScan(WIFI_PACKET_MONITOR, TFT_BLUE);
-    });
-  #endif
-  this->addNodes(&wifiSnifferMenu, "Channel Analyzer", TFTCYAN, PACKET_MONITOR, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    this->renderGraphUI(WIFI_SCAN_CHAN_ANALYZER);
-    wifi_scan_obj.StartScan(WIFI_SCAN_CHAN_ANALYZER, TFT_CYAN);
-  });
-  this->addNodes(&wifiSnifferMenu, "Channel Summary", TFTORANGE, PACKET_MONITOR, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    this->renderGraphUI(WIFI_SCAN_CHAN_ACT);
-    wifi_scan_obj.StartScan(WIFI_SCAN_CHAN_ACT, TFT_CYAN);
-  });
-
-  this->addNodes(&wifiSnifferMenu, text_table1[58], TFTWHITE, PACKET_MONITOR, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_RAW_CAPTURE, TFT_WHITE);
-  });
-
-  this->addNodes(&wifiSnifferMenu, text_table1[47], TFTRED, PWNAGOTCHI, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_PWN, TFT_RED);
-  });
-  
-  this->addNodes(&wifiSnifferMenu, text_table1[63], TFTYELLOW, PINESCAN_SNIFF, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_PINESCAN, TFT_YELLOW);
-  });
-
-  this->addNodes(&wifiSnifferMenu, text_table1[64], TFTORANGE, MULTISSID_SNIFF, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_MULTISSID, TFT_ORANGE);
-  });
-  this->addNodes(&wifiSnifferMenu, "Scan AP/STA", TFTLIME, BEACON_SNIFF, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_AP_STA, 0x97e0);
-  });
-  /*this->addNodes(&wifiSnifferMenu, "Fox Hunt", TFTCYAN, PACKET_MONITOR, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_SIG_STREN, TFT_CYAN);
-  });*/
-  this->addNodes(&wifiSnifferMenu, "Fox Hunt", TFTCYAN, SCANNERS, [this]() {
-    this->buildWiFiFoxHuntMenu();
-  });
-  this->addNodes(&wifiSnifferMenu, "MAC Monitor", TFTMAGENTA, SCANNERS, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_DETECT_FOLLOW, TFT_MAGENTA);
-  });
-  this->addNodes(&wifiSnifferMenu, "SAE Commit", TFTLIME, EAPOL, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_SCAN_SAE_COMMIT, TFT_GREEN);
-  });
-
-  // Build Wardriving menu
-  #ifdef HAS_GPS
-    /*wardrivingMenu.parentMenu = &wifiMenu; // Main Menu is second menu parent
-    this->addNodes(&wardrivingMenu, text09, TFTLIGHTGREY, NULL, 0, [this]() {
-      this->changeMenu(wardrivingMenu.parentMenu, true);
-    });*/
-    if (gps_obj.getGpsModuleStatus()) {
-      this->addNodes(&wifiSnifferMenu, "Wardrive", TFTGREEN, BEACON_SNIFF, [this]() {
-        display_obj.clearScreen();
-        this->drawStatusBar();
-        wifi_scan_obj.StartScan(WIFI_SCAN_WAR_DRIVE, TFT_GREEN);
-      });
-    }
-  #endif
-  /*#ifdef HAS_GPS
-    if (gps_obj.getGpsModuleStatus()) {
-      this->addNodes(&wardrivingMenu, "Station Wardrive", TFTORANGE, NULL, PROBE_SNIFF, [this]() {
-        display_obj.clearScreen();
-        this->drawStatusBar();
-        wifi_scan_obj.StartScan(WIFI_SCAN_STATION_WAR_DRIVE, TFT_ORANGE);
-      });
-    }
-  #endif*/
 
   // Build WiFi attack menu
   wifiAttackMenu.parentMenu = &wifiMenu; // Main Menu is second menu parent
@@ -4887,6 +4667,202 @@ void MenuFunctions::buildLazyMenu(Menu* menu)
       this->addNodes(menu, text_table1[33], TFTPURPLE, GENERAL_APPS, [this]() {
         this->changeMenu(&wifiGeneralMenu, true);
       });
+      break;
+
+    case MenuBuildKind::WIFI_SCANNER:
+      this->addNodes(menu, text09, TFTLIGHTGREY, 0, [this]() {
+        this->changeMenu(wifiScannerMenu.parentMenu, true);
+      });
+      this->addNodes(menu, "Ping Scan", TFTGREEN, SCANNERS, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_PING_SCAN, TFT_CYAN);
+      });
+      this->addNodes(menu, "ARP Scan", TFTCYAN, SCANNERS, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_ARP_SCAN, TFT_CYAN);
+      });
+      this->addNodes(menu, "Port Scan All", TFTMAGENTA, BEACON_LIST, [this]() {
+        wifiIPMenu.list->clear();
+        this->addNodes(&wifiIPMenu, text09, TFTLIGHTGREY, 0, [this]() {
+          this->changeMenu(wifiIPMenu.parentMenu, true);
+        });
+        for (int i = 0; i < ipList->size(); i++) {
+          this->addNodes(&wifiIPMenu, ipList->get(i).toString().c_str(), TFTBLUE, 255, [this, i]() {
+            Serial.println("Selected: " + ipList->get(i).toString());
+            wifi_scan_obj.current_scan_ip = ipList->get(i);
+            display_obj.clearScreen();
+            this->drawStatusBar();
+            wifi_scan_obj.StartScan(WIFI_PORT_SCAN_ALL, TFT_BLUE);
+          });
+        }
+        this->changeMenu(&wifiIPMenu, true);
+      });
+      this->addNodes(menu, "SSH Scan", TFTORANGE, SCANNERS, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_SCAN_SSH, TFT_CYAN);
+      });
+      this->addNodes(menu, "Telnet Scan", TFTRED, SCANNERS, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_SCAN_TELNET, TFT_CYAN);
+      });
+      this->addNodes(menu, "SMTP Scan", TFTWHITE, SCANNERS, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_SCAN_SMTP, TFT_CYAN);
+      });
+      this->addNodes(menu, "DNS Scan", TFTLIME, SCANNERS, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_SCAN_DNS, TFT_CYAN);
+      });
+      this->addNodes(menu, "HTTP Scan", TFTSKYBLUE, SCANNERS, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_SCAN_HTTP, TFT_CYAN);
+      });
+      this->addNodes(menu, "HTTPS Scan", TFTYELLOW, SCANNERS, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_SCAN_HTTPS, TFT_CYAN);
+      });
+      this->addNodes(menu, "RDP Scan", TFTPURPLE, SCANNERS, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_SCAN_RDP, TFT_CYAN);
+      });
+      break;
+
+    case MenuBuildKind::WIFI_SNIFFER:
+      this->addNodes(menu, text09, TFTLIGHTGREY, 0, [this]() {
+        this->changeMenu(wifiSnifferMenu.parentMenu, true);
+      });
+      this->addNodes(menu, text_table1[42], TFTCYAN, PROBE_SNIFF, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_SCAN_PROBE, TFT_CYAN);
+      });
+      this->addNodes(menu, text_table1[43], TFTMAGENTA, BEACON_SNIFF, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_SCAN_AP, TFT_MAGENTA);
+      });
+      this->addNodes(menu, text_table1[44], TFTRED, DEAUTH_SNIFF, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_SCAN_DEAUTH, TFT_RED);
+      });
+      this->addNodes(menu, "Remote ID Scan", TFTCYAN, SCANNERS, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(REMOTE_ID_SCAN_ALL, TFT_CYAN);
+      });
+      this->addNodes(menu, "Remote ID Devices", TFTMAGENTA, SCANNERS, [this]() {
+        remoteIdMenu.list->clear();
+        remoteIdMenu.parentMenu = &wifiSnifferMenu;
+        this->addNodes(&remoteIdMenu, text09, TFTLIGHTGREY, 0, [this]() {
+          this->changeMenu(remoteIdMenu.parentMenu, true);
+        });
+        for (size_t i = 0; i < wifi_scan_obj.remoteIdCount(); ++i) {
+          String label = wifi_scan_obj.remoteIdLabel(i);
+          this->addNodes(&remoteIdMenu, label.c_str(), TFTCYAN, SCANNERS, [this, i]() {
+            if (!wifi_scan_obj.selectRemoteIdTarget(i)) return;
+            display_obj.clearScreen();
+            this->drawStatusBar();
+            wifi_scan_obj.StartScan(REMOTE_ID_SCAN_TARGET, TFT_MAGENTA);
+          });
+        }
+        this->changeMenu(&remoteIdMenu, true);
+      });
+      this->addNodes(menu, "Packet Count", TFTORANGE, PACKET_MONITOR, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_SCAN_PACKET_RATE, TFT_ORANGE);
+        wifi_scan_obj.renderPacketRate();
+      });
+      #ifdef HAS_ILI9341
+        this->addNodes(menu, text_table1[46], TFTVIOLET, EAPOL, [this]() {
+          display_obj.clearScreen();
+          this->drawStatusBar();
+          wifi_scan_obj.StartScan(WIFI_SCAN_EAPOL, TFT_VIOLET);
+        });
+        this->addNodes(menu, text_table1[45], TFTBLUE, PACKET_MONITOR, [this]() {
+          wifi_scan_obj.StartScan(WIFI_PACKET_MONITOR, TFT_BLUE);
+        });
+      #else
+        this->addNodes(menu, text_table1[46], TFTVIOLET, EAPOL, [this]() {
+          display_obj.clearScreen();
+          this->drawStatusBar();
+          wifi_scan_obj.StartScan(WIFI_SCAN_EAPOL, TFT_VIOLET);
+        });
+        this->addNodes(menu, text_table1[45], TFTBLUE, PACKET_MONITOR, [this]() {
+          display_obj.clearScreen();
+          this->drawStatusBar();
+          wifi_scan_obj.StartScan(WIFI_PACKET_MONITOR, TFT_BLUE);
+        });
+      #endif
+      this->addNodes(menu, "Channel Analyzer", TFTCYAN, PACKET_MONITOR, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        this->renderGraphUI(WIFI_SCAN_CHAN_ANALYZER);
+        wifi_scan_obj.StartScan(WIFI_SCAN_CHAN_ANALYZER, TFT_CYAN);
+      });
+      this->addNodes(menu, "Channel Summary", TFTORANGE, PACKET_MONITOR, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        this->renderGraphUI(WIFI_SCAN_CHAN_ACT);
+        wifi_scan_obj.StartScan(WIFI_SCAN_CHAN_ACT, TFT_CYAN);
+      });
+      this->addNodes(menu, text_table1[58], TFTWHITE, PACKET_MONITOR, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_SCAN_RAW_CAPTURE, TFT_WHITE);
+      });
+      this->addNodes(menu, text_table1[47], TFTRED, PWNAGOTCHI, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_SCAN_PWN, TFT_RED);
+      });
+      this->addNodes(menu, text_table1[63], TFTYELLOW, PINESCAN_SNIFF, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_SCAN_PINESCAN, TFT_YELLOW);
+      });
+      this->addNodes(menu, text_table1[64], TFTORANGE, MULTISSID_SNIFF, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_SCAN_MULTISSID, TFT_ORANGE);
+      });
+      this->addNodes(menu, "Scan AP/STA", TFTLIME, BEACON_SNIFF, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_SCAN_AP_STA, 0x97e0);
+      });
+      this->addNodes(menu, "Fox Hunt", TFTCYAN, SCANNERS, [this]() {
+        this->buildWiFiFoxHuntMenu();
+      });
+      this->addNodes(menu, "MAC Monitor", TFTMAGENTA, SCANNERS, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_SCAN_DETECT_FOLLOW, TFT_MAGENTA);
+      });
+      this->addNodes(menu, "SAE Commit", TFTLIME, EAPOL, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_SCAN_SAE_COMMIT, TFT_GREEN);
+      });
+      #ifdef HAS_GPS
+        if (gps_obj.getGpsModuleStatus()) {
+          this->addNodes(menu, "Wardrive", TFTGREEN, BEACON_SNIFF, [this]() {
+            display_obj.clearScreen();
+            this->drawStatusBar();
+            wifi_scan_obj.StartScan(WIFI_SCAN_WAR_DRIVE, TFT_GREEN);
+          });
+        }
+      #endif
       break;
 
     #ifdef HAS_BT
