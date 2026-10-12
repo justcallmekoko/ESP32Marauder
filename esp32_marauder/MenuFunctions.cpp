@@ -2267,6 +2267,11 @@ void MenuFunctions::RunSetup()
 
   // WiFi General menu is populated on demand.
   wifiGeneralMenu.parentMenu = &wifiMenu;
+  // Build once during setup so shared result/target menus retain the same
+  // initial Back nodes and parent wiring they had before this refactor, then
+  // release only the WiFi General launcher nodes.
+  this->buildLazyMenu(&wifiGeneralMenu);
+  this->releaseLazyMenu(&wifiGeneralMenu);
 
 #ifdef HAS_BT
   // Bluetooth category menus are populated on demand.
