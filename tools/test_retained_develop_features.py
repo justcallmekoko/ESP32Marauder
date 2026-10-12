@@ -66,5 +66,26 @@ class RetainedDevelopFeatureTests(unittest.TestCase):
             renderer.index("drawFastHLine(PACKET_MONITOR_GRAPH_LEFT, plot_top"),
         )
 
+    def test_boolean_setting_toggle_updates_the_rendered_menu_row(self):
+        source = (ROOT / "esp32_marauder" / "MenuFunctions.cpp").read_text()
+        settings_menu = source[source.index("// Settings menu"):
+                               source.index("Serial.println(\"Finished settings nodes\")")]
+        self.assertIn(
+            "const int settings_menu_index = settingsMenu.list->size();",
+            settings_menu,
+        )
+        self.assertIn(
+            "[this, settings_menu_index, settingName]()",
+            settings_menu,
+        )
+        self.assertIn(
+            "displaySetting(settingName.c_str(), &settingsMenu, settings_menu_index);",
+            settings_menu,
+        )
+        self.assertNotIn(
+            "displaySetting(settingName.c_str(), &settingsMenu, i + 1);",
+            settings_menu,
+        )
+
 if __name__ == "__main__":
     unittest.main()
