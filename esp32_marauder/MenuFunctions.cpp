@@ -2,6 +2,7 @@
 #include "MenuMarquee.h"
 #include "CommandLine.h"
 #include "OwnedListLifecycle.h"
+#include "CensorText.h"
 #include "lang_var.h"
 #if defined(MARAUDER_V8)
   #include "CsiMotionMonitor.h"
@@ -18,6 +19,27 @@ extern LinkedList<BleDevice>* ble_devices;
 extern CommandLine cli_obj;
 
 namespace {
+String screenName(String value) {
+  if (!settings_obj.loadSetting<bool>("Censor")) return value;
+  for (size_t i = 3; i < value.length(); ++i) value.setCharAt(i, 'X');
+  return value;
+}
+
+String screenMac(String value) {
+  if (!settings_obj.loadSetting<bool>("Censor")) return value;
+  size_t digits = 0;
+  for (size_t i = 0; i < value.length(); ++i) {
+    if (!isxdigit(static_cast<unsigned char>(value[i]))) continue;
+    if (digits >= 4) value.setCharAt(i, 'X');
+    ++digits;
+  }
+  return value;
+}
+
+String screenIdentifier(const String& value) {
+  return CensorText::looksLikeMac(value.c_str()) ? screenMac(value) : screenName(value);
+}
+
 bool parseGeofenceNumber(const String& value, double& parsed) {
   char* end = nullptr;
   parsed = strtod(value.c_str(), &end);
@@ -1961,37 +1983,37 @@ void MenuFunctions::buildFoxTargetList(FoxHuntListKind type, int context_ap) {
     uint16_t color = TFTCYAN;
     if (type == FoxHuntListKind::AP_TARGETS) {
       const AccessPoint& ap = access_points->get(index);
-      label = String(ap.rssi) + " " + ap.essid;
+      label = String(ap.rssi) + " " + screenName(ap.essid);
       color = rssiToMenuColor(ap.rssi);
     } else if (type == FoxHuntListKind::APS_WITH_STATIONS) {
       const AccessPoint& ap = access_points->get(index);
-      label = ap.essid + " (" + String(ap.stations->size()) + ")";
+      label = screenName(ap.essid) + " (" + String(ap.stations->size()) + ")";
       color = TFTMAGENTA;
     } else if (type == FoxHuntListKind::STATION_TARGETS) {
-      label = macToString(stations->get(index).mac);
+      label = screenMac(macToString(stations->get(index).mac));
       color = TFTMAGENTA;
     } else if (type == FoxHuntListKind::PINEAPPLE_TARGETS) {
-      label = wifi_scan_obj.getPineScanLabel(index);
+      label = screenIdentifier(wifi_scan_obj.getPineScanLabel(index));
       color = TFTYELLOW;
     } else if (type == FoxHuntListKind::MULTISSID_TARGETS) {
-      label = wifi_scan_obj.getMultiSSIDLabel(index);
+      label = screenName(wifi_scan_obj.getMultiSSIDLabel(index));
       color = TFTORANGE;
     } else if (type == FoxHuntListKind::BLE_TARGETS) {
-      label = String(ble_devices->get(index).rssi) + " " + ble_devices->get(index).name;
+      label = String(ble_devices->get(index).rssi) + " " + screenIdentifier(ble_devices->get(index).name);
       color = rssiToMenuColor(ble_devices->get(index).rssi);
     } else if (type == FoxHuntListKind::FINDMY_TARGETS) {
-      label = String(airtags->get(index).rssi) + " " + airtags->get(index).mac;
+      label = String(airtags->get(index).rssi) + " " + screenMac(airtags->get(index).mac);
       color = TFTWHITE;
     } else if (type == FoxHuntListKind::FLIPPER_TARGETS) {
-      label = flippers->get(index).name.length() ? flippers->get(index).name : flippers->get(index).mac;
+      label = flippers->get(index).name.length() ? screenName(flippers->get(index).name) : screenMac(flippers->get(index).mac);
       color = TFTORANGE;
     } else if (type == FoxHuntListKind::IBEACON_TARGETS) {
       const BleDevice& device = ble_devices->get(index);
-      label = String(device.rssi) + " " + device.name;
+      label = String(device.rssi) + " " + screenIdentifier(device.name);
       color = rssiToMenuColor(device.rssi);
     } else {
       const BleDevice& device = ble_devices->get(index);
-      label = String(device.rssi) + " " + (device.name.length() ? device.name : macToString(device.mac));
+      label = String(device.rssi) + " " + (device.name.length() ? screenName(device.name) : screenMac(macToString(device.mac)));
       color = type == FoxHuntListKind::META_TARGETS ? TFTWHITE : TFTORANGE;
     }
 
@@ -3099,10 +3121,10 @@ void MenuFunctions::buildGeofenceActionMenu(uint8_t slot) {
             display_obj.tft.fillRect(0, SCREEN_HEIGHT / 3 + TEXT_HEIGHT * 2, SCREEN_WIDTH, STATUS_BAR_WIDTH, TFT_BLACK);
             display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
             display_obj.tft.setTextColor(TFT_CYAN, TFT_BLACK);
-            display_obj.tft.println(wifi_scan_obj.current_mini_kb_ssid + "\n");
+            display_obj.tft.println(screenName(wifi_scan_obj.current_mini_kb_ssid) + "\n");
             display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
 
-            display_obj.tft.println(ssids->get(0).essid);
+            display_obj.tft.println(screenName(ssids->get(0).essid));
 
             display_obj.tft.setTextColor(TFT_ORANGE, TFT_BLACK);
             #ifdef HAS_MINI_KB
@@ -3170,7 +3192,7 @@ void MenuFunctions::buildSavedWifiMenu(bool replace_mode) {
     String password;
     if (!settings_obj.loadSavedWifiCredential(index, ssid, password))
       continue;
-    String label = replace_mode ? "Replace " + ssid : "Remove " + ssid;
+    String label = replace_mode ? "Replace " + screenName(ssid) : "Remove " + screenName(ssid);
     this->addNodes(&savedWifiMenu, label.c_str(), replace_mode ? TFTORANGE : TFTRED, 0, [this, index, replace_mode]() {
       if (replace_mode)
         wifi_scan_obj.savePendingWifiCredential(index);
@@ -3442,7 +3464,7 @@ void MenuFunctions::buildWiFiGeneralMenu()
     for (int i = 0; i < probe_req_ssids->size(); i++) {
       ProbeReqSsid cur_ssid = probe_req_ssids->get(i);
       // This is the menu node
-      String button_name = "[" + String(cur_ssid.requests) + "]" + cur_ssid.essid;
+      String button_name = "[" + String(cur_ssid.requests) + "]" + screenName(cur_ssid.essid);
       this->addNodes(
         &selectProbeSSIDsMenu,
         button_name.c_str(),
@@ -3570,7 +3592,8 @@ void MenuFunctions::buildWiFiGeneralMenu()
       // Populate the menu with buttons
       for (int i = 0; i < access_points->size(); i++) {
         // This is the menu node
-        this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, 255, [this, i](){
+        const String label = screenName(access_points->get(i).essid);
+        this->addNodes(&wifiAPMenu, label.c_str(), TFTCYAN, 255, [this, i](){
         AccessPoint new_ap = access_points->get(i);
         new_ap.selected = !access_points->get(i).selected;
 
@@ -3597,7 +3620,8 @@ void MenuFunctions::buildWiFiGeneralMenu()
       // Populate the menu with buttons
       for (int i = 0; i < access_points->size(); i++) {
         // This is the menu node
-        this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, 255, [this, i](){
+        const String label = screenName(access_points->get(i).essid);
+        this->addNodes(&wifiAPMenu, label.c_str(), TFTCYAN, 255, [this, i](){
           this->changeMenu(&apInfoMenu, true);
           wifi_scan_obj.RunAPInfo(i);
         });
@@ -3635,7 +3659,8 @@ void MenuFunctions::buildWiFiGeneralMenu()
 
       for (int i = 0; i < menu_limit; i++) {
         wifiStationMenu.list->clear();
-        this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, 255, [this, i](){
+        const String label = screenName(access_points->get(i).essid);
+        this->addNodes(&wifiAPMenu, label.c_str(), TFTCYAN, 255, [this, i](){
 
           wifiStationMenu.list->clear();
 
@@ -3669,7 +3694,8 @@ void MenuFunctions::buildWiFiGeneralMenu()
           for (int x = 0; x < access_points->get(i).stations->size(); x++) {
             int cur_ap_sta = access_points->get(i).stations->get(x);
 
-            this->addNodes(&wifiStationMenu, macToString(stations->get(cur_ap_sta)).c_str(), TFTCYAN, 255, [this, i, cur_ap_sta, x](){
+            const String station_label = screenMac(macToString(stations->get(cur_ap_sta)));
+            this->addNodes(&wifiStationMenu, station_label.c_str(), TFTCYAN, 255, [this, i, cur_ap_sta, x](){
             Station new_sta = stations->get(cur_ap_sta);
             new_sta.selected = !stations->get(cur_ap_sta).selected;
 
@@ -3703,7 +3729,8 @@ void MenuFunctions::buildWiFiGeneralMenu()
       // Populate the menu with buttons
       for (int i = 0; i < access_points->size(); i++) {
         // This is the menu node
-        this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, 255, [this, i](){
+        const String label = screenName(access_points->get(i).essid);
+        this->addNodes(&wifiAPMenu, label.c_str(), TFTCYAN, 255, [this, i](){
           // Join WiFi using mini keyboard
           #ifdef HAS_MINI_KB
             #ifdef MARAUDER_POOM
@@ -3723,7 +3750,7 @@ void MenuFunctions::buildWiFiGeneralMenu()
                 display_obj.clearScreen();
                 display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
                 display_obj.tft.drawString("Connecting to:", 0, 12, 1);
-                display_obj.tft.drawString(access_points->get(i).essid.substring(0, 21), 0, 24, 1);
+                display_obj.tft.drawString(screenName(access_points->get(i).essid).substring(0, 21), 0, 24, 1);
                 display_obj.tft.display(true);
               #endif
               const bool connected = wifi_scan_obj.joinWiFi(access_points->get(i).essid, password);
@@ -3732,7 +3759,7 @@ void MenuFunctions::buildWiFiGeneralMenu()
                 display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
                 display_obj.tft.drawCentreString(connected ? "Connected" : "Connection failed",
                                                  SCREEN_WIDTH / 2, 20, 1);
-                display_obj.tft.drawCentreString(access_points->get(i).essid.substring(0, 21),
+                display_obj.tft.drawCentreString(screenName(access_points->get(i).essid).substring(0, 21),
                                                  SCREEN_WIDTH / 2, 34, 1);
                 display_obj.tft.display(true);
                 delay(1000);
@@ -3793,7 +3820,8 @@ void MenuFunctions::buildWiFiGeneralMenu()
       // Populate the menu with buttons
       for (int i = 0; i < ssids->size(); i++) {
         // This is the menu node
-        this->addNodes(&ssidsMenu, ssids->get(i).essid.c_str(), TFTCYAN, 255, [this, i](){
+        const String label = screenName(ssids->get(i).essid);
+        this->addNodes(&ssidsMenu, label.c_str(), TFTCYAN, 255, [this, i](){
           // Join WiFi using mini keyboard
           #ifdef HAS_MINI_KB
             this->changeMenu(&miniKbMenu, true);
@@ -4198,7 +4226,8 @@ void MenuFunctions::buildWiFiGeneralMenu()
       // Populate the menu with buttons
       for (int i = 0; i < access_points->size(); i++) {
         // This is the menu node
-        this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTLIME, 255, [this, i](){
+        const String label = screenName(access_points->get(i).essid);
+        this->addNodes(&wifiAPMenu, label.c_str(), TFTLIME, 255, [this, i](){
           this->changeMenu(&genAPMacMenu, true);
           wifi_scan_obj.RunSetMac(access_points->get(i).bssid, true);
         });
@@ -4218,7 +4247,8 @@ void MenuFunctions::buildWiFiGeneralMenu()
       // Populate the menu with buttons
       for (int i = 0; i < stations->size(); i++) {
         // This is the menu node
-        this->addNodes(&wifiAPMenu, macToString(stations->get(i).mac).c_str(), TFTMAGENTA, 255, [this, i](){
+        const String label = screenMac(macToString(stations->get(i).mac));
+        this->addNodes(&wifiAPMenu, label.c_str(), TFTMAGENTA, 255, [this, i](){
           this->changeMenu(&genAPMacMenu, true);
           wifi_scan_obj.RunSetMac(stations->get(i).mac, false);
         });
@@ -4338,7 +4368,8 @@ void MenuFunctions::buildBluetoothAttackMenu()
 
         // Create the menu nodes for all of the list items
         for (int i = 0; i < menu_limit; i++) {
-          this->addNodes(&wifiAPMenu, airtags->get(i).mac.c_str(), TFTWHITE, BLUETOOTH, [this, i](){
+          const String label = screenMac(airtags->get(i).mac);
+          this->addNodes(&wifiAPMenu, label.c_str(), TFTWHITE, BLUETOOTH, [this, i](){
             AirTag new_at = airtags->get(i);
             new_at.selected = true;
 
@@ -4384,7 +4415,7 @@ void MenuFunctions::buildBluetoothAttackMenu()
         // Create the menu nodes for all of the list items
         for (int i = 0; i < menu_limit; i++) {
           uint8_t node_color = rssiToMenuColor(airtags->get(i).rssi);
-          String node_name = String(airtags->get(i).rssi) + " " + airtags->get(i).mac;
+          String node_name = String(airtags->get(i).rssi) + " " + screenMac(airtags->get(i).mac);
           this->addNodes(&wifiAPMenu, node_name.c_str(), node_color, BLUETOOTH, [this, i](){
             AirTag new_at = airtags->get(i);
             new_at.selected = true;
@@ -4702,7 +4733,7 @@ void MenuFunctions::buildLazyMenu(Menu* menu)
           }
           for (int i = 0; i < access_points->size(); ++i) {
             const String label = access_points->get(i).essid.length() ?
-                access_points->get(i).essid : macToString(access_points->get(i).bssid);
+                screenName(access_points->get(i).essid) : screenMac(macToString(access_points->get(i).bssid));
             this->addNodes(&wifiAPMenu, label.c_str(), TFTCYAN, 255, [this, i]() {
               const AccessPoint& ap = access_points->get(i);
               if (!csi_motion_obj.start(ap.bssid, ap.essid, ap.channel)) {
@@ -4768,7 +4799,8 @@ void MenuFunctions::buildLazyMenu(Menu* menu)
           this->changeMenu(ssidsMenu.parentMenu, true);
         });
         for (int i = 0; i < access_points->size(); i++) {
-          this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, 255, [this, i]() {
+          const String label = screenName(access_points->get(i).essid);
+          this->addNodes(&wifiAPMenu, label.c_str(), TFTCYAN, 255, [this, i]() {
             if (evil_portal_obj.setAP(access_points->get(i).essid)) {
               AccessPoint new_ap = access_points->get(i);
               new_ap.selected = true;
@@ -4784,7 +4816,8 @@ void MenuFunctions::buildLazyMenu(Menu* menu)
           });
         }
         for (int i = 0; i < ssids->size(); i++) {
-          this->addNodes(&ssidsMenu, ssids->get(i).essid.c_str(), TFTCYAN, 255, [this, i]() {
+          const String label = screenName(ssids->get(i).essid);
+          this->addNodes(&ssidsMenu, label.c_str(), TFTCYAN, 255, [this, i]() {
             if (evil_portal_obj.setAP(ssids->get(i).essid)) {
               display_obj.clearScreen();
               this->drawStatusBar();
@@ -4818,7 +4851,8 @@ void MenuFunctions::buildLazyMenu(Menu* menu)
           this->changeMenu(&wifiAttackMenu, true);
         });
         for (int i = 0; i < probe_req_ssids->size(); i++) {
-          this->addNodes(&selectProbeSSIDsMenu, probe_req_ssids->get(i).essid.c_str(), TFTCYAN, 255, [this, i]() {
+          const String label = screenName(probe_req_ssids->get(i).essid);
+          this->addNodes(&selectProbeSSIDsMenu, label.c_str(), TFTCYAN, 255, [this, i]() {
             if (evil_portal_obj.setAP(probe_req_ssids->get(i).essid)) {
               display_obj.clearScreen();
               this->drawStatusBar();
@@ -4917,7 +4951,7 @@ void MenuFunctions::buildLazyMenu(Menu* menu)
           });
           for (int i = 0; i < ble_devices->size(); i++) {
             if (!ble_devices->get(i).is_ibeacon) continue;
-            String label = String(ble_devices->get(i).rssi) + " " + ble_devices->get(i).name;
+            String label = String(ble_devices->get(i).rssi) + " " + screenIdentifier(ble_devices->get(i).name);
             this->addNodes(&iBeaconMenu, label.c_str(), rssiToMenuColor(ble_devices->get(i).rssi), 255, [this, i]() {
               const BleDevice& device = ble_devices->get(i);
               char uuid[37];
@@ -4932,7 +4966,7 @@ void MenuFunctions::buildLazyMenu(Menu* menu)
               this->addNodes(&iBeaconInfoMenu, text09, TFTLIGHTGREY, 0, [this]() {
                 this->changeMenu(iBeaconInfoMenu.parentMenu, true);
               });
-              String mac = "MAC: " + macToString(device.mac);
+              String mac = "MAC: " + screenMac(macToString(device.mac));
               String uuid_a = "UUID: " + String(uuid).substring(0, 18);
               String uuid_b = "      " + String(uuid).substring(18);
               String major = "Major: " + String(device.ibeacon.major);

@@ -7,9 +7,19 @@
 #include "mbedtls/base64.h"
 #include "WiFiScan.h"
 #include "Display.h"
+#include "settings.h"
 
 extern WiFiScan wifi_scan_obj;
 extern Display display_obj;
+extern Settings settings_obj;
+
+namespace {
+String csiScreenName(String value) {
+  if (!settings_obj.loadSetting<bool>("Censor")) return value;
+  for (size_t i = 3; i < value.length(); ++i) value.setCharAt(i, 'X');
+  return value;
+}
+}
 
 bool CsiMotionMonitor::takeWiFi() {
   if (wifi_scan_obj.currentScanMode != WIFI_SCAN_OFF)
@@ -285,7 +295,8 @@ void CsiMotionMonitor::draw(uint32_t now_ms) {
   display_obj.tft.print("CSI Motion Monitor");
   display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
   display_obj.tft.setCursor(2, title_y + 14);
-  display_obj.tft.printf("AP: %.16s CH:%u", target_name_.c_str(), channel_);
+  const String display_target = csiScreenName(target_name_);
+  display_obj.tft.printf("AP: %.16s CH:%u", display_target.c_str(), channel_);
   display_obj.tft.setCursor(2, title_y + 26);
   display_obj.tft.printf("Rate:%u/s Drop:%lu", samples_per_second_,
       static_cast<unsigned long>(dropped_));
