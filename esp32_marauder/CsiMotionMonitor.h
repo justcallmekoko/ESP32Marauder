@@ -29,6 +29,7 @@ class CsiMotionMonitor {
     uint8_t channel;
     uint8_t secondary_channel;
     uint8_t rx_state;
+    bool first_word_invalid;
     uint16_t signal_length;
     uint32_t timestamp;
     uint32_t rx_timestamp;

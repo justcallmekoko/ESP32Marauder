@@ -163,6 +163,7 @@ void CsiMotionMonitor::enqueue(wifi_csi_info_t* info) {
   sample.channel = info->rx_ctrl.channel;
   sample.secondary_channel = info->rx_ctrl.second;
   sample.rx_state = info->rx_ctrl.rx_state;
+  sample.first_word_invalid = info->first_word_invalid;
   sample.signal_length = info->rx_ctrl.sig_len;
   sample.timestamp = millis();
   sample.rx_timestamp = info->rx_ctrl.timestamp;
@@ -182,12 +183,13 @@ void CsiMotionMonitor::writeRawRecord(const Sample& sample) {
           reinterpret_cast<const unsigned char*>(sample.iq), sample.length) != 0)
     return;
   encoded[encoded_length] = '\0';
-  Serial.printf("CSI_RAW,1,%lu,%lu,%lu,%d,%d,%u,%u,%u,%u,%u,%u,%u,%lu,%lu,",
+  Serial.printf("CSI_RAW,2,%lu,%lu,%lu,%d,%d,%u,%u,%u,%u,%u,%u,%u,%u,%lu,%lu,",
       static_cast<unsigned long>(sample.sequence),
       static_cast<unsigned long>(sample.rx_timestamp),
       static_cast<unsigned long>(sample.timestamp), sample.rssi, sample.noise_floor,
       sample.rate, sample.format, sample.channel, sample.secondary_channel,
-      sample.signal_length, sample.rx_state, sample.length,
+      sample.signal_length, sample.rx_state, sample.first_word_invalid ? 1 : 0,
+      sample.length,
       static_cast<unsigned long>(accepted_),
       static_cast<unsigned long>(dropped_));
   Serial.write(encoded, encoded_length);
@@ -206,7 +208,7 @@ void CsiMotionMonitor::writeSessionRecord(const char* event, uint32_t now_ms) {
       event, static_cast<unsigned long>(now_ms), target_[0], target_[1],
       target_[2], target_[3], target_[4], target_[5], channel_);
   if (strcmp(event, "START") == 0) {
-    Serial.println("CSI_SCHEMA,1,RAW,seq,rx_us,capture_ms,rssi,noise,rate,format,channel,secondary,sig_len,rx_state,csi_len,accepted,dropped,iq_base64");
+    Serial.println("CSI_SCHEMA,2,RAW,seq,rx_us,capture_ms,rssi,noise,rate,format,channel,secondary,sig_len,rx_state,first_word_invalid,csi_len,accepted,dropped,iq_base64");
     Serial.println("CSI_SCHEMA,1,METRIC,ms,rate_hz,dropped,reliability,amp,phase,corr,motion,state");
   }
 }
@@ -377,7 +379,8 @@ void CsiMotionMonitor::main(uint32_t now_ms) {
     if (sample.target_index < target_count_) {
       writeRawRecord(sample);
       targets_[sample.target_index].model.addSample(
-          sample.iq, sample.length, sample.rssi, sample.timestamp);
+          sample.iq, sample.length, sample.rssi, sample.timestamp,
+          sample.first_word_invalid);
     }
     read_index_ = static_cast<uint8_t>((read_index_ + 1) % kQueueSize);
   }
