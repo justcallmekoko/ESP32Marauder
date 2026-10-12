@@ -122,6 +122,7 @@ enum class MenuBuildKind : uint8_t {
   GPS_ROOT,
   WIFI_SCANNER,
   WIFI_SNIFFER,
+  WIFI_ATTACK,
 };
 
 // Individual Nodes of a menu

@@ -2094,7 +2094,7 @@ void MenuFunctions::RunSetup()
   // WiFi menu stuff
   wifiSnifferMenu.buildKind = MenuBuildKind::WIFI_SNIFFER;
   wifiScannerMenu.buildKind = MenuBuildKind::WIFI_SCANNER;
-  wifiAttackMenu.list = new LinkedList<MenuNode>();
+  wifiAttackMenu.buildKind = MenuBuildKind::WIFI_ATTACK;
   /*#ifdef HAS_GPS
     wardrivingMenu.list = new LinkedList<MenuNode>();
   #endif*/
@@ -2243,160 +2243,6 @@ void MenuFunctions::RunSetup()
 
   // Build WiFi attack menu
   wifiAttackMenu.parentMenu = &wifiMenu; // Main Menu is second menu parent
-  this->addNodes(&wifiAttackMenu, text09, TFTLIGHTGREY, 0, [this]() {
-    this->changeMenu(wifiAttackMenu.parentMenu, true);
-  });
-  this->addNodes(&wifiAttackMenu, text_table1[50], TFTRED, BEACON_LIST, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_ATTACK_BEACON_LIST, TFT_RED);
-  });
-  this->addNodes(&wifiAttackMenu, text_table1[51], TFTORANGE, BEACON_SPAM, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_ATTACK_BEACON_SPAM, TFT_ORANGE);
-  });
-  this->addNodes(&wifiAttackMenu, text1_67, TFTCYAN, FUNNY_BEACON, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_ATTACK_FUNNY_BEACON, TFT_CYAN);
-  });
-  this->addNodes(&wifiAttackMenu, text_table1[52], TFTYELLOW, RICK_ROLL, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_ATTACK_RICK_ROLL, TFT_YELLOW);
-  });
-  this->addNodes(&wifiAttackMenu, text_table1[53], TFTRED, PROBE_SNIFF, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_ATTACK_AUTH, TFT_RED);
-  });
-  this->addNodes(&wifiAttackMenu, "Evil Portal", TFTORANGE, BEACON_SNIFF, [this]() {
-
-    wifiAPMenu.list->clear();
-    ssidsMenu.list->clear();
-
-    wifiAPMenu.parentMenu = &evilPortalMenu;
-    ssidsMenu.parentMenu = &evilPortalMenu;
-
-    this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, 0, [this]() {
-      this->changeMenu(wifiAPMenu.parentMenu, true);
-    });
-    this->addNodes(&ssidsMenu, text09, TFTLIGHTGREY, 0, [this]() {
-      this->changeMenu(ssidsMenu.parentMenu, true);
-    });
-
-    // Get AP list ready
-    for (int i = 0; i < access_points->size(); i++) {
-      // This is the menu node
-      this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, 255, [this, i](){
-        if (evil_portal_obj.setAP(access_points->get(i).essid)) {
-          AccessPoint new_ap = access_points->get(i);
-          new_ap.selected = true;
-          access_points->set(i, new_ap);
-
-          evil_portal_obj.ap_index = i;
-
-          display_obj.clearScreen();
-          this->drawStatusBar();
-          wifi_scan_obj.StartScan(WIFI_SCAN_EVIL_PORTAL, TFT_ORANGE);
-          wifi_scan_obj.setMac();
-        }
-        else
-          this->changeMenu(&evilPortalMenu, true);
-      });
-    }
-
-    for (int i = 0; i < ssids->size(); i++) {
-      // This is the menu node
-      this->addNodes(&ssidsMenu, ssids->get(i).essid.c_str(), TFTCYAN, 255, [this, i](){
-        if (evil_portal_obj.setAP(ssids->get(i).essid)) {
-          display_obj.clearScreen();
-          this->drawStatusBar();
-          wifi_scan_obj.StartScan(WIFI_SCAN_EVIL_PORTAL, TFT_ORANGE);
-          wifi_scan_obj.setMac();
-        }
-        else
-          this->changeMenu(&evilPortalMenu, true);
-      });
-    }
-    this->changeMenu(&evilPortalMenu, true);
-  });
-  this->addNodes(&wifiAttackMenu, text_table1[54], TFTRED, DEAUTH_SNIFF, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_ATTACK_DEAUTH, TFT_RED);
-  });
-  this->addNodes(&wifiAttackMenu, text_table1[57], TFTMAGENTA, BEACON_LIST, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_ATTACK_AP_SPAM, TFT_MAGENTA);
-  });
-  this->addNodes(&wifiAttackMenu, text_table1[62], TFTRED, DEAUTH_SNIFF, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_ATTACK_DEAUTH_TARGETED, TFT_ORANGE);
-  });
-
-  this->addNodes(&wifiAttackMenu, "Karma", TFTORANGE, KEYBOARD_ICO, [this](){
-    // Add the back button
-    selectProbeSSIDsMenu.list->clear();
-    this->addNodes(&selectProbeSSIDsMenu, text09, TFTLIGHTGREY, 0, [this]() {
-      this->changeMenu(&wifiAttackMenu, true);
-    });
-
-    // Populate the menu with buttons
-    for (int i = 0; i < probe_req_ssids->size(); i++) {
-      // This is the menu node
-      this->addNodes(&selectProbeSSIDsMenu, probe_req_ssids->get(i).essid.c_str(), TFTCYAN, 255, [this, i](){
-        if (evil_portal_obj.setAP(probe_req_ssids->get(i).essid)) {
-          display_obj.clearScreen();
-          this->drawStatusBar();
-          wifi_scan_obj.StartScan(WIFI_SCAN_EVIL_PORTAL, TFT_ORANGE);
-          wifi_scan_obj.setMac();
-        }
-        else
-          this->changeMenu(&wifiAttackMenu, true);
-      });
-    }
-    this->changeMenu(&selectProbeSSIDsMenu, true);
-  });
-
-  this->addNodes(&wifiAttackMenu, "Bad Msg", TFTRED, DEAUTH_SNIFF, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_ATTACK_BAD_MSG, TFT_RED);
-  });
-  this->addNodes(&wifiAttackMenu, "Bad Msg Targeted", TFTYELLOW, DEAUTH_SNIFF, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_ATTACK_BAD_MSG_TARGETED, TFT_YELLOW);
-  });
-  this->addNodes(&wifiAttackMenu, "Assoc Sleep", TFTRED, DEAUTH_SNIFF, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_ATTACK_SLEEP, TFT_RED);
-  });
-  this->addNodes(&wifiAttackMenu, "Assoc Sleep Targ", TFTMAGENTA, DEAUTH_SNIFF, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_ATTACK_SLEEP_TARGETED, TFT_MAGENTA);
-  });
-  this->addNodes(&wifiAttackMenu, "SAE Commit Flood", TFTLIME, EAPOL, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_ATTACK_SAE_COMMIT, TFT_GREEN);
-  });
-  this->addNodes(&wifiAttackMenu, "Channel Switch", TFTORANGE, BEACON_LIST, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_ATTACK_CSA, TFT_GREEN);
-  });
-  this->addNodes(&wifiAttackMenu, "Quiet Time", TFTRED, BEACON_LIST, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(WIFI_ATTACK_QUIET, TFT_GREEN);
-  });
 
   evilPortalMenu.parentMenu = &wifiAttackMenu;
   this->addNodes(&evilPortalMenu, text09, TFTLIGHTGREY, 0, [this]() {
@@ -4863,6 +4709,147 @@ void MenuFunctions::buildLazyMenu(Menu* menu)
           });
         }
       #endif
+      break;
+
+    case MenuBuildKind::WIFI_ATTACK:
+      this->addNodes(menu, text09, TFTLIGHTGREY, 0, [this]() {
+        this->changeMenu(wifiAttackMenu.parentMenu, true);
+      });
+      this->addNodes(menu, text_table1[50], TFTRED, BEACON_LIST, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_ATTACK_BEACON_LIST, TFT_RED);
+      });
+      this->addNodes(menu, text_table1[51], TFTORANGE, BEACON_SPAM, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_ATTACK_BEACON_SPAM, TFT_ORANGE);
+      });
+      this->addNodes(menu, text1_67, TFTCYAN, FUNNY_BEACON, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_ATTACK_FUNNY_BEACON, TFT_CYAN);
+      });
+      this->addNodes(menu, text_table1[52], TFTYELLOW, RICK_ROLL, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_ATTACK_RICK_ROLL, TFT_YELLOW);
+      });
+      this->addNodes(menu, text_table1[53], TFTRED, PROBE_SNIFF, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_ATTACK_AUTH, TFT_RED);
+      });
+      this->addNodes(menu, "Evil Portal", TFTORANGE, BEACON_SNIFF, [this]() {
+        wifiAPMenu.list->clear();
+        ssidsMenu.list->clear();
+        wifiAPMenu.parentMenu = &evilPortalMenu;
+        ssidsMenu.parentMenu = &evilPortalMenu;
+        this->addNodes(&wifiAPMenu, text09, TFTLIGHTGREY, 0, [this]() {
+          this->changeMenu(wifiAPMenu.parentMenu, true);
+        });
+        this->addNodes(&ssidsMenu, text09, TFTLIGHTGREY, 0, [this]() {
+          this->changeMenu(ssidsMenu.parentMenu, true);
+        });
+        for (int i = 0; i < access_points->size(); i++) {
+          this->addNodes(&wifiAPMenu, access_points->get(i).essid.c_str(), TFTCYAN, 255, [this, i]() {
+            if (evil_portal_obj.setAP(access_points->get(i).essid)) {
+              AccessPoint new_ap = access_points->get(i);
+              new_ap.selected = true;
+              access_points->set(i, new_ap);
+              evil_portal_obj.ap_index = i;
+              display_obj.clearScreen();
+              this->drawStatusBar();
+              wifi_scan_obj.StartScan(WIFI_SCAN_EVIL_PORTAL, TFT_ORANGE);
+              wifi_scan_obj.setMac();
+            }
+            else
+              this->changeMenu(&evilPortalMenu, true);
+          });
+        }
+        for (int i = 0; i < ssids->size(); i++) {
+          this->addNodes(&ssidsMenu, ssids->get(i).essid.c_str(), TFTCYAN, 255, [this, i]() {
+            if (evil_portal_obj.setAP(ssids->get(i).essid)) {
+              display_obj.clearScreen();
+              this->drawStatusBar();
+              wifi_scan_obj.StartScan(WIFI_SCAN_EVIL_PORTAL, TFT_ORANGE);
+              wifi_scan_obj.setMac();
+            }
+            else
+              this->changeMenu(&evilPortalMenu, true);
+          });
+        }
+        this->changeMenu(&evilPortalMenu, true);
+      });
+      this->addNodes(menu, text_table1[54], TFTRED, DEAUTH_SNIFF, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_ATTACK_DEAUTH, TFT_RED);
+      });
+      this->addNodes(menu, text_table1[57], TFTMAGENTA, BEACON_LIST, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_ATTACK_AP_SPAM, TFT_MAGENTA);
+      });
+      this->addNodes(menu, text_table1[62], TFTRED, DEAUTH_SNIFF, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_ATTACK_DEAUTH_TARGETED, TFT_ORANGE);
+      });
+      this->addNodes(menu, "Karma", TFTORANGE, KEYBOARD_ICO, [this]() {
+        selectProbeSSIDsMenu.list->clear();
+        this->addNodes(&selectProbeSSIDsMenu, text09, TFTLIGHTGREY, 0, [this]() {
+          this->changeMenu(&wifiAttackMenu, true);
+        });
+        for (int i = 0; i < probe_req_ssids->size(); i++) {
+          this->addNodes(&selectProbeSSIDsMenu, probe_req_ssids->get(i).essid.c_str(), TFTCYAN, 255, [this, i]() {
+            if (evil_portal_obj.setAP(probe_req_ssids->get(i).essid)) {
+              display_obj.clearScreen();
+              this->drawStatusBar();
+              wifi_scan_obj.StartScan(WIFI_SCAN_EVIL_PORTAL, TFT_ORANGE);
+              wifi_scan_obj.setMac();
+            }
+            else
+              this->changeMenu(&wifiAttackMenu, true);
+          });
+        }
+        this->changeMenu(&selectProbeSSIDsMenu, true);
+      });
+      this->addNodes(menu, "Bad Msg", TFTRED, DEAUTH_SNIFF, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_ATTACK_BAD_MSG, TFT_RED);
+      });
+      this->addNodes(menu, "Bad Msg Targeted", TFTYELLOW, DEAUTH_SNIFF, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_ATTACK_BAD_MSG_TARGETED, TFT_YELLOW);
+      });
+      this->addNodes(menu, "Assoc Sleep", TFTRED, DEAUTH_SNIFF, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_ATTACK_SLEEP, TFT_RED);
+      });
+      this->addNodes(menu, "Assoc Sleep Targ", TFTMAGENTA, DEAUTH_SNIFF, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_ATTACK_SLEEP_TARGETED, TFT_MAGENTA);
+      });
+      this->addNodes(menu, "SAE Commit Flood", TFTLIME, EAPOL, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_ATTACK_SAE_COMMIT, TFT_GREEN);
+      });
+      this->addNodes(menu, "Channel Switch", TFTORANGE, BEACON_LIST, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_ATTACK_CSA, TFT_GREEN);
+      });
+      this->addNodes(menu, "Quiet Time", TFTRED, BEACON_LIST, [this]() {
+        display_obj.clearScreen();
+        this->drawStatusBar();
+        wifi_scan_obj.StartScan(WIFI_ATTACK_QUIET, TFT_GREEN);
+      });
       break;
 
     #ifdef HAS_BT
