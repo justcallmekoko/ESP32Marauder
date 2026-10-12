@@ -23,7 +23,16 @@ class CsiMotionMonitor {
     uint16_t length;
     uint16_t target_index;
     int8_t rssi;
+    int8_t noise_floor;
+    uint8_t rate;
+    uint8_t format;
+    uint8_t channel;
+    uint8_t secondary_channel;
+    uint8_t rx_state;
+    uint16_t signal_length;
     uint32_t timestamp;
+    uint32_t rx_timestamp;
+    uint32_t sequence;
     int8_t iq[kMaxCsiBytes];
   };
 
@@ -42,6 +51,9 @@ class CsiMotionMonitor {
   void drawGraph();
   const char* stateLabel() const;
   void updateFusion(uint32_t now_ms);
+  void writeRawRecord(const Sample& sample);
+  void writeMetricRecord(uint32_t now_ms);
+  void writeSessionRecord(const char* event, uint32_t now_ms);
   int findTarget(const uint8_t mac[6]) const;
   void releaseTargets();
 
@@ -50,6 +62,7 @@ class CsiMotionMonitor {
   volatile uint8_t read_index_ = 0;
   volatile uint32_t accepted_ = 0;
   volatile uint32_t dropped_ = 0;
+  volatile uint32_t sequence_ = 0;
   Target* targets_ = nullptr;
   uint16_t target_count_ = 0;
   uint16_t active_target_count_ = 0;

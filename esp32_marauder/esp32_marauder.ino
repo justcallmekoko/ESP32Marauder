@@ -247,7 +247,13 @@ void setup()
     esp_log_level_set("*", ESP_LOG_NONE);
   #endif
   
-  Serial.begin(115200);
+  #if defined(MARAUDER_V8)
+    // CSI dataset capture can exceed 115200 baud when raw I/Q vectors are
+    // streamed. This is a no-op for native USB CDC but protects UART capture.
+    Serial.begin(921600);
+  #else
+    Serial.begin(115200);
+  #endif
 
   #ifdef HAS_ACT_LED
     pinMode(ACT_LED_PIN, OUTPUT);
