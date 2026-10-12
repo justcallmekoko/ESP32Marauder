@@ -25,6 +25,9 @@ class CsiMotionModel {
   bool calibrated() const { return calibrated_; }
   uint8_t calibrationPercent(uint32_t now_ms) const;
   uint8_t motionScore() const { return motion_score_; }
+  uint8_t amplitudeScore() const { return amplitude_score_; }
+  uint8_t phaseScore() const { return phase_score_; }
+  uint8_t correlationScore() const { return correlation_score_; }
   uint8_t reliability() const { return reliability_; }
   uint16_t samplesPerSecond() const { return samples_per_second_; }
   int8_t rssi() const { return last_rssi_; }
@@ -36,6 +39,7 @@ class CsiMotionModel {
  private:
   float baseline_[kMaxCarriers] = {};
   float noise_[kMaxCarriers] = {};
+  float previous_phase_[kMaxCarriers] = {};
   uint8_t history_[kHistorySize] = {};
   size_t carrier_count_ = 0;
   size_t history_head_ = 0;
@@ -48,12 +52,20 @@ class CsiMotionModel {
   float rssi_mean_ = -100.0f;
   float rssi_deviation_ = 0.0f;
   float smoothed_score_ = 0.0f;
+  float phase_baseline_ = 0.0f;
+  float phase_noise_ = 0.01f;
+  float correlation_baseline_ = 0.0f;
+  float correlation_noise_ = 0.01f;
   uint16_t samples_per_second_ = 0;
   int8_t last_rssi_ = -127;
   uint8_t motion_score_ = 0;
+  uint8_t amplitude_score_ = 0;
+  uint8_t phase_score_ = 0;
+  uint8_t correlation_score_ = 0;
   uint8_t reliability_ = 0;
   uint8_t motion_votes_ = 0;
   uint8_t still_votes_ = 0;
   bool calibrated_ = false;
+  bool phase_initialized_ = false;
   State state_ = State::CALIBRATING;
 };

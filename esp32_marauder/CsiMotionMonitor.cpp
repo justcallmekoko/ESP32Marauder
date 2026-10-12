@@ -3,11 +3,14 @@
 #if defined(MARAUDER_V8)
 
 #include <string.h>
+#include <new>
 #include "WiFiScan.h"
 #include "Display.h"
+#include "EvilPortal.h"
 
 extern WiFiScan wifi_scan_obj;
 extern Display display_obj;
+extern LinkedList<AccessPoint>* access_points;
 
 bool CsiMotionMonitor::takeWiFi() {
   if (wifi_scan_obj.currentScanMode != WIFI_SCAN_OFF)
@@ -63,17 +66,48 @@ void CsiMotionMonitor::releaseWiFi() {
   wifi_scan_obj.wifi_initialized = false;
 }
 
-bool CsiMotionMonitor::start(const uint8_t target[6], const String& name,
-                             uint8_t channel) {
+bool CsiMotionMonitor::start(uint8_t channel) {
   stop();
-  memcpy(target_, target, sizeof(target_));
-  target_name_ = name;
   channel_ = channel;
+  if (!access_points)
+    return false;
+  for (int i = 0; i < access_points->size(); ++i) {
+    if (access_points->get(i).channel == channel_)
+      ++target_count_;
+  }
+  if (target_count_ == 0)
+    return false;
+  targets_ = static_cast<Target*>(ps_malloc(sizeof(Target) * target_count_));
+  if (!targets_)
+    targets_ = static_cast<Target*>(malloc(sizeof(Target) * target_count_));
+  if (!targets_) {
+    target_count_ = 0;
+    return false;
+  }
+  uint16_t target_index = 0;
+  for (int i = 0; i < access_points->size(); ++i) {
+    const AccessPoint& ap = access_points->get(i);
+    if (ap.channel != channel_)
+      continue;
+    Target* target = new (&targets_[target_index++]) Target();
+    memcpy(target->bssid, ap.bssid, sizeof(target->bssid));
+    target->accepted = target->dropped = 0;
+    target->model.reset(millis(), 30000);
+  }
   write_index_ = read_index_ = 0;
   accepted_ = dropped_ = 0;
-  model_.reset(millis(), 30000);
+  started_ms_ = millis();
+  last_fusion_ms_ = started_ms_;
+  motion_score_ = amplitude_score_ = phase_score_ = correlation_score_ = 0;
+  reliability_ = 0;
+  samples_per_second_ = 0;
+  motion_votes_ = still_votes_ = 0;
+  state_ = CsiMotionModel::State::CALIBRATING;
+  memset(history_, 0, sizeof(history_));
+  history_head_ = 0;
   if (!takeWiFi()) {
     releaseWiFi();
+    releaseTargets();
     return false;
   }
   active_ = true;
@@ -87,6 +121,7 @@ bool CsiMotionMonitor::start(const uint8_t target[6], const String& name,
 void CsiMotionMonitor::stop() {
   active_ = false;
   releaseWiFi();
+  releaseTargets();
   if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CSI_MOTION)
     wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
 }
@@ -94,7 +129,17 @@ void CsiMotionMonitor::stop() {
 void CsiMotionMonitor::recalibrate() {
   write_index_ = read_index_ = 0;
   accepted_ = dropped_ = 0;
-  model_.reset(millis(), 30000);
+  started_ms_ = millis();
+  for (uint16_t i = 0; i < target_count_; ++i) {
+    targets_[i].accepted = targets_[i].dropped = 0;
+    targets_[i].model.reset(started_ms_, 30000);
+  }
+  motion_score_ = amplitude_score_ = phase_score_ = correlation_score_ = 0;
+  reliability_ = 0;
+  samples_per_second_ = 0;
+  state_ = CsiMotionModel::State::CALIBRATING;
+  memset(history_, 0, sizeof(history_));
+  history_head_ = 0;
 }
 
 void CsiMotionMonitor::callback(void* context, wifi_csi_info_t* info) {
@@ -103,24 +148,51 @@ void CsiMotionMonitor::callback(void* context, wifi_csi_info_t* info) {
 }
 
 void CsiMotionMonitor::enqueue(wifi_csi_info_t* info) {
-  if (!active_ || !info->buf || memcmp(info->mac, target_, 6) != 0)
+  if (!active_ || !info->buf)
+    return;
+  const int target_index = findTarget(info->mac);
+  if (target_index < 0)
     return;
   const uint8_t next = static_cast<uint8_t>((write_index_ + 1) % kQueueSize);
   if (next == read_index_) {
     ++dropped_;
+    ++targets_[target_index].dropped;
     return;
   }
   Sample& sample = queue_[write_index_];
+  sample.target_index = static_cast<uint16_t>(target_index);
   sample.length = info->len > kMaxCsiBytes ? kMaxCsiBytes : info->len;
   sample.rssi = info->rx_ctrl.rssi;
   sample.timestamp = millis();
   memcpy(sample.iq, info->buf, sample.length);
   write_index_ = next;
   ++accepted_;
+  ++targets_[target_index].accepted;
+}
+
+int CsiMotionMonitor::findTarget(const uint8_t mac[6]) const {
+  for (uint16_t i = 0; i < target_count_; ++i) {
+    if (memcmp(mac, targets_[i].bssid, 6) == 0)
+      return i;
+  }
+  return -1;
+}
+
+void CsiMotionMonitor::releaseTargets() {
+  if (!targets_) {
+    target_count_ = 0;
+    return;
+  }
+  for (uint16_t i = 0; i < target_count_; ++i)
+    targets_[i].~Target();
+  free(targets_);
+  targets_ = nullptr;
+  target_count_ = 0;
+  active_target_count_ = 0;
 }
 
 const char* CsiMotionMonitor::stateLabel() const {
-  switch (model_.state()) {
+  switch (state_) {
     case CsiMotionModel::State::CALIBRATING: return "CALIBRATING";
     case CsiMotionModel::State::INSUFFICIENT_SAMPLES: return "LOW DATA";
     case CsiMotionModel::State::POSSIBLE_MOTION: return "POSSIBLE";
@@ -136,8 +208,8 @@ void CsiMotionMonitor::drawGraph() {
   const int graph_h = SCREEN_HEIGHT - graph_y - 18;
   display_obj.tft.fillRect(0, graph_y, SCREEN_WIDTH, graph_h, TFT_BLACK);
   display_obj.tft.drawRect(0, graph_y, SCREEN_WIDTH, graph_h, TFT_DARKGREY);
-  const uint8_t* history = model_.history();
-  const size_t head = model_.historyHead();
+  const uint8_t* history = history_;
+  const size_t head = history_head_;
   for (int x = 1; x < SCREEN_WIDTH; ++x) {
     const size_t offset =
         (static_cast<size_t>(SCREEN_WIDTH - x) * CsiMotionModel::kHistorySize) /
@@ -170,22 +242,22 @@ void CsiMotionMonitor::draw(uint32_t now_ms) {
   display_obj.tft.print("CSI Motion Monitor");
   display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
   display_obj.tft.setCursor(2, title_y + 14);
-  display_obj.tft.printf("AP: %.20s", target_name_.c_str());
+  display_obj.tft.printf("CH:%u APs:%u Active:%u", channel_, target_count_,
+      active_target_count_);
   display_obj.tft.setCursor(2, title_y + 26);
-  display_obj.tft.printf("%02X:%02X:%02X:%02X:%02X:%02X CH:%u",
-      target_[0], target_[1], target_[2], target_[3], target_[4], target_[5],
-      channel_);
+  display_obj.tft.printf("Rate:%u/s Drop:%lu", samples_per_second_,
+      static_cast<unsigned long>(dropped_));
   display_obj.tft.setCursor(2, title_y + 38);
-  display_obj.tft.printf("RSSI:%d Rate:%u/s Drop:%lu", model_.rssi(),
-      model_.samplesPerSecond(), static_cast<unsigned long>(dropped_));
+  display_obj.tft.printf("Motion:%u Reliability:%u", motion_score_, reliability_);
   display_obj.tft.setCursor(2, title_y + 50);
-  display_obj.tft.printf("Motion:%u Reliability:%u", model_.motionScore(),
-      model_.reliability());
+  display_obj.tft.printf("Amp:%u Phase:%u Corr:%u", amplitude_score_,
+      phase_score_, correlation_score_);
   display_obj.tft.setCursor(2, title_y + 62);
   display_obj.tft.printf("State: %s", stateLabel());
-  if (!model_.calibrated()) {
+  if (now_ms - started_ms_ < 30000) {
     display_obj.tft.setCursor(2, title_y + 74);
-    display_obj.tft.printf("Keep still: %u%%", model_.calibrationPercent(now_ms));
+    display_obj.tft.printf("Keep still: %u%%",
+        static_cast<unsigned>((now_ms - started_ms_) * 100U / 30000U));
   }
   display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
   display_obj.tft.setCursor(2, graph_y - 12);
@@ -193,15 +265,80 @@ void CsiMotionMonitor::draw(uint32_t now_ms) {
   drawGraph();
 }
 
+void CsiMotionMonitor::updateFusion(uint32_t now_ms) {
+  if (now_ms - last_fusion_ms_ < 1000)
+    return;
+  last_fusion_ms_ = now_ms;
+  struct Candidate { uint8_t score, amp, phase, corr, reliability; };
+  Candidate best[3] = {};
+  uint32_t reliability_sum = 0;
+  uint32_t total_rate = 0;
+  active_target_count_ = 0;
+  for (uint16_t i = 0; i < target_count_; ++i) {
+    CsiMotionModel& model = targets_[i].model;
+    model.tick(now_ms, targets_[i].accepted, targets_[i].dropped);
+    total_rate += model.samplesPerSecond();
+    if (!model.calibrated() || model.reliability() < 25)
+      continue;
+    ++active_target_count_;
+    reliability_sum += model.reliability();
+    Candidate candidate = {model.motionScore(), model.amplitudeScore(),
+        model.phaseScore(), model.correlationScore(), model.reliability()};
+    for (size_t slot = 0; slot < 3; ++slot) {
+      if (candidate.score > best[slot].score) {
+        for (size_t move = 2; move > slot; --move) best[move] = best[move - 1];
+        best[slot] = candidate;
+        break;
+      }
+    }
+  }
+  samples_per_second_ = static_cast<uint16_t>(total_rate > 65535 ? 65535 : total_rate);
+  reliability_ = active_target_count_ ? static_cast<uint8_t>(reliability_sum / active_target_count_) : 0;
+  uint32_t weight_sum = 0, motion_sum = 0, amp_sum = 0, phase_sum = 0, corr_sum = 0;
+  for (size_t i = 0; i < 3 && best[i].reliability; ++i) {
+    const uint32_t weight = best[i].reliability;
+    weight_sum += weight;
+    motion_sum += best[i].score * weight;
+    amp_sum += best[i].amp * weight;
+    phase_sum += best[i].phase * weight;
+    corr_sum += best[i].corr * weight;
+  }
+  motion_score_ = weight_sum ? motion_sum / weight_sum : 0;
+  amplitude_score_ = weight_sum ? amp_sum / weight_sum : 0;
+  phase_score_ = weight_sum ? phase_sum / weight_sum : 0;
+  correlation_score_ = weight_sum ? corr_sum / weight_sum : 0;
+  if (now_ms - started_ms_ < 30000) {
+    state_ = CsiMotionModel::State::CALIBRATING;
+  } else if (!active_target_count_) {
+    state_ = CsiMotionModel::State::INSUFFICIENT_SAMPLES;
+  } else if (motion_score_ >= CsiMotionModel::kMotionThreshold) {
+    motion_votes_ = motion_votes_ < 5 ? motion_votes_ + 1 : 5;
+    still_votes_ = 0;
+    state_ = motion_votes_ >= 2 ? CsiMotionModel::State::MOTION :
+                                  CsiMotionModel::State::POSSIBLE_MOTION;
+  } else if (motion_score_ >= CsiMotionModel::kPossibleMotionThreshold) {
+    motion_votes_ = still_votes_ = 0;
+    state_ = CsiMotionModel::State::POSSIBLE_MOTION;
+  } else {
+    motion_votes_ = 0;
+    still_votes_ = still_votes_ < 3 ? still_votes_ + 1 : 3;
+    if (still_votes_ >= 2) state_ = CsiMotionModel::State::STILL;
+  }
+  history_[history_head_] = reliability_ < 15 ? 255 : motion_score_;
+  history_head_ = (history_head_ + 1) % CsiMotionModel::kHistorySize;
+}
+
 void CsiMotionMonitor::main(uint32_t now_ms) {
   if (!active_)
     return;
   while (read_index_ != write_index_) {
     Sample& sample = queue_[read_index_];
-    model_.addSample(sample.iq, sample.length, sample.rssi, sample.timestamp);
+    if (sample.target_index < target_count_)
+      targets_[sample.target_index].model.addSample(
+          sample.iq, sample.length, sample.rssi, sample.timestamp);
     read_index_ = static_cast<uint8_t>((read_index_ + 1) % kQueueSize);
   }
-  model_.tick(now_ms, accepted_, dropped_);
+  updateFusion(now_ms);
   if (now_ms - last_draw_ms_ >= 500) {
     last_draw_ms_ = now_ms;
     draw(now_ms);
