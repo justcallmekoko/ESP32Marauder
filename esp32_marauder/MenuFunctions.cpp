@@ -2118,7 +2118,7 @@ void MenuFunctions::RunSetup()
   #endif
 
   // Bluetooth menu stuff
-  bluetoothSnifferMenu.list = new LinkedList<MenuNode>();
+  bluetoothSnifferMenu.buildKind = MenuBuildKind::BLUETOOTH_SNIFFER;
   bluetoothAttackMenu.list = new LinkedList<MenuNode>();
   iBeaconMenu.list = new LinkedList<MenuNode>();
   iBeaconInfoMenu.list = new LinkedList<MenuNode>();
@@ -3126,101 +3126,6 @@ void MenuFunctions::RunSetup()
 
   // Build bluetooth sniffer Menu
   bluetoothSnifferMenu.parentMenu = &bluetoothMenu; // Second Menu is third menu parent
-  this->addNodes(&bluetoothSnifferMenu, text09, TFTLIGHTGREY, 0, [this]() {
-    this->changeMenu(bluetoothSnifferMenu.parentMenu, true);
-  });
-  this->addNodes(&bluetoothSnifferMenu, text_table1[34], TFTGREEN, BLUETOOTH_SNIFF, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_GREEN);
-  });
-  this->addNodes(&bluetoothSnifferMenu, "Flipper Sniff", TFTORANGE, FLIPPER, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(BT_SCAN_FLIPPER, TFT_ORANGE);
-  });
-  this->addNodes(&bluetoothSnifferMenu, "FindMy Sniff", TFTWHITE, BLUETOOTH_SNIFF, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(BT_SCAN_AIRTAG, TFT_WHITE);
-  });
-  this->addNodes(&bluetoothSnifferMenu, "iBeacon Sniff", TFTCYAN, BLUETOOTH_SNIFF, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(BT_SCAN_IBEACON, TFT_CYAN);
-  });
-  this->addNodes(&bluetoothSnifferMenu, "iBeacon Info", TFTCYAN, KEYBOARD_ICO, [this]() {
-    iBeaconMenu.list->clear();
-    iBeaconMenu.parentMenu = &bluetoothSnifferMenu;
-    this->addNodes(&iBeaconMenu, text09, TFTLIGHTGREY, 0, [this]() {
-      this->changeMenu(iBeaconMenu.parentMenu, true);
-    });
-    for (int i = 0; i < ble_devices->size(); i++) {
-      if (!ble_devices->get(i).is_ibeacon) continue;
-      String label = String(ble_devices->get(i).rssi) + " " + ble_devices->get(i).name;
-      this->addNodes(&iBeaconMenu, label.c_str(), rssiToMenuColor(ble_devices->get(i).rssi), 255, [this, i]() {
-        const BleDevice& device = ble_devices->get(i);
-        char uuid[37];
-        snprintf(uuid, sizeof(uuid),
-                 "%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X",
-                 device.ibeacon.uuid[0], device.ibeacon.uuid[1], device.ibeacon.uuid[2], device.ibeacon.uuid[3],
-                 device.ibeacon.uuid[4], device.ibeacon.uuid[5], device.ibeacon.uuid[6], device.ibeacon.uuid[7],
-                 device.ibeacon.uuid[8], device.ibeacon.uuid[9], device.ibeacon.uuid[10], device.ibeacon.uuid[11],
-                 device.ibeacon.uuid[12], device.ibeacon.uuid[13], device.ibeacon.uuid[14], device.ibeacon.uuid[15]);
-        iBeaconInfoMenu.list->clear();
-        iBeaconInfoMenu.parentMenu = &iBeaconMenu;
-        this->addNodes(&iBeaconInfoMenu, text09, TFTLIGHTGREY, 0, [this]() {
-          this->changeMenu(iBeaconInfoMenu.parentMenu, true);
-        });
-        String mac = "MAC: " + macToString(device.mac);
-        String uuid_a = "UUID: " + String(uuid).substring(0, 18);
-        String uuid_b = "      " + String(uuid).substring(18);
-        String major = "Major: " + String(device.ibeacon.major);
-        String minor = "Minor: " + String(device.ibeacon.minor);
-        String power = "Tx Power: " + String(device.ibeacon.measured_power) + " dBm";
-        String rssi = "RSSI: " + String(device.rssi) + " dBm";
-        auto no_action = []() {};
-        this->addNodes(&iBeaconInfoMenu, mac.c_str(), TFTCYAN, 255, no_action);
-        this->addNodes(&iBeaconInfoMenu, uuid_a.c_str(), TFTWHITE, 255, no_action);
-        this->addNodes(&iBeaconInfoMenu, uuid_b.c_str(), TFTWHITE, 255, no_action);
-        this->addNodes(&iBeaconInfoMenu, major.c_str(), TFTCYAN, 255, no_action);
-        this->addNodes(&iBeaconInfoMenu, minor.c_str(), TFTCYAN, 255, no_action);
-        this->addNodes(&iBeaconInfoMenu, power.c_str(), TFTCYAN, 255, no_action);
-        this->addNodes(&iBeaconInfoMenu, rssi.c_str(), rssiToMenuColor(device.rssi), 255, no_action);
-        this->changeMenu(&iBeaconInfoMenu, true);
-      });
-    }
-    this->changeMenu(&iBeaconMenu, true);
-  });
-  this->addNodes(&bluetoothSnifferMenu, "FindMy Monitor", TFTWHITE, BLUETOOTH_SNIFF, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(BT_SCAN_AIRTAG_MON, TFT_WHITE);
-  });
-  this->addNodes(&bluetoothSnifferMenu, text_table1[35], TFTMAGENTA, CC_SKIMMERS, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(BT_SCAN_SKIMMERS, TFT_MAGENTA);
-  });
-  this->addNodes(&bluetoothSnifferMenu, "Bluetooth Analyzer", TFTCYAN, PACKET_MONITOR, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    this->renderGraphUI(BT_SCAN_ANALYZER);
-    wifi_scan_obj.StartScan(BT_SCAN_ANALYZER, TFT_CYAN);
-  });
-  this->addNodes(&bluetoothSnifferMenu, "Flock Sniff", TFTORANGE, FLOCK, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(BT_SCAN_FLOCK, TFT_ORANGE);
-  });
-  this->addNodes(&bluetoothSnifferMenu, "Meta Detect", TFTWHITE, BLUETOOTH_SNIFF, [this]() {
-    display_obj.clearScreen();
-    this->drawStatusBar();
-    wifi_scan_obj.StartScan(BT_SCAN_RAYBAN, TFT_CYAN);
-  });
-  this->addNodes(&bluetoothSnifferMenu, "Fox Hunt", TFTCYAN, SCANNERS, [this]() {
-    this->buildBluetoothFoxHuntMenu();
-  });
 
   // Bluetooth Attack menu
   bluetoothAttackMenu.parentMenu = &bluetoothMenu; // Second Menu is third menu parent
@@ -4862,6 +4767,104 @@ void MenuFunctions::buildLazyMenu(Menu* menu)
         });
         this->addNodes(menu, "Bluetooth Attacks", TFTRED, ATTACKS, [this]() {
           this->changeMenu(&bluetoothAttackMenu, true);
+        });
+        break;
+
+      case MenuBuildKind::BLUETOOTH_SNIFFER:
+        this->addNodes(menu, text09, TFTLIGHTGREY, 0, [this]() {
+          this->changeMenu(bluetoothSnifferMenu.parentMenu, true);
+        });
+        this->addNodes(menu, text_table1[34], TFTGREEN, BLUETOOTH_SNIFF, [this]() {
+          display_obj.clearScreen();
+          this->drawStatusBar();
+          wifi_scan_obj.StartScan(BT_SCAN_ALL, TFT_GREEN);
+        });
+        this->addNodes(menu, "Flipper Sniff", TFTORANGE, FLIPPER, [this]() {
+          display_obj.clearScreen();
+          this->drawStatusBar();
+          wifi_scan_obj.StartScan(BT_SCAN_FLIPPER, TFT_ORANGE);
+        });
+        this->addNodes(menu, "FindMy Sniff", TFTWHITE, BLUETOOTH_SNIFF, [this]() {
+          display_obj.clearScreen();
+          this->drawStatusBar();
+          wifi_scan_obj.StartScan(BT_SCAN_AIRTAG, TFT_WHITE);
+        });
+        this->addNodes(menu, "iBeacon Sniff", TFTCYAN, BLUETOOTH_SNIFF, [this]() {
+          display_obj.clearScreen();
+          this->drawStatusBar();
+          wifi_scan_obj.StartScan(BT_SCAN_IBEACON, TFT_CYAN);
+        });
+        this->addNodes(menu, "iBeacon Info", TFTCYAN, KEYBOARD_ICO, [this]() {
+          iBeaconMenu.list->clear();
+          iBeaconMenu.parentMenu = &bluetoothSnifferMenu;
+          this->addNodes(&iBeaconMenu, text09, TFTLIGHTGREY, 0, [this]() {
+            this->changeMenu(iBeaconMenu.parentMenu, true);
+          });
+          for (int i = 0; i < ble_devices->size(); i++) {
+            if (!ble_devices->get(i).is_ibeacon) continue;
+            String label = String(ble_devices->get(i).rssi) + " " + ble_devices->get(i).name;
+            this->addNodes(&iBeaconMenu, label.c_str(), rssiToMenuColor(ble_devices->get(i).rssi), 255, [this, i]() {
+              const BleDevice& device = ble_devices->get(i);
+              char uuid[37];
+              snprintf(uuid, sizeof(uuid),
+                       "%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X",
+                       device.ibeacon.uuid[0], device.ibeacon.uuid[1], device.ibeacon.uuid[2], device.ibeacon.uuid[3],
+                       device.ibeacon.uuid[4], device.ibeacon.uuid[5], device.ibeacon.uuid[6], device.ibeacon.uuid[7],
+                       device.ibeacon.uuid[8], device.ibeacon.uuid[9], device.ibeacon.uuid[10], device.ibeacon.uuid[11],
+                       device.ibeacon.uuid[12], device.ibeacon.uuid[13], device.ibeacon.uuid[14], device.ibeacon.uuid[15]);
+              iBeaconInfoMenu.list->clear();
+              iBeaconInfoMenu.parentMenu = &iBeaconMenu;
+              this->addNodes(&iBeaconInfoMenu, text09, TFTLIGHTGREY, 0, [this]() {
+                this->changeMenu(iBeaconInfoMenu.parentMenu, true);
+              });
+              String mac = "MAC: " + macToString(device.mac);
+              String uuid_a = "UUID: " + String(uuid).substring(0, 18);
+              String uuid_b = "      " + String(uuid).substring(18);
+              String major = "Major: " + String(device.ibeacon.major);
+              String minor = "Minor: " + String(device.ibeacon.minor);
+              String power = "Tx Power: " + String(device.ibeacon.measured_power) + " dBm";
+              String rssi = "RSSI: " + String(device.rssi) + " dBm";
+              auto no_action = []() {};
+              this->addNodes(&iBeaconInfoMenu, mac.c_str(), TFTCYAN, 255, no_action);
+              this->addNodes(&iBeaconInfoMenu, uuid_a.c_str(), TFTWHITE, 255, no_action);
+              this->addNodes(&iBeaconInfoMenu, uuid_b.c_str(), TFTWHITE, 255, no_action);
+              this->addNodes(&iBeaconInfoMenu, major.c_str(), TFTCYAN, 255, no_action);
+              this->addNodes(&iBeaconInfoMenu, minor.c_str(), TFTCYAN, 255, no_action);
+              this->addNodes(&iBeaconInfoMenu, power.c_str(), TFTCYAN, 255, no_action);
+              this->addNodes(&iBeaconInfoMenu, rssi.c_str(), rssiToMenuColor(device.rssi), 255, no_action);
+              this->changeMenu(&iBeaconInfoMenu, true);
+            });
+          }
+          this->changeMenu(&iBeaconMenu, true);
+        });
+        this->addNodes(menu, "FindMy Monitor", TFTWHITE, BLUETOOTH_SNIFF, [this]() {
+          display_obj.clearScreen();
+          this->drawStatusBar();
+          wifi_scan_obj.StartScan(BT_SCAN_AIRTAG_MON, TFT_WHITE);
+        });
+        this->addNodes(menu, text_table1[35], TFTMAGENTA, CC_SKIMMERS, [this]() {
+          display_obj.clearScreen();
+          this->drawStatusBar();
+          wifi_scan_obj.StartScan(BT_SCAN_SKIMMERS, TFT_MAGENTA);
+        });
+        this->addNodes(menu, "Bluetooth Analyzer", TFTCYAN, PACKET_MONITOR, [this]() {
+          display_obj.clearScreen();
+          this->drawStatusBar();
+          this->renderGraphUI(BT_SCAN_ANALYZER);
+          wifi_scan_obj.StartScan(BT_SCAN_ANALYZER, TFT_CYAN);
+        });
+        this->addNodes(menu, "Flock Sniff", TFTORANGE, FLOCK, [this]() {
+          display_obj.clearScreen();
+          this->drawStatusBar();
+          wifi_scan_obj.StartScan(BT_SCAN_FLOCK, TFT_ORANGE);
+        });
+        this->addNodes(menu, "Meta Detect", TFTWHITE, BLUETOOTH_SNIFF, [this]() {
+          display_obj.clearScreen();
+          this->drawStatusBar();
+          wifi_scan_obj.StartScan(BT_SCAN_RAYBAN, TFT_CYAN);
+        });
+        this->addNodes(menu, "Fox Hunt", TFTCYAN, SCANNERS, [this]() {
+          this->buildBluetoothFoxHuntMenu();
         });
         break;
     #endif

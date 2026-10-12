@@ -123,6 +123,7 @@ enum class MenuBuildKind : uint8_t {
   WIFI_SCANNER,
   WIFI_SNIFFER,
   WIFI_ATTACK,
+  BLUETOOTH_SNIFFER,
 };
 
 // Individual Nodes of a menu
