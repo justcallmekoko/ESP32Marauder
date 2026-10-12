@@ -4700,17 +4700,12 @@ void MenuFunctions::buildLazyMenu(Menu* menu)
           if (access_points->size() == 0) {
             this->addNodes(&wifiAPMenu, "Run AP Scan First", TFTORANGE, 255, []() {});
           }
-          uint16_t channel_counts[256] = {};
-          for (int i = 0; i < access_points->size(); ++i)
-            ++channel_counts[access_points->get(i).channel];
-          for (int channel = 1; channel < 256; ++channel) {
-            if (!channel_counts[channel])
-              continue;
-            const String label = "Channel " + String(channel) + " (" +
-                                 String(channel_counts[channel]) + " APs)";
-            this->addNodes(&wifiAPMenu, label.c_str(), TFTCYAN, 255,
-                           [this, channel]() {
-              if (!csi_motion_obj.start(static_cast<uint8_t>(channel))) {
+          for (int i = 0; i < access_points->size(); ++i) {
+            const String label = access_points->get(i).essid.length() ?
+                access_points->get(i).essid : macToString(access_points->get(i).bssid);
+            this->addNodes(&wifiAPMenu, label.c_str(), TFTCYAN, 255, [this, i]() {
+              const AccessPoint& ap = access_points->get(i);
+              if (!csi_motion_obj.start(ap.bssid, ap.essid, ap.channel)) {
                 display_obj.clearScreen();
                 display_obj.showCenterText("CSI start failed", SCREEN_HEIGHT / 2);
                 delay(1500);

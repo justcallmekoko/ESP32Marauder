@@ -10,7 +10,7 @@
 
 class CsiMotionMonitor {
  public:
-  bool start(uint8_t channel);
+  bool start(const uint8_t target[6], const String& name, uint8_t channel);
   void stop();
   void main(uint32_t now_ms);
   bool active() const { return active_; }
@@ -53,6 +53,8 @@ class CsiMotionMonitor {
   Target* targets_ = nullptr;
   uint16_t target_count_ = 0;
   uint16_t active_target_count_ = 0;
+  uint8_t target_[6] = {};
+  String target_name_;
   uint8_t channel_ = 1;
   bool active_ = false;
   bool wifi_owned_ = false;

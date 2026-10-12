@@ -6,11 +6,9 @@
 #include <new>
 #include "WiFiScan.h"
 #include "Display.h"
-#include "EvilPortal.h"
 
 extern WiFiScan wifi_scan_obj;
 extern Display display_obj;
-extern LinkedList<AccessPoint>* access_points;
 
 bool CsiMotionMonitor::takeWiFi() {
   if (wifi_scan_obj.currentScanMode != WIFI_SCAN_OFF)
@@ -66,17 +64,13 @@ void CsiMotionMonitor::releaseWiFi() {
   wifi_scan_obj.wifi_initialized = false;
 }
 
-bool CsiMotionMonitor::start(uint8_t channel) {
+bool CsiMotionMonitor::start(const uint8_t target[6], const String& name,
+                             uint8_t channel) {
   stop();
+  memcpy(target_, target, sizeof(target_));
+  target_name_ = name;
   channel_ = channel;
-  if (!access_points)
-    return false;
-  for (int i = 0; i < access_points->size(); ++i) {
-    if (access_points->get(i).channel == channel_)
-      ++target_count_;
-  }
-  if (target_count_ == 0)
-    return false;
+  target_count_ = 1;
   targets_ = static_cast<Target*>(ps_malloc(sizeof(Target) * target_count_));
   if (!targets_)
     targets_ = static_cast<Target*>(malloc(sizeof(Target) * target_count_));
@@ -84,16 +78,10 @@ bool CsiMotionMonitor::start(uint8_t channel) {
     target_count_ = 0;
     return false;
   }
-  uint16_t target_index = 0;
-  for (int i = 0; i < access_points->size(); ++i) {
-    const AccessPoint& ap = access_points->get(i);
-    if (ap.channel != channel_)
-      continue;
-    Target* target = new (&targets_[target_index++]) Target();
-    memcpy(target->bssid, ap.bssid, sizeof(target->bssid));
-    target->accepted = target->dropped = 0;
-    target->model.reset(millis(), 30000);
-  }
+  Target* target_state = new (&targets_[0]) Target();
+  memcpy(target_state->bssid, target_, sizeof(target_state->bssid));
+  target_state->accepted = target_state->dropped = 0;
+  target_state->model.reset(millis(), 30000);
   write_index_ = read_index_ = 0;
   accepted_ = dropped_ = 0;
   started_ms_ = millis();
@@ -242,8 +230,7 @@ void CsiMotionMonitor::draw(uint32_t now_ms) {
   display_obj.tft.print("CSI Motion Monitor");
   display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
   display_obj.tft.setCursor(2, title_y + 14);
-  display_obj.tft.printf("CH:%u APs:%u Active:%u", channel_, target_count_,
-      active_target_count_);
+  display_obj.tft.printf("AP: %.16s CH:%u", target_name_.c_str(), channel_);
   display_obj.tft.setCursor(2, title_y + 26);
   display_obj.tft.printf("Rate:%u/s Drop:%lu", samples_per_second_,
       static_cast<unsigned long>(dropped_));
