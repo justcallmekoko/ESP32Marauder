@@ -15,6 +15,7 @@ class CsiMotionMonitor {
   void main(uint32_t now_ms);
   bool active() const { return active_; }
   void recalibrate();
+  void printStatus(bool force = true);
 
  private:
   static constexpr uint8_t kQueueSize = 64;
@@ -62,6 +63,7 @@ class CsiMotionMonitor {
   uint32_t last_draw_ms_ = 0;
   uint32_t started_ms_ = 0;
   uint32_t last_fusion_ms_ = 0;
+  uint32_t last_serial_ms_ = 0;
   uint8_t motion_score_ = 0;
   uint8_t amplitude_score_ = 0;
   uint8_t phase_score_ = 0;

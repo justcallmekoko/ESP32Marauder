@@ -5,11 +5,15 @@
 #include <string.h>
 #include <new>
 #include "WiFiScan.h"
-#include "Display.h"
+#if defined(HAS_SCREEN)
+  #include "Display.h"
+#endif
 #include "settings.h"
 
 extern WiFiScan wifi_scan_obj;
-extern Display display_obj;
+#if defined(HAS_SCREEN)
+  extern Display display_obj;
+#endif
 extern Settings settings_obj;
 
 namespace {
@@ -41,7 +45,7 @@ bool CsiMotionMonitor::takeWiFi() {
     return false;
 
   wifi_csi_config_t config = {};
-  #if defined(CONFIG_IDF_TARGET_ESP32)
+  #if !CONFIG_SOC_WIFI_HE_SUPPORT
     config.lltf_en = true;
     // Keep one stable 64-tone layout across legacy and HT packets. Mixing
     // HT-LTF/STBC blocks changes vector length and breaks window continuity.
@@ -51,19 +55,34 @@ bool CsiMotionMonitor::takeWiFi() {
     config.channel_filter_en = false;
     config.manu_scale = false;
     config.shift = 0;
-    config.dump_ack_en = false;
+    #if ESP_IDF_VERSION_MAJOR >= 5
+      config.dump_ack_en = false;
+    #endif
   #else
     config.enable = 1;
     config.acquire_csi_legacy = 1;
-    config.acquire_csi_force_lltf = 1;
-    config.acquire_csi_ht20 = 1;
-    config.acquire_csi_ht40 = 1;
-    config.acquire_csi_vht = 1;
-    config.acquire_csi_su = 1;
-    config.acquire_csi_mu = 1;
-    config.acquire_csi_dcm = 1;
-    config.acquire_csi_beamformed = 1;
-    config.acquire_csi_he_stbc_mode = ESP_CSI_ACQUIRE_STBC_HELTF1;
+    #if CONFIG_SOC_WIFI_MAC_VERSION_NUM == 3
+      // C5 can force the same L-LTF shape for legacy, HT, VHT and HE frames.
+      config.acquire_csi_force_lltf = 1;
+      config.acquire_csi_ht20 = 1;
+      config.acquire_csi_ht40 = 1;
+      config.acquire_csi_vht = 1;
+      config.acquire_csi_su = 1;
+      config.acquire_csi_mu = 1;
+      config.acquire_csi_dcm = 1;
+      config.acquire_csi_beamformed = 1;
+      config.acquire_csi_he_stbc_mode = ESP_CSI_ACQUIRE_STBC_HELTF1;
+    #else
+      // C6 cannot force L-LTF for every modulation. Restrict capture to
+      // legacy frames so every one-second motion window has one tone layout.
+      config.acquire_csi_ht20 = 0;
+      config.acquire_csi_ht40 = 0;
+      config.acquire_csi_su = 0;
+      config.acquire_csi_mu = 0;
+      config.acquire_csi_dcm = 0;
+      config.acquire_csi_beamformed = 0;
+      config.acquire_csi_he_stbc = ESP_CSI_ACQUIRE_STBC_HELTF1;
+    #endif
     config.val_scale_cfg = 0;
     config.dump_ack_en = 0;
   #endif
@@ -114,6 +133,7 @@ bool CsiMotionMonitor::start(const uint8_t target[6], const String& name,
   samples_per_second_ = 0;
   motion_votes_ = still_votes_ = 0;
   state_ = CsiMotionModel::State::CALIBRATING;
+  last_serial_ms_ = 0;
   memset(history_, 0, sizeof(history_));
   history_head_ = 0;
   if (!takeWiFi()) {
@@ -123,9 +143,14 @@ bool CsiMotionMonitor::start(const uint8_t target[6], const String& name,
   }
   active_ = true;
   wifi_scan_obj.currentScanMode = WIFI_SCAN_CSI_MOTION;
-  display_obj.tft.fillRect(0, STATUS_BAR_WIDTH, SCREEN_WIDTH,
-                           SCREEN_HEIGHT - STATUS_BAR_WIDTH, TFT_BLACK);
-  draw(millis());
+  #if defined(HAS_SCREEN)
+    display_obj.tft.fillRect(0, STATUS_BAR_WIDTH, SCREEN_WIDTH,
+                             SCREEN_HEIGHT - STATUS_BAR_WIDTH, TFT_BLACK);
+    draw(millis());
+  #endif
+  Serial.printf("CSI motion started: AP=\"%s\" BSSID=%02X:%02X:%02X:%02X:%02X:%02X channel=%u; keep the device still for 30 seconds. Stop with stopscan.\n",
+      target_name_.c_str(), target_[0], target_[1], target_[2], target_[3],
+      target_[4], target_[5], channel_);
   return true;
 }
 
@@ -149,6 +174,7 @@ void CsiMotionMonitor::recalibrate() {
   reliability_ = 0;
   samples_per_second_ = 0;
   state_ = CsiMotionModel::State::CALIBRATING;
+  last_serial_ms_ = 0;
   memset(history_, 0, sizeof(history_));
   history_head_ = 0;
 }
@@ -215,7 +241,10 @@ const char* CsiMotionMonitor::stateLabel() const {
 }
 
 void CsiMotionMonitor::drawGraph() {
-  #if defined(MARAUDER_MINI_V3)
+  #if !defined(HAS_SCREEN)
+    return;
+  #else
+  #if SCREEN_HEIGHT <= 160
     const int graph_y = STATUS_BAR_WIDTH + 62;
     const int graph_h = SCREEN_HEIGHT - graph_y;
   #else
@@ -245,10 +274,14 @@ void CsiMotionMonitor::drawGraph() {
   int threshold_y = graph_y + graph_h - 2 -
       (CsiMotionModel::kMotionThreshold * (graph_h - 4) / 100);
   display_obj.tft.drawFastHLine(1, threshold_y, SCREEN_WIDTH - 2, TFT_ORANGE);
+  #endif
 }
 
 void CsiMotionMonitor::draw(uint32_t now_ms) {
-  #if defined(MARAUDER_MINI_V3)
+  #if !defined(HAS_SCREEN)
+    (void)now_ms;
+    return;
+  #elif SCREEN_HEIGHT <= 160
   const int graph_y = STATUS_BAR_WIDTH + 62;
   const int title_y = STATUS_BAR_WIDTH + 1;
   display_obj.tft.fillRect(0, STATUS_BAR_WIDTH, SCREEN_WIDTH,
@@ -315,6 +348,20 @@ void CsiMotionMonitor::draw(uint32_t now_ms) {
   #endif
   #endif
   drawGraph();
+}
+
+void CsiMotionMonitor::printStatus(bool force) {
+  const uint32_t now_ms = millis();
+  if (!force && now_ms - last_serial_ms_ < 1000) return;
+  last_serial_ms_ = now_ms;
+  const uint8_t calibration = now_ms - started_ms_ >= 30000 ? 100 :
+      static_cast<uint8_t>((now_ms - started_ms_) * 100U / 30000U);
+  Serial.printf(
+      "CSI motion | state=%s | motion=%u | reliability=%u | amp=%u | phase=%u | corr=%u | rate=%u/s | dropped=%lu | calibration=%u%% | AP=\"%s\" | channel=%u\n",
+      stateLabel(), motion_score_, reliability_, amplitude_score_, phase_score_,
+      correlation_score_, samples_per_second_,
+      static_cast<unsigned long>(dropped_), calibration, target_name_.c_str(),
+      channel_);
 }
 
 void CsiMotionMonitor::updateFusion(uint32_t now_ms) {
@@ -389,20 +436,23 @@ void CsiMotionMonitor::main(uint32_t now_ms) {
       targets_[sample.target_index].model.addSample(
           sample.iq, sample.length, sample.rssi, sample.timestamp,
           sample.first_word_invalid,
-          #if defined(CONFIG_IDF_TARGET_ESP32)
-            CsiMotionModel::SampleEncoding::SIGNED_8_IMAG_REAL
-          #else
+          #if defined(CONFIG_IDF_TARGET_ESP32C5)
             CsiMotionModel::SampleEncoding::SIGNED_12_LE
+          #else
+            CsiMotionModel::SampleEncoding::SIGNED_8_IMAG_REAL
           #endif
           );
     }
     read_index_ = static_cast<uint8_t>((read_index_ + 1) % kQueueSize);
   }
   updateFusion(now_ms);
+  printStatus(false);
+  #if defined(HAS_SCREEN)
   if (now_ms - last_draw_ms_ >= 500) {
     last_draw_ms_ = now_ms;
     draw(now_ms);
   }
+  #endif
 }
 
 #endif

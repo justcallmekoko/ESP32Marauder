@@ -87,7 +87,7 @@ class RetainedDevelopFeatureTests(unittest.TestCase):
             settings_menu,
         )
 
-    def test_csi_monitor_does_not_stream_serial_data(self):
+    def test_csi_monitor_streams_refined_status_but_not_raw_data(self):
         monitor = (ROOT / "esp32_marauder" / "CsiMotionMonitor.cpp").read_text()
         sketch = (ROOT / "esp32_marauder" / "esp32_marauder.ino").read_text()
         self.assertNotIn("CSI_RAW", monitor)
@@ -95,6 +95,7 @@ class RetainedDevelopFeatureTests(unittest.TestCase):
         self.assertNotIn("CSI_SESSION", monitor)
         self.assertNotIn("CSI_SCHEMA", monitor)
         self.assertNotIn("writeRawRecord", monitor)
+        self.assertIn('"CSI motion | state=%s | motion=%u | reliability=%u', monitor)
         self.assertIn("Serial.begin(115200);", sketch)
         self.assertNotIn("Serial.begin(921600);", sketch)
 
@@ -102,10 +103,7 @@ class RetainedDevelopFeatureTests(unittest.TestCase):
         config = (ROOT / "esp32_marauder" / "configs.h").read_text()
         monitor = (ROOT / "esp32_marauder" / "CsiMotionMonitor.cpp").read_text()
         menu = (ROOT / "esp32_marauder" / "MenuFunctions.cpp").read_text()
-        self.assertIn(
-            "defined(MARAUDER_MINI_V3) && !defined(DUAL_MINI_C5)",
-            config,
-        )
+        self.assertIn("defined(MARAUDER_MINI_V3)", config)
         self.assertIn('display_obj.tft.print("Up=Cal C=Stop");', monitor)
         self.assertIn(
             "else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CSI_MOTION)",
@@ -126,6 +124,21 @@ class RetainedDevelopFeatureTests(unittest.TestCase):
         self.assertIn("config.channel_filter_en = false;", monitor)
         self.assertIn("SampleEncoding::SIGNED_8_IMAG_REAL", monitor)
         self.assertIn("Original ESP32 CSI is emitted as signed int8", model)
+
+    def test_csi_motion_covers_supported_chip_families_and_headless_cli(self):
+        config = (ROOT / "esp32_marauder" / "configs.h").read_text()
+        monitor = (ROOT / "esp32_marauder" / "CsiMotionMonitor.cpp").read_text()
+        cli_h = (ROOT / "esp32_marauder" / "CommandLine.h").read_text()
+        cli_cpp = (ROOT / "esp32_marauder" / "CommandLine.cpp").read_text()
+        for target in ("MARAUDER_CARDPUTER_ADV", "MARAUDER_MULTIBOARD_S3",
+                       "MARAUDER_FLIPPER", "MARAUDER_M5_NANO_C6",
+                       "MARAUDER_C5", "MARAUDER_PANCAKE", "MARAUDER_POOM"):
+            self.assertIn(f"defined({target})", config)
+        self.assertIn("#if !CONFIG_SOC_WIFI_HE_SUPPORT", monitor)
+        self.assertIn("#if defined(CONFIG_IDF_TARGET_ESP32C5)", monitor)
+        self.assertIn('CSI_MOTION_CMD[] = "csimotion"', cli_h)
+        self.assertIn("csi_motion_obj.start(ap.bssid, ap.essid, ap.channel)", cli_cpp)
+        self.assertIn("csi_motion_obj.printStatus();", cli_cpp)
 
 if __name__ == "__main__":
     unittest.main()
