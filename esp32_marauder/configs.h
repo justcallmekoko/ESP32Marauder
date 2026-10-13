@@ -141,8 +141,36 @@
   //// END HARDWARE NAMES
 
  //// BOARD FEATURES
-  #if defined(DUAL_MINI_C5)
+ #if defined(DUAL_MINI_C5)
     #define MARAUDER_MINI_V3
+  #endif
+
+  // CSI is provided by every ESP32-family target in the supported build
+  // matrix. Chip-specific configuration and sample decoding live in
+  // CsiMotionMonitor; do not infer the sample format from this capability.
+  #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2) || \
+      defined(MARAUDER_MINI) || defined(MARAUDER_V4) || defined(MARAUDER_V6) || \
+      defined(MARAUDER_V6_1) || defined(MARAUDER_V7) || defined(MARAUDER_V7_1) || \
+      defined(MARAUDER_KIT) || defined(GENERIC_ESP32) || defined(MARAUDER_FLIPPER) || \
+      defined(MARAUDER_MULTIBOARD_S3) || defined(ESP32_LDDB) || \
+      defined(MARAUDER_DEV_BOARD_PRO) || defined(XIAO_ESP32_S3) || \
+      defined(XIAO_ESP32_C5) || defined(MARAUDER_REV_FEATHER) || \
+      defined(MARAUDER_CYD_MICRO) || defined(MARAUDER_CYD_2USB) || \
+      defined(MARAUDER_CYD_GUITION) || defined(MARAUDER_CYD_3_5_INCH) || \
+      defined(MARAUDER_C5) || defined(MARAUDER_T_DONGLE_C5) || \
+      defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || \
+      defined(MARAUDER_V8) || defined(MARAUDER_PANCAKE) || \
+      defined(MARAUDER_MINI_V3) || defined(MARAUDER_M5_NANO_C6) || \
+      defined(MARAUDER_POOM)
+    #define HAS_CSI_MOTION
+  #endif
+
+  #if defined(MARAUDER_MINI_V3) || defined(MARAUDER_V7) || \
+      defined(MARAUDER_V7_1) || defined(MARAUDER_CARDPUTER) || \
+      defined(MARAUDER_CARDPUTER_ADV) || defined(MARAUDER_M5STICKC) || \
+      defined(MARAUDER_M5STICKCP2) || defined(MARAUDER_MINI) || \
+      defined(MARAUDER_REV_FEATHER)
+    #define HAS_CSI_BUTTON_CONTROLS
   #endif
 
   #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
