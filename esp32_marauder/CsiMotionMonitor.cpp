@@ -41,19 +41,32 @@ bool CsiMotionMonitor::takeWiFi() {
     return false;
 
   wifi_csi_config_t config = {};
-  config.enable = 1;
-  config.acquire_csi_legacy = 1;
-  config.acquire_csi_force_lltf = 1;
-  config.acquire_csi_ht20 = 1;
-  config.acquire_csi_ht40 = 1;
-  config.acquire_csi_vht = 1;
-  config.acquire_csi_su = 1;
-  config.acquire_csi_mu = 1;
-  config.acquire_csi_dcm = 1;
-  config.acquire_csi_beamformed = 1;
-  config.acquire_csi_he_stbc_mode = ESP_CSI_ACQUIRE_STBC_HELTF1;
-  config.val_scale_cfg = 0;
-  config.dump_ack_en = 0;
+  #if defined(CONFIG_IDF_TARGET_ESP32)
+    config.lltf_en = true;
+    // Keep one stable 64-tone layout across legacy and HT packets. Mixing
+    // HT-LTF/STBC blocks changes vector length and breaks window continuity.
+    config.htltf_en = false;
+    config.stbc_htltf2_en = false;
+    config.ltf_merge_en = false;
+    config.channel_filter_en = false;
+    config.manu_scale = false;
+    config.shift = 0;
+    config.dump_ack_en = false;
+  #else
+    config.enable = 1;
+    config.acquire_csi_legacy = 1;
+    config.acquire_csi_force_lltf = 1;
+    config.acquire_csi_ht20 = 1;
+    config.acquire_csi_ht40 = 1;
+    config.acquire_csi_vht = 1;
+    config.acquire_csi_su = 1;
+    config.acquire_csi_mu = 1;
+    config.acquire_csi_dcm = 1;
+    config.acquire_csi_beamformed = 1;
+    config.acquire_csi_he_stbc_mode = ESP_CSI_ACQUIRE_STBC_HELTF1;
+    config.val_scale_cfg = 0;
+    config.dump_ack_en = 0;
+  #endif
   if (esp_wifi_set_csi_rx_cb(&CsiMotionMonitor::callback, this) != ESP_OK ||
       esp_wifi_set_csi_config(&config) != ESP_OK ||
       esp_wifi_set_csi(true) != ESP_OK)
@@ -295,7 +308,11 @@ void CsiMotionMonitor::draw(uint32_t now_ms) {
   }
   display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
   display_obj.tft.setCursor(2, graph_y - 12);
-  display_obj.tft.print("Top=Recalibrate Bottom=Stop");
+  #if defined(HAS_CSI_BUTTON_CONTROLS)
+    display_obj.tft.print("Up=Recalibrate Center=Stop");
+  #else
+    display_obj.tft.print("Top=Recalibrate Bottom=Stop");
+  #endif
   #endif
   drawGraph();
 }
@@ -371,7 +388,13 @@ void CsiMotionMonitor::main(uint32_t now_ms) {
     if (sample.target_index < target_count_) {
       targets_[sample.target_index].model.addSample(
           sample.iq, sample.length, sample.rssi, sample.timestamp,
-          sample.first_word_invalid);
+          sample.first_word_invalid,
+          #if defined(CONFIG_IDF_TARGET_ESP32)
+            CsiMotionModel::SampleEncoding::SIGNED_8_IMAG_REAL
+          #else
+            CsiMotionModel::SampleEncoding::SIGNED_12_LE
+          #endif
+          );
     }
     read_index_ = static_cast<uint8_t>((read_index_ + 1) % kQueueSize);
   }

@@ -5,6 +5,11 @@
 
 class CsiMotionModel {
  public:
+  enum class SampleEncoding : uint8_t {
+    SIGNED_12_LE,
+    SIGNED_8_IMAG_REAL,
+  };
+
   static constexpr size_t kMaxCarriers = 64;
   static constexpr size_t kHistorySize = 160;
   static constexpr uint8_t kPossibleMotionThreshold = 12;
@@ -20,7 +25,8 @@ class CsiMotionModel {
 
   void reset(uint32_t now_ms, uint32_t calibration_ms = 30000);
   void addSample(const int8_t* bytes, size_t length, int8_t rssi,
-                 uint32_t now_ms, bool first_word_invalid = false);
+                 uint32_t now_ms, bool first_word_invalid = false,
+                 SampleEncoding encoding = SampleEncoding::SIGNED_12_LE);
   void tick(uint32_t now_ms, uint32_t accepted, uint32_t dropped);
 
   bool calibrated() const { return calibrated_; }

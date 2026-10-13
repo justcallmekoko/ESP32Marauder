@@ -18,6 +18,13 @@ static void fillSample(int8_t* sample, int16_t real, int16_t imag) {
   }
 }
 
+static void fillLegacySample(int8_t* sample, int8_t real, int8_t imag) {
+  for (int i = 0; i < 128; i += 2) {
+    sample[i] = imag;
+    sample[i + 1] = real;
+  }
+}
+
 void test_calibration_and_still_signal() {
   CsiMotionModel model;
   int8_t sample[128];
@@ -145,6 +152,23 @@ void test_signed_12_bit_words_and_invalid_first_tone() {
   TEST_ASSERT_LESS_THAN(20, model.motionScore());
 }
 
+void test_signed_8_bit_imag_real_samples_and_invalid_first_word() {
+  CsiMotionModel model;
+  int8_t sample[128];
+  fillLegacySample(sample, -61, 15);
+  sample[0] = sample[1] = sample[2] = sample[3] = 127;
+  model.reset(0, 1000);
+  uint32_t accepted = 0;
+  for (uint32_t now = 0; now <= 3200; now += 20) {
+    model.addSample(sample, sizeof(sample), -55, now, true,
+        CsiMotionModel::SampleEncoding::SIGNED_8_IMAG_REAL);
+    ++accepted;
+    model.tick(now, accepted, 0);
+  }
+  TEST_ASSERT_TRUE(model.calibrated());
+  TEST_ASSERT_LESS_THAN(20, model.motionScore());
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_calibration_and_still_signal);
@@ -153,5 +177,6 @@ int main(int, char**) {
   RUN_TEST(test_relative_phase_variance_is_measured_from_one_receiver);
   RUN_TEST(test_subcarrier_shape_change_reduces_baseline_correlation);
   RUN_TEST(test_signed_12_bit_words_and_invalid_first_tone);
+  RUN_TEST(test_signed_8_bit_imag_real_samples_and_invalid_first_word);
   return UNITY_END();
 }

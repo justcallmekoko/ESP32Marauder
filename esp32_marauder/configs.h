@@ -145,8 +145,15 @@
     #define MARAUDER_MINI_V3
   #endif
 
-  #if defined(MARAUDER_V8) || (defined(MARAUDER_MINI_V3) && !defined(DUAL_MINI_C5))
+  #if defined(MARAUDER_V8) || (defined(MARAUDER_MINI_V3) && !defined(DUAL_MINI_C5)) || \
+      defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || \
+      defined(MARAUDER_V7) || defined(MARAUDER_V7_1)
     #define HAS_CSI_MOTION
+  #endif
+
+  #if (defined(MARAUDER_MINI_V3) && !defined(DUAL_MINI_C5)) || \
+      defined(MARAUDER_V7) || defined(MARAUDER_V7_1)
+    #define HAS_CSI_BUTTON_CONTROLS
   #endif
 
   #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)

@@ -93,14 +93,15 @@ uint8_t CsiMotionModel::calibrationPercent(uint32_t now_ms) const {
 }
 
 void CsiMotionModel::addSample(const int8_t* bytes, size_t length, int8_t rssi,
-                               uint32_t now_ms, bool first_word_invalid) {
-  // Forced L-LTF CSI on ESP32-C5 stores each scalar component as a signed
-  // little-endian 12-bit value in a 16-bit word. Two words form one complex
-  // tone. This is not the legacy signed-byte I/Q layout.
+                               uint32_t now_ms, bool first_word_invalid,
+                               SampleEncoding encoding) {
   if (!bytes || length < 16) return;
-  size_t scalar_count = length / 2;
+  const bool legacy = encoding == SampleEncoding::SIGNED_8_IMAG_REAL;
+  size_t scalar_count = legacy ? length : length / 2;
   scalar_count &= ~static_cast<size_t>(1);
-  size_t first_scalar = first_word_invalid ? 2 : 0;
+  // first_word_invalid covers four bytes: two legacy int8 complex tones or
+  // one C5 complex tone made from two 16-bit scalar words.
+  size_t first_scalar = first_word_invalid ? (legacy ? 4 : 2) : 0;
   if (scalar_count <= first_scalar + 3) return;
   size_t carriers = (scalar_count - first_scalar) / 2;
   if (carriers > kMaxCarriers) carriers = kMaxCarriers;
@@ -109,8 +110,16 @@ void CsiMotionModel::addSample(const int8_t* bytes, size_t length, int8_t rssi,
   float total = 0.0f;
   for (size_t i = 0; i < carriers; ++i) {
     const size_t scalar = first_scalar + i * 2;
-    real[i] = static_cast<float>(decode12(bytes + scalar * 2));
-    imag[i] = static_cast<float>(decode12(bytes + (scalar + 1) * 2));
+    if (legacy) {
+      // Original ESP32 CSI is emitted as signed int8 imaginary/real pairs.
+      imag[i] = static_cast<float>(bytes[scalar]);
+      real[i] = static_cast<float>(bytes[scalar + 1]);
+    } else {
+      // Forced L-LTF ESP32-C5 CSI stores signed 12-bit scalar components in
+      // little-endian 16-bit words. Two words form one complex tone.
+      real[i] = static_cast<float>(decode12(bytes + scalar * 2));
+      imag[i] = static_cast<float>(decode12(bytes + (scalar + 1) * 2));
+    }
     magnitude[i] = sqrtf(real[i] * real[i] + imag[i] * imag[i]);
     total += magnitude[i];
   }

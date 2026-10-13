@@ -983,7 +983,7 @@ void MenuFunctions::main(uint32_t currentTime)
                   wifi_scan_obj.changeChannel(wifi_scan_obj.dual_band_channels[wifi_scan_obj.dual_band_channel_index]);
                 #endif
               }
-              #if defined(MARAUDER_MINI_V3) && defined(HAS_CSI_MOTION)
+              #if defined(HAS_CSI_BUTTON_CONTROLS) && defined(HAS_CSI_MOTION)
                 else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CSI_MOTION) {
                   csi_motion_obj.recalibrate();
                 }

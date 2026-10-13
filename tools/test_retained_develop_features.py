@@ -113,5 +113,19 @@ class RetainedDevelopFeatureTests(unittest.TestCase):
         )
         self.assertIn("csi_motion_obj.recalibrate();", menu)
 
+    def test_csi_motion_has_separate_classic_esp32_path(self):
+        config = (ROOT / "esp32_marauder" / "configs.h").read_text()
+        monitor = (ROOT / "esp32_marauder" / "CsiMotionMonitor.cpp").read_text()
+        model = (ROOT / "esp32_marauder" / "CsiMotionModel.cpp").read_text()
+        for target in ("MARAUDER_V4", "MARAUDER_V6", "MARAUDER_V6_1",
+                       "MARAUDER_V7", "MARAUDER_V7_1"):
+            self.assertIn(f"defined({target})", config)
+        self.assertIn("config.lltf_en = true;", monitor)
+        self.assertIn("config.htltf_en = false;", monitor)
+        self.assertIn("config.stbc_htltf2_en = false;", monitor)
+        self.assertIn("config.channel_filter_en = false;", monitor)
+        self.assertIn("SampleEncoding::SIGNED_8_IMAG_REAL", monitor)
+        self.assertIn("Original ESP32 CSI is emitted as signed int8", model)
+
 if __name__ == "__main__":
     unittest.main()
