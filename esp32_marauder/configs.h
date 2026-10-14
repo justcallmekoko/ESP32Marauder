@@ -44,6 +44,14 @@
   //#define MARAUDER_M5_NANO_C6
   //#define DUAL_MINI_C5
   //#define MARAUDER_POOM
+  // Waveshare ESP32-C5-Touch-LCD-3.5 board. Same silicon/panel class as the
+  // Pancake V8 (ESP32-C5, ST7796 320x480, FT6336), so reuse Pancake's verified
+  // C5 feature + geometry logic and override only this board's differing pins below.
+  //#define MARAUDER_WS_C5_35
+  #ifdef MARAUDER_WS_C5_35
+    #define MARAUDER_PANCAKE
+    #define MARAUDER_WS_C5_35_OVERRIDE
+  #endif
   //// END BOARD TARGETS
 
   // The official Arduino board package supplies this identifier for the XIAO
@@ -3339,5 +3347,29 @@
     #endif
 
   #endif
+
+
+//// Waveshare C5 3.5" pin overrides (applied after Pancake defaults resolve)
+#ifdef MARAUDER_WS_C5_35_OVERRIDE
+  #undef HARDWARE_NAME
+  #define HARDWARE_NAME "Marauder C5 3.5"
+  // I2C bus is GPIO27/26 on this board (Pancake uses 9/10). CTP_SDA/SCL are
+  // defined as I2C_SDA/I2C_SCL tokens upstream, so they follow automatically.
+  #undef I2C_SDA
+  #undef I2C_SCL
+  #define I2C_SDA 27
+  #define I2C_SCL 26
+  // microSD chip-select is GPIO9 (Pancake uses 7); SD shares the LCD SPI bus,
+  // whose pins come from User_Setup_ws_c5_35.h via SD_MISO/MOSI/SCK = TFT_*.
+  #undef SD_CS
+  #define SD_CS 9
+  // No MAX17048 fuel gauge on this board; avoid probing a device that isn't here.
+  #ifdef HAS_MAX1704X
+    #undef HAS_MAX1704X
+  #endif
+  #ifdef HAS_BATTERY
+    #undef HAS_BATTERY
+  #endif
+#endif
 
 #endif
