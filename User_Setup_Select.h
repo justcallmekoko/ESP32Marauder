@@ -38,6 +38,7 @@
 //#include <User_Setup_marauder_m5cardputer_adv.h>
 //#include <User_Setup_cyd_3_5_inch.h>
 //#include <User_Setup_marauder_pancake.h>
+//#include <User_Setup_ws_c5_35.h>
 //#include <User_Setup_marauder_t_dongle_c5.h>
 
 //#include <User_Setups/Setup1_ILI9341.h>  // Setup file configured for my ILI9341
