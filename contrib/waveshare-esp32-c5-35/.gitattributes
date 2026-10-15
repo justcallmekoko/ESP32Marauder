@@ -1,0 +1,11 @@
+*.md text eol=lf
+*.txt text eol=lf
+*.json text eol=lf
+*.csv text eol=lf
+*.h text eol=lf
+*.ps1 text eol=crlf
+*.svg text eol=lf
+source/*.patch -text -whitespace
+firmware/*.bin binary
+wiring/*.png binary
+enclosure/*.stl binary
