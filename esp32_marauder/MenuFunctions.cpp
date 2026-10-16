@@ -2156,7 +2156,7 @@ void do_menu_sync_ntp() {
    sync_ntp();
    struct tm timeinfo;
    if (getLocalTime(&timeinfo)) {
-     Serial.println(&timeinfo, "%F %T");
+      print_datetime(timeinfo);
      //display_obj.tft.setCursor(0, 110);
      //display_obj.tft.println(&timeinfo, "%F %T");
    } else {

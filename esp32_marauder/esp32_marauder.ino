@@ -30,7 +30,7 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #ifdef HAS_FLIPPER_LED
   #include "flipperLED.h"
-#elif defined(XIAO_ESP32_S3)
+#elif defined(XIAO_ESP32_S3) || defined(XIAO_ESP32_C5)
   #include "xiaoLED.h"
 #elif defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
   #include "stickcLED.h"
@@ -129,7 +129,7 @@ extern void init_system_time();
 
 #ifdef HAS_FLIPPER_LED
   flipperLED flipper_led;
-#elif defined(XIAO_ESP32_S3)
+#elif defined(XIAO_ESP32_S3) || defined(XIAO_ESP32_C5)
   xiaoLED xiao_led;
 #elif defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
   stickcLED stickc_led;
@@ -190,7 +190,7 @@ void print_reset_reason() {
   Serial.println(resetReasonName());
 }
 
-#if defined(CORE_DEBUG_LEVEL)
+#if defined(CORE_DEBUG_LEVEL) && CORE_DEBUG_LEVEL > 2 && defined(I2C_SDA)
 
   void i2c_probe() {
     byte count = 0;
@@ -243,9 +243,9 @@ void setup()
     esp_log_level_set("*", ESP_LOG_NONE);
   #endif
 
-//  #ifndef HAS_IDF_3
-//    esp_spiram_init();
-//  #endif
+  #ifndef HAS_IDF_3
+    esp_spiram_init();
+  #endif
 
   Serial.begin(115200);
 
@@ -253,7 +253,7 @@ void setup()
   #ifdef I2C_SDA
     log_d("I2C Wire.begin: I2C_SDA=%d  I2C_SCL=%d", I2C_SDA, I2C_SCL);
     Wire.begin(I2C_SDA, I2C_SCL);
-    #if defined(CORE_DEBUG_LEVEL)
+    #if defined(CORE_DEBUG_LEVEL) && CORE_DEBUG_LEVEL > 2
       i2c_probe();
     #endif
   #endif
@@ -271,18 +271,8 @@ void setup()
     // perimanSetPinBusExtraType(ACT_LED_PIN, "ACT_LED_PIN");
   #endif
 
-  #if MARAUDER_WS_C5_28 || (defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT == 1)
-    while(!Serial && millis() < 2000) {
-      delay(500);
-    }
-    #if ESP_ARDUINO_VERSION_MAJOR >= 3
-      log_d("setting setTxTimeoutMs()");
-      Serial.setTxTimeoutMs(0);
-    #endif
-  #else
-    while(!Serial)
-        delay(10);
-  #endif
+  while(!Serial)
+      delay(10);
 
   // #ifdef HAS_C5_SD
   //   sharedSPI.begin(SD_SCK, SD_MISO, SD_MOSI);
@@ -384,7 +374,7 @@ void setup()
   // this removes the need for "sharedSPI"
   // the TFT init fucks up the SPI bus by closing SD_MISO
   // so reinit it and assert it to for the sd_obj.
-    #if defined(HAS_C5_SD)
+    #if defined(HAS_C5_SD) and !defined(MARAUDER_POOM)
       #ifndef SD_MISO
         #define SD_MISO TFT_MISO
         #define SD_MOSI TFT_MOSI
@@ -457,7 +447,7 @@ void setup()
   // Do some LED stuff
   #ifdef HAS_FLIPPER_LED
     flipper_led.RunSetup();
-  #elif defined(XIAO_ESP32_S3)
+  #elif defined(XIAO_ESP32_S3) || defined(XIAO_ESP32_C5)
     xiao_led.RunSetup();
   #elif defined(MARAUDER_M5STICKC)
     stickc_led.RunSetup();
@@ -493,7 +483,7 @@ void setup()
   menu_function_obj.changeMenu(menu_function_obj.current_menu);*/
 
   wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
-  #if defined(CORE_DEBUG_LEVEL)
+  #if defined(CORE_DEBUG_LEVEL) && CORE_DEBUG_LEVEL > 2 && defined(I2C_SDA)
     i2c_probe();
   #endif
   cli_obj.RunSetup();
@@ -556,7 +546,7 @@ void loop()
   }
   #ifdef HAS_FLIPPER_LED
     flipper_led.main();
-  #elif defined(XIAO_ESP32_S3)
+  #elif defined(XIAO_ESP32_S3) || defined(XIAO_ESP32_C5)
     xiao_led.main();
   #elif defined(MARAUDER_M5STICKC)
     stickc_led.main();

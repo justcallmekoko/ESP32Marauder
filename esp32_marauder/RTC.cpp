@@ -184,8 +184,8 @@ void RTC::adjust_rtc(const char *time_str) {
 
 void RTC::adjust_rtc(struct tm ti) {
   log_d("RTC::adjust_rtc struct tm: %d", ti.tm_year, ti.tm_year + 1900);
-  Serial.print("RTC::adjust_rtc ");
-  Serial.println(&ti, "%F %T");
+  // Serial.print("RTC::adjust_rtc ");
+  // print_datetime(ti);
 
   rtclock.adjust(DateTime(
     (uint16_t)(ti.tm_year) + 1900,
@@ -205,59 +205,6 @@ void RTC::adjust_rtc(uint32_t t) {
   rtclock.adjust(DateTime(t));
 }
 
-/*   Now Done in system_time.cpp
-
-// -----------------------------------------------------------------------------
-// NTP sync
-// -----------------------------------------------------------------------------
-bool RTC::sync_rtc_ntp(const char *ntpServer) {
-  if (!supported) { log_w("RTC not supported"); return false; }
-  if (!wifi_scan_obj.wifi_connected) { log_w("WiFi not connected"); return false; }
-
-  configTime(GMTOFFSET_SEC, DAYLIGHTOFFSET_SEC, ntpServer);
-  delay(1000);
-
-  struct tm timeinfo;
-  if (!getLocalTime(&timeinfo)) {
-    log_w("Failed to obtain time from NTP");
-    return false;
-  }
-  Serial.printf("sync_rtc_ntp getLocalTime timeinfo.tm_year=%d\n", timeinfo.tm_year);
-  system_time_set = true;
-  // Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
-  Serial.println(&timeinfo, "%F %T");
-  Serial.println(F("RTC successfully set via NTP"));
-
-  adjust_rtc(timeinfo);
-  Serial.println(F("RTC updated with NTP time"));
-  return true;
-}
-
-// -----------------------------------------------------------------------------
-// Set system time from ISO 8601 string  "2026-06-11T13:26:00"
-// -----------------------------------------------------------------------------
-bool RTC::getSystemTimeFromString(const char *timeStr) {
-  struct tm timeinfo = {};
-  if (strptime(timeStr, "%Y-%m-%dT%H:%M:%S", &timeinfo) == NULL) {
-    Serial.println(F("Failed to parse time string"));
-    return false;
-  }
-  time_t epochTime = mktime(&timeinfo);
-  if (epochTime == -1) {
-    Serial.println(F("Failed to convert to epoch"));
-    return false;
-  }
-  struct timeval tv = { .tv_sec = epochTime, .tv_usec = 0 };
-  if (settimeofday(&tv, NULL) != 0) {
-    Serial.println(F("Failed to update system time"));
-    return false;
-  }
-  system_time_set = true;
-  Serial.println(F("System time updated from string"));
-  return true;
-}
-
-*/
 
 // -----------------------------------------------------------------------------
 // dt_string / millis_dt_string

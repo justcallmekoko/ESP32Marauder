@@ -184,6 +184,15 @@
       "esptoolChip": "esp32c5"
     },
     {
+      "id": "seeed-xiao-esp32-c5",
+      "displayName": "Seeed XIAO ESP32-C5",
+      "aliases": ["XIAO ESP32-C5", "XIAO C5"],
+      "buildFlag": "XIAO_ESP32_C5",
+      "assetSuffix": "xiao_esp32c5",
+      "chipFamily": "ESP32-C5",
+      "esptoolChip": "esp32c5"
+    },
+    {
       "id": "lilygo-t-dongle-c5",
       "displayName": "LilyGo T-Dongle C5",
       "aliases": ["T-Dongle C5", "T Dongle C5"],

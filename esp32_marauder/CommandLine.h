@@ -26,6 +26,8 @@
   #include "shutdown.hpp"
 #endif
 
+#include "time_fmt.h"
+
 // If system time/date has been set
 extern bool system_time_set;
 

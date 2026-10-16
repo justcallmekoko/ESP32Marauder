@@ -1,6 +1,9 @@
 /*
- * PCF85063 - Arduino/PlatformIO RTC library
- * NXP PCF85063A/TP, I2C address 0x51
+ *
+ * The PCF85063 is a low-power CMOS Real-Time Clock (RTC) and calendar
+ * integrated circuit (IC) manufactured by NXP Semiconductors. 
+ *
+ *  I2C address 0x51
  * RTClib RTC_PCF8523-compatible interface
  * Register map from Waveshare BSP PCF85063Constants.h
  *
@@ -43,7 +46,8 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <stdint.h>
-#include <time.h>
+#include "time_fmt.h"
+
 
 // -- DateTime - mirrors RTClib -------------------------------------------------
 class DateTime {
@@ -90,7 +94,8 @@ public:
         _minute = (uint8_t)  ti->tm_min;
         _second = (uint8_t)  ti->tm_sec;
         log_d("Class::DateTime unix_epoch: tm=%d _year=%d", ti->tm_year, _year);
-        Serial.println(ti, "%F %T");
+        // Serial.println(ti, "%F %T");
+        print_datetime(*ti);
     }
 
     // DateTime(struct tm*)
@@ -102,7 +107,8 @@ public:
         _minute = (uint8_t)  ti->tm_min;
         _second = (uint8_t)  ti->tm_sec;
         log_d("Class::DateTime struct tm: tm=%d _year=%d", ti->tm_year, _year);
-        Serial.println(ti, "%F %T");
+        // Serial.println(ti, "%F %T");
+        print_datetime(*ti);
     }
 
     // DateTime from ISO8601 string "2026-10-11 13:24:43" or T separator
@@ -155,7 +161,6 @@ public:
         t.tm_min  = _minute;
         t.tm_sec  = _second;
         log_d("Datetime unixtime:  tm_y=%d _y=%d: ", t.tm_year, _year);
-        Serial.println(&t, "%F %T");
         return static_cast<uint32_t>(mktime(&t));
     }
 
@@ -170,7 +175,6 @@ public:
         t.tm_sec  = _second;
         t.tm_wday = dayOfTheWeek();
         log_d("Datetime toTm tm_y=%d _y=%d: ", t.tm_year, _year);
-        Serial.println(&t, "%F %T");
         return t;
     }
 

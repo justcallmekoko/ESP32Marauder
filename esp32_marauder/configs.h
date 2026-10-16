@@ -33,6 +33,7 @@
   //#define ESP32_LDDB
   //#define MARAUDER_DEV_BOARD_PRO
   //#define XIAO_ESP32_S3
+  //#define XIAO_ESP32_C5
   //#define MARAUDER_REV_FEATHER
   //#define MARAUDER_CYD_MICRO // 2432S028
   //#define MARAUDER_CYD_2USB // Another 2432S028 but it has tWo UsBs OoOoOoO
@@ -51,6 +52,13 @@
   //#define MARAUDER_WS_C5_28
   //#define MARAUDER_POOM
   //// END BOARD TARGETS
+
+  // The official Arduino board package supplies this identifier for the XIAO
+  // ESP32-C5. Auto-select the matching Marauder profile so every translation
+  // unit receives the same hardware contract, including the generated sketch.
+  #if defined(ARDUINO_XIAO_ESP32C5) && !defined(XIAO_ESP32_C5)
+    #define XIAO_ESP32_C5
+  #endif
 
   // Allocated only while settings are loaded or updated. This accommodates
   // five saved WiFi profiles without permanently caching their passwords.
@@ -115,6 +123,8 @@
     #define HARDWARE_NAME "Flipper Zero Dev Board Pro"
   #elif defined(XIAO_ESP32_S3)
     #define HARDWARE_NAME "XIAO ESP32 S3"
+  #elif defined(XIAO_ESP32_C5)
+    #define HARDWARE_NAME "Seeed Studio XIAO ESP32-C5"
   #elif defined(MARAUDER_CYD_HMI)
     #define HARDWARE_NAME "LILYGO T-HMI ESP32-S3 2.8 inch"
   #elif defined(MARAUDER_C5)
@@ -525,7 +535,6 @@
     //#define HAS_GPS
   #endif
 
-
   #ifdef MARAUDER_CYD_HMI
     #define HAS_TEMP_SENSOR
       #define USE_CPU_TEMP
@@ -565,6 +574,17 @@
       #endif
     #endif
     */
+
+  #ifdef XIAO_ESP32_C5
+    // Headless native-USB target. GPIO13/GPIO14 are reserved for USB D-/D+.
+    #define HAS_BT
+    #define HAS_GPS
+    #define HAS_DUAL_BAND
+    #define HAS_PSRAM
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3
+    #define XIAO_LED_PIN 27
+  #endif
 
   #ifdef MARAUDER_C5
     //#define HAS_FLIPPER_LED
@@ -690,7 +710,7 @@
       // I2C bus (shared by touch CST3530, CH32V003, QMI8658, SHTC3, PCF85063A)
     #if defined(MARAUDER_WS_C5_28)
       #define HAS_BT
-      //  #define HAS_NIMBLE_2
+        #define HAS_NIMBLE_2
       #define HAS_BUTTONS
       #define HAS_SCREEN
         #define HAS_FULL_SCREEN
@@ -756,6 +776,14 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     //#define HAS_DIRECT_UPLOAD
+  #endif
+
+  // The bare XIAO carrier has no SD hardware. Keep the capability absent even
+  // when another build-time definition is present in a shared build setup.
+  #ifdef XIAO_ESP32_C5
+    #undef HAS_C5_SD
+    #undef HAS_SD
+    #undef USE_SD
   #endif
 
   //// END BOARD FEATURES
@@ -3139,6 +3167,8 @@
     #define MEM_LOWER_LIM 10000
   #elif defined(XIAO_ESP32_S3)
     #define MEM_LOWER_LIM 10000
+  #elif defined(XIAO_ESP32_C5)
+    #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_C5)
     #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_CYD_HMI)
@@ -3282,6 +3312,10 @@
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 12 // External GPS TX -> T-Dongle UART0 RX
       #define GPS_RX 11 // External GPS RX -> T-Dongle UART0 TX
+    #elif defined(XIAO_ESP32_C5)
+      #define GPS_SERIAL_INDEX 1
+      #define GPS_TX 12 // External GPS TX -> XIAO D7 / UART RX
+      #define GPS_RX 11 // External GPS RX -> XIAO D6 / UART TX
     #elif defined(MARAUDER_C5)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 14
@@ -3313,20 +3347,26 @@
     //// BATTERY STUFF
     #ifdef HAS_BATTERY
 
-      #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
-        #define I2C_SDA 21
-        #define I2C_SCL 22
+    #if defined(MARAUDER_KIT)
+      #define I2C_SDA 33
+      #define I2C_SCL 22
+      #define HAS_MAX1704X
+      #undef HAS_AXP2101
+      #undef HAS_IP5306
 
-      #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_KIT)
-        #define I2C_SDA 33
-        #define I2C_SCL 22
-        #define HAS_MAX1704X
-        #undef HAS_AXP2101
-        #undef HAS_IP5306
+    // V4, V6 and V6.1 are also used by compatible third-party boards that may
+    // have a MAX17048 expansion instead of an IP5306. Compile both probes and
+    // select the gauge that responds at runtime.
+    #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
+      #define I2C_SDA 33
+      #define I2C_SCL 22
+      #define HAS_IP5306
+      #define HAS_MAX1704X
+      #undef HAS_AXP2101
 
-      #elif defined(MARAUDER_MINI)
-        #define I2C_SDA 33
-        #define I2C_SCL 26
+    #elif defined(MARAUDER_MINI)
+      #define I2C_SDA 33
+      #define I2C_SCL 26
 
       #elif defined(MARAUDER_V7)
         #define I2C_SDA 33
@@ -3354,7 +3394,7 @@
         #define I2C_SDA 22
         #define I2C_SCL 21
 
-    #elif defined(MARAUDER_V8)
+      #elif defined(MARAUDER_V8)
         #define I2C_SCL 4
         #define I2C_SDA 5
 
@@ -3377,9 +3417,8 @@
       #elif defined(MARAUDER_WS_C5_28)    // ADC is through IO expander
         #define I2C_SDA 0
         #define I2C_SCL 1
-      #endif
 
-      #ifdef MARAUDER_CYD_HMI
+      #elif defined(MARAUDER_CYD_HMI)
         #define BATTERY_ADC_PIN 5
       #endif
 
@@ -3429,6 +3468,7 @@
     #endif  // HAS_BATTERY
     //// END BATTERY STUFF
 
+
     //// MARAUDER TITLE STUFF
     #ifdef MARAUDER_V4
       #define MARAUDER_TITLE_BYTES 13578
@@ -3452,11 +3492,13 @@
       #define MARAUDER_TITLE_BYTES 13578
     #elif defined(MARAUDER_REV_FEATHER)
       #define MARAUDER_TITLE_BYTES 13578
-    #elif defined(MARAUDER_CYD_HMI)
-      #define MARAUDER_TITLE_BYTES 13578
     #elif defined(MARAUDER_C5)
       #define MARAUDER_TITLE_BYTES 13578
+    #elif defined(XIAO_ESP32_C5)
+      #define MARAUDER_TITLE_BYTES 13578
     #elif defined(MARAUDER_V8)
+      #define MARAUDER_TITLE_BYTES 13578
+    #elif defined(MARAUDER_PANCAKE)
       #define MARAUDER_TITLE_BYTES 13578
     #elif defined(MARAUDER_MINI_V3)
       #define MARAUDER_TITLE_BYTES 13578
@@ -3466,7 +3508,6 @@
     //// END MARAUDER TITLE STUFF
 
     //// PCAP BUFFER STUFF
-
     #ifdef HAS_PSRAM
       #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
       #define SNAP_LEN 1 * 4096 // max len of each recieved packet
@@ -3477,18 +3518,16 @@
       #define BUF_SIZE 3 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
       #define SNAP_LEN 2324 // max len of each recieved packet
     #endif
-
     //// END PCAP BUFFER STUFF
-
-    //// STUPID CYD STUFF
+  
     #if defined(HAS_CYD_TOUCH) || defined(HAS_C5_SD) || defined(HAS_SEPARATE_SD)
+
       #ifdef MARAUDER_CYD_MICRO
         #define XPT2046_IRQ  36
         #define XPT2046_MOSI 32
         #define XPT2046_MISO 39
         #define XPT2046_CLK  25
         #define XPT2046_CS   33
-
         #define SD_MISO      19
         #define SD_MOSI      23
         #define SD_SCK       18
@@ -3508,7 +3547,6 @@
         #define XPT2046_MISO 39
         #define XPT2046_CLK  25
         #define XPT2046_CS   33
-
         #define SD_MISO      19
         #define SD_MOSI      23
         #define SD_SCK       18
@@ -3528,11 +3566,6 @@
         #define SD_MISO 7
         #define SD_MOSI 2
         #define SD_SCK  6
-      #endif
-
-      #ifdef MARAUDER_V8
-        #define SD_MOSI TFT_MOSI
-        #define SD_SCK  TFT_SCLK
       #endif
 
       #ifdef MARAUDER_V4
@@ -3577,12 +3610,23 @@
         #define SD_SCK  TFT_SCLK
       #endif
 
-
       #ifdef MARAUDER_POOM
         #define SD_MISO 8
         #define SD_MOSI 4
         #define SD_SCK  6
       #endif
+
+    #ifdef MARAUDER_V8
+      #define SD_MISO TFT_MISO
+      #define SD_MOSI TFT_MOSI
+      #define SD_SCK  TFT_SCLK
+    #endif
+
+    #ifdef MARAUDER_PANCAKE
+      #define SD_MISO TFT_MISO
+      #define SD_MOSI TFT_MOSI
+      #define SD_SCK  TFT_SCLK
+    #endif
     #endif
     //// END STUPID CYD STUFF
 
