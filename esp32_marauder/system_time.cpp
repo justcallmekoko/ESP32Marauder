@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "time_fmt.h"
 #include <time.h>
 
 // should this be a .hpp ??
@@ -30,11 +31,37 @@ extern WiFiScan wifi_scan_obj;
 
 #ifdef HAS_RTC
   #include "RTC.h"
-  extern RTC rtc_obj;
+  RTC rtc_obj;
 #endif
 
 // has system time been set ?
 bool system_time_set = false;
+
+void init_system_time() {
+
+  log_d("Init Sys Time");
+  #ifdef HAS_RTC
+    #ifdef RTC_SDA
+      rtc_obj.RunSetup(RTC_SDA, RTC_SCL);
+    #else
+      rtc_obj.RunSetup();
+    #endif
+  #else
+    log_d("RTC NOT Installed");
+  #endif
+
+  // no need for this at first boot...
+  //   struct tm timeinfo;
+  //   if (getLocalTime(&timeinfo)) {
+  //     system_time_set = true;
+  //   } else {
+  //     log_w("System Time Not Set");
+  //     system_time_set = false;
+  //  }
+
+}
+
+
 
 // set host time
 // Set RTC if install and not in sync
@@ -58,7 +85,7 @@ bool set_system_time(struct tm timeInfo, bool setrtc = false) {
     #ifdef HAS_RTC
     if (rtc_obj.supported) {
       if (setrtc || !rtc_obj.rtc_synced) {
-        // log_d("set_system_time: calling rtc_obj.adjust_rtc");
+        log_d("set_system_time: calling rtc_obj.adjust_rtc");
         rtc_obj.adjust_rtc(timeInfo);
       }
     }
@@ -69,10 +96,11 @@ bool set_system_time(struct tm timeInfo, bool setrtc = false) {
 
 // convers date String "YYYY-MM-DD hh:mm:ss" to struct tm
 bool set_system_time(const String& time_str, bool setrtc = false) {
-  // log_d("set_system_time time_str"); delay(5);
+  log_d("set_system_time time_str"); delay(5);
     struct tm tm_info = {0};
     // log_d("set_system_time: '%s'", time_str.c_str());
-    if (strptime(time_str.c_str(), "%F %T", &tm_info) != NULL) {
+    //if (strptime(time_str.c_str(), "%F %T", &tm_info) != NULL) 
+    if (parse_datetime(time_str.c_str(), &tm_info)) {
         return set_system_time(tm_info, setrtc);
     }
     log_d("set_system_time: invalid time_str '%s'", time_str.c_str());
@@ -102,12 +130,13 @@ bool sync_ntp(const char *ntpServer = nullptr) {
     return false;
   }
   system_time_set = true;
-  Serial.println(&timeinfo, "%F %T");  //  "%A, %B %d %Y %H:%M:%S");
+  // Serial.println(&timeinfo, "%F %T");  //  "%A, %B %d %Y %H:%M:%S");
+  print_datetime(timeinfo);  //  "%A, %B %d %Y %H:%M:%S");
   Serial.println(F("System time set via NTP"));
 
   #ifdef HAS_RTC
   if (rtc_obj.supported && !rtc_obj.rtc_synced) {
-      // log_d("set_system_time: updating RTC");
+      log_d("set_system_time: updating RTC");
       rtc_obj.adjust_rtc(timeinfo);
   }
   #endif

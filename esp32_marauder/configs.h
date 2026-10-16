@@ -2683,8 +2683,9 @@
 
     #if defined(MARAUDER_C5)
       #define SD_CS 10
+
     #elif defined(MARAUDER_T_DONGLE_C5)
-      #define SD_CS 23
+      #define SD_CS 10
     #endif
 
     #ifdef MARAUDER_V8

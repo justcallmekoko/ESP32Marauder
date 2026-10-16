@@ -1,5 +1,16 @@
 
 #include "GpsI2c.h"
+// 
+// Gravity: GNSS GPS BeiDou Receiver Module
+// Supports I2C or UART Communications
+// switchable with a hardware switch on the board
+//
+// Pin
+//  1   D/T I2C data line SDA/UART Data Transmitting- TX
+//  2   C/R I2C clock line SCL/UART Data Receiving- RX
+
+
+
 // #include <format>
 // #include "ESP32_PinDebug.h"
 
@@ -12,6 +23,8 @@
 #ifdef HAS_GPSI2C
 
 #include <Arduino.h>
+#include "time_fmt.h"
+
 
 #ifndef HAS_GPSI2C_ADDR
   #define HAS_GPSI2C_ADDR 0x20
@@ -234,7 +247,7 @@ void GpsI2c::setGPSInfo() {
   this->lon_int = static_cast<int32_t>(lon_dat.lonitudeDegree * 1000000);
 
   this->lat = String(lat_dat.latitudeDegree, 6);
-  this->lon = String(lat_dat.latitudeDegree, 6);
+  this->lon = String(lat_dat.lonitudeDegree, 6);
 
   this->altf = static_cast<float>(gnss.getAlt());
 
@@ -243,7 +256,8 @@ void GpsI2c::setGPSInfo() {
     // Serial.print("datetime");  Serial.println(this->datetime);
     log_d("set_system_time(GetTimeInfo())");
     struct tm timeInfo = GetTimeInfo();
-    Serial.println(&timeInfo, "%F %T");
+    // Serial.println(&timeInfo, "%F %T");
+    print_datetime(timeInfo);
     set_system_time(timeInfo);
   }
 

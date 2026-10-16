@@ -1242,7 +1242,8 @@ void MenuFunctions::updateClockTemperature(bool doUpdate) {
       if (clock_update && system_time_set) {
 
         if(getLocalTime(&timeinfo))
-          strftime(timeBuffer, sizeof(timeBuffer), "%k:%M", &timeinfo);
+          // strftime(timeBuffer, sizeof(timeBuffer), "%k:%M", &timeinfo);
+          snprintf(timeBuffer, sizeof(timeBuffer), "%2d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
         else
           timeBuffer[0] = '\0';
 

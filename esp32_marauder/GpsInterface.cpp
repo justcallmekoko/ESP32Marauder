@@ -532,7 +532,7 @@ String GpsInterface::generateType(){
 
 void GpsInterface::GetTimeInfo(struct tm *timeInfo) {
   if (nmea.isValid() && nmea.getYear() > 0){
-    timeInfo->tm_year = nmea.getYear(); - 1900;
+    timeInfo->tm_year = nmea.getYear() - 1900;
     timeInfo->tm_mon = nmea.getMonth() - 1;
     timeInfo->tm_mday = nmea.getDay();
     timeInfo->tm_hour = nmea.getHour();
