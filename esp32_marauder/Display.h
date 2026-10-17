@@ -24,20 +24,41 @@
 
 // Reject board/display configuration mismatches at compile time. A mismatched
 // TFT setup can boot normally while driving the wrong controller and pins.
-#if defined(MARAUDER_CYD_3_5_INCH) && !defined(ST7796_DRIVER)
-  #error "MARAUDER_CYD_3_5_INCH requires User_Setup_cyd_3_5_inch.h (ST7796_DRIVER)"
-#endif
 #if (defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)) && !defined(ST7789_2_DRIVER)
   #error "Cardputer targets require their ST7789_2_DRIVER TFT_eSPI setup"
 #endif
 
-#ifdef HAS_CYD_TOUCH
+#if defined( HAS_CYD_TOUCH) || defined(MARAUDER_CYD_HMI)
   #include <XPT2046_Touchscreen.h>
 #endif
 
-#ifdef HAS_CAP_TOUCH
+// #ifdef MARAUDER_WS_C5_28
+//   #include <CH32V003_IOExpander.hpp>
+//   extern CH32V003_IOExpander CH32V003_obj;
+// #endif
+
+
+
+/*
+// we don't need the constructors called for ever include "Display.h
+
+#ifdef HAS_CST820  // HAS_CAP_TOUCH
+   #include "CST820.hpp"
+  extern CST820 CST820_touch;
+#endif
+#ifdef  HAS_FT6336 // HAS_CAP_TOUCH
   #include "ft6336.h"
 #endif
+
+#ifdef HAS_CST3530
+  #include <CST3530.hpp>
+#endif
+
+#ifdef HAS_CST820
+  #include <CST820.hpp>
+  // extern CST820 CST820_touch;
+#endif
+*/
 
 // WiFi stuff
 #define OTA_UPDATE 100
@@ -105,7 +126,7 @@ class Display
     TFT_eSPI_Button key[BUTTON_ARRAY_LEN + 4];
     const String PROGMEM version_number = MARAUDER_VERSION;
 
-    #ifdef HAS_CYD_TOUCH
+    #if defined( HAS_CYD_TOUCH) || defined(MARAUDER_CYD_HMI)
       SPIClass touchscreenSPI;
       XPT2046_Touchscreen touchscreen;
     #endif

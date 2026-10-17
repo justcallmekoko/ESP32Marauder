@@ -6,6 +6,9 @@
 #include "configs.h"
 #include "utils.h"
 #include "GpsTrackerStats.h"
+#ifdef HAS_ZIGBEE
+  #include "ZBScan.h"
+#endif
 #include "IBeacon.h"
 #include "RemoteIdDecoder.h"
 
@@ -80,6 +83,11 @@
 #elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
   #include "LedInterface.h"
 #endif
+
+//  WIFI_POWER_21dBm = 84,      // 21dBm
+//  WIFI_POWER_20_5dBm = 82,    // 20.5dBm
+//  WIFI_POWER_20dBm = 80,      // 20dBm
+int8_t wifi_power = 80;
 
 #ifdef HAS_DIRECT_UPLOAD
   #include <WiFiClientSecure.h>
@@ -182,6 +190,10 @@
 #define BT_ATTACK_FINDMY_LIVE 86
 #define REMOTE_ID_SCAN_ALL 87
 #define REMOTE_ID_SCAN_TARGET 88
+
+#ifndef ZIGBEE_SCAN_ALL
+  #define ZIGBEE_SCAN_ALL 200
+#endif
 
 #define WIFI_ATTACK_FUNNY_BEACON 99 
 
@@ -387,7 +399,14 @@ enum class MacSortMode : uint8_t {
   HIGH_RSSI
 };
 
-class WiFiScan
+// WiFiScan gains Zigbee / 802.15.4 sniffing by inheriting from ZBScan, in the
+// same spirit as it already mixes WiFi and Bluetooth scanning. Additional base
+// classes can be added here following the same multiple-inheritance pattern.
+#ifdef HAS_ZIGBEE
+  class WiFiScan : public ZBScan
+#else
+  class WiFiScan
+#endif
 {
   private:
 #ifdef HAS_PSRAM
@@ -1186,10 +1205,17 @@ class WiFiScan
     void RunClearSSIDs();
     void RunClearAPs();
     void RunClearStations();
+    void RunSaveAll();
+    void RunLoadAll();
     void RunSaveSSIDList(bool save_as = true);
     void RunLoadSSIDList();
     void RunSaveAPList(bool save_as = true);
     void RunLoadAPList();
+    void RunSortAPList();
+    #ifdef HAS_ZIGBEE
+      void RunSaveZBList(bool save_as = true);
+      void RunLoadZBList();
+    #endif
     void RunSaveATList(bool save_as = true);
     void RunLoadATList();
     void RunSetupGPSTracker(uint8_t scan_mode);
