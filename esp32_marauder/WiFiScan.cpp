@@ -4983,14 +4983,13 @@ void WiFiScan::RunInfo() {
 
   this->getMAC(true, sta_mac);
   this->getMAC(false, ap_mac);
+  const esp_partition_t* running_partition = esp_ota_get_running_partition();
+  const String app_partition = running_partition ? String(running_partition->label) : String("unknown");
 
   #ifdef HAS_PSRAM
        psramtat = ESP.getPsramSize();
   #endif
   uint32_t flashSize = ESP.getFlashChipSize();
-
-  const esp_partition_t* running_partition = esp_ota_get_running_partition();
-  const String app_partition = running_partition ? String(running_partition->label) : String("unknown");
 
   #ifdef HAS_SCREEN
     display_obj.tft.setTextWrap(false);

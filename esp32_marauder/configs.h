@@ -14,6 +14,7 @@
   #define POLISH_POTATO
 
   //#define DEVELOPER
+  // NOLINTBEGIN(whitespace, readabilty/comments, whitespace/line_length, whitespace/comments)
 
   // Developer-only escape hatch for unsigned or mismatched SD update images.
   // Production builds must remain fail-closed.
@@ -37,9 +38,9 @@
   //#define XIAO_ESP32_S3
   //#define XIAO_ESP32_C5
   //#define MARAUDER_REV_FEATHER
-  //#define MARAUDER_CYD_MICRO // 2432S028
-  //#define MARAUDER_CYD_2USB // Another 2432S028 but it has tWo UsBs OoOoOoO
-  //#define MARAUDER_CYD_GUITION // ESP32-2432S024 GUITION
+   //#define MARAUDER_CYD_MICRO // 2432S028
+   //#define MARAUDER_CYD_2USB // Another 2432S028 but it has tWo UsBs OoOoOoO
+   //#define MARAUDER_CYD_GUITION // ESP32-2432S024 GUITION
   //#define MARAUDER_CYD_3_5_INCH
   //#define MARAUDER_CYD_HMI  // LILYGO T-HMI ESP32-S3 Touch Display 2.8 inch
   //#define MARAUDER_C5
@@ -70,7 +71,7 @@
 
   #define GRAPH_REFRESH   100
 
-  #define TRACK_EVICT_SEC 90 // Seconds before marking tracked MAC as tombstone
+  #define TRACK_EVICT_SEC 90  // Seconds before marking tracked MAC as tombstone
 
   #define DUAL_BAND_CHANNELS 51
 
@@ -185,7 +186,7 @@
     #define USE_SD
     #define HAS_TEMP_SENSOR
     // #define HAS_RTC
-    //  #define HAS_RTC8563
+    // #define HAS_RTC8563
     #define HAS_GPS
     #define HAS_DIRECT_UPLOAD
   #endif
@@ -750,8 +751,6 @@
       #endif
 
 
-
-
       // Waveshare ESP32-C5-Touch-LCD-2.8
       // ESP32-C5, ST7789 240x320, CST3530 capacitive touch, CH32V003 IO expander
       // 32MB flash, 8MB PSRAM, dual-band WiFi, BLE5, SD card, audio
@@ -1261,18 +1260,18 @@
       #define SCREEN_ORIENTATION 1
 
       #define CHAR_WIDTH 6
-      #define SCREEN_WIDTH TFT_HEIGHT // Originally 240
-      #define SCREEN_HEIGHT TFT_WIDTH // Originally 320
+      #define SCREEN_WIDTH TFT_HEIGHT  // Originally 240
+      #define SCREEN_HEIGHT TFT_WIDTH  // Originally 320
       #define HEIGHT_1 TFT_WIDTH
       #define WIDTH_1 TFT_WIDTH
-      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
-      #define TEXT_HEIGHT (TFT_HEIGHT/10) // Height of text to be printed and scrolled
-      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
-      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
-      #define YMAX TFT_HEIGHT // Bottom of screen area
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6)  // number of characters on a single line with normal font
+      #define TEXT_HEIGHT (TFT_HEIGHT/10)  // Height of text to be printed and scrolled
+      #define BOT_FIXED_AREA 0  // Number of lines in bottom fixed area (lines counted from bottom of screen)
+      #define TOP_FIXED_AREA 48  // Number of lines in top fixed area (lines counted from top of screen)
+      #define YMAX TFT_HEIGHT  // Bottom of screen area
       #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
       //#define MENU_FONT NULL
-      #define MENU_FONT &FreeMono9pt7b // Winner
+      #define MENU_FONT &FreeMono9pt7b  // Winner
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
@@ -1305,7 +1304,7 @@
   #if defined(MARAUDER_M5STICKCP2)
       #define CHAN_PER_PAGE 7
 
-      #define MARAUDER_M5STICKC // From now on, everything is the same, except for one check in esp32_marauder.ino amd stickc_led.cpp/h
+      #define MARAUDER_M5STICKC  // From now on, everything is the same, except for one check in esp32_marauder.ino amd stickc_led.cpp/h
 
       #define SCREEN_CHAR_WIDTH 40
       #define TFT_MOSI 15
@@ -1340,18 +1339,18 @@
       #define SCREEN_ORIENTATION 0
 
       #define CHAR_WIDTH 6
-      #define SCREEN_WIDTH TFT_HEIGHT // Originally 240
-      #define SCREEN_HEIGHT TFT_WIDTH // Originally 320
+      #define SCREEN_WIDTH TFT_HEIGHT  // Originally 240
+      #define SCREEN_HEIGHT TFT_WIDTH  // Originally 320
       #define HEIGHT_1 TFT_WIDTH
       #define WIDTH_1 TFT_WIDTH
-      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
-      #define TEXT_HEIGHT (TFT_HEIGHT/10) // Height of text to be printed and scrolled
-      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
-      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
-      #define YMAX TFT_HEIGHT // Bottom of screen area
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6)  // number of characters on a single line with normal font
+      #define TEXT_HEIGHT (TFT_HEIGHT/10)  // Height of text to be printed and scrolled
+      #define BOT_FIXED_AREA 0  // Number of lines in bottom fixed area (lines counted from bottom of screen)
+      #define TOP_FIXED_AREA 48  // Number of lines in top fixed area (lines counted from top of screen)
+      #define YMAX TFT_HEIGHT  // Bottom of screen area
       #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
       //#define MENU_FONT NULL
-      #define MENU_FONT &FreeMono9pt7b // Winner
+      #define MENU_FONT &FreeMono9pt7b  // Winner
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
@@ -1413,19 +1412,19 @@
       #define SCREEN_ORIENTATION 1
 
       #define CHAR_WIDTH 6
-      #define SCREEN_WIDTH TFT_HEIGHT // 240 in landscape
-      #define SCREEN_HEIGHT TFT_WIDTH // 135 in landscape
+      #define SCREEN_WIDTH TFT_HEIGHT  // 240 in landscape
+      #define SCREEN_HEIGHT TFT_WIDTH  // 135 in landscape
       #define GRAPH_VERT_LIM SCREEN_HEIGHT/2 - 1
       #define HEIGHT_1 TFT_WIDTH
       #define WIDTH_1 TFT_WIDTH
-      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
-      #define TEXT_HEIGHT (TFT_HEIGHT/10) // Height of text to be printed and scrolled
-      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
-      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
-      #define YMAX TFT_HEIGHT // Bottom of screen area
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6)  // number of characters on a single line with normal font
+      #define TEXT_HEIGHT (TFT_HEIGHT/10)  // Height of text to be printed and scrolled
+      #define BOT_FIXED_AREA 0  // Number of lines in bottom fixed area (lines counted from bottom of screen)
+      #define TOP_FIXED_AREA 48  // Number of lines in top fixed area (lines counted from top of screen)
+      #define YMAX TFT_HEIGHT  // Bottom of screen area
       #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
       //#define MENU_FONT NULL
-      #define MENU_FONT &FreeMono9pt7b // Winner
+      #define MENU_FONT &FreeMono9pt7b  // Winner
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
@@ -1487,14 +1486,14 @@
       #define SCREEN_HEIGHT TFT_HEIGHT
       #define HEIGHT_1 TFT_WIDTH
       #define WIDTH_1 TFT_HEIGHT
-      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
-      #define TEXT_HEIGHT 16 // Height of text to be printed and scrolled
-      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
-      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
-      #define YMAX 320 // Bottom of screen area
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6)  // number of characters on a single line with normal font
+      #define TEXT_HEIGHT 16  // Height of text to be printed and scrolled
+      #define BOT_FIXED_AREA 0  // Number of lines in bottom fixed area (lines counted from bottom of screen)
+      #define TOP_FIXED_AREA 48  // Number of lines in top fixed area (lines counted from top of screen)
+      #define YMAX 320  // Bottom of screen area
       #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
       //#define MENU_FONT NULL
-      #define MENU_FONT &FreeMono9pt7b // Winner
+      #define MENU_FONT &FreeMono9pt7b  // Winner
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
@@ -1560,14 +1559,14 @@
       #define SCREEN_HEIGHT TFT_HEIGHT
       #define HEIGHT_1 TFT_WIDTH
       #define WIDTH_1 TFT_HEIGHT
-      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
-      #define TEXT_HEIGHT 16 // Height of text to be printed and scrolled
-      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
-      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
-      #define YMAX 320 // Bottom of screen area
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6)  // number of characters on a single line with normal font
+      #define TEXT_HEIGHT 16  // Height of text to be printed and scrolled
+      #define BOT_FIXED_AREA 0  // Number of lines in bottom fixed area (lines counted from bottom of screen)
+      #define TOP_FIXED_AREA 48  // Number of lines in top fixed area (lines counted from top of screen)
+      #define YMAX 320  // Bottom of screen area
       #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
       //#define MENU_FONT NULL
-      #define MENU_FONT &FreeMono9pt7b // Winner
+      #define MENU_FONT &FreeMono9pt7b  // Winner
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
@@ -1634,14 +1633,14 @@
       #define SCREEN_HEIGHT TFT_HEIGHT
       #define HEIGHT_1 TFT_WIDTH
       #define WIDTH_1 TFT_HEIGHT
-      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
-      #define TEXT_HEIGHT 16 // Height of text to be printed and scrolled
-      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
-      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
-      #define YMAX 320 // Bottom of screen area
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6)  // number of characters on a single line with normal font
+      #define TEXT_HEIGHT 16  // Height of text to be printed and scrolled
+      #define BOT_FIXED_AREA 0  // Number of lines in bottom fixed area (lines counted from bottom of screen)
+      #define TOP_FIXED_AREA 48  // Number of lines in top fixed area (lines counted from top of screen)
+      #define YMAX 320  // Bottom of screen area
       #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
       //#define MENU_FONT NULL
-      #define MENU_FONT &FreeMono9pt7b // Winner
+      #define MENU_FONT &FreeMono9pt7b  // Winner
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
@@ -1703,13 +1702,13 @@
       #define SCREEN_HEIGHT TFT_HEIGHT
       #define HEIGHT_1 TFT_WIDTH
       #define WIDTH_1 TFT_HEIGHT
-      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
-      #define TEXT_HEIGHT 16 // Height of text to be printed and scrolled
-      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
-      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
-      #define YMAX 320 // Bottom of screen area
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6)  // number of characters on a single line with normal font
+      #define TEXT_HEIGHT 16  // Height of text to be printed and scrolled
+      #define BOT_FIXED_AREA 0  // Number of lines in bottom fixed area (lines counted from bottom of screen)
+      #define TOP_FIXED_AREA 48  // Number of lines in top fixed area (lines counted from top of screen)
+      #define YMAX 320  // Bottom of screen area
       #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
-      #define MENU_FONT &FreeMono9pt7b // Winner
+      #define MENU_FONT &FreeMono9pt7b  // Winner
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
@@ -1775,7 +1774,7 @@
       #define YMAX 480
       #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
       //#define MENU_FONT NULL
-      #define MENU_FONT &FreeMono9pt7b // Winner
+      #define MENU_FONT &FreeMono9pt7b  // Winner
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
@@ -1837,14 +1836,14 @@
       #define SCREEN_HEIGHT TFT_HEIGHT
       #define HEIGHT_1 TFT_WIDTH
       #define WIDTH_1 TFT_HEIGHT
-      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
-      #define TEXT_HEIGHT 16 // Height of text to be printed and scrolled
-      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
-      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
-      #define YMAX 320 // Bottom of screen area
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6)  // number of characters on a single line with normal font
+      #define TEXT_HEIGHT 16  // Height of text to be printed and scrolled
+      #define BOT_FIXED_AREA 0  // Number of lines in bottom fixed area (lines counted from bottom of screen)
+      #define TOP_FIXED_AREA 48  // Number of lines in top fixed area (lines counted from top of screen)
+      #define YMAX 320  // Bottom of screen area
       #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
       //#define MENU_FONT NULL
-      #define MENU_FONT &FreeMono9pt7b // Winner
+      #define MENU_FONT &FreeMono9pt7b  // Winner
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
@@ -1907,14 +1906,14 @@
       #define SCREEN_HEIGHT TFT_HEIGHT
       #define HEIGHT_1 TFT_WIDTH
       #define WIDTH_1 TFT_HEIGHT
-      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
-      #define TEXT_HEIGHT 16 // Height of text to be printed and scrolled
-      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
-      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
-      #define YMAX 320 // Bottom of screen area
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6)  // number of characters on a single line with normal font
+      #define TEXT_HEIGHT 16  // Height of text to be printed and scrolled
+      #define BOT_FIXED_AREA 0  // Number of lines in bottom fixed area (lines counted from bottom of screen)
+      #define TOP_FIXED_AREA 48  // Number of lines in top fixed area (lines counted from top of screen)
+      #define YMAX 320  // Bottom of screen area
       #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
       //#define MENU_FONT NULL
-      #define MENU_FONT &FreeMono9pt7b // Winner
+      #define MENU_FONT &FreeMono9pt7b  // Winner
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
@@ -1979,14 +1978,14 @@
       #define SCREEN_HEIGHT TFT_HEIGHT
       #define HEIGHT_1 TFT_WIDTH
       #define WIDTH_1 TFT_HEIGHT
-      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
-      #define TEXT_HEIGHT 16 // Height of text to be printed and scrolled
-      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
-      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
-      #define YMAX 480 // Bottom of screen area
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6)  // number of characters on a single line with normal font
+      #define TEXT_HEIGHT 16  // Height of text to be printed and scrolled
+      #define BOT_FIXED_AREA 0  // Number of lines in bottom fixed area (lines counted from bottom of screen)
+      #define TOP_FIXED_AREA 48  // Number of lines in top fixed area (lines counted from top of screen)
+      #define YMAX 480  // Bottom of screen area
       #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
       //#define MENU_FONT NULL
-      #define MENU_FONT &FreeMono9pt7b // Winner
+      #define MENU_FONT &FreeMono9pt7b  // Winner
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
@@ -2050,14 +2049,14 @@
       #define SCREEN_HEIGHT TFT_HEIGHT
       #define HEIGHT_1 TFT_WIDTH
       #define WIDTH_1 TFT_HEIGHT
-      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
-      #define TEXT_HEIGHT 16 // Height of text to be printed and scrolled
-      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
-      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
-      #define YMAX 320 // Bottom of screen area
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6)  // number of characters on a single line with normal font
+      #define TEXT_HEIGHT 16  // Height of text to be printed and scrolled
+      #define BOT_FIXED_AREA 0  // Number of lines in bottom fixed area (lines counted from bottom of screen)
+      #define TOP_FIXED_AREA 48  // Number of lines in top fixed area (lines counted from top of screen)
+      #define YMAX 320  // Bottom of screen area
       #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
       //#define MENU_FONT NULL
-      #define MENU_FONT &FreeMono9pt7b // Winner
+      #define MENU_FONT &FreeMono9pt7b  // Winner
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
@@ -2121,14 +2120,14 @@
       #define SCREEN_HEIGHT TFT_HEIGHT
       #define HEIGHT_1 TFT_WIDTH
       #define WIDTH_1 TFT_HEIGHT
-      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
-      #define TEXT_HEIGHT 16 // Height of text to be printed and scrolled
-      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
-      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
-      #define YMAX 320 // Bottom of screen area
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6)  // number of characters on a single line with normal font
+      #define TEXT_HEIGHT 16  // Height of text to be printed and scrolled
+      #define BOT_FIXED_AREA 0  // Number of lines in bottom fixed area (lines counted from bottom of screen)
+      #define TOP_FIXED_AREA 48  // Number of lines in top fixed area (lines counted from top of screen)
+      #define YMAX 320  // Bottom of screen area
       #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
       //#define MENU_FONT NULL
-      #define MENU_FONT &FreeMono9pt7b // Winner
+      #define MENU_FONT &FreeMono9pt7b  // Winner
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
@@ -2192,14 +2191,14 @@
       #define SCREEN_HEIGHT TFT_HEIGHT
       #define HEIGHT_1 TFT_WIDTH
       #define WIDTH_1 TFT_HEIGHT
-      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
-      #define TEXT_HEIGHT 16 // Height of text to be printed and scrolled
-      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
-      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
-      #define YMAX 320 // Bottom of screen area
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6)  // number of characters on a single line with normal font
+      #define TEXT_HEIGHT 16  // Height of text to be printed and scrolled
+      #define BOT_FIXED_AREA 0  // Number of lines in bottom fixed area (lines counted from bottom of screen)
+      #define TOP_FIXED_AREA 48  // Number of lines in top fixed area (lines counted from top of screen)
+      #define YMAX 320  // Bottom of screen area
       #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
       //#define MENU_FONT NULL
-      #define MENU_FONT &FreeMono9pt7b // Winner
+      #define MENU_FONT &FreeMono9pt7b  // Winner
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
@@ -2264,14 +2263,14 @@
       #define SCREEN_HEIGHT TFT_HEIGHT
       #define HEIGHT_1 TFT_WIDTH
       #define WIDTH_1 TFT_HEIGHT
-      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
-      #define TEXT_HEIGHT 16 // Height of text to be printed and scrolled
-      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
-      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
-      #define YMAX 320 // Bottom of screen area
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6)  // number of characters on a single line with normal font
+      #define TEXT_HEIGHT 16  // Height of text to be printed and scrolled
+      #define BOT_FIXED_AREA 0  // Number of lines in bottom fixed area (lines counted from bottom of screen)
+      #define TOP_FIXED_AREA 48  // Number of lines in top fixed area (lines counted from top of screen)
+      #define YMAX 320  // Bottom of screen area
       #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
       //#define MENU_FONT NULL
-      #define MENU_FONT &FreeMono9pt7b // Winner
+      #define MENU_FONT &FreeMono9pt7b  // Winner
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
@@ -2337,18 +2336,18 @@
       #define SCREEN_ORIENTATION 0
 
       #define CHAR_WIDTH 6
-      #define SCREEN_WIDTH TFT_WIDTH // Originally 240
-      #define SCREEN_HEIGHT TFT_HEIGHT // Originally 320
+      #define SCREEN_WIDTH TFT_WIDTH  // Originally 240
+      #define SCREEN_HEIGHT TFT_HEIGHT  // Originally 320
       #define HEIGHT_1 TFT_WIDTH
       #define WIDTH_1 TFT_WIDTH
-      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
-      #define TEXT_HEIGHT (TFT_HEIGHT/10) // Height of text to be printed and scrolled
-      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
-      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
-      #define YMAX TFT_HEIGHT // Bottom of screen area
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6)  // number of characters on a single line with normal font
+      #define TEXT_HEIGHT (TFT_HEIGHT/10)  // Height of text to be printed and scrolled
+      #define BOT_FIXED_AREA 0  // Number of lines in bottom fixed area (lines counted from bottom of screen)
+      #define TOP_FIXED_AREA 48  // Number of lines in top fixed area (lines counted from top of screen)
+      #define YMAX TFT_HEIGHT  // Bottom of screen area
       #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
       //#define MENU_FONT NULL
-      #define MENU_FONT &FreeMono9pt7b // Winner
+      #define MENU_FONT &FreeMono9pt7b  // Winner
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
@@ -2415,18 +2414,18 @@
       #define SCREEN_ORIENTATION 1
 
       #define CHAR_WIDTH 6
-      #define SCREEN_WIDTH TFT_WIDTH // Originally 240
-      #define SCREEN_HEIGHT TFT_HEIGHT // Originally 320
+      #define SCREEN_WIDTH TFT_WIDTH  // Originally 240
+      #define SCREEN_HEIGHT TFT_HEIGHT  // Originally 320
       #define HEIGHT_1 TFT_WIDTH
       #define WIDTH_1 TFT_WIDTH
-      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
-      #define TEXT_HEIGHT (TFT_HEIGHT/10) // Height of text to be printed and scrolled
-      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
-      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
-      #define YMAX TFT_HEIGHT // Bottom of screen area
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6)  // number of characters on a single line with normal font
+      #define TEXT_HEIGHT (TFT_HEIGHT/10)  // Height of text to be printed and scrolled
+      #define BOT_FIXED_AREA 0  // Number of lines in bottom fixed area (lines counted from bottom of screen)
+      #define TOP_FIXED_AREA 48  // Number of lines in top fixed area (lines counted from top of screen)
+      #define YMAX TFT_HEIGHT  // Bottom of screen area
       #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
       //#define MENU_FONT NULL
-      #define MENU_FONT &FreeMono9pt7b // Winner
+      #define MENU_FONT &FreeMono9pt7b  // Winner
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
@@ -2490,18 +2489,18 @@
       #define SCREEN_ORIENTATION 0
 
       #define CHAR_WIDTH 6
-      #define SCREEN_WIDTH TFT_WIDTH // Originally 240
-      #define SCREEN_HEIGHT TFT_HEIGHT // Originally 320
+      #define SCREEN_WIDTH TFT_WIDTH  // Originally 240
+      #define SCREEN_HEIGHT TFT_HEIGHT  // Originally 320
       #define HEIGHT_1 TFT_WIDTH
       #define WIDTH_1 TFT_WIDTH
-      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
-      #define TEXT_HEIGHT (TFT_HEIGHT/10) // Height of text to be printed and scrolled
-      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
-      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
-      #define YMAX TFT_HEIGHT // Bottom of screen area
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6)  // number of characters on a single line with normal font
+      #define TEXT_HEIGHT (TFT_HEIGHT/10)  // Height of text to be printed and scrolled
+      #define BOT_FIXED_AREA 0  // Number of lines in bottom fixed area (lines counted from bottom of screen)
+      #define TOP_FIXED_AREA 48  // Number of lines in top fixed area (lines counted from top of screen)
+      #define YMAX TFT_HEIGHT  // Bottom of screen area
       #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
       //#define MENU_FONT NULL
-      #define MENU_FONT &FreeMono9pt7b // Winner
+      #define MENU_FONT &FreeMono9pt7b  // Winner
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
@@ -2565,7 +2564,7 @@
       #define TP_INT           5
       #define TP_RST           -1   // CH32V003 EXIO0
       #define TP_FREQ          100000  // 100 kHz (Standard-mode) 400 kHz (Fast-mode)
-      #define I2C_ADDR_CST3530  0x58 // NOT 0x1A : CST3530 differs from CST820
+      #define I2C_ADDR_CST3530  0x58  // NOT 0x1A : CST3530 differs from CST820
 
       #define BANNER_TEXT_SIZE 2
 
@@ -2592,14 +2591,14 @@
       #define SCREEN_HEIGHT TFT_HEIGHT
       #define HEIGHT_1 TFT_WIDTH
       #define WIDTH_1 TFT_HEIGHT
-      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6) // number of characters on a single line with normal font
-      #define TEXT_HEIGHT 16 // Height of text to be printed and scrolled
-      #define BOT_FIXED_AREA 0 // Number of lines in bottom fixed area (lines counted from bottom of screen)
-      #define TOP_FIXED_AREA 48 // Number of lines in top fixed area (lines counted from top of screen)
-      #define YMAX 320 // Bottom of screen area
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6)  // number of characters on a single line with normal font
+      #define TEXT_HEIGHT 16  // Height of text to be printed and scrolled
+      #define BOT_FIXED_AREA 0  // Number of lines in bottom fixed area (lines counted from bottom of screen)
+      #define TOP_FIXED_AREA 48  // Number of lines in top fixed area (lines counted from top of screen)
+      #define YMAX 320  // Bottom of screen area
       #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
       //#define MENU_FONT NULL
-      #define MENU_FONT &FreeMono9pt7b // Winner
+      #define MENU_FONT &FreeMono9pt7b  // Winner
       //#define MENU_FONT &FreeMonoBold9pt7b
       //#define MENU_FONT &FreeSans9pt7b
       //#define MENU_FONT &FreeSansBold9pt7b
@@ -2640,11 +2639,11 @@
     #define COMMAND_PREFIX "!"
 
     // Keypad start position, key sizes and spacing
-    #define KEY_X 120 // Centre of key
+    #define KEY_X 120  // Centre of key
     #define KEY_Y 50
-    #define KEY_W 240 // Width and height
+    #define KEY_W 240  // Width and height
     #define KEY_H 22
-    #define KEY_SPACING_X 0 // X and Y gap
+    #define KEY_SPACING_X 0  // X and Y gap
     #define KEY_SPACING_Y 1
     #define KEY_TEXTSIZE 1   // Font size multiplier
     #define ICON_W 22
@@ -2659,11 +2658,11 @@
     #define COMMAND_PREFIX "!"
 
     // Keypad start position, key sizes and spacing
-    #define KEY_X 120 // Centre of key
+    #define KEY_X 120  // Centre of key
     #define KEY_Y 50
-    #define KEY_W 240 // Width and height
+    #define KEY_W 240  // Width and height
     #define KEY_H 22
-    #define KEY_SPACING_X 0 // X and Y gap
+    #define KEY_SPACING_X 0  // X and Y gap
     #define KEY_SPACING_Y 1
     #define KEY_TEXTSIZE 1   // Font size multiplier
     #define ICON_W 22
@@ -2696,11 +2695,11 @@
     #define COMMAND_PREFIX "!"
 
     // Keypad start position, key sizes and spacing
-    #define KEY_X 120 // Centre of key
+    #define KEY_X 120  // Centre of key
     #define KEY_Y 50
-    #define KEY_W 240 // Width and height
+    #define KEY_W 240  // Width and height
     #define KEY_H 22
-    #define KEY_SPACING_X 0 // X and Y gap
+    #define KEY_SPACING_X 0  // X and Y gap
     #define KEY_SPACING_Y 1
     #define KEY_TEXTSIZE 1   // Font size multiplier
     #define ICON_W 22
@@ -2715,11 +2714,11 @@
     #define COMMAND_PREFIX "!"
 
     // Keypad start position, key sizes and spacing
-    #define KEY_X 160 // Centre of key
+    #define KEY_X 160  // Centre of key
     #define KEY_Y 59
-    #define KEY_W 320 // Width and height
+    #define KEY_W 320  // Width and height
     #define KEY_H 22
-    #define KEY_SPACING_X 0 // X and Y gap
+    #define KEY_SPACING_X 0  // X and Y gap
     #define KEY_SPACING_Y 1
     #define KEY_TEXTSIZE 1   // Font size multiplier
     #define ICON_W 22
@@ -2734,11 +2733,11 @@
     #define COMMAND_PREFIX "!"
 
     // Keypad start position, key sizes and spacing
-    #define KEY_X 120 // Centre of key
+    #define KEY_X 120  // Centre of key
     #define KEY_Y 50
-    #define KEY_W 240 // Width and height
+    #define KEY_W 240  // Width and height
     #define KEY_H 22
-    #define KEY_SPACING_X 0 // X and Y gap
+    #define KEY_SPACING_X 0  // X and Y gap
     #define KEY_SPACING_Y 1
     #define KEY_TEXTSIZE 1   // Font size multiplier
     #define ICON_W 22
@@ -2753,11 +2752,11 @@
     #define COMMAND_PREFIX "!"
 
     // Keypad start position, key sizes and spacing
-    #define KEY_X 120 // Centre of key
+    #define KEY_X 120  // Centre of key
     #define KEY_Y 50
-    #define KEY_W 240 // Width and height
+    #define KEY_W 240  // Width and height
     #define KEY_H 22
-    #define KEY_SPACING_X 0 // X and Y gap
+    #define KEY_SPACING_X 0  // X and Y gap
     #define KEY_SPACING_Y 1
     #define KEY_TEXTSIZE 1   // Font size multiplier
     #define ICON_W 22
@@ -2772,11 +2771,11 @@
     #define COMMAND_PREFIX "!"
 
     // Keypad start position, key sizes and spacing
-    #define KEY_X 160 // Centre of key
+    #define KEY_X 160  // Centre of key
     #define KEY_Y 50
-    #define KEY_W 320 // Width and height
+    #define KEY_W 320  // Width and height
     #define KEY_H 22
-    #define KEY_SPACING_X 0 // X and Y gap
+    #define KEY_SPACING_X 0  // X and Y gap
     #define KEY_SPACING_Y 1
     #define KEY_TEXTSIZE 1   // Font size multiplier
     #define ICON_W 22
@@ -2791,11 +2790,11 @@
     #define COMMAND_PREFIX "!"
 
     // Keypad start position, key sizes and spacing
-    #define KEY_X 120 // Centre of key
+    #define KEY_X 120  // Centre of key
     #define KEY_Y 50
-    #define KEY_W 240 // Width and height
+    #define KEY_W 240  // Width and height
     #define KEY_H 22
-    #define KEY_SPACING_X 0 // X and Y gap
+    #define KEY_SPACING_X 0  // X and Y gap
     #define KEY_SPACING_Y 1
     #define KEY_TEXTSIZE 1   // Font size multiplier
     #define ICON_W 22
@@ -2810,17 +2809,17 @@
     #define COMMAND_PREFIX "!"
 
     // Keypad start position, key sizes and spacing
-    #define KEY_X 120 // Centre of key
+    #define KEY_X 120  // Centre of key
     #define KEY_Y 50
-    #define KEY_W 240 // Width and height
+    #define KEY_W 240  // Width and height
     #define KEY_H 22
-    #define KEY_SPACING_X 0 // X and Y gap
+    #define KEY_SPACING_X 0  // X and Y gap
     #define KEY_SPACING_Y 1
     #define KEY_TEXTSIZE 1   // Font size multiplier
     #define ICON_W 22
     #define ICON_H 22
     #define BUTTON_PADDING 22
-    //#define BUTTON_ARRAY_LEN 5
+    // #define BUTTON_ARRAY_LEN 5
   #endif
 
   #ifdef MARAUDER_V7
@@ -2829,11 +2828,11 @@
     #define COMMAND_PREFIX "!"
 
     // Keypad start position, key sizes and spacing
-    #define KEY_X 120 // Centre of key
+    #define KEY_X 120  // Centre of key
     #define KEY_Y 50
-    #define KEY_W 240 // Width and height
+    #define KEY_W 240  // Width and height
     #define KEY_H 22
-    #define KEY_SPACING_X 0 // X and Y gap
+    #define KEY_SPACING_X 0  // X and Y gap
     #define KEY_SPACING_Y 1
     #define KEY_TEXTSIZE 1   // Font size multiplier
     #define ICON_W 22
@@ -2848,11 +2847,11 @@
     #define COMMAND_PREFIX "!"
 
     // Keypad start position, key sizes and spacing
-    #define KEY_X 120 // Centre of key
+    #define KEY_X 120   // Centre of key
     #define KEY_Y 50
-    #define KEY_W 240 // Width and height
+    #define KEY_W 240   // Width and height
     #define KEY_H 22
-    #define KEY_SPACING_X 0 // X and Y gap
+    #define KEY_SPACING_X 0  // X and Y gap
     #define KEY_SPACING_Y 1
     #define KEY_TEXTSIZE 1   // Font size multiplier
     #define ICON_W 22
@@ -2867,11 +2866,11 @@
     #define COMMAND_PREFIX "!"
 
     // Keypad start position, key sizes and spacing
-    #define KEY_X 120 // Centre of key
+    #define KEY_X 120  // Centre of key
     #define KEY_Y 50
-    #define KEY_W 240 // Width and height
+    #define KEY_W 240  // Width and height
     #define KEY_H 22
-    #define KEY_SPACING_X 0 // X and Y gap
+    #define KEY_SPACING_X 0  // X and Y gap
     #define KEY_SPACING_Y 1
     #define KEY_TEXTSIZE 1   // Font size multiplier
     #define ICON_W 22
@@ -2886,11 +2885,11 @@
     #define COMMAND_PREFIX "!"
 
     // Keypad start position, key sizes and spacing
-    #define KEY_X (TFT_WIDTH/2) // Centre of key
+    #define KEY_X (TFT_WIDTH/2)  // Centre of key
     #define KEY_Y (TFT_HEIGHT/4.5)
-    #define KEY_W TFT_WIDTH // Width and height
+    #define KEY_W TFT_WIDTH  // Width and height
     #define KEY_H (TFT_HEIGHT/12.8)
-    #define KEY_SPACING_X 0 // X and Y gap
+    #define KEY_SPACING_X 0  // X and Y gap
     #define KEY_SPACING_Y 1
     #define KEY_TEXTSIZE 1   // Font size multiplier
     #define ICON_W 22
@@ -2904,11 +2903,11 @@
     #define COMMAND_PREFIX "!"
 
     // Keypad start position, key sizes and spacing
-    #define KEY_X (TFT_WIDTH/2) // Centre of key
+    #define KEY_X (TFT_WIDTH/2)  // Centre of key
     #define KEY_Y (TFT_HEIGHT/4.5)
-    #define KEY_W TFT_WIDTH // Width and height
+    #define KEY_W TFT_WIDTH  // Width and height
     #define KEY_H (TFT_HEIGHT/12.8)
-    #define KEY_SPACING_X 0 // X and Y gap
+    #define KEY_SPACING_X 0  // X and Y gap
     #define KEY_SPACING_Y 1
     #define KEY_TEXTSIZE 1   // Font size multiplier
     #define ICON_W 22
@@ -2922,11 +2921,11 @@
     #define COMMAND_PREFIX "!"
 
     // Keypad start position, key sizes and spacing
-    #define KEY_X (TFT_WIDTH/2) // Centre of key
+    #define KEY_X (TFT_WIDTH/2)  // Centre of key
     #define KEY_Y (TFT_HEIGHT/5)
-    #define KEY_W TFT_HEIGHT // Width and height
+    #define KEY_W TFT_HEIGHT  // Width and height
     #define KEY_H (TFT_HEIGHT/17)
-    #define KEY_SPACING_X 0 // X and Y gap
+    #define KEY_SPACING_X 0  // X and Y gap
     #define KEY_SPACING_Y 1
     #define KEY_TEXTSIZE 1   // Font size multiplier
     #define ICON_W 22
@@ -2940,11 +2939,11 @@
     #define COMMAND_PREFIX "!"
 
     // Keypad start position, key sizes and spacing
-    #define KEY_X (SCREEN_WIDTH/2) // Centre of key
+    #define KEY_X (SCREEN_WIDTH/2)  // Centre of key
     #define KEY_Y (TFT_HEIGHT/6)
-    #define KEY_W SCREEN_WIDTH // Width and height
+    #define KEY_W SCREEN_WIDTH  // Width and height
     #define KEY_H (TFT_HEIGHT/17)
-    #define KEY_SPACING_X 0 // X and Y gap
+    #define KEY_SPACING_X 0  // X and Y gap
     #define KEY_SPACING_Y 1
     #define KEY_TEXTSIZE 1   // Font size multiplier
     #define ICON_W 22
@@ -2958,11 +2957,11 @@
     #define COMMAND_PREFIX "!"
 
     // Keypad start position, key sizes and spacing
-    #define KEY_X (TFT_WIDTH/2) // Centre of key
+    #define KEY_X (TFT_WIDTH/2)  // Centre of key
     #define KEY_Y (TFT_HEIGHT/4.5)
-    #define KEY_W TFT_WIDTH // Width and height
+    #define KEY_W TFT_WIDTH  // Width and height
     #define KEY_H (TFT_HEIGHT/12.8)
-    #define KEY_SPACING_X 0 // X and Y gap
+    #define KEY_SPACING_X 0  // X and Y gap
     #define KEY_SPACING_Y 1
     #define KEY_TEXTSIZE 1   // Font size multiplier
     #define ICON_W 22
@@ -2976,11 +2975,11 @@
     #define COMMAND_PREFIX "!"
 
     // Keypad start position, key sizes and spacing
-    #define KEY_X 160 // Centre of key
+    #define KEY_X 160  // Centre of key
     #define KEY_Y 59
-    #define KEY_W 320 // Width and height
+    #define KEY_W 320  // Width and height
     #define KEY_H 22
-    #define KEY_SPACING_X 0 // X and Y gap
+    #define KEY_SPACING_X 0  // X and Y gap
     #define KEY_SPACING_Y 1
     #define KEY_TEXTSIZE 1   // Font size multiplier
     #define ICON_W 22
@@ -3228,18 +3227,18 @@
     #elif defined(MARAUDER_C5)
       #define PIN 27
 //    #elif defined(MARAUDER_CYD_MICRO)      // CYD have RGB leds
-//      #define PIN 4
-//    #elif defined(MARAUDER_CYD_2USB)
-//      #define PIN 4
-//    #elif defined(MARAUDER_CYD_3_5_INCH)
-//      #define PIN 22
+//     #define PIN 4
+//   #elif defined(MARAUDER_CYD_2USB)
+//     #define PIN 4
+//   #elif defined(MARAUDER_CYD_3_5_INCH)
+//     #define PIN 22
     #elif defined(MARAUDER_C5)
       #define PIN 27
     #elif defined(MARAUDER_V8)
       #define PIN 27
-    #elif defined(MARAUDER_PANCAKE)
-      #define PIN 27
     #elif defined(MARAUDER_POOM)
+      #define PIN 27
+    #elif defined(MARAUDER_PANCAKE)
       #define PIN 27
     #elif defined(MARAUDER_CARDPUTER_ADV)
       #define PIN 21
@@ -3280,19 +3279,19 @@
       #define GPS_RX 13
     #elif defined(MARAUDER_CYD_MICRO)
       #define GPS_SERIAL_INDEX 2
-      #define GPS_TX 22 // Whoever thought it would be a good idea to use UART0 for GPS...
-      #define GPS_RX 27 // Now maybe we will be able to use CLI
+      #define GPS_TX 22  // Whoever thought it would be a good idea to use UART0 for GPS...
+      #define GPS_RX 27  // Now maybe we will be able to use CLI
     #elif defined(MARAUDER_CYD_2USB)
       #define GPS_SERIAL_INDEX 2
-      #define GPS_TX 22 // Whoever thought it would be a good idea to use UART0 for GPS...
-      #define GPS_RX 27 // Now maybe we will be able to use CLI
+      #define GPS_TX 22  // Whoever thought it would be a good idea to use UART0 for GPS...
+      #define GPS_RX 27  // Now maybe we will be able to use CLI
     #elif defined(MARAUDER_CYD_3_5_INCH)
       #define GPS_SERIAL_INDEX 2
       #define GPS_TX 21
       #define GPS_RX 25
     #elif defined(MARAUDER_CYD_GUITION)
       #define GPS_SERIAL_INDEX 2
-      #define GPS_TX 21 // Fits the extended I/O
+      #define GPS_TX 21  // Fits the extended I/O
       #define GPS_RX 22
     #elif defined(MARAUDER_V4)
       #define GPS_SERIAL_INDEX 2
@@ -3344,16 +3343,16 @@
       #define GPS_RX 9
     #elif defined(MARAUDER_T_DONGLE_C5)
       #define GPS_SERIAL_INDEX 1
-      #define GPS_TX 12 // External GPS TX -> T-Dongle UART0 RX
-      #define GPS_RX 11 // External GPS RX -> T-Dongle UART0 TX
+      #define GPS_TX 12  // External GPS TX -> T-Dongle UART0 RX
+      #define GPS_RX 11  // External GPS RX -> T-Dongle UART0 TX
     #elif defined(XIAO_ESP32_C5)
       #define GPS_SERIAL_INDEX 1
-      #define GPS_TX 12 // External GPS TX -> XIAO D7 / UART RX
-      #define GPS_RX 11 // External GPS RX -> XIAO D6 / UART TX
+      #define GPS_TX 12  // External GPS TX -> XIAO D7 / UART RX
+      #define GPS_RX 11  // External GPS RX -> XIAO D6 / UART TX
     #elif defined(MARAUDER_C5)
       #define GPS_SERIAL_INDEX 1
-      #define GPS_TX 14
-      #define GPS_RX 13
+      #define GPS_TX 12  // External GPS TX -> XIAO D7 / UART RX
+      #define GPS_RX 11  // External GPS RX -> XIAO D6 / UART TX
     #elif defined(MARAUDER_PANCAKE)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 14
@@ -3385,12 +3384,23 @@
       #define I2C_SDA 21
       #define I2C_SCL 22
 
-    #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_KIT)
+    #elif defined(MARAUDER_KIT)
       #define I2C_SDA 33
       #define I2C_SCL 22
       #define HAS_MAX1704X
       #undef HAS_AXP2101
       #undef HAS_IP5306
+
+    // V4, V6 and V6.1 are also used by compatible third-party boards that may
+    // have a MAX17048 expansion instead of an IP5306. Compile both probes and
+    // select the gauge that responds at runtime.
+    #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
+      #define I2C_SDA 33
+      #define I2C_SCL 22
+      #define HAS_IP5306
+      #define HAS_MAX1704X
+      #undef HAS_AXP2101
+      #undef HAS_AXP192
 
     #elif defined(MARAUDER_MINI)
       #define I2C_SDA 33
@@ -3454,7 +3464,7 @@
       #define BATTERY_ADC_PIN 5
     #endif
 
-    //  If we know what we have, we can delete what we're not using
+    // If we know what we have, we can delete what we're not using
     #if defined(BATTERY_ADC_PIN) || defined(HAS_CH32V003)
       #undef HAS_AXP2101
       #undef HAS_IP5306
@@ -3468,6 +3478,11 @@
       #undef HAS_MAX1704X
       #undef HAS_AXP192
       #undef HAS_BATTERY
+
+    // These targets cover mixed hardware and intentionally retain both probes.
+    #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
+      #undef HAS_AXP2101
+      #undef HAS_AXP192
 
     #elif defined(HAS_IP5306)
       #undef HAS_AXP2101
@@ -3541,14 +3556,14 @@
   //// PCAP BUFFER STUFF
 
   #ifdef HAS_PSRAM
-    #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
-    #define SNAP_LEN 1 * 4096 // max len of each recieved packet
+    #define BUF_SIZE 8 * 1024  // Had to reduce buffer size to save RAM. GG @spacehuhn
+    #define SNAP_LEN 1 * 4096  // max len of each recieved packet
   //#elif !defined(HAS_ILI9341)
-  //  #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
-  //  #define SNAP_LEN 4096 // max len of each recieved packet
+    //  #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
+    //  #define SNAP_LEN 4096 // max len of each recieved packet
   #else
-    #define BUF_SIZE 3 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
-    #define SNAP_LEN 2324 // max len of each recieved packet
+    #define BUF_SIZE 3 * 1024  // Had to reduce buffer size to save RAM. GG @spacehuhn
+    #define SNAP_LEN 2324  // max len of each recieved packet
   #endif
 
   //// END PCAP BUFFER STUFF
@@ -3670,7 +3685,7 @@
   #endif
 
   // #ifdef CONFIG_IDF_TARGET_ESP32
-  //   #undef ADJ_CPUFREQ
+  //  #undef ADJ_CPUFREQ
   // #endif
 
   //// FUNNY FLIPPER LED STUFF
@@ -3732,7 +3747,9 @@
 
   #endif
 
-  // CONFIG LOGIC
+
+  // NOLINTEND(whitespace, readabilty/comments, whitespace/line_length, whitespace/comments)
+  //// CONFIG LOGIC
 
   #if defined(HAS_CST820) || defined(HAS_AXS5106L) || defined(HAS_FT6336) || defined(HAS_CST3530)
     #define HAS_CAP_TOUCH 1
@@ -3776,6 +3793,6 @@
       #define HAS_LED
   #endif
 
-  // END CONFIG LOGIC
+  //// END CONFIG LOGIC
 
 #endif

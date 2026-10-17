@@ -1485,9 +1485,11 @@ void MenuFunctions::updateStatusBar()
   #endif
 
   #if defined(MARAUDER_POOM)
+    // display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR, true);
     display_obj.tft.setTextColor(the_color, other_color, true);
     display_obj.tft.drawString("SD", 116, 0, 1);
   #elif defined(HAS_MINI_SCREEN)
+    // display_obj.tft.setTextColor(the_color, STATUSBAR_COLOR, true);
     display_obj.tft.setTextColor(the_color, other_color, true);
     display_obj.tft.drawString("SD", TFT_WIDTH - 12, 0, 1);
   #endif

@@ -108,6 +108,9 @@ https://www.online-utility.org/image/convert/to/XBM
   #if defined(MARAUDER_POOM) && (B_BTN >= 0)
     Switches b_btn = Switches(B_BTN, 1000, B_PULL);
   #endif
+  #if defined(MARAUDER_POOM) && (B_BTN >= 0)
+    Switches b_btn = Switches(B_BTN, 1000, B_PULL);
+  #endif
 
 #endif
 
@@ -181,6 +184,7 @@ const String PROGMEM version_number = MARAUDER_VERSION;
 #endif
 
 uint32_t currentTime  = 0;
+
 
 /*  Fixed Below
 #ifdef HAS_C5_SD
@@ -296,10 +300,9 @@ void setup()
 
   // TFT_BL >= 0 does not if TFT_BL is -1
   // due to cpp's "unsigned promotion rules" where -1 == maxint
-  #ifdef HAS_SCREEN && defined(TFT_BL) && TFT_BL != -1
-    log_d("pinMode %d OUTPUT", TFT_BL);
-    pinMode(TFT_BL, OUTPUT);
-    // perimanSetPinBusExtraType(TFT_BL, "TFT_BL");
+  #if defined(HAS_SCREEN) && !defined(MARAUDER_POOM)
+    brightnessInit();
+    backlightOff();
   #endif
   
   #ifdef DEVELOPER
