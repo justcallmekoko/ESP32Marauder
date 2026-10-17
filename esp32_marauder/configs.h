@@ -785,7 +785,6 @@
     #undef HAS_SD
     #undef USE_SD
   #endif
-
   //// END BOARD FEATURES
 
     #ifndef GMTOFFSET_SEC
@@ -3318,8 +3317,8 @@
       #define GPS_RX 11 // External GPS RX -> XIAO D6 / UART TX
     #elif defined(MARAUDER_C5)
       #define GPS_SERIAL_INDEX 1
-      #define GPS_TX 14
-      #define GPS_RX 13
+      #define GPS_TX 12 // External GPS TX -> XIAO D7 / UART RX
+      #define GPS_RX 11 // External GPS RX -> XIAO D6 / UART TX
     #elif defined(MARAUDER_PANCAKE)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 14
@@ -3347,7 +3346,11 @@
     //// BATTERY STUFF
     #ifdef HAS_BATTERY
 
-    #if defined(MARAUDER_KIT)
+    #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2) 
+      #define I2C_SDA 33
+      #define I2C_SCL 22
+
+    #elif defined(MARAUDER_KIT)
       #define I2C_SDA 33
       #define I2C_SCL 22
       #define HAS_MAX1704X
@@ -3436,6 +3439,11 @@
         #undef HAS_MAX1704X
         #undef HAS_AXP192
         #undef HAS_BATTERY
+
+    // These targets cover mixed hardware and intentionally retain both probes.
+    #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
+      #undef HAS_AXP2101
+      #undef HAS_AXP192
 
       #elif defined(HAS_IP5306)
         #undef HAS_AXP2101
@@ -3702,6 +3710,7 @@
     #endif
 
 
+    //// HAS_RTC
     #ifdef HAS_RTC
 
       #if defined(MARAUDER_WS_C5_28)    // ADC is through IO expander
@@ -3728,8 +3737,10 @@
         #define I2C_ADDR_PCF8563 0x51
       #endif
 
-    #endif   // HAS_RTC
+    #endif   
+    ////  END HAS_RTC
 
+    //// HAS_TEMP_SENSOR
     #ifdef HAS_TEMP_SENSOR
 
       #if defined(MARAUDER_WS_C5_28)
@@ -3749,7 +3760,8 @@
         #undef HAS_CPU_TEMP
       #endif
 
-    #endif  // HAS_TEMP_SENSOR
+    #endif 
+    ////  END HAS_TEMP_SENSOR
 
     //do we have a SENSOR?
     #if !( defined(USE_CPU_TEMP) || defined(HAS_SHTC3) || defined(HAS_AHT20) )
@@ -3758,6 +3770,7 @@
     #endif
 
 
+    //// HAS_CAP_TOUCH
     #ifdef HAS_CAP_TOUCH
 
       #if defined(MARAUDER_JC2432W328C)
