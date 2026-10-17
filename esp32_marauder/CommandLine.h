@@ -21,6 +21,19 @@
   #include "LedInterface.h"
 #endif
 
+#if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
+  #include "shutdown.hpp"
+#endif
+
+
+#ifdef HAS_RTC
+  #include "RTC.h"
+  extern RTC rtc_obj;
+#endif
+
+// If system time/date has been set
+extern bool system_time_set;
+
 #ifdef HAS_SCREEN
   extern MenuFunctions menu_function_obj;
   extern Display display_obj;
@@ -79,6 +92,9 @@ const char PROGMEM GPS_CMD[] = "gps";
 const char PROGMEM NMEA_CMD[] = "nmea";
 const char PROGMEM GPS_POI_CMD[] = "gpspoi";
 const char PROGMEM GPS_TRACKER_CMD[] = "gpstracker";
+const char PROGMEM NTP_SYNC_CMD[] = "ntp_sync";
+const char PROGMEM DATE_CMD[] = "date";
+const char PROGMEM SETDATE_CMD[] = "setdate";
 const char PROGMEM SHUTDOWN_CMD[] = "shutdown";
 
 
@@ -92,6 +108,7 @@ const char PROGMEM SHUTDOWN_CMD[] = "shutdown";
   const char PROGMEM CPUFREQ_CMD[] = "cpufreq";
 #endif
 const char PROGMEM RESET_REASON_CMD[] = "resetreasion";
+
 const char PROGMEM RECON_CMD[] = "recon";
 
 // WiFi sniff/scan
@@ -116,6 +133,7 @@ const char PROGMEM PORT_SCAN_CMD[] = "portscan";
 const char PROGMEM ARP_SCAN_CMD[] = "arpscan";
 const char PROGMEM MAC_TRACK_CMD[] = "mactrack";
 const char PROGMEM SNIFF_SAE_CMD[] = "sniffsae";
+const char PROGMEM REMOTE_ID_CMD[] = "remoteid";
 
 // WiFi attack
 const char PROGMEM ATTACK_CMD[] = "attack";
@@ -176,8 +194,12 @@ const char PROGMEM HELP_GPS_POI_CMD[] = "gpspoi -s/-m/-e";
 const char PROGMEM HELP_GPS_TRACKER_CMD[] = "gpstracker -c <start/stop>";
 const char PROGMEM HELP_RECON_CMD[] = "recon wifi|ble|status|stop";
 const char PROGMEM HELP_NMEA_CMD[] = "nmea";
+#if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
   const char PROGMEM HELP_SHUTDOWN_CMD[] = "shutdown";
-
+#endif
+const char PROGMEM HELP_NTP_SYNC[] = "ntp_sync";
+const char PROGMEM HELP_SETDATE[] = "setdate YY-MM-DD HH:MM:SS";
+const char PROGMEM HELP_DATE[] = "print system time/date";
 
 #ifdef HAS_SD
   const char PROGMEM HELP_RESCANSD_CMD[] = "rescansd : rescan for SD card";
@@ -213,6 +235,7 @@ const char PROGMEM HELP_PORT_SCAN_CMD[] = "portscan [-a -t <ip index>]/[-s <ssh/
 const char PROGMEM HELP_ARP_SCAN_CMD[] = "arpscan [-f]";
 const char PROGMEM HELP_MAC_TRACK_CMD[] = "mactrack";
 const char PROGMEM HELP_SNIFF_SAE_CMD[] = "sniffsae";
+const char PROGMEM HELP_REMOTE_ID_CMD[] = "remoteid <scan/list/track/clear> [index]";
 
 // WiFi attack
 const char PROGMEM HELP_ATTACK_CMD[] = "attack -t <quiet/csa/sae/beacon [-l/-r/-a]/deauth [-c]/[-s <src mac>] [-d <dst mac>]/probe/rickroll/badmsg [-c]/sleep [-c]>";
@@ -234,7 +257,7 @@ const char PROGMEM HELP_SSID_CMD_A[] = "ssid -a [-g <count>/-n <name>]";
 const char PROGMEM HELP_SSID_CMD_B[] = "ssid -r <index>";
 const char PROGMEM HELP_SAVE_CMD[] = "save -a/-s";
 const char PROGMEM HELP_LOAD_CMD[] = "load -a/-s";
-const char PROGMEM HELP_JOIN_CMD[] = "join -a <index> -p <password>/-s";
+const char PROGMEM HELP_JOIN_CMD[] = "join (-a <index> -n <network>) -p <password>/-s";
 const char PROGMEM HELP_MAC_CMD_A[] = "randapmac";
 const char PROGMEM HELP_MAC_CMD_B[] = "randstamac";
 const char PROGMEM HELP_MAC_CMD_C[] = "cloneapmac [-a <index>]";
@@ -244,7 +267,7 @@ const char PROGMEM HELP_ADD_CMD_B[] = "add -c -b <mac> -ap <ap_index>";
 const char PROGMEM HELP_UPLOAD_CMD[] = "upload -d <wdg/wigle/both>";
 
 // Bluetooth sniff/scan
-const char PROGMEM HELP_BT_SNIFF_CMD[] = "sniffbt [-t] <airtag/flipper/flock/meta>";
+const char PROGMEM HELP_BT_SNIFF_CMD[] = "sniffbt [-t] <airtag/ibeacon/flipper/flock/meta>";
 const char PROGMEM HELP_BT_FINDMY_CMD[] = "findmy -t <index>";
 const char PROGMEM HELP_BT_SPAM_CMD[] = "blespam -t <sourapple/applejuice/google/samsung/windows/flipper/all>";
 const char PROGMEM HELP_BT_SPOOFAT_CMD[] = "spoofat -t <index>";

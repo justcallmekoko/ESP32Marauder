@@ -50,15 +50,17 @@ class Settings {
       bool  ForcePMKID  = false;
       bool  ForceProbe  = false;
       bool  SavePCAP    = true;
+      bool  TimeStPCAP  = true;
       bool  EnableLED   = true;
       bool  EPDeauth    = false;
       bool  ChanHop     = false;
       bool  ProbeGPS     = false;
-      String ClientSSID   = "";
-      String ClientPW     = "";
+      String ClientSSID = "";
+      String ClientPW   = "";
       String wu           = "";
       String wt           = "";
       String wdg_key      = "";
+
     } _cache;
 
     void _buildCache();  // parse json_settings_string -> _cache

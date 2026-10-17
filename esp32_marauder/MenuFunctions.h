@@ -25,6 +25,32 @@
 #include "settings.h"
 #include "MenuInputRepeat.h"
 
+#if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
+  #include "shutdown.hpp"
+#endif
+
+
+#ifdef HAS_AHT20
+  #include "AHT20.hpp"
+#endif
+
+#ifdef HAS_RTC
+  #include "RTC.h"
+  extern RTC rtc_obj;
+#endif
+
+#ifdef USE_CPU_TEMP
+#include "cpu_temp_sensor.hpp"
+#endif
+
+// If system time/date has been set
+extern bool system_time_set;
+
+extern void print_reset_reason();
+extern const char *resetReasonName();
+
+extern int8_t wifi_power;
+
 #ifdef MSC_SHARE
   #include "MSC_Share.h"
   extern MSC_Share MSC_Share_obj;
@@ -47,6 +73,9 @@
   #if (C_BTN >= 0)
     extern Switches c_btn;
   #endif
+  #ifdef MARAUDER_POOM
+    extern Switches b_btn;
+  #endif
 #endif
 
 extern WiFiScan wifi_scan_obj;
@@ -59,7 +88,13 @@ extern Settings settings_obj;
 extern void shutdown();
 extern void DeepSleep(int8_t);
 
-extern const char *resetReasonName();
+// extern void shutdown();
+// extern void DeepSleep(int8_t);
+
+#ifdef HAS_SHTC3
+  #include "SHTC3.hpp"
+  extern SHTC3 SHTC3_obj;
+#endif
 
 #define FLASH_BUTTON 0
 
@@ -151,6 +186,7 @@ class MenuFunctions
       BLE_TARGETS,
       FINDMY_TARGETS,
       FLIPPER_TARGETS,
+      IBEACON_TARGETS,
       META_TARGETS,
       FLOCK_TARGETS,
     };
@@ -191,6 +227,7 @@ class MenuFunctions
     // Main menu stuff
     Menu mainMenu;
     Menu reconMenu;
+
 
     Menu wifiMenu;
     Menu bluetoothMenu;
@@ -254,18 +291,21 @@ class MenuFunctions
     Menu setMacMenu;
     Menu selectProbeSSIDsMenu;
 
-    Menu adminMenu;
-    Menu adminSubMenu;
-    Menu CpuFreqMenu;
-
     // Bluetooth menu stuff
     Menu bluetoothSnifferMenu;
     Menu bluetoothAttackMenu;
+    Menu iBeaconMenu;
+    Menu iBeaconInfoMenu;
+    Menu remoteIdMenu;
 
     // Settings things menus
     Menu generateSSIDsMenu;
 
     Menu evilPortalMenu;
+
+    // Admin
+    Menu adminMenu;
+    Menu adminSubMenu;
 
     Menu foxHuntMenu;
     Menu foxSortMenu;

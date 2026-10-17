@@ -1,8 +1,9 @@
 #pragma once
+
 #ifndef ft6336_h
 #define ft6336_h
 
-#ifdef HAS_CAP_TOUCH
+#ifdef HAS_FT6336
 
 #include <Wire.h>
 
@@ -68,5 +69,5 @@ static uint8_t ft6336_update(uint16_t *x, uint16_t *y) {
     return 1;
 }
 
-#endif // HAS_CAP_TOUCH
+#endif // HAS_FT6336
 #endif // ft6336_h
