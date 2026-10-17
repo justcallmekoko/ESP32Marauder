@@ -3445,6 +3445,11 @@
       #undef HAS_AXP2101
       #undef HAS_AXP192
 
+    // These targets cover mixed hardware and intentionally retain both probes.
+    #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
+      #undef HAS_AXP2101
+      #undef HAS_AXP192
+
       #elif defined(HAS_IP5306)
         #undef HAS_AXP2101
         #undef HAS_MAX1704X

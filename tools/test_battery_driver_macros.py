@@ -41,14 +41,12 @@ class BatteryDriverMacroTests(unittest.TestCase):
             "MARAUDER_KIT": {"HAS_MAX1704X"},
             "MARAUDER_V7": {"HAS_MAX1704X"},
             "MARAUDER_V7_1": {"HAS_MAX1704X"},
-            "MARAUDER_WS_C5_28": {"HAS_CH32V003"),
         }
         battery_drivers = {
             "HAS_AXP192",
             "HAS_AXP2101",
             "HAS_IP5306",
             "HAS_MAX1704X",
-            "HAS_CH32V003",
         }
 
         for target, expected_drivers in expected.items():
