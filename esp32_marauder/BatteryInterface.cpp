@@ -1,23 +1,32 @@
+#include "configs.h"
 
-// #ifdef HAS_BATTERY
+#ifdef HAS_BATTERY
+
 
 #include "BatteryInterface.h"
 #include "lang_var.h"
+
+
 BatteryInterface::BatteryInterface() {
 
 }
 
 void BatteryInterface::main(uint32_t currentTime) {
   if (currentTime != 0) {
+      // Serial.println("Checking Battery Level");
+      // Serial.printf("%d - %d >= %d 3000", currentTime, initTime, (currentTime - initTime));
+
     if (currentTime - initTime >= 3000) {
-      //Serial.println("Checking Battery Level");
+      // Serial.println("Checking Battery Level");
       this->initTime = millis();
+      this->battery_level = this->getBatteryLevel();
+      // Serial.println("Battery Level: " + (String)this->battery_level);
+      return;
       int8_t new_level = this->getBatteryLevel();
-      //this->battery_level = this->getBatteryLevel();
       if (this->battery_level != new_level) {
-        Serial.println(text00 + (String)new_level);
+        // Serial.println(text00 + (String)new_level);
         this->battery_level = new_level;
-        Serial.println("Battery Level: " + (String)this->battery_level);
+        // Serial.println("Battery Level: " + (String)this->battery_level);
       }
     }
   }
@@ -27,12 +36,21 @@ void BatteryInterface::RunSetup() {
   byte error;
   byte addr;
 
+  log_d("BatteryInterface::RunSetup");
   #ifdef HAS_BATTERY
 
-    #ifdef BATTERY_ADC_PIN
+    #if defined(HAS_CH32V003)
+        this->supported = true;
+        this->has_adc_battery = true;
+
+      log_d("BatteryInterface::RunSetup: HAS_CH32V003");
+      // Do Nothing (yet)`
+
+    #elif defined(BATTERY_ADC_PIN)
         analogReadResolution(12);
         pinMode(BATTERY_ADC_PIN, INPUT);
         this->has_adc_battery = true;
+        this->supported = true;
         // this->i2c_supported = true;
         Serial.println(F("Battery: ADC mode"));
 
@@ -44,6 +62,7 @@ void BatteryInterface::RunSetup() {
 
         Serial.println(F("Detected AXP2101"));
 
+        this->supported = true;
         this->i2c_supported = true;
         this->has_axp2101 = true;
 
@@ -59,6 +78,7 @@ void BatteryInterface::RunSetup() {
             Serial.println(F("Detected IP5306"));
             this->has_ip5306 = true;
             this->i2c_supported = true;
+            this->supported = true;
           }
         #endif
 
@@ -76,6 +96,7 @@ void BatteryInterface::RunSetup() {
               Serial.println(F("Detected MAX17048"));
               this->has_max17048 = true;
               this->i2c_supported = true;
+              this->supported = true;
             }
           }
         #endif
@@ -90,7 +111,17 @@ int8_t BatteryInterface::getBatteryLevel() {
 
   #ifdef HAS_BATTERY
 
-    #ifdef BATTERY_ADC_PIN
+    #ifdef HAS_CH32V003
+      if (this->has_adc_battery) {
+        float bVolt =    CH32V003_obj.readBatteryVoltage();
+        // log_d("BatteryVoltage = %f", bVolt);
+        // float batteryPct = (bVolt - 3.0) / (4.2 - 3.0) * 100.0;
+        float batteryPct = (bVolt - 3.0) / (4.15 - 3.0) * 100.0;
+        int8_t bPct = constrain(batteryPct, 0, 100);
+        return bPct;
+      }
+
+    #elif BATTERY_ADC_PIN
       if (this->has_adc_battery) {
         int voltage_mv = analogReadMilliVolts(BATTERY_ADC_PIN) * 2; // voltage divider ratio 2:1
         if (voltage_mv <= 3300) return 0;
@@ -145,4 +176,4 @@ int8_t BatteryInterface::getBatteryLevel() {
   return -1;
 }
 
-// #endif // HAS_BATTERY
+#endif // HAS_BATTERY

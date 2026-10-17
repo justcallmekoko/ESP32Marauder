@@ -21,10 +21,25 @@
   #include "LedInterface.h"
 #endif
 
+#if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
+  #include "shutdown.hpp"
+#endif
+
+
+#ifdef HAS_RTC
+  #include "RTC.h"
+  extern RTC rtc_obj;
+#endif
+
+// If system time/date has been set
+extern bool system_time_set;
+
 #ifdef HAS_SCREEN
   extern MenuFunctions menu_function_obj;
   extern Display display_obj;
 #endif
+
+extern void print_reset_reason();
 
 extern WiFiScan wifi_scan_obj;
 //extern Web web_obj;
@@ -36,6 +51,12 @@ extern ReconMission recon_obj;
 #if defined(HAS_NEOPIXEL_LED)
   extern LedInterface led_obj;
 #endif
+
+#ifdef MSC_SHARE
+  #include "MSC_Share.h"
+    extern MSC_Share MSC_Share_obj;
+#endif
+
 extern LinkedList<AccessPoint>* access_points;
 extern LinkedList<BleDevice>* ble_devices;
 extern LinkedList<AirTag>* airtags;
@@ -46,6 +67,9 @@ extern LinkedList<IPAddress>* ipList;
 extern LinkedList<ProbeReqSsid>* probe_req_ssids;
 extern const String PROGMEM version_number;
 extern const String PROGMEM board_target;
+
+extern void shutdown();
+extern void DeepSleep(int8_t wakeup_but);
 
 //// Commands
 
@@ -68,6 +92,23 @@ const char PROGMEM GPS_CMD[] = "gps";
 const char PROGMEM NMEA_CMD[] = "nmea";
 const char PROGMEM GPS_POI_CMD[] = "gpspoi";
 const char PROGMEM GPS_TRACKER_CMD[] = "gpstracker";
+const char PROGMEM NTP_SYNC_CMD[] = "ntp_sync";
+const char PROGMEM DATE_CMD[] = "date";
+const char PROGMEM SETDATE_CMD[] = "setdate";
+const char PROGMEM SHUTDOWN_CMD[] = "shutdown";
+
+
+#ifdef HAS_SD
+  const char PROGMEM RESCANSD_CMD[] = "rescansd";
+#endif
+#ifdef MSC_SHARE
+  const char PROGMEM MSC_CMD[] = "msc";
+#endif
+#ifdef ADJ_CPUFREQ
+  const char PROGMEM CPUFREQ_CMD[] = "cpufreq";
+#endif
+const char PROGMEM RESET_REASON_CMD[] = "resetreasion";
+
 const char PROGMEM RECON_CMD[] = "recon";
 
 // WiFi sniff/scan
@@ -153,6 +194,23 @@ const char PROGMEM HELP_GPS_POI_CMD[] = "gpspoi -s/-m/-e";
 const char PROGMEM HELP_GPS_TRACKER_CMD[] = "gpstracker -c <start/stop>";
 const char PROGMEM HELP_RECON_CMD[] = "recon wifi|ble|status|stop";
 const char PROGMEM HELP_NMEA_CMD[] = "nmea";
+#if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
+  const char PROGMEM HELP_SHUTDOWN_CMD[] = "shutdown";
+#endif
+const char PROGMEM HELP_NTP_SYNC[] = "ntp_sync";
+const char PROGMEM HELP_SETDATE[] = "setdate YY-MM-DD HH:MM:SS";
+const char PROGMEM HELP_DATE[] = "print system time/date";
+
+#ifdef HAS_SD
+  const char PROGMEM HELP_RESCANSD_CMD[] = "rescansd : rescan for SD card";
+#endif
+#ifdef MSC_SHARE
+  const char PROGMEM HELP_MSC_CMD[] = "msc [start | stop | pause | resume] : Share SD over USB"; 
+#endif
+#ifdef ADJ_CPUFREQ
+  const char PROGMEM HELP_CPUFREQ_CMD[] = "cpufreq [240 | 160 | 80 | 40 | 20]"; 
+#endif
+const char PROGMEM HELP_RESET_REASON_CMD[] = "resetreasion : print reason for last reboot / crash";
 
 // WiFi sniff/scan
 const char PROGMEM HELP_EVIL_PORTAL_CMD[] = "evilportal [-c start [-w html.html]/sethtml <html.html>]";
@@ -199,7 +257,7 @@ const char PROGMEM HELP_SSID_CMD_A[] = "ssid -a [-g <count>/-n <name>]";
 const char PROGMEM HELP_SSID_CMD_B[] = "ssid -r <index>";
 const char PROGMEM HELP_SAVE_CMD[] = "save -a/-s";
 const char PROGMEM HELP_LOAD_CMD[] = "load -a/-s";
-const char PROGMEM HELP_JOIN_CMD[] = "join -a <index> -p <password>/-s";
+const char PROGMEM HELP_JOIN_CMD[] = "join (-a <index> -n <network>) -p <password>/-s";
 const char PROGMEM HELP_MAC_CMD_A[] = "randapmac";
 const char PROGMEM HELP_MAC_CMD_B[] = "randstamac";
 const char PROGMEM HELP_MAC_CMD_C[] = "cloneapmac [-a <index>]";
