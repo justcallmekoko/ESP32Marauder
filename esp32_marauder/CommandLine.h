@@ -214,7 +214,7 @@ const char PROGMEM HELP_MAC_CMD_C[] = "cloneapmac [-a <index>]";
 const char PROGMEM HELP_MAC_CMD_D[] = "clonestamac [-s <index>]";
 const char PROGMEM HELP_ADD_CMD_A[] = "add -a -b <mac> [-ch <channel>] [-e <ssid>]";
 const char PROGMEM HELP_ADD_CMD_B[] = "add -c -b <mac> -ap <ap_index>";
-const char PROGMEM HELP_UPLOAD_CMD[] = "upload -d <wdg/wigle/both>";
+const char PROGMEM HELP_UPLOAD_CMD[] = "upload -d <wdg/wigle/wardrift/both>";
 
 // Bluetooth sniff/scan
 const char PROGMEM HELP_BT_SNIFF_CMD[] = "sniffbt [-t] <airtag/ibeacon/flipper/flock/meta>";
