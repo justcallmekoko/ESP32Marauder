@@ -8,11 +8,11 @@ static const char WIGLE_CSV_COLUMNS[] =
   "RCOIs,MfgrId,Type";
 
 constexpr uint16_t wigleFrequencyMHz(uint16_t channel) {
-  if (channel >= 1 && channel <= 13)
-    return 2407 + (channel * 5);
-  if (channel == 14)
-    return 2484;
-  if (channel >= 32 && channel <= 177)
-    return 5000 + (channel * 5);
-  return 0;
+  return (channel >= 1 && channel <= 13)
+    ? 2407 + (channel * 5)
+    : (channel == 14)
+      ? 2484
+      : (channel >= 32 && channel <= 177)
+        ? 5000 + (channel * 5)
+        : 0;
 }
