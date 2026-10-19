@@ -203,6 +203,10 @@ uint32_t currentTime  = 0;
 
   void backlightOn() {
     #ifdef HAS_SCREEN
+      // TFT_eSPI::init() reconfigures the backlight pin. Reattach PWM before
+      // restoring the saved duty so display reinitialization cannot force the
+      // backlight to full brightness.
+      BL_SETUP();
       BL_SET(BL_LEVELS[bl_level_idx]);
     #endif
   }

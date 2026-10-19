@@ -5,6 +5,8 @@
 
 #ifdef HAS_SCREEN
 
+extern void backlightOn();
+
 namespace {
 
 uint8_t readLogoAlpha(uint16_t x, uint16_t y) {
@@ -196,10 +198,7 @@ bool Display::isTouchHeld(uint16_t threshold) {
 
 void Display::init() {
   tft.init();
-
-  #if defined(HAS_DUAL_BAND) && !defined(MARAUDER_MINI_V3) && !defined(MARAUDER_POOM)
-    digitalWrite(TFT_BL, HIGH);
-  #endif
+  backlightOn();
 }
 
 void Display::setCalData(bool landscape) {
