@@ -9,6 +9,39 @@ from typing import Any
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_REGISTRY = REPOSITORY_ROOT / "installer" / "targets.json"
 
+DOCUMENTATION_LINKS = (
+    (
+        ("xiao esp32-c5", "c5 hardware aliases"),
+        "Supported hardware and firmware targets",
+        "https://github.com/justcallmekoko/ESP32Marauder/wiki/Supported-Hardware",
+    ),
+    (
+        ("c5 hardware aliases",),
+        "ESP32-C5 DevKitC-1 and C5 Flipper Adapter",
+        "https://github.com/justcallmekoko/ESP32Marauder/wiki/ESP32%E2%80%90C5%E2%80%90DevKitC%E2%80%901",
+    ),
+    (
+        ("ip5306", "max17048", "battery fuel gauge"),
+        "Battery Fuel Gauge",
+        "https://github.com/justcallmekoko/ESP32Marauder/wiki/Battery-Fuel-Gauge",
+    ),
+    (
+        ("csi motion",),
+        "CSI Motion Monitor",
+        "https://github.com/justcallmekoko/ESP32Marauder/wiki/CSI-Motion-Monitor",
+    ),
+    (
+        ("findmy sound",),
+        "FindMy Sound",
+        "https://github.com/justcallmekoko/ESP32Marauder/wiki/FindMy-Sound",
+    ),
+    (
+        ("wardrive", "wigle"),
+        "Wardriving",
+        "https://github.com/justcallmekoko/ESP32Marauder/wiki/Wardrive",
+    ),
+)
+
 
 def load_targets(registry_path: Path) -> list[dict[str, Any]]:
     registry = json.loads(registry_path.read_text(encoding="utf-8"))
@@ -43,6 +76,18 @@ def render_asset_table(targets: list[dict[str, Any]]) -> str:
     return "\n".join(rows)
 
 
+def render_documentation_links(changes: str) -> str | None:
+    normalized_changes = changes.casefold()
+    links = [
+        f"- [{label}]({url})"
+        for keywords, label, url in DOCUMENTATION_LINKS
+        if any(keyword in normalized_changes for keyword in keywords)
+    ]
+    if not links:
+        return None
+    return "## Documentation\n\n" + "\n".join(links)
+
+
 def render_release_notes(
     targets: list[dict[str, Any]], channel: str, changes: str | None = None
 ) -> str:
@@ -53,6 +98,9 @@ def render_release_notes(
                 "Stable release notes require GitHub-generated changes and a full changelog"
             )
         sections.append(changes.strip())
+        documentation = render_documentation_links(changes)
+        if documentation:
+            sections.append(documentation)
 
     sections.append("[justcallmekokollc.com](https://justcallmekokollc.com)")
     if channel == "nightly":
