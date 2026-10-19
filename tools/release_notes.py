@@ -43,10 +43,18 @@ def render_asset_table(targets: list[dict[str, Any]]) -> str:
     return "\n".join(rows)
 
 
-def render_release_notes(targets: list[dict[str, Any]], channel: str) -> str:
-    sections = [
-        "[justcallmekokollc.com](https://justcallmekokollc.com)",
-    ]
+def render_release_notes(
+    targets: list[dict[str, Any]], channel: str, changes: str | None = None
+) -> str:
+    sections = []
+    if channel == "stable":
+        if not changes or "## What's Changed" not in changes or "**Full Changelog**:" not in changes:
+            raise ValueError(
+                "Stable release notes require GitHub-generated changes and a full changelog"
+            )
+        sections.append(changes.strip())
+
+    sections.append("[justcallmekokollc.com](https://justcallmekokollc.com)")
     if channel == "nightly":
         sections.append(
             "> **Nightly build:** This automated prerelease is for testing and "
@@ -88,10 +96,20 @@ def main() -> None:
     )
     parser.add_argument("--registry", type=Path, default=DEFAULT_REGISTRY)
     parser.add_argument("--channel", choices=("stable", "nightly"), default="stable")
+    parser.add_argument(
+        "--changes-file",
+        type=Path,
+        help="GitHub-generated change summary to prepend to stable release notes",
+    )
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
-    notes = render_release_notes(load_targets(args.registry), args.channel)
+    changes = (
+        args.changes_file.read_text(encoding="utf-8")
+        if args.changes_file is not None
+        else None
+    )
+    notes = render_release_notes(load_targets(args.registry), args.channel, changes)
     args.output.write_text(notes, encoding="utf-8")
 
 
