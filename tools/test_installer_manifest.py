@@ -79,6 +79,14 @@ class InstallerManifestTests(unittest.TestCase):
         c5_devkit = next(board for board in boards if board["flag"] == "MARAUDER_C5")
         self.assertIn("FlashSize=8M", c5_devkit["fbqn"])
         self.assertIn("PartitionScheme=default_8MB", c5_devkit["fbqn"])
+        c5_target = next(
+            target for target in registry["targets"] if target["buildFlag"] == "MARAUDER_C5"
+        )
+        self.assertTrue(
+            {"BFFB V2", "C5 Lowkey", "Marauder C5 Adapter"}.issubset(
+                c5_target["aliases"]
+            )
+        )
         self.assertEqual(
             len(registry_flags),
             len(registry["targets"]),

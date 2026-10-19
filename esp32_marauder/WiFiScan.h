@@ -8,6 +8,7 @@
 #include "GpsTrackerStats.h"
 #include "IBeacon.h"
 #include "RemoteIdDecoder.h"
+#include "WigleFormat.h"
 
 #include <ArduinoJson.h>
 #include <algorithm>
@@ -182,6 +183,7 @@
 #define BT_ATTACK_FINDMY_LIVE 86
 #define REMOTE_ID_SCAN_ALL 87
 #define REMOTE_ID_SCAN_TARGET 88
+#define WIFI_SCAN_CSI_MOTION 89
 
 #define WIFI_ATTACK_FUNNY_BEACON 99 
 
@@ -818,7 +820,7 @@ class WiFiScan
     IPAddress advanceScanIP();
     bool isHostAlive(IPAddress ip);
     bool checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout = 100);
-    String extractManufacturer(const uint8_t* payload);
+    String extractManufacturer(const uint8_t* payload, size_t payload_len);
     int checkMatchAP(char addr[], bool update_ap = true);
     uint8_t getSecurityType(const uint8_t* beacon, uint16_t len);
     void addAnalyzerValue(int16_t value, int rssi_avg, int16_t target_array[], int array_size);
@@ -925,7 +927,7 @@ class WiFiScan
     static MacEntry mac_entries[mac_history_len_half];
     static uint8_t mac_entry_state[mac_history_len_half];
 
-    String header_line = "WigleWifi-1.4,appRelease=" + (String)MARAUDER_VERSION + ",model=ESP32 Marauder,release=" + (String)MARAUDER_VERSION + ",device=ESP32 Marauder,display=SPI TFT,board=ESP32 Marauder,brand=JustCallMeKoko\nMAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\n";
+    String header_line = "WigleWifi-1.6,appRelease=" + (String)MARAUDER_VERSION + ",model=ESP32 Marauder,release=" + (String)MARAUDER_VERSION + ",device=ESP32 Marauder,display=SPI TFT,board=ESP32 Marauder,brand=JustCallMeKoko\n" + WIGLE_CSV_COLUMNS + "\n";
 
     uint8_t dual_band_channels[DUAL_BAND_CHANNELS] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 72, 76, 80, 84, 88, 92, 96, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, 169, 173, 177};
 
@@ -1145,7 +1147,7 @@ class WiFiScan
     bool seen_mac(unsigned char* mac, bool simple = true);
     int update_mac_entry(const uint8_t mac[6], int8_t rssi = 0, bool bt = false);
     inline void insert_mac_entry(uint32_t idx, const uint8_t mac[6], uint32_t now_ms, int8_t rssi = 0, bool bt = false);
-    void evict_and_insert(const uint8_t mac[6], uint32_t now_ms);
+    void evict_and_insert(const uint8_t mac[6], uint32_t now_ms, int8_t rssi, bool bt);
     uint8_t build_top10_for_ui(MacEntry* out_top10, MacSortMode mode);
     void save_mac(unsigned char* mac);
     #ifdef HAS_BT

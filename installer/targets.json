@@ -177,7 +177,12 @@
     {
       "id": "esp32-c5-devkitc-1",
       "displayName": "ESP32-C5-DevKitC-1",
-      "aliases": ["ESP32-C5 DevKit"],
+      "aliases": [
+        "ESP32-C5 DevKit",
+        "BFFB V2",
+        "C5 Lowkey",
+        "Marauder C5 Adapter"
+      ],
       "buildFlag": "MARAUDER_C5",
       "assetSuffix": "esp32c5devkitc1",
       "chipFamily": "ESP32-C5",
