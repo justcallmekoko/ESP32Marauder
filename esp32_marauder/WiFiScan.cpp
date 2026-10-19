@@ -734,7 +734,7 @@ extern "C" {
                     display_string.concat(F(" | GPS: No Fix"));
                   }
 
-                  String wardrive_line = (String)advertisedDevice->getAddress().toString().c_str() + ",,[BLE]," + gps_obj.getDatetime() + ",0," + (String)advertisedDevice->getRSSI() + "," + gps_obj.getLat() + "," + gps_obj.getLon() + "," + gps_obj.getAlt() + "," + gps_obj.getAccuracy() + ",BLE\n";
+                  String wardrive_line = (String)advertisedDevice->getAddress().toString().c_str() + ",,[BLE]," + gps_obj.getDatetime() + ",0,0," + (String)advertisedDevice->getRSSI() + "," + gps_obj.getLat() + "," + gps_obj.getLon() + "," + gps_obj.getAlt() + "," + gps_obj.getAccuracy() + ",,0,BLE\n";
                   Serial.print(wardrive_line);
 
                   if (do_save && !wifi_scan_obj.isGeofencePaused())
@@ -1514,7 +1514,7 @@ extern "C" {
                   if (gps_obj.getFixStatus())
                     do_save = true;
 
-                  String wardrive_line = (String)mac + ",,[BLE]," + gps_obj.getDatetime() + ",0," + (String)rssi + "," + gps_obj.getLat() + "," + gps_obj.getLon() + "," + gps_obj.getAlt() + "," + gps_obj.getAccuracy() + ",BLE\n";
+                  String wardrive_line = (String)mac + ",,[BLE]," + gps_obj.getDatetime() + ",0,0," + (String)rssi + "," + gps_obj.getLat() + "," + gps_obj.getLon() + "," + gps_obj.getAlt() + "," + gps_obj.getAccuracy() + ",,0,BLE\n";
                   Serial.print(wardrive_line);
 
                   if (do_save && !wifi_scan_obj.isGeofencePaused())
@@ -6205,7 +6205,8 @@ void WiFiScan::setBaseMacAddress(uint8_t macAddr[6]) {
 
           ssid.replace(",","_");
 
-          String wardrive_line = WiFi.BSSIDstr(i) + "," + ssid + "," + this->security_int_to_string(WiFi.encryptionType(i)) + "," + gps_obj.getDatetime() + "," + (String)WiFi.channel(i) + "," + (String)WiFi.RSSI(i) + "," + gps_obj.getLat() + "," + gps_obj.getLon() + "," + gps_obj.getAlt() + "," + gps_obj.getAccuracy() + ",WIFI\n";
+          const uint16_t channel = WiFi.channel(i);
+          String wardrive_line = WiFi.BSSIDstr(i) + "," + ssid + "," + this->security_int_to_string(WiFi.encryptionType(i)) + "," + gps_obj.getDatetime() + "," + (String)channel + "," + (String)wigleFrequencyMHz(channel) + "," + (String)WiFi.RSSI(i) + "," + gps_obj.getLat() + "," + gps_obj.getLon() + "," + gps_obj.getAlt() + "," + gps_obj.getAccuracy() + ",,0,WIFI\n";
           Serial.print((String)this->mac_history_cursor + " | " + wardrive_line);
 
           if (do_save) {
@@ -6362,17 +6363,19 @@ void WiFiScan::executeWarDrive() {
           String ssid = WiFi.SSID(i);
           ssid.replace(",", "_");
 
+          const uint16_t channel = WiFi.channel(i);
           String wardrive_line =
             WiFi.BSSIDstr(i) + "," +
             ssid + "," +
             this->security_int_to_string(WiFi.encryptionType(i)) + "," +
             gps_obj.getDatetime() + "," +
-            (String)WiFi.channel(i) + "," +
+            (String)channel + "," +
+            (String)wigleFrequencyMHz(channel) + "," +
             (String)WiFi.RSSI(i) + "," +
             gps_obj.getLat() + "," +
             gps_obj.getLon() + "," +
             gps_obj.getAlt() + "," +
-            gps_obj.getAccuracy() + ",WIFI\n";
+            gps_obj.getAccuracy() + ",,0,WIFI\n";
 
           Serial.print((String)this->mac_history_cursor + " | " + wardrive_line);
 
@@ -9277,11 +9280,12 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
               wifi_scan_obj.security_int_to_string(WIFI_AUTH_WPA2_PSK) + "," +
               gps_obj.getDatetime() + "," +
               (String)wifi_scan_obj.set_channel + "," +
+              (String)wigleFrequencyMHz(wifi_scan_obj.set_channel) + "," +
               (String)snifferPacket->rx_ctrl.rssi + "," +
               gps_obj.getLat() + "," +
               gps_obj.getLon() + "," +
               gps_obj.getAlt() + "," +
-              gps_obj.getAccuracy() + ",WIFI\n";
+              gps_obj.getAccuracy() + ",,0,WIFI\n";
 
             Serial.print((String)wifi_scan_obj.mac_history_cursor + " | " + wardrive_line);
 
