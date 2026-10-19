@@ -318,7 +318,18 @@ jobs:
           echo "version_dot=$VERSION_DOT" >> $GITHUB_ENV
 
       - name: Generate release documentation
-        run: python3 tools/release_notes.py --channel stable --output release-notes.md
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --method POST "repos/${{ github.repository }}/releases/generate-notes" \
+            -f tag_name="${{ env.version_dot }}" \
+            -f target_commitish="${{ github.sha }}" \
+            --jq .body > generated-changes.md
+          test -s generated-changes.md
+          python3 tools/release_notes.py \
+            --channel stable \
+            --changes-file generated-changes.md \
+            --output release-notes.md
           
       - name: Create Release
         id: create_release
