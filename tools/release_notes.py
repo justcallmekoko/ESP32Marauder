@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -11,33 +12,27 @@ DEFAULT_REGISTRY = REPOSITORY_ROOT / "installer" / "targets.json"
 
 DOCUMENTATION_LINKS = (
     (
-        ("xiao esp32-c5", "c5 hardware aliases"),
-        "Supported hardware and firmware targets",
+        "Seeed XIAO ESP32-C5",
         "https://github.com/justcallmekoko/ESP32Marauder/wiki/Supported-Hardware",
     ),
     (
-        ("c5 hardware aliases",),
-        "ESP32-C5 DevKitC-1 and C5 Flipper Adapter",
+        "C5 hardware aliases",
         "https://github.com/justcallmekoko/ESP32Marauder/wiki/ESP32%E2%80%90C5%E2%80%90DevKitC%E2%80%901",
     ),
     (
-        ("ip5306", "max17048", "battery fuel gauge"),
-        "Battery Fuel Gauge",
+        "IP5306 and MAX17048",
         "https://github.com/justcallmekoko/ESP32Marauder/wiki/Battery-Fuel-Gauge",
     ),
     (
-        ("csi motion",),
-        "CSI Motion Monitor",
+        "CSI motion monitor",
         "https://github.com/justcallmekoko/ESP32Marauder/wiki/CSI-Motion-Monitor",
     ),
     (
-        ("findmy sound",),
         "FindMy Sound",
         "https://github.com/justcallmekoko/ESP32Marauder/wiki/FindMy-Sound",
     ),
     (
-        ("wardrive", "wigle"),
-        "Wardriving",
+        "wardrive logs",
         "https://github.com/justcallmekoko/ESP32Marauder/wiki/Wardrive",
     ),
 )
@@ -76,16 +71,20 @@ def render_asset_table(targets: list[dict[str, Any]]) -> str:
     return "\n".join(rows)
 
 
-def render_documentation_links(changes: str) -> str | None:
-    normalized_changes = changes.casefold()
-    links = [
-        f"- [{label}]({url})"
-        for keywords, label, url in DOCUMENTATION_LINKS
-        if any(keyword in normalized_changes for keyword in keywords)
-    ]
-    if not links:
-        return None
-    return "## Documentation\n\n" + "\n".join(links)
+def link_documentation_in_changes(changes: str) -> str:
+    linked_lines = []
+    for line in changes.splitlines():
+        if line.startswith("* "):
+            for label, url in DOCUMENTATION_LINKS:
+                line = re.sub(
+                    re.escape(label),
+                    lambda match: f"[{match.group(0)}]({url})",
+                    line,
+                    count=1,
+                    flags=re.IGNORECASE,
+                )
+        linked_lines.append(line)
+    return "\n".join(linked_lines)
 
 
 def render_release_notes(
@@ -97,10 +96,7 @@ def render_release_notes(
             raise ValueError(
                 "Stable release notes require GitHub-generated changes and a full changelog"
             )
-        sections.append(changes.strip())
-        documentation = render_documentation_links(changes)
-        if documentation:
-            sections.append(documentation)
+        sections.append(link_documentation_in_changes(changes.strip()))
 
     sections.append("[justcallmekokollc.com](https://justcallmekokollc.com)")
     if channel == "nightly":

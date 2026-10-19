@@ -34,12 +34,16 @@ class ReleaseNotesTests(unittest.TestCase):
         self.assertNotIn("| `_v7.bin` |", table)
         self.assertNotIn("| `_lddb.bin` |", table)
         self.assertNotIn("| `_esp32c5_devkit.bin` |", table)
-        self.assertTrue(notes.startswith(changes))
-        self.assertIn("## Documentation", notes)
-        self.assertIn("wiki/CSI-Motion-Monitor", notes)
-        self.assertIn("wiki/Wardrive", notes)
+        self.assertTrue(notes.startswith("## What's Changed"))
+        self.assertIn(
+            "[CSI motion monitor](https://github.com/justcallmekoko/ESP32Marauder/wiki/CSI-Motion-Monitor)",
+            notes,
+        )
+        self.assertIn(
+            "[wardrive logs](https://github.com/justcallmekoko/ESP32Marauder/wiki/Wardrive)",
+            notes,
+        )
         self.assertLess(notes.index("## What's Changed"), notes.index("## Before installing"))
-        self.assertLess(notes.index("## Documentation"), notes.index("## Before installing"))
         self.assertLess(notes.index("## Before installing"), notes.index("## Firmware assets"))
         self.assertLess(notes.index("## Firmware assets"), notes.index("## Additional resources"))
 
@@ -52,14 +56,15 @@ class ReleaseNotesTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "GitHub-generated changes"):
             render_release_notes(load_targets(REGISTRY), "stable")
 
-    def test_stable_notes_skip_unrelated_documentation(self) -> None:
+    def test_stable_notes_do_not_link_unrelated_changes(self) -> None:
         changes = (
             "## What's Changed\n\n"
             "* Fix an internal parser by @contributor in https://example.com/pull/1\n\n"
             "**Full Changelog**: https://example.com/compare/v1.18.0...v1.19.0"
         )
         notes = render_release_notes(load_targets(REGISTRY), "stable", changes)
-        self.assertNotIn("## Documentation", notes)
+        self.assertIn("* Fix an internal parser by @contributor", notes)
+        self.assertNotIn("wiki/", notes.split("## Before installing", 1)[0])
 
     def test_release_workflows_use_generated_body(self) -> None:
         stable = STABLE_WORKFLOW.read_text(encoding="utf-8")
