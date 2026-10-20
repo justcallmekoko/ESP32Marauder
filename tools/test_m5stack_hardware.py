@@ -37,10 +37,28 @@ class M5StackHardwareTests(unittest.TestCase):
     def test_faces_and_core2_touch_paths(self):
         keyboard = (ROOT / "esp32_marauder/Keyboard.cpp").read_text()
         display = (ROOT / "esp32_marauder/Display.cpp").read_text()
+        menu = (ROOT / "esp32_marauder/MenuFunctions.cpp").read_text()
+        touch_keyboard = (ROOT / "esp32_marauder/TouchKeyboard.cpp").read_text()
         self.assertIn("Wire.requestFrom(0x08, 1)", keyboard)
         self.assertIn("not detected; using front buttons", keyboard)
         self.assertIn("raw_y >= 240 && raw_y < 280", display)
         self.assertIn("SELECT_BUTTON", display)
+        self.assertIn("if (!core2_full_touch_input) return 0", display)
+        self.assertIn("millis() - core2_front_button_seen < 60", display)
+        for key in ("'k'", "'m'", "'n'", "'s'"):
+            self.assertIn(f"isKeyPressed({key})", menu)
+        self.assertIn("M5CardputerKeyboard.available()", menu)
+        self.assertIn("setFullTouchInput(true)", touch_keyboard)
+        self.assertIn("setFullTouchInput(false)", touch_keyboard)
+        self.assertIn("display_obj.tft.width()", touch_keyboard)
+        self.assertIn("display_obj.tft.height()", touch_keyboard)
+
+    def test_m5_layout_reserves_status_and_title_rows(self):
+        config = (ROOT / "esp32_marauder/configs.h").read_text()
+        menu = (ROOT / "esp32_marauder/MenuFunctions.cpp").read_text()
+        self.assertIn("#define STATUS_BAR_WIDTH 16", config)
+        self.assertIn("#define KEY_Y 44", config)
+        self.assertIn("!defined(MARAUDER_M5STACK_CORE2_AWS)", menu)
 
     def test_core2_power_rails_match_board_wiring(self):
         source = (ROOT / "esp32_marauder/esp32_marauder.ino").read_text()

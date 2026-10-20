@@ -208,6 +208,7 @@ public:
     uint8_t isPressed();
     bool isChange();
     bool isKeyPressed(char c);
+    uint8_t currentKey() const;
     String getPressedKeysString();
 
     void updateKeysState();

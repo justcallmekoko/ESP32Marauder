@@ -1185,7 +1185,7 @@
       #define MENU_FONT &FreeMono9pt7b
       #define BUTTON_SCREEN_LIMIT 8
       #define BUTTON_ARRAY_LEN BUTTON_SCREEN_LIMIT
-      #define STATUS_BAR_WIDTH 15
+      #define STATUS_BAR_WIDTH 16
       #define LVGL_TICK_PERIOD 6
       #define STATUSBAR_COLOR 0x4A49
 
@@ -2469,7 +2469,7 @@
     #define BANNER_TIME 50
     #define COMMAND_PREFIX "!"
     #define KEY_X (SCREEN_WIDTH / 2)
-    #define KEY_Y 31
+    #define KEY_Y 44
     #define KEY_W SCREEN_WIDTH
     #define KEY_H 24
     #define KEY_SPACING_X 0

@@ -277,6 +277,15 @@ bool Keyboard_Class::isKeyPressed(char c)
 #endif
 }
 
+uint8_t Keyboard_Class::currentKey() const
+{
+#ifdef HAS_FACES_KEYBOARD
+    return _faces_available ? _faces_key : 0;
+#else
+    return 0;
+#endif
+}
+
 #include <cstring>
 
 void Keyboard_Class::updateKeysState()

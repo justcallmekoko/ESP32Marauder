@@ -244,7 +244,7 @@ void MenuFunctions::buttonSelected(int b, int x, uint16_t text_offset) {
 }
 
 void MenuFunctions::displayMenuButtons() {
-  #ifdef HAS_TOUCH
+  #if defined(HAS_TOUCH) && !defined(MARAUDER_M5STACK_CORE2_AWS)
     // Draw lines to show each menu button
     for (int i = 0; i < 3; i++) {
 
@@ -394,6 +394,12 @@ void MenuFunctions::main(uint32_t currentTime)
       pressed = display_obj.updateTouch(&t_x, &t_y);
   #endif
 
+  #ifdef MARAUDER_M5STACK_CORE2_AWS
+    const bool front_control_touch = pressed && display_obj.isFrontButtonTouch();
+  #else
+    const bool front_control_touch = false;
+  #endif
+
 
   // Brightness gesture: hold top or bottom zone 1.5s to enter brightness mode
   #ifdef HAS_ILI9341
@@ -464,6 +470,7 @@ void MenuFunctions::main(uint32_t currentTime)
   #ifdef HAS_ILI9341
     if ((wifi_scan_obj.currentScanMode != WIFI_SCAN_OFF) &&
         (pressed) &&
+        (!front_control_touch) &&
         (wifi_scan_obj.currentScanMode != WIFI_CONNECTED) &&
         (wifi_scan_obj.currentScanMode != OTA_UPDATE) &&
         (wifi_scan_obj.currentScanMode != ESP_UPDATE) &&
@@ -575,7 +582,12 @@ void MenuFunctions::main(uint32_t currentTime)
 
     #if (C_BTN >= 0) && !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
       bool c_btn_press = c_btn.justPressed();
-    #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
+    #elif defined(HAS_FACES_KEYBOARD)
+      bool c_btn_press = ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
+                          (wifi_scan_obj.currentScanMode == WIFI_CONNECTED) ||
+                          (wifi_scan_obj.currentScanMode == OTA_UPDATE)) &&
+                         (this->isKeyPressed('s') || this->isKeyPressed('S') || this->isKeyPressed(KEY_ENTER));
+    #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
       bool c_btn_press = this->isKeyPressed('(') || this->isKeyPressed(KEY_ENTER);
     #endif
 
@@ -920,7 +932,10 @@ void MenuFunctions::main(uint32_t currentTime)
           #if (U_BTN >= 0)
             const bool up_just_pressed = u_btn.justPressed();
             const bool up_is_pressed = u_btn.isPressedNow();
-          #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
+          #elif defined(HAS_FACES_KEYBOARD)
+            const bool up_just_pressed = this->isKeyPressed('k') || this->isKeyPressed('K');
+            const bool up_is_pressed = up_just_pressed;
+          #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
             const bool up_just_pressed = this->isKeyPressed(';') || this->isKeyPressed('w') || this->isKeyPressed('W');
             const bool up_is_pressed = up_just_pressed;
           #endif
@@ -1008,7 +1023,10 @@ void MenuFunctions::main(uint32_t currentTime)
       #if (D_BTN >= 0)
       const bool down_just_pressed = d_btn.justPressed();
       const bool down_is_pressed = d_btn.isPressedNow();
-      #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
+      #elif defined(HAS_FACES_KEYBOARD)
+      const bool down_just_pressed = this->isKeyPressed('m') || this->isKeyPressed('M');
+      const bool down_is_pressed = down_just_pressed;
+      #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
       const bool down_just_pressed = this->isKeyPressed('.') || this->isKeyPressed('s') || this->isKeyPressed('S');
       const bool down_is_pressed = down_just_pressed;
       #endif
@@ -1094,10 +1112,17 @@ void MenuFunctions::main(uint32_t currentTime)
       #if (R_BTN >= 0 || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD))
       #if (R_BTN >= 0)
       if (r_btn.justPressed()) {
-      #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
+      #elif defined(HAS_FACES_KEYBOARD)
+      if (this->isKeyPressed('s') || this->isKeyPressed('S')) {
+      #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
       if (this->isKeyPressed('/') || this->isKeyPressed('d') || this->isKeyPressed('D')) {
       #endif
+        #ifdef HAS_FACES_KEYBOARD
+        if (wifi_scan_obj.currentScanMode != WIFI_SCAN_OFF &&
+            wifi_scan_obj.currentScanMode != WIFI_CONNECTED) {
+        #else
         if (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
+        #endif
           #ifndef HAS_DUAL_BAND
             if (wifi_scan_obj.set_channel < 14)
               wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel + 1);
@@ -1118,10 +1143,17 @@ void MenuFunctions::main(uint32_t currentTime)
       #if (L_BTN >= 0 || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD))
       #if (L_BTN >= 0)
       if (l_btn.justPressed()) {
-      #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
+      #elif defined(HAS_FACES_KEYBOARD)
+      if (this->isKeyPressed('n') || this->isKeyPressed('N')) {
+      #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
       if (this->isKeyPressed(',') || this->isKeyPressed('a') || this->isKeyPressed('A')) {
       #endif
+        #ifdef HAS_FACES_KEYBOARD
+        if (wifi_scan_obj.currentScanMode != WIFI_SCAN_OFF &&
+            wifi_scan_obj.currentScanMode != WIFI_CONNECTED) {
+        #else
         if (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
+        #endif
           #ifndef HAS_DUAL_BAND
             if (wifi_scan_obj.set_channel > 1)
               wifi_scan_obj.changeChannel(wifi_scan_obj.set_channel - 1);
@@ -1140,7 +1172,11 @@ void MenuFunctions::main(uint32_t currentTime)
       #endif
 
       #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
-      if (this->isKeyPressed('`') || this->isKeyPressed(KEY_BACKSPACE)) {
+      if (this->isKeyPressed('`') || this->isKeyPressed(KEY_BACKSPACE)
+          #ifdef HAS_FACES_KEYBOARD
+            || this->isKeyPressed('n') || this->isKeyPressed('N')
+          #endif
+      ) {
         if (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
           if (current_menu->parentMenu != NULL) {
             this->changeMenu(current_menu->parentMenu, true);
@@ -1765,11 +1801,60 @@ void MenuFunctions::updateKeyboard()
 bool MenuFunctions::isKeyPressed(char c)
 {
   bool pressed = M5CardputerKeyboard.isKeyPressed(c);
+  #ifdef HAS_FACES_KEYBOARD
+    return pressed && M5CardputerKeyboard.isChange();
+  #else
+    if (pressed) delay(200);
+    return pressed;
+  #endif
+}
 
-  if (pressed)
-    delay(200);
-
-  return pressed;
+bool MenuFunctions::textInput(char *buffer, size_t bufLen, const char *title)
+{
+  #ifdef HAS_FACES_KEYBOARD
+    if (M5CardputerKeyboard.available()) {
+      display_obj.clearScreen();
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+      display_obj.tft.drawString(title ? title : "Enter text", 4, 6, 2);
+      display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      display_obj.tft.drawString(buffer, 4, 34, 2);
+      // Do not carry the menu-select key into the text field.
+      do {
+        this->updateKeyboard();
+        delay(5);
+      } while (M5CardputerKeyboard.isPressed());
+      while (true) {
+        this->updateKeyboard();
+        if (M5CardputerKeyboard.isChange()) {
+          uint8_t key = M5CardputerKeyboard.currentKey();
+          if (key == KEY_ENTER) return true;
+          if (key == KEY_BACKSPACE) {
+            size_t len = strlen(buffer);
+            if (len) buffer[len - 1] = '\0';
+          } else if (key >= 32 && key <= 126) {
+            size_t len = strlen(buffer);
+            if (len + 1 < bufLen) {
+              buffer[len] = (char)key;
+              buffer[len + 1] = '\0';
+            }
+          } else {
+            delay(5);
+            continue;
+          }
+          display_obj.tft.fillRect(0, 30, display_obj.tft.width(), 28, TFT_BLACK);
+          display_obj.tft.drawString(buffer, 4, 34, 2);
+        }
+        delay(5);
+        yield();
+      }
+    }
+  #endif
+  #ifdef HAS_TOUCH
+    return keyboardInput(buffer, bufLen, title);
+  #else
+    return false;
+  #endif
 }
 #endif
 
@@ -2503,7 +2588,7 @@ void MenuFunctions::RunSetup()
 String MenuFunctions::geofenceTextInput(const char* title) {
   #ifdef HAS_TOUCH
     char value[40] = {0};
-    if (keyboardInput(value, sizeof(value), title)) return String(value);
+    if (this->textInput(value, sizeof(value), title)) return String(value);
     return "";
   #elif defined(HAS_MINI_KB)
     miniKbMenu.name = title;
@@ -3500,7 +3585,7 @@ void MenuFunctions::buildWiFiGeneralMenu()
       bool keep_going = true;
       while (keep_going) {
         display_obj.clearScreen();
-        if (keyboardInput(ssidBuf, sizeof(ssidBuf), "Enter SSID")) {
+        if (this->textInput(ssidBuf, sizeof(ssidBuf), "Enter SSID")) {
           if (ssidBuf[0] != 0)
             wifi_scan_obj.addSSID(String(ssidBuf));
           for (int i = 0; i < 64; i++)
@@ -3788,7 +3873,7 @@ void MenuFunctions::buildWiFiGeneralMenu()
           // Join WiFi using touch screen keyboard
           #ifdef HAS_TOUCH
             char passwordBuf[64] = {0};  // or prefill with existing SSID
-            if (keyboardInput(passwordBuf, sizeof(passwordBuf), "Enter Password")) {
+            if (this->textInput(passwordBuf, sizeof(passwordBuf), "Enter Password")) {
               wifi_scan_obj.joinWiFi(access_points->get(i).essid, String(passwordBuf), true);
               if (wifi_scan_obj.hasPendingWifiCredential()) {
                 this->buildSavedWifiMenu(true);
@@ -3844,7 +3929,7 @@ void MenuFunctions::buildWiFiGeneralMenu()
           // Join WiFi using touch screen keyboard
           #ifdef HAS_TOUCH
             char passwordBuf[64] = {0};  // or prefill with existing SSID
-            if (keyboardInput(passwordBuf, sizeof(passwordBuf), "Enter Password")) {
+            if (this->textInput(passwordBuf, sizeof(passwordBuf), "Enter Password")) {
               Serial.println("Using SSID: " + (String)ssids->get(i).essid);
               wifi_scan_obj.startWiFi(ssids->get(i).essid, String(passwordBuf));
             }

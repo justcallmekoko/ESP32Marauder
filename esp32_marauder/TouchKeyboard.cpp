@@ -8,13 +8,13 @@ extern Display display_obj;
 
 // Keyboard will occupy the bottom half of the screen.
 static inline int16_t kbHeight() {
-  return TFT_HEIGHT / 2;
+  return display_obj.tft.height() / 2;
 }
 static inline int16_t kbYStart() {
-  return TFT_HEIGHT - kbHeight();
+  return display_obj.tft.height() - kbHeight();
 }
 static inline int16_t kbWidth() {
-  return TFT_WIDTH;
+  return display_obj.tft.width();
 }
 static inline int16_t kbXStart() {
   return 0;
@@ -40,10 +40,10 @@ enum KeyboardLayout {
 };
 
 static void drawTextArea(const char *title, const char *buffer) {
-  int16_t areaHeight = TFT_HEIGHT - kbHeight();
+  int16_t areaHeight = display_obj.tft.height() - kbHeight();
 
   // Clear text area
-  display_obj.tft.fillRect(0, 0, TFT_WIDTH, areaHeight, TFT_BLACK);
+  display_obj.tft.fillRect(0, 0, display_obj.tft.width(), areaHeight, TFT_BLACK);
 
   int16_t cursorY = 2;
 
@@ -362,6 +362,10 @@ bool keyboardInput(char *buffer, size_t bufLen, const char *title) {
   KeyboardLayout layout = LAYOUT_ALPHA;
   bool caps = false;
 
+  #ifdef MARAUDER_M5STACK_CORE2_AWS
+    display_obj.setFullTouchInput(true);
+  #endif
+
   drawTextArea(title, buffer);
   drawKeyboard(layout, caps);
 
@@ -386,10 +390,16 @@ bool keyboardInput(char *buffer, size_t bufLen, const char *title) {
         drawTextArea(title, buffer);
       } else if (r == KB_DONE) {
         drawTextArea(title, buffer);
+        #ifdef MARAUDER_M5STACK_CORE2_AWS
+          display_obj.setFullTouchInput(false);
+        #endif
         return true;
       } else if (r == KB_CANCEL) {
         // Optional: buffer[0] = '\0';
         drawTextArea(title, buffer);
+        #ifdef MARAUDER_M5STACK_CORE2_AWS
+          display_obj.setFullTouchInput(false);
+        #endif
         return false;
       } else if (r == KB_TOGGLE_LAYOUT) {
         layout = (layout == LAYOUT_ALPHA) ? LAYOUT_SYMBOLS : LAYOUT_ALPHA;

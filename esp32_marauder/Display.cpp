@@ -93,18 +93,37 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
         // FT6336 capacitive touch: rotation-aware + edge exclusion
         {
           uint16_t raw_x, raw_y;
-          if (!ft6336_read_raw(&raw_x, &raw_y)) return 0;
+          if (!ft6336_read_raw(&raw_x, &raw_y)) {
+            #ifdef MARAUDER_M5STACK_CORE2_AWS
+              // The FT6336 can miss isolated samples while a front button is
+              // held. Bridge those gaps so a hold is not seen as many taps.
+              if (core2_front_button >= 0 && millis() - core2_front_button_seen < 60) {
+                *x = TFT_WIDTH / 2;
+                *y = TFT_HEIGHT / 3 * core2_front_button + (TFT_HEIGHT / 6);
+                return 1;
+              }
+              core2_front_button = -1;
+            #endif
+            return 0;
+          }
 
           #ifdef MARAUDER_M5STACK_CORE2_AWS
             // Core2 reports its LCD in landscape coordinates. The lower
             // 40-pixel touch-only strip implements the three front buttons.
             if (raw_y >= 240 && raw_y < 280) {
+              if (core2_full_touch_input) return 0;
               uint8_t button = raw_x < 120 ? UP_BUTTON :
                                raw_x < 220 ? SELECT_BUTTON : DOWN_BUTTON;
+              core2_front_button = button;
+              core2_front_button_seen = millis();
               *x = TFT_WIDTH / 2;
               *y = TFT_HEIGHT / 3 * button + (TFT_HEIGHT / 6);
               return 1;
             }
+            core2_front_button = -1;
+            // Normal operation deliberately ignores the LCD surface. It is
+            // enabled only while the fallback on-screen keyboard is active.
+            if (!core2_full_touch_input) return 0;
             if (raw_x >= SCREEN_WIDTH || raw_y >= SCREEN_HEIGHT) return 0;
             *x = raw_x;
             *y = raw_y;
