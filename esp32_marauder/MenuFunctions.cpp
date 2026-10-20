@@ -244,7 +244,7 @@ void MenuFunctions::buttonSelected(int b, int x, uint16_t text_offset) {
 }
 
 void MenuFunctions::displayMenuButtons() {
-  #ifdef HAS_ILI9341
+  #ifdef HAS_TOUCH
     // Draw lines to show each menu button
     for (int i = 0; i < 3; i++) {
 
@@ -302,7 +302,7 @@ void MenuFunctions::main(uint32_t currentTime)
     saved_wifi_release_pending = false;
   }
 
-  #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+  #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
     this->updateKeyboard();
   #endif
 
@@ -575,8 +575,8 @@ void MenuFunctions::main(uint32_t currentTime)
 
     #if (C_BTN >= 0) && !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
       bool c_btn_press = c_btn.justPressed();
-    #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
-      bool c_btn_press = this->isKeyPressed('(');
+    #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
+      bool c_btn_press = this->isKeyPressed('(') || this->isKeyPressed(KEY_ENTER);
     #endif
 
     #ifndef HAS_ILI9341
@@ -916,12 +916,12 @@ void MenuFunctions::main(uint32_t currentTime)
     // Don't do this for touch screens
     #if !(defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_CYD_MICRO) || defined(MARAUDER_CYD_GUITION) || defined(MARAUDER_CYD_2USB) || defined(MARAUDER_CYD_3_5_INCH))
       #if !defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
-        #if (U_BTN >= 0 || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV))
+        #if (U_BTN >= 0 || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD))
           #if (U_BTN >= 0)
             const bool up_just_pressed = u_btn.justPressed();
             const bool up_is_pressed = u_btn.isPressedNow();
-          #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
-            const bool up_just_pressed = this->isKeyPressed(';');
+          #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
+            const bool up_just_pressed = this->isKeyPressed(';') || this->isKeyPressed('w') || this->isKeyPressed('W');
             const bool up_is_pressed = up_just_pressed;
           #endif
             const bool menu_navigation_active =
@@ -1004,12 +1004,12 @@ void MenuFunctions::main(uint32_t currentTime)
         #endif
       #endif
 
-      #if (D_BTN >= 0 || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV))
+      #if (D_BTN >= 0 || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD))
       #if (D_BTN >= 0)
       const bool down_just_pressed = d_btn.justPressed();
       const bool down_is_pressed = d_btn.isPressedNow();
-      #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
-      const bool down_just_pressed = this->isKeyPressed('.');
+      #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
+      const bool down_just_pressed = this->isKeyPressed('.') || this->isKeyPressed('s') || this->isKeyPressed('S');
       const bool down_is_pressed = down_just_pressed;
       #endif
       const bool down_menu_navigation_active =
@@ -1091,11 +1091,11 @@ void MenuFunctions::main(uint32_t currentTime)
       }
       #endif
 
-      #if (R_BTN >= 0 || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV))
+      #if (R_BTN >= 0 || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD))
       #if (R_BTN >= 0)
       if (r_btn.justPressed()) {
-      #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
-      if (this->isKeyPressed('/')) {
+      #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
+      if (this->isKeyPressed('/') || this->isKeyPressed('d') || this->isKeyPressed('D')) {
       #endif
         if (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
           #ifndef HAS_DUAL_BAND
@@ -1115,11 +1115,11 @@ void MenuFunctions::main(uint32_t currentTime)
       }
       #endif
 
-      #if (L_BTN >= 0 || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV))
+      #if (L_BTN >= 0 || defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD))
       #if (L_BTN >= 0)
       if (l_btn.justPressed()) {
-      #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
-      if (this->isKeyPressed(',')) {
+      #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
+      if (this->isKeyPressed(',') || this->isKeyPressed('a') || this->isKeyPressed('A')) {
       #endif
         if (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
           #ifndef HAS_DUAL_BAND
@@ -1139,7 +1139,7 @@ void MenuFunctions::main(uint32_t currentTime)
       }
       #endif
 
-      #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+      #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
       if (this->isKeyPressed('`') || this->isKeyPressed(KEY_BACKSPACE)) {
         if (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
           if (current_menu->parentMenu != NULL) {
@@ -1755,7 +1755,7 @@ void MenuFunctions::displaySetting(const char* key, Menu* menu, int index) {
   menu->list->set(index, node);
 }
 
-#if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+#if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
 void MenuFunctions::updateKeyboard()
 {
   M5CardputerKeyboard.updateKeyList();
@@ -2108,7 +2108,7 @@ void MenuFunctions::RunSetup()
 
   this->disable_touch = false;
 
-  #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+  #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
     M5CardputerKeyboard.begin();
   #endif
 
@@ -2946,7 +2946,7 @@ void MenuFunctions::buildGeofenceActionMenu(uint8_t slot) {
             #endif
           #endif
 
-          #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+          #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
             for (int i = 0; i < 95; i++) {
               if ((M5CardputerKeyboard._ascii_list[i] != '(') &&
                   (M5CardputerKeyboard._ascii_list[i] != '`')) {
@@ -3494,7 +3494,7 @@ void MenuFunctions::buildWiFiGeneralMenu()
 
   clearSSIDsMenu.parentMenu = &wifiGeneralMenu;
 
-  #ifdef HAS_ILI9341
+  #ifdef HAS_TOUCH
     this->addNodes(&wifiGeneralMenu, text_table1[1], TFTNAVY, KEYBOARD_ICO, [this](){
       char ssidBuf[64] = {0};
       bool keep_going = true;
@@ -3513,7 +3513,7 @@ void MenuFunctions::buildWiFiGeneralMenu()
       this->changeMenu(current_menu);
     });
   #endif
-  #if (!defined(HAS_ILI9341) && defined(HAS_BUTTONS))
+  #if (!defined(HAS_TOUCH) && defined(HAS_BUTTONS))
     this->addNodes(&wifiGeneralMenu, text_table1[1], TFTNAVY, KEYBOARD_ICO, [this](){
       this->changeMenu(&miniKbMenu, true);
       #ifdef HAS_MINI_KB

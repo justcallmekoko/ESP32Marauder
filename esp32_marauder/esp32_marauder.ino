@@ -56,6 +56,35 @@ https://www.online-utility.org/image/convert/to/XBM
   #include "MenuFunctions.h"
 #endif
 
+#ifdef MARAUDER_M5STACK_CORE2_AWS
+  static void core2AxpWrite(uint8_t reg, uint8_t value) {
+    Wire.beginTransmission(0x34);
+    Wire.write(reg);
+    Wire.write(value);
+    Wire.endTransmission();
+  }
+
+  static uint8_t core2AxpRead(uint8_t reg) {
+    Wire.beginTransmission(0x34);
+    Wire.write(reg);
+    Wire.endTransmission(false);
+    Wire.requestFrom(0x34, 1);
+    return Wire.available() ? Wire.read() : 0;
+  }
+
+  static void core2SetBacklight(uint8_t duty) {
+    const uint8_t step = duty == 0 ? 0 : map(duty, 1, 255, 7, 15);
+    core2AxpWrite(0x28, (core2AxpRead(0x28) & 0x0f) | (step << 4));
+  }
+
+  static void core2PowerInit() {
+    Wire.begin(I2C_SDA, I2C_SCL, 400000U);
+    core2AxpWrite(0x28, 0xcc); // LDO2/LDO3: LCD and backlight at 3.0 V
+    core2AxpWrite(0x82, 0xff); // battery and power ADCs
+    core2AxpWrite(0x12, core2AxpRead(0x12) | 0x4d);
+  }
+#endif
+
 #ifdef HAS_BUTTONS
   #include "Switches.h"
   
@@ -161,18 +190,26 @@ uint32_t currentTime  = 0;
 #ifndef HAS_MINI_SCREEN
   void brightnessInit() {
     #ifdef HAS_SCREEN
-      BL_SETUP();
       bl_prefs.begin("backlight", false);
       bl_level_idx = bl_prefs.getUChar("level", 9);
       if (bl_level_idx >= BL_NUM_LEVELS) bl_level_idx = 9;
-      BL_SET(BL_LEVELS[bl_level_idx]);
+      #ifdef MARAUDER_M5STACK_CORE2_AWS
+        core2SetBacklight(BL_LEVELS[bl_level_idx]);
+      #else
+        BL_SETUP();
+        BL_SET(BL_LEVELS[bl_level_idx]);
+      #endif
     #endif
   }
 
   void brightnessCycle() {
     #ifdef HAS_SCREEN
       bl_level_idx = (bl_level_idx + 1) % BL_NUM_LEVELS;
-      BL_SET(BL_LEVELS[bl_level_idx]);
+      #ifdef MARAUDER_M5STACK_CORE2_AWS
+        core2SetBacklight(BL_LEVELS[bl_level_idx]);
+      #else
+        BL_SET(BL_LEVELS[bl_level_idx]);
+      #endif
       bl_prefs.putUChar("level", bl_level_idx);
       Serial.print(F("[Brightness] Level "));
       Serial.print(bl_level_idx + 1);
@@ -196,7 +233,11 @@ uint32_t currentTime  = 0;
     #ifdef HAS_SCREEN
       if (level >= BL_NUM_LEVELS) level = BL_NUM_LEVELS - 1;
       bl_level_idx = level;
-      BL_SET(BL_LEVELS[bl_level_idx]);
+      #ifdef MARAUDER_M5STACK_CORE2_AWS
+        core2SetBacklight(BL_LEVELS[bl_level_idx]);
+      #else
+        BL_SET(BL_LEVELS[bl_level_idx]);
+      #endif
       bl_prefs.putUChar("level", bl_level_idx);
     #endif
   }
@@ -206,14 +247,22 @@ uint32_t currentTime  = 0;
       // TFT_eSPI::init() reconfigures the backlight pin. Reattach PWM before
       // restoring the saved duty so display reinitialization cannot force the
       // backlight to full brightness.
-      BL_SETUP();
-      BL_SET(BL_LEVELS[bl_level_idx]);
+      #ifdef MARAUDER_M5STACK_CORE2_AWS
+        core2SetBacklight(BL_LEVELS[bl_level_idx]);
+      #else
+        BL_SETUP();
+        BL_SET(BL_LEVELS[bl_level_idx]);
+      #endif
     #endif
   }
 
   void backlightOff() {
     #ifdef HAS_SCREEN
-      BL_SET(0);
+      #ifdef MARAUDER_M5STACK_CORE2_AWS
+        core2SetBacklight(0);
+      #else
+        BL_SET(0);
+      #endif
     #endif
   }
 #else
@@ -272,8 +321,12 @@ void setup()
     digitalWrite(POWER_HOLD_PIN, HIGH);
   #endif
   
-  #if defined(HAS_SCREEN) && !defined(MARAUDER_POOM)
+  #if defined(HAS_SCREEN) && !defined(MARAUDER_POOM) && !defined(MARAUDER_M5STACK_CORE2_AWS)
     pinMode(TFT_BL, OUTPUT);
+  #endif
+
+  #ifdef MARAUDER_M5STACK_CORE2_AWS
+    core2PowerInit();
   #endif
   
   backlightOff();
@@ -339,7 +392,7 @@ void setup()
 
   #ifdef HAS_SCREEN
     // Do some stealth mode stuff
-    #ifdef HAS_BUTTONS
+    #if defined(HAS_BUTTONS) && (C_BTN >= 0)
       if (c_btn.justPressed()) {
         display_obj.headless_mode = true;
 
@@ -436,7 +489,7 @@ void loop()
   #endif
 
   #if (defined(HAS_ILI9341) && !defined(MARAUDER_CYD_2USB))
-    #ifdef HAS_BUTTONS
+    #if defined(HAS_BUTTONS) && (C_BTN >= 0)
       if (c_btn.isHeld()) {
         if (menu_function_obj.disable_touch)
           menu_function_obj.disable_touch = false;

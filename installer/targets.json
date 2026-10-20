@@ -103,6 +103,24 @@
       "esptoolChip": "esp32"
     },
     {
+      "id": "m5stack-fire",
+      "displayName": "M5Stack Fire",
+      "aliases": ["M5Stack FIRE", "M5GO Fire"],
+      "buildFlag": "MARAUDER_M5STACK_FIRE",
+      "assetSuffix": "m5stack_fire",
+      "chipFamily": "ESP32",
+      "esptoolChip": "esp32"
+    },
+    {
+      "id": "m5stack-core2-aws",
+      "displayName": "M5Stack Core2 for AWS",
+      "aliases": ["Core2 for AWS", "AWS IoT EduKit", "M5Stack Core2 AWS"],
+      "buildFlag": "MARAUDER_M5STACK_CORE2_AWS",
+      "assetSuffix": "m5stack_core2_aws",
+      "chipFamily": "ESP32",
+      "esptoolChip": "esp32"
+    },
+    {
       "id": "reverse-feather",
       "displayName": "ESP32-S2 Reverse Feather",
       "aliases": ["Rev Feather"],

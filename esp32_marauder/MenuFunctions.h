@@ -5,7 +5,7 @@
 
 #include "configs.h"
 
-#if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+#if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
   #include "Keyboard.h"
 #endif
 
@@ -352,7 +352,7 @@ class MenuFunctions
     #endif
     //#endif
 
-    #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+    #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
       Keyboard_Class M5CardputerKeyboard = Keyboard_Class();
       void updateKeyboard();
       bool isKeyPressed(char c);

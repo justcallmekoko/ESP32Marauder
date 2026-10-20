@@ -5,7 +5,7 @@
 
 #include "configs.h"
 
-#if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+#if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
 
 /**
  * @file keyboard.h
@@ -23,11 +23,12 @@
 #include "Keyboard_def.h"
 #include "configs.h"
 
-#ifdef MARAUDER_CARDPUTER_ADV
+#if defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
 #include <Wire.h>
+#endif
+#ifdef MARAUDER_CARDPUTER_ADV
 #include "Adafruit_TCA8418.h"
 #endif
-
 struct Chart_t
 {
     uint8_t value;
@@ -159,6 +160,12 @@ private:
     bool _is_caps_locked;
     uint8_t _last_key_size;
 
+#ifdef HAS_FACES_KEYBOARD
+    bool _faces_available = false;
+    uint8_t _faces_key = 0;
+    uint8_t _faces_last_key = 0;
+#endif
+
 #ifdef MARAUDER_CARDPUTER
     void _set_output(const std::vector<int> &pinList, uint8_t output);
     uint8_t _get_input(const std::vector<int> &pinList);
@@ -184,6 +191,7 @@ public:
     }
 
     void begin();
+    bool available() const;
     uint8_t getKey(Point2D_t keyCoor);
 
     void updateKeyList();

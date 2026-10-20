@@ -95,6 +95,22 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
           uint16_t raw_x, raw_y;
           if (!ft6336_read_raw(&raw_x, &raw_y)) return 0;
 
+          #ifdef MARAUDER_M5STACK_CORE2_AWS
+            // Core2 reports its LCD in landscape coordinates. The lower
+            // 40-pixel touch-only strip implements the three front buttons.
+            if (raw_y >= 240 && raw_y < 280) {
+              uint8_t button = raw_x < 120 ? UP_BUTTON :
+                               raw_x < 220 ? SELECT_BUTTON : DOWN_BUTTON;
+              *x = TFT_WIDTH / 2;
+              *y = TFT_HEIGHT / 3 * button + (TFT_HEIGHT / 6);
+              return 1;
+            }
+            if (raw_x >= SCREEN_WIDTH || raw_y >= SCREEN_HEIGHT) return 0;
+            *x = raw_x;
+            *y = raw_y;
+            return 1;
+          #endif
+
           // Discard touches within PANCAKE_TOUCH_MARGIN pixels of any panel edge
           #define PANCAKE_PANEL_W TFT_WIDTH
           #define PANCAKE_PANEL_H TFT_HEIGHT
@@ -129,7 +145,11 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
           return 1;
         }
       #elif !defined(HAS_CYD_TOUCH)
-        return this->tft.getTouch(x, y, threshold);
+        #ifdef MARAUDER_M5STACK_FIRE
+          return 0;
+        #else
+          return this->tft.getTouch(x, y, threshold);
+        #endif
       #else
         if (this->touchscreen.tirqTouched() && this->touchscreen.touched()) {
           TS_Point p = this->touchscreen.getPoint();
@@ -202,7 +222,7 @@ void Display::init() {
 }
 
 void Display::setCalData(bool landscape) {
-  #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH)
+  #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH) && !defined(MARAUDER_M5STACK_FIRE)
     if (!landscape) {
       #ifdef TFT_SHIELD
         uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield

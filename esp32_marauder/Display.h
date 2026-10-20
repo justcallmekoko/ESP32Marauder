@@ -30,6 +30,9 @@
 #if (defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)) && !defined(ST7789_2_DRIVER)
   #error "Cardputer targets require their ST7789_2_DRIVER TFT_eSPI setup"
 #endif
+#if (defined(MARAUDER_M5STACK_FIRE) || defined(MARAUDER_M5STACK_CORE2_AWS)) && !defined(ILI9341_DRIVER)
+  #error "M5Stack Fire/Core2 targets require their ILI9341_DRIVER TFT_eSPI setup"
+#endif
 
 #ifdef HAS_CYD_TOUCH
   #include <XPT2046_Touchscreen.h>
