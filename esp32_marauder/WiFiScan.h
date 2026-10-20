@@ -765,14 +765,6 @@ class WiFiScan
         NimBLEAdvertisementData ScanData;
       };
 
-      struct WatchModel
-      {
-          uint8_t value;
-          const char *name;
-      };
-
-      WatchModel* watch_models = nullptr;
-
       static void scanCompleteCB(BLEScanResults scanResults);
       NimBLEAdvertisementData GetUniversalAdvertisementData(EBLEPayloadType type);
     #endif

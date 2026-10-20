@@ -57,7 +57,7 @@
   // five saved WiFi profiles without permanently caching their passwords.
   #define JSON_SETTING_SIZE 6144
 
-#define MARAUDER_VERSION "v1.19.0"
+#define MARAUDER_VERSION "v1.19.1"
 
   #define GRAPH_REFRESH   100
 
@@ -143,6 +143,13 @@
  //// BOARD FEATURES
  #if defined(DUAL_MINI_C5)
     #define MARAUDER_MINI_V3
+ #endif
+
+  // Original ESP32 boards have no PSRAM and must leave enough internal heap
+  // for the Wi-Fi and BLE stacks to coexist during wardriving. Keep this
+  // profile narrowly scoped: modern/C5 targets retain their full capacities.
+  #if defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_V7)
+    #define MARAUDER_LEGACY_LOW_MEMORY
   #endif
 
   // CSI is provided by every ESP32-family target in the supported build
@@ -259,7 +266,8 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     #define HAS_C5_SD
-    #define HAS_DIRECT_UPLOAD
+    // Direct HTTPS upload is omitted on this no-PSRAM legacy profile. Logs
+    // remain available on SD for upload from a host; C5 targets keep upload.
   #endif
 
   #ifdef MARAUDER_V7_1
@@ -339,7 +347,8 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     #define HAS_C5_SD
-    #define HAS_DIRECT_UPLOAD
+    // Direct HTTPS upload is omitted on this no-PSRAM legacy profile. Logs
+    // remain available on SD for upload from a host; C5 targets keep upload.
   #endif
 
   #ifdef MARAUDER_CYD_MICRO
@@ -3200,6 +3209,9 @@
   //#elif !defined(HAS_ILI9341)
   //  #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
   //  #define SNAP_LEN 4096 // max len of each recieved packet
+  #elif defined(MARAUDER_LEGACY_LOW_MEMORY)
+    #define BUF_SIZE 2 * 1024
+    #define SNAP_LEN 1514
   #else
     #define BUF_SIZE 3 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
     #define SNAP_LEN 2324 // max len of each recieved packet
