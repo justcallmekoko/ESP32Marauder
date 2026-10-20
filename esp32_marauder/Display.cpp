@@ -93,11 +93,13 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
         // FT6336 capacitive touch: rotation-aware + edge exclusion
         {
           uint16_t raw_x, raw_y;
-          if (!ft6336_read_raw(&raw_x, &raw_y)) {
+          const int8_t touch_state = ft6336_read_raw(&raw_x, &raw_y);
+          if (touch_state != 1) {
             #ifdef MARAUDER_M5STACK_CORE2_AWS
-              // The FT6336 can miss isolated samples while a front button is
-              // held. Bridge those gaps so a hold is not seen as many taps.
-              if (core2_front_button >= 0 && millis() - core2_front_button_seen < 60) {
+              // Only bridge I2C transport errors. A confirmed zero-touch
+              // status is a real release and must not delay the next tap.
+              if (touch_state < 0 && core2_front_button >= 0 &&
+                  millis() - core2_front_button_seen < 250) {
                 *x = TFT_WIDTH / 2;
                 *y = TFT_HEIGHT / 3 * core2_front_button + (TFT_HEIGHT / 6);
                 return 1;

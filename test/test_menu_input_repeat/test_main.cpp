@@ -27,6 +27,22 @@ void test_release_resets_hold_timing() {
   TEST_ASSERT_TRUE(repeat.update(true, 1600));
 }
 
+void test_debounced_release_gap_does_not_create_another_tap() {
+  MenuInputRepeat repeat;
+  TEST_ASSERT_TRUE(repeat.updateDebounced(true, 100, 200));
+  TEST_ASSERT_FALSE(repeat.updateDebounced(false, 180, 200));
+  TEST_ASSERT_FALSE(repeat.updateDebounced(true, 220, 200));
+  TEST_ASSERT_FALSE(repeat.updateDebounced(true, 1099, 200));
+  TEST_ASSERT_TRUE(repeat.updateDebounced(true, 1100, 200));
+}
+
+void test_debounced_release_eventually_rearms() {
+  MenuInputRepeat repeat;
+  TEST_ASSERT_TRUE(repeat.updateDebounced(true, 100, 200));
+  TEST_ASSERT_FALSE(repeat.updateDebounced(false, 301, 200));
+  TEST_ASSERT_TRUE(repeat.updateDebounced(true, 400, 200));
+}
+
 void test_touch_select_release_survives_held_state_polling() {
   constexpr int8_t select_button = 2;
   TEST_ASSERT_EQUAL_INT8(-1,
@@ -51,6 +67,8 @@ int main(int, char**) {
   RUN_TEST(test_press_fires_immediately_then_waits_one_second);
   RUN_TEST(test_held_input_repeats_at_rapid_interval);
   RUN_TEST(test_release_resets_hold_timing);
+  RUN_TEST(test_debounced_release_gap_does_not_create_another_tap);
+  RUN_TEST(test_debounced_release_eventually_rearms);
   RUN_TEST(test_touch_select_release_survives_held_state_polling);
   RUN_TEST(test_touch_drag_off_does_not_select_before_release);
   return UNITY_END();

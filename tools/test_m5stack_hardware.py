@@ -41,7 +41,9 @@ class M5StackHardwareTests(unittest.TestCase):
         self.assertIn("raw_y >= 240 && raw_y < 280", display)
         self.assertIn("SELECT_BUTTON", display)
         self.assertIn("if (!core2_full_touch_input) return 0", display)
-        self.assertIn("millis() - core2_front_button_seen < 60", display)
+        self.assertIn("touch_state < 0", display)
+        self.assertIn("millis() - core2_front_button_seen < 250", display)
+        self.assertIn("core2_release_debounce_ms = 200", menu)
         for key in ("'k'", "'m'", "'n'", "'s'"):
             self.assertIn(f"isKeyPressed({key})", menu)
         self.assertIn("marauder_keyboard.available()", menu)
@@ -51,6 +53,8 @@ class M5StackHardwareTests(unittest.TestCase):
         self.assertIn("display_obj.tft.height()", touch_keyboard)
         self.assertIn("key == KEY_ENTER) return EXIT_BUTTON_INDEX", wifi_scan)
         self.assertIn("core2_button == SELECT_BUTTON", wifi_scan)
+        self.assertIn("core2_button == UP_BUTTON) return CHAN_MINUS_INDEX", wifi_scan)
+        self.assertIn("core2_button == DOWN_BUTTON) return CHAN_PLUS_INDEX", wifi_scan)
         self.assertIn("defined(MARAUDER_M5STACK_CORE2_AWS)", recon)
         self.assertIn("fillRect(0,16,SCREEN_WIDTH,16", wifi_scan)
 

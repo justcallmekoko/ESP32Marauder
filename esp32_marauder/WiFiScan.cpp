@@ -10663,8 +10663,8 @@ bool WiFiScan::filterActive() {
       } else if (core2_button != last_core2_button) {
         last_core2_button = core2_button;
         if (core2_button == SELECT_BUTTON) return EXIT_BUTTON_INDEX;
-        if (core2_button == UP_BUTTON) return CHAN_PLUS_INDEX;
-        if (core2_button == DOWN_BUTTON) return CHAN_MINUS_INDEX;
+        if (core2_button == UP_BUTTON) return CHAN_MINUS_INDEX;
+        if (core2_button == DOWN_BUTTON) return CHAN_PLUS_INDEX;
       }
       return -1;
     #endif
