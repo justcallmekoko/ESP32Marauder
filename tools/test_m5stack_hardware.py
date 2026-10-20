@@ -52,6 +52,13 @@ class M5StackHardwareTests(unittest.TestCase):
         self.assertIn("#define AXP192_WIRE Wire", axp)
         self.assertIn("legacy\n    // sequence below is for M5StickC", axp)
 
+    def test_fire_display_uses_m5stack_safe_bus_contract(self):
+        setup = (ROOT / "User_Setup_m5stack_fire.h").read_text()
+        self.assertIn("#define TFT_BL   32", setup)
+        self.assertIn("#define TFT_BACKLIGHT_ON HIGH", setup)
+        self.assertIn("#define SPI_FREQUENCY       27000000", setup)
+        self.assertIn("#define SPI_READ_FREQUENCY   5000000", setup)
+
 
 if __name__ == "__main__":
     unittest.main()

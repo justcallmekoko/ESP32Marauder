@@ -11,6 +11,8 @@
 #define TFT_CS   14
 #define TFT_DC   27
 #define TFT_RST  33
+#define TFT_BL   32
+#define TFT_BACKLIGHT_ON HIGH
 
 #define LOAD_GLCD
 #define LOAD_FONT2
@@ -20,5 +22,5 @@
 #define LOAD_FONT8
 #define LOAD_GFXFF
 #define SMOOTH_FONT
-#define SPI_FREQUENCY       40000000
-#define SPI_READ_FREQUENCY  16000000
+#define SPI_FREQUENCY       27000000
+#define SPI_READ_FREQUENCY   5000000
