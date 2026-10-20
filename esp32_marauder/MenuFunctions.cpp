@@ -787,24 +787,24 @@ void MenuFunctions::main(uint32_t currentTime)
           // The FT6336 occasionally reports a brief empty sample while a
           // front control is held. Do not turn that gap into another tap.
           constexpr uint32_t core2_release_debounce_ms = 200;
-          const bool up_event = menu_up_repeat.updateDebounced(
+          const bool up_event = menu_touch_up_repeat.updateDebounced(
               held_button == UP_BUTTON, currentTime,
               core2_release_debounce_ms);
-          const bool down_event = menu_down_repeat.updateDebounced(
+          const bool down_event = menu_touch_down_repeat.updateDebounced(
               held_button == DOWN_BUTTON, currentTime,
               core2_release_debounce_ms);
         #else
-          const bool up_event = menu_up_repeat.update(
+          const bool up_event = menu_touch_up_repeat.update(
               held_button == UP_BUTTON, currentTime);
-          const bool down_event = menu_down_repeat.update(
+          const bool down_event = menu_touch_down_repeat.update(
               held_button == DOWN_BUTTON, currentTime);
         #endif
         menu_button = up_event ? UP_BUTTON :
                       down_event ? DOWN_BUTTON :
                       released_button == SELECT_BUTTON ? SELECT_BUTTON : -1;
       } else {
-        menu_up_repeat.reset();
-        menu_down_repeat.reset();
+        menu_touch_up_repeat.reset();
+        menu_touch_down_repeat.reset();
         menu_touch_button = -1;
         menu_button = display_obj.menuButton(&t_x, &t_y, pressed);
       }

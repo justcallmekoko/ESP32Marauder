@@ -44,6 +44,9 @@ class M5StackHardwareTests(unittest.TestCase):
         self.assertIn("touch_state < 0", display)
         self.assertIn("millis() - core2_front_button_seen < 250", display)
         self.assertIn("core2_release_debounce_ms = 200", menu)
+        self.assertIn("menu_touch_up_repeat.updateDebounced", menu)
+        self.assertIn("menu_touch_down_repeat.updateDebounced", menu)
+        self.assertIn("MenuInputRepeat menu_touch_up_repeat", (ROOT / "esp32_marauder/MenuFunctions.h").read_text())
         for key in ("'k'", "'m'", "'n'", "'s'"):
             self.assertIn(f"isKeyPressed({key})", menu)
         self.assertIn("marauder_keyboard.available()", menu)
