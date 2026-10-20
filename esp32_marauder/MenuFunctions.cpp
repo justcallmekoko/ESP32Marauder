@@ -396,8 +396,30 @@ void MenuFunctions::main(uint32_t currentTime)
 
   #ifdef MARAUDER_M5STACK_CORE2_AWS
     const bool front_control_touch = pressed && display_obj.isFrontButtonTouch();
+    const bool core2_center_pressed = front_control_touch &&
+        display_obj.menuButton(&t_x, &t_y, true, true) == SELECT_BUTTON;
+    const bool core2_return_pressed = this->isKeyPressed(KEY_ENTER);
   #else
     const bool front_control_touch = false;
+  #endif
+
+  #ifdef MARAUDER_M5STACK_CORE2_AWS
+    // Translate the controls that normally mean "tap/center to exit" into a
+    // single Core2-wide stop action. This runs before feature-specific touch
+    // handling so every non-blocking scan and recon view gets the same exit.
+    if ((core2_center_pressed || core2_return_pressed) &&
+        wifi_scan_obj.currentScanMode != WIFI_SCAN_OFF &&
+        wifi_scan_obj.currentScanMode != WIFI_CONNECTED &&
+        wifi_scan_obj.currentScanMode != OTA_UPDATE &&
+        wifi_scan_obj.currentScanMode != ESP_UPDATE) {
+      recon_obj.stop();
+      wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+      display_obj.init();
+      changeMenu(current_menu, true);
+      x = -1;
+      y = -1;
+      return;
+    }
   #endif
 
 
@@ -1794,15 +1816,15 @@ void MenuFunctions::displaySetting(const char* key, Menu* menu, int index) {
 #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
 void MenuFunctions::updateKeyboard()
 {
-  M5CardputerKeyboard.updateKeyList();
-  M5CardputerKeyboard.updateKeysState();
+  marauder_keyboard.updateKeyList();
+  marauder_keyboard.updateKeysState();
 }
 
 bool MenuFunctions::isKeyPressed(char c)
 {
-  bool pressed = M5CardputerKeyboard.isKeyPressed(c);
+  bool pressed = marauder_keyboard.isKeyPressed(c);
   #ifdef HAS_FACES_KEYBOARD
-    return pressed && M5CardputerKeyboard.isChange();
+    return pressed && marauder_keyboard.isChange();
   #else
     if (pressed) delay(200);
     return pressed;
@@ -1812,7 +1834,7 @@ bool MenuFunctions::isKeyPressed(char c)
 bool MenuFunctions::textInput(char *buffer, size_t bufLen, const char *title)
 {
   #ifdef HAS_FACES_KEYBOARD
-    if (M5CardputerKeyboard.available()) {
+    if (marauder_keyboard.available()) {
       display_obj.clearScreen();
       display_obj.tft.setTextSize(1);
       display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
@@ -1823,11 +1845,11 @@ bool MenuFunctions::textInput(char *buffer, size_t bufLen, const char *title)
       do {
         this->updateKeyboard();
         delay(5);
-      } while (M5CardputerKeyboard.isPressed());
+      } while (marauder_keyboard.isPressed());
       while (true) {
         this->updateKeyboard();
-        if (M5CardputerKeyboard.isChange()) {
-          uint8_t key = M5CardputerKeyboard.currentKey();
+        if (marauder_keyboard.isChange()) {
+          uint8_t key = marauder_keyboard.currentKey();
           if (key == KEY_ENTER) return true;
           if (key == KEY_BACKSPACE) {
             size_t len = strlen(buffer);
@@ -2194,7 +2216,7 @@ void MenuFunctions::RunSetup()
   this->disable_touch = false;
 
   #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
-    M5CardputerKeyboard.begin();
+    marauder_keyboard.begin();
   #endif
 
   // root menu stuff
@@ -3033,11 +3055,11 @@ void MenuFunctions::buildGeofenceActionMenu(uint8_t slot) {
 
           #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
             for (int i = 0; i < 95; i++) {
-              if ((M5CardputerKeyboard._ascii_list[i] != '(') &&
-                  (M5CardputerKeyboard._ascii_list[i] != '`')) {
-                if (this->isKeyPressed(M5CardputerKeyboard._ascii_list[i])) {
+              if ((marauder_keyboard._ascii_list[i] != '(') &&
+                  (marauder_keyboard._ascii_list[i] != '`')) {
+                if (this->isKeyPressed(marauder_keyboard._ascii_list[i])) {
                   pressed = true;
-                  wifi_scan_obj.current_mini_kb_ssid.concat(M5CardputerKeyboard._ascii_list[i]);
+                  wifi_scan_obj.current_mini_kb_ssid.concat(marauder_keyboard._ascii_list[i]);
                 }
                 if (this->isKeyPressed(KEY_BACKSPACE)) {
                   pressed = true;
@@ -3588,6 +3610,9 @@ void MenuFunctions::buildWiFiGeneralMenu()
         if (this->textInput(ssidBuf, sizeof(ssidBuf), "Enter SSID")) {
           if (ssidBuf[0] != 0)
             wifi_scan_obj.addSSID(String(ssidBuf));
+          #ifdef HAS_FACES_KEYBOARD
+            if (marauder_keyboard.available()) keep_going = false;
+          #endif
           for (int i = 0; i < 64; i++)
             ssidBuf[i] = NULL;
         }

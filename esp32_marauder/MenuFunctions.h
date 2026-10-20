@@ -353,7 +353,6 @@ class MenuFunctions
     //#endif
 
     #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
-      Keyboard_Class M5CardputerKeyboard = Keyboard_Class();
       void updateKeyboard();
       bool isKeyPressed(char c);
       bool textInput(char *buffer, size_t bufLen, const char *title);
@@ -412,5 +411,4 @@ class MenuFunctions
 
 #endif
 #endif
-
 

@@ -226,6 +226,7 @@ public:
         _is_caps_locked = isLocked;
     }
 };
+extern Keyboard_Class marauder_keyboard;
 #endif
 
 #endif

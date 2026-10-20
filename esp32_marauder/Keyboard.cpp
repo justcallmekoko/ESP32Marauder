@@ -2,6 +2,8 @@
 
 #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
 
+Keyboard_Class marauder_keyboard;
+
 #ifdef MARAUDER_CARDPUTER
 #include <driver/gpio.h>
 #include <Arduino.h>

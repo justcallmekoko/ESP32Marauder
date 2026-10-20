@@ -164,11 +164,7 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
           return 1;
         }
       #elif !defined(HAS_CYD_TOUCH)
-        #ifdef MARAUDER_M5STACK_FIRE
-          return 0;
-        #else
-          return this->tft.getTouch(x, y, threshold);
-        #endif
+        return this->tft.getTouch(x, y, threshold);
       #else
         if (this->touchscreen.tirqTouched() && this->touchscreen.touched()) {
           TS_Point p = this->touchscreen.getPoint();
@@ -241,7 +237,7 @@ void Display::init() {
 }
 
 void Display::setCalData(bool landscape) {
-  #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH) && !defined(MARAUDER_M5STACK_FIRE)
+  #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH)
     if (!landscape) {
       #ifdef TFT_SHIELD
         uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield
@@ -668,8 +664,8 @@ void Display::twoPartDisplay(String center_text)
 void Display::touchToExit()
 {
   tft.setTextColor(TFT_BLACK, TFT_LIGHTGREY);
-  tft.fillRect(0,32,HEIGHT_1,16, TFT_LIGHTGREY);
-  tft.drawCentreString(text11,TFT_WIDTH / 2,32,2);
+  tft.fillRect(0, 32, SCREEN_WIDTH, 16, TFT_LIGHTGREY);
+  tft.drawCentreString(text11, SCREEN_WIDTH / 2, 32, 2);
 }
 
 
