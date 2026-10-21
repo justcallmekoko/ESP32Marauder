@@ -1,11 +1,24 @@
 #include "AXP192.h"
 
+#ifdef MARAUDER_M5STACK_CORE2_AWS
+  #define AXP192_WIRE Wire
+#else
+  #define AXP192_WIRE Wire1
+#endif
+
 AXP192::AXP192() {
 }
 
 void AXP192::begin(void) {
-    Wire1.begin(21, 22);
-    Wire1.setClock(400000);
+    AXP192_WIRE.begin(21, 22);
+    AXP192_WIRE.setClock(400000);
+
+    #ifdef MARAUDER_M5STACK_CORE2_AWS
+    // Core2 power rails are initialized before display setup. The legacy
+    // sequence below is for M5StickC, where LDO3 powers the LCD; on Core2
+    // LDO3 powers the vibration motor instead.
+    return;
+    #endif
 
     // Set LDO2 & LDO3(TFT_LED & TFT) 3.0V
     Write1Byte(0x28, 0xcc);
@@ -47,18 +60,18 @@ void AXP192::begin(void) {
 }
 
 void AXP192::Write1Byte(uint8_t Addr, uint8_t Data) {
-    Wire1.beginTransmission(0x34);
-    Wire1.write(Addr);
-    Wire1.write(Data);
-    Wire1.endTransmission();
+    AXP192_WIRE.beginTransmission(0x34);
+    AXP192_WIRE.write(Addr);
+    AXP192_WIRE.write(Data);
+    AXP192_WIRE.endTransmission();
 }
 
 uint8_t AXP192::Read8bit(uint8_t Addr) {
-    Wire1.beginTransmission(0x34);
-    Wire1.write(Addr);
-    Wire1.endTransmission();
-    Wire1.requestFrom(0x34, 1);
-    return Wire1.read();
+    AXP192_WIRE.beginTransmission(0x34);
+    AXP192_WIRE.write(Addr);
+    AXP192_WIRE.endTransmission();
+    AXP192_WIRE.requestFrom(0x34, 1);
+    return AXP192_WIRE.read();
 }
 
 uint16_t AXP192::Read12Bit(uint8_t Addr) {
@@ -79,50 +92,50 @@ uint16_t AXP192::Read13Bit(uint8_t Addr) {
 
 uint16_t AXP192::Read16bit(uint8_t Addr) {
     uint16_t ReData = 0;
-    Wire1.beginTransmission(0x34);
-    Wire1.write(Addr);
-    Wire1.endTransmission();
-    Wire1.requestFrom(0x34, 2);
+    AXP192_WIRE.beginTransmission(0x34);
+    AXP192_WIRE.write(Addr);
+    AXP192_WIRE.endTransmission();
+    AXP192_WIRE.requestFrom(0x34, 2);
     for (int i = 0; i < 2; i++) {
         ReData <<= 8;
-        ReData |= Wire1.read();
+        ReData |= AXP192_WIRE.read();
     }
     return ReData;
 }
 
 uint32_t AXP192::Read24bit(uint8_t Addr) {
     uint32_t ReData = 0;
-    Wire1.beginTransmission(0x34);
-    Wire1.write(Addr);
-    Wire1.endTransmission();
-    Wire1.requestFrom(0x34, 3);
+    AXP192_WIRE.beginTransmission(0x34);
+    AXP192_WIRE.write(Addr);
+    AXP192_WIRE.endTransmission();
+    AXP192_WIRE.requestFrom(0x34, 3);
     for (int i = 0; i < 3; i++) {
         ReData <<= 8;
-        ReData |= Wire1.read();
+        ReData |= AXP192_WIRE.read();
     }
     return ReData;
 }
 
 uint32_t AXP192::Read32bit(uint8_t Addr) {
     uint32_t ReData = 0;
-    Wire1.beginTransmission(0x34);
-    Wire1.write(Addr);
-    Wire1.endTransmission();
-    Wire1.requestFrom(0x34, 4);
+    AXP192_WIRE.beginTransmission(0x34);
+    AXP192_WIRE.write(Addr);
+    AXP192_WIRE.endTransmission();
+    AXP192_WIRE.requestFrom(0x34, 4);
     for (int i = 0; i < 4; i++) {
         ReData <<= 8;
-        ReData |= Wire1.read();
+        ReData |= AXP192_WIRE.read();
     }
     return ReData;
 }
 
 void AXP192::ReadBuff(uint8_t Addr, uint8_t Size, uint8_t *Buff) {
-    Wire1.beginTransmission(0x34);
-    Wire1.write(Addr);
-    Wire1.endTransmission();
-    Wire1.requestFrom(0x34, (int)Size);
+    AXP192_WIRE.beginTransmission(0x34);
+    AXP192_WIRE.write(Addr);
+    AXP192_WIRE.endTransmission();
+    AXP192_WIRE.requestFrom(0x34, (int)Size);
     for (int i = 0; i < Size; i++) {
-        *(Buff + i) = Wire1.read();
+        *(Buff + i) = AXP192_WIRE.read();
     }
 }
 
@@ -291,11 +304,11 @@ void AXP192::SetSleep(void) {
 }
 
 uint8_t AXP192::GetWarningLeve(void) {
-    Wire1.beginTransmission(0x34);
-    Wire1.write(0x47);
-    Wire1.endTransmission();
-    Wire1.requestFrom(0x34, 1);
-    uint8_t buf = Wire1.read();
+    AXP192_WIRE.beginTransmission(0x34);
+    AXP192_WIRE.write(0x47);
+    AXP192_WIRE.endTransmission();
+    AXP192_WIRE.requestFrom(0x34, 1);
+    uint8_t buf = AXP192_WIRE.read();
     return (buf & 0x01);
 }
 

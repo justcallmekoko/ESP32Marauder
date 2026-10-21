@@ -14,10 +14,20 @@ class MenuInputRepeat {
   static constexpr uint32_t kRepeatIntervalMs = 120;
 
   bool update(bool pressed, uint32_t now) {
+    return updateDebounced(pressed, now, 0);
+  }
+
+  bool updateDebounced(bool pressed, uint32_t now,
+                       uint32_t release_debounce_ms) {
     if (!pressed) {
+      if (active_ && static_cast<uint32_t>(now - last_pressed_at_) <
+                         release_debounce_ms) {
+        return false;
+      }
       active_ = false;
       return false;
     }
+    last_pressed_at_ = now;
     if (!active_) {
       active_ = true;
       pressed_at_ = now;
@@ -38,4 +48,5 @@ class MenuInputRepeat {
   bool active_ = false;
   uint32_t pressed_at_ = 0;
   uint32_t repeated_at_ = 0;
+  uint32_t last_pressed_at_ = 0;
 };

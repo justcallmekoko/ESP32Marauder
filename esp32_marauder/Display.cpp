@@ -93,7 +93,44 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
         // FT6336 capacitive touch: rotation-aware + edge exclusion
         {
           uint16_t raw_x, raw_y;
-          if (!ft6336_read_raw(&raw_x, &raw_y)) return 0;
+          const int8_t touch_state = ft6336_read_raw(&raw_x, &raw_y);
+          if (touch_state != 1) {
+            #ifdef MARAUDER_M5STACK_CORE2_AWS
+              // Only bridge I2C transport errors. A confirmed zero-touch
+              // status is a real release and must not delay the next tap.
+              if (touch_state < 0 && core2_front_button >= 0 &&
+                  millis() - core2_front_button_seen < 250) {
+                *x = TFT_WIDTH / 2;
+                *y = TFT_HEIGHT / 3 * core2_front_button + (TFT_HEIGHT / 6);
+                return 1;
+              }
+              core2_front_button = -1;
+            #endif
+            return 0;
+          }
+
+          #ifdef MARAUDER_M5STACK_CORE2_AWS
+            // Core2 reports its LCD in landscape coordinates. The lower
+            // 40-pixel touch-only strip implements the three front buttons.
+            if (raw_y >= 240 && raw_y < 280) {
+              if (core2_full_touch_input) return 0;
+              uint8_t button = raw_x < 120 ? UP_BUTTON :
+                               raw_x < 220 ? SELECT_BUTTON : DOWN_BUTTON;
+              core2_front_button = button;
+              core2_front_button_seen = millis();
+              *x = TFT_WIDTH / 2;
+              *y = TFT_HEIGHT / 3 * button + (TFT_HEIGHT / 6);
+              return 1;
+            }
+            core2_front_button = -1;
+            // Normal operation deliberately ignores the LCD surface. It is
+            // enabled only while the fallback on-screen keyboard is active.
+            if (!core2_full_touch_input) return 0;
+            if (raw_x >= SCREEN_WIDTH || raw_y >= SCREEN_HEIGHT) return 0;
+            *x = raw_x;
+            *y = raw_y;
+            return 1;
+          #endif
 
           // Discard touches within PANCAKE_TOUCH_MARGIN pixels of any panel edge
           #define PANCAKE_PANEL_W TFT_WIDTH
@@ -629,8 +666,8 @@ void Display::twoPartDisplay(String center_text)
 void Display::touchToExit()
 {
   tft.setTextColor(TFT_BLACK, TFT_LIGHTGREY);
-  tft.fillRect(0,32,HEIGHT_1,16, TFT_LIGHTGREY);
-  tft.drawCentreString(text11,TFT_WIDTH / 2,32,2);
+  tft.fillRect(0, 32, SCREEN_WIDTH, 16, TFT_LIGHTGREY);
+  tft.drawCentreString(text11, SCREEN_WIDTH / 2, 32, 2);
 }
 
 
@@ -705,6 +742,12 @@ bool Display::queueLine(const String& line) {
   if (!display_queue_pressure.allow(display_buffer->size())) return false;
   if (!marauder::RuntimeMemoryGuard::instance().allow(line.length() + 48))
     return false;
+  return display_buffer->add(line);
+}
+
+bool Display::queueCriticalLine(const String& line) {
+  if (display_buffer == nullptr) return false;
+  if (!display_queue_pressure.allow(display_buffer->size())) return false;
   return display_buffer->add(line);
 }
 

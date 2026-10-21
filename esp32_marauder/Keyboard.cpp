@@ -1,6 +1,8 @@
 #include "Keyboard.h"
 
-#if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+#if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
+
+Keyboard_Class marauder_keyboard;
 
 #ifdef MARAUDER_CARDPUTER
 #include <driver/gpio.h>
@@ -75,6 +77,20 @@ void Keyboard_Class::begin()
     } else {
         Serial.println("[ERROR] TCA8418 keyboard not found on I2C (addr 0x34)");
     }
+#elif defined(HAS_FACES_KEYBOARD)
+    Wire.begin(I2C_SDA, I2C_SCL, 400000U);
+    Wire.beginTransmission(0x08);
+    _faces_available = Wire.endTransmission() == 0;
+    Serial.printf("[Keyboard] M5Stack Faces %s at I2C 0x08\n",
+                  _faces_available ? "detected" : "not detected; using front buttons");
+#endif
+}
+
+bool Keyboard_Class::available() const {
+#ifdef HAS_FACES_KEYBOARD
+    return _faces_available;
+#else
+    return true;
 #endif
 }
 
@@ -190,16 +206,34 @@ void Keyboard_Class::updateKeyList()
     for (auto &k : _tca_pressed_keys) {
         _key_list_buffer.push_back(k);
     }
+#elif defined(HAS_FACES_KEYBOARD)
+    _faces_last_key = _faces_key;
+    _faces_key = 0;
+    if (!_faces_available) return;
+    Wire.requestFrom(0x08, 1);
+    if (Wire.available()) {
+        _faces_key = Wire.read();
+        if (_faces_key == '\n') _faces_key = 0;
+        if (_faces_key == '\r') _faces_key = KEY_ENTER;
+        if (_faces_key == 0x08 || _faces_key == 0x7f) _faces_key = KEY_BACKSPACE;
+    }
 #endif
 }
 
 uint8_t Keyboard_Class::isPressed()
 {
+#ifdef HAS_FACES_KEYBOARD
+    return _faces_key != 0;
+#else
     return _key_list_buffer.size();
+#endif
 }
 
 bool Keyboard_Class::isChange()
 {
+#ifdef HAS_FACES_KEYBOARD
+    return _faces_key != _faces_last_key;
+#else
     if (_last_key_size != _key_list_buffer.size())
     {
         _last_key_size = _key_list_buffer.size();
@@ -209,9 +243,14 @@ bool Keyboard_Class::isChange()
     {
         return false;
     }
+#endif
 }
 
 String Keyboard_Class::getPressedKeysString() {
+#ifdef HAS_FACES_KEYBOARD
+    updateKeyList();
+    return _faces_key ? String((char)_faces_key) : String();
+#else
     updateKeyList();
     String pressed = "";
 
@@ -220,10 +259,14 @@ String Keyboard_Class::getPressedKeysString() {
     }
 
     return pressed;
+#endif
 }
 
 bool Keyboard_Class::isKeyPressed(char c)
 {
+#ifdef HAS_FACES_KEYBOARD
+    return _faces_available && _faces_key == (uint8_t)c;
+#else
     if (_key_list_buffer.size())
     {
         for (const auto &i : _key_list_buffer)
@@ -233,6 +276,16 @@ bool Keyboard_Class::isKeyPressed(char c)
         }
     }
     return false;
+#endif
+}
+
+uint8_t Keyboard_Class::currentKey() const
+{
+#ifdef HAS_FACES_KEYBOARD
+    return _faces_available ? _faces_key : 0;
+#else
+    return 0;
+#endif
 }
 
 #include <cstring>
@@ -243,6 +296,17 @@ void Keyboard_Class::updateKeysState()
     _key_pos_print_keys.clear();
     _key_pos_hid_keys.clear();
     _key_pos_modifier_keys.clear();
+
+#ifdef HAS_FACES_KEYBOARD
+    if (!_faces_key) return;
+    if (_faces_key == KEY_BACKSPACE) _keys_state_buffer.del = true;
+    else if (_faces_key == KEY_ENTER) _keys_state_buffer.enter = true;
+    else {
+        _keys_state_buffer.word.push_back((char)_faces_key);
+        if (_faces_key == ' ') _keys_state_buffer.space = true;
+    }
+    return;
+#endif
 
     // Get special keys
     for (auto &i : _key_list_buffer)

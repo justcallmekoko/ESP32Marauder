@@ -2,9 +2,26 @@
 
 char apName[MAX_AP_NAME_SIZE] = "PORTAL";
 
-#ifdef HAS_PSRAM
-  char* index_html = nullptr;
-#endif
+char* index_html = nullptr;
+
+namespace {
+bool replacePortalHtml(const char* html, size_t length) {
+  if (!html || length >= MAX_HTML_SIZE) return false;
+
+  #ifdef HAS_PSRAM
+    char* replacement = static_cast<char*>(ps_malloc(length + 1));
+  #else
+    char* replacement = static_cast<char*>(malloc(length + 1));
+  #endif
+  if (!replacement) return false;
+
+  memcpy(replacement, html, length);
+  replacement[length] = '\0';
+  free(index_html);
+  index_html = replacement;
+  return true;
+}
+}
 
 AsyncWebServer server(80);
 
@@ -39,10 +56,10 @@ void EvilPortal::cleanup() {
   this->dnsServer.stop();
   WiFi.softAPdisconnect(true);
 
-  #ifdef HAS_PSRAM
-    free(index_html);
-    index_html = nullptr;
-  #endif
+  free(index_html);
+  index_html = nullptr;
+  this->has_html = false;
+  this->using_serial_html = false;
 }
 
 bool EvilPortal::begin(LinkedList<ssid>* ssids, LinkedList<AccessPoint>* access_points) {
@@ -67,27 +84,15 @@ String EvilPortal::get_password() {
 }
 
 void EvilPortal::setupServer() {
-  #ifndef HAS_PSRAM
-    server.on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
-      request->send_P(200, "text/html", index_html);
-      #ifndef MARAUDER_V8
-        Serial.println(F("client connected"));
-      #endif
-      #ifdef HAS_SCREEN
-        this->sendToDisplay(F("Client connected to server"));
-      #endif
-    });
-  #else
-    server.on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
-      request->send(200, "text/html", index_html);
-      #ifndef MARAUDER_V8
-        Serial.println("client connected");
-      #endif
-      #ifdef HAS_SCREEN
-        this->sendToDisplay(F("Client connected to server"));
-      #endif
-    });
-  #endif
+  server.on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    request->send(200, "text/html", index_html ? index_html : "");
+    #ifndef MARAUDER_V8
+      Serial.println(F("client connected"));
+    #endif
+    #ifdef HAS_SCREEN
+      this->sendToDisplay(F("Client connected to server"));
+    #endif
+  });
 
   const char* captiveEndpoints[] = {
     "/hotspot-detect.html",
@@ -102,15 +107,9 @@ void EvilPortal::setupServer() {
 
   for (int i = 0; i < sizeof(captiveEndpoints) / sizeof(captiveEndpoints[0]); i++) {
     
-    #ifndef HAS_PSRAM
-      server.on(captiveEndpoints[i], HTTP_GET, [this](AsyncWebServerRequest *request){
-        request->send_P(200, "text/html", index_html);
-      });
-    #else
-      server.on(captiveEndpoints[i], HTTP_GET, [this](AsyncWebServerRequest *request){
-        request->send(200, "text/html", index_html);
-      });
-    #endif
+    server.on(captiveEndpoints[i], HTTP_GET, [this](AsyncWebServerRequest *request){
+      request->send(200, "text/html", index_html ? index_html : "");
+    });
   }
 
   server.on("/get-ap-name", HTTP_GET, [this](AsyncWebServerRequest *request) {
@@ -144,14 +143,11 @@ void EvilPortal::setHtmlFromSerial() {
   #ifndef MARAUDER_V8
     Serial.println(F("Setting HTML from serial..."));
   #endif
-  const char *htmlStr = Serial.readString().c_str();
-  #ifdef HAS_PSRAM
-    index_html = (char*) ps_malloc(MAX_HTML_SIZE);
-  #endif
-  strlcpy(index_html, htmlStr, strlen(htmlStr));
-  #ifdef HAS_PSRAM
-    index_html[MAX_HTML_SIZE - 1] = '\0';
-  #endif
+  const String html = Serial.readString();
+  if (!replacePortalHtml(html.c_str(), html.length())) {
+    Serial.println(F("Unable to allocate HTML buffer"));
+    return;
+  }
   this->has_html = true;
   this->using_serial_html = true;
   #ifndef MARAUDER_V8
@@ -200,13 +196,13 @@ bool EvilPortal::setHtml() {
       if (isPrintable(c))
         html.concat(c);
     }
-    #ifdef HAS_PSRAM
-      index_html = (char*) ps_malloc(MAX_HTML_SIZE);
-    #endif
-    strlcpy(index_html, html.c_str(), strlen(html.c_str()));
-    #ifdef HAS_PSRAM
-      index_html[MAX_HTML_SIZE - 1] = '\0';
-    #endif
+    if (!replacePortalHtml(html.c_str(), html.length())) {
+      html_file.close();
+      #ifndef MARAUDER_V8
+        Serial.println(F("Unable to allocate HTML buffer"));
+      #endif
+      return false;
+    }
     this->has_html = true;
     #ifndef MARAUDER_V8
       Serial.println("html set");
@@ -391,7 +387,10 @@ void EvilPortal::sendToDisplay(String msg) {
       display_string.concat(" ");
     }
     display_obj.loading = true;
-    display_obj.queueLine(display_string);
+    // Portal HTML lives in internal heap on no-PSRAM targets and can put the
+    // general allocation guard into pressure mode. Keep these bounded status
+    // and credential lines visible while still respecting queue backpressure.
+    display_obj.queueCriticalLine(display_string);
     display_obj.loading = false;
   #endif
 }
