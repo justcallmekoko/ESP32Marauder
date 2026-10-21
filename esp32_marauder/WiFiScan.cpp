@@ -48,7 +48,7 @@ LinkedList<BleDevice>* ble_devices;
 extern ReconMission recon_obj;
 
 namespace {
-#if defined(MARAUDER_LEGACY_LOW_MEMORY)
+#if defined(MARAUDER_NO_PSRAM_MEMORY_PROFILE)
 constexpr size_t MAX_RETAINED_BLE_DEVICES = 64;
 constexpr uint16_t NIMBLE_DUPLICATE_CACHE_SIZE = 64;
 #else

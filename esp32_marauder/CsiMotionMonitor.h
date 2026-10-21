@@ -18,7 +18,7 @@ class CsiMotionMonitor {
   void printStatus(bool force = true);
 
  private:
-  #if defined(MARAUDER_LEGACY_LOW_MEMORY)
+  #if defined(MARAUDER_NO_PSRAM_MEMORY_PROFILE)
     static constexpr uint8_t kQueueSize = 44;
   #else
     static constexpr uint8_t kQueueSize = 64;

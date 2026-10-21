@@ -145,13 +145,6 @@
     #define MARAUDER_MINI_V3
  #endif
 
-  // Original ESP32 boards have no PSRAM and must leave enough internal heap
-  // for the Wi-Fi and BLE stacks to coexist during wardriving. Keep this
-  // profile narrowly scoped: modern/C5 targets retain their full capacities.
-  #if defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_V7)
-    #define MARAUDER_LEGACY_LOW_MEMORY
-  #endif
-
   // CSI is provided by every ESP32-family target in the supported build
   // matrix. Chip-specific configuration and sample decoding live in
   // CsiMotionMonitor; do not infer the sample format from this capability.
@@ -266,8 +259,7 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     #define HAS_C5_SD
-    // Direct HTTPS upload is omitted on this no-PSRAM legacy profile. Logs
-    // remain available on SD for upload from a host; C5 targets keep upload.
+    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_V7_1
@@ -347,8 +339,7 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     #define HAS_C5_SD
-    // Direct HTTPS upload is omitted on this no-PSRAM legacy profile. Logs
-    // remain available on SD for upload from a host; C5 targets keep upload.
+    #define HAS_DIRECT_UPLOAD
   #endif
 
   #ifdef MARAUDER_CYD_MICRO
@@ -722,6 +713,15 @@
     #undef HAS_C5_SD
     #undef HAS_SD
     #undef USE_SD
+  #endif
+
+  // Conserve internal RAM on every supported target that has neither PSRAM
+  // nor an ESP32-C5. C5 targets retain their full capacities even when a
+  // particular board does not expose PSRAM.
+  #if !defined(HAS_PSRAM) && \
+      !defined(MARAUDER_C5) && !defined(MARAUDER_T_DONGLE_C5) && \
+      !defined(XIAO_ESP32_C5) && !defined(DUAL_MINI_C5)
+    #define MARAUDER_NO_PSRAM_MEMORY_PROFILE
   #endif
   //// END BOARD FEATURES
 
@@ -3209,7 +3209,7 @@
   //#elif !defined(HAS_ILI9341)
   //  #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
   //  #define SNAP_LEN 4096 // max len of each recieved packet
-  #elif defined(MARAUDER_LEGACY_LOW_MEMORY)
+  #elif defined(MARAUDER_NO_PSRAM_MEMORY_PROFILE)
     #define BUF_SIZE 2 * 1024
     #define SNAP_LEN 1514
   #else
