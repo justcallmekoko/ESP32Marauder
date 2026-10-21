@@ -234,6 +234,15 @@
       "esptoolChip": "esp32c5"
     },
     {
+      "id": "marauder-c5-3-5",
+      "displayName": "Waveshare ESP32-C5-Touch-LCD-3.5",
+      "aliases": ["Waveshare ESP32-C5-Touch-LCD-3.5", "WS C5 3.5"],
+      "buildFlag": "MARAUDER_WS_C5_35",
+      "assetSuffix": "ws_c5_35",
+      "chipFamily": "ESP32-C5",
+      "esptoolChip": "esp32c5"
+    },
+    {
       "id": "poom",
       "displayName": "POOM",
       "aliases": ["Stellar IoT POOM"],
