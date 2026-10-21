@@ -1842,7 +1842,9 @@ bool MenuFunctions::isKeyPressed(char c)
     return pressed;
   #endif
 }
+#endif
 
+#if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD) || defined(HAS_TOUCH)
 bool MenuFunctions::textInput(char *buffer, size_t bufLen, const char *title)
 {
   #ifdef HAS_FACES_KEYBOARD

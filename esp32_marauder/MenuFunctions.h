@@ -357,6 +357,9 @@ class MenuFunctions
     #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
       void updateKeyboard();
       bool isKeyPressed(char c);
+    #endif
+
+    #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD) || defined(HAS_TOUCH)
       bool textInput(char *buffer, size_t bufLen, const char *title);
     #endif
 
