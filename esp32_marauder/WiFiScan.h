@@ -84,8 +84,6 @@
 
 #ifdef HAS_DIRECT_UPLOAD
   #include <WiFiClientSecure.h>
-  #include <HTTPClient.h>
-  #include "mbedtls/sha256.h"
 #endif
 
 #define bad_list_length 3
@@ -764,14 +762,6 @@ class WiFiScan
         NimBLEAdvertisementData AdvData;
         NimBLEAdvertisementData ScanData;
       };
-
-      struct WatchModel
-      {
-          uint8_t value;
-          const char *name;
-      };
-
-      WatchModel* watch_models = nullptr;
 
       static void scanCompleteCB(BLEScanResults scanResults);
       NimBLEAdvertisementData GetUniversalAdvertisementData(EBLEPayloadType type);

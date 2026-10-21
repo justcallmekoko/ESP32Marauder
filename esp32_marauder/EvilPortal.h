@@ -39,11 +39,7 @@ extern Buffer buffer_obj;
 
 extern char apName[MAX_AP_NAME_SIZE];
 
-#ifndef HAS_PSRAM
-  char index_html[MAX_HTML_SIZE] = "TEST";
-#else
-  extern char* index_html;
-#endif
+extern char* index_html;
 
 struct ssid {
   String essid;
@@ -80,7 +76,7 @@ public:
   bool canHandle(AsyncWebServerRequest *request) { return true; }
 
   void handleRequest(AsyncWebServerRequest *request) {
-    request->send_P(200, "text/html", index_html);
+    request->send(200, "text/html", index_html ? index_html : "");
   }
 };
 

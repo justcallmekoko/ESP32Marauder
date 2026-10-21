@@ -58,7 +58,7 @@
   // five saved WiFi profiles without permanently caching their passwords.
   #define JSON_SETTING_SIZE 6144
 
-#define MARAUDER_VERSION "v1.19.0"
+#define MARAUDER_VERSION "v1.19.1"
 
   #define GRAPH_REFRESH   100
 
@@ -146,7 +146,7 @@
  //// BOARD FEATURES
  #if defined(DUAL_MINI_C5)
     #define MARAUDER_MINI_V3
-  #endif
+ #endif
 
   // CSI is provided by every ESP32-family target in the supported build
   // matrix. Chip-specific configuration and sample decoding live in
@@ -739,6 +739,15 @@
     #undef HAS_C5_SD
     #undef HAS_SD
     #undef USE_SD
+  #endif
+
+  // Conserve internal RAM on every supported target that has neither PSRAM
+  // nor an ESP32-C5. C5 targets retain their full capacities even when a
+  // particular board does not expose PSRAM.
+  #if !defined(HAS_PSRAM) && \
+      !defined(MARAUDER_C5) && !defined(MARAUDER_T_DONGLE_C5) && \
+      !defined(XIAO_ESP32_C5) && !defined(DUAL_MINI_C5)
+    #define MARAUDER_NO_PSRAM_MEMORY_PROFILE
   #endif
   //// END BOARD FEATURES
 
@@ -3343,6 +3352,9 @@
   //#elif !defined(HAS_ILI9341)
   //  #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
   //  #define SNAP_LEN 4096 // max len of each recieved packet
+  #elif defined(MARAUDER_NO_PSRAM_MEMORY_PROFILE)
+    #define BUF_SIZE 2 * 1024
+    #define SNAP_LEN 1514
   #else
     #define BUF_SIZE 3 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
     #define SNAP_LEN 2324 // max len of each recieved packet

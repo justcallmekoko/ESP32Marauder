@@ -172,6 +172,7 @@ class Display
     void buildBanner(String msg, int xpos);
     void clearScreen();
     bool queueLine(const String& line);
+    bool queueCriticalLine(const String& line);
     void displayBuffer(bool do_clear = false);
     void drawBootSplash();
     void getTouchWhileFunction(bool pressed);

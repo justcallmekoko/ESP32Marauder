@@ -51,8 +51,42 @@ LinkedList<BleDevice>* ble_devices;
 extern ReconMission recon_obj;
 
 namespace {
+#if defined(MARAUDER_NO_PSRAM_MEMORY_PROFILE)
+constexpr size_t MAX_RETAINED_BLE_DEVICES = 64;
+constexpr uint16_t NIMBLE_DUPLICATE_CACHE_SIZE = 64;
+#else
 constexpr size_t MAX_RETAINED_BLE_DEVICES = 128;
+constexpr uint16_t NIMBLE_DUPLICATE_CACHE_SIZE = 200;
+#endif
 constexpr uint32_t IBEACON_UI_INTERVAL_MS = 100;
+
+#ifdef HAS_BT
+struct WatchModelEntry {
+  uint8_t value;
+  const char* name;
+};
+
+constexpr WatchModelEntry WATCH_MODELS[] = {
+  {0x1A, "Fallback Watch"},
+  {0x02, "Black Watch4 Classic 40m"},
+  {0x03, "White Watch4 Classic 40m"},
+  {0x06, "Green Watch4 44mm"},
+  {0x07, "Black Watch4 40mm"},
+  {0x08, "White Watch4 40mm"},
+  {0x09, "Gold Watch4 40mm"},
+  {0x0B, "French Watch4 Classic"},
+  {0x0C, "Fox Watch5 44mm"},
+  {0x11, "Black Watch5 44mm"},
+  {0x12, "Sapphire Watch5 44mm"},
+  {0x14, "Gold Watch5 40mm"},
+  {0x16, "Gray Watch5 Pro 45mm"},
+  {0x17, "White Watch5 44mm"},
+  {0x1C, "Gold Watch6 Gold 40mm"},
+  {0x1D, "Silver Watch6 Cyan 44mm"},
+  {0x20, "Green Watch6 Classic 43m"},
+};
+constexpr size_t WATCH_MODEL_COUNT = sizeof(WATCH_MODELS) / sizeof(WATCH_MODELS[0]);
+#endif
 
 String screenName(String value) {
   if (!settings_obj.loadSetting<bool>("Censor")) return value;
@@ -210,7 +244,7 @@ extern "C" {
 
         AdvData_Raw = new uint8_t[15];
 
-        uint8_t model = watch_models[rand() % 25].value;
+        uint8_t model = WATCH_MODELS[rand() % WATCH_MODEL_COUNT].value;
         
         AdvData_Raw[i++] = 14; // Size
         AdvData_Raw[i++] = 0xFF; // AD Type (Manufacturer Specific)
@@ -2058,28 +2092,8 @@ void WiFiScan::RunSetup() {
     mac_entry_state[i] = 0;
 
   #ifdef HAS_BT
-    watch_models = new WatchModel[17] {
-      {0x1A, "Fallback Watch"},
-      {0x02, "Black Watch4 Classic 40m"},
-      {0x03, "White Watch4 Classic 40m"},
-      {0x06, "Green Watch4 44mm"},
-      {0x07, "Black Watch4 40mm"},
-      {0x08, "White Watch4 40mm"},
-      {0x09, "Gold Watch4 40mm"},
-      {0x0B, "French Watch4 Classic"},
-      {0x0C, "Fox Watch5 44mm"},
-      {0x11, "Black Watch5 44mm"},
-      {0x12, "Sapphire Watch5 44mm"},
-      {0x14, "Gold Watch5 40mm"},
-      {0x16, "Gray Watch5 Pro 45mm"},
-      {0x17, "White Watch5 44mm"},
-      {0x1C, "Gold Watch6 Gold 40mm"},
-      {0x1D, "Silver Watch6 Cyan 44mm"},
-      {0x20, "Green Watch6 Classic 43m"},
-    };
-    
     NimBLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DEVICE);
-    NimBLEDevice::setScanDuplicateCacheSize(200);
+    NimBLEDevice::setScanDuplicateCacheSize(NIMBLE_DUPLICATE_CACHE_SIZE);
     NimBLEDevice::init("");
     pBLEScan = NimBLEDevice::getScan(); //create new scan
     this->ble_initialized = true;
@@ -7184,7 +7198,7 @@ void WiFiScan::RunBluetoothScan(uint8_t scan_mode, uint16_t color) {
       NimBLEDevice::setScanDuplicateCacheSize(0);
     else {
       NimBLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DEVICE);
-      NimBLEDevice::setScanDuplicateCacheSize(200);
+      NimBLEDevice::setScanDuplicateCacheSize(NIMBLE_DUPLICATE_CACHE_SIZE);
     }
 
 
