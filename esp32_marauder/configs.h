@@ -15,6 +15,7 @@
   //// BOARD TARGETS
   //#define MARAUDER_M5STICKC
   //#define MARAUDER_M5STICKCP2
+  //#define MARAUDER_M5STACK_CORE2_AWS
   //#define MARAUDER_MINI
   //#define MARAUDER_V4
   //#define MARAUDER_V6
@@ -78,6 +79,8 @@
     #define HARDWARE_NAME "M5Stick-C Plus"
   #elif defined(MARAUDER_M5STICKCP2)
     #define HARDWARE_NAME "M5Stick-C Plus2"
+  #elif defined(MARAUDER_M5STACK_CORE2_AWS)
+    #define HARDWARE_NAME "M5Stack Core2 for AWS"
   #elif defined(MARAUDER_CARDPUTER)
     #define HARDWARE_NAME "M5 Cardputer"
   #elif defined(MARAUDER_CARDPUTER_ADV)
@@ -149,6 +152,7 @@
   // matrix. Chip-specific configuration and sample decoding live in
   // CsiMotionMonitor; do not infer the sample format from this capability.
   #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2) || \
+      defined(MARAUDER_M5STACK_CORE2_AWS) || \
       defined(MARAUDER_MINI) || defined(MARAUDER_V4) || defined(MARAUDER_V6) || \
       defined(MARAUDER_V6_1) || defined(MARAUDER_V7) || defined(MARAUDER_V7_1) || \
       defined(MARAUDER_KIT) || defined(GENERIC_ESP32) || defined(MARAUDER_FLIPPER) || \
@@ -169,13 +173,13 @@
       defined(MARAUDER_V7_1) || defined(MARAUDER_CARDPUTER) || \
       defined(MARAUDER_CARDPUTER_ADV) || defined(MARAUDER_M5STICKC) || \
       defined(MARAUDER_M5STICKCP2) || defined(MARAUDER_MINI) || \
+      defined(MARAUDER_M5STACK_CORE2_AWS) || \
       defined(MARAUDER_REV_FEATHER)
     #define HAS_CSI_BUTTON_CONTROLS
   #endif
 
   #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
     //#define FLIPPER_ZERO_HAT
-    #define HAS_MINI_KB
     #define HAS_BATTERY
       #if defined(MARAUDER_M5STICKC)
         #define HAS_AXP192
@@ -193,6 +197,28 @@
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
     #define HAS_DIRECT_UPLOAD
+  #endif
+
+  #if defined(MARAUDER_M5STACK_CORE2_AWS)
+    #define HAS_BT
+    #define HAS_BUTTONS
+    #define HAS_SCREEN
+    #define HAS_FULL_SCREEN
+    #define HAS_SD
+    #define USE_SD
+    #define HAS_TEMP_SENSOR
+    #define HAS_GPS
+    #define HAS_BATTERY
+    #define HAS_PSRAM
+    #define HAS_FACES_KEYBOARD
+    #define HAS_DIRECT_UPLOAD
+    #define HAS_CSI_BUTTON_CONTROLS
+    #define HAS_IDF_3
+    #define HAS_NIMBLE_2
+    #define HAS_AXP192
+    #define HAS_TOUCH
+    #define HAS_CAP_TOUCH
+    #define HAS_CORE2_BUTTONS
   #endif
 
   #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
@@ -847,6 +873,26 @@
       #define D_PULL true
     #endif
 
+    #ifdef MARAUDER_M5STACK_CORE2_AWS
+      // The Core2 exposes three capacitive zones below the visible LCD. They
+      // are sampled by Display and intentionally have no GPIO assignment.
+      #define L_BTN -1
+      #define C_BTN -1
+      #define U_BTN -1
+      #define R_BTN -1
+      #define D_BTN -1
+
+      #define HAS_U
+      #define HAS_D
+      #define HAS_C
+
+      #define L_PULL true
+      #define C_PULL true
+      #define U_PULL true
+      #define R_PULL true
+      #define D_PULL true
+    #endif
+
     #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
       #define L_BTN -1
       #define C_BTN 0
@@ -1088,6 +1134,70 @@
 
   //// DISPLAY DEFINITIONS
   #ifdef HAS_SCREEN
+
+    #if defined(MARAUDER_M5STACK_CORE2_AWS)
+      #define CHAN_PER_PAGE 14
+      #define SCREEN_CHAR_WIDTH 53
+      #define HAS_ILI9341
+      #define BANNER_TEXT_SIZE 1
+      #define SCREEN_BUFFER
+      #define MAX_SCREEN_BUFFER 13
+
+      #ifndef TFT_WIDTH
+        #define TFT_WIDTH 240
+      #endif
+      #ifndef TFT_HEIGHT
+        #define TFT_HEIGHT 320
+      #endif
+
+      #define SCREEN_ORIENTATION 1
+      #define SCREEN_WIDTH TFT_HEIGHT
+      #define SCREEN_HEIGHT TFT_WIDTH
+      #define GRAPH_VERT_LIM (SCREEN_HEIGHT / 2 - 1)
+      #define EXT_BUTTON_WIDTH 0
+      #define CHAR_WIDTH 6
+      #define HEIGHT_1 SCREEN_HEIGHT
+      #define WIDTH_1 SCREEN_WIDTH
+      #define STANDARD_FONT_CHAR_LIMIT (SCREEN_WIDTH / 6)
+      #define TEXT_HEIGHT 16
+      #define BOT_FIXED_AREA 0
+      #define TOP_FIXED_AREA 32
+      #define YMAX SCREEN_HEIGHT
+      #define minimum(a,b) (((a) < (b)) ? (a) : (b))
+      #define MENU_FONT &FreeMono9pt7b
+      #define BUTTON_SCREEN_LIMIT 8
+      #define BUTTON_ARRAY_LEN BUTTON_SCREEN_LIMIT
+      #define STATUS_BAR_WIDTH 16
+      #define LVGL_TICK_PERIOD 6
+      #define STATUSBAR_COLOR 0x4A49
+
+      #define FRAME_X 100
+      #define FRAME_Y 64
+      #define FRAME_W 120
+      #define FRAME_H 50
+      #define REDBUTTON_X FRAME_X
+      #define REDBUTTON_Y FRAME_Y
+      #define REDBUTTON_W (FRAME_W / 2)
+      #define REDBUTTON_H FRAME_H
+      #define GREENBUTTON_X (REDBUTTON_X + REDBUTTON_W)
+      #define GREENBUTTON_Y FRAME_Y
+      #define GREENBUTTON_W (FRAME_W / 2)
+      #define GREENBUTTON_H FRAME_H
+
+      #define TFT_MISO 38
+      #define TFT_MOSI 23
+      #define TFT_SCLK 18
+      #define TFT_CS 5
+      #define TFT_DC 15
+      #define TFT_RST -1
+      #define TFT_BL -1
+      #define TOUCH_CS -1
+      #define CTP_RST -1
+      #define CTP_SDA 21
+      #define CTP_SCL 22
+      #define CAP_TOUCH_PANEL_WIDTH 320
+      #define CAP_TOUCH_PANEL_HEIGHT 280
+    #endif
 
     #ifdef MARAUDER_M5STICKC
       #define CHAN_PER_PAGE 7
@@ -2326,6 +2436,21 @@
   //// END DISPLAY DEFINITIONS
 
   //// MENU DEFINITIONS
+  #if defined(MARAUDER_M5STACK_CORE2_AWS)
+    #define BANNER_TIME 50
+    #define COMMAND_PREFIX "!"
+    #define KEY_X (SCREEN_WIDTH / 2)
+    #define KEY_Y 44
+    #define KEY_W SCREEN_WIDTH
+    #define KEY_H 24
+    #define KEY_SPACING_X 0
+    #define KEY_SPACING_Y 1
+    #define KEY_TEXTSIZE 1
+    #define ICON_W 22
+    #define ICON_H 22
+    #define BUTTON_PADDING 28
+  #endif
+
   #ifdef MARAUDER_V4
     #define BANNER_TIME 100
     
@@ -2714,6 +2839,14 @@
       #define SD_CS -1
     #endif
 
+    #if defined(MARAUDER_M5STACK_CORE2_AWS)
+      #define SD_CS 4
+      #define SD_SCK 18
+      #define SD_MISO 38
+      #define SD_MOSI 23
+      #define HAS_SEPARATE_SD
+    #endif
+
     #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
       //#define SS      12
       #define SD_CS   12
@@ -2827,6 +2960,8 @@
   //// MEMORY LOWER LIMIT STUFF
   // These values are in bytes
   #ifdef MARAUDER_M5STICKC
+    #define MEM_LOWER_LIM 10000
+  #elif defined(MARAUDER_M5STACK_CORE2_AWS)
     #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
     #define MEM_LOWER_LIM 10000
@@ -2991,6 +3126,10 @@
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 33
       #define GPS_RX 32
+    #elif defined(MARAUDER_M5STACK_CORE2_AWS)
+      #define GPS_SERIAL_INDEX 2
+      #define GPS_TX 13
+      #define GPS_RX 14
     #elif defined(MARAUDER_CARDPUTER)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 1
@@ -3039,6 +3178,10 @@
 
     #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2) 
       #define I2C_SDA 33
+      #define I2C_SCL 22
+
+    #elif defined(MARAUDER_M5STACK_CORE2_AWS)
+      #define I2C_SDA 21
       #define I2C_SCL 22
 
     #elif defined(MARAUDER_KIT)
