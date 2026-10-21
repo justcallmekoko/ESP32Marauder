@@ -387,7 +387,10 @@ void EvilPortal::sendToDisplay(String msg) {
       display_string.concat(" ");
     }
     display_obj.loading = true;
-    display_obj.queueLine(display_string);
+    // Portal HTML lives in internal heap on no-PSRAM targets and can put the
+    // general allocation guard into pressure mode. Keep these bounded status
+    // and credential lines visible while still respecting queue backpressure.
+    display_obj.queueCriticalLine(display_string);
     display_obj.loading = false;
   #endif
 }

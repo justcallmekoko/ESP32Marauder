@@ -56,6 +56,15 @@ class LegacyMemoryProfileTests(unittest.TestCase):
         self.assertIn("free(index_html);", source)
         self.assertIn("index_html = nullptr;", source)
 
+    def test_portal_feedback_survives_dynamic_html_pressure(self):
+        portal = (ROOT / "esp32_marauder/EvilPortal.cpp").read_text(encoding="utf-8")
+        display = (ROOT / "esp32_marauder/Display.cpp").read_text(encoding="utf-8")
+        self.assertIn("display_obj.queueCriticalLine(display_string)", portal)
+        critical = display.split("bool Display::queueCriticalLine", 1)[1]
+        critical = critical.split("void Display::displayBuffer", 1)[0]
+        self.assertIn("display_queue_pressure.allow", critical)
+        self.assertNotIn("RuntimeMemoryGuard", critical)
+
     def test_watch_model_lookup_cannot_overrun_table(self):
         source = (ROOT / "esp32_marauder/WiFiScan.cpp").read_text(encoding="utf-8")
         self.assertIn("WATCH_MODEL_COUNT", source)
