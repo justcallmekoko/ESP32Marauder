@@ -5,7 +5,7 @@
 
 #include "configs.h"
 
-#if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+#if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
   #include "Keyboard.h"
 #endif
 
@@ -183,6 +183,8 @@ class MenuFunctions
     uint32_t marquee_selected_since = 0;
     MenuInputRepeat menu_up_repeat;
     MenuInputRepeat menu_down_repeat;
+    MenuInputRepeat menu_touch_up_repeat;
+    MenuInputRepeat menu_touch_down_repeat;
     int8_t menu_touch_button = -1;
 
     void buildWiFiFoxHuntMenu();
@@ -352,10 +354,13 @@ class MenuFunctions
     #endif
     //#endif
 
-    #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
-      Keyboard_Class M5CardputerKeyboard = Keyboard_Class();
+    #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
       void updateKeyboard();
       bool isKeyPressed(char c);
+    #endif
+
+    #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD) || defined(HAS_TOUCH)
+      bool textInput(char *buffer, size_t bufLen, const char *title);
     #endif
 
   public:
@@ -411,5 +416,3 @@ class MenuFunctions
 
 #endif
 #endif
-
-
