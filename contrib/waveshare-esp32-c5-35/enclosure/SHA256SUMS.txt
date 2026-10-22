@@ -1,0 +1,9 @@
+860443ca524614b4136340309f7fb62e547e8751f8fbc795b0efc709f0d2a565  esp32-c5-carrier-v2.stl
+117d6b0a62f435e310ba3db8e9098bcf202e32324d89bde8af116379af0e44d3  esp32-c5-clamp-v2.stl
+a5d5ec49f6a7ff0f8bcebc8efb623c712eb8e5de3f608f62fbfed2f47ecbbf80  esp32-c5-port-fit-test-v2.stl
+035cb1ea1359e81f6ab35ec3689f6d1cc111ef1e48365c4d79ba795369999a0b  waveshare-35-display-retainer-v2.stl
+775ff91bb440d2a1f60cae7c3272eddabcbeecb4cde15ca2551581982a2d4d54  waveshare-35-front-housing-v2.stl
+3803bee038ff1ae1178de32610a75aa2b403eafba9811950e1e135d1ecb79be7  waveshare-35-rear-adapter-v2.stl
+f5f3ba4e392aec5a3cc2db44cd0241e47ad222cb868219b6afb80a23ad7caf59  waveshare-35-rear-shell-v2.stl
+a97d69514a10a2e5dca7ff2e16a0c5efdf169e132a623ab8a0b43139c5c2f80c  waveshare-35-stylus-clip-fit-test-v1.stl
+728fed7c808f5c9a58912e34343c6d8109c27feea21d314135fd03c61b90fe90  waveshare-35-stylus-holder-v1.stl
