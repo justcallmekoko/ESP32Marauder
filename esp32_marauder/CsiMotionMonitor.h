@@ -49,9 +49,11 @@ class CsiMotionMonitor {
   const char* stateLabel() const;
   void updateFusion(uint32_t now_ms);
   int findTarget(const uint8_t mac[6]) const;
+  bool allocateQueue();
+  void releaseQueue();
   void releaseTargets();
 
-  Sample queue_[kQueueSize] = {};
+  Sample* queue_ = nullptr;
   volatile uint8_t write_index_ = 0;
   volatile uint8_t read_index_ = 0;
   volatile uint32_t accepted_ = 0;

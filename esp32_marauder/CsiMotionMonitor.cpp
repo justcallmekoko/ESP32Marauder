@@ -4,6 +4,7 @@
 
 #include <string.h>
 #include <new>
+#include "MemoryGuard.h"
 #include "WiFiScan.h"
 #if defined(HAS_SCREEN)
   #include "Display.h"
@@ -109,6 +110,8 @@ void CsiMotionMonitor::releaseWiFi() {
 bool CsiMotionMonitor::start(const uint8_t target[6], const String& name,
                              uint8_t channel) {
   stop();
+  if (!allocateQueue())
+    return false;
   memcpy(target_, target, sizeof(target_));
   target_name_ = name;
   channel_ = channel;
@@ -118,6 +121,7 @@ bool CsiMotionMonitor::start(const uint8_t target[6], const String& name,
     targets_ = static_cast<Target*>(malloc(sizeof(Target) * target_count_));
   if (!targets_) {
     target_count_ = 0;
+    releaseQueue();
     return false;
   }
   Target* target_state = new (&targets_[0]) Target();
@@ -139,6 +143,7 @@ bool CsiMotionMonitor::start(const uint8_t target[6], const String& name,
   if (!takeWiFi()) {
     releaseWiFi();
     releaseTargets();
+    releaseQueue();
     return false;
   }
   active_ = true;
@@ -158,6 +163,7 @@ void CsiMotionMonitor::stop() {
   active_ = false;
   releaseWiFi();
   releaseTargets();
+  releaseQueue();
   if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CSI_MOTION)
     wifi_scan_obj.currentScanMode = WIFI_SCAN_OFF;
 }
@@ -185,7 +191,7 @@ void CsiMotionMonitor::callback(void* context, wifi_csi_info_t* info) {
 }
 
 void CsiMotionMonitor::enqueue(wifi_csi_info_t* info) {
-  if (!active_ || !info->buf)
+  if (!active_ || !queue_ || !info->buf)
     return;
   const int target_index = findTarget(info->mac);
   if (target_index < 0)
@@ -214,6 +220,25 @@ int CsiMotionMonitor::findTarget(const uint8_t mac[6]) const {
       return i;
   }
   return -1;
+}
+
+bool CsiMotionMonitor::allocateQueue() {
+  if (queue_)
+    return true;
+  const size_t bytes = sizeof(Sample) * kQueueSize;
+  queue_ = static_cast<Sample*>(ps_malloc(bytes));
+  if (!queue_ && marauder::RuntimeMemoryGuard::instance().allow(bytes))
+    queue_ = static_cast<Sample*>(malloc(bytes));
+  if (!queue_)
+    return false;
+  memset(queue_, 0, bytes);
+  return true;
+}
+
+void CsiMotionMonitor::releaseQueue() {
+  free(queue_);
+  queue_ = nullptr;
+  write_index_ = read_index_ = 0;
 }
 
 void CsiMotionMonitor::releaseTargets() {
