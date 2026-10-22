@@ -238,6 +238,7 @@
 #define WIGLE_UPLOAD 0
 #define WDG_UPLOAD   1
 #define BOTH_UPLOAD  2
+#define WARDRIFT_UPLOAD 3
 
 extern EvilPortal evil_portal_obj;
 
@@ -781,6 +782,7 @@ class WiFiScan
 
     bool wigleUpload(String filePath);
     bool wdgwarsUpload(String filePath);
+    bool wardriftUpload(String filePath);
     void writeSidecar(String filePath, String service);
     bool sidecarExists(String filePath, String service); 
     #ifdef HAS_SCREEN

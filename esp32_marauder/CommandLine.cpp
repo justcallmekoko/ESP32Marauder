@@ -690,6 +690,8 @@ void CommandLine::runCommand(String input) {
         upload_dest = WIGLE_UPLOAD;
       else if (upload_dest_arg == "both")
         upload_dest = BOTH_UPLOAD;
+      else if (upload_dest_arg == "wardrift")
+        upload_dest = WARDRIFT_UPLOAD;
 
       if (upload_dest > -1) {
         if (!wifi_scan_obj.joinSavedWiFi(false)) {
@@ -699,7 +701,7 @@ void CommandLine::runCommand(String input) {
         delay(1000);
         for (int i = 0; i < sd_obj.sd_files->size(); i++) {
           if (sd_obj.sd_files->get(i).startsWith("wardrive_") || sd_obj.sd_files->get(i).startsWith("wigle-")) {
-            if (!sd_obj.sd_files->get(i).endsWith(".wigle") && !sd_obj.sd_files->get(i).endsWith(".wdg") && !sd_obj.sd_files->get(i).endsWith(".gpx")) {
+            if (!sd_obj.sd_files->get(i).endsWith(".wigle") && !sd_obj.sd_files->get(i).endsWith(".wdg") && !sd_obj.sd_files->get(i).endsWith(".wardrift") && !sd_obj.sd_files->get(i).endsWith(".gpx")) {
               Serial.println("Uploading " + sd_obj.sd_files->get(i) + "...");
               if (wifi_scan_obj.uploadFile("/" + sd_obj.sd_files->get(i), true, upload_dest)) {
                 Serial.println("Upload OK");
