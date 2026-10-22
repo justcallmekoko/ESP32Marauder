@@ -4302,6 +4302,9 @@ void WiFiScan::RunLoadSSIDList() {
       #endif
       return;
     }
+
+    this->clearList(CLEAR_SSID);
+
     while (log_file.available()) {
       String line = log_file.readStringUntil('\n'); // Read until newline character
       this->addSSID(line);
