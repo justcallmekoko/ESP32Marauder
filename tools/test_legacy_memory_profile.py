@@ -56,6 +56,23 @@ class LegacyMemoryProfileTests(unittest.TestCase):
         self.assertIn("free(index_html);", source)
         self.assertIn("index_html = nullptr;", source)
 
+    def test_csi_queue_is_allocated_only_while_active(self):
+        header = (ROOT / "esp32_marauder/CsiMotionMonitor.h").read_text(
+            encoding="utf-8"
+        )
+        source = (ROOT / "esp32_marauder/CsiMotionMonitor.cpp").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("Sample* queue_ = nullptr;", header)
+        self.assertNotIn("Sample queue_[kQueueSize]", header)
+        self.assertIn("bool CsiMotionMonitor::allocateQueue()", source)
+        self.assertIn("queue_ = static_cast<Sample*>(ps_malloc(bytes));", source)
+        self.assertIn("RuntimeMemoryGuard::instance().allow(bytes)", source)
+        self.assertIn("queue_ = static_cast<Sample*>(malloc(bytes));", source)
+        self.assertIn("void CsiMotionMonitor::releaseQueue()", source)
+        self.assertIn("free(queue_);", source)
+        self.assertIn("releaseQueue();", source[source.index("void CsiMotionMonitor::stop()"):])
+
     def test_portal_feedback_survives_dynamic_html_pressure(self):
         portal = (ROOT / "esp32_marauder/EvilPortal.cpp").read_text(encoding="utf-8")
         display = (ROOT / "esp32_marauder/Display.cpp").read_text(encoding="utf-8")
