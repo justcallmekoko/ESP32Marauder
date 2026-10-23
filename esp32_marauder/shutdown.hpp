@@ -22,7 +22,7 @@
     #endif
 
     #if defined(MARAUDER_WS_C5_28)
-      CH32V003_obj.SetAudio(0);
+      CH32V00X_obj.SetAudio(0);
     #endif
       
 

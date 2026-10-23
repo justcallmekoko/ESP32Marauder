@@ -66,5 +66,79 @@ class RetainedDevelopFeatureTests(unittest.TestCase):
             renderer.index("drawFastHLine(PACKET_MONITOR_GRAPH_LEFT, plot_top"),
         )
 
+    def test_boolean_setting_toggle_updates_the_rendered_menu_row(self):
+        source = (ROOT / "esp32_marauder" / "MenuFunctions.cpp").read_text()
+        settings_menu = source[source.index("// Settings menu"):
+                               source.index("Serial.println(\"Finished settings nodes\")")]
+        self.assertIn(
+            "const int settings_menu_index = settingsMenu.list->size();",
+            settings_menu,
+        )
+        self.assertIn(
+            "[this, settings_menu_index, settingName]()",
+            settings_menu,
+        )
+        self.assertIn(
+            "displaySetting(settingName.c_str(), &settingsMenu, settings_menu_index);",
+            settings_menu,
+        )
+        self.assertNotIn(
+            "displaySetting(settingName.c_str(), &settingsMenu, i + 1);",
+            settings_menu,
+        )
+
+    def test_csi_monitor_streams_refined_status_but_not_raw_data(self):
+        monitor = (ROOT / "esp32_marauder" / "CsiMotionMonitor.cpp").read_text()
+        sketch = (ROOT / "esp32_marauder" / "esp32_marauder.ino").read_text()
+        self.assertNotIn("CSI_RAW", monitor)
+        self.assertNotIn("CSI_METRIC", monitor)
+        self.assertNotIn("CSI_SESSION", monitor)
+        self.assertNotIn("CSI_SCHEMA", monitor)
+        self.assertNotIn("writeRawRecord", monitor)
+        self.assertIn('"CSI motion | state=%s | motion=%u | reliability=%u', monitor)
+        self.assertIn("Serial.begin(115200);", sketch)
+        self.assertNotIn("Serial.begin(921600);", sketch)
+
+    def test_csi_motion_is_available_on_mini_v3_with_compact_controls(self):
+        config = (ROOT / "esp32_marauder" / "configs.h").read_text()
+        monitor = (ROOT / "esp32_marauder" / "CsiMotionMonitor.cpp").read_text()
+        menu = (ROOT / "esp32_marauder" / "MenuFunctions.cpp").read_text()
+        self.assertIn("defined(MARAUDER_MINI_V3)", config)
+        self.assertIn('display_obj.tft.print("Up=Cal C=Stop");', monitor)
+        self.assertIn(
+            "else if (wifi_scan_obj.currentScanMode == WIFI_SCAN_CSI_MOTION)",
+            menu,
+        )
+        self.assertIn("csi_motion_obj.recalibrate();", menu)
+
+    def test_csi_motion_has_separate_classic_esp32_path(self):
+        config = (ROOT / "esp32_marauder" / "configs.h").read_text()
+        monitor = (ROOT / "esp32_marauder" / "CsiMotionMonitor.cpp").read_text()
+        model = (ROOT / "esp32_marauder" / "CsiMotionModel.cpp").read_text()
+        for target in ("MARAUDER_V4", "MARAUDER_V6", "MARAUDER_V6_1",
+                       "MARAUDER_V7", "MARAUDER_V7_1"):
+            self.assertIn(f"defined({target})", config)
+        self.assertIn("config.lltf_en = true;", monitor)
+        self.assertIn("config.htltf_en = false;", monitor)
+        self.assertIn("config.stbc_htltf2_en = false;", monitor)
+        self.assertIn("config.channel_filter_en = false;", monitor)
+        self.assertIn("SampleEncoding::SIGNED_8_IMAG_REAL", monitor)
+        self.assertIn("Original ESP32 CSI is emitted as signed int8", model)
+
+    def test_csi_motion_covers_supported_chip_families_and_headless_cli(self):
+        config = (ROOT / "esp32_marauder" / "configs.h").read_text()
+        monitor = (ROOT / "esp32_marauder" / "CsiMotionMonitor.cpp").read_text()
+        cli_h = (ROOT / "esp32_marauder" / "CommandLine.h").read_text()
+        cli_cpp = (ROOT / "esp32_marauder" / "CommandLine.cpp").read_text()
+        for target in ("MARAUDER_CARDPUTER_ADV", "MARAUDER_MULTIBOARD_S3",
+                       "MARAUDER_FLIPPER", "MARAUDER_M5_NANO_C6",
+                       "MARAUDER_C5", "MARAUDER_PANCAKE", "MARAUDER_POOM"):
+            self.assertIn(f"defined({target})", config)
+        self.assertIn("#if !CONFIG_SOC_WIFI_HE_SUPPORT", monitor)
+        self.assertIn("#if defined(CONFIG_IDF_TARGET_ESP32C5)", monitor)
+        self.assertIn('CSI_MOTION_CMD[] = "csimotion"', cli_h)
+        self.assertIn("csi_motion_obj.start(ap.bssid, ap.essid, ap.channel)", cli_cpp)
+        self.assertIn("csi_motion_obj.printStatus();", cli_cpp)
+
 if __name__ == "__main__":
     unittest.main()

@@ -3,13 +3,20 @@
 #ifdef HAS_AXP192
 
 #ifndef AXP192_SDA
-  #ifdef I2C_SDA
-     #define AXP192_SDA I2C_SDA
-     #define AXP192_SCL I2C_SCL
-  #else
+  #if defined(MARAUDER_M5STACK_CORE2_AWS) || !defined(I2C_SDA)
      #define AXP192_SDA 21
      #define AXP192_SCL 22
-   #endif
+     #define AXP192_WIRE &Wire1
+  #else
+     #define AXP192_SDA I2C_SDA
+     #define AXP192_SCL I2C_SCL
+     #define AXP192_WIRE &Wire
+  #endif
+#endif
+
+// Should me set with AXP192_SDA
+#ifndef AXP192_WIRE
+  #define AXP192_WIRE &Wire1
 #endif
 
 AXP192::AXP192() {
@@ -17,11 +24,7 @@ AXP192::AXP192() {
 
 void AXP192::begin(void) {
 
-    #if defined(I2C_SDA) && (AXP192_SDA == I2C_SDA)
-      _wire = &Wire;
-    #else
-      _wire = &Wire1;
-    #endif
+    _wire = AXP192_WIRE;
 
     _wire->begin(AXP192_SDA, AXP192_SCL);
 

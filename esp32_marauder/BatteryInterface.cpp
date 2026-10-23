@@ -43,11 +43,11 @@ void BatteryInterface::RunSetup() {
   log_d("BatteryInterface::RunSetup");
   #ifdef HAS_BATTERY
 
-    #if defined(HAS_CH32V003)
+    #if defined(HAS_CH32V00X)
         this->supported = true;
         this->has_adc_battery = true;
 
-      log_d("BatteryInterface::RunSetup: HAS_CH32V003");
+      log_d("BatteryInterface::RunSetup: HAS_CH32V00X");
       // Do Nothing (yet)`
 
     #elif defined(BATTERY_ADC_PIN)
@@ -115,9 +115,9 @@ int8_t BatteryInterface::getBatteryLevel() {
 
   #ifdef HAS_BATTERY
 
-    #ifdef HAS_CH32V003
+    #ifdef HAS_CH32V00X
       if (this->has_adc_battery) {
-        float bVolt =    CH32V003_obj.readBatteryVoltage();
+        float bVolt =    CH32V00X_obj.readBatteryVoltage();
         // log_d("BatteryVoltage = %f", bVolt);
         // float batteryPct = (bVolt - 3.0) / (4.2 - 3.0) * 100.0;
         float batteryPct = (bVolt - 3.0) / (4.15 - 3.0) * 100.0;

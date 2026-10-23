@@ -51,6 +51,7 @@ class Settings {
       bool  ForceProbe  = false;
       bool  SavePCAP    = true;
       bool  TimeStPCAP  = true;
+      bool  Censor        = false;
       bool  EnableLED   = true;
       bool  EPDeauth    = false;
       bool  ChanHop     = false;

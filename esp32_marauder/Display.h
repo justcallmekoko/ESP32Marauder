@@ -30,14 +30,17 @@
 #if (defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)) && !defined(ST7789_2_DRIVER)
   #error "Cardputer targets require their ST7789_2_DRIVER TFT_eSPI setup"
 #endif
+#if defined(MARAUDER_M5STACK_CORE2_AWS) && !defined(ILI9341_DRIVER)
+  #error "M5Stack Core2 target requires its ILI9341_DRIVER TFT_eSPI setup"
+#endif
 
 #if defined( HAS_CYD_TOUCH) || defined(MARAUDER_CYD_HMI)
   #include <XPT2046_Touchscreen.h>
 #endif
 
 // #ifdef MARAUDER_WS_C5_28
-//   #include <CH32V003_IOExpander.hpp>
-//   extern CH32V003_IOExpander CH32V003_obj;
+//   #include <CH32V00X_IOExpander.hpp>
+//   extern CH32V00X_IOExpander CH32V00X_obj;
 // #endif
 
 
@@ -116,6 +119,12 @@ class Display
     boolean change_colour = 1;
     boolean selected = 1;
 
+    #ifdef MARAUDER_M5STACK_CORE2_AWS
+      bool core2_full_touch_input = false;
+      int8_t core2_front_button = -1;
+      uint32_t core2_front_button_seen = 0;
+    #endif
+
     void drawFrame();
 
     #ifdef SCREEN_BUFFER
@@ -172,6 +181,10 @@ class Display
     int8_t menuButton(uint16_t *x, uint16_t *y, bool pressed, bool check_hold = false);
     uint8_t updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold = 600);
     bool isTouchHeld(uint16_t threshold = 600);
+    #ifdef MARAUDER_M5STACK_CORE2_AWS
+      void setFullTouchInput(bool enabled) { core2_full_touch_input = enabled; }
+      bool isFrontButtonTouch() const { return core2_front_button >= 0; }
+    #endif
     void tftDrawGraphObjects(byte x_scale);
     void tftDrawEapolColorKey(bool filter = false);
     void tftDrawColorKey();
@@ -183,6 +196,7 @@ class Display
     void buildBanner(String msg, int xpos);
     void clearScreen();
     bool queueLine(const String& line);
+    bool queueCriticalLine(const String& line);
     void displayBuffer(bool do_clear = false);
     void drawBootSplash();
     void getTouchWhileFunction(bool pressed);

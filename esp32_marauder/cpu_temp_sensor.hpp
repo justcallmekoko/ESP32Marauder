@@ -19,7 +19,7 @@
 
 #include "driver/temperature_sensor.h"
 
-inline temperature_sensor_handle_t temp_handle = NULL;
+inline temperature_sensor_handle_t temp_handle = 0;
 inline float _celsius = 0.0;
 
 inline bool init_sys_temp() {
@@ -31,7 +31,6 @@ esp_err_t x = 0;
     temperature_sensor_config_t temp_sensor_config = TEMPERATURE_SENSOR_CONFIG_DEFAULT(-10, 80);
 
     // Install and enable the internal sensor
-    x = temperature_sensor_install(&temp_sensor_config, &temp_handle);
     x = ESP_ERROR_CHECK_WITHOUT_ABORT(temperature_sensor_install(&temp_sensor_config, &temp_handle));
 
     log_d("temperature_sensor_install: x = %d", x);
@@ -41,6 +40,12 @@ esp_err_t x = 0;
 
     log_d("temperature_sensor_enable: x = %d", x);
     log_d("x = %d", x);
+
+    if ( x == 259) {
+      log_d("Retry temperature_sensor_enable");
+      temperature_sensor_disable(temp_handle);
+      x = ESP_ERROR_CHECK_WITHOUT_ABORT(temperature_sensor_enable(temp_handle));
+    }
     return x == ESP_OK;
   }
 

@@ -20,6 +20,7 @@
   //// BOARD TARGETS
   //#define MARAUDER_M5STICKC
   //#define MARAUDER_M5STICKCP2
+  //#define MARAUDER_M5STACK_CORE2_AWS
   //#define MARAUDER_MINI
   //#define MARAUDER_V4
   //#define MARAUDER_V6
@@ -33,6 +34,7 @@
   //#define ESP32_LDDB
   //#define MARAUDER_DEV_BOARD_PRO
   //#define XIAO_ESP32_S3
+  //#define XIAO_ESP32_C5
   //#define MARAUDER_REV_FEATHER
   //#define MARAUDER_CYD_MICRO // 2432S028
   //#define MARAUDER_CYD_2USB // Another 2432S028 but it has tWo UsBs OoOoOoO
@@ -50,13 +52,28 @@
   //#define DUAL_MINI_C5
   //#define MARAUDER_WS_C5_28
   //#define MARAUDER_POOM
+  // Waveshare ESP32-C5-Touch-LCD-3.5 board. Same silicon/panel class as the
+  // Pancake V8 (ESP32-C5, ST7796 320x480, FT6336), so reuse Pancake's verified
+  // C5 feature + geometry logic and override only this board's differing pins below.
+  //#define MARAUDER_WS_C5_35
+  #ifdef MARAUDER_WS_C5_35
+    #define MARAUDER_PANCAKE
+    #define MARAUDER_WS_C5_35_OVERRIDE
+  #endif
   //// END BOARD TARGETS
+
+  // The official Arduino board package supplies this identifier for the XIAO
+  // ESP32-C5. Auto-select the matching Marauder profile so every translation
+  // unit receives the same hardware contract, including the generated sketch.
+  #if defined(ARDUINO_XIAO_ESP32C5) && !defined(XIAO_ESP32_C5)
+    #define XIAO_ESP32_C5
+  #endif
 
   // Allocated only while settings are loaded or updated. This accommodates
   // five saved WiFi profiles without permanently caching their passwords.
   #define JSON_SETTING_SIZE 6144
 
-#define MARAUDER_VERSION "v1.18.0"
+#define MARAUDER_VERSION "v1.19.2"
 
   #define GRAPH_REFRESH   100
 
@@ -77,6 +94,8 @@
     #define HARDWARE_NAME "M5Stick-C Plus"
   #elif defined(MARAUDER_M5STICKCP2)
     #define HARDWARE_NAME "M5Stick-C Plus2"
+  #elif defined(MARAUDER_M5STACK_CORE2_AWS)
+    #define HARDWARE_NAME "M5Stack Core2 for AWS"
   #elif defined(MARAUDER_CARDPUTER)
     #define HARDWARE_NAME "M5 Cardputer"
   #elif defined(MARAUDER_CARDPUTER_ADV)
@@ -117,6 +136,8 @@
     #define HARDWARE_NAME "XIAO ESP32 S3"
   #elif defined(MARAUDER_CYD_HMI)
     #define HARDWARE_NAME "LILYGO T-HMI ESP32-S3 2.8 inch"
+  #elif defined(XIAO_ESP32_C5)
+    #define HARDWARE_NAME "Seeed Studio XIAO ESP32-C5"
   #elif defined(MARAUDER_C5)
     #define HARDWARE_NAME "ESP32-C5 DevKit"
   #elif defined(MARAUDER_T_DONGLE_C5)
@@ -146,9 +167,38 @@
     #define MARAUDER_MINI_V3
   #endif
 
+  // CSI is provided by every ESP32-family target in the supported build
+  // matrix. Chip-specific configuration and sample decoding live in
+  // CsiMotionMonitor; do not infer the sample format from this capability.
+  #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2) || \
+      defined(MARAUDER_M5STACK_CORE2_AWS) || \
+      defined(MARAUDER_MINI) || defined(MARAUDER_V4) || defined(MARAUDER_V6) || \
+      defined(MARAUDER_V6_1) || defined(MARAUDER_V7) || defined(MARAUDER_V7_1) || \
+      defined(MARAUDER_KIT) || defined(GENERIC_ESP32) || defined(MARAUDER_FLIPPER) || \
+      defined(MARAUDER_MULTIBOARD_S3) || defined(ESP32_LDDB) || \
+      defined(MARAUDER_DEV_BOARD_PRO) || defined(XIAO_ESP32_S3) || \
+      defined(XIAO_ESP32_C5) || defined(MARAUDER_REV_FEATHER) || \
+      defined(MARAUDER_CYD_MICRO) || defined(MARAUDER_CYD_2USB) || \
+      defined(MARAUDER_CYD_GUITION) || defined(MARAUDER_CYD_3_5_INCH) || \
+      defined(MARAUDER_C5) || defined(MARAUDER_T_DONGLE_C5) || \
+      defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || \
+      defined(MARAUDER_V8) || defined(MARAUDER_PANCAKE) || \
+      defined(MARAUDER_MINI_V3) || defined(MARAUDER_M5_NANO_C6) || \
+      defined(MARAUDER_POOM)
+    #define HAS_CSI_MOTION
+  #endif
+
+  #if defined(MARAUDER_MINI_V3) || defined(MARAUDER_V7) || \
+      defined(MARAUDER_V7_1) || defined(MARAUDER_CARDPUTER) || \
+      defined(MARAUDER_CARDPUTER_ADV) || defined(MARAUDER_M5STICKC) || \
+      defined(MARAUDER_M5STICKCP2) || defined(MARAUDER_MINI) || \
+      defined(MARAUDER_M5STACK_CORE2_AWS) || \
+      defined(MARAUDER_REV_FEATHER)
+    #define HAS_CSI_BUTTON_CONTROLS
+  #endif
+
   #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
     //#define FLIPPER_ZERO_HAT
-    #define HAS_MINI_KB
     #define HAS_BATTERY
       #if defined(MARAUDER_M5STICKC)
         #define HAS_AXP192
@@ -170,6 +220,28 @@
     #define HAS_DIRECT_UPLOAD
   #endif
 
+  #if defined(MARAUDER_M5STACK_CORE2_AWS)
+    #define HAS_BT
+    #define HAS_BUTTONS
+    #define HAS_SCREEN
+    #define HAS_FULL_SCREEN
+    #define HAS_SD
+    #define USE_SD
+    #define HAS_TEMP_SENSOR
+    #define HAS_GPS
+    #define HAS_BATTERY
+    #define HAS_PSRAM
+    #define HAS_FACES_KEYBOARD
+    #define HAS_DIRECT_UPLOAD
+    #define HAS_CSI_BUTTON_CONTROLS
+    #define HAS_IDF_3
+    #define HAS_NIMBLE_2
+    #define HAS_AXP192
+    #define HAS_TOUCH
+    #define HAS_CAP_TOUCH
+    #define HAS_CORE2_BUTTONS
+  #endif
+
   #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
     //#define FLIPPER_ZERO_HAT
     #define HAS_MINI_KB
@@ -184,6 +256,8 @@
     #define USE_SD
     #define HAS_TEMP_SENSOR
     #define HAS_GPS
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3
     #define HAS_DIRECT_UPLOAD
 
     #ifdef MARAUDER_CARDPUTER_ADV
@@ -565,6 +639,16 @@
       #endif
     #endif
     */
+  #ifdef XIAO_ESP32_C5
+    // Headless native-USB target. GPIO13/GPIO14 are reserved for USB D-/D+.
+    #define HAS_BT
+    #define HAS_GPS
+    #define HAS_DUAL_BAND
+    #define HAS_PSRAM
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3
+    #define XIAO_LED_PIN 27
+  #endif
 
   #ifdef MARAUDER_C5
     //#define HAS_FLIPPER_LED
@@ -702,8 +786,8 @@
       #define HAS_TOUCH
         #define HAS_CAP_TOUCH
         #define HAS_CST3530 1      // distinguish from CST820
-      #define HAS_CH32V003         // CH32V003 IO expander
-        #define CH32V003_I2C_ADDR 0x24
+      #define HAS_CH32V00X         // CH32V003 IO expander
+        #define CH32V00X_I2C_ADDR 0x24
       #define HAS_TEMP_SENSOR
         #define HAS_SHTC3
       // Platform capabilities
@@ -715,7 +799,7 @@
       #define HAS_RTC
         #define HAS_PCF85063         // i2c real-time clock (RTC)
       #define HAS_GPS
-        // #define HAS_GPSI2C
+        #define HAS_GPSI2C
       // #define HAS_CYD_PORTRAIT
       #define HAS_IDF_3
       // HAS_MIC
@@ -758,6 +842,22 @@
     //#define HAS_DIRECT_UPLOAD
   #endif
 
+  // The bare XIAO carrier has no SD hardware. Keep the capability absent even
+  // when another build-time definition is present in a shared build setup.
+  #ifdef XIAO_ESP32_C5
+    #undef HAS_C5_SD
+    #undef HAS_SD
+    #undef USE_SD
+  #endif
+
+  // Conserve internal RAM on every supported target that has neither PSRAM
+  // nor an ESP32-C5. C5 targets retain their full capacities even when a
+  // particular board does not expose PSRAM.
+  #if !defined(HAS_PSRAM) && \
+      !defined(MARAUDER_C5) && !defined(MARAUDER_T_DONGLE_C5) && \
+      !defined(XIAO_ESP32_C5) && !defined(DUAL_MINI_C5)
+    #define MARAUDER_NO_PSRAM_MEMORY_PROFILE
+  #endif
   //// END BOARD FEATURES
 
     #ifndef GMTOFFSET_SEC
@@ -887,6 +987,26 @@
       #if defined(MARAUDER_M5STICKCP2)
         #define HAS_U
       #endif
+      #define HAS_D
+      #define HAS_C
+
+      #define L_PULL true
+      #define C_PULL true
+      #define U_PULL true
+      #define R_PULL true
+      #define D_PULL true
+    #endif
+
+    #ifdef MARAUDER_M5STACK_CORE2_AWS
+      // The Core2 exposes three capacitive zones below the visible LCD. They
+      // are sampled by Display and intentionally have no GPIO assignment.
+      #define L_BTN -1
+      #define C_BTN -1
+      #define U_BTN -1
+      #define R_BTN -1
+      #define D_BTN -1
+
+      #define HAS_U
       #define HAS_D
       #define HAS_C
 
@@ -1166,6 +1286,70 @@
 
   //// DISPLAY DEFINITIONS
   #ifdef HAS_SCREEN
+
+    #if defined(MARAUDER_M5STACK_CORE2_AWS)
+      #define CHAN_PER_PAGE 14
+      #define SCREEN_CHAR_WIDTH 53
+      #define HAS_ILI9341
+      #define BANNER_TEXT_SIZE 1
+      #define SCREEN_BUFFER
+      #define MAX_SCREEN_BUFFER 13
+
+      #ifndef TFT_WIDTH
+        #define TFT_WIDTH 240
+      #endif
+      #ifndef TFT_HEIGHT
+        #define TFT_HEIGHT 320
+      #endif
+
+      #define SCREEN_ORIENTATION 1
+      #define SCREEN_WIDTH TFT_HEIGHT
+      #define SCREEN_HEIGHT TFT_WIDTH
+      #define GRAPH_VERT_LIM (SCREEN_HEIGHT / 2 - 1)
+      #define EXT_BUTTON_WIDTH 0
+      #define CHAR_WIDTH 6
+      #define HEIGHT_1 SCREEN_HEIGHT
+      #define WIDTH_1 SCREEN_WIDTH
+      #define STANDARD_FONT_CHAR_LIMIT (SCREEN_WIDTH / 6)
+      #define TEXT_HEIGHT 16
+      #define BOT_FIXED_AREA 0
+      #define TOP_FIXED_AREA 32
+      #define YMAX SCREEN_HEIGHT
+      #define minimum(a,b) (((a) < (b)) ? (a) : (b))
+      #define MENU_FONT &FreeMono9pt7b
+      #define BUTTON_SCREEN_LIMIT 8
+      #define BUTTON_ARRAY_LEN BUTTON_SCREEN_LIMIT
+      #define STATUS_BAR_WIDTH 16
+      #define LVGL_TICK_PERIOD 6
+      #define STATUSBAR_COLOR 0x4A49
+
+      #define FRAME_X 100
+      #define FRAME_Y 64
+      #define FRAME_W 120
+      #define FRAME_H 50
+      #define REDBUTTON_X FRAME_X
+      #define REDBUTTON_Y FRAME_Y
+      #define REDBUTTON_W (FRAME_W / 2)
+      #define REDBUTTON_H FRAME_H
+      #define GREENBUTTON_X (REDBUTTON_X + REDBUTTON_W)
+      #define GREENBUTTON_Y FRAME_Y
+      #define GREENBUTTON_W (FRAME_W / 2)
+      #define GREENBUTTON_H FRAME_H
+
+      #define TFT_MISO 38
+      #define TFT_MOSI 23
+      #define TFT_SCLK 18
+      #define TFT_CS 5
+      #define TFT_DC 15
+      #define TFT_RST -1
+      #define TFT_BL -1
+      #define TOUCH_CS -1
+      #define CTP_RST -1
+      #define CTP_SDA 21
+      #define CTP_SCL 22
+      #define CAP_TOUCH_PANEL_WIDTH 320
+      #define CAP_TOUCH_PANEL_HEIGHT 280
+    #endif
 
     #ifdef MARAUDER_M5STICKC
       #define CHAN_PER_PAGE 7
@@ -2582,6 +2766,21 @@
   //// END DISPLAY DEFINITIONS
 
   //// MENU DEFINITIONS
+  #if defined(MARAUDER_M5STACK_CORE2_AWS)
+    #define BANNER_TIME 50
+    #define COMMAND_PREFIX "!"
+    #define KEY_X (SCREEN_WIDTH / 2)
+    #define KEY_Y 44
+    #define KEY_W SCREEN_WIDTH
+    #define KEY_H 24
+    #define KEY_SPACING_X 0
+    #define KEY_SPACING_Y 1
+    #define KEY_TEXTSIZE 1
+    #define ICON_W 22
+    #define ICON_H 22
+    #define BUTTON_PADDING 28
+  #endif
+
   #ifdef MARAUDER_V4
     #define BANNER_TIME 100
 
@@ -2993,6 +3192,13 @@
     #elif defined(MARAUDER_M5STICKC)
       #define SD_CS -1
 
+    #elif defined(MARAUDER_M5STACK_CORE2_AWS)
+      #define SD_CS 4
+      #define SD_SCK 18
+      #define SD_MISO 38
+      #define SD_MOSI 23
+      #define HAS_SEPARATE_SD
+
     #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
       //#define SS      12
       #define SD_CS   12
@@ -3031,9 +3237,8 @@
       #define SD_MOSI           7    // shared
       #define SD_MISO           8    // dedicated MISO for SD
       #define SD_CS             23
-    #endif
 
-    #ifdef MARAUDER_POOM
+    #elif defined(MARAUDER_POOM)
       #define SD_CS 5
     #endif
 
@@ -3103,6 +3308,8 @@
   // These values are in bytes
   #ifdef MARAUDER_M5STICKC
     #define MEM_LOWER_LIM 10000
+  #elif defined(MARAUDER_M5STACK_CORE2_AWS)
+    #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
     #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_MINI)
@@ -3138,6 +3345,8 @@
   #elif defined(MARAUDER_DEV_BOARD_PRO)
     #define MEM_LOWER_LIM 10000
   #elif defined(XIAO_ESP32_S3)
+    #define MEM_LOWER_LIM 10000
+  #elif defined(XIAO_ESP32_C5)
     #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_C5)
     #define MEM_LOWER_LIM 10000
@@ -3266,6 +3475,10 @@
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 33
       #define GPS_RX 32
+    #elif defined(MARAUDER_M5STACK_CORE2_AWS)
+      #define GPS_SERIAL_INDEX 2
+      #define GPS_TX 13
+      #define GPS_RX 14
     #elif defined(MARAUDER_CARDPUTER)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 1
@@ -3282,6 +3495,10 @@
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 12 // External GPS TX -> T-Dongle UART0 RX
       #define GPS_RX 11 // External GPS RX -> T-Dongle UART0 TX
+    #elif defined(XIAO_ESP32_C5)
+      #define GPS_SERIAL_INDEX 1
+      #define GPS_TX 12 // External GPS TX -> XIAO D7 / UART RX
+      #define GPS_RX 11 // External GPS RX -> XIAO D6 / UART TX
     #elif defined(MARAUDER_C5)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 14
@@ -3321,12 +3538,26 @@
         #define I2C_SDA 21
         #define I2C_SCL 22
 
-      #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || defined(MARAUDER_KIT)
+    #elif defined(MARAUDER_M5STACK_CORE2_AWS)
+      #define I2C_SDA 21
+      #define I2C_SCL 22
+
+    #elif defined(MARAUDER_KIT)
         #define I2C_SDA 33
         #define I2C_SCL 22
         #define HAS_MAX1704X
         #undef HAS_AXP2101
         #undef HAS_IP5306
+
+    // V4, V6 and V6.1 are also used by compatible third-party boards that may
+    // have a MAX17048 expansion instead of an IP5306. Compile both probes and
+    // select the gauge that responds at runtime.
+    #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
+      #define I2C_SDA 33
+      #define I2C_SCL 22
+      #define HAS_IP5306
+      #define HAS_MAX1704X
+      #undef HAS_AXP2101
 
       #elif defined(MARAUDER_MINI)
         #define I2C_SDA 33
@@ -3388,7 +3619,7 @@
       #endif
 
       //  If we know what we have, we can delete what we're not using
-      #if defined(BATTERY_ADC_PIN) || defined(HAS_CH32V003)
+      #if defined(BATTERY_ADC_PIN) || defined(HAS_CH32V00X)
         #undef HAS_AXP2101
         #undef HAS_IP5306
         #undef HAS_MAX1704X
@@ -3401,6 +3632,11 @@
         #undef HAS_MAX1704X
         #undef HAS_AXP192
         #undef HAS_BATTERY
+
+    // These targets cover mixed hardware and intentionally retain both probes.
+    #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
+      #undef HAS_AXP2101
+      #undef HAS_AXP192
 
       #elif defined(HAS_IP5306)
         #undef HAS_AXP2101
@@ -3460,6 +3696,8 @@
       #define MARAUDER_TITLE_BYTES 13578
     #elif defined(MARAUDER_C5)
       #define MARAUDER_TITLE_BYTES 13578
+  #elif defined(XIAO_ESP32_C5)
+    #define MARAUDER_TITLE_BYTES 13578
     #elif defined(MARAUDER_V8)
       #define MARAUDER_TITLE_BYTES 13578
     #elif defined(MARAUDER_MINI_V3)
@@ -3477,6 +3715,9 @@
     //#elif !defined(HAS_ILI9341)
     //  #define BUF_SIZE 8 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
     //  #define SNAP_LEN 4096 // max len of each recieved packet
+  #elif defined(MARAUDER_NO_PSRAM_MEMORY_PROFILE)
+    #define BUF_SIZE 2 * 1024
+    #define SNAP_LEN 1514
     #else
       #define BUF_SIZE 3 * 1024 // Had to reduce buffer size to save RAM. GG @spacehuhn
       #define SNAP_LEN 2324 // max len of each recieved packet
@@ -3804,5 +4045,34 @@
 
 
     // END CONFIG LOGIC
+//// Waveshare C5 3.5" pin overrides (applied after Pancake defaults resolve)
+#ifdef MARAUDER_WS_C5_35_OVERRIDE
+  #undef HARDWARE_NAME
+  #define HARDWARE_NAME "Marauder C5 3.5"
+  // I2C bus is GPIO27/26 on this board (Pancake uses 9/10). CTP_SDA/SCL are
+  // defined as I2C_SDA/I2C_SCL tokens upstream, so they follow automatically.
+  #undef I2C_SDA
+  #undef I2C_SCL
+  #define I2C_SDA 27
+  #define I2C_SCL 26
+  // microSD chip-select is GPIO9 (Pancake uses 7); SD shares the LCD SPI bus,
+  // whose pins come from User_Setup_ws_c5_35.h via SD_MISO/MOSI/SCK = TFT_*.
+  #undef SD_CS
+  #define SD_CS 9
+  // No MAX17048 fuel gauge on this board; avoid probing a device that isn't here.
+  #ifdef HAS_MAX1704X
+    #undef HAS_MAX1704X
+  #endif
+  #ifdef HAS_BATTERY
+    #undef HAS_BATTERY
+  #endif
+  #define HAS_TEMP_SENSOR
+  #define HAS_SHTC3
+
+  #define FT6336_SDA 27
+  #define FT6336_SCL 26
+  #define TP_SDA 27
+  #define TP_SCL 26
+#endif
 
 #endif

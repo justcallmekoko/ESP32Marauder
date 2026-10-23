@@ -27,6 +27,7 @@
 //#include <User_Setup_marauder_rev_feather.h>
 //#include <User_Setup_marauder_m5stickc.h>
 //#include <User_Setup_marauder_m5stickcp2.h>
+//#include <User_Setup_m5stack_core2_aws.h>
 //#include <User_Setup_pocket_sdr.h>
 //#include <User_Setup_dual_nrf24.h>
 //#include <User_Setup_pocket_sdr_2.h>
@@ -38,6 +39,7 @@
 //#include <User_Setup_marauder_m5cardputer_adv.h>
 //#include <User_Setup_cyd_3_5_inch.h>
 //#include <User_Setup_marauder_pancake.h>
+//#include <User_Setup_ws_c5_35.h>
 //#include <User_Setup_marauder_t_dongle_c5.h>
 //#include <User_Setup_cyd_24.h>
 //#include <User_Setup_cyd_JC2432W328C.h>

@@ -523,7 +523,8 @@ void ReconMission::writeManifest(bool complete) {
 }
 
 // GCOVR_EXCL_START -- Recon dashboard rendering requires a hardware TFT.
-#if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+#if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || \
+    defined(MARAUDER_M5STACK_CORE2_AWS)
   #define RECON_SCREEN_WIDTH SCREEN_WIDTH
   #define RECON_SCREEN_HEIGHT SCREEN_HEIGHT
 #else
