@@ -303,10 +303,6 @@ void setup()
     esp_log_level_set("*", ESP_LOG_NONE);
   #endif
 
-//  #ifndef HAS_IDF_3
-//    esp_spiram_init();
-//  #endif
-
   Serial.begin(115200);
 
 

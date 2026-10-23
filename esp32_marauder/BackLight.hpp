@@ -186,11 +186,11 @@
 
       #include "CORE2_AWS.hpp"
 
-      void brightnessInit() { 
+      inline void brightnessInit() { 
           core2SetBacklight(BL_LEVELS[bl_level_idx]);
       }
 
-      void brightnessCycle() {
+      inline void brightnessCycle() {
         bl_level_idx = (bl_level_idx + 1) % BL_NUM_LEVELS;
         core2SetBacklight(BL_LEVELS[bl_level_idx]);
         bl_prefs.putUChar("level", bl_level_idx);
@@ -205,7 +205,7 @@
 
       uint8_t getBrightnessLevel() { return bl_level_idx; }
 
-      void brightnessSet(uint8_t level) {
+      inline void brightnessSet(uint8_t level) {
         if (level >= BL_NUM_LEVELS) {
           level = BL_NUM_LEVELS - 1;
           bl_level_idx = level;
@@ -222,7 +222,7 @@
         log_i("level = %d currentDuty=%d, Freq=%d", bl_level_idx, currentDuty, ledcReadFreq(TLED));
       }
 
-      void brightnessSave(uint8_t level) {
+      inline void brightnessSave(uint8_t level) {
         if (level >= BL_NUM_LEVELS) level = BL_NUM_LEVELS - 1;
         bl_level_idx = level;
         core2SetBacklight(BL_LEVELS[bl_level_idx]);
@@ -233,11 +233,11 @@
         log_i("level = %d currentDuty=%d, Freq=%d", bl_level_idx, currentDuty, ledcReadFreq(TLED));
       }
 
-      void backlightOn() {
+      inline void backlightOn() {
           core2SetBacklight(BL_LEVELS[bl_level_idx]);
       }
 
-      void backlightOff() {
+      inline void backlightOff() {
         core2SetBacklight(0);
         // log_d("backlightOff");
         uint32_t currentDuty = ledcRead(TLED);
