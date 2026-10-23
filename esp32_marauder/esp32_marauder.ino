@@ -425,7 +425,6 @@ void setup()
   #ifdef HAS_PSRAM
     if (!psramInit()) {
       Serial.println(F("PSRAM not available"));
-      log_d("PSRAM not available");
     }
   #endif
 
