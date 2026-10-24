@@ -436,14 +436,14 @@ void setup()
     #endif
   #endif
 
-  #ifdef HAS_SCREEN
+  #if defined(HAS_SCREEN) && !defined(HAS_SDMMC)
     display_obj.RunSetup();
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
   // this removes the need for "sharedSPI"
   // the TFT init fucks up the SPI bus by closing SD_MISO
   // so reinit it and assert it to for the sd_obj.
-    #if defined(HAS_C5_SD)
+    #if defined(HAS_C5_SD) && !defined(MARAUDER_POOM
       #ifndef SD_MISO
         #define SD_MISO TFT_MISO
         #define SD_MOSI TFT_MOSI

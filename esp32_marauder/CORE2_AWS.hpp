@@ -28,8 +28,8 @@
       return;
     }
 
-    inline const uint16_t millivolts = map(duty, 1, 255, 2500, 3300);
-    inline const uint8_t step = (millivolts - 700) / 25;
+    const uint16_t millivolts = map(duty, 1, 255, 2500, 3300);
+    const uint8_t step = (millivolts - 700) / 25;
 
     core2AxpWrite(0x27, (core2AxpRead(0x27) & 0x80) | (step & 0x7f));
     core2AxpWrite(0x12, outputs | (1 << 1));

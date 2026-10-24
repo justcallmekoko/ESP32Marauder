@@ -184,6 +184,9 @@
 
     #elif defined(MARAUDER_M5STACK_CORE2_AWS)
 
+    const uint8_t BL_LEVELS[] = {26, 51, 77, 102, 128, 153, 179, 204, 230, 255, 255};
+    uint8_t BL_NUM_LEVELS = 11;
+
       #include "CORE2_AWS.hpp"
 
       inline void brightnessInit() { 
@@ -216,10 +219,6 @@
 
         core2SetBacklight(BL_LEVELS[bl_level_idx]);
         // Serial.print("bl_level_idx = "); Serial.println(BL_LEVELS[bl_level_idx]);
-
-        currentDuty = ledcRead(TLED);
-        // Serial.print("TFT_BL currentDuty = "); Serial.println(currentDuty);
-        log_i("level = %d currentDuty=%d, Freq=%d", bl_level_idx, currentDuty, ledcReadFreq(TLED));
       }
 
       inline void brightnessSave(uint8_t level) {
@@ -227,10 +226,6 @@
         bl_level_idx = level;
         core2SetBacklight(BL_LEVELS[bl_level_idx]);
         bl_prefs.putUChar("level", bl_level_idx);
-        // Serial.print("bl_level_idx = "); Serial.println(BL_LEVELS[bl_level_idx]);
-        uint32_t currentDuty = ledcRead(TLED);
-        // Serial.print("currentDuty = "); Serial.println(currentDuty);
-        log_i("level = %d currentDuty=%d, Freq=%d", bl_level_idx, currentDuty, ledcReadFreq(TLED));
       }
 
       inline void backlightOn() {
@@ -240,8 +235,6 @@
       inline void backlightOff() {
         core2SetBacklight(0);
         // log_d("backlightOff");
-        uint32_t currentDuty = ledcRead(TLED);
-        log_d("level = %d currentDuty=%d", bl_level_idx, currentDuty);
       }
 
     #elif !defined(HAS_MINI_SCREEN)
