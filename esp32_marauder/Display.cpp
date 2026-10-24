@@ -355,25 +355,25 @@ void Display::RunSetup() {
   #endif
 
   #ifdef HAS_CST820
-    #ifndef TP_INT
-      #define TP_INT -1
+    #ifndef CTP_INT
+      #define CTP_INT -1
     #endif
 
-    #ifndef TP_RST
-      #define TP_RST -1
+    #ifndef CTP_RST
+      #define CTP_RST -1
     #endif
 
-    // CST820_touch.begin(&Wire, TP_INT, TP_RST);
+    // CST820_touch.begin(&Wire, CTP_INT, CTP_RST);
     CST820_touch.begin(&Wire);
   #endif
 
   #ifdef HAS_CST3530
       CST3530_obj.begin(Wire);
-      // #if defined(TP_INT) && TP_INT >= 0
-      //   CST3530_obj.enableInterrupt(TP_INT);
+      // #if defined(CTP_INT) && CTP_INT >= 0
+      //   CST3530_obj.enableInterrupt(CTP_INT);
       // #endif
-      // CST3530_obj.begin(&Wire, TP_INT, TP_RST, TP_FREQ);
-      // CST3530_obj.begin(TP_SDA, TO_SCL, TP_INT, TP_RST,f TP_FREQ)
+      // CST3530_obj.begin(&Wire, CTP_INT, CTP_RST, CTP_FREQ);
+      // CST3530_obj.begin(CTP_SDA, CTP_SCL, CTP_INT, CTP_RST,f CTP_FREQ)
       log_d("CST3530_obj.begin done");
   #endif
 

@@ -2692,11 +2692,11 @@
 
 
       // Touch CST3530
-      #define TP_SDA           I2C_SDA
-      #define TP_SCL           I2C_SCL
-      #define TP_INT           5
-      #define TP_RST           -1   // CH32V003 EXIO0
-      #define TP_FREQ          100000  // 100 kHz (Standard-mode) 400 kHz (Fast-mode)
+      #define CTP_SDA           I2C_SDA
+      #define CTP_SCL           I2C_SCL
+      #define CTP_INT           5
+      #define CTP_RST           -1   // CH32V003 EXIO0
+      #define CTP_FREQ          100000  // 100 kHz (Standard-mode) 400 kHz (Fast-mode)
       #define I2C_ADDR_CST3530  0x58 // NOT 0x1A : CST3530 differs from CST820
 
       #define BANNER_TEXT_SIZE 2
@@ -3605,9 +3605,9 @@
         #define I2C_SCL 10
         #define HAS_MAX1704X
         // FT6336 cap touch - shares I2C bus with MAX17048
-        #define TP_RST 8
-        #define TP_SDA I2C_SDA
-        #define TP_SCL I2C_SCL
+        #define CTP_RST 8
+        #define CTP_SDA I2C_SDA
+        #define CTP_SCL I2C_SCL
 
       #elif defined(MARAUDER_WS_C5_28)    // ADC is through IO expander
         #define I2C_SDA 0
@@ -3954,46 +3954,46 @@
         #define I2C_SDA 33
         #define I2C_SCL 32
         #define I2C_FREQ 10000    // 10K instead of 100K
-        #define TP_SDA I2C_SDA
-        #define TP_SCL I2C_SCL
-        #define TP_FREQ 10000    // 10K instead of 100K
-        #define TP_RST 25
-        #define TP_INT -1  // ?22? / 21 ?
+        #define CTP_SDA I2C_SDA
+        #define CTP_SCL I2C_SCL
+        #define CTP_FREQ 10000    // 10K instead of 100K
+        #define CTP_RST 25
+        #define CTP_INT -1  // ?22? / 21 ?
         #define I2C_ADDR_CST820 0x15
 
       #elif defined(MARAUDER_PANCAKE)
         #define HAS_FT6336
         #define I2C_SDA 9
         #define I2C_SCL 10
-        #define TP_SDA I2C_SDA
-        #define TP_SCL I2C_SCL
-        #define TP_RST 8
+        #define CTP_SDA I2C_SDA
+        #define CTP_SCL I2C_SCL
+        #define CTP_RST 8
         #define I2C_FT6336_ADDR      0x38
 
       #elif defined(MARAUDER_LCDWIKI_28)
         #define HAS_FT6336
-        #define TP_SDA 16
-        #define TP_SCL 15
-        #define TP_RST 18
+        #define CTP_SDA 16
+        #define CTP_SCL 15
+        #define CTP_RST 18
         #define I2C_FT6336_ADDR      0x38
 
       #elif defined(MARAUDER_WS_C5_28)    // ADC is through IO expander
         #define HAS_CST3530 1      // distinguish from CST820
         #define I2C_SDA 0
         #define I2C_SCL 1
-        #define TP_SDA           I2C_SDA
-        #define TP_SCL           I2C_SCL
-        #define TP_INT           5
-        #define TP_RST           -1   // CH32V003 EXIO0
-        #define TP_FREQ          100000  // 100 kHz (Standard-mode) 400 kHz (Fast-mode)
+        #define CTP_SDA           I2C_SDA
+        #define CTP_SCL           I2C_SCL
+        #define CTP_INT           5
+        #define CTP_RST           -1   // CH32V003 EXIO0
+        #define CTP_FREQ          100000  // 100 kHz (Standard-mode) 400 kHz (Fast-mode)
         #define I2C_ADDR_CST3530  0x58 // NOT 0x1A : CST3530 differs from CST820
 
       #elif defined(MARAUDER_CYD_3_5_INCH_CAP) 
         #define HAS_GT911 1 
-        #define TP_SDA 33
-        #define TP_SCL 32
-        #define TP_INT 21
-        #define TP_RST 25
+        #define CTP_SDA 33
+        #define CTP_SCL 32
+        #define CTP_INT 21
+        #define CTP_RST 25
         #define I2C_ADDR_GT911 0x38
       #endif
 
@@ -4071,8 +4071,8 @@
 
   #define FT6336_SDA 27
   #define FT6336_SCL 26
-  #define TP_SDA 27
-  #define TP_SCL 26
+  #define CTP_SDA 27
+  #define CTP_SCL 26
 #endif
 
 #endif

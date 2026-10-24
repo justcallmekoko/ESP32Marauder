@@ -51,12 +51,12 @@
 // -- Limits --------------------------------------------------------------------
 #define CST3530_MAX_POINTS      (5)
 
-#ifndef TP_INT
-  #define TP_INT -1
+#ifndef CTP_INT
+  #define CTP_INT -1
 #endif
 
-#ifndef TP_RST
-  #define TP_RST -1
+#ifndef CTP_RST
+  #define CTP_RST -1
 #endif
 
 // -- Touch event : mapped directly from chip finger-event field ----------------
@@ -84,8 +84,8 @@ class CST3530 {
 public:
     inline CST3530(TwoWire &wire           = Wire,
                     uint8_t  addr           = CST3530_I2C_ADDR,
-                    int8_t   rstPin         = TP_RST,
-                    int8_t   intPin         = TP_INT,
+                    int8_t   rstPin         = CTP_RST,
+                    int8_t   intPin         = CTP_INT,
                     uint8_t  rstActiveLevel = LOW)
         : _wire(wire), _addr(addr), _rstPin(rstPin), _intPin(intPin)
         , _rstActiveLevel(rstActiveLevel), _interruptEnabled(false)

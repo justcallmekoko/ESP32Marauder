@@ -125,7 +125,7 @@ int8_t BatteryInterface::getBatteryLevel() {
         return bPct;
       }
 
-    #elif BATTERY_ADC_PIN
+    #elif defined(BATTERY_ADC_PIN)
       if (this->has_adc_battery) {
         int voltage_mv = analogReadMilliVolts(BATTERY_ADC_PIN) * 2; // voltage divider ratio 2:1
         if (voltage_mv <= 3300) return 0;
