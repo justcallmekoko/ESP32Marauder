@@ -1172,6 +1172,7 @@ class WiFiScan
     void changeChannel(int chan = -1);
     void RunAPInfo(uint16_t index, bool do_display = true);
     void RunInfo();
+    bool setStationSelected(uint16_t index, bool selected);
     void RunSetMac(uint8_t * mac, bool ap = true);
     void RunGenerateRandomMac(bool ap = true);
     void RunGenerateSSIDs(int count = 20);

@@ -1895,17 +1895,11 @@ void CommandLine::runCommand(String input) {
         for (int i = 0; i < stations->size(); i++) {
           Station station = stations->get(i);
           if (station.selected) {
-            // Unselect "selected" ap
-            Station new_sta = station;
-            new_sta.selected = false;
-            stations->set(i, new_sta);
+            wifi_scan_obj.setStationSelected(i, false);
             count_unselected += 1;
           }
           else {
-            // Select "unselected" ap
-            Station new_sta = station;
-            new_sta.selected = true;
-            stations->set(i, new_sta);
+            wifi_scan_obj.setStationSelected(i, true);
             count_selected += 1;
           }
         }
@@ -1916,24 +1910,18 @@ void CommandLine::runCommand(String input) {
         // Mark Stations as selected
         for (int i = 0; i < sta_index.size(); i++) {
           int index = sta_index.get(i).toInt();
-          Station station = stations->get(index);
           if (!this->inRange(stations->size(), index)) {
             Serial.print(F("Index not in range: "));
             Serial.println(index);
             continue;
           }
+          Station station = stations->get(index);
           if (station.selected) {
-            // Unselect "selected" ap
-            Station new_sta = station;
-            new_sta.selected = false;
-            stations->set(index, new_sta);
+            wifi_scan_obj.setStationSelected(index, false);
             count_unselected += 1;
           }
           else {
-            // Select "unselected" ap
-            Station new_sta = station;
-            new_sta.selected = true;
-            stations->set(index, new_sta);
+            wifi_scan_obj.setStationSelected(index, true);
             count_selected += 1;
           }
         }

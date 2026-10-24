@@ -3805,15 +3805,14 @@ void MenuFunctions::buildWiFiGeneralMenu()
 
             for (int y = 0; y < access_points->get(i).stations->size(); y++) {
               int cur_ap_sta_inx = access_points->get(i).stations->get(y);
-              Station new_sta = stations->get(cur_ap_sta_inx);
-              new_sta.selected = !stations->get(cur_ap_sta_inx).selected;
+              const bool selected = !stations->get(cur_ap_sta_inx).selected;
 
               // Change selection status of menu node
               MenuNode new_node = current_menu->list->get(y + 2);
               new_node.selected = !current_menu->list->get(y + 2).selected;
               current_menu->list->set(y + 2, new_node);
 
-              stations->set(cur_ap_sta_inx, new_sta);
+              wifi_scan_obj.setStationSelected(cur_ap_sta_inx, selected);
             }
 
             this->changeMenu(current_menu, true);
@@ -3826,15 +3825,14 @@ void MenuFunctions::buildWiFiGeneralMenu()
 
             const String station_label = screenMac(macToString(stations->get(cur_ap_sta)));
             this->addNodes(&wifiStationMenu, station_label.c_str(), TFTCYAN, 255, [this, i, cur_ap_sta, x](){
-            Station new_sta = stations->get(cur_ap_sta);
-            new_sta.selected = !stations->get(cur_ap_sta).selected;
+            const bool selected = !stations->get(cur_ap_sta).selected;
 
             // Change selection status of menu node
             MenuNode new_node = current_menu->list->get(x + 2);
             new_node.selected = !current_menu->list->get(x + 2).selected;
             current_menu->list->set(x + 2, new_node);
 
-            stations->set(cur_ap_sta, new_sta);
+            wifi_scan_obj.setStationSelected(cur_ap_sta, selected);
             }, stations->get(cur_ap_sta).selected);
           }
 
