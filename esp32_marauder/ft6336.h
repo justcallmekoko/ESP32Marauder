@@ -10,6 +10,7 @@
 #define FT6336_ADDR      0x38
 #define FT6336_TD_STATUS 0x02
 #define FT6336_T1_XH     0x03
+#define FT6336_G_MODE    0xA4
 
 static bool _ft6336_read(uint8_t reg, uint8_t *buf, uint8_t len) {
     Wire.beginTransmission(FT6336_ADDR);
@@ -54,6 +55,22 @@ static void ft6336_init() {
     Wire.write(0x80);
     Wire.write(40);
     Wire.endTransmission();
+
+#ifdef MARAUDER_WS_C5_35
+    // INT gate. G_MODE (0xA4) = 0 selects polling mode, where INT is held LOW
+    // for as long as a finger is down instead of pulsing once per report.
+    // ft6336_read_raw() then trusts the controller only while INT is LOW,
+    // which stops phantom and stuck touches. TP_INT has an external pull-up.
+    pinMode(CTP_INT, INPUT);
+    Wire.beginTransmission(FT6336_ADDR);
+    Wire.write(FT6336_G_MODE);
+    Wire.write(0x00);
+    Wire.endTransmission();
+    uint8_t gMode = 0xFF;
+    _ft6336_read(FT6336_G_MODE, &gMode, 1);
+    Serial.printf("[Touch] FT6336 G_MODE: 0x%02X%s\n",
+                  gMode, gMode == 0x00 ? " (polling, INT gate active)" : " (unexpected)");
+#endif
 }
 
 // Reads raw panel coordinates (panel native portrait space: 0..319 × 0..479).
@@ -68,6 +85,8 @@ static int8_t ft6336_read_raw(uint16_t *raw_x, uint16_t *raw_y) {
     // (1-2 points, on-panel coords) so a noisy read cannot register as a tap
     // and false-trigger STOP during scans. Scoped to this board; other FT6336
     // boards keep the original path below unchanged.
+    // INT gate: no finger means INT is high, so report no touch and skip I2C.
+    if (digitalRead(CTP_INT) != LOW) return 0;
     Wire.end(); Wire.begin(CTP_SDA, CTP_SCL, 100000U);
     uint8_t data[7];
     if (!_ft6336_read(FT6336_TD_STATUS, data, 7)) return -1;

@@ -3560,6 +3560,8 @@
   #ifdef HAS_NEOPIXEL_LED
     #undef HAS_NEOPIXEL_LED
   #endif
+  // FT6336 TP_INT is GPIO3 (external 10K pull-up). Touch reads are gated on it.
+  #define CTP_INT 3
 #endif
 
 #endif

@@ -65,6 +65,16 @@ class WaveshareC535HardwareTests(unittest.TestCase):
         self.assertIn("#ifdef MARAUDER_WS_C5_35", touch)
         self.assertIn("Wire.end(); Wire.begin(CTP_SDA, CTP_SCL, 100000U);", touch)
         self.assertIn("return -1;", touch)
+        # INT gate: TP_INT on GPIO3, polling mode, and no I2C read without INT LOW.
+        self.assertIn("#define CTP_INT 3", config)
+        self.assertIn("#define FT6336_G_MODE    0xA4", touch)
+        self.assertIn("pinMode(CTP_INT, INPUT);", touch)
+        gate = "if (digitalRead(CTP_INT) != LOW) return 0;"
+        self.assertIn(gate, touch)
+        self.assertLess(
+            touch.index(gate),
+            touch.index("Wire.end(); Wire.begin(CTP_SDA, CTP_SCL, 100000U);"),
+        )
         self.assertIn("#define WS_EXIO_ADDR        0x24", expander)
         self.assertIn("ws_c5_exio_begin", expander)
 
