@@ -13112,7 +13112,8 @@ void WiFiScan::main(uint32_t currentTime)
   }
   else if ((currentScanMode == WIFI_ATTACK_BEACON_LIST)) {
     for (int i = 0; i < ssids->size(); i++)
-      this->broadcastCustomBeacon(currentTime, ssids->get(i));
+      if (ssids->get(i).selected)
+        this->broadcastCustomBeacon(currentTime, ssids->get(i));
 
     if (currentTime - initTime >= 1000)
     {
