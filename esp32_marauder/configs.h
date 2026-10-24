@@ -3555,6 +3555,8 @@
   #ifdef HAS_BATTERY
     #undef HAS_BATTERY
   #endif
+  // FT6336 TP_INT is GPIO3 (external 10K pull-up). Touch reads are gated on it.
+  #define CTP_INT 3
 #endif
 
 #endif
