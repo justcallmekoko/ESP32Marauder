@@ -3555,6 +3555,13 @@
   #ifdef HAS_BATTERY
     #undef HAS_BATTERY
   #endif
+  // No UART GPS on this board. Pancake's GPS_TX/GPS_RX (14/13) are the C5's
+  // native USB D+/D- lines here, so starting Serial2 on them drops the board
+  // off USB. The header UART is not connected as shipped, and the onboard GPS
+  // is I2C, which GpsInterface does not support.
+  #ifdef HAS_GPS
+    #undef HAS_GPS
+  #endif
 #endif
 
 #endif

@@ -52,6 +52,11 @@ class WaveshareC535HardwareTests(unittest.TestCase):
             "#define TFT_DC    5",
         ):
             self.assertIn(expected, tft)
+        # UART GPS would claim GPIO13/14 (native USB); it must stay off for this
+        # board only, inside the override block.
+        override = config[config.index("#ifdef MARAUDER_WS_C5_35_OVERRIDE"):]
+        self.assertIn("#undef HAS_GPS", override)
+        self.assertEqual(config.count("#undef HAS_GPS"), 1)
         self.assertIn("#ifdef MARAUDER_WS_C5_35", touch)
         self.assertIn("Wire.end(); Wire.begin(CTP_SDA, CTP_SCL, 100000U);", touch)
         self.assertIn("return -1;", touch)
