@@ -23,8 +23,13 @@
   AXP192 axp192_obj;
 #endif
 
-#ifndef BATTERY_ADC_PIN  // not 12c
+#if !defined(BATTERY_ADC_PIN) && !defined(HAS_CH32V00X)  // not 12c
   #include <Wire.h>
+#endif
+
+#ifdef HAS_CH32V00X
+  #include <CH32V00X_IOExpander.hpp>
+  extern CH32V00X_IOExpander CH32V00X_obj;
 #endif
 
 #define IP5306_ADDR 0x75
@@ -46,6 +51,7 @@ class BatteryInterface {
     int8_t battery_level = 0;
     int8_t old_level = 0;
     bool i2c_supported = false;
+    bool supported = false;
     bool has_max17048 = false;
     bool has_ip5306 = false;
     bool has_axp2101 = false;

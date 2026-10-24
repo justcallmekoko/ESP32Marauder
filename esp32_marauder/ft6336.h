@@ -1,8 +1,9 @@
 #pragma once
+
 #ifndef ft6336_h
 #define ft6336_h
 
-#ifdef HAS_CAP_TOUCH
+#ifdef HAS_FT6336
 
 #include <Wire.h>
 #include "ws_c5_exio.h"
@@ -28,11 +29,11 @@ static void ft6336_init() {
     ws_c5_exio_begin();
 #else
     #if CTP_RST >= 0
-      pinMode(CTP_RST, OUTPUT);
-      digitalWrite(CTP_RST, LOW);
-      delay(10);
-      digitalWrite(CTP_RST, HIGH);
-      delay(300);
+    pinMode(CTP_RST, OUTPUT);
+    digitalWrite(CTP_RST, LOW);
+    delay(10);
+    digitalWrite(CTP_RST, HIGH);
+    delay(300);
     #endif
     Wire.begin(CTP_SDA, CTP_SCL, 400000U);
 #endif
@@ -100,5 +101,5 @@ static uint8_t ft6336_update(uint16_t *x, uint16_t *y) {
     return 1;
 }
 
-#endif // HAS_CAP_TOUCH
+#endif // HAS_FT6336
 #endif // ft6336_h
