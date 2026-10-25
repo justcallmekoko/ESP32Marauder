@@ -4631,16 +4631,49 @@ void MenuFunctions::clearAttackStationSelections() {
   }
 }
 
-void MenuFunctions::selectAllAttackStations() {
+void MenuFunctions::clearAttackStationsForAp(uint16_t ap_index) {
   extern LinkedList<AccessPoint>* access_points;
   extern LinkedList<Station>* stations;
-  for (int i = 0; i < stations->size(); ++i)
-    wifi_scan_obj.setStationSelected(i, true);
-  for (int i = 0; i < access_points->size(); ++i) {
-    AccessPoint ap = access_points->get(i);
-    if (ap.stations && ap.stations->size() > 0) ap.selected = true;
-    access_points->set(i, ap);
+  if (ap_index >= access_points->size()) return;
+  AccessPoint ap = access_points->get(ap_index);
+  if (!ap.stations) return;
+  for (int i = 0; i < ap.stations->size(); ++i) {
+    const int station_index = ap.stations->get(i);
+    if (station_index >= 0 && station_index < stations->size())
+      wifi_scan_obj.setStationSelected(station_index, false);
   }
+}
+
+void MenuFunctions::setAttackApScope(uint16_t ap_index, AttackTargetMode mode) {
+  extern LinkedList<AccessPoint>* access_points;
+  if (ap_index >= access_points->size()) return;
+  AccessPoint ap = access_points->get(ap_index);
+  ap.attack_scope = static_cast<uint8_t>(mode);
+  ap.selected = mode != AttackTargetMode::NONE;
+  access_points->set(ap_index, ap);
+}
+
+int MenuFunctions::attackApProfileCount() const {
+  extern LinkedList<AccessPoint>* access_points;
+  int count = 0;
+  for (int i = 0; i < access_points->size(); ++i)
+    if (access_points->get(i).attack_scope != ATTACK_AP_SCOPE_NONE) ++count;
+  return count;
+}
+
+int MenuFunctions::selectedAttackStationCount(uint16_t ap_index) const {
+  extern LinkedList<AccessPoint>* access_points;
+  extern LinkedList<Station>* stations;
+  if (ap_index >= access_points->size()) return 0;
+  AccessPoint ap = access_points->get(ap_index);
+  if (!ap.stations) return 0;
+  int count = 0;
+  for (int i = 0; i < ap.stations->size(); ++i) {
+    const int station_index = ap.stations->get(i);
+    if (station_index >= 0 && station_index < stations->size() &&
+        stations->get(station_index).selected) ++count;
+  }
+  return count;
 }
 
 void MenuFunctions::beginAttackPlan(const char* name, uint8_t scan_mode,
@@ -4654,7 +4687,16 @@ void MenuFunctions::beginAttackPlan(const char* name, uint8_t scan_mode,
 
   if (target_kind == AttackTargetKind::DEAUTH_SCOPE ||
       target_kind == AttackTargetKind::STATION_SCOPE) {
-    buildAttackModeMenu();
+    extern LinkedList<AccessPoint>* access_points;
+    for (int i = 0; i < access_points->size(); ++i) {
+      AccessPoint ap = access_points->get(i);
+      ap.attack_scope = ap.selected
+          ? (target_kind == AttackTargetKind::DEAUTH_SCOPE
+              ? ATTACK_AP_SCOPE_BROADCAST : ATTACK_AP_SCOPE_ALL_STATIONS)
+          : ATTACK_AP_SCOPE_NONE;
+      access_points->set(i, ap);
+    }
+    buildAttackStationApPicker();
   } else if (target_kind == AttackTargetKind::ACCESS_POINTS) {
     buildAttackApPicker();
   } else if (target_kind == AttackTargetKind::SSIDS) {
@@ -4666,9 +4708,9 @@ void MenuFunctions::beginAttackPlan(const char* name, uint8_t scan_mode,
 
 void MenuFunctions::buildAttackModeMenu() {
   attackModeMenu.list->clear();
-  attackModeMenu.parentMenu = &wifiAttackMenu;
+  attackModeMenu.parentMenu = &attackTargetMenu;
   this->addNodes(&attackModeMenu, text09, TFTLIGHTGREY, 0, [this]() {
-    this->changeMenu(&wifiAttackMenu, true);
+    buildAttackStationApPicker();
   });
 
   if (attack_target_kind == AttackTargetKind::DEAUTH_SCOPE) {
@@ -4676,32 +4718,37 @@ void MenuFunctions::buildAttackModeMenu() {
       attack_target_mode = AttackTargetMode::BROADCAST;
       attack_plan_scan_mode = WIFI_ATTACK_DEAUTH;
       wifi_scan_obj.dst_mac = "ff:ff:ff:ff:ff:ff";
-      buildAttackApPicker();
+      clearAttackStationsForAp(attack_active_ap_index);
+      setAttackApScope(attack_active_ap_index, attack_target_mode);
+      buildAttackReviewMenu();
     });
   }
 
   this->addNodes(&attackModeMenu, "All Stations", TFTORANGE, DEAUTH_SNIFF, [this]() {
     attack_target_mode = AttackTargetMode::ALL_STATIONS;
     if (attack_target_kind == AttackTargetKind::DEAUTH_SCOPE)
-      attack_plan_scan_mode = WIFI_ATTACK_DEAUTH_TARGETED;
-    else if (attack_plan_scan_mode == WIFI_ATTACK_BAD_MSG_TARGETED)
-      attack_plan_scan_mode = WIFI_ATTACK_BAD_MSG;
-    else if (attack_plan_scan_mode == WIFI_ATTACK_SLEEP_TARGETED)
-      attack_plan_scan_mode = WIFI_ATTACK_SLEEP;
-    selectAllAttackStations();
+      attack_plan_scan_mode = WIFI_ATTACK_DEAUTH;
+    clearAttackStationsForAp(attack_active_ap_index);
+    setAttackApScope(attack_active_ap_index, attack_target_mode);
     buildAttackReviewMenu();
   });
 
   this->addNodes(&attackModeMenu, "Pick Stations", TFTCYAN, KEYBOARD_ICO, [this]() {
     attack_target_mode = AttackTargetMode::PICK_STATIONS;
     if (attack_target_kind == AttackTargetKind::DEAUTH_SCOPE)
-      attack_plan_scan_mode = WIFI_ATTACK_DEAUTH_TARGETED;
-    else if (attack_plan_scan_mode == WIFI_ATTACK_BAD_MSG)
-      attack_plan_scan_mode = WIFI_ATTACK_BAD_MSG_TARGETED;
-    else if (attack_plan_scan_mode == WIFI_ATTACK_SLEEP)
-      attack_plan_scan_mode = WIFI_ATTACK_SLEEP_TARGETED;
-    buildAttackStationApPicker();
+      attack_plan_scan_mode = WIFI_ATTACK_DEAUTH;
+    setAttackApScope(attack_active_ap_index, attack_target_mode);
+    buildAttackStationPicker(attack_active_ap_index);
   });
+  extern LinkedList<AccessPoint>* access_points;
+  if (attack_active_ap_index < access_points->size() &&
+      access_points->get(attack_active_ap_index).attack_scope != ATTACK_AP_SCOPE_NONE) {
+    this->addNodes(&attackModeMenu, "Remove from Profile", TFTYELLOW, CLEAR_ICO, [this]() {
+      clearAttackStationsForAp(attack_active_ap_index);
+      setAttackApScope(attack_active_ap_index, AttackTargetMode::NONE);
+      buildAttackStationApPicker();
+    });
+  }
   this->changeMenu(&attackModeMenu, true);
 }
 
@@ -4748,15 +4795,18 @@ void MenuFunctions::buildAttackApPicker() {
 void MenuFunctions::buildAttackStationApPicker() {
   extern LinkedList<AccessPoint>* access_points;
   attackTargetMenu.list->clear();
-  attackTargetMenu.parentMenu = &attackModeMenu;
+  attackTargetMenu.parentMenu = &wifiAttackMenu;
   this->addNodes(&attackTargetMenu, text09, TFTLIGHTGREY, 0, [this]() {
-    this->changeMenu(&attackModeMenu, true);
+    this->changeMenu(&wifiAttackMenu, true);
   });
   this->addNodes(&attackTargetMenu, "Review / Continue", TFTGREEN, ATTACKS, [this]() {
     buildAttackReviewMenu();
   });
-  this->addNodes(&attackTargetMenu, "Clear Selected", TFTYELLOW, CLEAR_ICO, [this]() {
+  this->addNodes(&attackTargetMenu, "Clear Profile", TFTYELLOW, CLEAR_ICO, [this]() {
     clearAttackStationSelections();
+    extern LinkedList<AccessPoint>* access_points;
+    for (int i = 0; i < access_points->size(); ++i)
+      setAttackApScope(i, AttackTargetMode::NONE);
     buildAttackStationApPicker();
   });
   if (access_points->size() == 0)
@@ -4765,8 +4815,10 @@ void MenuFunctions::buildAttackStationApPicker() {
     String label = screenName(access_points->get(i).essid) + " [" +
                    String(access_points->get(i).stations ? access_points->get(i).stations->size() : 0) + "]";
     this->addNodes(&attackTargetMenu, label.c_str(), TFTCYAN, 255, [this, i]() {
-      buildAttackStationPicker(i);
-    });
+      attack_active_ap_index = i;
+      attack_target_mode = static_cast<AttackTargetMode>(access_points->get(i).attack_scope);
+      buildAttackModeMenu();
+    }, access_points->get(i).attack_scope != ATTACK_AP_SCOPE_NONE);
   }
   this->changeMenu(&attackTargetMenu, true);
 }
@@ -4782,6 +4834,9 @@ void MenuFunctions::buildAttackStationPicker(uint16_t ap_index) {
   this->addNodes(&attackStationMenu, "Review / Continue", TFTGREEN, ATTACKS, [this]() {
     buildAttackReviewMenu();
   });
+  this->addNodes(&attackStationMenu, "Add Another AP", TFTGREEN, WIFI, [this]() {
+    buildAttackStationApPicker();
+  });
   if (ap_index >= access_points->size() || !access_points->get(ap_index).stations) {
     this->addNodes(&attackStationMenu, "No stations", TFTORANGE, 255, []() {});
     this->changeMenu(&attackStationMenu, true);
@@ -4793,6 +4848,10 @@ void MenuFunctions::buildAttackStationPicker(uint16_t ap_index) {
     AccessPoint ap = access_points->get(ap_index);
     for (int i = 0; i < ap.stations->size(); ++i)
       wifi_scan_obj.setStationSelected(ap.stations->get(i), true);
+    buildAttackStationPicker(ap_index);
+  });
+  this->addNodes(&attackStationMenu, "Clear AP Stations", TFTYELLOW, CLEAR_ICO, [this, ap_index]() {
+    clearAttackStationsForAp(ap_index);
     buildAttackStationPicker(ap_index);
   });
   for (int i = 0; i < ap.stations->size(); ++i) {
@@ -4845,13 +4904,9 @@ void MenuFunctions::buildAttackReviewMenu() {
   attackReviewMenu.list->clear();
   attackReviewMenu.parentMenu = &wifiAttackMenu;
   this->addNodes(&attackReviewMenu, text09, TFTLIGHTGREY, 0, [this]() {
-    if (attack_target_mode == AttackTargetMode::PICK_STATIONS)
+    if (attack_target_kind == AttackTargetKind::DEAUTH_SCOPE ||
+        attack_target_kind == AttackTargetKind::STATION_SCOPE)
       buildAttackStationApPicker();
-    else if (attack_target_mode == AttackTargetMode::BROADCAST)
-      buildAttackApPicker();
-    else if (attack_target_kind == AttackTargetKind::DEAUTH_SCOPE ||
-             attack_target_kind == AttackTargetKind::STATION_SCOPE)
-      buildAttackModeMenu();
     else if (attack_target_kind == AttackTargetKind::EVIL_PORTAL)
       this->changeMenu(&evilPortalMenu, true);
     else if (attack_target_kind == AttackTargetKind::KARMA)
@@ -4868,18 +4923,38 @@ void MenuFunctions::buildAttackReviewMenu() {
 
   bool valid = true;
   String scope_line = "Scope: Targetless";
-  if (attack_target_mode == AttackTargetMode::BROADCAST) {
-    scope_line = "Broadcast: " + String(selectedAttackApCount()) + " AP(s)";
-    valid = selectedAttackApCount() > 0;
-  } else if (attack_target_mode == AttackTargetMode::ALL_STATIONS) {
-    scope_line = "All Stations: " + String(selectedAttackStationCount());
-    valid = selectedAttackStationCount() > 0;
-  } else if (attack_target_mode == AttackTargetMode::PICK_STATIONS) {
-    scope_line = "Picked Stations: " + String(selectedAttackStationCount());
-    valid = selectedAttackStationCount() > 0;
+  if (attack_target_kind == AttackTargetKind::DEAUTH_SCOPE ||
+      attack_target_kind == AttackTargetKind::STATION_SCOPE) {
+    extern LinkedList<AccessPoint>* access_points;
+    scope_line = "Profile: " + String(attackApProfileCount()) + " AP(s)";
+    valid = attackApProfileCount() > 0;
+    for (int i = 0; i < access_points->size(); ++i) {
+      const AccessPoint ap = access_points->get(i);
+      if (ap.attack_scope == ATTACK_AP_SCOPE_NONE) continue;
+      String line = screenName(ap.essid) + ": ";
+      if (ap.attack_scope == ATTACK_AP_SCOPE_BROADCAST)
+        line += "Broadcast";
+      else if (ap.attack_scope == ATTACK_AP_SCOPE_ALL_STATIONS) {
+        line += "All ";
+        line += String(ap.stations ? ap.stations->size() : 0);
+        if (!ap.stations || ap.stations->size() == 0) valid = false;
+      } else {
+        const int picked = selectedAttackStationCount(i);
+        line += "Picked ";
+        line += String(picked);
+        if (picked == 0) valid = false;
+      }
+      this->addNodes(&attackReviewMenu, line.c_str(), valid ? TFTGREEN : TFTORANGE, 255, []() {});
+    }
+    this->addNodes(&attackReviewMenu, "Add Another AP", TFTGREEN, WIFI, [this]() {
+      buildAttackStationApPicker();
+    });
   } else if (attack_target_kind == AttackTargetKind::ACCESS_POINTS) {
     scope_line = "Access Points: " + String(selectedAttackApCount());
     valid = selectedAttackApCount() > 0;
+    this->addNodes(&attackReviewMenu, "Add Another AP", TFTGREEN, WIFI, [this]() {
+      buildAttackApPicker();
+    });
   } else if (attack_target_kind == AttackTargetKind::SSIDS) {
     scope_line = "SSIDs: " + String(selectedAttackSsidCount());
     valid = selectedAttackSsidCount() > 0;
@@ -4900,8 +4975,9 @@ void MenuFunctions::buildAttackReviewMenu() {
 }
 
 void MenuFunctions::startAttackPlan() {
-  if (attack_target_mode == AttackTargetMode::ALL_STATIONS)
-    selectAllAttackStations();
+  wifi_scan_obj.guided_attack_profile =
+      attack_target_kind == AttackTargetKind::DEAUTH_SCOPE ||
+      attack_target_kind == AttackTargetKind::STATION_SCOPE;
   display_obj.clearScreen();
   this->drawStatusBar();
   wifi_scan_obj.StartScan(attack_plan_scan_mode, attack_plan_color);

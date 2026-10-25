@@ -185,6 +185,11 @@
 
 #define WIFI_ATTACK_FUNNY_BEACON 99 
 
+#define ATTACK_AP_SCOPE_NONE 0
+#define ATTACK_AP_SCOPE_BROADCAST 1
+#define ATTACK_AP_SCOPE_ALL_STATIONS 2
+#define ATTACK_AP_SCOPE_PICK_STATIONS 3
+
 #define BASE_MULTIPLIER 4
 
 #define ANALYZER_NAME_REFRESH 100 // Number of events to refresh the name
@@ -1188,6 +1193,7 @@ class WiFiScan
     void RunSetupGPSTracker(uint8_t scan_mode);
     void channelHop(bool filtered = false, bool ranged = false);
     uint8_t currentScanMode = 0;
+    bool guided_attack_profile = false;
     void main(uint32_t currentTime);
     void StartScan(uint8_t scan_mode, uint16_t color = 0);
     void StopScan(uint8_t scan_mode);

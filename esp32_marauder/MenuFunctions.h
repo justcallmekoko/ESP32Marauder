@@ -360,8 +360,11 @@ class MenuFunctions
     void buildAttackSsidPicker();
     void buildAttackReviewMenu();
     void startAttackPlan();
-    void selectAllAttackStations();
     void clearAttackStationSelections();
+    void clearAttackStationsForAp(uint16_t ap_index);
+    void setAttackApScope(uint16_t ap_index, AttackTargetMode mode);
+    int attackApProfileCount() const;
+    int selectedAttackStationCount(uint16_t ap_index) const;
     int selectedAttackApCount() const;
     int selectedAttackStationCount() const;
     int selectedAttackSsidCount() const;
@@ -375,6 +378,7 @@ class MenuFunctions
     uint16_t attack_plan_color = TFT_RED;
     AttackTargetKind attack_target_kind = AttackTargetKind::NONE;
     AttackTargetMode attack_target_mode = AttackTargetMode::NONE;
+    uint16_t attack_active_ap_index = 0;
     void releaseLazyMenu(Menu* menu);
     Menu* lazy_menu_release_pending = nullptr;
     void battery(bool initial = false);
