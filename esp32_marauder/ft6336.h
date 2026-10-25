@@ -6,7 +6,9 @@
 #ifdef HAS_FT6336
 
 #include <Wire.h>
-#include "ws_c5_exio.h"
+#ifdef MARAUDER_WS_C5_35
+  #include "CH32V00X_IOExpander.hpp"
+#endif
 
 #define FT6336_ADDR      0x38
 #define FT6336_TD_STATUS 0x02
@@ -22,10 +24,47 @@ static bool _ft6336_read(uint8_t reg, uint8_t *buf, uint8_t len) {
     return true;
 }
 
+#ifdef MARAUDER_WS_C5_35
+// Waveshare ESP32-C5-Touch-LCD-3.5 panel bring-up via the CH32V00X (CH32V007)
+// I/O expander at 0x24 (the generic CH32V00X_IOExpander driver; same device,
+// registers and address as the former ws_c5_exio.h helper). EXIO0 = touch
+// reset, EXIO1 = LCD reset, EXIO5 = panel power / backlight enable.
+//
+// The expander registers are driven directly (writeReg) rather than through
+// lcdReset()/touchReset(), to preserve Waveshare's verified bring-up exactly:
+// configure the three signals as outputs, then raise the power rail and BOTH
+// resets TOGETHER before pulsing either reset. Resetting the FT6336 while its
+// rail is still off (the earlier bug) left the touch chip unresponsive. The
+// FT6336 also needs ~300 ms after its reset is released before it answers.
+// Must run before tft.init(); safe to call more than once.
+static bool ws_c5_exio_begin() {
+    Wire.begin(CTP_SDA, CTP_SCL, 100000U);  // 100kHz: robust reads over the panel flex
+    const uint8_t TP  = CH32V00X_PIN_0;     // EXIO0 -> FT6336 reset
+    const uint8_t LCD = CH32V00X_PIN_1;     // EXIO1 -> ST7796 reset
+    const uint8_t PWR = CH32V00X_PIN_5;     // EXIO5 -> panel power / backlight enable
+    CH32V00X_IOExpander& io = CH32V00X_obj;
+    bool ok = io.writeReg(CH32V00X_REG_DIR, 0xFF) &&            // all pins output
+              io.writeReg(CH32V00X_REG_OUT, 0x00) &&            // all low
+              io.writeReg(CH32V00X_REG_PWM, 0x00) &&            // backlight off
+              io.writeReg(CH32V00X_REG_DIR, TP | LCD | PWR);    // drive the 3 signals
+    ok = ok && io.writeReg(CH32V00X_REG_OUT, TP | LCD);        delay(50);
+    ok = ok && io.writeReg(CH32V00X_REG_OUT, 0x00);           delay(50);
+    ok = ok && io.writeReg(CH32V00X_REG_OUT, TP | LCD | PWR); delay(50);  // rail + resets up together
+    // Power is on. Pulse each reset (active-low) with the rail up.
+    ok = ok && io.writeReg(CH32V00X_REG_OUT, TP | PWR);       delay(20);   // LCD reset low
+    ok = ok && io.writeReg(CH32V00X_REG_OUT, TP | LCD | PWR); delay(120);  // LCD reset high
+    ok = ok && io.writeReg(CH32V00X_REG_OUT, LCD | PWR);      delay(20);   // touch reset low
+    ok = ok && io.writeReg(CH32V00X_REG_OUT, TP | LCD | PWR); delay(300);  // touch reset high (FT6336 boot)
+    ok = ok && io.writeReg(CH32V00X_REG_PWM, 0xFF);           // backlight full
+    Serial.printf("[WS-C5] CH32V00X expander 0x24 %s\n", ok ? "ready" : "NOT FOUND");
+    return ok;
+}
+#endif
+
 static void ft6336_init() {
 #ifdef MARAUDER_WS_C5_35
-    // Panel power, LCD reset and touch reset are on the I/O expander (0x24),
-    // which also opens the shared I2C bus. Must run before tft.init().
+    // Panel power, LCD reset and touch reset are on the CH32V00X I/O expander
+    // (0x24), which also opens the shared I2C bus. Must run before tft.init().
     ws_c5_exio_begin();
 #else
     #if CTP_RST >= 0

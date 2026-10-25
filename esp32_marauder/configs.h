@@ -860,6 +860,15 @@
   #endif
   //// END BOARD FEATURES
 
+  // ESP32-C5 boards that also drive a display (WS_C5_28 / WS_C5_35) have very
+  // little internal SRAM free at runtime (display buffers + full feature
+  // profile), so the runtime memory guard's default floor would latch paused
+  // and block all WiFi/BLE scanning. Lower the guard floor for these targets
+  // (thresholds in MemoryGuard.h; tune against the "[memguard] free=..." log).
+  #if defined(MARAUDER_WS_C5_28) || defined(MARAUDER_WS_C5_35)
+    #define MARAUDER_LOW_INTERNAL_RAM
+  #endif
+
     #ifndef GMTOFFSET_SEC
       #define GMTOFFSET_SEC 0  // -8 hours for Pacific Time
     #endif
