@@ -151,6 +151,22 @@
 
   //// END HARDWARE NAMES
 
+  //// FCC MODULE IDENTIFIERS
+  // These identify the installed radio module, not a separate end-product grant.
+  #if defined(MARAUDER_V8) || defined(MARAUDER_MINI_V3) || defined(MARAUDER_C5)
+    #define FCC_ID "2AC7Z-ESPC5WROOMU"
+  #elif defined(MARAUDER_V4) || defined(MARAUDER_V6) || defined(MARAUDER_V6_1) || \
+        defined(MARAUDER_V7) || defined(MARAUDER_V7_1) || defined(MARAUDER_MINI) || \
+        defined(MARAUDER_KIT)
+    #define FCC_ID "2AC7Z-ESP32WROOM32U"
+  #elif defined(MARAUDER_DEV_BOARD_PRO)
+    #define FCC_ID "2AC7Z-ESP32WROOM32E"
+  #else
+    #define FCC_ID "See hardware label"
+  #endif
+
+  //// END FCC MODULE IDENTIFIERS
+
  //// BOARD FEATURES
  #if defined(DUAL_MINI_C5)
     #define MARAUDER_MINI_V3

@@ -1,5 +1,6 @@
 #include "esp_random.h"
 #include "WiFiScan.h"
+#include "StationSelection.h"
 #ifdef HAS_FACES_KEYBOARD
   #include "Keyboard.h"
 #endif
@@ -5023,6 +5024,7 @@ void WiFiScan::RunInfo() {
     display_obj.tft.println(text_table4[20]);
     display_obj.tft.println(text_table4[21] + display_obj.version_number);
     display_obj.tft.println("Hardware: " + (String)HARDWARE_NAME);
+    display_obj.tft.println("FCC ID: " + (String)FCC_ID);
     display_obj.tft.println("App partition: " + app_partition);
     display_obj.tft.println(text_table4[22] + (String)esp_get_idf_version());
   #endif
@@ -5030,6 +5032,7 @@ void WiFiScan::RunInfo() {
   Serial.println(text_table4[20]);
   Serial.println(text_table4[21] + (String)MARAUDER_VERSION);
   Serial.println("Hardware: " + (String)HARDWARE_NAME);
+  Serial.println("FCC ID: " + (String)FCC_ID);
   Serial.println("App partition: " + app_partition);
   Serial.println(text_table4[22] + (String)esp_get_idf_version());
 
@@ -5117,6 +5120,26 @@ void WiFiScan::RunInfo() {
   //#ifdef HAS_SCREEN
   //  display_obj.tft.println(text_table4[35] + (String)temp_obj.current_temp + " C");
   //#endif
+}
+
+bool WiFiScan::setStationSelected(uint16_t index, bool selected) {
+  if (stations == nullptr || index >= stations->size())
+    return false;
+
+  Station station = stations->get(index);
+  station.selected = selected;
+  stations->set(index, station);
+
+  if (access_points != nullptr) {
+    const int ap_index = associatedApToSelect(selected, station.ap, access_points->size());
+    if (ap_index >= 0) {
+      AccessPoint access_point = access_points->get(ap_index);
+      access_point.selected = true;
+      access_points->set(ap_index, access_point);
+    }
+  }
+
+  return true;
 }
 
 void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color) {
