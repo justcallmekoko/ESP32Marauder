@@ -11667,15 +11667,29 @@ void WiFiScan::packetRateLoop(uint32_t tick) {
 }
 
 #ifdef HAS_ZIGBEE
-// Beacon-Sniff-style touch controls for the Zigbee sniffer. Mirrors the WiFi
-// sniffers' button handling: the shared checkAnalyzerButtons() returns which of
-// the on-screen keys was released, then we act on the same CHAN_* / EXIT_BUTTON
-// indices. The channel range here is the 802.15.4 band (11..26), not WiFi's.
+// Beacon-Sniff-style touch controls for the Zigbee sniffer: - / + step the
+// 802.15.4 channel (11..26), HOP toggles band hopping, X exits. Draws the same
+// key rectangles the WiFi sniffers use.
+//
+// NOTE on touch handling: we deliberately do NOT use WiFiScan::
+// checkAnalyzerButtons() here. That routine only marks a key "pressed" from
+// inside a `while (updateTouch())` loop, i.e. it needs the touch to keep
+// reading as pressed across repeated polls. The capacitive controllers on
+// these boards (e.g. CST3530 on the Waveshare C5) instead report a touch as a
+// single DOWN *event*: updateTouch() returns 1 once, with the coordinate, then
+// 0 while the finger is held - so checkAnalyzerButtons() never registers a
+// press and always returns -1. Here we hit-test the button rectangles directly
+// against that one DOWN coordinate, which is all this screen needs and works
+// with both event- and level-style touch controllers.
 void WiFiScan::zigbeeScanButtons(uint32_t currentTime) {
+  (void)currentTime;
   #if defined(HAS_SCREEN) && defined(HAS_ILI9341)
-    int8_t b = this->checkAnalyzerButtons(currentTime);
+    uint16_t t_x = 0, t_y = 0;
+    if (!display_obj.updateTouch(&t_x, &t_y))
+      return;   // no fresh touch this tick
 
-    if (b == EXIT_BUTTON_INDEX) {
+    // X : stop the scan and return to the menu.
+    if (display_obj.key[EXIT_BUTTON_INDEX].contains(t_x, t_y)) {
       this->StartScan(WIFI_SCAN_OFF);
       this->orient_display = true;
       return;
@@ -11683,7 +11697,7 @@ void WiFiScan::zigbeeScanButtons(uint32_t currentTime) {
     // '-' : step down one channel. Choosing a channel parks the radio on it,
     // so -/+ also turn hopping off (auto-lock) and clear the shared ChanHop
     // flag, keeping the HOP button and the persisted setting in agreement.
-    else if (b == CHAN_MINUS_INDEX) {
+    if (display_obj.key[CHAN_MINUS_INDEX].contains(t_x, t_y)) {
       if (this->zb_channel > ZIGBEE_MIN_CHANNEL) {
         this->zb_channel--;
         this->zb_channel_hop = false;
@@ -11697,7 +11711,7 @@ void WiFiScan::zigbeeScanButtons(uint32_t currentTime) {
       return;
     }
     // '+' : step up one channel (same auto-lock behaviour as '-').
-    else if (b == CHAN_PLUS_INDEX) {
+    if (display_obj.key[CHAN_PLUS_INDEX].contains(t_x, t_y)) {
       if (this->zb_channel < ZIGBEE_MAX_CHANNEL) {
         this->zb_channel++;
         this->zb_channel_hop = false;
@@ -11710,17 +11724,15 @@ void WiFiScan::zigbeeScanButtons(uint32_t currentTime) {
       }
       return;
     }
-    // 'HOP' : toggle band hopping via the shared persistent ChanHop setting.
+    // HOP : toggle band hopping via the shared persistent ChanHop setting.
     // Turning hop back on resumes from the current channel in zigbeeLoop().
-    else if (b == CHAN_HOP_INDEX) {
+    if (display_obj.key[CHAN_HOP_INDEX].contains(t_x, t_y)) {
       settings_obj.toggleSetting("ChanHop");
       this->zb_channel_hop = settings_obj.loadSetting<bool>("ChanHop");
       display_obj.tftDrawChanHopButton(false, this->zb_channel_hop);
       this->zbDrawStatusLabel();
       return;
     }
-  #else
-    (void)currentTime;
   #endif
 }
 #endif
