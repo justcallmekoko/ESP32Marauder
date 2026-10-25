@@ -3878,6 +3878,11 @@ void MenuFunctions::RunSetup()
     this->drawStatusBar();
     wifi_scan_obj.StartScan(ZIGBEE_SCAN_ALL, TFT_GREEN);
   });
+  this->addNodes(&zigbeeMenu, "Show Keys", TFTPURPLE, SNIFFERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.RunShowZBKeys();
+  });
   #ifdef HAS_SD
     this->addNodes(&zigbeeMenu, "Save Nodes", TFTNAVY, SD_UPDATE, [this]() {
       display_obj.clearScreen();
@@ -3888,6 +3893,16 @@ void MenuFunctions::RunSetup()
       display_obj.clearScreen();
       this->drawStatusBar();
       wifi_scan_obj.RunLoadZBList();
+    });
+    this->addNodes(&zigbeeMenu, "Save Keys", TFTNAVY, SD_UPDATE, [this]() {
+      display_obj.clearScreen();
+      this->drawStatusBar();
+      wifi_scan_obj.RunSaveZBKeys();
+    });
+    this->addNodes(&zigbeeMenu, "Load Keys", TFTBLUE, SD_UPDATE, [this]() {
+      display_obj.clearScreen();
+      this->drawStatusBar();
+      wifi_scan_obj.RunLoadZBKeys();
     });
   #endif
 #endif

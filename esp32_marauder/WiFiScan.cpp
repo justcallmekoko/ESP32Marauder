@@ -4500,6 +4500,176 @@ void WiFiScan::RunSaveZBList(bool save_as) {
     }
   #endif
 }
+
+// Human-readable key-type tag for JSON / display.
+static const char *zbKeyTypeTag(ZbKeyType t) {
+  return (t == ZB_KEY_NETWORK) ? "NWK" : (t == ZB_KEY_TCLK) ? "TCLK" : "APP";
+}
+
+// Save all known/captured Zigbee keys to /zkeys.json (a JSON array). Rewrites
+// the whole file each time (the key list is tiny), so it stays valid JSON.
+// Called from "Save Keys" and automatically whenever a key is captured.
+void WiFiScan::RunSaveZBKeys() {
+  #ifdef HAS_SD
+    if (!sd_obj.supported) {
+      Serial.println(F("[ZBKEY] SD not available - cannot save /zkeys.json"));
+      return;
+    }
+
+    SD.remove("/zkeys.json");
+    File f = SD.open("/zkeys.json", FILE_WRITE);
+    if (!f) {
+      Serial.println(F("[ZBKEY] Could not open /zkeys.json for write"));
+      return;
+    }
+
+    DynamicJsonDocument jsonDocument(4096);
+    JsonArray jsonArray = jsonDocument.to<JsonArray>();
+
+    int key_count = (zigbee_keys != nullptr) ? zigbee_keys->size() : 0;
+    for (int i = 0; i < key_count; i++) {
+      ZbKey k = zigbee_keys->get(i);
+      JsonObject o = jsonArray.createNestedObject();
+
+      char hex[ZIGBEE_KEY_LEN * 3 + 1];
+      int p = 0;
+      for (int b = 0; b < ZIGBEE_KEY_LEN; b++)
+        p += snprintf(hex + p, sizeof(hex) - p, "%02X%s",
+                      k.key[b], b < ZIGBEE_KEY_LEN - 1 ? ":" : "");
+
+      // Wrap in String() so ArduinoJson copies the text into the document
+      // (k is a local; its char buffers go out of scope before serialize).
+      o["type"]       = String(zbKeyTypeTag(k.type));
+      o["key"]        = String(hex);
+      o["seq"]        = k.seqNum;
+      o["label"]      = String(k.label);
+      o["capturedAt"] = k.capturedAt_ms;
+    }
+
+    serializeJson(jsonArray, f);
+    f.close();
+
+    Serial.printf("[ZBKEY] Saved %d key(s) to /zkeys.json\n", key_count);
+    #ifdef HAS_SCREEN
+      display_obj.tft.setTextWrap(false);
+      display_obj.tft.setFreeFont(NULL);
+      display_obj.tft.setCursor(0, 110);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextColor(TFT_CYAN);
+      display_obj.tft.print(F("Saved Zigbee keys: "));
+      display_obj.tft.println((String)key_count);
+    #endif
+  #endif
+}
+
+// Load keys from /zkeys.json back into the key list (additive, deduped by
+// zbAddKey). Lets previously-captured network keys survive a reboot.
+void WiFiScan::RunLoadZBKeys() {
+  #ifdef HAS_SD
+    File file = sd_obj.getFile(F("/zkeys.json"));
+    if (!file) {
+      Serial.println(F("[ZBKEY] Could not open /zkeys.json"));
+      return;
+    }
+
+    DynamicJsonDocument jsonDocument(4096);
+    DeserializationError err = deserializeJson(jsonDocument, file);
+    file.close();
+    if (err) {
+      Serial.print(F("[ZBKEY] /zkeys.json parse error: "));
+      Serial.println(err.c_str());
+      return;
+    }
+
+    JsonArray jsonArray = jsonDocument.as<JsonArray>();
+    int loaded = 0;
+    for (JsonVariant v : jsonArray) {
+      JsonObject o = v.as<JsonObject>();
+      const char *typeStr = o["type"] | "NWK";
+      const char *hex     = o["key"]  | "";
+      uint8_t seq         = o["seq"]  | 0;
+      const char *label   = o["label"] | "";
+
+      ZbKeyType type = ZB_KEY_NETWORK;
+      if (strcmp(typeStr, "TCLK") == 0) type = ZB_KEY_TCLK;
+      else if (strcmp(typeStr, "APP") == 0) type = ZB_KEY_APP;
+
+      // Parse "AA:BB:.." (or plain hex) into 16 bytes.
+      uint8_t key[ZIGBEE_KEY_LEN] = {};
+      int nib = 0, byteIdx = 0;
+      uint8_t cur = 0;
+      for (const char *c = hex; *c && byteIdx < ZIGBEE_KEY_LEN; c++) {
+        uint8_t v;
+        if (*c >= '0' && *c <= '9') v = *c - '0';
+        else if (*c >= 'a' && *c <= 'f') v = *c - 'a' + 10;
+        else if (*c >= 'A' && *c <= 'F') v = *c - 'A' + 10;
+        else continue;                       // skip ':' and any separators
+        cur = (cur << 4) | v;
+        if (++nib == 2) { key[byteIdx++] = cur; cur = 0; nib = 0; }
+      }
+      if (byteIdx == ZIGBEE_KEY_LEN && this->zbAddKey(type, key, seq, label))
+        loaded++;
+    }
+    Serial.printf("[ZBKEY] Loaded %d key(s) from /zkeys.json\n", loaded);
+    #ifdef HAS_SCREEN
+      display_obj.tft.setTextWrap(false);
+      display_obj.tft.setFreeFont(NULL);
+      display_obj.tft.setCursor(0, 110);
+      display_obj.tft.setTextSize(1);
+      display_obj.tft.setTextColor(TFT_CYAN);
+      display_obj.tft.print(F("Loaded Zigbee keys: "));
+      display_obj.tft.println((String)loaded);
+    #endif
+  #endif
+}
+
+// Static on-screen listing of all known/captured keys (menu "Show Keys").
+void WiFiScan::RunShowZBKeys() {
+  int key_count = (zigbee_keys != nullptr) ? zigbee_keys->size() : 0;
+
+  Serial.printf("[ZBKEY] %d key(s):\n", key_count);
+  #ifdef HAS_SCREEN
+    display_obj.tft.setTextWrap(false);
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setCursor(0, 40);
+    display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+    display_obj.tft.println(F("Zigbee Keys"));
+  #endif
+
+  if (key_count == 0) {
+    Serial.println(F("  (none)"));
+    #ifdef HAS_SCREEN
+      display_obj.tft.setTextColor(TFT_YELLOW, TFT_BLACK);
+      display_obj.tft.println(F("  (no keys captured)"));
+    #endif
+    return;
+  }
+
+  for (int i = 0; i < key_count; i++) {
+    ZbKey k = zigbee_keys->get(i);
+    char hex[ZIGBEE_KEY_LEN * 3 + 1];
+    int p = 0;
+    for (int b = 0; b < ZIGBEE_KEY_LEN; b++)
+      p += snprintf(hex + p, sizeof(hex) - p, "%02X%s",
+                    k.key[b], b < ZIGBEE_KEY_LEN - 1 ? ":" : "");
+
+    Serial.printf("  %-4s seq=%u %s %s\n",
+                  zbKeyTypeTag(k.type), k.seqNum, hex, k.label);
+    #ifdef HAS_SCREEN
+      // Key is wider than the screen, so show the tag/seq/label then the hex
+      // on its own wrapped line.
+      display_obj.tft.setTextColor(
+        k.type == ZB_KEY_NETWORK ? TFT_CYAN : TFT_LIGHTGREY, TFT_BLACK);
+      display_obj.tft.print(zbKeyTypeTag(k.type));
+      display_obj.tft.print(F(" s")); display_obj.tft.print(k.seqNum);
+      display_obj.tft.print(F(" ")); display_obj.tft.println(k.label);
+      display_obj.tft.setTextWrap(true);
+      display_obj.tft.println(hex);
+      display_obj.tft.setTextWrap(false);
+    #endif
+  }
+}
 #endif // HAS_ZIGBEE
 
 void WiFiScan::RunLoadSSIDList() {
@@ -13427,6 +13597,13 @@ void WiFiScan::main(uint32_t currentTime)
       // drain/parse frames. zigbeeLoop() no-ops once the radio is stopped.
       this->zigbeeScanButtons(currentTime);
       this->zigbeeLoop(currentTime);
+      // Persist newly-captured keys to /zkeys.json as they arrive.
+      if (this->zb_keys_dirty) {
+        this->zb_keys_dirty = false;
+        #ifdef HAS_SD
+          this->RunSaveZBKeys();
+        #endif
+      }
     }
   #endif
   #ifdef HAS_GPS

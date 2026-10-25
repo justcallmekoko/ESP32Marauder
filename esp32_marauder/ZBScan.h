@@ -115,7 +115,46 @@ struct ZbFrameInfo {
   uint16_t nwkSrc;
   uint16_t nwkDst;
   bool     hasNwk;
+
+  // Byte offset (into the raw 802.15.4 frame) at which the MAC payload / NWK
+  // layer begins. Set by zbDecodeMac; the key-capture path needs it to walk
+  // the NWK + APS headers over the real on-air bytes.
+  uint8_t  macPayloadOffset;
 };
+
+// ---------------------------------------------------------------------------
+// Zigbee key material (network key interception). Ported from the C6_zigbee
+// IEEE802154Sniffer / ZbKeyCapture classes. A captured or preloaded key is a
+// plain ZbKey held in a global LinkedList, mirroring zigbee_nodes.
+// ---------------------------------------------------------------------------
+#define ZIGBEE_KEY_LEN        16
+#define ZB_MAX_PENDING_JOINS  4
+
+enum ZbKeyType : uint8_t {
+  ZB_KEY_TCLK    = 0,   // Trust Center Link Key (used to decrypt Transport Key)
+  ZB_KEY_NETWORK = 1,   // captured Zigbee network key
+  ZB_KEY_APP     = 2,
+};
+
+struct ZbKey {
+  ZbKeyType type;
+  uint8_t   key[ZIGBEE_KEY_LEN];
+  uint8_t   seqNum;
+  uint32_t  capturedAt_ms;
+  char      label[20];
+};
+
+// Tracks a device mid-join (association response seen) so a following APS
+// Transport Key frame can be matched to it.
+struct ZbJoinState {
+  uint16_t shortAddr;
+  uint64_t extAddr;
+  uint32_t assocTime_ms;
+  bool     active;
+};
+
+// Global captured/known-key list, mirroring the global `zigbee_nodes`.
+extern LinkedList<ZbKey>* zigbee_keys;
 
 // A discovered Zigbee / 802.15.4 node. Modeled on WiFiScan's AccessPoint: a
 // plain struct held in a LinkedList, carrying a nested LinkedList of the peers
@@ -168,6 +207,24 @@ class ZBScan {
     uint32_t zb_frame_count = 0;
     uint32_t zb_zigbee_count = 0;
 
+    // --- Network-key capture ------------------------------------------------
+    // Watch the APS Transport Key sent to a joining device and recover the
+    // network key by trying each known Trust Center Link Key (TCLK). Enabled
+    // by default; the default TCLKs (ZigBeeAlliance09, eISY) are preloaded at
+    // scan start. Captured keys land in the global `zigbee_keys` list.
+    bool     zb_key_capture = true;
+
+    // Set true whenever a new key is captured/added, so WiFiScan can persist
+    // the key list to SD (polled + cleared from the ZIGBEE main() dispatch).
+    bool     zb_keys_dirty = false;
+
+    void   zbLoadDefaultKeys();            // preload known TCLKs (idempotent)
+    int    clearZigbeeKeys();              // free + empty the key list
+    bool   zbAddKey(ZbKeyType type, const uint8_t *key16,
+                    uint8_t seqNum = 0, const char *label = nullptr);
+    ZbKey *zbFindNetworkKey(uint8_t seqNum);
+    size_t zigbeeKeyCount() const;
+
   protected:
     uint8_t zb_channel = ZIGBEE_DEFAULT_CHANNEL;
     uint8_t zb_start_channel = 0;  // 0 = hop; 11..26 = lock to that channel
@@ -196,6 +253,37 @@ class ZBScan {
     ZigbeeNode* zbUpdateNode(const ZbFrameInfo &info, uint16_t addr, bool is_src);
     int  zbFindNode(uint16_t short_addr);
     void zbProcessFrame(const ZbFrameInfo &info);
+
+    // --- Key-capture internals (ported from C6_zigbee ZbKeyCapture) ---------
+    ZbJoinState zb_joins[ZB_MAX_PENDING_JOINS];
+    uint64_t    zb_coordEUI64 = 0;   // coordinator EUI64, learned from traffic
+    bool        zb_keys_loaded = false;
+
+    // Feed one fully-decoded frame (plus its raw bytes) through the key-capture
+    // pipeline. rawLen/macOff describe the on-air frame in `raw`.
+    void zbKeyCaptureFrame(const ZbFrameInfo &info, const uint8_t *raw,
+                           uint8_t rawLen, uint8_t macOff);
+    void zbExpireJoins(uint32_t timeout_ms = 30000);
+    void zbPrintKey(const ZbKey &key);   // inline (screen + serial) report
+
+    ZbJoinState *zbFindJoin(uint16_t addr);
+    ZbJoinState *zbAllocJoin(uint16_t addr);
+    void         zbFreeJoin(ZbJoinState *j);
+
+    void zbHandleAssocResponse(const ZbFrameInfo &info);
+    bool zbHandleTransportKey(const ZbFrameInfo &info,
+                              const uint8_t *nwkPayload, uint8_t nwkLen);
+    bool zbSkipNwkHeader(const uint8_t *p, uint8_t len, uint8_t &apsOffset);
+    bool zbDecryptApsPayload(const uint8_t *nwkPayload, uint8_t nwkLen,
+                             uint8_t apsOffset, const uint8_t *key,
+                             uint64_t knownExtSrc,
+                             uint8_t *plaintextOut, uint8_t &plaintextLen);
+    bool zbParseTransportKey(const uint8_t *aps, uint8_t apsLen,
+                             uint8_t *networkKeyOut, uint8_t &seqNumOut);
+    bool zbCcmDecrypt(const uint8_t *key, const uint8_t *nonce,
+                      const uint8_t *aad, uint8_t aadLen,
+                      const uint8_t *ciphertext, uint8_t ciphertextLen,
+                      uint8_t *plaintext, const uint8_t *mic, uint8_t micLen);
 
  //ifdef HAS_ZIGBEE
     bool zbRadioInit(uint8_t channel);

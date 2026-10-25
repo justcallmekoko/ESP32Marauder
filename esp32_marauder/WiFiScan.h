@@ -1218,6 +1218,12 @@ enum class MacSortMode : uint8_t {
       // Beacon-Sniff-style touch controls for the Zigbee sniffer
       // (- / + channel, HOP toggle, X exit). Called each main() tick.
       void zigbeeScanButtons(uint32_t currentTime);
+      // Captured/known Zigbee keys -> /zkeys.json (JSON array), and an
+      // on-screen listing. RunSaveZBKeys is also called automatically from the
+      // main() dispatch whenever a new key is captured (zb_keys_dirty).
+      void RunSaveZBKeys();
+      void RunLoadZBKeys();
+      void RunShowZBKeys();
     #endif
     void RunSaveATList(bool save_as = true);
     void RunLoadATList();

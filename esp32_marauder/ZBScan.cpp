@@ -10,11 +10,53 @@
   extern Display display_obj;
 #endif
 
-// Global node list, defined here (declared extern in ZBScan.h), mirroring the
-// way WiFiScan.cpp owns the global `access_points` list.
-LinkedList<ZigbeeNode>* zigbee_nodes = new LinkedList<ZigbeeNode>();
+// AES-128-CCM* lives in mbedtls, which is part of the ESP32 Arduino / ESP-IDF
+// framework and is therefore always available on the 802.15.4-capable targets
+// this file compiles for. Used to decrypt the APS Transport Key command.
+#include "mbedtls/ccm.h"
 
-ZBScan::ZBScan() {}
+// PSRAM helper: the Waveshare C5 has 8MB PSRAM (BOARD_HAS_PSRAM). Allocating
+// the growing node/key list containers from PSRAM when present frees internal
+// RAM and lets the node list grow far larger. Mirrors the ps_malloc placement-
+// new idiom already used for `ssids` in WiFiScan.cpp.
+template <typename T>
+static LinkedList<T>* zbNewList() {
+  #ifdef BOARD_HAS_PSRAM
+    if (psramFound()) {
+      void *mem = ps_malloc(sizeof(LinkedList<T>));
+      if (mem) return new (mem) LinkedList<T>();
+    }
+  #endif
+  return new LinkedList<T>();
+}
+
+// Global node list, defined here (declared extern in ZBScan.h), mirroring the
+// way WiFiScan.cpp owns the global `access_points` list. Placed in PSRAM when
+// available so the discovered-node capacity is bounded by PSRAM, not the small
+// internal heap.
+LinkedList<ZigbeeNode>* zigbee_nodes = zbNewList<ZigbeeNode>();
+
+// Global captured/known-key list (TCLKs + recovered network keys).
+LinkedList<ZbKey>* zigbee_keys = zbNewList<ZbKey>();
+
+// -- Well-known Trust Center Link Keys, preloaded so a join can be decrypted --
+// ZigBeeAlliance09 is the Zigbee 3.0 global default TCLK; eISY is a gateway-
+// specific TCLK observed in the field. Ported from C6_zigbee.
+static const uint8_t ZB_TCLK_ZIGBEE_ALLIANCE09[ZIGBEE_KEY_LEN] = {
+  0x5A, 0x69, 0x67, 0x42, 0x65, 0x65, 0x41, 0x6C,
+  0x6C, 0x69, 0x61, 0x6E, 0x63, 0x65, 0x30, 0x39
+};
+static const uint8_t ZB_TCLK_EISY[ZIGBEE_KEY_LEN] = {
+  0x01, 0xA4, 0x10, 0x62, 0xBF, 0x9E, 0xAD, 0x7A,
+  0x8F, 0xE7, 0x2A, 0xBD, 0xB6, 0xF8, 0x18, 0x83
+};
+
+#define ZB_APS_CMD_TRANSPORT_KEY   0x05
+#define ZB_APS_KEY_TYPE_NWK        0x01
+
+ZBScan::ZBScan() {
+  memset(this->zb_joins, 0, sizeof(this->zb_joins));
+}
 
 // ---------------------------------------------------------------------------
 // Broadcast / reserved short address helper (mirrors C6_zigbee's is_bcast()).
@@ -56,6 +98,437 @@ int ZBScan::clearZigbeeNodes() {
   }
   zigbee_nodes->clear();
   return num;
+}
+
+// ===========================================================================
+// Network-key capture (ported from C6_zigbee ZbKeyCapture).
+//
+// During a device join the coordinator sends an APS Transport Key command
+// carrying the network key, encrypted at the APS layer with the Trust Center
+// Link Key (TCLK). We watch for the association response (to learn which
+// device is joining), then decrypt the following Transport Key with each known
+// TCLK and recover the network key. Some stacks send the Transport Key with no
+// APS encryption (plaintext) - that path is handled too.
+// ===========================================================================
+
+size_t ZBScan::zigbeeKeyCount() const {
+  return zigbee_keys == nullptr ? 0 : zigbee_keys->size();
+}
+
+int ZBScan::clearZigbeeKeys() {
+  if (zigbee_keys == nullptr) {
+    zigbee_keys = zbNewList<ZbKey>();
+    return 0;
+  }
+  int num = zigbee_keys->size();
+  zigbee_keys->clear();
+  this->zb_keys_loaded = false;
+  return num;
+}
+
+// Add a key if not already present (dedup on type + key bytes). Returns true
+// when a new key was stored.
+bool ZBScan::zbAddKey(ZbKeyType type, const uint8_t *key16,
+                      uint8_t seqNum, const char *label) {
+  if (zigbee_keys == nullptr) zigbee_keys = zbNewList<ZbKey>();
+
+  for (int i = 0; i < zigbee_keys->size(); i++) {
+    ZbKey existing = zigbee_keys->get(i);
+    if (existing.type == type &&
+        memcmp(existing.key, key16, ZIGBEE_KEY_LEN) == 0)
+      return false;   // already have it
+  }
+
+  ZbKey k;
+  k.type = type;
+  memcpy(k.key, key16, ZIGBEE_KEY_LEN);
+  k.seqNum = seqNum;
+  k.capturedAt_ms = millis();
+  memset(k.label, 0, sizeof(k.label));
+  if (label) strncpy(k.label, label, sizeof(k.label) - 1);
+
+  zigbee_keys->add(k);
+  this->zb_keys_dirty = true;   // ask WiFiScan to persist to SD
+  return true;
+}
+
+ZbKey *ZBScan::zbFindNetworkKey(uint8_t seqNum) {
+  // LinkedList::get() returns by value, so hand back a pointer into a static
+  // scratch copy (read-only use only).
+  static ZbKey found;
+  if (zigbee_keys == nullptr) return nullptr;
+  for (int i = 0; i < zigbee_keys->size(); i++) {
+    ZbKey k = zigbee_keys->get(i);
+    if (k.type == ZB_KEY_NETWORK && k.seqNum == seqNum) {
+      found = k;
+      return &found;
+    }
+  }
+  return nullptr;
+}
+
+void ZBScan::zbLoadDefaultKeys() {
+  if (this->zb_keys_loaded) return;
+  this->zbAddKey(ZB_KEY_TCLK, ZB_TCLK_ZIGBEE_ALLIANCE09, 0, "ZigBeeAlliance09");
+  this->zbAddKey(ZB_KEY_TCLK, ZB_TCLK_EISY, 0, "eISY-TCLK");
+  // Default TCLKs are not "captured" - don't force an SD rewrite for them.
+  this->zb_keys_dirty = false;
+  this->zb_keys_loaded = true;
+}
+
+void ZBScan::zbPrintKey(const ZbKey &key) {
+  const char *tn = (key.type == ZB_KEY_NETWORK) ? "NWK"
+                 : (key.type == ZB_KEY_TCLK)    ? "TCLK" : "APP";
+  char hex[ZIGBEE_KEY_LEN * 3 + 1];
+  int p = 0;
+  for (int i = 0; i < ZIGBEE_KEY_LEN; i++)
+    p += snprintf(hex + p, sizeof(hex) - p, "%02X%s",
+                  key.key[i], i < ZIGBEE_KEY_LEN - 1 ? ":" : "");
+  Serial.printf("[ZBKEY] %s seq=%u %s %s\n", tn, key.seqNum, hex, key.label);
+  #ifdef HAS_SCREEN
+    String line = String("[KEY] ") + tn + " s" + key.seqNum + " " + hex;
+    if (display_obj.display_buffer != nullptr)
+      display_obj.display_buffer->add(line);
+  #endif
+}
+
+// -- Pending-join tracking ----------------------------------------------------
+
+ZbJoinState *ZBScan::zbFindJoin(uint16_t addr) {
+  for (int i = 0; i < ZB_MAX_PENDING_JOINS; i++)
+    if (this->zb_joins[i].active && this->zb_joins[i].shortAddr == addr)
+      return &this->zb_joins[i];
+  return nullptr;
+}
+
+ZbJoinState *ZBScan::zbAllocJoin(uint16_t addr) {
+  for (int i = 0; i < ZB_MAX_PENDING_JOINS; i++) {
+    if (!this->zb_joins[i].active) {
+      this->zb_joins[i].active       = true;
+      this->zb_joins[i].shortAddr    = addr;
+      this->zb_joins[i].extAddr      = 0;
+      this->zb_joins[i].assocTime_ms = millis();
+      return &this->zb_joins[i];
+    }
+  }
+  // All slots busy - reuse the oldest.
+  ZbJoinState *oldest = &this->zb_joins[0];
+  for (int i = 1; i < ZB_MAX_PENDING_JOINS; i++)
+    if (this->zb_joins[i].assocTime_ms < oldest->assocTime_ms)
+      oldest = &this->zb_joins[i];
+  oldest->active       = true;
+  oldest->shortAddr    = addr;
+  oldest->extAddr      = 0;
+  oldest->assocTime_ms = millis();
+  return oldest;
+}
+
+void ZBScan::zbFreeJoin(ZbJoinState *j) {
+  if (j) j->active = false;
+}
+
+void ZBScan::zbExpireJoins(uint32_t timeout_ms) {
+  uint32_t now = millis();
+  for (int i = 0; i < ZB_MAX_PENDING_JOINS; i++)
+    if (this->zb_joins[i].active &&
+        (now - this->zb_joins[i].assocTime_ms) > timeout_ms)
+      this->zb_joins[i].active = false;
+}
+
+// -- Entry point: feed one decoded frame through the capture pipeline ---------
+
+void ZBScan::zbKeyCaptureFrame(const ZbFrameInfo &info, const uint8_t *raw,
+                               uint8_t rawLen, uint8_t macOff) {
+  if (!this->zb_key_capture) return;
+
+  // Learn the coordinator's EUI64 whenever it appears as an extended source
+  // from short address 0x0000.
+  if (info.srcExtended != 0 && info.macSrc == 0x0000)
+    this->zb_coordEUI64 = info.srcExtended;
+
+  // Association response (MAC command 0x02) tells us a device is joining.
+  if (info.frameType == ZB_FC_FRAME_TYPE_MACCMD) {
+    uint8_t cmdId = (macOff < rawLen) ? raw[macOff] : 0xFF;
+    if (cmdId == 0x02)
+      this->zbHandleAssocResponse(info);
+    return;
+  }
+
+  // Unicast Zigbee data frame -> candidate APS Transport Key.
+  if (info.isZigbee && info.frameType == ZB_FC_FRAME_TYPE_DATA) {
+    if (!zb_is_bcast(info.nwkDst) && macOff < rawLen)
+      this->zbHandleTransportKey(info, raw + macOff, rawLen - macOff);
+  }
+}
+
+void ZBScan::zbHandleAssocResponse(const ZbFrameInfo &info) {
+  // Must come from the coordinator (directly, or relayed by a router whose NWK
+  // source is the coordinator).
+  if (info.macSrc != 0x0000 && info.nwkSrc != 0x0000) return;
+
+  uint16_t newDevAddr = info.macDst;   // may be 0xFFFE for an ext-addressed resp
+
+  // If we already track this EUI64 (from an earlier assoc req/beacon), just
+  // refresh its short address instead of allocating a new slot.
+  if (info.dstExtended != 0) {
+    for (int i = 0; i < ZB_MAX_PENDING_JOINS; i++) {
+      if (this->zb_joins[i].active &&
+          this->zb_joins[i].extAddr == info.dstExtended) {
+        this->zb_joins[i].shortAddr = newDevAddr;
+        return;
+      }
+    }
+  }
+
+  ZbJoinState *j = this->zbAllocJoin(newDevAddr);
+  j->extAddr = info.dstExtended;
+  Serial.printf("[ZBKEY] Join detected: 0x%04X (EUI64 %016llX)\n",
+                newDevAddr, (unsigned long long)info.dstExtended);
+}
+
+bool ZBScan::zbHandleTransportKey(const ZbFrameInfo &info,
+                                  const uint8_t *nwkPayload, uint8_t nwkLen) {
+  // Match to a recently-joined device by NWK dst; fall back to any active join
+  // if the frame came from the coordinator (indirect routing via a parent).
+  ZbJoinState *j = this->zbFindJoin(info.nwkDst);
+  if (!j && info.nwkSrc == 0x0000) {
+    for (int i = 0; i < ZB_MAX_PENDING_JOINS; i++)
+      if (this->zb_joins[i].active) { j = &this->zb_joins[i]; break; }
+  }
+  if (!j) return false;
+
+  uint8_t apsOffset = 0;
+  if (!this->zbSkipNwkHeader(nwkPayload, nwkLen, apsOffset)) return false;
+  if (apsOffset >= nwkLen) return false;
+
+  uint8_t apsFc        = nwkPayload[apsOffset];
+  uint8_t apsFrameType = apsFc & 0x03;
+  bool    apsSecured   = (apsFc >> 5) & 0x01;
+
+  if (apsFrameType != 0x01) return false;   // not an APS command frame
+
+  // Coordinator EUI64 for the CCM* nonce (fallback: node 0x0000's ext addr).
+  uint64_t coordEUI64 = this->zb_coordEUI64;
+  if (coordEUI64 == 0) {
+    int ci = this->zbFindNode(0x0000);
+    if (ci >= 0) coordEUI64 = zigbee_nodes->get(ci).ext_addr;
+  }
+
+  if (apsSecured) {
+    // APS-encrypted: try every known TCLK.
+    for (int ki = 0; ki < zigbee_keys->size(); ki++) {
+      ZbKey k = zigbee_keys->get(ki);
+      if (k.type != ZB_KEY_TCLK) continue;
+
+      uint8_t plaintext[96] = {};
+      uint8_t plaintextLen  = 0;
+      if (!this->zbDecryptApsPayload(nwkPayload, nwkLen, apsOffset,
+                                     k.key, coordEUI64,
+                                     plaintext, plaintextLen))
+        continue;
+
+      uint8_t networkKey[ZIGBEE_KEY_LEN] = {};
+      uint8_t keySeq = 0;
+      if (!this->zbParseTransportKey(plaintext, plaintextLen, networkKey, keySeq)) {
+        // zbParseTransportKey expects the buffer to start at the APS FC byte,
+        // which holds for the MIC-only / plaintext case (zbDecryptApsPayload
+        // copies from the APS FC). For a truly ENCRYPTED payload, however, the
+        // CCM* output is the bare APS command payload - command id(1) +
+        // keyType(1) + key(16) + seq(1) + ... - so parse that layout directly.
+        if (!(plaintextLen >= 19 &&
+              plaintext[0] == ZB_APS_CMD_TRANSPORT_KEY &&
+              plaintext[1] == ZB_APS_KEY_TYPE_NWK))
+          continue;
+        memcpy(networkKey, &plaintext[2], ZIGBEE_KEY_LEN);
+        keySeq = plaintext[2 + ZIGBEE_KEY_LEN];
+      }
+
+      char label[20];
+      snprintf(label, sizeof(label), "NWK-seq%u", keySeq);
+      if (this->zbAddKey(ZB_KEY_NETWORK, networkKey, keySeq, label)) {
+        ZbKey disp; disp.type = ZB_KEY_NETWORK;
+        memcpy(disp.key, networkKey, ZIGBEE_KEY_LEN);
+        disp.seqNum = keySeq; strncpy(disp.label, label, sizeof(disp.label));
+        Serial.println(F("[ZBKEY] *** Network key captured! ***"));
+        this->zbPrintKey(disp);
+      }
+      this->zbFreeJoin(j);
+      return true;
+    }
+    if (this->zb_verbose)
+      Serial.printf("[ZBKEY] Decrypt failed for 0x%04X\n", info.nwkDst);
+    return false;
+  }
+
+  // APS not encrypted: parse the plaintext Transport Key directly.
+  uint8_t networkKey[ZIGBEE_KEY_LEN] = {};
+  uint8_t keySeq = 0;
+  if (!this->zbParseTransportKey(&nwkPayload[apsOffset], nwkLen - apsOffset,
+                                 networkKey, keySeq))
+    return false;
+
+  char label[20];
+  snprintf(label, sizeof(label), "NWK-seq%u", keySeq);
+  if (this->zbAddKey(ZB_KEY_NETWORK, networkKey, keySeq, label)) {
+    ZbKey disp; disp.type = ZB_KEY_NETWORK;
+    memcpy(disp.key, networkKey, ZIGBEE_KEY_LEN);
+    disp.seqNum = keySeq; strncpy(disp.label, label, sizeof(disp.label));
+    Serial.println(F("[ZBKEY] *** Network key captured (plaintext)! ***"));
+    this->zbPrintKey(disp);
+  }
+  this->zbFreeJoin(j);
+  return true;
+}
+
+// Skip the NWK header (incl. optional multicast/ext-addr/source-route/AUX) to
+// reach the APS layer. Returns the APS offset in `apsOffset`.
+bool ZBScan::zbSkipNwkHeader(const uint8_t *p, uint8_t len, uint8_t &apsOffset) {
+  if (len < 8) return false;
+
+  uint16_t nwkFc = (uint16_t)p[0] | ((uint16_t)p[1] << 8);
+  uint8_t off = 8;                            // FC(2)+dst(2)+src(2)+radius(1)+seq(1)
+
+  if ((nwkFc >> 8) & 0x01) { if (off + 1 > len) return false; off++; }        // multicast ctrl
+  if (nwkFc & ZB_NWK_FC_EXT_DST) { if (off + 8 > len) return false; off += 8; }
+  if (nwkFc & ZB_NWK_FC_EXT_SRC) { if (off + 8 > len) return false; off += 8; }
+  if (nwkFc & ZB_NWK_FC_SOURCE_ROUTE) {
+    if (off + 2 > len) return false;
+    uint8_t relayCount = p[off];
+    off += 2 + relayCount * 2;
+    if (off > len) return false;
+  }
+
+  // NWK AUX security header (bit9 of FC) - skip it to reach the APS layer.
+  if (nwkFc & ZB_NWK_FC_SECURITY) {
+    if (off + 6 > len) return false;          // secCtrl(1)+fc(4)+keySeq(1)
+    uint8_t auxSecCtrl = p[off];
+    bool hasExtSrc = (auxSecCtrl >> 5) & 0x01; // bit5 = Extended Nonce
+    off += 6;
+    if (hasExtSrc) { if (off + 8 > len) return false; off += 8; }
+  }
+
+  apsOffset = off;
+  return true;
+}
+
+// Decrypt the APS Transport Key payload with CCM* using `key` (a TCLK). Handles
+// both the encrypted (secLevel>=4) and plaintext-within-APS cases.
+bool ZBScan::zbDecryptApsPayload(const uint8_t *nwkPayload, uint8_t nwkLen,
+                                 uint8_t apsOffset, const uint8_t *key,
+                                 uint64_t knownExtSrc,
+                                 uint8_t *plaintextOut, uint8_t &plaintextLen) {
+  if (apsOffset + 1 + 6 + 4 >= nwkLen) return false;
+
+  uint8_t auxStart   = apsOffset + 1;         // AUX begins after APS FC
+  const uint8_t *aux = &nwkPayload[auxStart];
+  uint8_t remaining  = nwkLen - auxStart;
+  if (remaining < 6) return false;
+
+  uint8_t  secCtrl  = aux[0];
+  uint8_t  secLevel = secCtrl & 0x07;
+  bool     hasExtSrc = (secCtrl >> 5) & 0x01; // bit5 = Extended Nonce
+
+  // MIC length depends on secLevel&0x03: 0/4/8/16 bytes.
+  uint8_t micLen;
+  switch (secLevel & 0x03) {
+    case 0:  micLen = 0;  break;
+    case 1:  micLen = 4;  break;
+    case 2:  micLen = 8;  break;
+    default: micLen = 16; break;
+  }
+
+  uint8_t auxOff = 5;                          // past secCtrl(1) + frameCounter(4)
+  uint8_t srcEui64[8] = {};
+  if (hasExtSrc) {
+    if (auxOff + 8 > remaining) return false;
+    memcpy(srcEui64, &aux[auxOff], 8);
+    auxOff += 8;
+  } else {
+    memcpy(srcEui64, &knownExtSrc, 8);         // coordinator EUI64 (LE in memory)
+  }
+  if (auxOff + 1 > remaining) return false;
+  auxOff++;                                    // skip keySeq
+
+  uint8_t encStart = auxStart + auxOff;
+  if (encStart + micLen >= nwkLen) return false;
+  uint8_t encLen = nwkLen - encStart - micLen;
+
+  // secLevel without the ENC bit (0x04) => payload is plaintext; copy from the
+  // APS FC byte so zbParseTransportKey sees FC + AUX + command.
+  if ((secLevel & 0x04) == 0) {
+    uint8_t payloadLen = nwkLen - apsOffset - micLen;
+    if (payloadLen == 0 || payloadLen > 95) return false;
+    memcpy(plaintextOut, &nwkPayload[apsOffset], payloadLen);
+    plaintextLen = payloadLen;
+    return true;
+  }
+
+  const uint8_t *ciphertext = &nwkPayload[encStart];
+  const uint8_t *mic        = &nwkPayload[nwkLen - micLen];
+
+  // CCM* nonce: srcEUI64(8,LE) | frameCounter(4,LE) | secCtrl(1).
+  uint8_t nonce[13];
+  memcpy(nonce,     srcEui64, 8);
+  memcpy(nonce + 8, &aux[1],  4);
+  nonce[12] = secCtrl;
+
+  // AAD: NWK payload from offset 0 up to (not including) the ciphertext.
+  const uint8_t *aad    = nwkPayload;
+  uint8_t        aadLen = encStart;
+
+  if (encLen == 0 || encLen > 95) return false;
+
+  bool ok = this->zbCcmDecrypt(key, nonce, aad, aadLen,
+                               ciphertext, encLen, plaintextOut, mic, micLen);
+  if (ok) plaintextLen = encLen;
+  return ok;
+}
+
+bool ZBScan::zbCcmDecrypt(const uint8_t *key, const uint8_t *nonce,
+                          const uint8_t *aad, uint8_t aadLen,
+                          const uint8_t *ct, uint8_t ctLen,
+                          uint8_t *pt, const uint8_t *mic, uint8_t micLen) {
+  mbedtls_ccm_context ctx;
+  mbedtls_ccm_init(&ctx);
+  int ret = mbedtls_ccm_setkey(&ctx, MBEDTLS_CIPHER_ID_AES, key, 128);
+  if (ret != 0) { mbedtls_ccm_free(&ctx); return false; }
+  ret = mbedtls_ccm_star_auth_decrypt(&ctx, ctLen, nonce, 13,
+                                      aad, aadLen, ct, pt, mic, micLen);
+  mbedtls_ccm_free(&ctx);
+  return (ret == 0);
+}
+
+// Parse an APS Transport Key command. aps[0] = APS FC byte.
+bool ZBScan::zbParseTransportKey(const uint8_t *aps, uint8_t apsLen,
+                                 uint8_t *networkKeyOut, uint8_t &seqNumOut) {
+  if (apsLen < 2) return false;
+
+  uint8_t apsFc        = aps[0];
+  uint8_t apsFrameType = apsFc & 0x03;
+  bool    apsSecured   = (apsFc >> 5) & 0x01;
+  if (apsFrameType != 0x01) return false;
+
+  uint8_t cmdOff = 1;                          // command id follows APS FC
+  if (apsSecured) {
+    if (apsLen < 8) return false;
+    uint8_t auxSecCtrl = aps[1];
+    bool    hasExtSrc  = (auxSecCtrl >> 6) & 0x01;
+    uint8_t auxLen     = 6;
+    if (hasExtSrc) auxLen += 8;
+    cmdOff = 1 + auxLen;
+  }
+  if (cmdOff + 1 >= apsLen) return false;
+
+  if (aps[cmdOff] != ZB_APS_CMD_TRANSPORT_KEY) return false;
+
+  // Transport Key payload: cmd(1)+keyType(1)+key(16)+seq(1)+dstEUI(8)+srcEUI(8).
+  uint8_t payOff = cmdOff + 1;
+  if (payOff + 35 > apsLen) return false;
+  if (aps[payOff] != ZB_APS_KEY_TYPE_NWK) return false;
+
+  memcpy(networkKeyOut, &aps[payOff + 1], ZIGBEE_KEY_LEN);
+  seqNumOut = aps[payOff + 1 + ZIGBEE_KEY_LEN];
+  return true;
 }
 
 // Add a node if new, otherwise refresh it. For source frames, record the link
@@ -434,6 +907,10 @@ bool ZBScan::zbDecodeMac(const ZbSnifferFrame &raw, ZbFrameInfo &info) {
     }
   }
 
+  // Start of the MAC payload (NWK layer for data frames, command id for MAC
+  // commands). The key-capture path walks the NWK/APS headers from here.
+  info.macPayloadOffset = off;
+
   // Payload decode
   if (off < len && info.frameType == ZB_FC_FRAME_TYPE_DATA) {
     const uint8_t *payload = &p[off];
@@ -525,6 +1002,12 @@ void ZBScan::RunZigbeeScan(uint8_t scan_mode, uint16_t color) {
   // Fresh node list for this run, same as RunAPScan recreates access_points.
   this->clearZigbeeNodes();
 
+  // Preload the known TCLKs (kept across runs so captured network keys and any
+  // SD-loaded keys survive) and reset the per-join / coordinator state.
+  this->zbLoadDefaultKeys();
+  memset(this->zb_joins, 0, sizeof(this->zb_joins));
+  this->zb_coordEUI64 = 0;
+
   this->zb_frame_count  = 0;
   this->zb_zigbee_count = 0;
 
@@ -576,8 +1059,14 @@ void ZBScan::zigbeeLoop(uint32_t currentTime) {
         this->zbPrintFrame(info);
 
       this->zbProcessFrame(info);
+
+      // Network-key capture: watch assoc responses + APS Transport Key frames.
+      this->zbKeyCaptureFrame(info, raw.data, raw.len, info.macPayloadOffset);
     }
   }
+
+  // Drop stale pending joins (device started a join but no key seen).
+  this->zbExpireJoins();
 
   // When hopping, move one channel each HOP_DELAY*2; locked mode never hops.
   if (this->zb_channel_hop && currentTime - this->zb_last_hop >= (HOP_DELAY * 2)) {
