@@ -1215,6 +1215,9 @@ enum class MacSortMode : uint8_t {
     #ifdef HAS_ZIGBEE
       void RunSaveZBList(bool save_as = true);
       void RunLoadZBList();
+      // Beacon-Sniff-style touch controls for the Zigbee sniffer
+      // (- / + channel, HOP toggle, X exit). Called each main() tick.
+      void zigbeeScanButtons(uint32_t currentTime);
     #endif
     void RunSaveATList(bool save_as = true);
     void RunLoadATList();

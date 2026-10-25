@@ -2919,10 +2919,31 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
           display_obj.tft.setTextColor(TFT_BLACK, color);
           display_obj.tft.drawCentreString("Scan Zigbee", TFT_WIDTH / 2, 16, 2);
         #endif
-        this->prepareScanStage(TFT_GREEN, TFT_BLACK);
       #endif
       this->setLEDMode(MODE_SNIFF);
       this->RunZigbeeScan(scan_mode, color);
+
+      // Match the WiFi "Beacon Sniff" screen: a - / + / HOP / X control row
+      // instead of tap-anywhere-to-exit. RunZigbeeScan() has already set the
+      // starting channel and hop state (CLI-locked channel => hop off). When
+      // the user did NOT CLI-lock a channel, honor the shared, persisted WiFi
+      // "ChanHop" flag for the initial hop state - the HOP button toggles that
+      // same NVS setting, as agreed, so the two stay consistent.
+      if (!(this->zb_start_channel >= ZIGBEE_MIN_CHANNEL &&
+            this->zb_start_channel <= ZIGBEE_MAX_CHANNEL))
+        this->zb_channel_hop = settings_obj.loadSetting<bool>("ChanHop");
+
+      // Remember the tile colour so the status strip can be redrawn live as
+      // the channel hops (ZBScan::zbDrawStatusLabel).
+      this->zb_color = color;
+      #ifdef HAS_SCREEN
+        display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+        // Same draw helpers (and portrait layout) the WiFi sniffers use.
+        display_obj.tftDrawChannelScaleButtons(this->zb_channel, false);
+        display_obj.tftDrawExitScaleButtons(false);
+        display_obj.tftDrawChanHopButton(false, this->zb_channel_hop);
+        this->zbDrawStatusLabel();
+      #endif
     #endif
   }
   else if (scan_mode == WIFI_SCAN_GPS_NMEA){
@@ -11645,6 +11666,65 @@ void WiFiScan::packetRateLoop(uint32_t tick) {
   #endif
 }
 
+#ifdef HAS_ZIGBEE
+// Beacon-Sniff-style touch controls for the Zigbee sniffer. Mirrors the WiFi
+// sniffers' button handling: the shared checkAnalyzerButtons() returns which of
+// the on-screen keys was released, then we act on the same CHAN_* / EXIT_BUTTON
+// indices. The channel range here is the 802.15.4 band (11..26), not WiFi's.
+void WiFiScan::zigbeeScanButtons(uint32_t currentTime) {
+  #if defined(HAS_SCREEN) && defined(HAS_ILI9341)
+    int8_t b = this->checkAnalyzerButtons(currentTime);
+
+    if (b == EXIT_BUTTON_INDEX) {
+      this->StartScan(WIFI_SCAN_OFF);
+      this->orient_display = true;
+      return;
+    }
+    // '-' : step down one channel. Choosing a channel parks the radio on it,
+    // so -/+ also turn hopping off (auto-lock) and clear the shared ChanHop
+    // flag, keeping the HOP button and the persisted setting in agreement.
+    else if (b == CHAN_MINUS_INDEX) {
+      if (this->zb_channel > ZIGBEE_MIN_CHANNEL) {
+        this->zb_channel--;
+        this->zb_channel_hop = false;
+        settings_obj.saveSetting<bool>("ChanHop", false);
+        this->zbSetChannel(this->zb_channel);
+        display_obj.tftDrawChannelScaleButtons(this->zb_channel, false);
+        display_obj.tftDrawExitScaleButtons(false);
+        display_obj.tftDrawChanHopButton(false, this->zb_channel_hop);
+        this->zbDrawStatusLabel();
+      }
+      return;
+    }
+    // '+' : step up one channel (same auto-lock behaviour as '-').
+    else if (b == CHAN_PLUS_INDEX) {
+      if (this->zb_channel < ZIGBEE_MAX_CHANNEL) {
+        this->zb_channel++;
+        this->zb_channel_hop = false;
+        settings_obj.saveSetting<bool>("ChanHop", false);
+        this->zbSetChannel(this->zb_channel);
+        display_obj.tftDrawChannelScaleButtons(this->zb_channel, false);
+        display_obj.tftDrawExitScaleButtons(false);
+        display_obj.tftDrawChanHopButton(false, this->zb_channel_hop);
+        this->zbDrawStatusLabel();
+      }
+      return;
+    }
+    // 'HOP' : toggle band hopping via the shared persistent ChanHop setting.
+    // Turning hop back on resumes from the current channel in zigbeeLoop().
+    else if (b == CHAN_HOP_INDEX) {
+      settings_obj.toggleSetting("ChanHop");
+      this->zb_channel_hop = settings_obj.loadSetting<bool>("ChanHop");
+      display_obj.tftDrawChanHopButton(false, this->zb_channel_hop);
+      this->zbDrawStatusLabel();
+      return;
+    }
+  #else
+    (void)currentTime;
+  #endif
+}
+#endif
+
 bool WiFiScan::checkHostPort(IPAddress ip, uint16_t port, uint16_t timeout) {
   WiFiClient client;
 
@@ -13331,6 +13411,9 @@ void WiFiScan::main(uint32_t currentTime)
   }
   #ifdef HAS_ZIGBEE
     else if (currentScanMode == ZIGBEE_SCAN_ALL) {
+      // Service the -/+/HOP/X touch buttons first (may stop the scan), then
+      // drain/parse frames. zigbeeLoop() no-ops once the radio is stopped.
+      this->zigbeeScanButtons(currentTime);
       this->zigbeeLoop(currentTime);
     }
   #endif

@@ -234,6 +234,21 @@ void ZBScan::zbPrintFrame(const ZbFrameInfo &info) {
   #endif
 }
 
+// Redraw the single-line status strip at the top of the Zigbee sniff screen.
+// Uses the exact rect/font the scan title uses (see WiFiScan::StartScan's
+// ZIGBEE_SCAN_ALL branch) so it overwrites the title cleanly and keeps the
+// current channel + hop state visible - including while the band is hopping.
+void ZBScan::zbDrawStatusLabel() {
+  #ifdef HAS_SCREEN
+    display_obj.tft.fillRect(0, 16, TFT_WIDTH, 16, this->zb_color);
+    display_obj.tft.setTextColor(TFT_BLACK, this->zb_color);
+    String label = this->zb_channel_hop
+                     ? (String("Zigbee HOP  CH ") + this->zb_channel)
+                     : (String("Zigbee LOCK CH ") + this->zb_channel);
+    display_obj.tft.drawCentreString(label, TFT_WIDTH / 2, 16, 2);
+  #endif
+}
+
 // ---------------------------------------------------------------------------
 // 802.15.4 radio plumbing (ESP32-C5 / ESP32-C6 / ESP32-H2 only).
 // Ported from C6_zigbee IEEE802154Sniffer (init/start/stop/rxCallback).
@@ -568,6 +583,8 @@ void ZBScan::zigbeeLoop(uint32_t currentTime) {
   if (this->zb_channel_hop && currentTime - this->zb_last_hop >= (HOP_DELAY * 2)) {
     this->zb_last_hop = millis();
     this->zbChannelHop();
+    // Keep the on-screen "CH n" label in step with the radio as it hops.
+    this->zbDrawStatusLabel();
   }
 }
 

@@ -449,9 +449,12 @@ void MenuFunctions::main(uint32_t currentTime)
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_DISPLAY_AP_INFO) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_EVIL_PORTAL) ||
           (wifi_scan_obj.currentScanMode == WIFI_SCAN_AP_STA) ||
-          #ifdef HAS_ZIGBEE
-            (wifi_scan_obj.currentScanMode == ZIGBEE_SCAN_ALL) ||
-          #endif
+          // NOTE: ZIGBEE_SCAN_ALL is intentionally NOT in this touch
+          // "tap-anywhere-to-stop" list (like WiFi's WIFI_SCAN_AP beacon
+          // sniff). Its own - / + / HOP / X button row (WiFiScan::
+          // zigbeeScanButtons) owns the touch area, and the X button exits.
+          // Physical-button boards still stop it via the #ifndef HAS_ILI9341
+          // path below.
           (wifi_scan_obj.currentScanMode == WIFI_PING_SCAN) ||
           (wifi_scan_obj.currentScanMode == WIFI_ARP_SCAN) ||
           (wifi_scan_obj.currentScanMode == WIFI_PORT_SCAN_ALL) ||

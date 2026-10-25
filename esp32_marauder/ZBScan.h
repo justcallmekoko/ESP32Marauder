@@ -178,6 +178,15 @@ class ZBScan {
     uint32_t zb_last_hop = 0;
     uint32_t zb_last_ui_update = 0;
 
+    // Fill colour of the one-line on-screen status strip (the scan-tile colour,
+    // stashed by WiFiScan::StartScan so zbDrawStatusLabel can redraw the strip
+    // live as the channel hops). 0 == RGB565 black, a safe default pre-scan.
+    uint16_t zb_color = 0;
+
+    // Redraw the status strip ("Zigbee HOP/LOCK CH n") in the same rect the
+    // scan title uses. No-op on screenless builds.
+    void zbDrawStatusLabel();
+
     void zbPrintFrame(const ZbFrameInfo &info);
     static const char *zbFrameTypeName(uint8_t frameType);
     static const char *zbMacCmdName(uint8_t cmd);
