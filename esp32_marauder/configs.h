@@ -254,7 +254,11 @@
     #define HAS_AXP192
     #define HAS_TOUCH
     #define HAS_CAP_TOUCH
+      #define HAS_FT6336
     #define HAS_CORE2_BUTTONS
+    // BM8563 is same as PCF8563
+    #define HAS_RTC
+      #define HAS_PCF8563
   #endif
 
   #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
@@ -4019,6 +4023,16 @@
         #define CTP_INT 21
         #define CTP_RST 25
         #define I2C_ADDR_GT911 0x38
+
+      #elif defined(MARAUDER_M5STACK_CORE2_AWS)
+        #define HAS_FT6336
+        #define I2C_SDA 21
+        #define I2C_SCL 22
+        #define CTP_SDA I2C_SDA
+        #define CTP_SCL I2C_SCL
+        #define CTP_INT 39
+        #define I2C_FT6336_ADDR      0x38
+
       #endif
 
     #endif  // HAS_CAP_TOUCH
