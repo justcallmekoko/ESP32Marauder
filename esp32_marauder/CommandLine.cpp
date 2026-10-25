@@ -1,4 +1,5 @@
 #include "CommandLine.h"
+#include "CliBusy.h"
 
 // GCOVR_EXCL_START -- serial protocol output depends on Arduino Serial.
 namespace {
@@ -264,7 +265,10 @@ void CommandLine::runCommand(String input) {
   if (input == "") return;
 
   if(wifi_scan_obj.scanning() && wifi_scan_obj.currentScanMode == WIFI_SCAN_GPS_NMEA){
-    if(input != STOPSCAN_CMD) return;    
+    if(input != STOPSCAN_CMD) {
+      Serial.println(marauder::cliBusyMessage(marauder::CliBusyReason::ScanRunning));
+      return;
+    }
   }
   else
     Serial.println("#" + input);
@@ -1552,6 +1556,15 @@ void CommandLine::runCommand(String input) {
         #endif
       }
     }
+  }
+  else if (marauder::cliIsScanGatedCommand(cmd_args.get(0).c_str())) {
+    // The command was recognised but cannot start while the radio is busy.
+    if (wifi_scan_obj.currentScanMode == WIFI_CONNECTED)
+      Serial.println(marauder::cliBusyMessage(marauder::CliBusyReason::WifiConnected));
+    else if (wifi_scan_obj.currentScanMode == SHOW_INFO)
+      Serial.println(marauder::cliBusyMessage(marauder::CliBusyReason::ShowInfo));
+    else
+      Serial.println(marauder::cliBusyMessage(marauder::CliBusyReason::ScanRunning));
   }
 
   if (wifi_scan_obj.wifi_connected) {
