@@ -23,7 +23,6 @@
       #define HAS_CPU_TEMP
   #else
     #undef HAS_CPU_TEMP
-  #error "undef HAS_CPU_TEMP"
   #endif
 
 //do we have a SENSOR?
