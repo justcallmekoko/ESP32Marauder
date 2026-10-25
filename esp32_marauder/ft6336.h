@@ -39,9 +39,9 @@ static bool _ft6336_read(uint8_t reg, uint8_t *buf, uint8_t len) {
 // Must run before tft.init(); safe to call more than once.
 static bool ws_c5_exio_begin() {
     Wire.begin(CTP_SDA, CTP_SCL, 100000U);  // 100kHz: robust reads over the panel flex
-    const uint8_t TP  = CH32V00X_PIN_0;     // EXIO0 -> FT6336 reset
-    const uint8_t LCD = CH32V00X_PIN_1;     // EXIO1 -> ST7796 reset
-    const uint8_t PWR = CH32V00X_PIN_5;     // EXIO5 -> panel power / backlight enable
+    const uint8_t TP  = BOARD_TP_RST_EXIO;     // EXIO0 -> FT6336 reset
+    const uint8_t LCD = BOARD_LCD_RST_EXIO;     // EXIO1 -> ST7796 reset
+    const uint8_t PWR = BOARD_IO_EXTENSION_PIN_5;     // EXIO5 -> panel power / backlight enable ?? not right
     CH32V00X_IOExpander& io = CH32V00X_obj;
     bool ok = io.writeReg(CH32V00X_REG_DIR, 0xFF) &&            // all pins output
               io.writeReg(CH32V00X_REG_OUT, 0x00) &&            // all low
