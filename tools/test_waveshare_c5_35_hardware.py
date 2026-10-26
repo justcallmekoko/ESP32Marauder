@@ -56,6 +56,12 @@ class WaveshareC535HardwareTests(unittest.TestCase):
         override = config[config.index("#ifdef MARAUDER_WS_C5_35_OVERRIDE"):]
         self.assertIn("#undef HAS_NEOPIXEL_LED", override)
         self.assertIn("#define I2C_SDA 27", override)
+        sketch = (ROOT / "esp32_marauder" / "esp32_marauder.ino").read_text(encoding="utf-8")
+        # Brightness drives the expander PWM register, not the (absent) TFT_BL pin.
+        self.assertIn("#define BL_SET(duty)     ws_exio_write(WS_EXIO_PWM_REG, (duty))", sketch)
+        self.assertIn("#define WS_EXIO_PWM_REG     0x05", expander)
+        menus = (ROOT / "esp32_marauder" / "MenuFunctions.cpp").read_text(encoding="utf-8")
+        self.assertIn("#define BL_PREVIEW(duty) ws_exio_write(WS_EXIO_PWM_REG, (duty))", menus)
         self.assertIn("#ifdef MARAUDER_WS_C5_35", touch)
         self.assertIn("Wire.end(); Wire.begin(CTP_SDA, CTP_SCL, 100000U);", touch)
         self.assertIn("return -1;", touch)
