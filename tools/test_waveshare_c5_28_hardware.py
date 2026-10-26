@@ -26,11 +26,11 @@ class WaveshareC528HardwareTests(unittest.TestCase):
             )
             self.assertIn('flag: "MARAUDER_WS_C5_28"', workflow)
             self.assertIn("FlashSize=16M", workflow)
-            self.assertIn('tft_file: "User_Setup_marauder_ws_c5_28.h"', workflow)
+            self.assertIn('tft_file: "User_Setup_ws_c5_28.h"', workflow)
 
     def test_board_contract_keeps_expander_and_touch_handling_isolated(self) -> None:
         config = (ROOT / "esp32_marauder" / "configs.h").read_text(encoding="utf-8")
-        tft = (ROOT / "User_Setup_marauder_ws_c5_28.h").read_text(encoding="utf-8")
+        tft = (ROOT / "User_Setup_ws_c5_28.h").read_text(encoding="utf-8")
         touch = (ROOT / "esp32_marauder" / "CST3530.hpp").read_text(encoding="utf-8")
         expander = (ROOT / "esp32_marauder" / "CH32V00X_IOExpander.hpp").read_text(
             encoding="utf-8"

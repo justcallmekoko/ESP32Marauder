@@ -3601,9 +3601,9 @@
     //// BATTERY STUFF
     #ifdef HAS_BATTERY
 
-      #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
-        #define I2C_SDA 21
-        #define I2C_SCL 22
+    #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
+      #define I2C_SDA 21
+      #define I2C_SCL 22
 
     #elif defined(MARAUDER_M5STACK_CORE2_AWS)
       #define I2C_SDA 21
@@ -3692,11 +3692,17 @@
       #endif
 
       //  If we know what we have, we can delete what we're not using
-      #if defined(BATTERY_ADC_PIN) || defined(HAS_CH32V00X)
-        #undef HAS_AXP2101
-        #undef HAS_IP5306
-        #undef HAS_MAX1704X
-        #undef HAS_AXP192
+      #ifdef BATTERY_ADC_PIN
+          #undef HAS_AXP2101
+          #undef HAS_IP5306
+          #undef HAS_MAX1704X
+          #undef HAS_AXP192
+
+      #elif defined(HAS_CH32V00X) && !defined(MARAUDER_WS_C5_35)
+          #undef HAS_AXP2101
+          #undef HAS_IP5306
+          #undef HAS_MAX1704X
+          #undef HAS_AXP192
 
       // No driver for this LiPo charger
       #elif defined(HAS_TP4057)
@@ -4073,110 +4079,110 @@
       #define CTP_INT 3
       #define I2C_ADDR_FT6336      0x38
 
-      #elif defined(MARAUDER_WS_C5_28)    // ADC is through IO expander
-        #define HAS_CST3530 1      // distinguish from CST820
-        #define I2C_SDA 0
-        #define I2C_SCL 1
-        #define CTP_SDA           I2C_SDA
-        #define CTP_SCL           I2C_SCL
-        #define CTP_INT           5
-        #define CTP_RST           -1   // CH32V003 EXIO0
-        #define CTP_FREQ          100000  // 100 kHz (Standard-mode) 400 kHz (Fast-mode)
-        #define I2C_ADDR_CST3530  0x58 // NOT 0x1A : CST3530 differs from CST820
+        #elif defined(MARAUDER_WS_C5_28)    // ADC is through IO expander
+          #define HAS_CST3530 1      // distinguish from CST820
+          #define I2C_SDA 0
+          #define I2C_SCL 1
+          #define CTP_SDA           I2C_SDA
+          #define CTP_SCL           I2C_SCL
+          #define CTP_INT           5
+          #define CTP_RST           -1   // CH32V003 EXIO0
+          #define CTP_FREQ          100000  // 100 kHz (Standard-mode) 400 kHz (Fast-mode)
+          #define I2C_ADDR_CST3530  0x58 // NOT 0x1A : CST3530 differs from CST820
 
-      #elif defined(MARAUDER_CYD_3_5_INCH_CAP) 
-        #define HAS_GT911 1 
-        #define CTP_SDA 33
-        #define CTP_SCL 32
-        #define CTP_INT 21
-        #define CTP_RST 25
-        #define I2C_ADDR_GT911 0x38
+        #elif defined(MARAUDER_CYD_3_5_INCH_CAP) 
+          #define HAS_GT911 1 
+          #define CTP_SDA 33
+          #define CTP_SCL 32
+          #define CTP_INT 21
+          #define CTP_RST 25
+          #define I2C_ADDR_GT911 0x38
 
-      #elif defined(MARAUDER_M5STACK_CORE2_AWS)
-        #define HAS_FT6336
-        #define I2C_SDA 21
-        #define I2C_SCL 22
-        #define CTP_SDA I2C_SDA
-        #define CTP_SCL I2C_SCL
-        #define CTP_INT 39
-        #define I2C_FT6336_ADDR      0x38
+        #elif defined(MARAUDER_M5STACK_CORE2_AWS)
+          #define HAS_FT6336
+          #define I2C_SDA 21
+          #define I2C_SCL 22
+          #define CTP_SDA I2C_SDA
+          #define CTP_SCL I2C_SCL
+          #define CTP_INT 39
+          #define I2C_FT6336_ADDR      0x38
 
+        #endif
+
+      #endif  // HAS_CAP_TOUCH
+      // CONFIG LOGIC
+
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic warning "-Wcpp"
+
+
+      //  I2C Touch Screens
+      #if defined(HAS_CST820) || defined(HAS_AXS5106L) || defined(HAS_FT6336) || defined(HAS_CST3530)
+        #define HAS_CAP_TOUCH 1
       #endif
 
-    #endif  // HAS_CAP_TOUCH
-    // CONFIG LOGIC
-
-  #pragma GCC diagnostic push
-  #pragma GCC diagnostic warning "-Wcpp"
 
 
-    //  I2C Touch Screens
-    #if defined(HAS_CST820) || defined(HAS_AXS5106L) || defined(HAS_FT6336) || defined(HAS_CST3530)
-      #define HAS_CAP_TOUCH 1
+      #if defined(HAS_NIMBLE_2) && !defined(HAS_BT)
+        #warning "HAS_NIMBLE_2 defined without HAS_BT, check 'BOARD FEATURES' section"
+        #define HAS_BT 1
+      #endif
+
+      #if defined(HAS_FULL_SCREEN) && !defined(HAS_SCREEN)
+        #warning "HAS_FULL_SCREEN defined without HAS_SCREEN, check 'BOARD FEATURES' section"
+        #define HAS_SCREEN 1
+      #endif
+
+      #if defined(HAS_MINI_SCREEN) && !defined(HAS_SCREEN)
+        #warning "HAS_MINI_SCREEN defined without HAS_SCREEN, check 'BOARD FEATURES' section"
+        #define HAS_SCREEN 1
+      #endif
+
+      #if defined(USE_SD) && !defined(SD_CS)
+        #warning "USE_SD defined without SD_CS, check 'SD DEFINITIONS' section"
+      #endif
+
+      #if defined(HAS_C5_SD) && ( !defined(USE_SD) || !defined(HAS_SD) )
+        #warning "HAS_C5_SD defined without USE_SD/HAS_SD, check 'BOARD FEATURES' section"
+        #define HAS_SD
+        #define USE_SD
+      #endif
+
+      #if defined(HAS_FLIPPER_LED) || defined(HAS_XIAO_LED) || defined(HAS_STICKC_LED) || defined(HAS_NEOPIXEL_LED)
+          #define HAS_LED
+      #endif
+
+
+    #pragma GCC diagnostic pop
+
+
+      // END CONFIG LOGIC
+  //// Waveshare C5 3.5" pin overrides (applied after Pancake defaults resolve)
+  #if defined(MARAUDER_WS_C5_35_OVERRIDE) && defined(_NEVER_)
+    #undef HARDWARE_NAME
+    #define HARDWARE_NAME "Marauder C5 3.5"
+    // I2C bus is GPIO27/26 on this board (Pancake uses 9/10). CTP_SDA/SCL are
+    // defined as I2C_SDA/I2C_SCL tokens upstream, so they follow automatically.
+    #undef I2C_SDA
+    #undef I2C_SCL
+    #define I2C_SDA 27
+    #define I2C_SCL 26
+    // microSD chip-select is GPIO9 (Pancake uses 7); SD shares the LCD SPI bus,
+    // whose pins come from User_Setup_ws_c5_35.h via SD_MISO/MOSI/SCK = TFT_*.
+    #undef SD_CS
+    #define SD_CS 9
+    // No MAX17048 fuel gauge on this board; avoid probing a device that isn't here.
+    #ifdef HAS_MAX1704X
+      #undef HAS_MAX1704X
     #endif
-
-
-
-    #if defined(HAS_NIMBLE_2) && !defined(HAS_BT)
-      #warning "HAS_NIMBLE_2 defined without HAS_BT, check 'BOARD FEATURES' section"
-      #define HAS_BT 1
+    #ifdef HAS_BATTERY
+      #undef HAS_BATTERY
     #endif
+    #define HAS_TEMP_SENSOR
+    #define HAS_SHTC3
 
-    #if defined(HAS_FULL_SCREEN) && !defined(HAS_SCREEN)
-      #warning "HAS_FULL_SCREEN defined without HAS_SCREEN, check 'BOARD FEATURES' section"
-      #define HAS_SCREEN 1
-    #endif
-
-    #if defined(HAS_MINI_SCREEN) && !defined(HAS_SCREEN)
-      #warning "HAS_MINI_SCREEN defined without HAS_SCREEN, check 'BOARD FEATURES' section"
-      #define HAS_SCREEN 1
-    #endif
-
-    #if defined(USE_SD) && !defined(SD_CS)
-      #warning "USE_SD defined without SD_CS, check 'SD DEFINITIONS' section"
-    #endif
-
-    #if defined(HAS_C5_SD) && ( !defined(USE_SD) || !defined(HAS_SD) )
-      #warning "HAS_C5_SD defined without USE_SD/HAS_SD, check 'BOARD FEATURES' section"
-      #define HAS_SD
-      #define USE_SD
-    #endif
-
-    #if defined(HAS_FLIPPER_LED) || defined(HAS_XIAO_LED) || defined(HAS_STICKC_LED) || defined(HAS_NEOPIXEL_LED)
-        #define HAS_LED
-    #endif
-
-
-  #pragma GCC diagnostic pop
-
-
-    // END CONFIG LOGIC
-//// Waveshare C5 3.5" pin overrides (applied after Pancake defaults resolve)
-#if defined(MARAUDER_WS_C5_35_OVERRIDE) && defined(_NEVER_)
-  #undef HARDWARE_NAME
-  #define HARDWARE_NAME "Marauder C5 3.5"
-  // I2C bus is GPIO27/26 on this board (Pancake uses 9/10). CTP_SDA/SCL are
-  // defined as I2C_SDA/I2C_SCL tokens upstream, so they follow automatically.
-  #undef I2C_SDA
-  #undef I2C_SCL
-  #define I2C_SDA 27
-  #define I2C_SCL 26
-  // microSD chip-select is GPIO9 (Pancake uses 7); SD shares the LCD SPI bus,
-  // whose pins come from User_Setup_ws_c5_35.h via SD_MISO/MOSI/SCK = TFT_*.
-  #undef SD_CS
-  #define SD_CS 9
-  // No MAX17048 fuel gauge on this board; avoid probing a device that isn't here.
-  #ifdef HAS_MAX1704X
-    #undef HAS_MAX1704X
+    #define CTP_SDA 27
+    #define CTP_SCL 26
   #endif
-  #ifdef HAS_BATTERY
-    #undef HAS_BATTERY
-  #endif
-  #define HAS_TEMP_SENSOR
-  #define HAS_SHTC3
-
-  #define CTP_SDA 27
-  #define CTP_SCL 26
-#endif
 
 #endif

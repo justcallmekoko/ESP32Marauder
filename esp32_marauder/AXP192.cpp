@@ -30,6 +30,13 @@ void AXP192::begin(void) {
 
     _wire->setClock(400000);
 
+    #ifdef MARAUDER_M5STACK_CORE2_AWS
+    // Core2 power rails are initialized before display setup. The legacy
+    // sequence below is for M5StickC, where LDO3 powers the LCD; on Core2
+    // LDO3 powers the vibration motor instead.
+    return;
+    #endif
+
     // Set LDO2 & LDO3(TFT_LED & TFT) 3.0V
     Write1Byte(0x28, 0xcc);
 

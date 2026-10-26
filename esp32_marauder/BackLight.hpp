@@ -327,15 +327,17 @@
         log_i("level = %d currentDuty=%d, Freq=%d", bl_level_idx, currentDuty, ledcReadFreq(TLED));
       }
 
-      inline void backlightOn() {
+      inline void backlightOn()  // ledc
+      {
         if (bl_level_idx < 3)
           bl_level_idx = 3;
-        // Serial.println("BL brightnessOn");
-        BL_SET(BL_LEVELS[bl_level_idx]);
-        // Serial.print("bl_level_idx = "); Serial.println(BL_LEVELS[bl_level_idx]);
-        uint32_t currentDuty = ledcRead(TLED);
-        // Serial.print("currentDuty = "); Serial.println(currentDuty);
-        log_d("level = %d currentDuty=%d, Freq=%d", bl_level_idx, currentDuty, ledcReadFreq(TLED));
+          // Serial.println("BL brightnessOn");
+          BL_SETUP();
+          BL_SET(BL_LEVELS[bl_level_idx]);
+          // Serial.print("bl_level_idx = "); Serial.println(BL_LEVELS[bl_level_idx]);
+          uint32_t currentDuty = ledcRead(TLED);
+          // Serial.print("currentDuty = "); Serial.println(currentDuty);
+          log_d("level = %d currentDuty=%d, Freq=%d", bl_level_idx, currentDuty, ledcReadFreq(TLED));
       }
 
       inline void backlightOff() {
