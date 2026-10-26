@@ -3905,6 +3905,46 @@ void MenuFunctions::RunSetup()
       wifi_scan_obj.RunLoadZBKeys();
     });
   #endif
+  // Parameterless active-mode utilities. These report on the serial console;
+  // the target-specific verbs (zbjoin/zbrejoin/zback <addr>/zbping/zbfindlock)
+  // stay CLI-only since they need a target address + PAN. Find Locks (sweep)
+  // needs a running, joined session with a captured network key.
+  this->addNodes(&zigbeeMenu, "Find Locks (sweep)", TFTORANGE, SNIFFERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setCursor(0, 40);
+    display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
+    display_obj.tft.println(F("Door-lock sweep started"));
+    display_obj.tft.println(F("(results on serial)"));
+    wifi_scan_obj.zbFindLockSweepAll();
+  });
+  this->addNodes(&zigbeeMenu, "Show Locks", TFTCYAN, SNIFFERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    wifi_scan_obj.zbPrintLockStatus();
+  });
+  this->addNodes(&zigbeeMenu, "Stop ACK Attack", TFTRED, SNIFFERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setCursor(0, 40);
+    display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+    display_obj.tft.println(F("ACK attack stopped"));
+    wifi_scan_obj.zbStopAckAttack();
+  });
+  this->addNodes(&zigbeeMenu, "Restore MAC", TFTYELLOW, SNIFFERS, [this]() {
+    display_obj.clearScreen();
+    this->drawStatusBar();
+    display_obj.tft.setFreeFont(NULL);
+    display_obj.tft.setTextSize(1);
+    display_obj.tft.setCursor(0, 40);
+    display_obj.tft.setTextColor(TFT_YELLOW, TFT_BLACK);
+    display_obj.tft.println(F("Own EUI64 restored to HW MAC"));
+    wifi_scan_obj.zbRestoreOwnEUI64();
+  });
 #endif
 
   //#ifndef HAS_ILI9341
