@@ -36,8 +36,10 @@ defined for this one board, so no other Marauder target is affected.
 - Advertised name: `Marauder-XXXX` (`XXXX` = last two bytes of the BLE address).
   Apps match on the **service UUID**, not the name, so an honest Marauder name
   still links.
-- `WD:CAPS` reports `board_name=Marauder_WS_C5_35`, `fw=1.6.9` (latest, so no OTA
-  offer), and `ota=0 bt=0 gps=0 cap=0 usb=0` — only what this bridge implements.
+- `WD:CAPS` reports `board_name=Marauder_WS_C5_35`, `fw=99.99.99` (sentinel above
+  any real WardriveESP release, so the app's version check never offers an OTA
+  and never goes stale), and `ota=0 bt=0 gps=0 cap=0 usb=0` — only what this
+  bridge implements.
 - Service UUID: `47686F73-7445-5350-4272-696467655376`
   - RX   `0147686F-7374-4553-5042-726964675852` (write / write-no-response)
   - TX   `0247686F-7374-4553-5042-726964675854` (notify)
@@ -65,7 +67,7 @@ may span several frames.
   raw unframed text. A framed CMD gets an ACK with the same command id.
 - On TX subscribe (and at `wdstream start -wifi`) the board greets with, before
   any `WD:AP`:
-  - `WD:CAPS fw=1.6.0 chip=esp32c5 bands=2g,5g ota=0 bt=0 gps=0 cap=0 usb=0 link=ble chans=...`
+  - `WD:CAPS fw=99.99.99 chip=esp32c5 bands=2g,5g ota=0 bt=0 gps=0 cap=0 usb=0 board_name=Marauder_WS_C5_35 link=ble chans=...`
     — capabilities are reported **honestly** for what v1 implements.
   - `WD:MODE mode=wifi`
   - `WD:BEGIN type=wifi interval=0 channel=auto`

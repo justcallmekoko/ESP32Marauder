@@ -49,11 +49,13 @@ extern CommandLine cli_obj;
 #define GL_CTRL_UUID    "0347686F-7374-4553-5042-72694C525443"  // phone -> C5
 
 // Honest capability advertisement for what this bridge actually implements.
-// Honest identity: board_name reports this as a Marauder, and fw reports the
-// latest protocol version (1.6.9) so WarDriveGo offers no OTA update (which
-// would otherwise try to flash real WardriveESP over this Marauder build; there
-// is no OTA characteristic either, so a mistaken OTA just fails).
-#define GL_CAPS_LINE    "WD:CAPS fw=1.6.9 chip=esp32c5 bands=2g,5g ota=0 bt=0 gps=0 cap=0 usb=0 board_name=Marauder_WS_C5_35 link=ble chans=1,6,11,36,40,44,48,149,153,157,161"
+// Honest identity: board_name reports this as a Marauder, and fw is a sentinel
+// (99.99.99) that sits above any real WardriveESP release, so WarDriveGo's
+// version check never offers an OTA (which would otherwise try to flash real
+// WardriveESP over this Marauder build). A fixed real version goes stale on the
+// next WardriveESP release and the nag returns; the sentinel never does. There
+// is no OTA characteristic either, so a mistaken OTA just fails.
+#define GL_CAPS_LINE    "WD:CAPS fw=99.99.99 chip=esp32c5 bands=2g,5g ota=0 bt=0 gps=0 cap=0 usb=0 board_name=Marauder_WS_C5_35 link=ble chans=1,6,11,36,40,44,48,149,153,157,161"
 #define GL_PLAN_CHANS   "1,6,11,36,40,44,48,149,153,157,161"
 
 // Payload bytes per DATA frame. Kept well under the negotiated MTU (247) once
