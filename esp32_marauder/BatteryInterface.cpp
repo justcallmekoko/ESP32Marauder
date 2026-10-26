@@ -66,6 +66,21 @@ void BatteryInterface::RunSetup() {
             axp192_obj.begin();
         #endif
 
+        #ifdef HAS_AXP2101_GAUGE
+          if (this->axp2101Read(AXP2101_REG_CHIP_ID) == AXP2101_CHIP_ID) {
+            int ctrl = this->axp2101Read(AXP2101_REG_GAUGE_CTRL);
+            if (ctrl >= 0 && !(ctrl & 0x08)) {  // make sure the fuel gauge is running
+              Wire.beginTransmission(AXP2101_GAUGE_ADDR);
+              Wire.write(AXP2101_REG_GAUGE_CTRL);
+              Wire.write((uint8_t)(ctrl | 0x08));
+              Wire.endTransmission();
+            }
+            Serial.println(F("Detected AXP2101"));
+            this->has_axp2101_gauge = true;
+            this->i2c_supported = true;
+          }
+        #endif
+
 
         #ifdef HAS_MAX1704X
           Wire.beginTransmission(MAX17048_ADDR);
@@ -120,6 +135,18 @@ int8_t BatteryInterface::getBatteryLevel() {
     #endif
 
 
+    #ifdef HAS_AXP2101_GAUGE
+      if (this->has_axp2101_gauge) {
+        int status = this->axp2101Read(AXP2101_REG_STATUS1);
+        int percent = (status >= 0 && (status & 0x08))  // bit 3: cell fitted
+                        ? this->axp2101Read(AXP2101_REG_BAT_PERCENT) : -1;
+        // Hide the status-bar reading while no cell is fitted (or the read fails).
+        this->i2c_supported = percent >= 0;
+        if (percent < 0) return -1;
+        return percent > 100 ? 100 : (int8_t)percent;
+      }
+    #endif
+
     #ifdef HAS_MAX1704X
       if (this->has_max17048) {
         float percent = this->maxlipo.cellPercent();
@@ -146,3 +173,14 @@ int8_t BatteryInterface::getBatteryLevel() {
 }
 
 // #endif // HAS_BATTERY
+
+#ifdef HAS_AXP2101_GAUGE
+// One-byte register read from the AXP2101; -1 on any I2C error.
+int BatteryInterface::axp2101Read(uint8_t reg) {
+  Wire.beginTransmission(AXP2101_GAUGE_ADDR);
+  Wire.write(reg);
+  if (Wire.endTransmission(false) != 0) return -1;
+  if (Wire.requestFrom(AXP2101_GAUGE_ADDR, 1) != 1) return -1;
+  return Wire.read();
+}
+#endif

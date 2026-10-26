@@ -52,6 +52,12 @@ class WaveshareC535HardwareTests(unittest.TestCase):
             "#define TFT_DC    5",
         ):
             self.assertIn(expected, tft)
+        # Battery level is read from the AXP2101 directly (no XPowersLib in CI).
+        override = config[config.index("#ifdef MARAUDER_WS_C5_35_OVERRIDE"):]
+        self.assertIn("#define HAS_AXP2101_GAUGE", override)
+        self.assertNotIn("#define HAS_AXP2101\n", override)
+        battery = (ROOT / "esp32_marauder" / "BatteryInterface.cpp").read_text(encoding="utf-8")
+        self.assertIn("AXP2101_REG_BAT_PERCENT", battery)
         self.assertIn("#ifdef MARAUDER_WS_C5_35", touch)
         self.assertIn("Wire.end(); Wire.begin(CTP_SDA, CTP_SCL, 100000U);", touch)
         self.assertIn("return -1;", touch)

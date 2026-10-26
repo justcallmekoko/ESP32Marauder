@@ -3552,9 +3552,11 @@
   #ifdef HAS_MAX1704X
     #undef HAS_MAX1704X
   #endif
-  #ifdef HAS_BATTERY
-    #undef HAS_BATTERY
+  // Battery level comes from the on-board AXP2101 PMU (0x34) on the shared I2C bus.
+  #ifndef HAS_BATTERY
+    #define HAS_BATTERY
   #endif
+  #define HAS_AXP2101_GAUGE
 #endif
 
 #endif
