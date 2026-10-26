@@ -52,6 +52,10 @@ class WaveshareC535HardwareTests(unittest.TestCase):
             "#define TFT_DC    5",
         ):
             self.assertIn(expected, tft)
+        # Pancake's NeoPixel pin (GPIO27) is this board's I2C SDA; it must stay off.
+        override = config[config.index("#ifdef MARAUDER_WS_C5_35_OVERRIDE"):]
+        self.assertIn("#undef HAS_NEOPIXEL_LED", override)
+        self.assertIn("#define I2C_SDA 27", override)
         self.assertIn("#ifdef MARAUDER_WS_C5_35", touch)
         self.assertIn("Wire.end(); Wire.begin(CTP_SDA, CTP_SCL, 100000U);", touch)
         self.assertIn("return -1;", touch)

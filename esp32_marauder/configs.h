@@ -3555,6 +3555,11 @@
   #ifdef HAS_BATTERY
     #undef HAS_BATTERY
   #endif
+  // No NeoPixel on this board. Pancake drives its LED on GPIO27, which is the
+  // shared I2C SDA line here (touch + I/O expander), so LED updates corrupt I2C.
+  #ifdef HAS_NEOPIXEL_LED
+    #undef HAS_NEOPIXEL_LED
+  #endif
 #endif
 
 #endif
