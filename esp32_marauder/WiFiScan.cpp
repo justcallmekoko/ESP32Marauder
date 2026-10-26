@@ -11046,41 +11046,57 @@ bool WiFiScan::filterActive() {
 // GCOVR_EXCL_START -- Packet Monitor graphs require a hardware TFT and live capture.
 #ifdef HAS_SCREEN
   int8_t WiFiScan::checkAnalyzerButtons(uint32_t currentTime) {
-    boolean pressed = false;
-  
     uint16_t t_x = 0, t_y = 0; // To store the touch coordinates
 
-    // Do the touch stuff
-    #ifdef HAS_ILI9341
-      pressed = display_obj.updateTouch(&t_x, &t_y);
-    #endif
-
-    if (pressed) {
-      while(display_obj.updateTouch(&t_x, &t_y)) {
-
-
-        // Check buttons for presses
+    #if defined(HAS_ILI9341) && (defined(HAS_CST3530) || defined(HAS_CST820))
+      // Event-reporting capacitive controllers (CST3530 on the Waveshare C5,
+      // CST820 elsewhere): updateTouch() returns a single DOWN event, with the
+      // coordinate, per finger-press and nothing while the finger is held - so
+      // it is already debounced in the driver (one touch = one event). We
+      // hit-test that DOWN coordinate directly and return the button.
+      //
+      // The level-based path below instead relies on the touch reading as
+      // "pressed" across repeated polls (press -> justReleased), which never
+      // happens on these controllers (the finger reads down only once) - that
+      // is why the sniffer -/+/HOP/X buttons did nothing on the C5. This is the
+      // same approach the Zigbee sniff buttons use.
+      if (display_obj.updateTouch(&t_x, &t_y)) {
         for (int8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
-        {
-          if (pressed && display_obj.key[b].contains(t_x, t_y)) {
-            //display_obj.tft.fillCircle(t_x, t_y, 2, TFT_WHITE);
-            display_obj.key[b].press(true);
-            //Serial.println(b);
-          }
-          else
-            display_obj.key[b].press(false);
-        }
+          if (display_obj.key[b].contains(t_x, t_y))
+            return b;
       }
-    } else {
-      for (int8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
-        display_obj.key[b].press(false);
-    }
+      return -1;
+    #else
+      // Level-reporting controllers (resistive XPT2046, etc.) keep returning a
+      // touch while the finger is held. The blocking drain loop below is
+      // deliberate: it swallows the continuous touch so one finger-press is not
+      // registered as several separate events (debounce). The press ->
+      // justReleased transition is then completed on the following call, after
+      // the finger lifts. Left unchanged from the original.
+      boolean pressed = false;
+      #ifdef HAS_ILI9341
+        pressed = display_obj.updateTouch(&t_x, &t_y);
+      #endif
 
-    // Which buttons pressed
-    for (int8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
-      if (display_obj.key[b].justReleased())
-        return b;
-    return -1;
+      if (pressed) {
+        while(display_obj.updateTouch(&t_x, &t_y)) {
+          for (int8_t b = 0; b < BUTTON_ARRAY_LEN; b++) {
+            if (pressed && display_obj.key[b].contains(t_x, t_y))
+              display_obj.key[b].press(true);
+            else
+              display_obj.key[b].press(false);
+          }
+        }
+      } else {
+        for (int8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
+          display_obj.key[b].press(false);
+      }
+
+      for (int8_t b = 0; b < BUTTON_ARRAY_LEN; b++)
+        if (display_obj.key[b].justReleased())
+          return b;
+      return -1;
+    #endif
   }
 #endif
 
