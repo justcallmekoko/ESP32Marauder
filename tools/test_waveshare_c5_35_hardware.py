@@ -70,6 +70,16 @@ class WaveshareC535HardwareTests(unittest.TestCase):
         self.assertIn("AXP2101_REG_BAT_PERCENT", battery)
         self.assertIn("!this->has_axp2101_gauge && !this->detectAxp2101Gauge()", battery)
         self.assertIn("bool BatteryInterface::detectAxp2101Gauge()", battery)
+        # GPS: LC76G over I2C; the UART GPS path (GPIO13/14 = native USB) never starts.
+        override = config[config.index("#ifdef MARAUDER_WS_C5_35_OVERRIDE"):]
+        self.assertIn("#define HAS_GPS_LC76G_I2C", override)
+        gps = (ROOT / "esp32_marauder" / "GpsInterface.cpp").read_text(encoding="utf-8")
+        begin = gps[gps.index("void GpsInterface::begin()"):]
+        self.assertLess(begin.index("marauder::lc76g::begin()"), begin.index("Serial2.begin("))
+        self.assertLess(begin.index("return;"), begin.index("Serial2.begin("))
+        lc76g = (ROOT / "esp32_marauder" / "GpsLc76gI2c.cpp").read_text(encoding="utf-8")
+        for expected in ("0xAA510008UL", "0xAA512000UL", "RD_ADDR   = 0x54", "CR_ADDR   = 0x50"):
+            self.assertIn(expected, lc76g)
         self.assertIn("#ifdef MARAUDER_WS_C5_35", touch)
         self.assertIn("Wire.end(); Wire.begin(CTP_SDA, CTP_SCL, 100000U);", touch)
         self.assertIn("return -1;", touch)
