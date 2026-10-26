@@ -1062,6 +1062,31 @@ void CommandLine::runCommand(String input) {
       else
         wifi_scan_obj.zbSetOwnEUI64((uint64_t)strtoull(cmd_args.get(1).c_str(), NULL, 16));
     }
+    // ZDO ping / door-lock discovery (need a join + a captured network key).
+    else if (cmd_args.get(0) == ZIGBEE_PING_CMD) {
+      if (wifi_scan_obj.currentScanMode != ZIGBEE_SCAN_ALL)
+        Serial.println(F("Start 'sniffzb <ch>' first."));
+      else if (cmd_args.size() < 3)
+        Serial.println(F("Usage: zbping <targetShort> <pan>"));
+      else
+        wifi_scan_obj.zbPing((uint16_t)strtoul(cmd_args.get(1).c_str(), NULL, 0),
+                             (uint16_t)strtoul(cmd_args.get(2).c_str(), NULL, 0));
+    }
+    else if (cmd_args.get(0) == ZIGBEE_FINDLOCK_CMD) {
+      if (wifi_scan_obj.currentScanMode != ZIGBEE_SCAN_ALL)
+        Serial.println(F("Start 'sniffzb <ch>' first."));
+      else if (cmd_args.size() < 3)
+        Serial.println(F("Usage: zbfindlock <targetShort> <pan>"));
+      else
+        wifi_scan_obj.zbFindLock((uint16_t)strtoul(cmd_args.get(1).c_str(), NULL, 0),
+                                 (uint16_t)strtoul(cmd_args.get(2).c_str(), NULL, 0));
+    }
+    else if (cmd_args.get(0) == ZIGBEE_SWEEPLOCK_CMD) {
+      if (wifi_scan_obj.currentScanMode != ZIGBEE_SCAN_ALL)
+        Serial.println(F("Start 'sniffzb <ch>' first."));
+      else
+        wifi_scan_obj.zbFindLockSweepAll();
+    }
     #endif
     // Beacon sniff
     else if (cmd_args.get(0) == SNIFF_BEACON_CMD) {

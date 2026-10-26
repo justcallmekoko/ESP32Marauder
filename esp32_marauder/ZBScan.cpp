@@ -12,8 +12,12 @@
 
 // AES-128-CCM* lives in mbedtls, which is part of the ESP32 Arduino / ESP-IDF
 // framework and is therefore always available on the 802.15.4-capable targets
-// this file compiles for. Used to decrypt the APS Transport Key command.
+// this file compiles for. Used to decrypt the APS Transport Key command and to
+// encrypt/decrypt NWK-layer ZDO frames (ZbPing).
 #include "mbedtls/ccm.h"
+extern "C" {
+  #include "esp_random.h"   // HWRNG, to seed the NWK frame counter
+}
 
 // PSRAM helper: the Waveshare C5 has 8MB PSRAM (BOARD_HAS_PSRAM). Allocating
 // the growing node/key list containers from PSRAM when present frees internal
@@ -177,6 +181,21 @@ ZbKey *ZBScan::zbFindNetworkKey(uint8_t seqNum) {
     }
   }
   return nullptr;
+}
+
+// Most recently captured/added NETWORK key (used to encrypt outgoing ZDO
+// frames). Returns a pointer into its own static scratch copy.
+ZbKey *ZBScan::zbFindLatestNetworkKey() {
+  static ZbKey latest;
+  if (zigbee_keys == nullptr) return nullptr;
+  bool found = false;
+  uint32_t best = 0;
+  for (int i = 0; i < zigbee_keys->size(); i++) {
+    ZbKey k = zigbee_keys->get(i);
+    if (k.type != ZB_KEY_NETWORK) continue;
+    if (!found || k.capturedAt_ms >= best) { latest = k; best = k.capturedAt_ms; found = true; }
+  }
+  return found ? &latest : nullptr;
 }
 
 void ZBScan::zbLoadDefaultKeys() {
@@ -1192,6 +1211,533 @@ bool ZBScan::zbSendRejoinRequest(uint16_t coordShort, uint16_t pan,
   return this->zbSendRawFrame(frame, off);
 }
 
+// ===========================================================================
+// ZDO ping + door-lock discovery (ported from C6_zigbee ZbPing). Builds ZDO
+// requests inside an APS Data frame, NWK-encrypts with the captured network
+// key (CCM*), and wraps in a MAC data frame. Requires a successful join (own
+// short address) + a captured network key. No door-lock actuation.
+//
+// Layering (innermost -> outermost):
+//   ZDO:  TransactionSeq(1) + request payload
+//   APS:  FC(1) dstEP(1) cluster(2) profile(2) srcEP(1) counter(1) + ZDO
+//   NWK:  FC(2) dst(2) src(2) radius(1) seq(1) + AUX + CCM*(APS) + MIC(4)
+//   MAC:  FC(2) seq(1) dstPAN(2) dst(2) src(2) [PAN-ID compressed] + NWK
+// CCM* nonce = srcEUI64(8,LE) | frameCounter(4,LE) | secCtrl(1); AAD = NWK+AUX.
+// ===========================================================================
+
+void ZBScan::zbPingSeed() {
+  if (this->zb_pingSeeded) return;
+  // Seed counters from the HWRNG so a reboot does not reuse a frame counter
+  // under the same key/EUI64 (CCM* nonce uniqueness).
+  uint32_t seed = esp_random();
+  this->zb_nwkFrameCounter = seed;
+  this->zb_pingMacSeq      = (uint8_t)(seed >> 8);
+  this->zb_pingNwkSeq      = (uint8_t)(seed >> 16);
+  this->zb_apsCounter      = (uint8_t)(seed >> 24);
+  this->zb_pingSeeded      = true;
+}
+
+bool ZBScan::zbSendApsData(uint8_t dstEp, uint8_t srcEp, uint16_t cluster,
+                           uint16_t profile, const uint8_t *payload,
+                           uint8_t payloadLen, uint16_t target, uint16_t pan) {
+  uint8_t aps[32];
+  if (8 + (int)payloadLen > (int)sizeof(aps)) return false;
+  aps[0] = 0x00;                       // APS FC: Data, unicast, unsecured
+  aps[1] = dstEp;
+  aps[2] = (uint8_t)(cluster & 0xFF);
+  aps[3] = (uint8_t)(cluster >> 8);
+  aps[4] = (uint8_t)(profile & 0xFF);
+  aps[5] = (uint8_t)(profile >> 8);
+  aps[6] = srcEp;
+  aps[7] = this->zb_apsCounter++;
+  for (uint8_t i = 0; i < payloadLen; i++) aps[8 + i] = payload[i];
+  return this->zbNwkEncryptAndSend(pan, target, aps, 8 + payloadLen);
+}
+
+int ZBScan::zbSendZdoReq(uint16_t cluster, uint16_t target, uint16_t pan,
+                         const uint8_t *extra, uint8_t extraLen) {
+  uint8_t seq = this->zb_zdoSeq++;
+  uint8_t body[16];
+  if (1 + (int)extraLen > (int)sizeof(body)) return -1;
+  body[0] = seq;
+  for (uint8_t i = 0; i < extraLen; i++) body[1 + i] = extra[i];
+  if (!this->zbSendApsData(ZB_ZDO_EP, ZB_ZDO_EP, cluster, ZB_ZDO_PROFILE_ID,
+                           body, 1 + extraLen, target, pan))
+    return -1;
+  return seq;
+}
+
+bool ZBScan::zbPing(uint16_t targetShortAddr, uint16_t targetPan) {
+  if (!this->zbJoinAssociated()) {
+    Serial.println(F("[ZBPING] Not associated - 'zbjoin' first")); return false;
+  }
+  if (!this->zbFindLatestNetworkKey()) {
+    Serial.println(F("[ZBPING] No network key captured - can't encrypt")); return false;
+  }
+  this->zbPingSeed();
+  uint8_t noi[2] = { (uint8_t)(targetShortAddr & 0xFF), (uint8_t)(targetShortAddr >> 8) };
+  int seq = this->zbSendZdoReq(ZB_ZDO_NODE_DESC_REQ, targetShortAddr, targetPan, noi, 2);
+  if (seq < 0) return false;
+  this->zbAllocPending(targetShortAddr, targetPan, (uint8_t)seq);
+  Serial.printf("[ZBPING] Node_Desc_req -> 0x%04X (zdoSeq=%u)\n", targetShortAddr, seq);
+  return true;
+}
+
+bool ZBScan::zbFindLock(uint16_t targetShortAddr, uint16_t targetPan) {
+  if (!this->zbJoinAssociated()) {
+    Serial.println(F("[ZBLOCK] Not associated - 'zbjoin' first")); return false;
+  }
+  if (!this->zbFindLatestNetworkKey()) {
+    Serial.println(F("[ZBLOCK] No network key captured - can't probe")); return false;
+  }
+  if (this->zb_lockPhase != ZB_LOCK_IDLE) {
+    Serial.printf("[ZBLOCK] Busy scanning 0x%04X\n", this->zb_lockTarget); return false;
+  }
+  this->zbPingSeed();
+  this->zb_lockSweeping = false;
+  return this->zbStartLockScan(targetShortAddr, targetPan);
+}
+
+void ZBScan::zbFindLockSweepAll() {
+  if (!this->zbJoinAssociated() || !this->zbFindLatestNetworkKey()) {
+    Serial.println(F("[ZBLOCK] Need a join + a captured network key first")); return;
+  }
+  this->zbPingSeed();
+  this->zb_sweepLen = 0; this->zb_sweepIdx = 0; this->zb_sweepPan = 0xFFFF;
+  int n = (zigbee_nodes != nullptr) ? zigbee_nodes->size() : 0;
+  for (int i = 0; i < n && this->zb_sweepLen < ZB_LOCK_MAX_SWEEP; i++) {
+    ZigbeeNode node = zigbee_nodes->get(i);
+    if (node.short_addr == 0xFFFE || node.short_addr == 0xFFFF) continue;
+    if (node.short_addr == 0x0000) continue;   // skip coordinator
+    this->zb_sweepQueue[this->zb_sweepLen++] = node.short_addr;
+    if (this->zb_sweepPan == 0xFFFF && node.pan_id && node.pan_id != 0xFFFF)
+      this->zb_sweepPan = node.pan_id;
+  }
+  if (this->zb_sweepLen == 0) { Serial.println(F("[ZBLOCK] No hosts to sweep")); return; }
+  this->zb_lockSweeping = true;
+  Serial.printf("[ZBLOCK] Sweeping %u host(s) for the Door Lock cluster\n", this->zb_sweepLen);
+  this->zbNextSweepOrIdle();
+}
+
+bool ZBScan::zbStartLockScan(uint16_t target, uint16_t pan) {
+  this->zb_lockTarget = target; this->zb_lockPan = pan;
+  this->zb_lockFound = false; this->zb_lockEpCount = 0; this->zb_lockEpIndex = 0;
+  uint8_t noi[2] = { (uint8_t)(target & 0xFF), (uint8_t)(target >> 8) };
+  if (this->zbSendZdoReq(ZB_ZDO_ACTIVE_EP_REQ, target, pan, noi, 2) < 0) {
+    Serial.printf("[ZBLOCK] TX failed for 0x%04X\n", target);
+    this->zb_lockPhase = ZB_LOCK_IDLE; return false;
+  }
+  this->zb_lockPhase = ZB_LOCK_WAIT_ACTIVE_EP;
+  this->zb_lockSentMs = millis();
+  Serial.printf("[ZBLOCK] Probing 0x%04X (Active_EP_req)\n", target);
+  return true;
+}
+
+void ZBScan::zbSendSimpleDescReq(uint8_t endpoint) {
+  uint8_t body[3] = { (uint8_t)(this->zb_lockTarget & 0xFF),
+                      (uint8_t)(this->zb_lockTarget >> 8), endpoint };
+  this->zbSendZdoReq(ZB_ZDO_SIMPLE_DESC_REQ, this->zb_lockTarget, this->zb_lockPan, body, 3);
+  this->zb_lockSentMs = millis();
+}
+
+void ZBScan::zbFinishLockTarget() {
+  if (this->zb_lockFound)
+    Serial.printf("[ZBLOCK] *** 0x%04X IS A DOOR LOCK (cluster 0x0101) ***\n",
+                  this->zb_lockTarget);
+  else if (!this->zb_lockSweeping)
+    Serial.printf("[ZBLOCK] 0x%04X: no Door Lock cluster\n", this->zb_lockTarget);
+  this->zb_lockPhase = ZB_LOCK_IDLE;
+  this->zbNextSweepOrIdle();
+}
+
+void ZBScan::zbNextSweepOrIdle() {
+  if (!this->zb_lockSweeping) return;
+  if (this->zb_sweepIdx >= this->zb_sweepLen) {
+    this->zb_lockSweeping = false;
+    Serial.println(F("[ZBLOCK] Sweep complete"));
+    return;
+  }
+  uint16_t next = this->zb_sweepQueue[this->zb_sweepIdx++];
+  this->zbStartLockScan(next, this->zb_sweepPan);
+}
+
+void ZBScan::zbPingUpdate() {
+  uint32_t now = millis();
+  for (int i = 0; i < ZB_PING_MAX_PENDING; i++) {
+    if (this->zb_pending[i].active &&
+        (now - this->zb_pending[i].sentAt_ms) > ZB_PING_TIMEOUT_MS) {
+      Serial.printf("[ZBPING] Timeout: no response from 0x%04X\n", this->zb_pending[i].target);
+      this->zb_pending[i].active = false;
+    }
+  }
+  if (this->zb_lockPhase != ZB_LOCK_IDLE &&
+      (now - this->zb_lockSentMs) > ZB_LOCK_STEP_TIMEOUT_MS) {
+    if (this->zb_lockPhase == ZB_LOCK_WAIT_ACTIVE_EP) {
+      if (!this->zb_lockSweeping)
+        Serial.printf("[ZBLOCK] 0x%04X: no Active_EP response\n", this->zb_lockTarget);
+      this->zb_lockPhase = ZB_LOCK_IDLE;
+      this->zbNextSweepOrIdle();
+    } else {
+      this->zb_lockEpIndex++;
+      if (this->zb_lockEpIndex < this->zb_lockEpCount)
+        this->zbSendSimpleDescReq(this->zb_lockEndpoints[this->zb_lockEpIndex]);
+      else
+        this->zbFinishLockTarget();
+    }
+  }
+}
+
+void ZBScan::zbPingProcessFrame(const ZbFrameInfo &info, const uint8_t *raw,
+                                uint8_t rawLen, uint8_t macOff) {
+  if (!info.isZigbee || info.frameType != ZB_FC_FRAME_TYPE_DATA) return;
+  if (!info.hasNwk || info.zbNwkType != ZB_NWK_TYPE_DATA) return;
+  if (!info.zbNwkSecurity) return;
+  if (zb_is_bcast(info.nwkDst)) return;
+
+  uint16_t src = info.nwkSrc;
+  ZbPendingPing *p = this->zbFindPending(src);
+  bool wantLock = (this->zb_lockPhase != ZB_LOCK_IDLE && src == this->zb_lockTarget);
+  if (!p && !wantLock) return;
+
+  if (macOff >= rawLen) return;
+  const uint8_t *nwk = raw + macOff;
+  uint8_t nwkLen = rawLen - macOff;
+
+  uint8_t plain[96];
+  uint8_t plainLen = 0;
+  if (!this->zbNwkDecrypt(nwk, nwkLen, src, plain, plainLen)) return;
+  if (plainLen < 8) return;
+
+  uint8_t apsFc = plain[0];
+  if ((apsFc & 0x03) != 0x00) return;        // not APS Data
+  if ((apsFc >> 5) & 0x01) return;           // APS-secured: not handled
+
+  uint16_t cluster = (uint16_t)plain[2] | ((uint16_t)plain[3] << 8);
+  uint16_t profile = (uint16_t)plain[4] | ((uint16_t)plain[5] << 8);
+  if (profile != ZB_ZDO_PROFILE_ID) return;
+
+  const uint8_t *zdo = plain + 8;
+  uint8_t zdoLen = plainLen - 8;
+
+  switch (cluster) {
+    case ZB_ZDO_NODE_DESC_RSP: {
+      if (!p) return;
+      if (zdoLen < 17) return;               // seq+status+nwkAddr+nodeDesc(13)
+      uint32_t rtt = millis() - p->sentAt_ms;
+      p->active = false;
+      if (zdo[1] != 0x00) {
+        Serial.printf("[ZBPING] 0x%04X ZDO status 0x%02X\n", src, zdo[1]);
+        return;
+      }
+      this->zbReportNodeDesc(src, &zdo[4], rtt);
+      return;
+    }
+    case ZB_ZDO_ACTIVE_EP_RSP:
+      if (wantLock) this->zbHandleActiveEpRsp(src, zdo, zdoLen);
+      return;
+    case ZB_ZDO_SIMPLE_DESC_RSP:
+      if (wantLock) this->zbHandleSimpleDescRsp(src, zdo, zdoLen);
+      return;
+    default:
+      return;
+  }
+}
+
+// Active_EP_rsp: seq(1) status(1) nwkAddr(2) epCount(1) endpoints(epCount)
+void ZBScan::zbHandleActiveEpRsp(uint16_t src, const uint8_t *zdo, uint8_t zdoLen) {
+  if (this->zb_lockPhase != ZB_LOCK_WAIT_ACTIVE_EP) return;
+  if (zdoLen < 5) return;
+  if (zdo[1] != 0x00) { this->zbFinishLockTarget(); return; }
+  uint8_t epCount = zdo[4];
+  if (epCount == 0 || (5 + epCount) > zdoLen) { this->zbFinishLockTarget(); return; }
+  this->zb_lockEpCount = (epCount > ZB_LOCK_MAX_ENDPOINTS) ? ZB_LOCK_MAX_ENDPOINTS : epCount;
+  for (uint8_t i = 0; i < this->zb_lockEpCount; i++) this->zb_lockEndpoints[i] = zdo[5 + i];
+  this->zb_lockEpIndex = 0;
+  this->zb_lockPhase = ZB_LOCK_WAIT_SIMPLE_DESC;
+  this->zbSendSimpleDescReq(this->zb_lockEndpoints[0]);
+}
+
+// Simple_Desc_rsp: seq(1) status(1) nwkAddr(2) length(1) + Simple Descriptor.
+void ZBScan::zbHandleSimpleDescRsp(uint16_t src, const uint8_t *zdo, uint8_t zdoLen) {
+  if (this->zb_lockPhase != ZB_LOCK_WAIT_SIMPLE_DESC) return;
+  if (zdoLen >= 5 && zdo[1] == 0x00) {
+    const uint8_t *d = &zdo[5];
+    uint8_t descLen = zdo[4];
+    if (descLen >= 7 && (5 + descLen) <= zdoLen) {
+      uint8_t  ep      = d[0];
+      uint16_t profId  = (uint16_t)d[1] | ((uint16_t)d[2] << 8);
+      uint8_t  inCount = d[6];
+      uint8_t  o = 7;
+      bool epHasLock = false;
+      for (uint8_t i = 0; i < inCount && (o + 1) < descLen; i++, o += 2) {
+        uint16_t c = (uint16_t)d[o] | ((uint16_t)d[o + 1] << 8);
+        if (c == ZB_CLUSTER_DOOR_LOCK) epHasLock = true;
+      }
+      if (o < descLen) {
+        uint8_t outCount = d[o++];
+        for (uint8_t i = 0; i < outCount && (o + 1) < descLen; i++, o += 2) {
+          uint16_t c = (uint16_t)d[o] | ((uint16_t)d[o + 1] << 8);
+          if (c == ZB_CLUSTER_DOOR_LOCK) epHasLock = true;
+        }
+      }
+      if (epHasLock) {
+        this->zb_lockFound = true;
+        this->zbRecordLockInfo(src, this->zb_lockPan, ep, profId);
+        Serial.printf("[ZBLOCK] 0x%04X ep %u (profile 0x%04X) exposes Door Lock\n",
+                      src, ep, profId);
+      }
+    }
+  }
+  this->zb_lockEpIndex++;
+  if (this->zb_lockEpIndex < this->zb_lockEpCount)
+    this->zbSendSimpleDescReq(this->zb_lockEndpoints[this->zb_lockEpIndex]);
+  else
+    this->zbFinishLockTarget();
+}
+
+void ZBScan::zbPrintLockStatus() const {
+  switch (this->zb_lockPhase) {
+    case ZB_LOCK_IDLE: Serial.println(F("[ZBLOCK] Idle")); break;
+    case ZB_LOCK_WAIT_ACTIVE_EP:
+      Serial.printf("[ZBLOCK] Scanning 0x%04X (endpoint list)\n", this->zb_lockTarget); break;
+    case ZB_LOCK_WAIT_SIMPLE_DESC:
+      Serial.printf("[ZBLOCK] Scanning 0x%04X (ep %u/%u)\n",
+                    this->zb_lockTarget, this->zb_lockEpIndex + 1, this->zb_lockEpCount); break;
+  }
+  for (int i = 0; i < ZB_LOCK_MAX_INFO; i++)
+    if (this->zb_locks[i].valid)
+      Serial.printf("[ZBLOCK] Located lock: 0x%04X ep %u profile 0x%04X\n",
+                    this->zb_locks[i].addr, this->zb_locks[i].endpoint,
+                    this->zb_locks[i].profile);
+}
+
+ZbPendingPing *ZBScan::zbFindPending(uint16_t target) {
+  for (int i = 0; i < ZB_PING_MAX_PENDING; i++)
+    if (this->zb_pending[i].active && this->zb_pending[i].target == target)
+      return &this->zb_pending[i];
+  return nullptr;
+}
+
+ZbPendingPing *ZBScan::zbAllocPending(uint16_t target, uint16_t pan, uint8_t zdoSeq) {
+  for (int i = 0; i < ZB_PING_MAX_PENDING; i++) {
+    if (!this->zb_pending[i].active) {
+      this->zb_pending[i] = { true, target, pan, zdoSeq, (uint32_t)millis() };
+      return &this->zb_pending[i];
+    }
+  }
+  ZbPendingPing *oldest = &this->zb_pending[0];
+  for (int i = 1; i < ZB_PING_MAX_PENDING; i++)
+    if (this->zb_pending[i].sentAt_ms < oldest->sentAt_ms) oldest = &this->zb_pending[i];
+  *oldest = { true, target, pan, zdoSeq, (uint32_t)millis() };
+  return oldest;
+}
+
+ZbNodeDescCache *ZBScan::zbFindCache(uint16_t addr) {
+  for (int i = 0; i < ZB_NODE_DESC_CACHE; i++)
+    if (this->zb_descCache[i].valid && this->zb_descCache[i].addr == addr)
+      return &this->zb_descCache[i];
+  return nullptr;
+}
+
+ZbNodeDescCache *ZBScan::zbAllocCache(uint16_t addr) {
+  for (int i = 0; i < ZB_NODE_DESC_CACHE; i++) {
+    if (!this->zb_descCache[i].valid) {
+      this->zb_descCache[i].valid = true;
+      this->zb_descCache[i].addr  = addr;
+      return &this->zb_descCache[i];
+    }
+  }
+  this->zb_descCache[0].valid = true;
+  this->zb_descCache[0].addr  = addr;
+  return &this->zb_descCache[0];
+}
+
+void ZBScan::zbRecordLockInfo(uint16_t addr, uint16_t pan, uint8_t ep, uint16_t profile) {
+  for (int i = 0; i < ZB_LOCK_MAX_INFO; i++)
+    if (this->zb_locks[i].valid && this->zb_locks[i].addr == addr) {
+      this->zb_locks[i] = { true, addr, pan, ep, profile }; return;
+    }
+  for (int i = 0; i < ZB_LOCK_MAX_INFO; i++)
+    if (!this->zb_locks[i].valid) {
+      this->zb_locks[i] = { true, addr, pan, ep, profile }; return;
+    }
+  this->zb_locks[0] = { true, addr, pan, ep, profile };
+}
+
+bool ZBScan::zbFindAuxHeader(const uint8_t *nwk, uint8_t len, uint16_t nwkFc,
+                             uint8_t &auxOffset) {
+  uint8_t off = 8;
+  if (off > len) return false;
+  if ((nwkFc >> 8) & 0x01) { if (off + 1 > len) return false; off++; }   // multicast
+  if ((nwkFc & ZB_NWK_FC_EXT_DST) && off + 8 <= len) off += 8;
+  if ((nwkFc & ZB_NWK_FC_EXT_SRC) && off + 8 <= len) off += 8;
+  if (nwkFc & ZB_NWK_FC_SOURCE_ROUTE) {
+    if (off + 2 > len) return false;
+    uint8_t relayCount = nwk[off];
+    off += 2 + relayCount * 2;
+    if (off > len) return false;
+  }
+  if (!(nwkFc & ZB_NWK_FC_SECURITY)) return false;
+  auxOffset = off;
+  return true;
+}
+
+bool ZBScan::zbNwkDecrypt(const uint8_t *nwk, uint8_t nwkLen, uint16_t nwkSrc,
+                          uint8_t *plainOut, uint8_t &plainLen) {
+  if (nwkLen < 10) return false;
+  uint16_t nwkFc = (uint16_t)nwk[0] | ((uint16_t)nwk[1] << 8);
+
+  uint8_t auxOffset;
+  if (!this->zbFindAuxHeader(nwk, nwkLen, nwkFc, auxOffset)) return false;
+  if (auxOffset + 6 > nwkLen) return false;
+
+  uint8_t secCtrl  = nwk[auxOffset];
+  uint8_t secLevel = secCtrl & 0x07;
+  bool    hasExtSrc = (secCtrl >> 5) & 0x01;
+
+  uint8_t off = auxOffset + 1;
+  const uint8_t *frameCounterBytes = &nwk[off];
+  off += 4;
+
+  uint64_t srcEui64 = 0;
+  if (hasExtSrc) {
+    if (off + 8 > nwkLen) return false;
+    for (int i = 0; i < 8; i++) srcEui64 |= ((uint64_t)nwk[off + i] << (8 * i));
+    off += 8;
+  } else {
+    int idx = this->zbFindNode(nwkSrc);
+    if (idx < 0 || zigbee_nodes->get(idx).ext_addr == 0) return false;
+    srcEui64 = zigbee_nodes->get(idx).ext_addr;
+  }
+  if (off + 1 > nwkLen) return false;
+  uint8_t keySeq = nwk[off]; off += 1;
+
+  uint8_t cipherStart = off;
+  bool encrypted = (secLevel & 0x04) != 0;
+  uint8_t micLen;
+  switch (secLevel & 0x03) { case 0: micLen = 0; break; case 1: micLen = 4; break;
+                             case 2: micLen = 8; break; default: micLen = 16; }
+  if (cipherStart + micLen > nwkLen) return false;
+  uint8_t cipherLen = nwkLen - cipherStart - micLen;
+  if (cipherLen == 0 || cipherLen > 96) return false;
+
+  ZbKey *key = this->zbFindNetworkKey(keySeq);
+  if (!key) return false;
+
+  if (!encrypted) { memcpy(plainOut, &nwk[cipherStart], cipherLen); plainLen = cipherLen; return true; }
+
+  uint8_t nonce[13];
+  for (int i = 0; i < 8; i++) nonce[i] = (uint8_t)(srcEui64 >> (8 * i));
+  memcpy(nonce + 8, frameCounterBytes, 4);
+  nonce[12] = secCtrl;
+
+  mbedtls_ccm_context ctx;
+  mbedtls_ccm_init(&ctx);
+  int ret = mbedtls_ccm_setkey(&ctx, MBEDTLS_CIPHER_ID_AES, key->key, 128);
+  if (ret == 0)
+    ret = mbedtls_ccm_star_auth_decrypt(&ctx, cipherLen, nonce, sizeof(nonce),
+                                        nwk, cipherStart, &nwk[cipherStart], plainOut,
+                                        &nwk[cipherStart + cipherLen], micLen);
+  mbedtls_ccm_free(&ctx);
+  if (ret != 0) return false;
+  plainLen = cipherLen;
+  return true;
+}
+
+bool ZBScan::zbNwkEncryptAndSend(uint16_t dstPan, uint16_t dstShort,
+                                 const uint8_t *apsFrame, uint8_t apsLen) {
+  ZbKey *key = this->zbFindLatestNetworkKey();
+  if (!key || apsLen > 32) return false;
+
+  uint16_t ownShort = this->zb_joinAssignedShort;
+  uint64_t ownEui64 = this->zb_ownEUI64;
+
+  // NWK header: Data, protoVer 2, discoverRoute, security.
+  uint16_t nwkFc = 0x0048 | ZB_NWK_FC_SECURITY;
+  uint8_t nwk[8];
+  nwk[0] = (uint8_t)(nwkFc & 0xFF); nwk[1] = (uint8_t)(nwkFc >> 8);
+  nwk[2] = (uint8_t)(dstShort & 0xFF); nwk[3] = (uint8_t)(dstShort >> 8);
+  nwk[4] = (uint8_t)(ownShort & 0xFF); nwk[5] = (uint8_t)(ownShort >> 8);
+  nwk[6] = 30; nwk[7] = this->zb_pingNwkSeq++;
+
+  // AUX: secCtrl(1) frameCounter(4,LE) extSrc(8,LE) keySeq(1); secLevel 5
+  // (ENC-MIC32), key id 1 (Network), ext nonce.
+  uint8_t aux[14];
+  aux[0] = 5 | (0x01 << 3) | (0x01 << 5);
+  this->zb_nwkFrameCounter++;
+  aux[1] = (uint8_t)(this->zb_nwkFrameCounter & 0xFF);
+  aux[2] = (uint8_t)(this->zb_nwkFrameCounter >> 8);
+  aux[3] = (uint8_t)(this->zb_nwkFrameCounter >> 16);
+  aux[4] = (uint8_t)(this->zb_nwkFrameCounter >> 24);
+  for (int i = 0; i < 8; i++) aux[5 + i] = (uint8_t)(ownEui64 >> (8 * i));
+  aux[13] = key->seqNum;
+
+  uint8_t aad[8 + 14];
+  memcpy(aad, nwk, 8); memcpy(aad + 8, aux, 14);
+
+  uint8_t nonce[13];
+  for (int i = 0; i < 8; i++) nonce[i] = (uint8_t)(ownEui64 >> (8 * i));
+  memcpy(nonce + 8, &aux[1], 4); nonce[12] = aux[0];
+
+  uint8_t ciphertext[32];
+  uint8_t tag[4];
+  mbedtls_ccm_context ctx;
+  mbedtls_ccm_init(&ctx);
+  int ret = mbedtls_ccm_setkey(&ctx, MBEDTLS_CIPHER_ID_AES, key->key, 128);
+  if (ret == 0)
+    ret = mbedtls_ccm_star_encrypt_and_tag(&ctx, apsLen, nonce, sizeof(nonce),
+                                           aad, sizeof(aad), apsFrame, ciphertext,
+                                           tag, sizeof(tag));
+  mbedtls_ccm_free(&ctx);
+  if (ret != 0) { Serial.println(F("[ZBPING] NWK encrypt failed")); return false; }
+
+  uint8_t frame[ZIGBEE_MAX_FRAME_LEN];
+  uint8_t off = 0;
+  frame[off++] = 0x61;          // MAC: Data, ACK req, PAN ID compression
+  frame[off++] = 0x88;          // dst=short, src=short
+  frame[off++] = this->zb_pingMacSeq++;
+  frame[off++] = (uint8_t)(dstPan & 0xFF);  frame[off++] = (uint8_t)(dstPan >> 8);
+  frame[off++] = (uint8_t)(dstShort & 0xFF); frame[off++] = (uint8_t)(dstShort >> 8);
+  frame[off++] = (uint8_t)(ownShort & 0xFF); frame[off++] = (uint8_t)(ownShort >> 8);
+  memcpy(&frame[off], nwk, 8);             off += 8;
+  memcpy(&frame[off], aux, 14);            off += 14;
+  memcpy(&frame[off], ciphertext, apsLen); off += apsLen;
+  memcpy(&frame[off], tag, 4);             off += 4;
+  return this->zbSendRawFrame(frame, off);
+}
+
+void ZBScan::zbReportNodeDesc(uint16_t addr, const uint8_t *d, uint32_t rtt_ms) {
+  uint8_t  logicalType      = d[0] & 0x07;
+  uint8_t  macCapability    = d[2];
+  uint16_t manufacturerCode = (uint16_t)d[3] | ((uint16_t)d[4] << 8);
+  uint8_t  maxBufferSize    = d[5];
+  uint16_t maxInTransferSize  = (uint16_t)d[6]  | ((uint16_t)d[7]  << 8);
+  uint16_t serverMask         = (uint16_t)d[8]  | ((uint16_t)d[9]  << 8);
+  uint16_t maxOutTransferSize = (uint16_t)d[10] | ((uint16_t)d[11] << 8);
+  uint8_t  descCapability     = d[12];
+
+  Serial.printf("[ZBPING] 0x%04X responded in %lums - %s, MACcap=0x%02X, mfg=0x%04X\n",
+                addr, (unsigned long)rtt_ms, zbLogicalTypeName(logicalType),
+                macCapability, manufacturerCode);
+
+  ZbNodeDescCache *c = this->zbFindCache(addr);
+  if (!c) { c = this->zbAllocCache(addr); Serial.println(F("[ZBPING]   (new descriptor)")); }
+  else if (c->logicalType != logicalType || c->macCapability != macCapability ||
+           c->manufacturerCode != manufacturerCode || c->serverMask != serverMask)
+    Serial.println(F("[ZBPING]   (descriptor changed since last sighting)"));
+
+  c->valid = true; c->addr = addr; c->logicalType = logicalType;
+  c->macCapability = macCapability; c->manufacturerCode = manufacturerCode;
+  c->maxBufferSize = maxBufferSize; c->maxInTransferSize = maxInTransferSize;
+  c->serverMask = serverMask; c->maxOutTransferSize = maxOutTransferSize;
+  c->descCapability = descCapability;
+}
+
+const char *ZBScan::zbLogicalTypeName(uint8_t t) {
+  switch (t) { case 0: return "Coordinator"; case 1: return "Router";
+               case 2: return "End Device"; default: return "Reserved"; }
+}
+
 // MAC-header decoder. Ported from IEEE802154Sniffer::_decodeMac(), reduced to
 // the addressing/beacon fields Marauder records.
 bool ZBScan::zbDecodeMac(const ZbSnifferFrame &raw, ZbFrameInfo &info) {
@@ -1369,6 +1915,13 @@ void ZBScan::RunZigbeeScan(uint8_t scan_mode, uint16_t color) {
   memset(this->zb_joins, 0, sizeof(this->zb_joins));
   this->zb_coordEUI64 = 0;
 
+  // Reset ZDO ping / find_lock state for this run.
+  memset(this->zb_pending, 0, sizeof(this->zb_pending));
+  memset(this->zb_descCache, 0, sizeof(this->zb_descCache));
+  memset(this->zb_locks, 0, sizeof(this->zb_locks));
+  this->zb_lockPhase = ZB_LOCK_IDLE;
+  this->zb_lockSweeping = false;
+
   this->zb_frame_count  = 0;
   this->zb_zigbee_count = 0;
 
@@ -1426,11 +1979,16 @@ void ZBScan::zigbeeLoop(uint32_t currentTime) {
 
       // Active join (if in progress): watch for our Association Response.
       this->zbJoinProcessFrame(info, raw.data, raw.len, info.macPayloadOffset);
+
+      // ZDO ping / find_lock: watch for NWK-encrypted responses to us.
+      this->zbPingProcessFrame(info, raw.data, raw.len, info.macPayloadOffset);
     }
   }
 
-  // Drive an in-progress join (poll / timeout) and drop stale pending joins.
+  // Drive an in-progress join (poll / timeout), ZDO ping/lock timeouts, and
+  // drop stale pending joins.
   this->zbJoinUpdate();
+  this->zbPingUpdate();
   this->zbExpireJoins();
 
   // When hopping, move one channel each HOP_DELAY*2; locked mode never hops.

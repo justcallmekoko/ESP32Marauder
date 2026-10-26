@@ -165,6 +165,62 @@ struct ZbJoinState {
 // Global captured/known-key list, mirroring the global `zigbee_nodes`.
 extern LinkedList<ZbKey>* zigbee_keys;
 
+// --- ZDO ping / find_lock (ZbPing) -----------------------------------------
+// Application-layer reachability (ZDO Node_Desc_req/rsp) and door-lock
+// discovery (Active_EP + Simple_Desc enumeration). Requires an active join
+// (own short address) and a captured network key. Door-lock ACTUATION
+// (lock/unlock) is deliberately NOT ported. Ported from C6_zigbee ZbPing.
+#define ZB_ZDO_PROFILE_ID       0x0000
+#define ZB_ZDO_EP               0x00
+#define ZB_ZDO_NODE_DESC_REQ    0x0002
+#define ZB_ZDO_NODE_DESC_RSP    0x8002
+#define ZB_ZDO_SIMPLE_DESC_REQ  0x0004
+#define ZB_ZDO_SIMPLE_DESC_RSP  0x8004
+#define ZB_ZDO_ACTIVE_EP_REQ    0x0005
+#define ZB_ZDO_ACTIVE_EP_RSP    0x8005
+#define ZB_CLUSTER_DOOR_LOCK    0x0101
+
+#define ZB_PING_MAX_PENDING       6
+#define ZB_NODE_DESC_CACHE        16
+#define ZB_LOCK_MAX_ENDPOINTS     16
+#define ZB_LOCK_MAX_SWEEP         32
+#define ZB_LOCK_MAX_INFO          8
+#define ZB_PING_TIMEOUT_MS        3000
+#define ZB_LOCK_STEP_TIMEOUT_MS   2500
+
+struct ZbPendingPing {
+  bool     active;
+  uint16_t target;
+  uint16_t pan;
+  uint8_t  zdoSeq;
+  uint32_t sentAt_ms;
+};
+
+struct ZbNodeDescCache {
+  bool     valid;
+  uint16_t addr;
+  uint8_t  logicalType;
+  uint8_t  macCapability;
+  uint16_t manufacturerCode;
+  uint8_t  maxBufferSize;
+  uint16_t maxInTransferSize;
+  uint16_t serverMask;
+  uint16_t maxOutTransferSize;
+  uint8_t  descCapability;
+};
+
+struct ZbLockInfo {
+  bool     valid;
+  uint16_t addr;
+  uint16_t pan;
+  uint8_t  endpoint;
+  uint16_t profile;
+};
+
+enum ZbLockScanPhase : uint8_t {
+  ZB_LOCK_IDLE = 0, ZB_LOCK_WAIT_ACTIVE_EP = 1, ZB_LOCK_WAIT_SIMPLE_DESC = 2
+};
+
 // A discovered Zigbee / 802.15.4 node. Modeled on WiFiScan's AccessPoint: a
 // plain struct held in a LinkedList, carrying a nested LinkedList of the peers
 // it has been seen talking to (by short address) - the "connections".
@@ -279,6 +335,14 @@ class ZBScan {
     // then recovers. ack_attack: see zbStartAckAttack/zbStopAckAttack.
     bool zbInsecureRejoin(uint16_t targetShortAddr);
 
+    // --- ZDO ping / door-lock discovery (ZbPing) ----------------------------
+    // Require zbJoinAssociated() + a captured network key. No lock actuation.
+    bool   zbPing(uint16_t targetShortAddr, uint16_t targetPan);
+    bool   zbFindLock(uint16_t targetShortAddr, uint16_t targetPan);
+    void   zbFindLockSweepAll();
+    void   zbPrintLockStatus() const;
+    ZbKey *zbFindLatestNetworkKey();   // most recent captured NETWORK key
+
   protected:
     uint8_t zb_channel = ZIGBEE_DEFAULT_CHANNEL;
     uint8_t zb_start_channel = 0;  // 0 = hop; 11..26 = lock to that channel
@@ -340,6 +404,53 @@ class ZBScan {
                             uint8_t rawLen, uint8_t macOff);
     bool zbSendRejoinRequest(uint16_t coordShort, uint16_t pan, uint64_t spoofEui64);
     static const char *zbAssocStatusName(uint8_t status);
+
+    // --- ZbPing state + internals -------------------------------------------
+    ZbPendingPing   zb_pending[ZB_PING_MAX_PENDING];
+    ZbNodeDescCache zb_descCache[ZB_NODE_DESC_CACHE];
+    uint32_t        zb_nwkFrameCounter = 0;
+    uint8_t         zb_pingMacSeq = 0, zb_pingNwkSeq = 0, zb_apsCounter = 0, zb_zdoSeq = 0;
+    bool            zb_pingSeeded = false;
+
+    ZbLockScanPhase zb_lockPhase = ZB_LOCK_IDLE;
+    uint16_t        zb_lockTarget = 0xFFFF, zb_lockPan = 0xFFFF;
+    uint8_t         zb_lockEndpoints[ZB_LOCK_MAX_ENDPOINTS];
+    uint8_t         zb_lockEpCount = 0, zb_lockEpIndex = 0;
+    uint32_t        zb_lockSentMs = 0;
+    bool            zb_lockFound = false, zb_lockSweeping = false;
+    uint16_t        zb_sweepQueue[ZB_LOCK_MAX_SWEEP];
+    uint8_t         zb_sweepLen = 0, zb_sweepIdx = 0;
+    uint16_t        zb_sweepPan = 0xFFFF;
+    ZbLockInfo      zb_locks[ZB_LOCK_MAX_INFO];
+
+    void zbPingSeed();                 // seed counters from HWRNG (once)
+    void zbPingUpdate();               // pending/lock-scan timeouts each loop
+    void zbPingProcessFrame(const ZbFrameInfo &info, const uint8_t *raw,
+                            uint8_t rawLen, uint8_t macOff);
+    bool zbSendApsData(uint8_t dstEp, uint8_t srcEp, uint16_t cluster,
+                       uint16_t profile, const uint8_t *payload, uint8_t payloadLen,
+                       uint16_t target, uint16_t pan);
+    int  zbSendZdoReq(uint16_t cluster, uint16_t target, uint16_t pan,
+                      const uint8_t *extra, uint8_t extraLen);
+    bool zbNwkEncryptAndSend(uint16_t dstPan, uint16_t dstShort,
+                             const uint8_t *apsFrame, uint8_t apsLen);
+    bool zbNwkDecrypt(const uint8_t *nwk, uint8_t nwkLen, uint16_t nwkSrc,
+                      uint8_t *plainOut, uint8_t &plainLen);
+    bool zbFindAuxHeader(const uint8_t *nwk, uint8_t len, uint16_t nwkFc,
+                         uint8_t &auxOffset);
+    void zbReportNodeDesc(uint16_t addr, const uint8_t *nodeDesc, uint32_t rtt_ms);
+    static const char *zbLogicalTypeName(uint8_t t);
+    bool zbStartLockScan(uint16_t target, uint16_t pan);
+    void zbSendSimpleDescReq(uint8_t endpoint);
+    void zbHandleActiveEpRsp(uint16_t src, const uint8_t *zdo, uint8_t zdoLen);
+    void zbHandleSimpleDescRsp(uint16_t src, const uint8_t *zdo, uint8_t zdoLen);
+    void zbFinishLockTarget();
+    void zbNextSweepOrIdle();
+    ZbPendingPing   *zbFindPending(uint16_t target);
+    ZbPendingPing   *zbAllocPending(uint16_t target, uint16_t pan, uint8_t zdoSeq);
+    ZbNodeDescCache *zbFindCache(uint16_t addr);
+    ZbNodeDescCache *zbAllocCache(uint16_t addr);
+    void             zbRecordLockInfo(uint16_t addr, uint16_t pan, uint8_t ep, uint16_t profile);
 
     // Feed one fully-decoded frame (plus its raw bytes) through the key-capture
     // pipeline. rawLen/macOff describe the on-air frame in `raw`.
