@@ -28,7 +28,13 @@ class WaveshareC535HardwareTests(unittest.TestCase):
             # Core 3.3.4 exposes at most a 16 MB choice. Marauder intentionally
             # uses its established 8 MB app layout within the board's 32 MB chip.
             self.assertIn("FlashSize=8M", workflow)
+            # Marauder's Serial must be the native USB port (no USB-UART bridge).
+            self.assertIn("esp32:esp32:esp32c5:CDCOnBoot=cdc,FlashSize=8M", workflow)
             self.assertIn('tft_file: "User_Setup_ws_c5_35.h"', workflow)
+
+        sketch = (ROOT / "esp32_marauder" / "esp32_marauder.ino").read_text(encoding="utf-8")
+        # With USB CDC as Serial, boot must not wait forever for a USB host.
+        self.assertIn("!Serial && millis() - t0 < 1000", sketch)
 
     def test_board_contract_keeps_expander_and_touch_handling_isolated(self) -> None:
         config = (ROOT / "esp32_marauder" / "configs.h").read_text(encoding="utf-8")

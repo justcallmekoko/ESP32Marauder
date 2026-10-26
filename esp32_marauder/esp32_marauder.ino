@@ -323,6 +323,11 @@ void setup()
   #endif
   
   Serial.begin(115200);
+  #if defined(MARAUDER_WS_C5_35) && ARDUINO_USB_CDC_ON_BOOT
+    // Serial is the native USB CDC port on this board. With no host attached
+    // (battery / power bank) a blocking write would stall boot, so don't wait.
+    Serial.setTxTimeoutMs(0);
+  #endif
 
   #ifdef HAS_ACT_LED
     pinMode(ACT_LED_PIN, OUTPUT);
@@ -330,8 +335,15 @@ void setup()
     digitalWrite(ACT_LED_PIN, LOW);
   #endif
 
-  while(!Serial)
-    delay(10);
+  #if defined(MARAUDER_WS_C5_35) && ARDUINO_USB_CDC_ON_BOOT
+    // !Serial means "no USB host has opened the port". Running on battery or a
+    // power bank that never happens, so wait briefly instead of forever.
+    for (uint32_t t0 = millis(); !Serial && millis() - t0 < 1000; )
+      delay(10);
+  #else
+    while(!Serial)
+      delay(10);
+  #endif
 
   #ifdef HAS_C5_SD
     sharedSPI.begin(SD_SCK, SD_MISO, SD_MOSI);
