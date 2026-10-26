@@ -1022,6 +1022,47 @@ void CommandLine::runCommand(String input) {
         Serial.println(F("Zigbee sniffing requires an ESP32-C5 / ESP32-C6 / ESP32-H2"));
       #endif
     }
+    #ifdef HAS_ZIGBEE
+    // Zigbee active verbs (join / insecure_rejoin / ack_attack / EUI64). These
+    // TRANSMIT - authorised testing of your own network only - and require a
+    // running "sniffzb" (preferably channel-locked: e.g. "sniffzb 15").
+    else if (cmd_args.get(0) == ZIGBEE_JOIN_CMD) {
+      if (wifi_scan_obj.currentScanMode != ZIGBEE_SCAN_ALL)
+        Serial.println(F("Start 'sniffzb <ch>' first."));
+      else if (cmd_args.size() < 3)
+        Serial.println(F("Usage: zbjoin <parentShort> <pan>   e.g. zbjoin 0x0000 0x1A62"));
+      else {
+        uint16_t parent = (uint16_t)strtoul(cmd_args.get(1).c_str(), NULL, 0);
+        uint16_t pan    = (uint16_t)strtoul(cmd_args.get(2).c_str(), NULL, 0);
+        wifi_scan_obj.zbJoinStart(parent, pan);
+      }
+    }
+    else if (cmd_args.get(0) == ZIGBEE_REJOIN_CMD) {
+      if (wifi_scan_obj.currentScanMode != ZIGBEE_SCAN_ALL)
+        Serial.println(F("Start 'sniffzb <ch>' first."));
+      else if (cmd_args.size() < 2)
+        Serial.println(F("Usage: zbrejoin <targetShort>   (impersonate a known device)"));
+      else
+        wifi_scan_obj.zbInsecureRejoin((uint16_t)strtoul(cmd_args.get(1).c_str(), NULL, 0));
+    }
+    else if (cmd_args.get(0) == ZIGBEE_ACK_CMD) {
+      if (wifi_scan_obj.currentScanMode != ZIGBEE_SCAN_ALL)
+        Serial.println(F("Start 'sniffzb <ch>' first."));
+      else if (cmd_args.get(1) == "off" || cmd_args.get(1) == "stop")
+        wifi_scan_obj.zbStopAckAttack();
+      else if (cmd_args.size() < 2)
+        Serial.println(F("Usage: zback <targetShort> | zback off"));
+      else
+        wifi_scan_obj.zbStartAckAttack((uint16_t)strtoul(cmd_args.get(1).c_str(), NULL, 0));
+    }
+    else if (cmd_args.get(0) == ZIGBEE_MAC_CMD) {
+      // "zbmac <hexEUI64>" spoofs the source EUI64; bare "zbmac" restores HW MAC.
+      if (cmd_args.size() < 2)
+        wifi_scan_obj.zbRestoreOwnEUI64();
+      else
+        wifi_scan_obj.zbSetOwnEUI64((uint64_t)strtoull(cmd_args.get(1).c_str(), NULL, 16));
+    }
+    #endif
     // Beacon sniff
     else if (cmd_args.get(0) == SNIFF_BEACON_CMD) {
       this->startScanFromCLI(WIFI_SCAN_AP, TFT_MAGENTA, "Beacon sniff");

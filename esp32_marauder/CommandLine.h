@@ -95,6 +95,11 @@ const char PROGMEM SCAN_ALL_CMD[] = "scanall";
 //const char PROGMEM SCANSTA_CMD[] = "scansta";
 const char PROGMEM SNIFF_RAW_CMD[] = "sniffraw";
 const char PROGMEM SNIFF_ZIGBEE_CMD[] = "sniffzb";
+// Zigbee active / simulation / attack verbs (require an active "sniffzb").
+const char PROGMEM ZIGBEE_JOIN_CMD[]   = "zbjoin";
+const char PROGMEM ZIGBEE_REJOIN_CMD[] = "zbrejoin";
+const char PROGMEM ZIGBEE_ACK_CMD[]    = "zback";
+const char PROGMEM ZIGBEE_MAC_CMD[]    = "zbmac";
 const char PROGMEM SNIFF_BEACON_CMD[] = "sniffbeacon";
 const char PROGMEM SNIFF_PROBE_CMD[] = "sniffprobe";
 const char PROGMEM SNIFF_PWN_CMD[] = "sniffpwn";

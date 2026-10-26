@@ -130,6 +130,15 @@ struct ZbFrameInfo {
 #define ZIGBEE_KEY_LEN        16
 #define ZB_MAX_PENDING_JOINS  4
 
+// --- Active TX / simulation (ZbJoiner / ZbAttack / ZbPing) ------------------
+// 802.15.4 MAC command ids and association-capability bits for the transmit
+// path. The radio shares the 2.4GHz front end, so each TX stops RX, transmits,
+// then resumes RX.
+#define ZB_MAC_CMD_ASSOC_REQUEST    0x01
+#define ZB_MAC_CMD_DATA_REQUEST     0x04
+#define ZB_ASSOC_CAP_ALLOC_ADDR     0x80   // request a short address
+#define ZB_ASSOC_CAP_SIMPLE_DEVICE  ZB_ASSOC_CAP_ALLOC_ADDR  // RFD, battery, sleepy
+
 enum ZbKeyType : uint8_t {
   ZB_KEY_TCLK    = 0,   // Trust Center Link Key (used to decrypt Transport Key)
   ZB_KEY_NETWORK = 1,   // captured Zigbee network key
@@ -225,6 +234,51 @@ class ZBScan {
     ZbKey *zbFindNetworkKey(uint8_t seqNum);
     size_t zigbeeKeyCount() const;
 
+    // --- Transmit primitives (shared 2.4GHz front end: stop-RX / TX / RX) ---
+    bool zbSendRawFrame(const uint8_t *frame, uint8_t frameLen);
+    bool zbSendBeaconRequest();
+    bool zbSendAssociationRequest(uint16_t dstPan, uint16_t dstShortAddr,
+                                  uint8_t capabilityInfo = ZB_ASSOC_CAP_SIMPLE_DEVICE);
+    bool zbSendDataRequest(uint16_t dstPan, uint16_t dstShortAddr,
+                           bool useOwnShortAddr, uint16_t ownShortAddr = 0xFFFE);
+    bool zbSendAck(uint8_t seqNum);
+
+    // --- Own extended address (EUI64) + spoofing ----------------------------
+    uint64_t zbGetOwnEUI64() const { return this->zb_ownEUI64; }
+    uint64_t zbGetHwEUI64()  const { return this->zb_hwEUI64; }
+    void     zbSetOwnEUI64(uint64_t eui64);   // program a spoofed source EUI64
+    void     zbRestoreOwnEUI64();             // revert to the hardware MAC
+    bool     zbIsEUI64Spoofed() const { return this->zb_ownEUI64 != this->zb_hwEUI64; }
+
+    // --- ACK-attack (spoofed MAC ACK injected from the RX ISR) --------------
+    void     zbStartAckAttack(uint16_t target);
+    void     zbStopAckAttack();
+    bool     zbAckAttackActive() const { return zb_ackAttackActive; }
+    uint16_t zbAckAttackTarget() const { return zb_ackAttackTarget; }
+    uint32_t zbAckAttackCount()  const { return zb_ackAttackCount; }
+
+    // --- Join a network as an end device (ZbJoiner) -------------------------
+    // Sends a MAC Association Request to a permit-join parent, then polls for
+    // the Association Response; on success we get a short address and the
+    // coordinator's following Transport Key is captured by the key pipeline.
+    enum ZbJoinPhase : uint8_t {
+      ZB_JOIN_IDLE = 0, ZB_JOIN_WAIT = 1, ZB_JOIN_ASSOCIATED = 2, ZB_JOIN_FAILED = 3
+    };
+    bool        zbJoinStart(uint16_t parentShort, uint16_t parentPan,
+                            uint8_t cap = ZB_ASSOC_CAP_SIMPLE_DEVICE);
+    void        zbJoinAbort();
+    ZbJoinPhase zbJoinGetPhase()  const { return this->zb_joinPhase; }
+    uint16_t    zbJoinShortAddr() const { return this->zb_joinAssignedShort; }
+    bool        zbJoinAssociated() const { return this->zb_joinPhase == ZB_JOIN_ASSOCIATED; }
+    void        zbJoinPrintStatus() const;
+
+    // --- Offensive probes (ZbAttack) - authorised testing of YOUR net only --
+    // insecure_rejoin: impersonate a known device (spoof its EUI64) and send an
+    // unsecured NWK Rejoin Request; a permissive Trust Center answers and
+    // transports the network key under the default TCLK, which the key pipeline
+    // then recovers. ack_attack: see zbStartAckAttack/zbStopAckAttack.
+    bool zbInsecureRejoin(uint16_t targetShortAddr);
+
   protected:
     uint8_t zb_channel = ZIGBEE_DEFAULT_CHANNEL;
     uint8_t zb_start_channel = 0;  // 0 = hop; 11..26 = lock to that channel
@@ -258,6 +312,34 @@ class ZBScan {
     ZbJoinState zb_joins[ZB_MAX_PENDING_JOINS];
     uint64_t    zb_coordEUI64 = 0;   // coordinator EUI64, learned from traffic
     bool        zb_keys_loaded = false;
+
+    // Own extended address: zb_hwEUI64 is the real hardware MAC; zb_ownEUI64 is
+    // what outgoing frames use (== hardware unless spoofed). Integer convention
+    // matches srcExtended/dstExtended (big-integer canonical form).
+    uint64_t    zb_ownEUI64 = 0;
+    uint64_t    zb_hwEUI64  = 0;
+    uint8_t     zb_hwEUI64Bytes[8] = {};
+
+    // ACK-attack state is touched from the RX ISR, hence static + volatile.
+    static volatile bool     zb_ackAttackActive;
+    static volatile uint16_t zb_ackAttackTarget;
+    static volatile uint32_t zb_ackAttackCount;
+
+    // Join state machine (ZbJoiner) + attack NWK sequence counter.
+    ZbJoinPhase zb_joinPhase        = ZB_JOIN_IDLE;
+    uint16_t    zb_joinParentShort  = 0xFFFF;
+    uint16_t    zb_joinParentPan    = 0xFFFF;
+    uint16_t    zb_joinAssignedShort = 0xFFFE;
+    uint32_t    zb_joinStartMs      = 0;
+    uint32_t    zb_joinLastPollMs   = 0;
+    uint8_t     zb_joinPollCount    = 0;
+    uint8_t     zb_attackNwkSeq     = 0;
+
+    void zbJoinUpdate();   // drive polling / timeout each loop
+    void zbJoinProcessFrame(const ZbFrameInfo &info, const uint8_t *raw,
+                            uint8_t rawLen, uint8_t macOff);
+    bool zbSendRejoinRequest(uint16_t coordShort, uint16_t pan, uint64_t spoofEui64);
+    static const char *zbAssocStatusName(uint8_t status);
 
     // Feed one fully-decoded frame (plus its raw bytes) through the key-capture
     // pipeline. rawLen/macOff describe the on-air frame in `raw`.
