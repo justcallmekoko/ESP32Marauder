@@ -3552,8 +3552,9 @@
   #ifdef HAS_MAX1704X
     #undef HAS_MAX1704X
   #endif
-  #ifdef HAS_BATTERY
-    #undef HAS_BATTERY
+  // Battery level comes from the on-board AXP2101 PMU (0x34) on the shared I2C bus.
+  #ifndef HAS_BATTERY
+    #define HAS_BATTERY
   #endif
   // No NeoPixel on this board. Pancake drives its LED on GPIO27, which is the
   // shared I2C SDA line here (touch + I/O expander), so LED updates corrupt I2C.
@@ -3562,6 +3563,7 @@
   #endif
   // FT6336 TP_INT is GPIO3 (external 10K pull-up). Touch reads are gated on it.
   #define CTP_INT 3
+  #define HAS_AXP2101_GAUGE
 #endif
 
 #endif
