@@ -53,6 +53,7 @@ struct AccessPoint {
   uint8_t channel;
   uint8_t bssid[6];
   bool selected;
+  uint8_t attack_scope = 0;
  // LinkedList<char>* beacon;
   char beacon[2];
   int8_t rssi;
