@@ -43,7 +43,7 @@
 //#include <User_Setup_marauder_t_dongle_c5.h>
 //#include <User_Setup_cyd_24.h>
 //#include <User_Setup_cyd_JC2432W328C.h>
-//#include <User_Setup_marauder_ws_c5_28.h>
+//#include <User_Setup_ws_c5_28.h>
 //#include <User_Setup_LilyGo_T_HMI.h>
 
 //#include <User_Setups/Setup1_ILI9341.h>  // Setup file configured for my ILI9341

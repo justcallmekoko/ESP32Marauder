@@ -2268,7 +2268,7 @@ bool WiFiScan::checkMem(size_t requestedBytes) {
   return marauder::RuntimeMemoryGuard::instance().allow(requestedBytes);
 }
 
-// cppcheck-suppress  missingReturn
+// cppcheck-suppress missingReturn
 int WiFiScan::clearList(uint8_t list_type) {
   int num_cleared = 0;
 

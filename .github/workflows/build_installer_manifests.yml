@@ -150,6 +150,13 @@ jobs:
           ref: ${{ matrix.board.nimble_ver }}
           path: CustomNimBLE-Arduino
 
+      - name: Install XPowersLib
+        uses: actions/checkout@v4
+        with:
+          repository: lewisxhe/XPowersLib
+          ref: v0.3.3
+          path: CustomXPowersLib
+
       - name: Install Adafruit_RTClib
         uses: actions/checkout@v4
         with:
