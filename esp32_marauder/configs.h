@@ -3555,6 +3555,10 @@
   #ifdef HAS_BATTERY
     #undef HAS_BATTERY
   #endif
+  // GPS is a Quectel LC76G on the shared I2C bus (0x50/0x54). The header UART
+  // isn't connected as shipped, and Pancake's GPS UART pins (14/13) are this
+  // board's native USB, so the UART GPS path must never start.
+  #define HAS_GPS_LC76G_I2C
 #endif
 
 #endif

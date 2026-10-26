@@ -109,6 +109,7 @@ class Display
     void processAndPrintString(TFT_eSPI& tft, const String& originalString);
 
   public:
+    uint32_t last_touch_ms = 0;  // millis() of the last active touch read
     Display();
     TFT_eSPI tft = TFT_eSPI();
     TFT_eSPI_Button key[BUTTON_ARRAY_LEN + 4];
