@@ -56,10 +56,6 @@
   // Pancake V8 (ESP32-C5, ST7796 320x480, FT6336), so reuse Pancake's verified
   // C5 feature + geometry logic and override only this board's differing pins below.
   //#define MARAUDER_WS_C5_35
-  #ifdef MARAUDER_WS_C5_35
-    #define MARAUDER_PANCAKE
-    #define MARAUDER_WS_C5_35_OVERRIDE
-  #endif
   //// END BOARD TARGETS
 
   // The official Arduino board package supplies this identifier for the XIAO
@@ -156,6 +152,8 @@
     #define HARDWARE_NAME "Waveshare ESP32-C5-Touch-LCD-2.8"
   #elif defined(MARAUDER_POOM)
     #define HARDWARE_NAME "POOM"
+  #elif MARAUDER_WS_C5_35
+    #define HARDWARE_NAME "Waveshare ESP32-C5-Touch-LCD-3.5"
   #else
     #define HARDWARE_NAME "ESP32"
   #endif
@@ -760,6 +758,41 @@
     #define HAS_DIRECT_UPLOAD
   #endif
 
+  #ifdef MARAUDER_WS_C5_35
+    #define HAS_TOUCH
+      #define HAS_CAP_TOUCH
+      #define HAS_FT6336
+    #define HAS_BATTERY
+      #define HAS_AXP2101
+      // #define BATTERY_ADC_PIN 0x06    // ADC is through IO expander Reg Id
+    #define HAS_RTC
+      #define HAS_PCF85063         // i2c real-time clock (RTC)
+    #define HAS_BT
+      #define HAS_NIMBLE_2
+    #define HAS_BUTTONS
+    // #define HAS_NEOPIXEL_LED
+    //#define HAS_PWR_MGMT
+    #define HAS_CH32V00X         // CH32V00X IO expander
+      #define CH32V00X_I2C_ADDR 0x24
+    #define HAS_SCREEN
+      #define HAS_FULL_SCREEN
+    #define HAS_GPS
+    #define USE_SD
+      #define HAS_SD
+      #define HAS_C5_SD
+    #define HAS_DUAL_BAND
+    #define HAS_PSRAM
+    #define HAS_TEMP_SENSOR
+      #define HAS_SHTC3
+      #define HAS_CPU_TEMP 1
+    #define HAS_IDF_3
+    #define HAS_DIRECT_UPLOAD
+    #define DEEPSLEEP
+    #define HAS_ZIGBEE
+    #define HAS_SOUND
+      #define HAS_ES8311
+  #endif  // MARAUDER_WS_C5_35
+
   #ifdef MARAUDER_MINI_V3
     //#define HAS_TOUCH
     //#define HAS_FLIPPER_LED
@@ -1105,7 +1138,7 @@
       #define D_PULL true
     #endif
 
-    #ifdef MARAUDER_PANCAKE
+    #if defined(MARAUDER_PANCAKE) || defined(MARAUDER_WS_C5_35)
       #define L_BTN -1
       #define C_BTN 28
       #define U_BTN -1
@@ -1897,7 +1930,7 @@
       #define STATUSBAR_COLOR 0x4A49
     #endif
 
-    #if defined(MARAUDER_PANCAKE)
+    #if defined(MARAUDER_PANCAKE) || defined(MARAUDER_WS_C5_35)
       #define CHAN_PER_PAGE 7
 
       #define SCREEN_CHAR_WIDTH 40
@@ -2884,7 +2917,7 @@
     //#define BUTTON_ARRAY_LEN 5
   #endif
 
-  #if defined(MARAUDER_PANCAKE)
+  #if defined(MARAUDER_PANCAKE) || defined(MARAUDER_WS_C5_35)
     #define BANNER_TIME 100
 
     #define COMMAND_PREFIX "!"
@@ -3261,10 +3294,16 @@
       #define SD_SCK TFT_SCLK
 
     #elif defined(MARAUDER_WS_C5_28)
-      #define SD_SCK            6    // shared
-      #define SD_MOSI           7    // shared
-      #define SD_MISO           8    // dedicated MISO for SD
+      #define SD_SCK            6    // shared TFT
+      #define SD_MOSI           7    // shared TFT
+      #define SD_MISO           8    // shared TFT
       #define SD_CS             23
+
+    #elif defined(MARAUDER_WS_C5_35)
+      #define SD_SCK            6    // shared TFT_SCLK
+      #define SD_MOSI           7    // shared TFT_MOSI
+      #define SD_MISO           2    // shared TFT_MISO
+      #define SD_CS             9
 
     #elif defined(MARAUDER_POOM)
       #define SD_CS 5
@@ -3531,7 +3570,7 @@
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 14
       #define GPS_RX 13
-    #elif defined(MARAUDER_PANCAKE)
+    #elif defined(MARAUDER_PANCAKE) || defined(MARAUDER_WS_C5_35)
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 14
       #define GPS_RX 13
@@ -3637,9 +3676,15 @@
         #define CTP_SDA I2C_SDA
         #define CTP_SCL I2C_SCL
 
+      #elif defined(MARAUDER_WS_C5_35)    // ADC is through IO expander
+        #define HAS_AXP2101
+        #define I2C_SDA 27
+        #define I2C_SCL 26
+
       #elif defined(MARAUDER_WS_C5_28)    // ADC is through IO expander
         #define I2C_SDA 0
         #define I2C_SCL 1
+
       #endif
 
       #ifdef MARAUDER_CYD_HMI
@@ -3927,7 +3972,15 @@
         #define I2C_SCL 1
         #define RTC_SDA           I2C_SDA
         #define RTC_SCL           I2C_SCL
-        #define I2C_ADDR_PCF85063  0x51 // NOT 0x1A : CST3530 differs from CST820
+        #define I2C_ADDR_PCF85063  0x51
+
+      #elif defined(MARAUDER_WS_C5_35)    // ADC is through IO expander
+        #define HAS_PCF85063         // i2c real-time clock (RTC)
+        #define I2C_SDA 27
+        #define I2C_SCL 26
+        #define RTC_SDA           I2C_SDA
+        #define RTC_SCL           I2C_SCL
+        #define I2C_ADDR_PCF85063  0x51 
 
       #elif defined(MARAUDER_REV_FEATHER)
         #define HAS_PCF8523         // i2c real-time clock (RTC) in Adalogger
@@ -3949,7 +4002,13 @@
 
     #ifdef HAS_TEMP_SENSOR
 
-      #if defined(MARAUDER_WS_C5_28)
+      #if defined(MARAUDER_WS_C5_35)
+        #define HAS_SHTC3
+        #define I2C_SDA 27
+        #define I2C_SCL 26
+        #define I2C_ADDR_SHTC3  0x70 // NOT 0x1A 
+
+      #elif defined(MARAUDER_WS_C5_28)
         #define HAS_SHTC3
         #define I2C_SDA 0
         #define I2C_SCL 1
@@ -4004,6 +4063,15 @@
         #define CTP_SCL 15
         #define CTP_RST 18
         #define I2C_FT6336_ADDR      0x38
+
+    #elif defined(MARAUDER_WS_C5_35)
+      #define I2C_SDA 27
+      #define I2C_SCL 26
+      #define HAS_FT6336
+      #define CTP_SDA I2C_SDA
+      #define CTP_SCL I2C_SCL
+      #define CTP_INT 3
+      #define I2C_ADDR_FT6336      0x38
 
       #elif defined(MARAUDER_WS_C5_28)    // ADC is through IO expander
         #define HAS_CST3530 1      // distinguish from CST820
@@ -4084,7 +4152,7 @@
 
     // END CONFIG LOGIC
 //// Waveshare C5 3.5" pin overrides (applied after Pancake defaults resolve)
-#ifdef MARAUDER_WS_C5_35_OVERRIDE
+#if defined(MARAUDER_WS_C5_35_OVERRIDE) && defined(_NEVER_)
   #undef HARDWARE_NAME
   #define HARDWARE_NAME "Marauder C5 3.5"
   // I2C bus is GPIO27/26 on this board (Pancake uses 9/10). CTP_SDA/SCL are
@@ -4107,8 +4175,6 @@
   #define HAS_TEMP_SENSOR
   #define HAS_SHTC3
 
-  #define FT6336_SDA 27
-  #define FT6336_SCL 26
   #define CTP_SDA 27
   #define CTP_SCL 26
 #endif

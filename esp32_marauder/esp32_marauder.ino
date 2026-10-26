@@ -199,34 +199,8 @@ void print_reset_reason() {
   Serial.println(resetReasonName());
 }
 
-#define NO_PROBE  1
-#if defined(CORE_DEBUG_LEVEL) && !defined(NO_PROBE)
-
-  void i2c_probe() {
-    byte count = 0;
-    for (byte address = 1; address < 127; address++) {
-      Wire.beginTransmission(address); // Start transmission to address
-      byte error = Wire.endTransmission(); // End and get status
-      if (error == 0) {
-        Serial.print("I2C device found at address 0x");
-        if (address < 16) Serial.print("0");
-        Serial.println(address, HEX);
-        count++;
-      } else if (error == 4) {
-        Serial.print("Unknown error at address 0x");
-        if (address < 16) Serial.print("0");
-        Serial.println(address, HEX);
-      }
-    }
-    Serial.print("Done. Found ");
-    Serial.print(count);
-    Serial.println(" devices.");
-  }
-#endif // CORE_DEBUG_LEVEL)
-
 void setup()
 {
-
 
   // https://github.com/Xinyuan-LilyGO/T-HMI/issues/34
   // LILYGO T-HMI : latch power on if on battery
@@ -259,9 +233,6 @@ void setup()
   #ifdef I2C_SDA
     log_d("I2C Wire.begin: I2C_SDA=%d  I2C_SCL=%d", I2C_SDA, I2C_SCL);
     Wire.begin(I2C_SDA, I2C_SCL);
-    #if defined(CORE_DEBUG_LEVEL) && !defined(NO_PROBE)
-      i2c_probe();
-    #endif
   #endif
 
   #ifdef HAS_CH32V00X
@@ -277,6 +248,7 @@ void setup()
     // perimanSetPinBusExtraType(ACT_LED_PIN, "ACT_LED_PIN");
   #endif
 
+  // prevent freeze from full USBSerial
   #if defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT == 1
     while(!Serial && millis() < 2000) {
       delay(500);
@@ -324,7 +296,7 @@ void setup()
     // perimanSetPinBusExtraType(TFT_CS, "TFT_CS");
   #endif
 
-  #ifdef MARAUDER_WS_C5_28
+  #if defined(MARAUDER_WS_C5_28) || defined(MARAUDER_WS_C5_35)
 
     // Must happen before display init CH32V003 controls LCD_RST and backlight
     log_d("Wire: I2C_SDA=%d  I2C_SCL=%d", I2C_SDA, I2C_SCL);
@@ -338,7 +310,7 @@ void setup()
 
     // CST3530 is init'ed in Display.cpp
 
-  #endif  // MARAUDER_WS_C5_28
+  #endif  // MARAUDER_WS_C5_28 || MARAUDER_WS_C5_35
 
   // Preset SPI CS pins to avoid bus conflicts
   // Beware of "unsigned promotion rules" where -1 == maxint
@@ -500,15 +472,13 @@ void setup()
   menu_function_obj.changeMenu(menu_function_obj.current_menu);*/
 
   wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
-  #if defined(CORE_DEBUG_LEVEL) && !defined(NO_PROBE)
-    i2c_probe();
-  #endif
 
-  #ifdef HAS_CH32V00X
+  #if defined(HAS_CH32V00X) && defined(_NEVER_)
     #if defined(CORE_DEBUG_LEVEL) && CORE_DEBUG_LEVEL > 2
       CH32V00X_obj.printState();
     #endif
   #endif
+
   cli_obj.RunSetup();
 }
 

@@ -43,7 +43,7 @@ void BatteryInterface::RunSetup() {
   log_d("BatteryInterface::RunSetup");
   #ifdef HAS_BATTERY
 
-    #if defined(HAS_CH32V00X)
+    #if defined(HAS_CH32V00X) && !defined(HAS_AXP2101)
         this->supported = true;
         this->has_adc_battery = true;
 
@@ -115,7 +115,7 @@ int8_t BatteryInterface::getBatteryLevel() {
 
   #ifdef HAS_BATTERY
 
-    #ifdef HAS_CH32V00X
+    #if defined(HAS_CH32V00X) && !defined(HAS_AXP2101)
       if (this->has_adc_battery) {
         float bVolt =    CH32V00X_obj.readBatteryVoltage();
         // log_d("BatteryVoltage = %f", bVolt);

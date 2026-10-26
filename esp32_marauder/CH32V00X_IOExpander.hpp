@@ -1,22 +1,24 @@
 /*
+ *
+ *
+ * The CH32V00X is an ultra-low-cost, 32-bit general-purpose microcontroller 
+ * used here by Waveshare as an I2C gpio port expander
+ *
  * CH32V00X_IOExpander - Arduino/PlatformIO library (single-header, ESP32)
  * Converted from Waveshare ESP-IDF component (Apache-2.0)
  * Original: https://github.com/waveshareteam/Waveshare-ESP32-components
  *
- * Register map (from Waveshare source custom_io_expander_ch32v003.c):
- *   0x02  DIR  - direction, bit=1 input / bit=0 output
+ * Register map (from Waveshare source custom_io_expander_CH32V00X.c):
+ *   0x02  DIR  - direction, bit=1 output / bit=0 input (see CH32V00X_DIR_OUT_IS_1)
  *   0x03  OUT  - output levels
  *   0x04  IN   - input levels (read-only)
  *   0x05  PWM  - backlight duty 0-255
  *   0x06  ADC  - 2 bytes little-endian, 10-bit result
- *   0x07  INT  - interrupt / RTC status byte  //   MARAUDER_WS_C5_28 only ??
+ *   0x07  INT  - interrupt / RTC status byte
  *
  * Header-only: all methods are `inline` so this file can be included from
  * multiple translation units without violating ODR.
  */
-
-
-// https://github.com/waveshareteam/ESP32-C5-Touch-LCD-3.5/blob/main/examples/esp-idf/06_exio/components/io_extension/io_extension.h
 
 #pragma once
 #include <Arduino.h>
@@ -29,43 +31,36 @@
 #define CH32V00X_DEFAULT_ADDR   (0x24)
 
 // GPIO pin bitmasks - match esp_io_expander IO_EXPANDER_PIN_NUM_x
-#define BOARD_IO_EXTENSION_PIN_0   (1 << 0)
-#define BOARD_IO_EXTENSION_PIN_1   (1 << 1)
-#define BOARD_IO_EXTENSION_PIN_2   (1 << 2)
-#define BOARD_IO_EXTENSION_PIN_3   (1 << 3)
-#define BOARD_IO_EXTENSION_PIN_4   (1 << 4)
-#define BOARD_IO_EXTENSION_PIN_5   (1 << 5)
-#define BOARD_IO_EXTENSION_PIN_6   (1 << 6)
-#define BOARD_IO_EXTENSION_PIN_7   (1 << 7)
-
-#if defined(MARAUDER_WS_C5_35)
-  #define BOARD_IO_EXTENSION_PIN_8    (1 << 8)
-  #define BOARD_IO_EXTENSION_PIN_9    (1 << 9)
-  #define BOARD_IO_EXTENSION_PIN_10   (1 << 10)
-  #define BOARD_IO_EXTENSION_PIN_11   (1 << 11)
-  #define BOARD_IO_EXTENSION_PIN_12   (1 << 12)
-  #define BOARD_IO_EXTENSION_PIN_13   (1 << 13)
-  #define BOARD_IO_EXTENSION_PIN_14   (1 << 14)
-  #define BOARD_IO_EXTENSION_PIN_15   (1 << 15)
-#endif
-
-
-#define BOARD_IO_EXTENSION_ALL_PINS (0xFF)
+#define CH32V00X_PIN_0   (1 << 0)
+#define CH32V00X_PIN_1   (1 << 1)
+#define CH32V00X_PIN_2   (1 << 2)
+#define CH32V00X_PIN_3   (1 << 3)
+#define CH32V00X_PIN_4   (1 << 4)
+#define CH32V00X_PIN_5   (1 << 5)
+#define CH32V00X_PIN_6   (1 << 6)
+#define CH32V00X_PIN_7   (1 << 7)
+#define CH32V00X_ALL_PINS (0xFF)
 
 // Register map - from Waveshare source
-#define CH32V00X_REG_DIR    (0x02)   // direction: bit=1 input, bit=0 output
+#define CH32V00X_REG_DIR    (0x02)   // direction: bit=1 output, bit=0 input
 #define CH32V00X_REG_OUT    (0x03)   // output level
 #define CH32V00X_REG_IN     (0x04)   // input level (read-only)
 #define CH32V00X_REG_PWM    (0x05)   // PWM duty 0-255
+#define CH32V00X_REG_ADC    (0x06)   // ADC - 2 bytes, little-endian (lo first)
+#define CH32V00X_REG_INT    (0x07)   // interrupt / RTC status
 
+// DIR register polarity. Waveshare's io_extension.c sets all pins to
+// output with IO_EXTENSION_IO_Mode(0xFF), and esp_io_expander's default
+// (dir_out_bit_zero = 0) is also bit=1 = output. Define as 0 to restore
+// the old bit=1 = input behaviour.
+#ifndef CH32V00X_DIR_OUT_IS_1
+  #define CH32V00X_DIR_OUT_IS_1 1
+#endif
 
-// #if defined(MARAUDER_WS_C5_28)
-  #define CH32V00X_REG_ADC    (0x06)   // ADC - 2 bytes, little-endian (lo first)
-  #define CH32V00X_REG_INT    (0x07)   // interrupt / RTC status
-// #endif
-
-// Power-on defaults (matches CH32V003 reset state)
-#define CH32V00X_DIR_DEFAULT  (0xFF)  // all inputs
+// Defaults written by reset(). These are the same bytes as before the
+// polarity fix, so begin() puts the same values on the wire:
+// all pins output, all low.
+#define CH32V00X_DIR_DEFAULT  (0xFF)
 #define CH32V00X_OUT_DEFAULT  (0x00)  // all low
 
 #define BOARD_IO_EXTENSION_ADDR        0x24
@@ -73,21 +68,14 @@
 #define BOARD_IO_EXTENSION_OUTPUT_REG  0x03
 #define BOARD_IO_EXTENSION_PWM_REG     0x05
 
-#if defined(MARAUDER_WS_C5_28)
-  #define BOARD_TP_RST_EXIO  BOARD_IO_EXTENSION_PIN_0
-  #define BOARD_LCD_RST_EXIO BOARD_IO_EXTENSION_PIN_1
-  #define BOARD_RTC_INT_EXIO BOARD_IO_EXTENSION_PIN_2
-  #define BOARD_PA_CTRL_EXIO BOARD_IO_EXTENSION_PIN_3
-#elif defined(MARAUDER_WS_C5_35)
-  #define BOARD_LCD_RST_EXIO BOARD_IO_EXTENSION_PIN_0
-  #define BOARD_TP_RST_EXIO  BOARD_IO_EXTENSION_PIN_1
-  #define BOARD_QMI_INT1_EXIO BOARD_IO_EXTENSION_PIN_2
-  #define BOARD_AXP_IRQ1_EXIO BOARD_IO_EXTENSION_PIN_3
-  #define BOARD_RTC_INT_EXIO BOARD_IO_EXTENSION_PIN_4
-  #define BOARD_PA_CTRL_EXIO BOARD_IO_EXTENSION_PIN_5
-  #define BOARD_SYS_OUT_EXIO BOARD_IO_EXTENSION_PIN_6
-  #define BOARD_CAM_PWDN_EXIO BOARD_IO_EXTENSION_PIN_7
-#endif
+#define BOARD_TP_RST_EXIO  0
+#define BOARD_LCD_RST_EXIO 1
+#define BOARD_PA_CTRL_EXIO 3
+
+#define CH32V00X_MODE_OUTPUT 1
+#define CH32V00X_MODE_OUTPUT 0
+
+#define ADC_BATT_SAMPLES 10
 
 class CH32V00X_IOExpander {
 public:
@@ -111,7 +99,7 @@ public:
             log_d("Fail Ret Code: %d", r);
             return false;
         } else {
-          log_d("CH32V003 found at %d", _addr);
+          log_d("CH32V00X found at %d", _addr);
         }
         return reset();
     }
@@ -122,57 +110,54 @@ public:
         _dirReg = CH32V00X_DIR_DEFAULT;
         if (!writeReg(CH32V00X_REG_OUT, CH32V00X_OUT_DEFAULT)) return false;
         _outReg = CH32V00X_OUT_DEFAULT;
-        log_d("reset true");
+        log_d("CH32V00X_IOExpander reset true");
         return true;
     }
 
 
-#ifdef BOARD_PA_CTRL_EXIO
-    inline int GetAudio(uint8_t level) {
-        log_d("GetAudio");
-        return this->digitalRead(BOARD_PA_CTRL_EXIO);
+    inline int GetAudio() {
+        return this->digitalRead(CH32V00X_PIN_3);
     }
 
     inline void SetAudio(uint8_t level) {
         log_d("SetAudio = %d", level);
-        this->pinMode(BOARD_PA_CTRL_EXIO, OUTPUT);
+        this->pinMode(CH32V00X_PIN_3, CH32V00X_MODE_OUTPUT);
         if (level == HIGH) {
-            this->digitalWrite(BOARD_PA_CTRL_EXIO, HIGH);
+            this->digitalWrite(CH32V00X_PIN_3, HIGH);
         } else {
-            this->digitalWrite(BOARD_PA_CTRL_EXIO, LOW);
+            this->digitalWrite(CH32V00X_PIN_3, LOW);
         }
+        // log_d("Set/GetAudio = %d", this->digitalRead(CH32V00X_PIN_3));
     }
-#endif
 
-#ifdef BOARD_LCD_RST_EXIO
     inline void lcdReset() {
-        this->pinMode(BOARD_LCD_RST_EXIO, OUTPUT);
-        this->digitalWrite(BOARD_LCD_RST_EXIO, LOW);   // assert reset
+        log_d("lcdReset");
+        this->pinMode(CH32V00X_PIN_1, CH32V00X_MODE_OUTPUT);
+        this->digitalWrite(CH32V00X_PIN_1, LOW);   // assert reset
         delay(50);
-        this->digitalWrite(BOARD_LCD_RST_EXIO, HIGH);  // enable display
+        this->digitalWrite(CH32V00X_PIN_1, HIGH);  // enable display
         delay(120);
     }
-#endif
 
-#ifdef BOARD_TP_RST_EXIO
     inline void touchReset() {
-        this->pinMode(BOARD_TP_RST_EXIO, OUTPUT);
-        this->digitalWrite(BOARD_TP_RST_EXIO, LOW);   // assert reset
+        log_d("touchReset");
+        this->pinMode(CH32V00X_PIN_0, CH32V00X_MODE_OUTPUT);
+        this->digitalWrite(CH32V00X_PIN_0, LOW);   // assert reset
         delay(50);
-        this->digitalWrite(BOARD_TP_RST_EXIO, HIGH);  // release reset
+        this->digitalWrite(CH32V00X_PIN_0, HIGH);  // release reset
         delay(120);
     }
-#endif
 
     // -- GPIO ------------------------------------------------------------------
     // pinMask: one or more CH32V00X_PIN_x OR'd together
     // mode:    OUTPUT or INPUT (Arduino constants)
     inline bool pinMode(uint8_t pinMask, uint8_t mode) {
-        // DIR register: bit=1 → input, bit=0 → output  (same as Waveshare source)
-        if (mode == OUTPUT) {
-            _dirReg &= ~pinMask;
-        } else {
+        // bool setBit = (mode == OUTPUT) == (CH32V00X_DIR_OUT_IS_1 != 0);
+        log_d("pinMask=0x%02X mode=%d", pinMask, mode);
+        if (mode == CH32V00X_MODE_OUTPUT) {
             _dirReg |= pinMask;
+        } else {
+            _dirReg &= ~pinMask;
         }
         return writeReg(CH32V00X_REG_DIR, _dirReg);
     }
@@ -195,12 +180,13 @@ public:
         uint8_t masked = (uint8_t)val & pinMask;
         // For single-pin reads return HIGH/LOW; for multi-pin return the raw mask.
         if ((pinMask & (pinMask - 1)) == 0) {
+            log_d("return HIGH/LOW");
             return masked ? HIGH : LOW;
         }
+        log_d("return masked");
         return masked;
     }
 
-#ifdef CH32V00X_REG_PWM
     // -- PWM backlight -----------------------------------------------------------
     // duty 0-255.  Some Waveshare boards invert this - call invertPWM(true).
     inline bool setPWM(uint8_t duty) {
@@ -209,9 +195,7 @@ public:
     }
 
     inline void invertPWM(bool invert) { _invertPWM = invert; }
-#endif
 
-#ifdef CH32V00X_REG_ADC
     // -- ADC (battery voltage) ---------------------------------------------------
     // Returns raw 10-bit value (0-1023), or -1 on error.
     // ADC register returns 2 bytes little-endian per Waveshare source.
@@ -223,20 +207,26 @@ public:
     }
 
     // Converts raw reading to voltage assuming Waveshare's 3:1 resistor divider.
-    inline float readBatteryVoltage(float vref = 3.3f) {
-        int raw = readADCRaw();
+    inline float readBatteryVoltage(float vref = 3.3f, uint8_t num_samples = ADC_BATT_SAMPLES) {
+        uint32_t raw = 0;
+
+        for (int i = 0; i < num_samples; i++) {
+            raw += readADCRaw();
+            delayMicroseconds(30); // Optional small delay between samples
+        }
+
         if (raw < 0) return -1.0f;
+
+        raw /= ADC_BATT_SAMPLES;
+
         // 10-bit ADC (0-1023), 3:1 resistor divider on Waveshare boards
         return (static_cast<float>(raw) / 1023.0f) * vref * 3.0f;
     }
-#endif
 
-#ifdef CH32V00X_REG_INT
     // -- Interrupt / RTC status ---------------------------------------------------
     inline int readINT() {
         return readReg(CH32V00X_REG_INT);
     }
-#endif
 
     // -- Low-level helpers ---------------------------------------------------------
     inline bool writeReg(uint8_t reg, uint8_t value) {
@@ -263,37 +253,32 @@ public:
         return true;
     }
 
-#if defined(CORE_DEBUG_LEVEL) && CORE_DEBUG_LEVEL >2
+#if defined(CORE_DEBUG_LEVEL) && CORE_DEBUG_LEVEL >2 && defined(_NEVER_)
     // Dump all registers to Serial.
     inline void printState() {
-  #ifdef CH32V00X_REG_DIR
-        log_d("-- CH32V003 IO Expander --");
-        log_d("  DIR (0x%02X): 0x%02X %08b  (1=in 0=out per bit)", CH32V00X_REG_DIR, _dirReg, _dirReg);
-        // Serial.println("  DIR (0x%02X): 0x%02X %08b  (1=in 0=out per bit)", CH32V00X_REG_DIR, _dirReg, _dirReg);
-        log_d("  OUT (0x%02X): 0x%02X %08b", CH32V00X_REG_OUT, _outReg, _outReg);
-        // Serial.println("  OUT (0x%02X): 0x%02X %08b", CH32V00X_REG_OUT, _outReg, _outReg);
+        Serial.println("-- CH32V00X IO Expander --");
+        Serial.printf("  DIR (0x%02X): 0x%02X %08b %d (1=out 0=in per bit)\n",
+                      CH32V00X_REG_DIR, _dirReg, _dirReg, _outReg);
+        Serial.printf("  OUT (0x%02X): 0x%02X %08b %d\n", CH32V00X_REG_OUT, _outReg, _outReg, _outReg);
         int iout = readReg(CH32V00X_REG_OUT);
-        log_d(" IOUT (0x%02X): 0x%02X", CH32V00X_REG_OUT, iout  >= 0 ? (uint8_t)iout  : 0xFF);
+        int iiout = (iout >= 0 ? (uint8_t)iout  : 0xFF);
+        Serial.printf(" IOUT (0x%02X): 0x%02X %08b %d\n", CH32V00X_REG_OUT, iiout, (uint8_t)iout, iout);
+                      //iout  >= 0 ? (uint8_t)iout  : 0xFF);
         int in  = readReg(CH32V00X_REG_IN);
-        log_d("  IN  (0x%02X): 0x%02X", CH32V00X_REG_IN, in  >= 0 ? (uint8_t)in  : 0xFF);
-  #endif
-  #ifdef  CH32V00X_REG_PWM
+        int iin  = (in  >= 0 ? (uint8_t)in  : 0xFF);
+        Serial.printf("  IN  (0x%02X): 0x%02X %08b %d \n", CH32V00X_REG_IN, iin, (uint8_t)in, in);
+                      // in  >= 0 ? (uint8_t)in  : 0xFF);
         int pwm = readReg(CH32V00X_REG_PWM);
-        log_d("  PWM (0x%02X): %d", CH32V00X_REG_PWM,
+        Serial.printf("  PWM (0x%02X): %d\n", CH32V00X_REG_PWM,
                       pwm >= 0 ? pwm : -1);
-  #endif
-  #ifdef CH32V00X_REG_ADC
         int adc = readADCRaw();
-        log_d("  ADC (0x%02X): raw=%d  %.2fV battery",
+        Serial.printf("  ADC (0x%02X): raw=%d  %.2fV battery\n",
                       CH32V00X_REG_ADC, adc,
                       adc >= 0 ? readBatteryVoltage() : 0.0f);
-  #endif
-  #ifdef CH32V00X_REG_INT
         int intr = readINT();
-        log_d("  INT (0x%02X): 0x%02X", CH32V00X_REG_INT,
+        Serial.printf("  INT (0x%02X): 0x%02X\n", CH32V00X_REG_INT,
                       intr >= 0 ? (uint8_t)intr : 0xFF);
-  #endif 
-        log_d("--------------------------");
+        Serial.println("--------------------------");
     }
 #endif 
 

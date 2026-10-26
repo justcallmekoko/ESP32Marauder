@@ -14,6 +14,22 @@
 #define FT6336_TD_STATUS 0x02
 #define FT6336_T1_XH     0x03
 
+#if !defined(CTP_SDA) && defined(I2C_SDA)
+  #define CTP_SDA I2C_SDA
+  #define CTP_SCL I2C_SCL
+  #if defined(I2C_RST)
+    #define CTP_RST I2C_RST
+  #endif
+#endif
+
+#ifndef CTP_FREQ
+  #ifdef I2C_FREQ
+    #define CTP_FREQ I2C_FREQ
+  #else
+    #define CTP_FREQ 400000U
+  #endif
+#endif
+
 static bool _ft6336_read(uint8_t reg, uint8_t *buf, uint8_t len) {
     Wire.beginTransmission(FT6336_ADDR);
     Wire.write(reg);
@@ -39,9 +55,9 @@ static bool _ft6336_read(uint8_t reg, uint8_t *buf, uint8_t len) {
 // Must run before tft.init(); safe to call more than once.
 static bool ws_c5_exio_begin() {
     Wire.begin(CTP_SDA, CTP_SCL, 100000U);  // 100kHz: robust reads over the panel flex
-    const uint8_t TP  = BOARD_TP_RST_EXIO;     // EXIO0 -> FT6336 reset
-    const uint8_t LCD = BOARD_LCD_RST_EXIO;     // EXIO1 -> ST7796 reset
-    const uint8_t PWR = BOARD_IO_EXTENSION_PIN_5;     // EXIO5 -> panel power / backlight enable ?? not right
+    const uint8_t TP  = CH32V00X_PIN_0;     // EXIO0 -> FT6336 reset
+    const uint8_t LCD = CH32V00X_PIN_1;     // EXIO1 -> ST7796 reset
+    const uint8_t PWR = CH32V00X_PIN_5;     // EXIO5 -> panel power / backlight enable
     CH32V00X_IOExpander& io = CH32V00X_obj;
     bool ok = io.writeReg(CH32V00X_REG_DIR, 0xFF) &&            // all pins output
               io.writeReg(CH32V00X_REG_OUT, 0x00) &&            // all low
@@ -62,20 +78,20 @@ static bool ws_c5_exio_begin() {
 #endif
 
 static void ft6336_init() {
+    log_d("ft6336 init");
 #ifdef MARAUDER_WS_C5_35
     // Panel power, LCD reset and touch reset are on the CH32V00X I/O expander
     // (0x24), which also opens the shared I2C bus. Must run before tft.init().
-    ws_c5_exio_begin();
-#else
-    #if CTP_RST >= 0
-    pinMode(CTP_RST, OUTPUT);
-    digitalWrite(CTP_RST, LOW);
-    delay(10);
-    digitalWrite(CTP_RST, HIGH);
-    delay(300);
-    #endif
-    Wire.begin(CTP_SDA, CTP_SCL, 400000U);
+    CH32V00X_obj.touchReset();
+#elif CTP_RST >= 0
+      pinMode(CTP_RST, OUTPUT);
+      digitalWrite(CTP_RST, LOW);
+      delay(10);
+      digitalWrite(CTP_RST, HIGH);
+      delay(300);
 #endif
+
+    Wire.begin(CTP_SDA, CTP_SCL, 400000U);
 
     uint8_t chipId = 0;
     Wire.beginTransmission(FT6336_ADDR);
