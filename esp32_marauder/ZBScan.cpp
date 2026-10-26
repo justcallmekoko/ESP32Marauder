@@ -1957,9 +1957,15 @@ void ZBScan::zigbeeLoop(uint32_t currentTime) {
   if (!this->zb_running)
     return;
 
-  // Drain the RX queue, log EVERY frame, and fold it into the node list.
+  // Drain the RX queue, log each frame, and fold it into the node list - but
+  // only up to ZB_MAX_FRAMES_PER_LOOP per call so a burst of heavy traffic
+  // can't monopolise the main loop and starve the touch buttons. Remaining
+  // frames are picked up on the next cycle.
   ZbSnifferFrame raw;
-  while (xQueueReceive(zb_rx_queue, &raw, 0) == pdTRUE) {
+  uint8_t processed = 0;
+  while (processed < ZB_MAX_FRAMES_PER_LOOP &&
+         xQueueReceive(zb_rx_queue, &raw, 0) == pdTRUE) {
+    processed++;
     this->zb_frame_count++;
 
     ZbFrameInfo info = {};

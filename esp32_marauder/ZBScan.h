@@ -45,6 +45,12 @@
 
 #define ZIGBEE_MAX_FRAME_LEN    128
 #define ZIGBEE_QUEUE_DEPTH      16
+// Max RX frames decoded per zigbeeLoop() call. Bounding the drain keeps the
+// main loop cycling (and the -/+/HOP/X touch buttons responsive) under heavy
+// 802.15.4 traffic; leftover frames are handled on the next cycle. At typical
+// loop rates this still processes far more frames/sec than any real network
+// produces, so nothing meaningful is dropped.
+#define ZB_MAX_FRAMES_PER_LOOP  6
 
 // IEEE 802.15.4 MAC frame-control fields
 #define ZB_FC_FRAME_TYPE_MASK   0x07
