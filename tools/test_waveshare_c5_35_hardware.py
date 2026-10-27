@@ -68,6 +68,8 @@ class WaveshareC535HardwareTests(unittest.TestCase):
         self.assertNotIn("#define HAS_AXP2101\n", override)
         battery = (ROOT / "esp32_marauder" / "BatteryInterface.cpp").read_text(encoding="utf-8")
         self.assertIn("AXP2101_REG_BAT_PERCENT", battery)
+        self.assertIn("!this->has_axp2101_gauge && !this->detectAxp2101Gauge()", battery)
+        self.assertIn("bool BatteryInterface::detectAxp2101Gauge()", battery)
         self.assertIn("#ifdef MARAUDER_WS_C5_35", touch)
         self.assertIn("Wire.end(); Wire.begin(CTP_SDA, CTP_SCL, 100000U);", touch)
         self.assertIn("return -1;", touch)

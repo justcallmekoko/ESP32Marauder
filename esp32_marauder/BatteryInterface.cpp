@@ -67,18 +67,7 @@ void BatteryInterface::RunSetup() {
         #endif
 
         #ifdef HAS_AXP2101_GAUGE
-          if (this->axp2101Read(AXP2101_REG_CHIP_ID) == AXP2101_CHIP_ID) {
-            int ctrl = this->axp2101Read(AXP2101_REG_GAUGE_CTRL);
-            if (ctrl >= 0 && !(ctrl & 0x08)) {  // make sure the fuel gauge is running
-              Wire.beginTransmission(AXP2101_GAUGE_ADDR);
-              Wire.write(AXP2101_REG_GAUGE_CTRL);
-              Wire.write((uint8_t)(ctrl | 0x08));
-              Wire.endTransmission();
-            }
-            Serial.println(F("Detected AXP2101"));
-            this->has_axp2101_gauge = true;
-            this->i2c_supported = true;
-          }
+          this->detectAxp2101Gauge();
         #endif
 
 
@@ -136,6 +125,8 @@ int8_t BatteryInterface::getBatteryLevel() {
 
 
     #ifdef HAS_AXP2101_GAUGE
+      // Retry discovery after transient shared-I2C startup failures.
+      if (!this->has_axp2101_gauge && !this->detectAxp2101Gauge()) return -1;
       if (this->has_axp2101_gauge) {
         int status = this->axp2101Read(AXP2101_REG_STATUS1);
         int percent = (status >= 0 && (status & 0x08))  // bit 3: cell fitted
@@ -175,6 +166,25 @@ int8_t BatteryInterface::getBatteryLevel() {
 // #endif // HAS_BATTERY
 
 #ifdef HAS_AXP2101_GAUGE
+bool BatteryInterface::detectAxp2101Gauge() {
+  if (this->axp2101Read(AXP2101_REG_CHIP_ID) != AXP2101_CHIP_ID) {
+    this->i2c_supported = false;
+    return false;
+  }
+
+  int ctrl = this->axp2101Read(AXP2101_REG_GAUGE_CTRL);
+  if (ctrl >= 0 && !(ctrl & 0x08)) {
+    Wire.beginTransmission(AXP2101_GAUGE_ADDR);
+    Wire.write(AXP2101_REG_GAUGE_CTRL);
+    Wire.write((uint8_t)(ctrl | 0x08));
+    Wire.endTransmission();
+  }
+  if (!this->has_axp2101_gauge) Serial.println(F("Detected AXP2101"));
+  this->has_axp2101_gauge = true;
+  this->i2c_supported = true;
+  return true;
+}
+
 // One-byte register read from the AXP2101; -1 on any I2C error.
 int BatteryInterface::axp2101Read(uint8_t reg) {
   Wire.beginTransmission(AXP2101_GAUGE_ADDR);

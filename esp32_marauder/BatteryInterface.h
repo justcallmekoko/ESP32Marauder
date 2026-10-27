@@ -68,6 +68,7 @@ class BatteryInterface {
     void main(uint32_t currentTime);
     int8_t getBatteryLevel();
     #ifdef HAS_AXP2101_GAUGE
+      bool detectAxp2101Gauge();
       int axp2101Read(uint8_t reg);
     #endif
 };
