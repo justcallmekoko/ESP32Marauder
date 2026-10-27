@@ -330,9 +330,6 @@ void setup()
     digitalWrite(ACT_LED_PIN, LOW);
   #endif
 
-  while(!Serial)
-    delay(10);
-
   #ifdef HAS_C5_SD
     sharedSPI.begin(SD_SCK, SD_MISO, SD_MOSI);
     delay(100);
@@ -371,11 +368,6 @@ void setup()
 
     delay(10);
   #endif
-
-  //Serial.begin(115200);
-
-  //while(!Serial)
-  //  delay(10);
 
   Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
 
