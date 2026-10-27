@@ -206,7 +206,7 @@ uint32_t currentTime  = 0;
       // Backlight is the I/O expander's PWM register (0x24 reg 0x05), not a GPIO
       // (TFT_BL is -1 on this board).
       #define BL_SETUP()       do {} while (0)
-      #define BL_SET(duty)     ws_exio_write(WS_EXIO_PWM_REG, (duty))
+      #define BL_SET(duty)     do { if (ws_exio_ready) ws_exio_write(WS_EXIO_PWM_REG, (duty)); } while (0)
     #elif ESP_ARDUINO_VERSION_MAJOR >= 3
       #define BL_SETUP()       ledcAttach(TFT_BL, BL_FREQ, BL_RESOLUTION)
       #define BL_SET(duty)     ledcWrite(TFT_BL, (duty))
@@ -348,7 +348,7 @@ void setup()
     digitalWrite(POWER_HOLD_PIN, HIGH);
   #endif
   
-  #if defined(HAS_SCREEN) && !defined(MARAUDER_POOM) && !defined(MARAUDER_M5STACK_CORE2_AWS)
+  #if defined(HAS_SCREEN) && !defined(MARAUDER_POOM) && !defined(MARAUDER_M5STACK_CORE2_AWS) && !defined(MARAUDER_WS_C5_35)
     pinMode(TFT_BL, OUTPUT);
   #endif
 
