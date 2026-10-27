@@ -44,10 +44,10 @@ void init_system_time() {
     log_d("RTC NOT Installed");
   #endif
 
-  struct tm timeinfo;
-  if (getLocalTime(&timeinfo)) {
-    print_datetime(timeinfo);
-    system_time_set = true;
+  // struct tm timeinfo;
+  // if (getLocalTime(&timeinfo)) {
+  //   print_datetime(timeinfo);
+  //   system_time_set = true;
   // } else {
   //   log_w("getLocalTime Fail");
   }
