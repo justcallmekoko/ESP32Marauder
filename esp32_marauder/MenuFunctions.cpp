@@ -4,6 +4,9 @@
 #include "OwnedListLifecycle.h"
 #include "CensorText.h"
 #include "lang_var.h"
+#ifdef MARAUDER_EPAPER_UI
+#include "EpaperPower.h"
+#endif
 #if defined(HAS_CSI_MOTION)
   #include "CsiMotionMonitor.h"
 #endif
@@ -19,6 +22,23 @@ extern LinkedList<BleDevice>* ble_devices;
 extern CommandLine cli_obj;
 
 namespace {
+#ifdef MARAUDER_EPAPER_UI
+void stickyStatusBar(bool force) {
+  static String previous;
+  uint8_t channel = wifi_scan_obj.set_channel;
+  wifi_second_chan_t secondary;
+  esp_wifi_get_channel(&channel, &secondary);
+  const String status = "MARAUDER    CH " + String(channel) + "    SD " +
+      (sd_obj.supported ? "OK" : "--");
+  if (!force && previous == status) return;
+  previous = status;
+  auto& screen = display_obj.tft;
+  screen.fillRect(0, 0, SCREEN_WIDTH, STATUS_BAR_WIDTH, TFT_BLACK);
+  screen.setFreeFont(NULL); screen.setTextSize(2);
+  screen.setTextColor(TFT_WHITE, TFT_BLACK);
+  screen.drawString(status, 24, 4);
+}
+#endif
 String screenName(String value) {
   if (!settings_obj.loadSetting<bool>("Censor")) return value;
   for (size_t i = 3; i < value.length(); ++i) value.setCharAt(i, 'X');
@@ -132,6 +152,9 @@ uint16_t MenuFunctions::menuLabelMaxOffset(const String& name) {
 }
 
 void MenuFunctions::updateMenuMarquee(uint32_t current_time) {
+  #ifdef MARAUDER_EPAPER_UI
+    return; // Continuous LCD marquee animation causes unnecessary e-paper refreshes.
+  #endif
   const bool menu_visible = (wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
                             (wifi_scan_obj.currentScanMode == WIFI_CONNECTED) ||
                             (wifi_scan_obj.currentScanMode == OTA_UPDATE);
@@ -175,6 +198,9 @@ void MenuFunctions::updateMenuMarquee(uint32_t current_time) {
 void MenuFunctions::buttonNotSelected(int b, int x) {
   if (x == -1)
     x = b;
+  #ifdef MARAUDER_EPAPER_UI
+    drawStickyMenuRow(x, false); return;
+  #endif
 
   // Ensure b is within valid button index range
   b = (x - menu_start_index) % BUTTON_SCREEN_LIMIT;
@@ -205,6 +231,9 @@ void MenuFunctions::buttonNotSelected(int b, int x) {
 void MenuFunctions::buttonSelected(int b, int x, uint16_t text_offset) {
   if (x == -1)
     x = b;
+  #ifdef MARAUDER_EPAPER_UI
+    drawStickyMenuRow(x, true); drawStickyMenuFooter(); return;
+  #endif
 
   // Ensure b is within valid button index range
   b = (x - menu_start_index) % BUTTON_SCREEN_LIMIT;
@@ -244,6 +273,10 @@ void MenuFunctions::buttonSelected(int b, int x, uint16_t text_offset) {
 }
 
 void MenuFunctions::displayMenuButtons() {
+  #ifdef MARAUDER_EPAPER_UI
+    drawStickyMenuFooter();
+    return;
+  #endif
   #if defined(HAS_TOUCH) && !defined(MARAUDER_M5STACK_CORE2_AWS)
     // Draw lines to show each menu button
     for (int i = 0; i < 3; i++) {
@@ -424,7 +457,7 @@ void MenuFunctions::main(uint32_t currentTime)
 
 
   // Brightness gesture: hold top or bottom zone 1.5s to enter brightness mode
-  #ifdef HAS_ILI9341
+  #if defined(HAS_ILI9341) && !defined(MARAUDER_EPAPER_UI)
     bool touching_menu_control = false;
     if (pressed) {
       for (uint8_t b = BUTTON_ARRAY_LEN; b < BUTTON_ARRAY_LEN + 3; b++) {
@@ -460,7 +493,7 @@ void MenuFunctions::main(uint32_t currentTime)
     }
   #endif
 
-  // POI button interception during wardrive — full width bottom bar
+  // POI button interception during wardrive â€” full width bottom bar
   #ifdef HAS_ILI9341
     if (pressed &&
         (wifi_scan_obj.currentScanMode == WIFI_SCAN_WAR_DRIVE ||
@@ -602,7 +635,19 @@ void MenuFunctions::main(uint32_t currentTime)
 
   #ifdef HAS_BUTTONS
 
-    #if (C_BTN >= 0) && !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
+    #if defined(MARAUDER_EPAPER_UI)
+      const bool c_btn_press = epaper::takePowerSelect();
+      if (c_btn_press && wifi_scan_obj.scanning() &&
+          wifi_scan_obj.currentScanMode != WIFI_CONNECTED &&
+          wifi_scan_obj.currentScanMode != OTA_UPDATE &&
+          wifi_scan_obj.currentScanMode != ESP_UPDATE) {
+        recon_obj.stop();
+        wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
+        display_obj.init();
+        changeMenu(current_menu, true);
+        return;
+      }
+    #elif (C_BTN >= 0) && !defined(MARAUDER_CARDPUTER) && !defined(MARAUDER_CARDPUTER_ADV)
       bool c_btn_press = c_btn.justPressed();
     #elif defined(HAS_FACES_KEYBOARD)
       bool c_btn_press = ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
@@ -810,6 +855,10 @@ void MenuFunctions::main(uint32_t currentTime)
       }
 
       if (menu_button >= 0) {
+        #ifdef MARAUDER_EPAPER_UI
+          Serial.printf("Sticky menu touch: action=%d menu=%s selected=%u\n",
+            menu_button, current_menu->name.c_str(), current_menu->selected);
+        #endif
         if (menu_button == UP_BUTTON) {
           if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
               (wifi_scan_obj.currentScanMode == WIFI_CONNECTED) ||
@@ -1227,6 +1276,10 @@ void MenuFunctions::main(uint32_t currentTime)
       #endif
 
       if(c_btn_press){
+        #ifdef MARAUDER_EPAPER_UI
+          if (wifi_scan_obj.currentScanMode != WIFI_SCAN_OFF &&
+              wifi_scan_obj.currentScanMode != WIFI_CONNECTED) return;
+        #endif
         current_menu->list->get(current_menu->selected).callable();
       }
 
@@ -1345,6 +1398,9 @@ void MenuFunctions::battery2(bool initial)
 
 void MenuFunctions::updateStatusBar()
 {
+  #ifdef MARAUDER_EPAPER_UI
+    stickyStatusBar(false); return;
+  #endif
   display_obj.tft.setTextSize(1);
 
   bool status_changed = false;
@@ -1550,6 +1606,9 @@ void MenuFunctions::updateStatusBar()
 
 void MenuFunctions::drawStatusBar()
 {
+  #ifdef MARAUDER_EPAPER_UI
+    stickyStatusBar(true); return;
+  #endif
   display_obj.tft.setTextSize(1);
   #ifdef HAS_MINI_SCREEN
     display_obj.tft.setFreeFont(NULL);
@@ -3567,7 +3626,7 @@ void MenuFunctions::buildWiFiGeneralMenu()
     this->addNodes(&selectProbeSSIDsMenu, text09, TFTLIGHTGREY, 0, [this]() {
       this->changeMenu(&wifiGeneralMenu, true);
 
-      // TODO: TBD - Should probe_req_ssids have it´s own life and override ap.config and/or ssids -list for EP?
+      // TODO: TBD - Should probe_req_ssids have itÂ´s own life and override ap.config and/or ssids -list for EP?
       // If so, then we should not add selected ssids to ssids list
 
       // Add selected ssid names to ssids list when clicking back button
@@ -5552,7 +5611,11 @@ void MenuFunctions::buildLazyMenu(Menu* menu)
       this->addNodes(menu, "Save/Load Files", TFTCYAN, SD_UPDATE, [this]() {
         this->changeMenu(&saveFileMenu, true);
       });
-      #ifndef HAS_MINI_SCREEN
+      #if defined(MARAUDER_EPAPER_UI)
+        this->addNodes(menu, "Clean display", TFTWHITE, BRIGHTNESS, [this]() {
+          display_obj.tft.requestClean();
+        });
+      #elif !defined(HAS_MINI_SCREEN)
         this->addNodes(menu, "Brightness", TFTYELLOW, BRIGHTNESS, [this]() {
           this->brightnessMode();
         });
@@ -5973,6 +6036,9 @@ void MenuFunctions::buildButtons(Menu *menu, int starting_index, const char* but
 
 void MenuFunctions::displayCurrentMenu(int start_index)
 {
+  #ifdef MARAUDER_EPAPER_UI
+    drawStickyMenu(); return;
+  #endif
   //Serial.println(F("Displaying current menu..."));
   marquee_menu = nullptr;
   marquee_selected = 0xFFFF;
@@ -6056,6 +6122,11 @@ void MenuFunctions::displayCurrentMenu(int start_index)
 // ============================================================
 #ifndef HAS_MINI_SCREEN
   void MenuFunctions::brightnessMode() {
+    #ifdef MARAUDER_EPAPER_UI
+      display_obj.tft.requestClean();
+      display_obj.tft.display(true);
+      return;
+    #endif
     extern void brightnessSave(uint8_t level);
     extern uint8_t getBrightnessLevel();
 

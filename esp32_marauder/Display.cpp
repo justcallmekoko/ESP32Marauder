@@ -61,7 +61,11 @@ Display::Display()
 int8_t Display::menuButton(uint16_t *x, uint16_t *y, bool pressed, bool check_hold) {
   #ifdef HAS_ILI9341
     for (uint8_t b = BUTTON_ARRAY_LEN; b < BUTTON_ARRAY_LEN + 3; b++) {
+      #ifdef MARAUDER_EPAPER_UI
+      if (pressed && sticky::menuZone(*x, *y, tft.width(), tft.height()) == b - BUTTON_ARRAY_LEN) {
+      #else
       if (pressed && this->key[b].contains(*x, *y)) {
+      #endif
         this->key[b].press(true);  // tell the button it is pressed
       } else {
         this->key[b].press(false);  // tell the button it is NOT pressed
@@ -87,6 +91,9 @@ int8_t Display::menuButton(uint16_t *x, uint16_t *y, bool pressed, bool check_ho
 }
 
 uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
+  #ifdef MARAUDER_EPAPER_UI
+    return !headless_mode && tft.getTouch(x, y, threshold);
+  #endif
   #ifdef HAS_ILI9341
     if (!this->headless_mode) {
       #ifdef HAS_CAP_TOUCH
@@ -239,7 +246,7 @@ void Display::init() {
 }
 
 void Display::setCalData(bool landscape) {
-  #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH)
+  #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH) && !defined(MARAUDER_EPAPER_UI)
     if (!landscape) {
       #ifdef TFT_SHIELD
         uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield
@@ -275,6 +282,9 @@ void Display::setCalData(bool landscape) {
 // Function to prepare the display and the menus
 void Display::RunSetup() {
   run_setup = false;
+  #ifdef MARAUDER_EPAPER_UI
+    TOP_FIXED_AREA_2 = TOP_FIXED_AREA;
+  #endif
 
   // Need to declare new
   display_buffer = new LinkedList<String>();
@@ -301,7 +311,7 @@ void Display::RunSetup() {
 
   #ifdef HAS_ILI9341
 
-    #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH)
+    #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH) && !defined(MARAUDER_EPAPER_UI)
       this->setCalData();
     #endif
 
@@ -480,6 +490,13 @@ void Display::tftDrawYScaleButtons(byte y_scale)
 }
 
 void Display::tftDrawChannelScaleButtons(int set_channel, bool lnd_an) {
+  #ifdef MARAUDER_EPAPER_UI
+    if (!lnd_an) {
+      drawStickyScanButton(CHAN_MINUS_INDEX, 186, "CH -");
+      drawStickyScanButton(CHAN_PLUS_INDEX, 294, "CH +");
+      return;
+    }
+  #endif
   #ifdef MARAUDER_POOM
     return;
   #endif
@@ -543,6 +560,12 @@ void Display::tftDrawChannelScaleButtons(int set_channel, bool lnd_an) {
 }
 
 void Display::tftDrawChanHopButton(bool lnd_an, bool en) {
+  #ifdef MARAUDER_EPAPER_UI
+    if (!lnd_an) {
+      drawStickyScanButton(CHAN_HOP_INDEX, 402, en ? "HOP ON" : "HOP OFF");
+      return;
+    }
+  #endif
   #ifdef MARAUDER_POOM
     return;
   #endif
@@ -607,6 +630,12 @@ void Display::tftDrawChanHopButton(bool lnd_an, bool en) {
 }
 
 void Display::tftDrawExitScaleButtons(bool lnd_an) {
+  #ifdef MARAUDER_EPAPER_UI
+    if (!lnd_an) {
+      drawStickyScanButton(EXIT_BUTTON_INDEX, 78, "EXIT");
+      return;
+    }
+  #endif
   #ifdef MARAUDER_POOM
     return;
   #endif
@@ -650,6 +679,17 @@ void Display::tftDrawExitScaleButtons(bool lnd_an) {
 
 void Display::twoPartDisplay(String center_text)
 {
+  #ifdef MARAUDER_EPAPER_UI
+    tft.setFreeFont(nullptr);
+    tft.setTextSize(2);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.fillRect(0, 128, SCREEN_WIDTH, TOP_FIXED_AREA - 128, TFT_BLACK);
+    tft.setTextWrap(true);
+    tft.setCursor(24, 136);
+    tft.println(center_text);
+    tft.setTextWrap(false);
+    return;
+  #endif
   tft.setTextColor(TFT_BLACK, TFT_YELLOW);
   tft.fillRect(0,16,HEIGHT_1,144, TFT_YELLOW);
   //tft.drawCentreString(center_text,120,82,1);
@@ -665,6 +705,15 @@ void Display::twoPartDisplay(String center_text)
 
 void Display::touchToExit()
 {
+  #ifdef MARAUDER_EPAPER_UI
+    TOP_FIXED_AREA_2 = TOP_FIXED_AREA;
+    tft.fillRect(24, 132, SCREEN_WIDTH - 48, 56, TFT_BLACK);
+    tft.setFreeFont(nullptr);
+    tft.setTextSize(2);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.drawCentreString("Tap screen to exit", SCREEN_WIDTH / 2, 152);
+    return;
+  #endif
   tft.setTextColor(TFT_BLACK, TFT_LIGHTGREY);
   tft.fillRect(0, 32, SCREEN_WIDTH, 16, TFT_LIGHTGREY);
   tft.drawCentreString(text11, SCREEN_WIDTH / 2, 32, 2);
@@ -753,6 +802,28 @@ bool Display::queueCriticalLine(const String& line) {
 
 void Display::displayBuffer(bool do_clear)
 {
+  #ifdef MARAUDER_EPAPER_UI
+    // Consume a bounded batch and draw the text view once. Redrawing every
+    // line immediately wastes CPU while the panel is still refreshing.
+    static uint32_t last_sticky_text = 0;
+    if (!display_buffer || !screen_buffer || display_buffer->size() == 0 ||
+        uint32_t(millis() - last_sticky_text) < 100) return;
+    last_sticky_text = millis();
+    for (int n = 0; n < DISPLAY_BUFFER_LIMIT && display_buffer->size(); ++n) {
+      if (screen_buffer->size() >= MAX_SCREEN_BUFFER) scrollScreenBuffer();
+      screen_buffer->add(display_buffer->shift());
+    }
+    tft.fillRect(0, TOP_FIXED_AREA_2, SCREEN_WIDTH,
+                 SCREEN_HEIGHT - TOP_FIXED_AREA_2, TFT_BLACK);
+    tft.setFreeFont(nullptr);
+    tft.setTextSize(2); tft.setTextWrap(false);
+    for (int i = 0; i < screen_buffer->size(); ++i) {
+      tft.setCursor(0, TOP_FIXED_AREA_2 + i * TEXT_HEIGHT);
+      processAndPrintString(tft, screen_buffer->get(i));
+    }
+    printing = false;
+    return;
+  #endif
   if (this->display_buffer->size() > 0)
   {
 
@@ -842,6 +913,10 @@ void Display::updateBanner(String msg)
 
 void Display::buildBanner(String msg, int xpos)
 {
+  #ifdef MARAUDER_EPAPER_UI
+    drawScanTitle(msg, TFT_WHITE);
+    return;
+  #endif
   int h = TEXT_HEIGHT;
 
   #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
@@ -854,6 +929,16 @@ void Display::buildBanner(String msg, int xpos)
   this->tft.setTextSize(BANNER_TEXT_SIZE);           // Font size scaling is x1
   this->tft.setTextColor(TFT_WHITE, TFT_BLACK);  // Black text, no background colour
   this->showCenterText(msg.c_str(), banner_y);
+}
+
+void Display::drawScanTitle(const String& title, uint16_t color) {
+  #ifdef MARAUDER_EPAPER_UI
+    tft.drawHeading(title);
+    TOP_FIXED_AREA_2 = TOP_FIXED_AREA;
+  #else
+    tft.fillRect(0, 16, SCREEN_WIDTH, 16, color);
+    tft.drawCentreString(title, SCREEN_WIDTH / 2, 16, 2);
+  #endif
 }
 
 #endif

@@ -1,4 +1,7 @@
 #include "CommandLine.h"
+#ifdef MARAUDER_EPAPER_UI
+#include "EpaperPower.h"
+#endif
 
 // GCOVR_EXCL_START -- serial protocol output depends on Arduino Serial.
 namespace {
@@ -262,6 +265,50 @@ void CommandLine::startScanFromCLI(int scan_mode, uint16_t color, const char* sc
 
 void CommandLine::runCommand(String input) {
   if (input == "") return;
+  #ifdef MARAUDER_EPAPER_UI
+    // Keep the original diagnostic alias for existing scripts.
+    if (input.startsWith("paper ")) input = "sticky " + input.substring(6);
+      if (input == "sticky status") {
+        display_obj.tft.diagnostics(); display_obj.tft.touchDiagnostics();
+        Serial.printf("E-paper UI: headless=%u disabled=%u menu=%s selected=%u\n",
+          display_obj.headless_mode, menu_function_obj.disable_touch,
+          menu_function_obj.current_menu->name.c_str(), menu_function_obj.current_menu->selected);
+        return;
+      }
+      if (input == "sticky touchreset") { display_obj.tft.resetTouch(); return; }
+    if (input == "sticky dump") { display_obj.tft.dumpFrame(); return; }
+    if (input == "sticky poweroff") { epaper::powerOff(); return; }
+    if (input == "sticky powertest" && wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
+      epaper::powerOff(5000); return;
+    }
+    if ((input == "sticky preview deauth" || input == "sticky preview recon") &&
+        wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
+      display_obj.clearScreen();
+      menu_function_obj.drawStatusBar();
+      if (input.endsWith("recon")) recon_obj.previewStickyDashboard();
+      else {
+        display_obj.drawScanTitle("Deauthentication Sniffer", TFT_RED);
+        display_obj.tftDrawChannelScaleButtons(1, false);
+        display_obj.tftDrawExitScaleButtons(false);
+        display_obj.tftDrawChanHopButton(false, false);
+        display_obj.tft.drawString("Display preview - radio off", 24, TOP_FIXED_AREA);
+      }
+      display_obj.tft.display(true);
+      Serial.println("E-paper: display preview only; no scan started");
+      return;
+    }
+    if (input == "sticky test" && wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) {
+      display_obj.tft.startDiagnostic(); return;
+    }
+    if (input == "sticky tick") { display_obj.tft.diagnosticTick(); return; }
+    if (input == "sticky menu") {
+      display_obj.tft.stopDiagnostic();
+      menu_function_obj.changeMenu(menu_function_obj.current_menu, true); return;
+    }
+    if (input == "sticky clean") {
+      display_obj.tft.requestClean(); display_obj.tft.display(true); return;
+    }
+  #endif
 
   if(wifi_scan_obj.scanning() && wifi_scan_obj.currentScanMode == WIFI_SCAN_GPS_NMEA){
     if(input != STOPSCAN_CMD) return;    

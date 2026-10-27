@@ -203,6 +203,11 @@ class MenuFunctions
     MenuInputRepeat menu_touch_up_repeat;
     MenuInputRepeat menu_touch_down_repeat;
     int8_t menu_touch_button = -1;
+    #ifdef MARAUDER_EPAPER_UI
+      void drawStickyMenuRow(int index, bool focused);
+      void drawStickyMenu();
+      void drawStickyMenuFooter();
+    #endif
 
     void buildWiFiFoxHuntMenu();
     void buildBluetoothFoxHuntMenu();
@@ -440,7 +445,7 @@ class MenuFunctions
     uint16_t x = -1, y = -1;
     boolean pressed = false;
 
-    bool disable_touch;
+    bool disable_touch = false;
 
     String loaded_file = "";
 

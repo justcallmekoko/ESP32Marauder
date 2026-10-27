@@ -549,6 +549,12 @@ void ReconMission::drawDashboard(uint32_t current_time) {
     pending_churn_in = 0;
     pending_churn_out = 0;
     const uint32_t seconds = (current_time - started_at) / 1000;
+    #ifdef MARAUDER_EPAPER_UI
+      display_obj.display_buffer->clear();
+      display_obj.screen_buffer->clear();
+      drawStickyDashboard(seconds, churn_in, churn_out);
+      return;
+    #endif
     #ifdef MARAUDER_POOM
       // Keep the global status row intact and dedicate the remaining seven
       // text rows to a compact dashboard designed for the 128x64 OLED.

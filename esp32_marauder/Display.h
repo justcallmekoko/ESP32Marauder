@@ -18,6 +18,10 @@
 
 #ifdef MARAUDER_POOM
   #include "PoomDisplay.h"
+#elif defined(MARAUDER_M5PAPER)
+  #include "M5PaperDisplay.h"
+#elif defined(MARAUDER_RETERMINAL_STICKY)
+  #include "StickyDisplay.h"
 #else
   #include <TFT_eSPI.h>
 #endif
@@ -107,6 +111,9 @@ class Display
       void scrollScreenBuffer(bool down = false);
     #endif
     void processAndPrintString(TFT_eSPI& tft, const String& originalString);
+    #ifdef MARAUDER_EPAPER_UI
+      void drawStickyScanButton(uint8_t index, int16_t x, const char* label);
+    #endif
 
   public:
     Display();
@@ -130,7 +137,7 @@ class Display
 
     uint8_t TOP_FIXED_AREA_2 = 48;
     uint8_t print_delay_1, print_delay_2 = 10;
-    uint8_t current_banner_pos = SCREEN_WIDTH;
+    uint16_t current_banner_pos = SCREEN_WIDTH;
 
     LinkedList<String>* display_buffer;
 
@@ -170,6 +177,7 @@ class Display
     void tftDrawExitScaleButtons(bool lnd_an = true);
     void tftDrawChanHopButton(bool lnd_an = true, bool en = false);
     void buildBanner(String msg, int xpos);
+    void drawScanTitle(const String& title, uint16_t color);
     void clearScreen();
     bool queueLine(const String& line);
     bool queueCriticalLine(const String& line);

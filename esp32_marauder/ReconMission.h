@@ -31,6 +31,9 @@ class ReconMission {
   bool active() const { return running; }
   bool suppressScanUi() const { return suppress_scan_ui; }
   ReconMode mode() const { return active_mode; }
+  #ifdef MARAUDER_EPAPER_UI
+    void previewStickyDashboard();
+  #endif
 
  private:
   void observeLists();
@@ -47,6 +50,9 @@ class ReconMission {
   void rebuildStationLinks();
   void writeManifest(bool complete);
   void drawDashboard(uint32_t current_time);
+  #ifdef MARAUDER_EPAPER_UI
+    void drawStickyDashboard(uint32_t seconds, uint8_t churn_in, uint8_t churn_out);
+  #endif
   void recordUiEvent(char type, const uint8_t mac[6], int8_t rssi,
                      const char* label = nullptr);
 
