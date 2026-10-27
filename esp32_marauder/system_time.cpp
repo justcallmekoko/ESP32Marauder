@@ -50,7 +50,7 @@ void init_system_time() {
   //   system_time_set = true;
   // } else {
   //   log_w("getLocalTime Fail");
-  }
+  // }
 
 }
 
