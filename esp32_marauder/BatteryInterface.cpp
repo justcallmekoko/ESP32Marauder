@@ -173,11 +173,19 @@ bool BatteryInterface::detectAxp2101Gauge() {
   }
 
   int ctrl = this->axp2101Read(AXP2101_REG_GAUGE_CTRL);
-  if (ctrl >= 0 && !(ctrl & 0x08)) {
+  if (ctrl < 0) {
+    this->i2c_supported = false;
+    return false;
+  }
+  if (!(ctrl & 0x08)) {
     Wire.beginTransmission(AXP2101_GAUGE_ADDR);
     Wire.write(AXP2101_REG_GAUGE_CTRL);
     Wire.write((uint8_t)(ctrl | 0x08));
-    Wire.endTransmission();
+    if (Wire.endTransmission() != 0 ||
+        (this->axp2101Read(AXP2101_REG_GAUGE_CTRL) & 0x08) == 0) {
+      this->i2c_supported = false;
+      return false;
+    }
   }
   if (!this->has_axp2101_gauge) Serial.println(F("Detected AXP2101"));
   this->has_axp2101_gauge = true;
