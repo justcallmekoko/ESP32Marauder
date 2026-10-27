@@ -288,6 +288,7 @@ void CommandLine::runCommand(String input) {
       Serial.println(HELP_BACKUP_SPIFFS_CMD);
       Serial.println(HELP_BACKUP_STATUS_CMD);
       Serial.println(HELP_RESTORE_SPIFFS_CMD);
+      Serial.println(HELP_SD_FM_CMD);
     #endif
     // GCOVR_EXCL_STOP
     Serial.println(HELP_LED_CMD);
@@ -550,6 +551,13 @@ void CommandLine::runCommand(String input) {
         sd_obj.listDir(cmd_args.get(1));
     #endif
   }
+  // SD file manager
+  #ifdef HAS_SD
+  else if (cmd_args.get(0) == SD_FM_CMD) {
+    SDFileManager file_manager;
+    file_manager.run(&cmd_args);
+  }
+  #endif
   // GCOVR_EXCL_START -- requires mounted SPIFFS and SD filesystems.
   else if (cmd_args.get(0) == PROTOCOL_INFO_CMD) {
     int machine_arg = this->argSearch(&cmd_args, "--machine");
