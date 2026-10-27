@@ -18,7 +18,7 @@ namespace lc76g {
 // True if the module answers on the bus. Call once from GpsInterface::begin().
 bool begin();
 
-// One read cycle (self-throttled to ~2 Hz): pulls pending NMEA text from the
+// One read cycle (self-throttled to ~8 Hz): pulls pending NMEA text from the
 // module and hands each byte to `sink`. Call from the main loop only; the cycle
 // is a multi-frame transaction that must not interleave with other I2C traffic.
 void service(void (*sink)(char c));

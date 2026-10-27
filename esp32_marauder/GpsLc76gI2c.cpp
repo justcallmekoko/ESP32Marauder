@@ -23,10 +23,11 @@ namespace {
 const uint8_t  CR_ADDR   = 0x50;  // command/register write
 const uint8_t  RD_ADDR   = 0x54;  // data read
 const uint8_t  WR_ADDR   = 0x58;  // data write (wake)
-const uint32_t CHUNK     = 1024;  // bytes per cycle; bounds the main-loop hitch
-const uint32_t PERIOD_MS = 500;   // min gap between cycles (~2 Hz)
+const uint32_t CHUNK     = 256;   // shorter atomic transaction for shared-bus touch latency
+const uint32_t PERIOD_MS = 125;   // preserve 2048 B/s drain capacity (~8 Hz)
 const uint32_t STEP_MS   = 3;     // inter-step settle
 const uint16_t BUS_TIMEOUT_MS = 300;
+const uint32_t EMPTY_WAKE_CYCLES = 4000 / PERIOD_MS;
 
 uint32_t s_bytes = 0, s_fails = 0, s_last = 0, s_empty = 0;
 
@@ -136,7 +137,7 @@ void service(void (*sink)(char c)) {
   if (r < 0) {
     s_fails++;
   } else if (r == 0) {
-    if (++s_empty >= 8) { s_empty = 0; wake(); }
+    if (++s_empty >= EMPTY_WAKE_CYCLES) { s_empty = 0; wake(); }
   } else {
     s_empty = 0;
     s_bytes += r;

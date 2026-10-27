@@ -83,6 +83,10 @@ class WaveshareC535HardwareTests(unittest.TestCase):
         lc76g = (ROOT / "esp32_marauder" / "GpsLc76gI2c.cpp").read_text(encoding="utf-8")
         for expected in ("0xAA510008UL", "0xAA512000UL", "RD_ADDR   = 0x54", "CR_ADDR   = 0x50"):
             self.assertIn(expected, lc76g)
+        self.assertIn("CHUNK     = 256", lc76g)
+        self.assertIn("PERIOD_MS = 125", lc76g)
+        self.assertIn("EMPTY_WAKE_CYCLES = 4000 / PERIOD_MS", lc76g)
+        self.assertIn("lc76gNow - this->lc76g_last_probe_ms >= 2000", gps)
         self.assertIn("#ifdef MARAUDER_WS_C5_35", touch)
         self.assertIn("Wire.end(); Wire.begin(CTP_SDA, CTP_SCL, 100000U);", touch)
         self.assertIn("return -1;", touch)

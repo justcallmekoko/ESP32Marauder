@@ -34,6 +34,8 @@ void GpsInterface::begin() {
   #ifdef HAS_GPS_LC76G_I2C
     // GPS is an LC76G on the shared I2C bus; there is no GPS UART.
     this->gps_enabled = marauder::lc76g::begin();
+    this->lc76g_last_probe_ms = millis();
+    if (this->lc76g_last_probe_ms == 0) this->lc76g_last_probe_ms = 1;
     if (this->gps_enabled)
       Serial.println(F("LC76G GPS found on I2C"));
     else
@@ -783,6 +785,13 @@ String GpsInterface::getNmeaNotparsed() {
 
 void GpsInterface::main() {
   #ifdef HAS_GPS_LC76G_I2C
+    const uint32_t lc76gNow = millis();
+    if (!this->gps_enabled &&
+        lc76gNow - this->lc76g_last_probe_ms >= 2000) {
+      this->lc76g_last_probe_ms = lc76gNow;
+      this->gps_enabled = marauder::lc76g::begin();
+      if (this->gps_enabled) Serial.println(F("LC76G GPS recovered on I2C"));
+    }
     if (this->gps_enabled) {
       #ifdef HAS_SCREEN
         if (millis() - display_obj.last_touch_ms >= LC76G_TOUCH_IDLE_MS)
