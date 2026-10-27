@@ -12,7 +12,13 @@
   // Production builds must remain fail-closed.
   //#define ALLOW_UNVERIFIED_SD_UPDATE
 
+  #if defined(MARAUDER_RETERMINAL_STICKY) || defined(MARAUDER_M5PAPER)
+    #define MARAUDER_EPAPER_UI
+  #endif
+
   //// BOARD TARGETS
+  //#define MARAUDER_M5PAPER // Original M5Paper v1.1, not PaperS3
+  //#define MARAUDER_RETERMINAL_STICKY
   //#define MARAUDER_M5STICKC
   //#define MARAUDER_M5STICKCP2
   //#define MARAUDER_M5STACK_CORE2_AWS
@@ -83,7 +89,11 @@
   #define MODE_CUSTOM 4
 
   //// HARDWARE NAMES
-  #ifdef MARAUDER_M5STICKC
+  #if defined(MARAUDER_M5PAPER)
+    #define HARDWARE_NAME "M5Paper v1.1"
+  #elif defined(MARAUDER_RETERMINAL_STICKY)
+    #define HARDWARE_NAME "Seeed reTerminal Sticky"
+  #elif defined(MARAUDER_M5STICKC)
     #define HARDWARE_NAME "M5Stick-C Plus"
   #elif defined(MARAUDER_M5STICKCP2)
     #define HARDWARE_NAME "M5Stick-C Plus2"
@@ -168,6 +178,12 @@
   //// END FCC MODULE IDENTIFIERS
 
  //// BOARD FEATURES
+ #ifdef MARAUDER_M5PAPER
+   #include "M5PaperConfig.h"
+ #endif
+ #ifdef MARAUDER_RETERMINAL_STICKY
+   #include "StickyConfig.h"
+ #endif
  #if defined(DUAL_MINI_C5)
     #define MARAUDER_MINI_V3
  #endif
