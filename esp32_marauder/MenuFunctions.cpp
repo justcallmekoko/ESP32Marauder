@@ -2778,8 +2778,27 @@ void MenuFunctions::RunSetup()
   });
   for (int i = 0; i < settings_obj.getNumberSettings(); i++) {
     String settingName = settings_obj.setting_index_to_name(i);
+    const char* name_str = settingName.c_str();
     const char* type = this->callSetting(settingName.c_str());
     if (type && strcmp(type, "bool") == 0) {
+
+      #ifndef HAS_GPS
+      if (strcmp(name_str, "Probe GPS at Boot") == 0)
+        continue;
+      #endif   // HAS_GPS
+      #ifndef HAS_SOUND
+      if (strcmp(name_str, "EnableSND") == 0)
+        continue;
+      #endif   // HAS_SOUND
+      #ifndef HAS_LED
+      if (strcmp(name_str, "EnableLED") == 0)
+        continue;
+      #endif   // HAS_LED
+      #ifndef HAS_SD
+        if ((strcmp(name_str, "SavePCAP") == 0) || strcmp(name_str, "Timestamp PCAP files") == 0)
+          continue;
+      #endif   // HAS_SD
+
       const int settings_menu_index = settingsMenu.list->size();
       this->addNodes(&settingsMenu, settingName.c_str(), TFTLIGHTGREY, SETTINGS, [this, settings_menu_index, settingName]() {
           const bool setting_enabled = settings_obj.toggleSetting(settingName.c_str());
@@ -4849,9 +4868,9 @@ void MenuFunctions::buildLazyMenu(Menu* menu)
         ESP.restart();
       });
 
-      #ifdef POWER_HOLD_PIN
+      #if defined(POWER_HOLD_PIN) || (defined(HAS_BATTERY) && (defined(HAS_AXP2101) || defined(HAS_AXP192)))
         this->addNodes(&mainMenu, "Power Off", TFTLIGHTGREY, SHUTDOWN, []() {
-            shutdown();
+            shutdown_system();
         });
       #elif defined(DEEPSLEEP)
         this->addNodes(&mainMenu, "Deep Sleep", TFTLIGHTGREY, SHUTDOWN, []() {

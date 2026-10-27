@@ -770,7 +770,7 @@ void CommandLine::runCommand(String input) {
     ESP.restart();
   #if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
   else if (cmd_args.get(0) == SHUTDOWN_CMD)
-    shutdown();
+    shutdown_system();
   #endif
 
   //// WiFi/Bluetooth Scan/Attack commands

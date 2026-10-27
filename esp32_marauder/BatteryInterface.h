@@ -29,7 +29,6 @@
 
 #ifdef HAS_CH32V00X
   #include <CH32V00X_IOExpander.hpp>
-  extern CH32V00X_IOExpander CH32V00X_obj;
 #endif
 
 #define IP5306_ADDR 0x75
@@ -38,6 +37,9 @@
 class BatteryInterface {
   private:
     uint32_t initTime = 0;
+    // calc ADC avg.
+    // int8_t last4[4] = {0};
+    // int8_t last_index = 0;
 
     #ifdef HAS_MAX1704X
       Adafruit_MAX17048 maxlipo;
@@ -50,8 +52,8 @@ class BatteryInterface {
   public:
     int8_t battery_level = 0;
     int8_t old_level = 0;
+    bool supported = false;     // is not all i2c
     bool i2c_supported = false;
-    bool supported = false;
     bool has_max17048 = false;
     bool has_ip5306 = false;
     bool has_axp2101 = false;
@@ -62,6 +64,12 @@ class BatteryInterface {
     void RunSetup();
     void main(uint32_t currentTime);
     int8_t getBatteryLevel();
+
+    #if defined(HAS_AXP2101)
+      void PowerOff() { power.shutdown(); }
+    #elif defined(HAS_AXP192)
+      void PowerOff() { axp192_obj.PowerOff();  }
+    #endif
 };
 
 #endif  // ifndef BatteryInterface_h
