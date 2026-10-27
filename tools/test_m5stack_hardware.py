@@ -79,13 +79,13 @@ class M5StackHardwareTests(unittest.TestCase):
             self.assertNotIn("M5STACK_FIRE", path.read_text())
 
     def test_core2_power_rails_match_board_wiring(self):
-        source = (ROOT / "esp32_marauder/esp32_marauder.ino").read_text()
+        source = (ROOT / "esp32_marauder/CORE2_AWS.hpp").read_text()
         axp = (ROOT / "esp32_marauder/AXP192.cpp").read_text()
         self.assertIn("core2AxpWrite(0x28, 0xf2)", source)
         self.assertIn("core2AxpWrite(0x27", source)
         self.assertIn("core2AxpRead(0x12) & ~(1 << 3)", source)
         self.assertIn("outputs & ~(1 << 1)", source)
-        self.assertIn("#define AXP192_WIRE Wire", axp)
+        self.assertIn("#define AXP192_WIRE &Wire", axp)
         self.assertIn("legacy\n    // sequence below is for M5StickC", axp)
 
 if __name__ == "__main__":

@@ -1,17 +1,34 @@
 #include "AXP192.h"
 
-#ifdef MARAUDER_M5STACK_CORE2_AWS
-  #define AXP192_WIRE Wire
-#else
-  #define AXP192_WIRE Wire1
+#ifdef HAS_AXP192
+
+#ifndef AXP192_SDA
+  #if defined(MARAUDER_M5STACK_CORE2_AWS) || !defined(I2C_SDA)
+     #define AXP192_SDA 21
+     #define AXP192_SCL 22
+     #define AXP192_WIRE &Wire1
+  #else
+     #define AXP192_SDA I2C_SDA
+     #define AXP192_SCL I2C_SCL
+     #define AXP192_WIRE &Wire
+  #endif
+#endif
+
+// Should me set with AXP192_SDA
+#ifndef AXP192_WIRE
+  #define AXP192_WIRE &Wire1
 #endif
 
 AXP192::AXP192() {
 }
 
 void AXP192::begin(void) {
-    AXP192_WIRE.begin(21, 22);
-    AXP192_WIRE.setClock(400000);
+
+    _wire = AXP192_WIRE;
+
+    _wire->begin(AXP192_SDA, AXP192_SCL);
+
+    _wire->setClock(400000);
 
     #ifdef MARAUDER_M5STACK_CORE2_AWS
     // Core2 power rails are initialized before display setup. The legacy
@@ -60,18 +77,18 @@ void AXP192::begin(void) {
 }
 
 void AXP192::Write1Byte(uint8_t Addr, uint8_t Data) {
-    AXP192_WIRE.beginTransmission(0x34);
-    AXP192_WIRE.write(Addr);
-    AXP192_WIRE.write(Data);
-    AXP192_WIRE.endTransmission();
+    _wire->beginTransmission(0x34);
+    _wire->write(Addr);
+    _wire->write(Data);
+    _wire->endTransmission();
 }
 
 uint8_t AXP192::Read8bit(uint8_t Addr) {
-    AXP192_WIRE.beginTransmission(0x34);
-    AXP192_WIRE.write(Addr);
-    AXP192_WIRE.endTransmission();
-    AXP192_WIRE.requestFrom(0x34, 1);
-    return AXP192_WIRE.read();
+    _wire->beginTransmission(0x34);
+    _wire->write(Addr);
+    _wire->endTransmission();
+    _wire->requestFrom(0x34, 1);
+    return _wire->read();
 }
 
 uint16_t AXP192::Read12Bit(uint8_t Addr) {
@@ -92,50 +109,50 @@ uint16_t AXP192::Read13Bit(uint8_t Addr) {
 
 uint16_t AXP192::Read16bit(uint8_t Addr) {
     uint16_t ReData = 0;
-    AXP192_WIRE.beginTransmission(0x34);
-    AXP192_WIRE.write(Addr);
-    AXP192_WIRE.endTransmission();
-    AXP192_WIRE.requestFrom(0x34, 2);
+    _wire->beginTransmission(0x34);
+    _wire->write(Addr);
+    _wire->endTransmission();
+    _wire->requestFrom(0x34, 2);
     for (int i = 0; i < 2; i++) {
         ReData <<= 8;
-        ReData |= AXP192_WIRE.read();
+        ReData |= _wire->read();
     }
     return ReData;
 }
 
 uint32_t AXP192::Read24bit(uint8_t Addr) {
     uint32_t ReData = 0;
-    AXP192_WIRE.beginTransmission(0x34);
-    AXP192_WIRE.write(Addr);
-    AXP192_WIRE.endTransmission();
-    AXP192_WIRE.requestFrom(0x34, 3);
+    _wire->beginTransmission(0x34);
+    _wire->write(Addr);
+    _wire->endTransmission();
+    _wire->requestFrom(0x34, 3);
     for (int i = 0; i < 3; i++) {
         ReData <<= 8;
-        ReData |= AXP192_WIRE.read();
+        ReData |= _wire->read();
     }
     return ReData;
 }
 
 uint32_t AXP192::Read32bit(uint8_t Addr) {
     uint32_t ReData = 0;
-    AXP192_WIRE.beginTransmission(0x34);
-    AXP192_WIRE.write(Addr);
-    AXP192_WIRE.endTransmission();
-    AXP192_WIRE.requestFrom(0x34, 4);
+    _wire->beginTransmission(0x34);
+    _wire->write(Addr);
+    _wire->endTransmission();
+    _wire->requestFrom(0x34, 4);
     for (int i = 0; i < 4; i++) {
         ReData <<= 8;
-        ReData |= AXP192_WIRE.read();
+        ReData |= _wire->read();
     }
     return ReData;
 }
 
 void AXP192::ReadBuff(uint8_t Addr, uint8_t Size, uint8_t *Buff) {
-    AXP192_WIRE.beginTransmission(0x34);
-    AXP192_WIRE.write(Addr);
-    AXP192_WIRE.endTransmission();
-    AXP192_WIRE.requestFrom(0x34, (int)Size);
+    _wire->beginTransmission(0x34);
+    _wire->write(Addr);
+    _wire->endTransmission();
+    _wire->requestFrom(0x34, (int)Size);
     for (int i = 0; i < Size; i++) {
-        *(Buff + i) = AXP192_WIRE.read();
+        *(Buff + i) = _wire->read();
     }
 }
 
@@ -304,11 +321,11 @@ void AXP192::SetSleep(void) {
 }
 
 uint8_t AXP192::GetWarningLeve(void) {
-    AXP192_WIRE.beginTransmission(0x34);
-    AXP192_WIRE.write(0x47);
-    AXP192_WIRE.endTransmission();
-    AXP192_WIRE.requestFrom(0x34, 1);
-    uint8_t buf = AXP192_WIRE.read();
+    _wire->beginTransmission(0x34);
+    _wire->write(0x47);
+    _wire->endTransmission();
+    _wire->requestFrom(0x34, 1);
+    uint8_t buf = _wire->read();
     return (buf & 0x01);
 }
 
@@ -446,3 +463,4 @@ void AXP192::SetPeripherialsPower(uint8_t state) {
     // uint8_t data;
     // Set EXTEN to enable 5v boost
 }
+#endif HAS_AXP192

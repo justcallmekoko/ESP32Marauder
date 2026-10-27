@@ -7,6 +7,7 @@ from pathlib import Path
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 DISPLAY_SOURCE = REPOSITORY_ROOT / "esp32_marauder" / "Display.cpp"
 SKETCH_SOURCE = REPOSITORY_ROOT / "esp32_marauder" / "esp32_marauder.ino"
+BACKlIGHT_SOURCE = REPOSITORY_ROOT / "esp32_marauder" / "BackLight.hpp"
 
 
 def function_body(source: str, signature: str) -> str:
@@ -33,8 +34,8 @@ class BrightnessRestoreTests(unittest.TestCase):
         self.assertNotIn("digitalWrite(TFT_BL, HIGH)", body)
 
     def test_pwm_backlight_restore_reattaches_ledc(self) -> None:
-        source = SKETCH_SOURCE.read_text(encoding="utf-8")
-        body = function_body(source, "void backlightOn()")
+        source = BACKlIGHT_SOURCE.read_text(encoding="utf-8")
+        body = function_body(source, "void backlightOn()  // ledc")
 
         self.assertLess(body.index("BL_SETUP();"), body.index("BL_SET("))
 

@@ -1,4 +1,7 @@
 #include "EvilPortal.h"
+#ifdef HAS_DUAL_BAND
+  #include <esp_wifi.h>
+#endif
 
 char apName[MAX_AP_NAME_SIZE] = "PORTAL";
 
@@ -339,6 +342,18 @@ void EvilPortal::startAP() {
   const IPAddress AP_IP(172, 0, 0, 1);
 
   WiFi.mode(WIFI_AP);
+#ifdef HAS_DUAL_BAND
+  // ESP32-C5: the default 11ax AP config faults in the WiFi driver's
+  // softap_choose_bss_color_without_conflict() during esp_wifi_start().
+  // Restrict the AP to 11b/g/n so BSS coloring is never invoked.
+  {
+    wifi_protocols_t ap_proto = {
+      .ghz_2g = WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N,
+      .ghz_5g = WIFI_PROTOCOL_11A | WIFI_PROTOCOL_11N | WIFI_PROTOCOL_11AC,
+    };
+    esp_wifi_set_protocols(WIFI_IF_AP, &ap_proto);
+  }
+#endif
   WiFi.softAPConfig(AP_IP, AP_IP, IPAddress(255, 255, 255, 0));
   WiFi.softAP(apName);
 
