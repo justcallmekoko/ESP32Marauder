@@ -18,7 +18,7 @@
    #include "CST820.hpp"
 #endif
 
-extern void backlightOn();
+include "BackLight.hpp"
 
 namespace {
 

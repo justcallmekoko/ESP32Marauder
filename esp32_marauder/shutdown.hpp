@@ -35,7 +35,6 @@
       CH32V00X_obj.setPWM(0);
       log_d("CH32V00X Powerdown");
     #endif
-      delay(200);
 
     #if defined(ES8311) && defined(HAS_SOUND)
       sound_obj.PowerOff();
@@ -60,6 +59,7 @@
 
     #endif
 
+     delay(200);
     // Should we isolate  pins with external pull-up resistors
     // to minimize current consumption.
     // #ifdef I2C_SDA
