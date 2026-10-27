@@ -358,7 +358,7 @@ void setup()
     #endif
   #endif
 
-  #if defined(HAS_SCREEN) && !defined(HAS_SDMMC)
+  #ifdef HAS_SCREEN
     display_obj.RunSetup();
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
