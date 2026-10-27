@@ -12,6 +12,12 @@ firmware and does not pretend to be — it only speaks the same wire protocol fo
 interoperability. It implements no OTA characteristic and reports a firmware
 version WarDriveGo will not try to upgrade, so the app offers no firmware update.
 
+The same BLE server also exposes a second surface — the **Biscuit Manager** GATT
+service plus the standard Device Information Service — so the Biscuit Manager app
+can drive the board as a pure wardriver too. Both links share one Wi-Fi scan;
+each scanned AP is fanned out to whichever link(s) asked, in that link's format.
+See *Biscuit Manager link* below.
+
 Strictly opt-in: scoped entirely behind `HAS_BLE_UART_BRIDGE`, which is only
 defined for this one board, so no other Marauder target is affected.
 
@@ -25,7 +31,10 @@ defined for this one board, so no other Marauder target is affected.
 
 ## Files
 
-- `esp32_marauder/GhostLinkBridge.h` / `.cpp` — the bridge.
+- `esp32_marauder/GhostLinkBridge.h` / `.cpp` — the bridge (both surfaces).
+- `esp32_marauder/BiscuitLink.h` / `.cpp` — standalone, dependency-free
+  clean-room codec for the Biscuit Manager line protocol (parse CMD / format
+  `DATA:AP` / status JSON / band filter). MIT; links into the bridge.
 - `esp32_marauder/configs.h` — defines `HAS_BLE_UART_BRIDGE` inside the
   `MARAUDER_WS_C5_35` block.
 - `esp32_marauder/esp32_marauder.ino` — `ghostlink_obj.RunSetup()` in `setup()`
@@ -86,6 +95,58 @@ WD:END reason=stop
 ```
 
 `ch > 14` indicates a 5 GHz AP. `ssid_hex` is empty when `hidden=1`.
+
+## Biscuit Manager link (second surface)
+
+A second GATT service on the same NimBLE server lets the **Biscuit Manager** app
+drive the board as a wardriving node. It is a simple newline-delimited text
+protocol (no GhostLink framing): the phone writes commands to CMD and subscribes
+to RSP for replies.
+
+- Service UUID `4fafc201-1fb5-459e-8fcc-c5c9c331914b`
+  - CMD `beb5483e-36e1-4688-b7f5-ea07361b26a8` (write) — `CMD:<cmd>[:params]`
+  - RSP `beb5483e-36e1-4688-b7f5-ea07361b26a9` (notify) — replies, one line each
+  - STA `beb5483e-36e1-4688-b7f5-ea07361b26aa` (read) — status JSON
+  - SET `beb5483e-36e1-4688-b7f5-ea07361b26ab` (read/write) — settings (unused)
+- Device Information Service `0x180A`, which the app reads to identify the node:
+  Manufacturer (`2A29`) `Biscuit Shop`, Model (`2A24`) `Biscuit DIY`, Firmware
+  (`2A26`) `MARAUDER_VERSION`.
+- Advertising: two 128-bit service UUIDs cannot share one 31-byte PDU, so while
+  unconnected the advertised UUID + scan-response name rotates (~1.28 s) between
+  the WardriveESP slot (`Marauder-XXXX`) and the Biscuit slot (`Biscuit`).
+- **GAP device name follows the active link.** The connected name (`0x2A00`)
+  becomes `Biscuit` once the app subscribes to RSP, and reverts to `Marauder-XXXX`
+  on a WardriveESP TX-subscribe or disconnect. A dual-protocol app (WarDriveGo
+  speaks both surfaces) classifies the device by this name after connecting, so a
+  static name made the Biscuit session never start and the WardriveESP link
+  stall; with this, WarDriveGo lists the board under **both** its WardriveESP and
+  Biscuit sections, both streaming.
+
+### Commands and replies
+
+- `CMD:wardriveall` / `CMD:scanap` → all bands; `CMD:wardrive` → 2.4 GHz only
+  (ch ≤ 14); `CMD:wardrive5g` → 5 GHz only (ch ≥ 36). Reply `RSP:<cmd>:OK` then
+  `STATUS:2:Scan started: <cmd>`, then `DATA:AP` lines.
+- `CMD:stopscan` → `RSP:stopscan:OK` then `STATUS:1:Ready`.
+- Any other `CMD:<x>` → `RSP:<x>:ERROR:unsupported`.
+- On RSP subscribe the board greets with `TIME:REQUEST:` then `STATUS:1:Ready`,
+  and repeats `TIME:REQUEST:` every 5 s until the app answers `TIME:SYNC:<iso>`
+  (the value is unused — only its arrival stops the retry).
+
+```
+DATA:AP:<SSID>,<BSSID-upper>,<channel>,<rssi>,<security>
+STATUS:<n>:<message>          # n: 1 ready, 2 busy
+{"status":<n>,"battery":<0..100|-1>}   # the STA read characteristic
+```
+
+The SSID has `,`, CR and LF flattened to `_` so it can never break the
+comma/line-delimited protocol. APs are deduplicated by BSSID (60 s window) so a
+parked stream stops re-sending every sweep.
+
+> **Clean-room interop note.** `BiscuitLink.{h,cpp}` implements only the *wire
+> format* (UUIDs, command tokens, line layouts) from the public Biscuit-Wiki GATT
+> Reference — an interface specification, not copied source. MIT-licensed and
+> dependency-free.
 
 ## Build
 

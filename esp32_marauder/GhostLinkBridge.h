@@ -9,6 +9,12 @@
 // documented wire protocol only -- no third-party firmware source is copied
 // here. See docs/ble_ghostlink_bridge.md for the contract and coexistence notes.
 //
+// The same BLE server also exposes the Biscuit Manager GATT surface (a second
+// service + the standard Device Information Service), so the Biscuit app can
+// drive the board as a pure wardriver too. That line protocol is handled by the
+// standalone clean-room codec in BiscuitLink.h/.cpp (MIT, no dependencies). The
+// two links share one Wi-Fi scan; each AP is fanned out in each link's format.
+//
 // Scoped entirely behind HAS_BLE_UART_BRIDGE, which is only defined for the
 // Waveshare C5 3.5 target, so no other Marauder board is affected.
 

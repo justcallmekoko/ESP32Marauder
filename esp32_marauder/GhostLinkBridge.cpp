@@ -12,6 +12,18 @@
 #include "CommandLine.h"
 extern CommandLine cli_obj;
 
+// WiFiScan gives us the canonical bracketed auth token (e.g. "[WPA2_PSK]") for
+// the Biscuit DATA:AP line, matching exactly what Marauder/Biscuit emit.
+extern WiFiScan wifi_scan_obj;
+
+#ifdef HAS_BATTERY
+#include "BatteryInterface.h"
+extern BatteryInterface battery_obj;
+#endif
+
+// Clean-room Biscuit Manager line-protocol codec (MIT, transport-agnostic).
+#include "BiscuitLink.h"
+
 // ---------------------------------------------------------------------------
 // GhostLink / WardriveESP wire protocol (clean-room, from documented spec).
 //
@@ -22,12 +34,17 @@ extern CommandLine cli_obj;
 //     [3]  frame type   (see GL_TYPE_*)
 //     [4]  status       (0 = OK)
 //     [5]  flags        (CMD: 0x01 = first, 0x02 = more)
-//     [6..7]   command id      (uint16 LE)
-//     [8..11]  payload length  (uint32 LE)
+//     [6..9]   reply/command id (uint32 LE)
+//     [10..11] payload length   (uint16 LE)
 //   ...followed by <payload length> payload bytes.
 //
 // The companion app concatenates DATA-frame payloads and then splits the
 // accumulated bytes on '\n', so a single record may span several BLE frames.
+//
+// This board also exposes a SECOND service on the same server: the Biscuit
+// Manager GATT surface (see BiscuitLink.h). Both links share one NimBLE server
+// and one Wi-Fi scan; each scanned AP is fanned out to whichever link(s) asked
+// to stream, in that link's own format.
 // ---------------------------------------------------------------------------
 
 #define GL_VERSION      0x01
@@ -67,6 +84,24 @@ extern CommandLine cli_obj;
 #define GL_SWEEP_GAP_MS   1500
 #define GL_RECOVER_MS     1000
 
+// AP dedup window: re-report a given BSSID at most once a minute so a board
+// left streaming doesn't re-send the same networks on every ~1.5 s sweep.
+// (Matches PURE-WARDRIVER's node behaviour; WarDriveGo dedups by BSSID anyway,
+// so this is pure BLE-bandwidth savings.)
+#define GL_DEDUP_N        64
+#define GL_DEDUP_MS       60000UL
+
+// RX routing: a write arrives either on the WardriveESP RX/CTRL characteristic
+// or on the Biscuit CMD characteristic. The channel tag tells the loop which
+// parser to use.
+#define CH_WD             0
+#define CH_BISCUIT        1
+
+// Advertising: two 128-bit service UUIDs cannot share one 31-byte PDU, so while
+// nobody is connected we flip the advertised UUID+name between the WardriveESP
+// and Biscuit slots about this often (payload swapped live).
+#define GL_ADV_ROTATE_MS  1280
+
 // ---------------------------------------------------------------------------
 // Shared state (file scope so the NimBLE callback objects and the bridge
 // methods can see it). All NimBLE notify() calls happen from the main loop;
@@ -76,37 +111,73 @@ namespace {
   NimBLEServer*         s_server   = nullptr;
   NimBLECharacteristic* s_tx       = nullptr;
 
+  // Biscuit link characteristics (second service on the same server).
+  NimBLECharacteristic* s_bisc_cmd = nullptr;   // write  (phone -> C5)
+  NimBLECharacteristic* s_bisc_rsp = nullptr;   // notify (C5 -> phone)
+  NimBLECharacteristic* s_bisc_sta = nullptr;   // read   (status JSON)
+  NimBLECharacteristic* s_bisc_set = nullptr;   // read/write (settings, unused)
+
   volatile bool s_connected        = false;
   volatile bool s_tx_subscribed    = false;
   volatile bool s_handshake_sent   = false;
   volatile bool s_advertise_want   = false;
 
-  SemaphoreHandle_t s_rx_mux = nullptr;          // guards s_rx_msgs
-  std::vector<std::string> s_rx_msgs;            // RX writes pending for loop
+  // Biscuit link state.
+  volatile bool s_bisc_subscribed  = false;     // app enabled RSP notifications
+  volatile bool s_bisc_greet       = false;     // send greeting on (re)subscribe
+  bool     s_bisc_session     = false;          // a CMD:wardrive* is active
+  bool     s_bisc_time_synced = false;          // TIME:SYNC seen (we ignore value)
+  uint8_t  s_bisc_band        = 0;              // 0 all, 1 = 2.4 GHz, 2 = 5 GHz
+  uint32_t s_bisc_time_req_ms = 0;              // TIME:REQUEST retry cadence
+
+  SemaphoreHandle_t s_rx_mux = nullptr;         // guards s_rx_msgs
+  struct GlRxMsg { uint8_t ch; std::string data; };
+  std::vector<GlRxMsg> s_rx_msgs;               // RX writes pending for loop
 
   // Wardrive sweep state.
-  // Every outgoing frame carries the "reply id" = the id of the last command
-  // the phone sent (its CMD frame id), starting at 1 before any command. The
-  // app waits for an ACK with that id and for DATA replies tagged with it.
+  // Every outgoing WardriveESP frame carries the "reply id" = the id of the
+  // last command the phone sent (its CMD frame id), starting at 1 before any
+  // command. The app waits for an ACK with that id and for DATA replies tagged
+  // with it.
   uint32_t s_reply_id      = 1;
 
-  bool     s_streaming     = false;
+  bool     s_streaming     = false;             // WardriveESP (WarDriveGo) stream
   bool     s_scan_pending  = false;
   uint32_t s_last_sweep_ms = 0;
   uint32_t s_scans         = 0;
   uint32_t s_aps_total     = 0;
   uint32_t s_recover_ms    = 0;
 
+  // Advertising rotation.
+  char     s_adv_name[20]   = {0};              // "Marauder-XXXX"
+  uint8_t  s_adv_slot       = 0;                // 0 = WardriveESP, 1 = Biscuit
+  uint32_t s_last_rotate_ms = 0;
+
+  // GAP device name (0x2A00) follows the active link: once the Biscuit app
+  // subscribes to its Response characteristic the connected name reads
+  // "Biscuit"; a WardriveESP TX-subscribe (and every disconnect) reverts it to
+  // "Marauder-XXXX". A dual-protocol central (e.g. WarDriveGo, which speaks both
+  // surfaces) classifies the device by this name after connecting, so a static
+  // name makes it miscategorise the board. Callbacks only set the desired value;
+  // the loop applies it (setDeviceName off the NimBLE host task).
+  volatile uint8_t s_gap_want    = 0;           // 0 = wardrive name, 1 = biscuit
+  uint8_t          s_gap_applied = 0xFF;         // force an apply on first pass
+
   uint8_t  s_frame[12 + GL_PAYLOAD_MAX];
 
-  void rxEnqueue(const uint8_t* data, size_t len) {
+  // BSSID -> last-sent time. "AA:BB:CC:DD:EE:FF" is 17 chars + NUL. LRU reuse
+  // once full; cleared at the start of every wardrive session.
+  struct GlDedup { char key[18]; uint32_t ms; };
+  GlDedup s_dedup[GL_DEDUP_N];
+
+  void rxEnqueue(uint8_t ch, const uint8_t* data, size_t len) {
     if (!data || !len || !s_rx_mux) return;
     std::string msg(reinterpret_cast<const char*>(data), len);
     // Callback runs in the NimBLE host task (not an ISR), so a blocking mutex
     // is safe here and avoids heap work inside a spinlock critical section.
     if (xSemaphoreTake(s_rx_mux, pdMS_TO_TICKS(20)) == pdTRUE) {
       if (s_rx_msgs.size() < 16)         // bound the queue
-        s_rx_msgs.push_back(std::move(msg));
+        s_rx_msgs.push_back(GlRxMsg{ch, std::move(msg)});
       xSemaphoreGive(s_rx_mux);
     }
   }
@@ -117,36 +188,64 @@ namespace {
 // ---------------------------------------------------------------------------
 class GlServerCallbacks : public NimBLEServerCallbacks {
   void onConnect(NimBLEServer* /*p*/, NimBLEConnInfo& /*info*/) override {
-    s_connected      = true;
-    s_handshake_sent = false;      // re-greet each new central
-    s_reply_id       = 1;          // spec: reply id starts at 1 before any command
+    s_connected        = true;
+    s_handshake_sent   = false;    // re-greet each new central
+    s_reply_id         = 1;        // spec: reply id starts at 1 before any command
+    s_bisc_subscribed  = false;
+    s_bisc_greet       = false;
+    s_bisc_session     = false;
+    s_bisc_time_synced = false;
+    s_bisc_band        = 0;
+    s_gap_want         = 0;        // default to the Marauder name until a link subscribes
   }
   void onDisconnect(NimBLEServer* /*p*/, NimBLEConnInfo& /*info*/, int /*reason*/) override {
-    s_connected     = false;
-    s_tx_subscribed = false;
-    s_streaming     = false;
-    s_advertise_want = true;       // main loop re-arms advertising
+    s_connected        = false;
+    s_tx_subscribed    = false;
+    s_streaming        = false;
+    s_bisc_subscribed  = false;
+    s_bisc_greet       = false;
+    s_bisc_session     = false;
+    s_bisc_time_synced = false;
+    s_gap_want         = 0;        // revert the connected name on the next link
+    s_gap_applied      = 0xFF;     // re-apply on reconnect
+    s_advertise_want   = true;     // main loop re-arms advertising
   }
 };
 
+// Shared write handler for the WardriveESP RX/CTRL chars and the Biscuit CMD
+// char; the channel is decided by which characteristic fired.
 class GlRxCallbacks : public NimBLECharacteristicCallbacks {
   void onWrite(NimBLECharacteristic* c, NimBLEConnInfo& /*info*/) override {
     NimBLEAttValue v = c->getValue();
-    rxEnqueue(v.data(), v.length());
+    uint8_t ch = (c == s_bisc_cmd) ? CH_BISCUIT : CH_WD;
+    rxEnqueue(ch, v.data(), v.length());
   }
 };
 
 class GlTxCallbacks : public NimBLECharacteristicCallbacks {
   void onSubscribe(NimBLECharacteristic* /*c*/, NimBLEConnInfo& /*info*/, uint16_t subValue) override {
     s_tx_subscribed = (subValue != 0);
-    if (s_tx_subscribed)
+    if (s_tx_subscribed) {
       s_handshake_sent = false;    // greet on (re)subscribe
+      s_gap_want       = 0;        // connected name -> Marauder
+    }
+  }
+};
+
+class GlBiscRspCallbacks : public NimBLECharacteristicCallbacks {
+  void onSubscribe(NimBLECharacteristic* /*c*/, NimBLEConnInfo& /*info*/, uint16_t subValue) override {
+    s_bisc_subscribed = (subValue != 0);
+    if (s_bisc_subscribed) {
+      s_bisc_greet = true;         // TIME:REQUEST + STATUS sent from the loop
+      s_gap_want   = 1;            // connected name -> Biscuit
+    }
   }
 };
 
 static GlServerCallbacks s_server_cb;
 static GlRxCallbacks     s_rx_cb;
 static GlTxCallbacks     s_tx_cb;
+static GlBiscRspCallbacks s_bisc_rsp_cb;
 
 // ---------------------------------------------------------------------------
 // Low-level frame TX (main-loop context only)
@@ -191,6 +290,34 @@ static void glSendText(const String& text) {
 }
 
 // ---------------------------------------------------------------------------
+// Biscuit link TX (main-loop context only). No framing: one line per notify,
+// newline-terminated (the app splits inbound notifications on '\n').
+// ---------------------------------------------------------------------------
+static int glBatteryLevel() {
+#ifdef HAS_BATTERY
+  return battery_obj.getBatteryLevel();
+#else
+  return -1;
+#endif
+}
+
+static void glBiscSend(const char* line) {
+  if (!s_bisc_rsp || !s_connected || !s_bisc_subscribed || !line) return;
+  std::string out(line);
+  out += '\n';
+  s_bisc_rsp->notify(reinterpret_cast<const uint8_t*>(out.data()), out.size());
+  delay(3);
+}
+
+// Refresh the polled Status characteristic (0 booting, 1 ready, 2 busy).
+static void glBiscStatus(int status) {
+  if (!s_bisc_sta) return;
+  char js[64];
+  biscuitFormatStatus(js, sizeof js, status, glBatteryLevel());
+  s_bisc_sta->setValue(std::string(js));
+}
+
+// ---------------------------------------------------------------------------
 // Wardrive record helpers
 // ---------------------------------------------------------------------------
 static String glHexEncode(const String& s) {
@@ -219,6 +346,27 @@ static const char* glAuthName(wifi_auth_mode_t m) {
   }
 }
 
+// AP dedup. Returns true when 'bssid' was sent within GL_DEDUP_MS (caller
+// skips it); otherwise records 'now' against the key -- reusing the oldest slot
+// when the table is full -- and returns false so the record is sent.
+static bool glDedupHit(const char* bssid, uint32_t now) {
+  int freeSlot = -1, oldest = 0;
+  for (int i = 0; i < GL_DEDUP_N; i++) {
+    if (s_dedup[i].key[0] == '\0') { if (freeSlot < 0) freeSlot = i; continue; }
+    if (strncmp(s_dedup[i].key, bssid, sizeof(s_dedup[i].key) - 1) == 0) {
+      if (now - s_dedup[i].ms < GL_DEDUP_MS) return true;   // seen recently
+      s_dedup[i].ms = now;                                   // stale: refresh
+      return false;
+    }
+    if (s_dedup[i].ms < s_dedup[oldest].ms) oldest = i;
+  }
+  int slot = (freeSlot >= 0) ? freeSlot : oldest;
+  strncpy(s_dedup[slot].key, bssid, sizeof(s_dedup[slot].key) - 1);
+  s_dedup[slot].key[sizeof(s_dedup[slot].key) - 1] = '\0';
+  s_dedup[slot].ms = now;
+  return false;
+}
+
 static void glSendHandshake() {
   String hs;
   hs += GL_CAPS_LINE;                                  hs += "\n";
@@ -234,6 +382,26 @@ static void glSendHandshake() {
 // ---------------------------------------------------------------------------
 GhostLinkBridge ghostlink_obj;
 
+// Build (or live-swap) the advertisement for the current slot. A 31-byte PDU
+// holds Flags(3) + one 128-bit service UUID(18); the name goes in the scan
+// response. Slot 0 advertises the WardriveESP UUID + "Marauder-XXXX", slot 1
+// the Biscuit UUID + "Biscuit".
+static void glBuildAdv(uint8_t slot) {
+  NimBLEAdvertising* adv = NimBLEDevice::getAdvertising();
+  if (!adv) return;
+  const bool biscuit = (slot == 1);
+
+  NimBLEAdvertisementData ad;
+  ad.setFlags(0x06);                 // LE General Discoverable + BR/EDR not supported
+  ad.addServiceUUID(biscuit ? BISCUIT_SVC_UUID : GL_SVC_UUID);
+
+  NimBLEAdvertisementData sr;
+  sr.setName(biscuit ? std::string(BISCUIT_ADV_NAME) : std::string(s_adv_name));
+
+  adv->setAdvertisementData(ad);
+  adv->setScanResponseData(sr);
+}
+
 static void glSetupStack() {
   if (!s_rx_mux) s_rx_mux = xSemaphoreCreateMutex();
 
@@ -248,15 +416,16 @@ static void glSetupStack() {
 
   // Build "Marauder-XXXX" from the last two bytes of the BLE address. Apps find
   // the board by its service UUID, so an honest Marauder name still links fine.
+  // (The WardriveESP slot's scan-response name; the Biscuit slot uses "Biscuit".)
   uint64_t addr = (uint64_t)NimBLEDevice::getAddress();
-  char name[20];
-  snprintf(name, sizeof(name), "Marauder-%02X%02X",
+  snprintf(s_adv_name, sizeof(s_adv_name), "Marauder-%02X%02X",
            (unsigned)((addr >> 8) & 0xFF), (unsigned)(addr & 0xFF));
-  NimBLEDevice::setDeviceName(name);
+  NimBLEDevice::setDeviceName(s_adv_name);
 
   s_server = NimBLEDevice::createServer();
   s_server->setCallbacks(&s_server_cb);
 
+  // --- WardriveESP service (WarDriveGo) ------------------------------------
   NimBLEService* svc = s_server->createService(GL_SVC_UUID);
 
   NimBLECharacteristic* rx = svc->createCharacteristic(
@@ -273,20 +442,72 @@ static void glSetupStack() {
 
   svc->start();
 
+  // --- Biscuit service (Biscuit Manager) -----------------------------------
+  // A second service on the same server. The CMD write is routed to CH_BISCUIT
+  // by pointer in GlRxCallbacks; RSP carries the subscription that triggers the
+  // greeting. Status/Settings answer reads with their stored value.
+  NimBLEService* bsvc = s_server->createService(BISCUIT_SVC_UUID);
+  s_bisc_cmd = bsvc->createCharacteristic(
+      BISCUIT_CMD_UUID, NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR);
+  s_bisc_cmd->setCallbacks(&s_rx_cb);
+  s_bisc_rsp = bsvc->createCharacteristic(
+      BISCUIT_RSP_UUID, NIMBLE_PROPERTY::NOTIFY);
+  s_bisc_rsp->setCallbacks(&s_bisc_rsp_cb);
+  s_bisc_sta = bsvc->createCharacteristic(
+      BISCUIT_STA_UUID, NIMBLE_PROPERTY::READ);
+  s_bisc_set = bsvc->createCharacteristic(
+      BISCUIT_SET_UUID, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::NOTIFY);
+  {
+    char js[64];
+    biscuitFormatStatus(js, sizeof js, 1, glBatteryLevel());
+    s_bisc_sta->setValue(std::string(js));
+    s_bisc_set->setValue(std::string("{}"));
+  }
+  bsvc->start();
+
+  // --- Device Information Service (0x180A) ---------------------------------
+  // Biscuit Manager reads model/firmware from here; without it the app logs the
+  // firmware row EMPTY and keeps retrying the connection.
+  NimBLEService* dis = s_server->createService(NimBLEUUID((uint16_t)0x180A));
+  if (dis) {
+    NimBLECharacteristic* mfr = dis->createCharacteristic(
+        NimBLEUUID((uint16_t)0x2A29), NIMBLE_PROPERTY::READ);
+    NimBLECharacteristic* mod = dis->createCharacteristic(
+        NimBLEUUID((uint16_t)0x2A24), NIMBLE_PROPERTY::READ);
+    NimBLECharacteristic* fw = dis->createCharacteristic(
+        NimBLEUUID((uint16_t)0x2A26), NIMBLE_PROPERTY::READ);
+    if (mfr && mod && fw) {
+      mfr->setValue(std::string("Biscuit Shop"));   // 2A29 Manufacturer
+      mod->setValue(std::string("Biscuit DIY"));    // 2A24 Model
+      fw->setValue(std::string(MARAUDER_VERSION));  // 2A26 Firmware Revision
+      dis->start();
+    }
+  }
+
+  // --- Advertising ----------------------------------------------------------
+  // Two services, two 128-bit UUIDs: a 31-byte PDU holds only one, so the slot
+  // rotates while unconnected (see main()). Start on the WardriveESP slot.
   NimBLEAdvertising* adv = NimBLEDevice::getAdvertising();
-  adv->addServiceUUID(GL_SVC_UUID);
-  adv->setName(name);
-  adv->enableScanResponse(true);
   adv->setMinInterval(0x30);             // ~30 ms: quick discovery even with
   adv->setMaxInterval(0x60);             // ~60 ms  Wi-Fi sharing the radio
+  #ifdef HAS_NIMBLE_2
+    adv->setConnectableMode(BLE_GAP_CONN_MODE_UND);
+    adv->setDiscoverableMode(BLE_GAP_DISC_MODE_GEN);
+  #endif
+  s_adv_slot       = 0;
+  s_last_rotate_ms = millis();
+  glBuildAdv(s_adv_slot);
   adv->start();
 
   s_connected      = false;
   s_tx_subscribed  = false;
   s_handshake_sent = false;
+  s_bisc_subscribed = false;
+  s_bisc_session   = false;
 
   Serial.print("GhostLink BLE bridge advertising as ");
-  Serial.println(name);
+  Serial.print(s_adv_name);
+  Serial.println(" (+ Biscuit)");
 }
 
 void GhostLinkBridge::RunSetup() {
@@ -294,7 +515,7 @@ void GhostLinkBridge::RunSetup() {
 }
 
 bool GhostLinkBridge::isConnected() { return s_connected; }
-bool GhostLinkBridge::isStreaming() { return s_streaming; }
+bool GhostLinkBridge::isStreaming() { return s_streaming || s_bisc_session; }
 
 void GhostLinkBridge::startWardrive() {
   // WD:CAPS/MODE/BEGIN/PLAN are the handshake; make sure it has gone out.
@@ -304,11 +525,12 @@ void GhostLinkBridge::startWardrive() {
   s_last_sweep_ms = 0;              // scan immediately
   s_scans         = 0;
   s_aps_total     = 0;
+  memset(s_dedup, 0, sizeof(s_dedup));   // fresh session: re-report everything
   Serial.println("GhostLink: wardrive stream started");
 }
 
 void GhostLinkBridge::stopWardrive(const char* reason) {
-  if (s_scan_pending) {
+  if (s_scan_pending && !s_bisc_session) {
     WiFi.scanDelete();
     s_scan_pending = false;
   }
@@ -319,6 +541,52 @@ void GhostLinkBridge::stopWardrive(const char* reason) {
   glSendText(end);
   glSendFrame(GL_TYPE_END, s_reply_id, 0, nullptr, 0);
   Serial.printf("GhostLink: wardrive stream ended (%s)\n", reason);
+}
+
+// Handle one inbound Biscuit line (loop context).
+static void glHandleBiscuitLine(const char* line, size_t len) {
+  BiscuitCmd c = biscuitParseLine(line, len);
+  switch (c.type) {
+    case BISCUIT_CMD_TIME_SYNC:
+      s_bisc_time_synced = true;
+      break;
+
+    case BISCUIT_CMD_STOPSCAN:
+      glBiscSend("RSP:stopscan:OK");
+      s_bisc_session = false;
+      s_bisc_band    = 0;
+      // Release a pending sweep only if WarDriveGo isn't also streaming.
+      if (!s_streaming && s_scan_pending) {
+        WiFi.scanDelete();
+        s_scan_pending = false;
+      }
+      glBiscSend("STATUS:1:Ready");
+      glBiscStatus(1);
+      break;
+
+    case BISCUIT_CMD_WARDRIVE: {
+      s_bisc_session  = true;
+      s_bisc_band     = c.band;
+      memset(s_dedup, 0, sizeof(s_dedup));   // fresh session: re-report all
+      s_last_sweep_ms = 0;                   // sweep right away
+      String rsp = String("RSP:") + c.name + ":OK";
+      glBiscSend(rsp.c_str());
+      String st = String("STATUS:2:Scan started: ") + c.name;
+      glBiscSend(st.c_str());
+      glBiscStatus(2);
+      break;
+    }
+
+    case BISCUIT_CMD_UNSUPPORTED: {
+      String rsp = String("RSP:") + c.name + ":ERROR:unsupported";
+      glBiscSend(rsp.c_str());
+      break;
+    }
+
+    case BISCUIT_CMD_NONE:
+    default:
+      break;
+  }
 }
 
 void GhostLinkBridge::emitApBatch() {
@@ -333,35 +601,59 @@ void GhostLinkBridge::emitApBatch() {
 
   uint32_t ts = millis();
   for (int i = 0; i < n; i++) {
-    String ssid   = WiFi.SSID(i);
-    bool   hidden = (ssid.length() == 0);
-    String rec    = "WD:AP ts=";
-    rec += ts;
-    rec += " bssid=";
-    rec += WiFi.BSSIDstr(i);
-    rec += " ssid_hex=";
-    rec += hidden ? String("") : glHexEncode(ssid);
-    rec += " rssi=";
-    rec += WiFi.RSSI(i);
-    rec += " ch=";
-    rec += WiFi.channel(i);
-    rec += " auth=";
-    rec += glAuthName(WiFi.encryptionType(i));
-    rec += " hidden=";
-    rec += hidden ? "1" : "0";
-    rec += "\n";
-    glSendText(rec);
+    String bssid = WiFi.BSSIDstr(i);
+    if (glDedupHit(bssid.c_str(), ts)) continue;   // sent recently; skip (both links)
+
+    String ssid           = WiFi.SSID(i);
+    bool   hidden         = (ssid.length() == 0);
+    int    ch             = WiFi.channel(i);
+    int    rssi           = WiFi.RSSI(i);
+    wifi_auth_mode_t enc  = WiFi.encryptionType(i);
+
+    // WardriveESP link (WarDriveGo): framed WD:AP record.
+    if (s_streaming) {
+      String rec = "WD:AP ts=";
+      rec += ts;
+      rec += " bssid=";
+      rec += bssid;
+      rec += " ssid_hex=";
+      rec += hidden ? String("") : glHexEncode(ssid);
+      rec += " rssi=";
+      rec += rssi;
+      rec += " ch=";
+      rec += ch;
+      rec += " auth=";
+      rec += glAuthName(enc);
+      rec += " hidden=";
+      rec += hidden ? "1" : "0";
+      rec += "\n";
+      glSendText(rec);
+    }
+
+    // Biscuit link: unframed DATA:AP line, with the session's band filter.
+    if (s_bisc_session && biscuitBandAllows(s_bisc_band, ch)) {
+      String mac = bssid;
+      mac.toUpperCase();
+      String sec = wifi_scan_obj.security_int_to_string((int)enc);
+      char line[220];
+      biscuitFormatAp(line, sizeof line, ssid.c_str(), mac.c_str(), ch, rssi, sec.c_str());
+      glBiscSend(line);
+    }
+
     s_aps_total++;
   }
   WiFi.scanDelete();
   s_scans++;
 
-  String st = "WD:STATUS aps=";
-  st += s_aps_total;
-  st += " scans=";
-  st += s_scans;
-  st += "\n";
-  glSendText(st);
+  if (s_streaming) {
+    String st = "WD:STATUS aps=";
+    st += s_aps_total;
+    st += " scans=";
+    st += s_scans;
+    st += "\n";
+    glSendText(st);
+  }
+  if (s_bisc_session) glBiscStatus(2);   // still scanning = busy
 
   s_last_sweep_ms = millis();
 }
@@ -433,45 +725,88 @@ void GhostLinkBridge::main(uint32_t currentTime) {
   // stack down with NimBLEDevice::deinit(). Rate-limited so we never hammer it.
   if (!NimBLEDevice::isInitialized()) {
     if (currentTime - s_recover_ms >= GL_RECOVER_MS) {
-      s_recover_ms = currentTime;
-      s_streaming  = false;
+      s_recover_ms   = currentTime;
+      s_streaming    = false;
+      s_bisc_session = false;
       glSetupStack();
     }
     return;
   }
 
-  // Whenever no central is connected, make sure we are advertising. NimBLE
-  // stops advertising on connect and after some failed connection attempts, and
-  // Wi-Fi activity can disrupt it, so re-arm it here every loop instead of only
-  // on a disconnect event -- otherwise a board left on can quietly become
-  // undiscoverable until reboot (symptom: app struggles to connect to a board
-  // that was already powered on).
+  // Whenever no central is connected, keep advertising and rotate the advertised
+  // service UUID+name (~1.28 s) so both WarDriveGo and Biscuit see the slot they
+  // match on. NimBLE stops advertising on connect and after some failed
+  // connection attempts, and Wi-Fi activity can disrupt it, so we also re-arm it
+  // here every loop -- otherwise a board left on can quietly become
+  // undiscoverable until reboot.
   if (!s_connected) {
     NimBLEAdvertising* adv = NimBLEDevice::getAdvertising();
-    if (adv && !adv->isAdvertising()) adv->start();
+    if (adv) {
+      if (currentTime - s_last_rotate_ms >= GL_ADV_ROTATE_MS) {
+        s_last_rotate_ms = currentTime;
+        s_adv_slot ^= 1;
+        glBuildAdv(s_adv_slot);      // live payload swap
+      }
+      if (!adv->isAdvertising()) adv->start();
+    }
     s_advertise_want = false;
     return;
   }
 
-  // Greet once the central subscribes to TX, and begin scanning: the spec has
-  // the board start a wardrive on TX-subscribe, which is what WarDriveGo waits
-  // for (no explicit command needed).
+  // Connected: make the GAP device name (0x2A00) match the active link so a
+  // dual-protocol central classifies this board correctly after connecting.
+  if (s_gap_applied != s_gap_want) {
+    s_gap_applied = s_gap_want;
+    NimBLEDevice::setDeviceName(s_gap_want == 1 ? std::string(BISCUIT_ADV_NAME)
+                                                : std::string(s_adv_name));
+  }
+
+  // WarDriveGo: greet once the central subscribes to TX, and begin scanning: the
+  // spec has the board start a wardrive on TX-subscribe (no explicit command).
   if (s_tx_subscribed && !s_handshake_sent) {
     glSendHandshake();
     startWardrive();
   }
 
+  // Biscuit: greet on Response subscribe (TIME:REQUEST + STATUS:1:Ready), then
+  // re-request the time every 5 s until the app answers with TIME:SYNC.
+  if (s_bisc_subscribed) {
+    if (s_bisc_greet) {
+      s_bisc_greet       = false;
+      s_bisc_time_synced = false;
+      glBiscSend("TIME:REQUEST:");
+      glBiscSend("STATUS:1:Ready");
+      s_bisc_time_req_ms = currentTime;
+    } else if (!s_bisc_time_synced && currentTime - s_bisc_time_req_ms >= 5000) {
+      s_bisc_time_req_ms = currentTime;
+      glBiscSend("TIME:REQUEST:");
+    }
+  }
+
   // Drain queued RX writes.
-  std::vector<std::string> msgs;
+  std::vector<GlRxMsg> msgs;
   if (s_rx_mux && xSemaphoreTake(s_rx_mux, pdMS_TO_TICKS(5)) == pdTRUE) {
     if (!s_rx_msgs.empty()) msgs.swap(s_rx_msgs);
     xSemaphoreGive(s_rx_mux);
   }
 
   for (auto& m : msgs) {
+    if (m.ch == CH_BISCUIT) {
+      // One write may carry several '\n'-separated Biscuit lines.
+      const std::string& s = m.data;
+      size_t start = 0;
+      while (start < s.size()) {
+        size_t nl  = s.find('\n', start);
+        size_t end = (nl == std::string::npos) ? s.size() : nl;
+        if (end > start) glHandleBiscuitLine(s.data() + start, end - start);
+        start = (nl == std::string::npos) ? s.size() : nl + 1;
+      }
+      continue;
+    }
+
     String cmd;
     uint32_t cmd_id = 0;
-    bool framed = glExtractCommand(m, cmd, cmd_id);
+    bool framed = glExtractCommand(m.data, cmd, cmd_id);
     if (framed) {
       s_reply_id = cmd_id;       // tag every later frame with this command's id
       glSendFrame(GL_TYPE_ACK, cmd_id, 0, nullptr, 0);
@@ -479,7 +814,7 @@ void GhostLinkBridge::main(uint32_t currentTime) {
     handleCommandLine(cmd);
   }
 
-  if (s_streaming) serviceWardrive(currentTime);
+  if (s_streaming || s_bisc_session) serviceWardrive(currentTime);
 }
 
 #endif // HAS_BLE_UART_BRIDGE
