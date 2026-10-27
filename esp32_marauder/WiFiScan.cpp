@@ -3361,12 +3361,18 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
   }
 
   #ifdef HAS_SCREEN
-    display_obj.display_buffer->clear();
-    #ifdef SCREEN_BUFFER
-      display_obj.screen_buffer->clear();
-    #endif
-    Serial.println(display_obj.display_buffer->size());
-  
+    // display_buffer is only allocated in Display::RunSetup(); guard against
+    // StopScan() running before the display has been set up (e.g. the boot-time
+    // StartScan(WIFI_SCAN_OFF) in setup()).
+    if (display_obj.display_buffer != nullptr) {
+      display_obj.display_buffer->clear();
+      #ifdef SCREEN_BUFFER
+        if (display_obj.screen_buffer != nullptr)
+          display_obj.screen_buffer->clear();
+      #endif
+      Serial.println(display_obj.display_buffer->size());
+    }
+
     display_obj.tteBar = false;
   #endif
 
