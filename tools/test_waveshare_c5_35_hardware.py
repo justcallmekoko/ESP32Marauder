@@ -69,7 +69,8 @@ class WaveshareC535HardwareTests(unittest.TestCase):
         self.assertIn("#define CTP_INT 3", config)
         self.assertIn("#define FT6336_G_MODE    0xA4", touch)
         self.assertIn("pinMode(CTP_INT, INPUT);", touch)
-        gate = "if (digitalRead(CTP_INT) != LOW) return 0;"
+        self.assertIn("_ft6336_int_gate_active = modeReadOk && gMode == 0x00;", touch)
+        gate = "if (_ft6336_int_gate_active && digitalRead(CTP_INT) != LOW) return 0;"
         self.assertIn(gate, touch)
         self.assertLess(
             touch.index(gate),

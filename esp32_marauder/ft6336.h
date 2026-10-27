@@ -12,6 +12,10 @@
 #define FT6336_T1_XH     0x03
 #define FT6336_G_MODE    0xA4
 
+#ifdef MARAUDER_WS_C5_35
+static bool _ft6336_int_gate_active = false;
+#endif
+
 static bool _ft6336_read(uint8_t reg, uint8_t *buf, uint8_t len) {
     Wire.beginTransmission(FT6336_ADDR);
     Wire.write(reg);
@@ -65,11 +69,15 @@ static void ft6336_init() {
     Wire.beginTransmission(FT6336_ADDR);
     Wire.write(FT6336_G_MODE);
     Wire.write(0x00);
-    Wire.endTransmission();
+    const bool modeWriteOk = Wire.endTransmission() == 0;
     uint8_t gMode = 0xFF;
-    _ft6336_read(FT6336_G_MODE, &gMode, 1);
+    const bool modeReadOk = modeWriteOk &&
+        _ft6336_read(FT6336_G_MODE, &gMode, 1);
+    _ft6336_int_gate_active = modeReadOk && gMode == 0x00;
     Serial.printf("[Touch] FT6336 G_MODE: 0x%02X%s\n",
-                  gMode, gMode == 0x00 ? " (polling, INT gate active)" : " (unexpected)");
+                  gMode, _ft6336_int_gate_active
+                      ? " (polling, INT gate active)"
+                      : " (polling fallback active)");
 #endif
 }
 
@@ -86,7 +94,7 @@ static int8_t ft6336_read_raw(uint16_t *raw_x, uint16_t *raw_y) {
     // and false-trigger STOP during scans. Scoped to this board; other FT6336
     // boards keep the original path below unchanged.
     // INT gate: no finger means INT is high, so report no touch and skip I2C.
-    if (digitalRead(CTP_INT) != LOW) return 0;
+    if (_ft6336_int_gate_active && digitalRead(CTP_INT) != LOW) return 0;
     Wire.end(); Wire.begin(CTP_SDA, CTP_SCL, 100000U);
     uint8_t data[7];
     if (!_ft6336_read(FT6336_TD_STATUS, data, 7)) return -1;
