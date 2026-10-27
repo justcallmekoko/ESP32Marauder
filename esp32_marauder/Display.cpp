@@ -232,6 +232,15 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
           //*x = map(p.x, 200, 3700, 1, TFT_WIDTH);
           //*y = map(p.y, 240, 3800, 1, TFT_HEIGHT);
 
+          // Ignore low-pressure readings. As the finger lifts, the resistive
+          // XPT2046 emits a final spurious point with low Z (~300) and
+          // off-screen coordinates; accepting it overwrote the last-held menu
+          // button and ate the SELECT press->release transition (UP/DOWN fire
+          // on auto-repeat while held; SELECT only on release). `threshold`
+          // (default 600) is the same pressure gate the non-CYD
+          // tft.getTouch(x, y, threshold) path uses; solid touches read Z ~1200-2600.
+          if (p.z < threshold) return 0;
+
           #ifdef DEBUG_TOUCH
           // DEBUG (CYD SELECT-not-detected): remember the raw touch before any
           // per-board hack so the log below shows the effect of the hack + map.
