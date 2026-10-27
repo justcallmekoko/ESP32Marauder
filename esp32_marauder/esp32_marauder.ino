@@ -6,6 +6,9 @@ https://www.online-utility.org/image/convert/to/XBM
 */
 
 #include "configs.h"
+#ifdef MARAUDER_EPAPER_UI
+#include "EpaperPower.h"
+#endif
 
 #ifndef HAS_SCREEN
   #define MenuFunctions_h
@@ -199,7 +202,10 @@ uint32_t currentTime  = 0;
 // Helper macros for LEDC API compatibility (2.x vs 3.x board package)
 #ifdef HAS_SCREEN
   #ifndef HAS_MINI_SCREEN
-    #if ESP_ARDUINO_VERSION_MAJOR >= 3
+    #if defined(MARAUDER_EPAPER_UI)
+      #define BL_SETUP() ((void)0)
+      #define BL_SET(duty) ((void)0)
+    #elif ESP_ARDUINO_VERSION_MAJOR >= 3
       #define BL_SETUP()       ledcAttach(TFT_BL, BL_FREQ, BL_RESOLUTION)
       #define BL_SET(duty)     ledcWrite(TFT_BL, (duty))
     #else
@@ -292,7 +298,7 @@ uint32_t currentTime  = 0;
     #ifdef HAS_SCREEN
       #if defined(MARAUDER_MINI) || defined(MARAUDER_MINI_V3)
         digitalWrite(TFT_BL, LOW);
-      #elif !defined(MARAUDER_POOM)
+      #elif !defined(MARAUDER_POOM) && !defined(MARAUDER_EPAPER_UI)
         digitalWrite(TFT_BL, HIGH);
       #endif
     #endif
@@ -302,7 +308,7 @@ uint32_t currentTime  = 0;
     #ifdef HAS_SCREEN
       #if defined(MARAUDER_MINI) || defined(MARAUDER_MINI_V3)
         digitalWrite(TFT_BL, HIGH);
-      #elif !defined(MARAUDER_POOM)
+      #elif !defined(MARAUDER_POOM) && !defined(MARAUDER_EPAPER_UI)
         digitalWrite(TFT_BL, LOW);
       #endif
     #endif
@@ -310,7 +316,13 @@ uint32_t currentTime  = 0;
 #endif
 
 #ifdef HAS_C5_SD
-  SPIClass sharedSPI(SPI);
+  #ifdef MARAUDER_RETERMINAL_STICKY
+    SPIClass sharedSPI(FSPI);
+  #elif defined(MARAUDER_M5PAPER)
+    SPIClass& sharedSPI = SPI;
+  #else
+    SPIClass sharedSPI(SPI);
+  #endif
   SDInterface sd_obj = SDInterface(&sharedSPI, SD_CS);
 #endif
 
@@ -333,6 +345,10 @@ void setup()
   while(!Serial)
     delay(10);
 
+  #ifdef MARAUDER_EPAPER_UI
+    TFT_eSPI::prepareBoard();
+  #endif
+
   #ifdef HAS_C5_SD
     sharedSPI.begin(SD_SCK, SD_MISO, SD_MOSI);
     delay(100);
@@ -343,7 +359,7 @@ void setup()
     digitalWrite(POWER_HOLD_PIN, HIGH);
   #endif
   
-  #if defined(HAS_SCREEN) && !defined(MARAUDER_POOM) && !defined(MARAUDER_M5STACK_CORE2_AWS)
+  #if defined(HAS_SCREEN) && !defined(MARAUDER_POOM) && !defined(MARAUDER_M5STACK_CORE2_AWS) && !defined(MARAUDER_EPAPER_UI)
     pinMode(TFT_BL, OUTPUT);
   #endif
 
@@ -414,7 +430,7 @@ void setup()
 
   #ifdef HAS_SCREEN
     // Do some stealth mode stuff
-    #if defined(HAS_BUTTONS) && (C_BTN >= 0)
+    #if defined(HAS_BUTTONS) && (C_BTN >= 0) && !defined(MARAUDER_EPAPER_UI)
       if (c_btn.justPressed()) {
         display_obj.headless_mode = true;
 
@@ -496,12 +512,18 @@ void setup()
   wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
   
   cli_obj.RunSetup();
+  #ifdef MARAUDER_EPAPER_UI
+    epaper::beginButtons();
+  #endif
 }
 
 
 void loop()
 {
   currentTime = millis();
+  #ifdef MARAUDER_EPAPER_UI
+    epaper::servicePowerButton();
+  #endif
   bool mini = false;
 
   #ifdef SCREEN_BUFFER
@@ -510,7 +532,7 @@ void loop()
     #endif
   #endif
 
-  #if (defined(HAS_ILI9341) && !defined(MARAUDER_CYD_2USB))
+  #if (defined(HAS_ILI9341) && !defined(MARAUDER_CYD_2USB) && !defined(MARAUDER_EPAPER_UI))
     #if defined(HAS_BUTTONS) && (C_BTN >= 0)
       if (c_btn.isHeld()) {
         if (menu_function_obj.disable_touch)
@@ -528,6 +550,17 @@ void loop()
 
   // Update all of our objects
   cli_obj.main(currentTime);
+  #ifdef MARAUDER_EPAPER_UI
+    if (display_obj.tft.diagnosticActive()) {
+      display_obj.tft.serviceDiagnostic();
+      if (epaper::takePowerSelect()) {
+        display_obj.tft.stopDiagnostic();
+        menu_function_obj.changeMenu(menu_function_obj.current_menu, true);
+      }
+      delay(1);
+      return;
+    }
+  #endif
   wifi_scan_obj.main(currentTime);
   recon_obj.main(currentTime);
   #if defined(HAS_CSI_MOTION)
@@ -568,7 +601,7 @@ void loop()
     led_obj.main(currentTime);
   #endif
 
-  #ifdef MARAUDER_POOM
+  #if defined(MARAUDER_POOM) || defined(MARAUDER_EPAPER_UI)
     display_obj.tft.display();
   #endif
 

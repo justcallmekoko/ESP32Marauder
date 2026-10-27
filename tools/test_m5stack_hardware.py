@@ -59,7 +59,9 @@ class M5StackHardwareTests(unittest.TestCase):
         self.assertIn("core2_button == UP_BUTTON) return CHAN_MINUS_INDEX", wifi_scan)
         self.assertIn("core2_button == DOWN_BUTTON) return CHAN_PLUS_INDEX", wifi_scan)
         self.assertIn("defined(MARAUDER_M5STACK_CORE2_AWS)", recon)
-        self.assertIn("fillRect(0,16,SCREEN_WIDTH,16", wifi_scan)
+        self.assertIn("display_obj.drawScanTitle(", wifi_scan)
+        self.assertIn("void Display::drawScanTitle(", display)
+        self.assertIn("tft.fillRect(0, 16, SCREEN_WIDTH, 16, color)", display)
 
     def test_m5_layout_reserves_status_and_title_rows(self):
         config = (ROOT / "esp32_marauder/configs.h").read_text()
