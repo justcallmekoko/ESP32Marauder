@@ -15,6 +15,9 @@
 #include "Assets.h"
 #include "BootSplash.h"
 #include "MemoryGuard.h"
+#ifdef XIAO_ESP32_S3_TOUCH
+  #include "Xiao147Display.h"
+#endif
 
 #ifdef MARAUDER_POOM
   #include "PoomDisplay.h"
@@ -32,6 +35,10 @@
 #endif
 #if defined(MARAUDER_M5STACK_CORE2_AWS) && !defined(ILI9341_DRIVER)
   #error "M5Stack Core2 target requires its ILI9341_DRIVER TFT_eSPI setup"
+#endif
+
+#if defined(XIAO_ESP32_S3_TOUCH) && (!defined(USER_SETUP_ID) || USER_SETUP_ID != 1470)
+  #error "XIAO 1.47 display requires User_Setup_marauder_xiao_147.h"
 #endif
 
 #ifdef HAS_CYD_TOUCH
@@ -110,7 +117,11 @@ class Display
 
   public:
     Display();
-    TFT_eSPI tft = TFT_eSPI();
+    #ifdef XIAO_ESP32_S3_TOUCH
+      Xiao147Display tft;
+    #else
+      TFT_eSPI tft = TFT_eSPI();
+    #endif
     TFT_eSPI_Button key[BUTTON_ARRAY_LEN + 4];
     const String PROGMEM version_number = MARAUDER_VERSION;
 

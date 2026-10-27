@@ -87,7 +87,9 @@ int8_t Display::menuButton(uint16_t *x, uint16_t *y, bool pressed, bool check_ho
 }
 
 uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
-  #ifdef HAS_ILI9341
+  #ifdef XIAO_ESP32_S3_TOUCH
+    return 0; // Touch deferred: saved bring-up reported phantom inputs.
+  #elif defined(HAS_ILI9341)
     if (!this->headless_mode) {
       #ifdef HAS_CAP_TOUCH
         // FT6336 capacitive touch: rotation-aware + edge exclusion
@@ -239,7 +241,7 @@ void Display::init() {
 }
 
 void Display::setCalData(bool landscape) {
-  #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH)
+  #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH) && !defined(XIAO_ESP32_S3_TOUCH)
     if (!landscape) {
       #ifdef TFT_SHIELD
         uint16_t calData[5] = { 275, 3494, 361, 3528, 4 }; // tft.setRotation(0); // Portrait with TFT Shield
@@ -301,7 +303,7 @@ void Display::RunSetup() {
 
   #ifdef HAS_ILI9341
 
-    #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH)
+    #if !defined(HAS_CYD_TOUCH) && !defined(HAS_CAP_TOUCH) && !defined(XIAO_ESP32_S3_TOUCH)
       this->setCalData();
     #endif
 

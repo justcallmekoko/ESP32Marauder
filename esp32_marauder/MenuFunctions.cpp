@@ -1068,10 +1068,16 @@ void MenuFunctions::main(uint32_t currentTime)
           wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF ||
           wifi_scan_obj.currentScanMode == WIFI_CONNECTED ||
           wifi_scan_obj.currentScanMode == OTA_UPDATE;
-      const bool down_event = down_menu_navigation_active
-          ? menu_down_repeat.update(down_is_pressed, currentTime)
-          : down_just_pressed;
-      if (!down_menu_navigation_active) menu_down_repeat.reset();
+      #ifdef XIAO_ESP32_S3_TOUCH
+        // Two-button UX: one press = one move, no hold-to-repeat runaway.
+        (void)down_is_pressed;
+        const bool down_event = down_just_pressed;
+      #else
+        const bool down_event = down_menu_navigation_active
+            ? menu_down_repeat.update(down_is_pressed, currentTime)
+            : down_just_pressed;
+        if (!down_menu_navigation_active) menu_down_repeat.reset();
+      #endif
       if (down_event) {
         if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
             (wifi_scan_obj.currentScanMode == WIFI_CONNECTED) ||
