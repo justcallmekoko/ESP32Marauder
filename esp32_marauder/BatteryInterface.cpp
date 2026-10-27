@@ -181,8 +181,12 @@ bool BatteryInterface::detectAxp2101Gauge() {
     Wire.beginTransmission(AXP2101_GAUGE_ADDR);
     Wire.write(AXP2101_REG_GAUGE_CTRL);
     Wire.write((uint8_t)(ctrl | 0x08));
-    if (Wire.endTransmission() != 0 ||
-        (this->axp2101Read(AXP2101_REG_GAUGE_CTRL) & 0x08) == 0) {
+    if (Wire.endTransmission() != 0) {
+      this->i2c_supported = false;
+      return false;
+    }
+    const int enabledCtrl = this->axp2101Read(AXP2101_REG_GAUGE_CTRL);
+    if (enabledCtrl < 0 || (enabledCtrl & 0x08) == 0) {
       this->i2c_supported = false;
       return false;
     }

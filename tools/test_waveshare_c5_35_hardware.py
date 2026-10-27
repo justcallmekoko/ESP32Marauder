@@ -71,7 +71,7 @@ class WaveshareC535HardwareTests(unittest.TestCase):
         self.assertIn("!this->has_axp2101_gauge && !this->detectAxp2101Gauge()", battery)
         self.assertIn("bool BatteryInterface::detectAxp2101Gauge()", battery)
         self.assertIn("Wire.endTransmission() != 0", battery)
-        self.assertIn("this->axp2101Read(AXP2101_REG_GAUGE_CTRL) & 0x08", battery)
+        self.assertIn("enabledCtrl < 0 || (enabledCtrl & 0x08) == 0", battery)
         # GPS: LC76G over I2C; the UART GPS path (GPIO13/14 = native USB) never starts.
         override = config[config.index("#ifdef MARAUDER_WS_C5_35_OVERRIDE"):]
         self.assertIn("#define HAS_GPS_LC76G_I2C", override)
