@@ -28,7 +28,7 @@
 #include "settings.h"
 #include "MenuInputRepeat.h"
 
-#if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
+#if defined(POWER_HOLD_PIN) || (defined(HAS_BATTERY) && (defined(HAS_AXP2101) || defined(HAS_AXP192))) || defined(DEEPSLEEP)
   #include "shutdown.hpp"
 #endif
 

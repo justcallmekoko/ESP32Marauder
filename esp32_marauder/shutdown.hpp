@@ -4,7 +4,7 @@
 #ifndef SHUTDOWN_HPP
 #define SHUTDOWN_HPP
 
-#if defined(DEEPSLEEP) || defined(POWER_HOLD_PIN)
+#if defined(POWER_HOLD_PIN) || (defined(HAS_BATTERY) && (defined(HAS_AXP2101) || defined(HAS_AXP192))) || defined(DEEPSLEEP)
 
   #if defined(ES8311) && defined(HAS_SOUND)
     #include "Sound.hpp"
