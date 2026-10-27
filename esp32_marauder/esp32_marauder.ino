@@ -330,8 +330,11 @@ void setup()
     digitalWrite(ACT_LED_PIN, LOW);
   #endif
 
-  while(!Serial)
-    delay(10);
+  // Allow standalone power without waiting for a USB serial host.
+  #ifndef XIAO_ESP32_S3_TOUCH
+    while(!Serial)
+      delay(10);
+  #endif
 
   #ifdef HAS_C5_SD
     sharedSPI.begin(SD_SCK, SD_MISO, SD_MOSI);

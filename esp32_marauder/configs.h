@@ -29,6 +29,7 @@
   //#define ESP32_LDDB
   //#define MARAUDER_DEV_BOARD_PRO
   //#define XIAO_ESP32_S3
+  //#define XIAO_ESP32_S3_TOUCH // Seeed 1.47-inch display, button navigation
   //#define XIAO_ESP32_C5
   //#define MARAUDER_REV_FEATHER
   //#define MARAUDER_CYD_MICRO // 2432S028
@@ -125,6 +126,8 @@
     #define HARDWARE_NAME "ESP32 LDDB"
   #elif defined(MARAUDER_DEV_BOARD_PRO)
     #define HARDWARE_NAME "Flipper Zero Dev Board Pro"
+  #elif defined(XIAO_ESP32_S3_TOUCH)
+    #define HARDWARE_NAME "XIAO ESP32-S3 1.47 Display"
   #elif defined(XIAO_ESP32_S3)
     #define HARDWARE_NAME "XIAO ESP32 S3"
   #elif defined(XIAO_ESP32_C5)
@@ -606,6 +609,18 @@
     #define XIAO_LED_PIN 27
   #endif
 
+  #ifdef XIAO_ESP32_S3_TOUCH
+    #define HAS_SCREEN
+    #define HAS_FULL_SCREEN
+    #define HAS_BT
+    #define HAS_PSRAM
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3
+    #define HAS_BUTTONS
+    // AXS5106L touch and shared-SPI SD are not supported by this initial port.
+    // Do not enable HAS_TOUCH, HAS_SD, USE_SD, or HAS_DIRECT_UPLOAD here.
+  #endif
+
   #ifdef MARAUDER_C5
     //#define HAS_FLIPPER_LED
     //#define FLIPPER_ZERO_HAT
@@ -790,6 +805,26 @@
 
   //// BUTTON DEFINITIONS
   #ifdef HAS_BUTTONS
+
+    #ifdef XIAO_ESP32_S3_TOUCH
+      // Two physical buttons. BTN_A (GPIO11/D19) = scroll (menu down, wraps),
+      // BTN_B (GPIO42/D15) = select (center). Active-low; internal pull-ups are
+      // enabled by the Switches constructor.
+      #define L_BTN -1
+      #define C_BTN 42     // BTN_B = select
+      #define U_BTN -1
+      #define R_BTN -1
+      #define D_BTN 11     // BTN_A = scroll (down, wraps to top)
+
+      #define HAS_D
+      #define HAS_C
+
+      #define L_PULL true
+      #define C_PULL true
+      #define U_PULL true
+      #define R_PULL true
+      #define D_PULL true
+    #endif
 
     #ifdef MARAUDER_REV_FEATHER
       #define L_BTN -1
@@ -1515,8 +1550,74 @@
       #define GREENBUTTON_H FRAME_H
     
       #define STATUSBAR_COLOR 0x4A49
-    
+
       #define KIT_LED_BUILTIN 13
+    #endif
+
+    #ifdef XIAO_ESP32_S3_TOUCH
+      #define CHAN_PER_PAGE 7
+
+      #define SCREEN_CHAR_WIDTH 28
+      #define HAS_ILI9341           // Marauder umbrella flag for a full-colour TFT (panel is JD9853A)
+      #define BANNER_TEXT_SIZE 2
+
+      #ifndef TFT_WIDTH
+        #define TFT_WIDTH 172
+      #endif
+
+      #ifndef TFT_HEIGHT
+        #define TFT_HEIGHT 320
+      #endif
+
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
+
+      #define EXT_BUTTON_WIDTH 30
+
+      #define SCREEN_BUFFER
+
+      #define MAX_SCREEN_BUFFER 21
+
+      #define SCREEN_ORIENTATION 0
+
+      #define CHAR_WIDTH 12
+      #define SCREEN_WIDTH TFT_WIDTH
+      #define SCREEN_HEIGHT TFT_HEIGHT
+      #define HEIGHT_1 TFT_WIDTH
+      #define WIDTH_1 TFT_HEIGHT
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6)
+      #define TEXT_HEIGHT 16
+      #define BOT_FIXED_AREA 0
+      #define TOP_FIXED_AREA 48
+      #define YMAX 320
+      #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
+      #define MENU_FONT &FreeMono9pt7b
+      #define BUTTON_SCREEN_LIMIT 12
+      #define BUTTON_ARRAY_LEN BUTTON_SCREEN_LIMIT
+      #define STATUS_BAR_WIDTH 16
+      #define LVGL_TICK_PERIOD 6
+
+      #define FRAME_X 100
+      #define FRAME_Y 64
+      #define FRAME_W 120
+      #define FRAME_H 50
+
+      #define REDBUTTON_X FRAME_X
+      #define REDBUTTON_Y FRAME_Y
+      #define REDBUTTON_W (FRAME_W/2)
+      #define REDBUTTON_H FRAME_H
+
+      #define GREENBUTTON_X (REDBUTTON_X + REDBUTTON_W)
+      #define GREENBUTTON_Y FRAME_Y
+      #define GREENBUTTON_W (FRAME_W/2)
+      #define GREENBUTTON_H FRAME_H
+
+      #define STATUSBAR_COLOR 0x4A49
+
+      // ---- AXS5106L capacitive touch (I2C 0x63) ----
+      #define CTP_SDA 5    // D4
+      #define CTP_SCL 6    // D5
+      #define CTP_INT 44   // D7  (active-low touch interrupt)
+      #define CTP_RST 13   // D17 (shared with LCD reset; owned by TFT_eSPI)
     #endif
 
     #if defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
@@ -2513,6 +2614,24 @@
     //#define BUTTON_ARRAY_LEN 5
   #endif
 
+  #ifdef XIAO_ESP32_S3_TOUCH
+    #define BANNER_TIME 50
+
+    #define COMMAND_PREFIX "!"
+
+    // Keypad start position, key sizes and spacing (TFT-relative for 172x320)
+    #define KEY_X (TFT_WIDTH/2)      // Centre of key
+    #define KEY_Y (TFT_HEIGHT/4.5)
+    #define KEY_W TFT_WIDTH          // Width and height
+    #define KEY_H (TFT_HEIGHT/12.8)
+    #define KEY_SPACING_X 0          // X and Y gap
+    #define KEY_SPACING_Y 1
+    #define KEY_TEXTSIZE 1           // Font size multiplier
+    #define ICON_W 22
+    #define ICON_H 22
+    #define BUTTON_PADDING 28        // left margin for menu labels (avoids first-letter clip on 172px)
+  #endif
+
   // Status bar right-side icon x-positions (SCREEN_WIDTH-relative)
   // V8 (240px): SD=170 WiFi=154 Force=138 Touch=186 Bat=204
   // Pancake (320px): SD=250 WiFi=234 Force=218 Touch=266 Bat=284
@@ -2899,6 +3018,10 @@
       #define SD_CS 3
     #endif
 
+    #ifdef XIAO_ESP32_S3_TOUCH
+      #define SD_CS 43   // D6 (shares SPI bus with the display)
+    #endif
+
     #if defined(MARAUDER_C5)
       #define SD_CS 10
     #elif defined(MARAUDER_T_DONGLE_C5)
@@ -3020,6 +3143,8 @@
   #elif defined(ESP32_LDDB)
     #define MEM_LOWER_LIM 10000
   #elif defined(MARAUDER_DEV_BOARD_PRO)
+    #define MEM_LOWER_LIM 10000
+  #elif defined(XIAO_ESP32_S3_TOUCH)
     #define MEM_LOWER_LIM 10000
   #elif defined(XIAO_ESP32_S3)
     #define MEM_LOWER_LIM 10000
