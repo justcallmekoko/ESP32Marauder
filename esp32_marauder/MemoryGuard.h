@@ -46,7 +46,16 @@ namespace marauder {
     #define MARAUDER_MEMGUARD_PAUSE_FREE     (10 * 1024)  // pause below ~10 KB free
   #endif
   #ifndef MARAUDER_MEMGUARD_RESUME_FREE
-    #define MARAUDER_MEMGUARD_RESUME_FREE    (14 * 1024)  // resume once >= ~14 KB free
+    // Tuned from the live WS_C5_28 memguard log: during a WiFi sniff the board
+    // floats at free ~= 14.0-14.25 KB internal. A 14 KB resume line sits just
+    // ABOVE that ceiling, so after the first startup dip the guard latched
+    // paused forever (free could never climb back to 14 KB) and froze the AP
+    // list at 5 entries. 12 KB is below the observed ceiling (so the guard can
+    // actually resume) while staying 2 KB above the 10 KB pause floor to keep
+    // the hysteresis gap. ASSUMPTION: 12 KB derived from that one board's log,
+    // not a universal value - re-check the "[memguard] free=..." log if the
+    // internal-RAM profile changes.
+    #define MARAUDER_MEMGUARD_RESUME_FREE    (12 * 1024)  // resume once >= ~12 KB free
   #endif
   #ifndef MARAUDER_MEMGUARD_PAUSE_LARGEST
     #define MARAUDER_MEMGUARD_PAUSE_LARGEST  (6 * 1024)   // pause if largest block < ~6 KB
