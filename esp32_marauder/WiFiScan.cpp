@@ -7363,7 +7363,8 @@ void WiFiScan::setupRemoteIdBle() {
       pBLEScan->setScanCallbacks(&bluetoothScanCallbacks, false);
     #endif
     pBLEScan->setActiveScan(false);
-    pBLEScan->setInterval(80);
+    // Avoid repeatedly masking Wi-Fi beacons sent at an 80 ms cadence.
+    pBLEScan->setInterval(83);
     pBLEScan->setWindow(40);
     pBLEScan->setMaxResults(0);
     pBLEScan->setDuplicateFilter(false);
