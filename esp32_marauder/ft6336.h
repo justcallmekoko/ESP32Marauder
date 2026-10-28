@@ -20,9 +20,11 @@ static bool _ft6336_read(uint8_t reg, uint8_t *buf, uint8_t len) {
     Wire.beginTransmission(FT6336_ADDR);
     Wire.write(reg);
     if (Wire.endTransmission(false) != 0) return false;
-    Wire.requestFrom((int)FT6336_ADDR, (int)len);
-    for (uint8_t i = 0; i < len; i++)
-        buf[i] = Wire.available() ? Wire.read() : 0;
+    if (Wire.requestFrom((int)FT6336_ADDR, (int)len) != len) return false;
+    for (uint8_t i = 0; i < len; i++) {
+        if (!Wire.available()) return false;
+        buf[i] = Wire.read();
+    }
     return true;
 }
 

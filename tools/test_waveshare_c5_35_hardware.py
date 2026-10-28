@@ -58,7 +58,8 @@ class WaveshareC535HardwareTests(unittest.TestCase):
         self.assertIn("#define I2C_SDA 27", override)
         sketch = (ROOT / "esp32_marauder" / "esp32_marauder.ino").read_text(encoding="utf-8")
         # Brightness drives the expander PWM register, not the (absent) TFT_BL pin.
-        self.assertIn("if (ws_exio_ready) ws_exio_write(WS_EXIO_PWM_REG, (duty))", sketch)
+        self.assertIn("if (ws_backlight_bus_ready) ws_exio_write(WS_EXIO_PWM_REG, (duty))", sketch)
+        self.assertIn("ws_backlight_bus_ready = true;", sketch)
         self.assertIn("!defined(MARAUDER_WS_C5_35)", sketch)
         self.assertIn("#define WS_EXIO_PWM_REG     0x05", expander)
         menus = (ROOT / "esp32_marauder" / "MenuFunctions.cpp").read_text(encoding="utf-8")
@@ -93,6 +94,7 @@ class WaveshareC535HardwareTests(unittest.TestCase):
         # INT gate: TP_INT on GPIO3, polling mode, and no I2C read without INT LOW.
         self.assertIn("#define CTP_INT 3", config)
         self.assertIn("#define FT6336_G_MODE    0xA4", touch)
+        self.assertIn("Wire.requestFrom((int)FT6336_ADDR, (int)len) != len", touch)
         self.assertIn("pinMode(CTP_INT, INPUT);", touch)
         self.assertIn("_ft6336_int_gate_active = modeReadOk && gMode == 0x00;", touch)
         gate = "if (_ft6336_int_gate_active && digitalRead(CTP_INT) != LOW) return 0;"

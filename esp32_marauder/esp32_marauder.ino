@@ -197,6 +197,9 @@ uint32_t currentTime  = 0;
   const uint8_t BL_NUM_LEVELS = 10;
   uint8_t bl_level_idx = 9; // default full brightness
   Preferences bl_prefs;
+  #ifdef MARAUDER_WS_C5_35
+    bool ws_backlight_bus_ready = false;
+  #endif
 #endif
 
 // Helper macros for LEDC API compatibility (2.x vs 3.x board package)
@@ -206,7 +209,7 @@ uint32_t currentTime  = 0;
       // Backlight is the I/O expander's PWM register (0x24 reg 0x05), not a GPIO
       // (TFT_BL is -1 on this board).
       #define BL_SETUP()       do {} while (0)
-      #define BL_SET(duty)     do { if (ws_exio_ready) ws_exio_write(WS_EXIO_PWM_REG, (duty)); } while (0)
+      #define BL_SET(duty)     do { if (ws_backlight_bus_ready) ws_exio_write(WS_EXIO_PWM_REG, (duty)); } while (0)
     #elif ESP_ARDUINO_VERSION_MAJOR >= 3
       #define BL_SETUP()       ledcAttach(TFT_BL, BL_FREQ, BL_RESOLUTION)
       #define BL_SET(duty)     ledcWrite(TFT_BL, (duty))
@@ -396,6 +399,9 @@ void setup()
 
   #ifdef HAS_SCREEN
     display_obj.RunSetup();
+    #ifdef MARAUDER_WS_C5_35
+      ws_backlight_bus_ready = true;
+    #endif
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
   #endif
 
