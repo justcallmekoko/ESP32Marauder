@@ -323,6 +323,11 @@ void setup()
   #endif
   
   Serial.begin(115200);
+  #if defined(MARAUDER_WS_C5_35) && ARDUINO_USB_CDC_ON_BOOT
+    // Serial is the native USB CDC port on this board. With no host attached
+    // (battery / power bank) a blocking write would stall boot, so don't wait.
+    Serial.setTxTimeoutMs(0);
+  #endif
 
   #ifdef HAS_ACT_LED
     pinMode(ACT_LED_PIN, OUTPUT);
