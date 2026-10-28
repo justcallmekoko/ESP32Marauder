@@ -74,6 +74,14 @@ extern BatteryInterface battery_obj;
 // is no OTA characteristic either, so a mistaken OTA just fails.
 #define GL_CAPS_LINE    "WD:CAPS fw=99.99.99 chip=esp32c5 bands=2g,5g ota=0 bt=0 gps=0 cap=0 usb=0 board_name=Marauder_WS_C5_35 link=ble chans=1,6,11,36,40,44,48,149,153,157,161"
 #define GL_PLAN_CHANS   "1,6,11,36,40,44,48,149,153,157,161"
+// The same plan as an array: live sweeps scan ONE of these per pass so each
+// scan is short and the shared radio isn't held long enough to starve BLE.
+static const uint8_t GL_SCAN_CHANS[] = {1,6,11,36,40,44,48,149,153,157,161};
+#define GL_SCAN_CHAN_COUNT (sizeof(GL_SCAN_CHANS) / sizeof(GL_SCAN_CHANS[0]))
+// Per-channel passive dwell (ms); short keeps BLE alive. Applies to passive
+// (5 GHz) sweeps -- the coexistence layer ignores a custom dwell on an active
+// scan, so 2.4 GHz uses the driver default.
+#define GL_SCAN_DWELL_MS 120
 
 // Payload bytes per DATA frame. Kept well under the negotiated MTU (247) once
 // the 12-byte header and the 3-byte ATT overhead are accounted for.
@@ -83,6 +91,12 @@ extern BatteryInterface battery_obj;
 // Pacing: don't launch Wi-Fi sweeps back-to-back; let touch/BLE breathe.
 #define GL_SWEEP_GAP_MS   1500
 #define GL_RECOVER_MS     1000
+// Hold off the first Wi-Fi sweep this long after a central connects, so the BLE
+// link and its connection parameters (longer supervision timeout) settle before
+// the radio starts sharing time with scans. A central may apply a requested
+// timeout only after an initial exchange, so scanning immediately can drop the
+// link in the first seconds; once settled it rides through sweeps.
+#define GL_SETTLE_MS      3000
 
 // AP dedup window: re-report a given BSSID at most once a minute so a board
 // left streaming doesn't re-send the same networks on every ~1.5 s sweep.
@@ -144,24 +158,24 @@ namespace {
   bool     s_streaming     = false;             // WardriveESP (WarDriveGo) stream
   bool     s_scan_pending  = false;
   uint32_t s_last_sweep_ms = 0;
+  uint32_t s_stream_start_ms = 0;   // set on connect; gates the settle delay
   uint32_t s_scans         = 0;
   uint32_t s_aps_total     = 0;
   uint32_t s_recover_ms    = 0;
+  uint8_t  s_scan_chan_idx = 0;    // rotates through GL_SCAN_CHANS, one per sweep
 
   // Advertising rotation.
   char     s_adv_name[20]   = {0};              // "Marauder-XXXX"
+  char     s_bisc_name[20]  = {0};              // "Biscuit-XXXX" (per-board)
   uint8_t  s_adv_slot       = 0;                // 0 = WardriveESP, 1 = Biscuit
   uint32_t s_last_rotate_ms = 0;
 
-  // GAP device name (0x2A00) follows the active link: once the Biscuit app
-  // subscribes to its Response characteristic the connected name reads
-  // "Biscuit"; a WardriveESP TX-subscribe (and every disconnect) reverts it to
-  // "Marauder-XXXX". A dual-protocol central (e.g. WarDriveGo, which speaks both
-  // surfaces) classifies the device by this name after connecting, so a static
-  // name makes it miscategorise the board. Callbacks only set the desired value;
-  // the loop applies it (setDeviceName off the NimBLE host task).
-  volatile uint8_t s_gap_want    = 0;           // 0 = wardrive name, 1 = biscuit
-  uint8_t          s_gap_applied = 0xFF;         // force an apply on first pass
+  // GAP device name (0x2A00) is set once before advertising ("Marauder-XXXX")
+  // and never changed while connected. Renaming a peripheral mid-connection can
+  // destabilize a connected central. Apps classify the board by its service
+  // UUID, not this name, so a static name is correct; the per-service scan-
+  // response names (Marauder-XXXX / Biscuit-XXXX) still tell the two surfaces
+  // apart on discovery.
 
   uint8_t  s_frame[12 + GL_PAYLOAD_MAX];
 
@@ -187,7 +201,7 @@ namespace {
 // NimBLE callbacks
 // ---------------------------------------------------------------------------
 class GlServerCallbacks : public NimBLEServerCallbacks {
-  void onConnect(NimBLEServer* /*p*/, NimBLEConnInfo& /*info*/) override {
+  void onConnect(NimBLEServer* p, NimBLEConnInfo& info) override {
     s_connected        = true;
     s_handshake_sent   = false;    // re-greet each new central
     s_reply_id         = 1;        // spec: reply id starts at 1 before any command
@@ -196,7 +210,12 @@ class GlServerCallbacks : public NimBLEServerCallbacks {
     s_bisc_session     = false;
     s_bisc_time_synced = false;
     s_bisc_band        = 0;
-    s_gap_want         = 0;        // default to the Marauder name until a link subscribes
+    // One radio serves Wi-Fi + BLE; a live Wi-Fi sweep can briefly stall BLE.
+    // Ask the central for a longer supervision timeout so a short stall doesn't
+    // tear the link down. Units: interval 1.25 ms, timeout 10 ms -> 30-50 ms
+    // interval, 5 s timeout (within Apple's BLE accessory guidelines). The
+    // central may decline, but most honor a longer timeout.
+    p->updateConnParams(info.getConnHandle(), 24, 40, 0, 500);
   }
   void onDisconnect(NimBLEServer* /*p*/, NimBLEConnInfo& /*info*/, int /*reason*/) override {
     s_connected        = false;
@@ -206,8 +225,6 @@ class GlServerCallbacks : public NimBLEServerCallbacks {
     s_bisc_greet       = false;
     s_bisc_session     = false;
     s_bisc_time_synced = false;
-    s_gap_want         = 0;        // revert the connected name on the next link
-    s_gap_applied      = 0xFF;     // re-apply on reconnect
     s_advertise_want   = true;     // main loop re-arms advertising
   }
 };
@@ -225,20 +242,16 @@ class GlRxCallbacks : public NimBLECharacteristicCallbacks {
 class GlTxCallbacks : public NimBLECharacteristicCallbacks {
   void onSubscribe(NimBLECharacteristic* /*c*/, NimBLEConnInfo& /*info*/, uint16_t subValue) override {
     s_tx_subscribed = (subValue != 0);
-    if (s_tx_subscribed) {
+    if (s_tx_subscribed)
       s_handshake_sent = false;    // greet on (re)subscribe
-      s_gap_want       = 0;        // connected name -> Marauder
-    }
   }
 };
 
 class GlBiscRspCallbacks : public NimBLECharacteristicCallbacks {
   void onSubscribe(NimBLECharacteristic* /*c*/, NimBLEConnInfo& /*info*/, uint16_t subValue) override {
     s_bisc_subscribed = (subValue != 0);
-    if (s_bisc_subscribed) {
+    if (s_bisc_subscribed)
       s_bisc_greet = true;         // TIME:REQUEST + STATUS sent from the loop
-      s_gap_want   = 1;            // connected name -> Biscuit
-    }
   }
 };
 
@@ -396,7 +409,7 @@ static void glBuildAdv(uint8_t slot) {
   ad.addServiceUUID(biscuit ? BISCUIT_SVC_UUID : GL_SVC_UUID);
 
   NimBLEAdvertisementData sr;
-  sr.setName(biscuit ? std::string(BISCUIT_ADV_NAME) : std::string(s_adv_name));
+  sr.setName(biscuit ? std::string(s_bisc_name) : std::string(s_adv_name));
 
   adv->setAdvertisementData(ad);
   adv->setScanResponseData(sr);
@@ -414,11 +427,14 @@ static void glSetupStack() {
   #endif
   NimBLEDevice::setMTU(GL_PREFERRED_MTU);
 
-  // Build "Marauder-XXXX" from the last two bytes of the BLE address. Apps find
-  // the board by its service UUID, so an honest Marauder name still links fine.
-  // (The WardriveESP slot's scan-response name; the Biscuit slot uses "Biscuit".)
+  // Build "Marauder-XXXX" / "Biscuit-XXXX" from the last two bytes of the BLE
+  // address. Apps find the board by its service UUID, so the names are honest
+  // display labels; the per-board suffix lets a central tell two nodes apart
+  // (the fixed "Biscuit" name made every board look identical to Biscuit Manager).
   uint64_t addr = (uint64_t)NimBLEDevice::getAddress();
   snprintf(s_adv_name, sizeof(s_adv_name), "Marauder-%02X%02X",
+           (unsigned)((addr >> 8) & 0xFF), (unsigned)(addr & 0xFF));
+  snprintf(s_bisc_name, sizeof(s_bisc_name), "Biscuit-%02X%02X",
            (unsigned)((addr >> 8) & 0xFF), (unsigned)(addr & 0xFF));
   NimBLEDevice::setDeviceName(s_adv_name);
 
@@ -522,7 +538,8 @@ void GhostLinkBridge::startWardrive() {
   if (!s_handshake_sent) glSendHandshake();
   s_streaming     = true;
   s_scan_pending  = false;
-  s_last_sweep_ms = 0;              // scan immediately
+  s_last_sweep_ms = 0;
+  s_stream_start_ms = millis();     // first sweep waits GL_SETTLE_MS (let BLE settle)
   s_scans         = 0;
   s_aps_total     = 0;
   memset(s_dedup, 0, sizeof(s_dedup));   // fresh session: re-report everything
@@ -663,11 +680,25 @@ void GhostLinkBridge::serviceWardrive(uint32_t now) {
     emitApBatch();
     return;
   }
+  // Let a freshly connected BLE link (and its conn-param request) settle before
+  // the first sweep; stops an early drop in the first seconds after connect.
+  if (now - s_stream_start_ms < GL_SETTLE_MS) return;
   if (now - s_last_sweep_ms < GL_SWEEP_GAP_MS) return;
 
-  // Async scan: non-blocking so touch and the main loop keep running.
-  // args: async, show_hidden, passive, max_ms_per_chan, channel(0=all)
-  int rc = WiFi.scanNetworks(true, true);
+  // Scan ONE plan channel per sweep, rotating across sweeps, instead of the
+  // whole 2.4+5 GHz band at once. A full-band scan holds the single radio for
+  // seconds and starves the BLE link past its supervision timeout (the link
+  // drops once live scanning kicks in); a single-channel scan is short, so BLE
+  // keeps its connection events. 5 GHz goes passive so the dwell is honored and
+  // the radio only listens (gentlest on BLE); 2.4 GHz stays active, since the
+  // coexistence layer ignores a custom dwell on an active scan and uses the
+  // driver default there. Tunables:
+  // GL_SCAN_CHANS / GL_SCAN_DWELL_MS / GL_SWEEP_GAP_MS.
+  // args: async, show_hidden, passive, max_ms_per_chan, channel
+  uint8_t ch = GL_SCAN_CHANS[s_scan_chan_idx];
+  s_scan_chan_idx = (s_scan_chan_idx + 1) % GL_SCAN_CHAN_COUNT;
+  bool passive = (ch > 14);              // 5 GHz passive (dwell honored); 2.4 GHz active
+  int rc = WiFi.scanNetworks(true, true, passive, GL_SCAN_DWELL_MS, ch);
   if (rc == WIFI_SCAN_RUNNING || rc == WIFI_SCAN_FAILED || rc >= 0)
     s_scan_pending = true;         // results collected next tick
 }
@@ -753,13 +784,6 @@ void GhostLinkBridge::main(uint32_t currentTime) {
     return;
   }
 
-  // Connected: make the GAP device name (0x2A00) match the active link so a
-  // dual-protocol central classifies this board correctly after connecting.
-  if (s_gap_applied != s_gap_want) {
-    s_gap_applied = s_gap_want;
-    NimBLEDevice::setDeviceName(s_gap_want == 1 ? std::string(BISCUIT_ADV_NAME)
-                                                : std::string(s_adv_name));
-  }
 
   // WarDriveGo: greet once the central subscribes to TX, and begin scanning: the
   // spec has the board start a wardrive on TX-subscribe (no explicit command).
