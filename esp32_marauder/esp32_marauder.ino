@@ -40,6 +40,9 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #include "settings.h"
 #include "CommandLine.h"
+#ifdef HAS_BLE_UART_BRIDGE
+  #include "GhostLinkBridge.h"
+#endif
 #include "ReconMission.h"
 #if defined(HAS_CSI_MOTION)
   #include "CsiMotionMonitor.h"
@@ -502,6 +505,10 @@ void setup()
   wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
   
   cli_obj.RunSetup();
+
+  #ifdef HAS_BLE_UART_BRIDGE
+    ghostlink_obj.RunSetup();
+  #endif
 }
 
 
@@ -534,6 +541,9 @@ void loop()
 
   // Update all of our objects
   cli_obj.main(currentTime);
+  #ifdef HAS_BLE_UART_BRIDGE
+    ghostlink_obj.main(currentTime);
+  #endif
   wifi_scan_obj.main(currentTime);
   recon_obj.main(currentTime);
   #if defined(HAS_CSI_MOTION)
