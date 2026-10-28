@@ -4622,6 +4622,16 @@ int MenuFunctions::selectedAttackSsidCount() const {
   return count;
 }
 
+void MenuFunctions::clearAttackApSelections() {
+  extern LinkedList<AccessPoint>* access_points;
+  for (int i = 0; i < access_points->size(); ++i) {
+    AccessPoint ap = access_points->get(i);
+    ap.selected = false;
+    ap.attack_scope = ATTACK_AP_SCOPE_NONE;
+    access_points->set(i, ap);
+  }
+}
+
 void MenuFunctions::clearAttackStationSelections() {
   extern LinkedList<Station>* stations;
   for (int i = 0; i < stations->size(); ++i) {
@@ -4960,7 +4970,7 @@ void MenuFunctions::buildAttackReviewMenu() {
     valid = selectedAttackSsidCount() > 0;
   } else if (attack_target_kind == AttackTargetKind::EVIL_PORTAL ||
              attack_target_kind == AttackTargetKind::KARMA) {
-    scope_line = "Portal: " + attack_plan_scope;
+    scope_line = "Portal: " + screenName(attack_plan_scope);
     valid = attack_plan_scope.length() > 0;
   }
   this->addNodes(&attackReviewMenu, scope_line.c_str(), valid ? TFTGREEN : TFTRED, 255, []() {});
@@ -5311,6 +5321,7 @@ void MenuFunctions::buildLazyMenu(Menu* menu)
         attack_plan_color = TFT_ORANGE;
         attack_target_kind = AttackTargetKind::EVIL_PORTAL;
         attack_target_mode = AttackTargetMode::NONE;
+        clearAttackApSelections();
         wifiAPMenu.list->clear();
         ssidsMenu.list->clear();
         wifiAPMenu.parentMenu = &evilPortalMenu;
@@ -5324,6 +5335,7 @@ void MenuFunctions::buildLazyMenu(Menu* menu)
         for (int i = 0; i < access_points->size(); i++) {
           const String label = screenName(access_points->get(i).essid);
           this->addNodes(&wifiAPMenu, label.c_str(), TFTCYAN, 255, [this, i]() {
+            clearAttackApSelections();
             if (evil_portal_obj.setAP(access_points->get(i).essid)) {
               AccessPoint new_ap = access_points->get(i);
               new_ap.selected = true;
@@ -5339,6 +5351,7 @@ void MenuFunctions::buildLazyMenu(Menu* menu)
         for (int i = 0; i < ssids->size(); i++) {
           const String label = screenName(ssids->get(i).essid);
           this->addNodes(&ssidsMenu, label.c_str(), TFTCYAN, 255, [this, i]() {
+            clearAttackApSelections();
             if (evil_portal_obj.setAP(ssids->get(i).essid)) {
               attack_plan_scope = ssids->get(i).essid;
               buildAttackReviewMenu();
@@ -5364,6 +5377,7 @@ void MenuFunctions::buildLazyMenu(Menu* menu)
         attack_plan_color = TFT_ORANGE;
         attack_target_kind = AttackTargetKind::KARMA;
         attack_target_mode = AttackTargetMode::NONE;
+        clearAttackApSelections();
         selectProbeSSIDsMenu.list->clear();
         this->addNodes(&selectProbeSSIDsMenu, text09, TFTLIGHTGREY, 0, [this]() {
           this->changeMenu(&wifiAttackMenu, true);
@@ -5371,6 +5385,7 @@ void MenuFunctions::buildLazyMenu(Menu* menu)
         for (int i = 0; i < probe_req_ssids->size(); i++) {
           const String label = screenName(probe_req_ssids->get(i).essid);
           this->addNodes(&selectProbeSSIDsMenu, label.c_str(), TFTCYAN, 255, [this, i]() {
+            clearAttackApSelections();
             if (evil_portal_obj.setAP(probe_req_ssids->get(i).essid)) {
               attack_plan_scope = probe_req_ssids->get(i).essid;
               buildAttackReviewMenu();
@@ -6064,7 +6079,10 @@ void MenuFunctions::displayCurrentMenu(int start_index)
     uint8_t level = getBrightnessLevel();
 
     // LEDC write compatibility (2.x vs 3.x board package)
-    #if ESP_ARDUINO_VERSION_MAJOR >= 3
+    #if defined(MARAUDER_WS_C5_35)
+      // Backlight is the I/O expander's PWM register, not a GPIO.
+      #define BL_PREVIEW(duty) ws_exio_write(WS_EXIO_PWM_REG, (duty))
+    #elif ESP_ARDUINO_VERSION_MAJOR >= 3
       #define BL_PREVIEW(duty) ledcWrite(TFT_BL, (duty))
     #else
       #define BL_PREVIEW(duty) ledcWrite(0, (duty))

@@ -94,6 +94,7 @@ uint8_t Display::updateTouch(uint16_t *x, uint16_t *y, uint16_t threshold) {
         {
           uint16_t raw_x, raw_y;
           const int8_t touch_state = ft6336_read_raw(&raw_x, &raw_y);
+          if (touch_state == 1) this->last_touch_ms = millis();
           if (touch_state != 1) {
             #ifdef MARAUDER_M5STACK_CORE2_AWS
               // Only bridge I2C transport errors. A confirmed zero-touch

@@ -3037,7 +3037,8 @@ void WiFiScan::displayTargetFilter() {
       for (int i = 0; i < access_points->size(); i++) {
         AccessPoint access_point = access_points->get(i);
         if (access_point.selected) {
-          String msg_str = "CH: " + (String)access_point.channel + " " + access_point.essid;
+          String msg_str = "CH: " + (String)access_point.channel + " " +
+                           screenName(access_point.essid);
           display_obj.showCenterText(msg_str.c_str(), display_obj.tft.getCursorY(), true);
         }
       }
@@ -7387,7 +7388,8 @@ void WiFiScan::setupRemoteIdBle() {
       pBLEScan->setScanCallbacks(&bluetoothScanCallbacks, false);
     #endif
     pBLEScan->setActiveScan(false);
-    pBLEScan->setInterval(80);
+    // Avoid repeatedly masking Wi-Fi beacons sent at an 80 ms cadence.
+    pBLEScan->setInterval(83);
     pBLEScan->setWindow(40);
     pBLEScan->setMaxResults(0);
     pBLEScan->setDuplicateFilter(false);

@@ -328,6 +328,7 @@ bool EvilPortal::setAP(String essid) {
 
   strncpy(apName, essid.c_str(), MAX_AP_NAME_SIZE - 1);
   apName[MAX_AP_NAME_SIZE - 1] = '\0';
+  this->ap_index = -1;
   this->has_ap = true;
   #ifndef MARAUDER_V8
     Serial.println(F("ap config set"));
