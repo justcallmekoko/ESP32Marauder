@@ -2081,6 +2081,30 @@ void WiFiScan::RunSetup() {
         api_settings_file.close();
       }
 
+      if (SD.exists("/wardrift_key.txt")) {
+        String contents = "";
+        api_settings_file = sd_obj.getFile("/wardrift_key.txt");
+        while (api_settings_file.available()) {
+          contents+=(char)api_settings_file.read();
+        }
+
+        while (contents.length() > 0) {
+          char c = contents[contents.length() - 1];
+          if (c == '\n' || c == '\r')
+            contents.remove(contents.length() - 1);
+          else
+            break;
+        }
+
+        if (settings_obj.saveSetting<bool>(WARDRIFT_KEY_NAME, contents)) {
+          sd_obj.removeFile("/wardrift_key.txt");
+          Serial.println("Saved Wardrift API Key: " + contents);
+        } else {
+          Serial.println("Failed to save Wardrift API Key");
+        }
+        api_settings_file.close();
+      }
+
 
     }
   #endif
@@ -12001,9 +12025,11 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
 
     bool wigle_already = !retry && this->sidecarExists(filePath, "wigle");
     bool wdg_already   = !retry && this->sidecarExists(filePath, "wdg");
+    bool wardrift_already = !retry && this->sidecarExists(filePath, "wardrift");
 
     bool wigle_ok = wigle_already;
     bool wdg_ok   = wdg_already;
+    bool wardrift_ok   = wardrift_already;
 
     if ((upload_type == WIGLE_UPLOAD) || (upload_type == BOTH_UPLOAD)) {
       if (!wigle_already) {
@@ -12035,12 +12061,29 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
       }
     }
 
+    if (upload_type == WARDRIFT_UPLOAD) {
+      if (!wardrift_already) {
+        Serial.println("[UPLOAD] Uploading to Wardrift: " + filePath);
+        wardrift_ok = this->wardriftUpload(filePath);
+        if (wardrift_ok) {
+          this->writeSidecar(filePath, "wardrift");
+          Serial.println("[UPLOAD] Wardrift upload succeeded");
+        } else {
+          Serial.println("[UPLOAD] Wardrift upload failed");
+        }
+      } else {
+        Serial.println("[UPLOAD] Wardrift already uploaded, skipping");
+      }
+    }
+
     if (upload_type == WIGLE_UPLOAD)
       return wigle_ok;
     else if (upload_type == WDG_UPLOAD)
       return wdg_ok;
     else if (upload_type == BOTH_UPLOAD)
       return wigle_ok && wdg_ok;
+    else if (upload_type == WARDRIFT_UPLOAD)
+      return wardrift_ok;
     
     return false;
   }
@@ -12230,6 +12273,164 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
       #ifdef HAS_SCREEN
         display_obj.clearScreen();
         display_obj.showCenterText("WDG OK", TFT_HEIGHT / 2, true);
+      #endif
+      delay(1000);
+    }
+
+    return ok;
+  }
+
+  // Upload one log file to Wardrift (wardrift.net).
+  bool WiFiScan::wardriftUpload(String filePath) {
+    bool gotAny = false;
+
+    #ifdef HAS_SCREEN
+    this->drawUploadProgress("WARDRIFT", 0); // GCOVR_EXCL_LINE
+    #endif
+    delay(100);
+
+    if (!SD.exists(filePath)) {
+      #ifdef HAS_SCREEN
+      display_obj.showCenterText(String(filePath + " not found").c_str(), TFT_HEIGHT / 2, true);
+      delay(2000);
+      #endif
+      Serial.println("[WARDRIFT] File not found: " + filePath);
+      return false;
+    }
+
+    String apiKey = settings_obj.loadSetting<String>(WARDRIFT_KEY_NAME);
+    if (apiKey.isEmpty()) {
+      #ifdef HAS_SCREEN
+      display_obj.clearScreen();
+      display_obj.showCenterText("No Wardrift key", TFT_HEIGHT / 2, true);
+      delay(2000);
+      #endif
+      Serial.println("[WARDRIFT] No Wardrift API key configured");
+      return false;
+    }
+
+    File fileToUpload = SD.open(filePath);
+    if (!fileToUpload) {
+      #ifdef HAS_SCREEN
+      display_obj.clearScreen();
+      display_obj.showCenterText("Could not open file", TFT_HEIGHT / 2, true);
+      delay(2000);
+      #endif
+      Serial.println("[WARDRIFT] Could not open: " + filePath);
+      return false;
+    }
+
+    String fileName = filePath;
+    int slashIdx = fileName.lastIndexOf('/');
+    if (slashIdx >= 0)
+      fileName = fileName.substring(slashIdx + 1);
+
+    int totalLength = fileToUpload.size();
+
+    Serial.println("[WARDRIFT] File size: " + String(fileToUpload.size()));
+
+    client->setInsecure();
+    client->setTimeout(5000);
+
+    if (!client->connect("wardrift.net", 443)) {
+      fileToUpload.close();
+      client->stop();
+      #ifdef HAS_SCREEN
+      display_obj.clearScreen();
+      display_obj.showCenterText("Wardrift connect fail", TFT_HEIGHT / 2, true);
+      delay(2000);
+      #endif
+      Serial.println("[WARDRIFT] Failed to connect to wardrift.net");
+      return false;
+    }
+
+    // HTTP request
+    client->println("POST /v1/ingest/signals HTTP/1.1");
+    client->println("Host: wardrift.net");
+    client->println("User-Agent: ESP32Uploader/1.0");
+    client->println("Accept: application/json");
+    client->println("X-API-Key: " + apiKey);
+    client->println("X-File-Name: " + fileName);
+    client->println("Content-Type: text/csv");
+    client->print("Content-Length: ");
+    client->println(totalLength);
+    client->println("Connection: close");
+    client->println();
+
+    // Send body
+    marauder::UploadStreamBuffer uploadBuffer;
+    if (!uploadBuffer) {
+      fileToUpload.close();
+      client->stop();
+      Serial.println("[WARDRIFT] Could not allocate upload buffer");
+      return false;
+    }
+    size_t totalSent = 0;
+    uint8_t pct = 0;
+
+    while (fileToUpload.available()) {
+      size_t n = fileToUpload.read(uploadBuffer.data(), uploadBuffer.size());
+      totalSent += n;
+      client->write(uploadBuffer.data(), n);
+      pct = (totalSent * 100) / fileToUpload.size();
+      #ifdef HAS_SCREEN
+      this->drawUploadProgress("WARDRIFT", pct); // GCOVR_EXCL_LINE
+      #endif
+    }
+
+    client->flush();
+    fileToUpload.close();
+
+    Serial.println("[WARDRIFT] Bytes sent: " + String(totalSent));
+
+    #ifdef HAS_SCREEN
+      this->drawUploadProgress("WARDRIFT", 100, true); // GCOVR_EXCL_LINE
+    #endif
+
+    // Read response
+    String response;
+    unsigned long t = millis();
+    while (millis() - t < 8000) {
+      while (client->available()) {
+        gotAny = true;
+        char c = client->read();
+        Serial.print(c);
+        response += c;
+      }
+      if (gotAny && !client->connected()) {
+        break;
+      }
+      delay(10);
+    }
+
+    Serial.println();
+
+    client->stop();
+
+    String respTrunc = response.length() > 200 ? response.substring(0, 200) : response;
+    Serial.println("[WARDRIFT] Response: " + respTrunc);
+
+    // 200 with an accepted receipt on success
+    bool ok = (response.indexOf("200 OK") >= 0) &&
+              (response.indexOf("\"accepted\":true") >= 0 ||
+               response.indexOf("\"accepted\": true") >= 0);
+
+    if (!ok) {
+      #ifdef HAS_SCREEN
+        display_obj.clearScreen();
+        display_obj.tft.setTextSize(1);
+        display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+        display_obj.showCenterText("Wardrift Failed", TFT_HEIGHT / 3, true);
+        display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
+        display_obj.showCenterText("Server rejected upload", TFT_HEIGHT / 2, true);
+        delay(3000);
+      #else
+        delay(1000);
+      #endif
+    } else {
+      #ifdef HAS_SCREEN
+        display_obj.clearScreen();
+        display_obj.showCenterText("Wardrift OK", TFT_HEIGHT / 2, true);
       #endif
       delay(1000);
     }
