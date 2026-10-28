@@ -52,9 +52,57 @@ class WaveshareC535HardwareTests(unittest.TestCase):
             "#define TFT_DC    5",
         ):
             self.assertIn(expected, tft)
+        # Pancake's NeoPixel pin (GPIO27) is this board's I2C SDA; it must stay off.
+        override = config[config.index("#ifdef MARAUDER_WS_C5_35_OVERRIDE"):]
+        self.assertIn("#undef HAS_NEOPIXEL_LED", override)
+        self.assertIn("#define I2C_SDA 27", override)
+        sketch = (ROOT / "esp32_marauder" / "esp32_marauder.ino").read_text(encoding="utf-8")
+        # Brightness drives the expander PWM register, not the (absent) TFT_BL pin.
+        self.assertIn("if (ws_backlight_bus_ready) ws_exio_write(WS_EXIO_PWM_REG, (duty))", sketch)
+        self.assertIn("ws_backlight_bus_ready = true;", sketch)
+        self.assertIn("!defined(MARAUDER_WS_C5_35)", sketch)
+        self.assertIn("#define WS_EXIO_PWM_REG     0x05", expander)
+        menus = (ROOT / "esp32_marauder" / "MenuFunctions.cpp").read_text(encoding="utf-8")
+        self.assertIn("#define BL_PREVIEW(duty) ws_exio_write(WS_EXIO_PWM_REG, (duty))", menus)
+        # Battery level is read from the AXP2101 directly (no XPowersLib in CI).
+        override = config[config.index("#ifdef MARAUDER_WS_C5_35_OVERRIDE"):]
+        self.assertIn("#define HAS_AXP2101_GAUGE", override)
+        self.assertNotIn("#define HAS_AXP2101\n", override)
+        battery = (ROOT / "esp32_marauder" / "BatteryInterface.cpp").read_text(encoding="utf-8")
+        self.assertIn("AXP2101_REG_BAT_PERCENT", battery)
+        self.assertIn("!this->has_axp2101_gauge && !this->detectAxp2101Gauge()", battery)
+        self.assertIn("bool BatteryInterface::detectAxp2101Gauge()", battery)
+        self.assertIn("Wire.endTransmission() != 0", battery)
+        self.assertIn("enabledCtrl < 0 || (enabledCtrl & 0x08) == 0", battery)
+        # GPS: LC76G over I2C; the UART GPS path (GPIO13/14 = native USB) never starts.
+        override = config[config.index("#ifdef MARAUDER_WS_C5_35_OVERRIDE"):]
+        self.assertIn("#define HAS_GPS_LC76G_I2C", override)
+        gps = (ROOT / "esp32_marauder" / "GpsInterface.cpp").read_text(encoding="utf-8")
+        begin = gps[gps.index("void GpsInterface::begin()"):]
+        self.assertLess(begin.index("marauder::lc76g::begin()"), begin.index("Serial2.begin("))
+        self.assertLess(begin.index("return;"), begin.index("Serial2.begin("))
+        lc76g = (ROOT / "esp32_marauder" / "GpsLc76gI2c.cpp").read_text(encoding="utf-8")
+        for expected in ("0xAA510008UL", "0xAA512000UL", "RD_ADDR   = 0x54", "CR_ADDR   = 0x50"):
+            self.assertIn(expected, lc76g)
+        self.assertIn("CHUNK     = 256", lc76g)
+        self.assertIn("PERIOD_MS = 125", lc76g)
+        self.assertIn("EMPTY_WAKE_CYCLES = 4000 / PERIOD_MS", lc76g)
+        self.assertIn("lc76gNow - this->lc76g_last_probe_ms >= 2000", gps)
         self.assertIn("#ifdef MARAUDER_WS_C5_35", touch)
         self.assertIn("Wire.end(); Wire.begin(CTP_SDA, CTP_SCL, 100000U);", touch)
         self.assertIn("return -1;", touch)
+        # INT gate: TP_INT on GPIO3, polling mode, and no I2C read without INT LOW.
+        self.assertIn("#define CTP_INT 3", config)
+        self.assertIn("#define FT6336_G_MODE    0xA4", touch)
+        self.assertIn("Wire.requestFrom((int)FT6336_ADDR, (int)len) != len", touch)
+        self.assertIn("pinMode(CTP_INT, INPUT);", touch)
+        self.assertIn("_ft6336_int_gate_active = modeReadOk && gMode == 0x00;", touch)
+        gate = "if (_ft6336_int_gate_active && digitalRead(CTP_INT) != LOW) return 0;"
+        self.assertIn(gate, touch)
+        self.assertLess(
+            touch.index(gate),
+            touch.index("Wire.end(); Wire.begin(CTP_SDA, CTP_SCL, 100000U);"),
+        )
         self.assertIn("#define WS_EXIO_ADDR        0x24", expander)
         self.assertIn("ws_c5_exio_begin", expander)
 

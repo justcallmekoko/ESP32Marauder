@@ -28,6 +28,16 @@
 #endif
 
 #define IP5306_ADDR 0x75
+
+// AXP2101 PMU read directly over I2C (no XPowersLib). Register map per the
+// AXP2101 datasheet / XPowersLib: chip ID 0x03 == 0x4A, STATUS1 0x00 bit 3 =
+// battery present, 0x18 bit 3 = fuel gauge enable, 0xA4 = battery percent.
+#define AXP2101_GAUGE_ADDR      0x34
+#define AXP2101_REG_STATUS1     0x00
+#define AXP2101_REG_CHIP_ID     0x03
+#define AXP2101_CHIP_ID         0x4A
+#define AXP2101_REG_GAUGE_CTRL  0x18
+#define AXP2101_REG_BAT_PERCENT 0xA4
 #define MAX17048_ADDR 0x36
 
 class BatteryInterface {
@@ -48,6 +58,7 @@ class BatteryInterface {
     bool i2c_supported = false;
     bool has_max17048 = false;
     bool has_ip5306 = false;
+    bool has_axp2101_gauge = false;
     bool has_axp2101 = false;
     bool has_adc_battery = false;
 
@@ -56,6 +67,10 @@ class BatteryInterface {
     void RunSetup();
     void main(uint32_t currentTime);
     int8_t getBatteryLevel();
+    #ifdef HAS_AXP2101_GAUGE
+      bool detectAxp2101Gauge();
+      int axp2101Read(uint8_t reg);
+    #endif
 };
 
 #endif  // ifndef BatteryInterface_h

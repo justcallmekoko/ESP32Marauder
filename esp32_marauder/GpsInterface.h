@@ -102,6 +102,9 @@ class GpsInterface {
     String datetime = "";
     
     bool gps_enabled = false;
+#ifdef HAS_GPS_LC76G_I2C
+    uint32_t lc76g_last_probe_ms = 0;
+#endif
     bool good_fix = false;
     char nav_system='\0';
     uint8_t num_sats = 0;

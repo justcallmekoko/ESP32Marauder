@@ -2,11 +2,26 @@
 
 #ifdef HAS_GPS
 
+#ifdef HAS_GPS_LC76G_I2C
+  #include "GpsLc76gI2c.h"
+  #ifdef HAS_SCREEN
+    #include "Display.h"
+    extern Display display_obj;
+  #endif
+  // Skip GPS cycles while the screen is being touched: a GPS read holds the
+  // shared I2C bus for a few ms, and doing it mid-gesture makes taps jittery.
+  static const uint32_t LC76G_TOUCH_IDLE_MS = 400;
+#endif
+
 extern GpsInterface gps_obj;
 
 char nmeaBuffer[100];
 
 MicroNMEA nmea(nmeaBuffer, sizeof(nmeaBuffer));
+
+#ifdef HAS_GPS_LC76G_I2C
+  static void lc76gSink(char c) { nmea.process(c); }
+#endif
 
 HardwareSerial Serial2(GPS_SERIAL_INDEX);
 
@@ -16,7 +31,21 @@ static const uint32_t PROBE_MS = 1200;
 
 void GpsInterface::begin() {
 
-  
+  #ifdef HAS_GPS_LC76G_I2C
+    // GPS is an LC76G on the shared I2C bus; there is no GPS UART.
+    this->gps_enabled = marauder::lc76g::begin();
+    this->lc76g_last_probe_ms = millis();
+    if (this->lc76g_last_probe_ms == 0) this->lc76g_last_probe_ms = 1;
+    if (this->gps_enabled)
+      Serial.println(F("LC76G GPS found on I2C"));
+    else
+      Serial.println(F("GPS Not Found"));
+    this->type_flag=GPSTYPE_NATIVE; //enforce default
+    this->disable_queue(); //init the queue, disabled, kill NULLs
+    nmea.setUnknownSentenceHandler(gps_nmea_notimp);
+    return;
+  #endif
+
   Serial2.begin(9600, SERIAL_8N1, GPS_TX, GPS_RX);
 
   uint32_t gps_baud = this->initGpsBaudAndForce115200();
@@ -384,6 +413,10 @@ void GpsInterface::flush_queue_textin(){
 }
 
 void GpsInterface::sendSentence(const char* sentence){
+  #ifdef HAS_GPS_LC76G_I2C
+    (void)sentence;  // no GPS UART; module commands are not supported over I2C here
+    return;
+  #endif
   MicroNMEA::sendSentence(Serial2, sentence);
 }
 
@@ -751,6 +784,22 @@ String GpsInterface::getNmeaNotparsed() {
 }
 
 void GpsInterface::main() {
+  #ifdef HAS_GPS_LC76G_I2C
+    const uint32_t lc76gNow = millis();
+    if (!this->gps_enabled &&
+        lc76gNow - this->lc76g_last_probe_ms >= 2000) {
+      this->lc76g_last_probe_ms = lc76gNow;
+      this->gps_enabled = marauder::lc76g::begin();
+      if (this->gps_enabled) Serial.println(F("LC76G GPS recovered on I2C"));
+    }
+    if (this->gps_enabled) {
+      #ifdef HAS_SCREEN
+        if (millis() - display_obj.last_touch_ms >= LC76G_TOUCH_IDLE_MS)
+      #endif
+          marauder::lc76g::service(lc76gSink);
+    }
+  #endif
+
   while (Serial2.available()) {
     //Fetch the character one by one
     char c = Serial2.read();
