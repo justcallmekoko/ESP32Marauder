@@ -3552,9 +3552,22 @@
   #ifdef HAS_MAX1704X
     #undef HAS_MAX1704X
   #endif
-  #ifdef HAS_BATTERY
-    #undef HAS_BATTERY
+  // Battery level comes from the on-board AXP2101 PMU (0x34) on the shared I2C bus.
+  #ifndef HAS_BATTERY
+    #define HAS_BATTERY
   #endif
+  // No NeoPixel on this board. Pancake drives its LED on GPIO27, which is the
+  // shared I2C SDA line here (touch + I/O expander), so LED updates corrupt I2C.
+  #ifdef HAS_NEOPIXEL_LED
+    #undef HAS_NEOPIXEL_LED
+  #endif
+  // FT6336 TP_INT is GPIO3 (external 10K pull-up). Touch reads are gated on it.
+  #define CTP_INT 3
+  #define HAS_AXP2101_GAUGE
+  // GPS is a Quectel LC76G on the shared I2C bus (0x50/0x54). The header UART
+  // isn't connected as shipped, and Pancake's GPS UART pins (14/13) are this
+  // board's native USB, so the UART GPS path must never start.
+  #define HAS_GPS_LC76G_I2C
 #endif
 
 #endif

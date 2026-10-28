@@ -5693,7 +5693,10 @@ void MenuFunctions::displayCurrentMenu(int start_index)
     uint8_t level = getBrightnessLevel();
 
     // LEDC write compatibility (2.x vs 3.x board package)
-    #if ESP_ARDUINO_VERSION_MAJOR >= 3
+    #if defined(MARAUDER_WS_C5_35)
+      // Backlight is the I/O expander's PWM register, not a GPIO.
+      #define BL_PREVIEW(duty) ws_exio_write(WS_EXIO_PWM_REG, (duty))
+    #elif ESP_ARDUINO_VERSION_MAJOR >= 3
       #define BL_PREVIEW(duty) ledcWrite(TFT_BL, (duty))
     #else
       #define BL_PREVIEW(duty) ledcWrite(0, (duty))
