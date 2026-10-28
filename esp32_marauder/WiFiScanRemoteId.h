@@ -283,7 +283,8 @@ String WiFiScan::remoteIdLabel(size_t index) const {
   if (record != nullptr) snapshot = *record;
   portEXIT_CRITICAL(&remote_id_mux);
   if (record == nullptr) return "";
-  String id = snapshot.hasUasId ? String(snapshot.uasId) : macToString(snapshot.mac);
+  String id = screenIdentifier(
+      snapshot.hasUasId ? String(snapshot.uasId) : macToString(snapshot.mac));
   String label = String(snapshot.rssi) + " " + id;
   #ifdef HAS_GPS
     if (gps_obj.getFixStatus() && snapshot.hasLocation) {
@@ -589,7 +590,8 @@ void WiFiScan::renderRemoteIdGlobal() {
                                sizeof(transports));
       display_obj.tft.setCursor(2, y);
       display_obj.tft.setTextColor(rssiToColor(record->rssi), TFT_BLACK);
-      String id = record->hasUasId ? String(record->uasId) : macToString(record->mac);
+      String id = screenIdentifier(
+          record->hasUasId ? String(record->uasId) : macToString(record->mac));
       display_obj.tft.print(String(i) + ":" + String(record->rssi) +
                             " [" + String(transports) + "] " + id);
       y += 10;
@@ -702,9 +704,10 @@ void WiFiScan::renderRemoteIdTarget() {
       display_obj.tft.print(value);
       y += 11;
     };
-    line(record->hasUasId ? "ID " + String(record->uasId)
-                          : "MAC " + macToString(record->mac), TFT_CYAN);
-    if (record->hasOperatorId) line("OP " + String(record->operatorId), TFT_MAGENTA);
+    line(record->hasUasId ? "ID " + screenIdentifier(String(record->uasId))
+                          : "MAC " + screenIdentifier(macToString(record->mac)), TFT_CYAN);
+    if (record->hasOperatorId)
+      line("OP " + screenIdentifier(String(record->operatorId)), TFT_MAGENTA);
     if (record->hasDescription) line("DESC " + String(record->description));
     char transports[16];
     remoteIdFormatTransports(record->transportMask, transports,
