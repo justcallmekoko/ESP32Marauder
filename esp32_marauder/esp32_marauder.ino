@@ -335,16 +335,6 @@ void setup()
     digitalWrite(ACT_LED_PIN, LOW);
   #endif
 
-  #if defined(MARAUDER_WS_C5_35) && ARDUINO_USB_CDC_ON_BOOT
-    // !Serial means "no USB host has opened the port". Running on battery or a
-    // power bank that never happens, so wait briefly instead of forever.
-    for (uint32_t t0 = millis(); !Serial && millis() - t0 < 1000; )
-      delay(10);
-  #else
-    while(!Serial)
-      delay(10);
-  #endif
-
   #ifdef HAS_C5_SD
     sharedSPI.begin(SD_SCK, SD_MISO, SD_MOSI);
     delay(100);
@@ -383,11 +373,6 @@ void setup()
 
     delay(10);
   #endif
-
-  //Serial.begin(115200);
-
-  //while(!Serial)
-  //  delay(10);
 
   Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
 

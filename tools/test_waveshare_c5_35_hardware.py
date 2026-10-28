@@ -33,8 +33,10 @@ class WaveshareC535HardwareTests(unittest.TestCase):
             self.assertIn('tft_file: "User_Setup_ws_c5_35.h"', workflow)
 
         sketch = (ROOT / "esp32_marauder" / "esp32_marauder.ino").read_text(encoding="utf-8")
-        # With USB CDC as Serial, boot must not wait forever for a USB host.
-        self.assertIn("!Serial && millis() - t0 < 1000", sketch)
+        # With USB CDC as Serial, boot must never block on a USB host (no
+        # while(!Serial) wait — see test_boot_without_serial.py) and writes must
+        # not block when no host is attached.
+        self.assertIn("Serial.setTxTimeoutMs(0);", sketch)
 
     def test_board_contract_keeps_expander_and_touch_handling_isolated(self) -> None:
         config = (ROOT / "esp32_marauder" / "configs.h").read_text(encoding="utf-8")
