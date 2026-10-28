@@ -59,6 +59,19 @@ class AttackMenuReachabilityTests(unittest.TestCase):
         ):
             self.assertIn(scope, engine)
 
+    def test_portal_scope_is_bounded_and_censored(self):
+        self.assertIn('scope_line = "Portal: " + screenName(attack_plan_scope);', MENU)
+        self.assertIn("void MenuFunctions::clearAttackApSelections()", MENU)
+        self.assertIn("ap.attack_scope = ATTACK_AP_SCOPE_NONE;", MENU)
+        self.assertGreaterEqual(MENU.count("clearAttackApSelections();"), 5)
+
+        engine = (ROOT / "esp32_marauder" / "WiFiScan.cpp").read_text(encoding="utf-8")
+        self.assertIn("screenName(access_point.essid)", engine)
+
+        portal = (ROOT / "esp32_marauder" / "EvilPortal.cpp").read_text(encoding="utf-8")
+        set_ap = portal[portal.index("bool EvilPortal::setAP(String essid)") :]
+        self.assertIn("this->ap_index = -1;", set_ap)
+
 
 if __name__ == "__main__":
     unittest.main()

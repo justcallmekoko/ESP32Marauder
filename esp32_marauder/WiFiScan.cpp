@@ -3037,7 +3037,8 @@ void WiFiScan::displayTargetFilter() {
       for (int i = 0; i < access_points->size(); i++) {
         AccessPoint access_point = access_points->get(i);
         if (access_point.selected) {
-          String msg_str = "CH: " + (String)access_point.channel + " " + access_point.essid;
+          String msg_str = "CH: " + (String)access_point.channel + " " +
+                           screenName(access_point.essid);
           display_obj.showCenterText(msg_str.c_str(), display_obj.tft.getCursorY(), true);
         }
       }
