@@ -6,10 +6,10 @@
   #include "Display.h"
 #endif
 
-#if defined(HAS_GPS) && !defined(HAS_GPSI2C)
+#if defined(HAS_GPS) && !defined(HAS_GPS_GRAVITY_I2C)
   #include "GpsInterface.h"
-#elif defined(HAS_GPSI2C)
-  #include "GpsI2c.h"
+#elif defined(HAS_GPS_GRAVITY_I2C)
+  #include "Gps_Gravity_I2c.h"
 #endif
 
 #ifdef HAS_SD
@@ -29,8 +29,8 @@ extern Buffer buffer_obj;
   extern Display display_obj;
 #endif
 
-#if defined(HAS_GPSI2C)
-  extern GpsI2c gps_obj;
+#if defined(HAS_GPS_GRAVITY_I2C)
+  extern GpsGravityI2c gps_obj;
 #elif defined(HAS_GPS)
   extern GpsInterface gps_obj;
 #endif

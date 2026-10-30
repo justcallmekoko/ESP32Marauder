@@ -1,11 +1,11 @@
 #pragma once
 
-#ifndef GpsI2c_h
-#define GpsI2c_h
+#ifndef Gps_Gravity_I2c.h
+#define Gps_Gravity_I2c.h
 
 #include "configs.h"
 
-#ifdef HAS_GPSI2C
+#ifdef HAS_GPS_GRAVITY_I2C
 
 #include <Wire.h>
 #include "DFRobot_GNSS.h"
@@ -29,17 +29,17 @@
     5: timeout
 */
 
-class GpsI2c {
+class GpsGravityI2c {
  public:
 
-    GpsI2c(TwoWire* wirePort = nullptr)  {
-        log_d("GpsI2c Initializer");
+    GpsGravityI2c(TwoWire* wirePort = nullptr)  {
+        log_d("GpsGravityI2c Initializer");
 
       #ifdef GPS_SDA
         if (wirePort != nullptr) {
           _wire = wirePort;
           _wire->begin(GPS_SDA, GPS_SCL);
-          log_d("GpsI2c: GPS_SDA=%d GPS_SCL=%d", GPS_SDA, GPS_SCL);
+          log_d("GpsGravityI2c: GPS_SDA=%d GPS_SCL=%d", GPS_SDA, GPS_SCL);
         }
       #endif
 
@@ -148,5 +148,5 @@ class GpsI2c {
     uint8_t num_sats = 0;
 };
 
-#endif    //  HAS_GPSI2C
-#endif    // GPSI2C_h
+#endif    //  HAS_GPS_GRAVITY_I2C
+#endif    // Gps_Gravity_I2c.h

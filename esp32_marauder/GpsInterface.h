@@ -5,7 +5,7 @@
 
 #include "configs.h"
 
-#if defined(HAS_GPS) && !defined(HAS_GPSI2C)
+#if defined(HAS_GPS) && !defined(HAS_GPS_GRAVITY_I2C)
 
 #include <MicroNMEA.h>
 #include <SoftwareSerial.h>

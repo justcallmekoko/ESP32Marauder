@@ -1,6 +1,6 @@
 #include "GpsInterface.h"
 
-#if defined(HAS_GPS) && !defined(HAS_GPSI2C)
+#if defined(HAS_GPS) && !defined(HAS_GPS_GRAVITY_I2C)
 
 extern GpsInterface gps_obj;
 
@@ -805,4 +805,4 @@ void GpsInterface::main(uint32_t curr_time) {
     this->setGPSInfo();
   }
 }
-#endif   //  HAS_GPS && !HAS_GPSI2C
+#endif   //  HAS_GPS && !HAS_GPS_GRAVITY_I2C

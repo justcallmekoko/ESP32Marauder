@@ -8,9 +8,9 @@
 extern WiFiScan wifi_scan_obj;
 
 #ifdef HAS_GPS
-  #ifdef HAS_GPSI2C
-    #include "GpsI2c.h"
-    extern GpsI2c gps_obj;
+  #ifdef HAS_GPS_GRAVITY_I2C
+    #include "Gps_Gravity_I2c.h"
+    extern GpsGravityI2c gps_obj;
   #else
     #include "GpsInterface.h"
     extern GpsInterface gps_obj;

@@ -2890,7 +2890,7 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
     #endif
   }
   else if (scan_mode == WIFI_SCAN_GPS_NMEA){
-    #if defined(HAS_GPS) && !defined(HAS_GPSI2C)
+    #if defined(HAS_GPS) && !defined(HAS_GPS_GRAVITY_I2C)
       gps_obj.enable_queue();
     #endif
   }
@@ -3299,7 +3299,7 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
     display_obj.tteBar = false;
   #endif
 
-  #if defined(HAS_GPS) && !defined(HAS_GPSI2C)
+  #if defined(HAS_GPS) && !defined(HAS_GPS_GRAVITY_I2C)
     gps_obj.disable_queue();
   #endif
 }
@@ -4537,7 +4537,7 @@ bool WiFiScan::RunGPSInfo(bool tracker, bool display, bool poi) {
   bool return_val = true;
   #ifdef HAS_GPS
 
-    #ifdef HAS_GPSI2C
+    #ifdef HAS_GPS_GRAVITY_I2C
       gps_obj.setGPSInfo();
     #endif
 
@@ -4683,7 +4683,7 @@ bool WiFiScan::RunGPSInfo(bool tracker, bool display, bool poi) {
 }
 
 void WiFiScan::RunGPSNmea() {
-  #if defined(HAS_GPS) && !defined(HAS_GPSI2C)
+  #if defined(HAS_GPS) && !defined(HAS_GPS_GRAVITY_I2C)
     LinkedList<nmea_sentence_t> *buffer=gps_obj.get_queue();
     bool queue_enabled=gps_obj.queue_enabled();
 
@@ -8900,9 +8900,9 @@ String WiFiScan::checkEmptyProbe(String essid) {
 void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type) {
   extern WiFiScan wifi_scan_obj;
 
-  #if defined(HAS_GPS) || defined(HAS_GPSI2C)
-    #ifdef HAS_GPSI2C
-      extern GpsI2c gps_obj;
+  #if defined(HAS_GPS) || defined(HAS_GPS_GRAVITY_I2C)
+    #ifdef HAS_GPS_GRAVITY_I2C
+      extern GpsGravityI2c gps_obj;
     #else
       extern GpsInterface gps_obj;
     #endif
@@ -13068,7 +13068,7 @@ void WiFiScan::main(uint32_t currentTime)
       packets_sent = 0;
     }
   }
-  #if defined(HAS_GPS) && !defined(HAS_GPSI2C)
+  #if defined(HAS_GPS) && !defined(HAS_GPS_GRAVITY_I2C)
     else if ((currentScanMode == WIFI_SCAN_OFF))
       if(gps_obj.queue_enabled())
         gps_obj.disable_queue();

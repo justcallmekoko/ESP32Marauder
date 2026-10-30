@@ -14,8 +14,8 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #include <stdio.h>
 
-#if defined(HAS_GPSI2C)
-  #include "GpsI2c.h"
+#if defined(HAS_GPS_GRAVITY_I2C)
+  #include "Gps_Gravity_I2c.h"
 #elif defined(HAS_GPS)
   #include "GpsInterface.h"
 #endif
@@ -90,8 +90,8 @@ ReconMission recon_obj;
   TDongleDisplay t_dongle_display;
 #endif
 
-#if defined(HAS_GPSI2C)
-  GpsI2c gps_obj;
+#if defined(HAS_GPS_GRAVITY_I2C)
+  GpsGravityI2c gps_obj;
 #elif defined(HAS_GPS)
   GpsInterface gps_obj;
 #endif
@@ -389,7 +389,7 @@ void setup()
     led_obj.RunSetup();
   #endif
 
-  #if defined(HAS_GPSI2C) 
+  #if defined(HAS_GPS_GRAVITY_I2C) 
       #if defined(GPS_SDA) &&  defined(I2C_SDA) && GPS_SDA != I2C_SDA
 	Wire1.begin(GPS_SDA, GPS_SCL, 10000);
 	gps_obj.begin(&Wire1);
@@ -463,7 +463,7 @@ void loop()
     t_dongle_display.update(currentTime, wifi_scan_obj);
   #endif
 
-  #if defined(HAS_GPS) || defined(HAS_GPSI2C)
+  #if defined(HAS_GPS) || defined(HAS_GPS_GRAVITY_I2C)
     if (gps_obj.gps_enabled) {
       gps_obj.main(currentTime);
     }

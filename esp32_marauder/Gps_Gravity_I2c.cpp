@@ -1,5 +1,5 @@
 
-#include "GpsI2c.h"
+#include "Gps_Gravity_I2c.h"
 // 
 // Gravity: GNSS GPS BeiDou Receiver Module
 // Supports I2C or UART Communications
@@ -20,17 +20,17 @@
 // gps_obj.generateGXgga();
 //     String gxrmc = gps_obj.generateGXrmc();
 
-#ifdef HAS_GPSI2C
+#ifdef HAS_GPS_GRAVITY_I2C
 
 #include <Arduino.h>
 #include "time_fmt.h"
 
 
-#ifndef HAS_GPSI2C_ADDR
-  #define HAS_GPSI2C_ADDR 0x20
+#ifndef HAS_GPS_GRAVITY_I2C_ADDR
+  #define HAS_GPS_GRAVITY_I2C_ADDR 0x20
 #endif
 
-extern GpsI2c  gps_obj;
+extern GpsGravityI2c  gps_obj;
 extern bool system_time_set;
 extern bool set_system_time(struct tm, bool setrtc = false);
 
@@ -43,9 +43,9 @@ extern bool set_system_time(struct tm, bool setrtc = false);
 
 uint32_t lastq;
 
-void GpsI2c::begin(int sdaPin, int sclPin, uint32_t frequency) {
-  // Serial.print("GpsI2c::begin  ADDR="); Serial.print(GNSS_DEVICE_ADDR);
-  log_d("GpsI2c");
+void GpsGravityI2c::begin(int sdaPin, int sclPin, uint32_t frequency) {
+  // Serial.print("GpsGravityI2c::begin  ADDR="); Serial.print(GNSS_DEVICE_ADDR);
+  log_d("GpsGravityI2c");
 
   Wire.begin(sdaPin, sclPin);
   // Wire.begin(I2C_SDA, I2C_SCL);
@@ -53,7 +53,7 @@ void GpsI2c::begin(int sdaPin, int sclPin, uint32_t frequency) {
   begin(&Wire);
 }
 
-void GpsI2c::begin(TwoWire *wireInstance) {
+void GpsGravityI2c::begin(TwoWire *wireInstance) {
   if (_wire == nullptr)
     _wire = wireInstance ? wireInstance : &Wire;
 
@@ -61,17 +61,17 @@ void GpsI2c::begin(TwoWire *wireInstance) {
   delay(500);
   // describeAllPins();
   // Serial.print("GNSS_DEVICE_ADDR=0x"); Serial.println(GNSS_DEVICE_ADDR, HEX);
-  // Serial.print("HAS_GPSI2C_ADDR=0x"); Serial.println(HAS_GPSI2C_ADDR, HEX);
+  // Serial.print("HAS_GPS_GRAVITY_I2C_ADDR=0x"); Serial.println(HAS_GPS_GRAVITY_I2C_ADDR, HEX);
 
-  // (&Wire, HAS_GPSI2C_ADDR);
+  // (&Wire, HAS_GPS_GRAVITY_I2C_ADDR);
   DFRobot_GNSS_I2C gnssu = DFRobot_GNSS_I2C(_wire, GNSS_DEVICE_ADDR);
 
   lastq = millis();
 
   // retry GPS connection but give up after 5+ sec...
   while (!(this->gps_enabled = gnss.begin())) {
-     log_d("GpsI2c::begin fail");
-     Serial.println("GpsI2c::begin Fail");
+     log_d("GpsGravityI2c::begin fail");
+     Serial.println("GpsGravityI2c::begin Fail");
      // describeAllPins();
      if ( (millis() - lastq) > 2500)
        return;
@@ -79,9 +79,9 @@ void GpsI2c::begin(TwoWire *wireInstance) {
   }
 
   this->gps_enabled = true;
-  log_d("GpsI2c::begin gps_enabled=%d", this->gps_enabled);
+  log_d("GpsGravityI2c::begin gps_enabled=%d", this->gps_enabled);
 
-  // Serial.print("GpsI2c::begin gps_enabled="); Serial.println(this->gps_enabled);
+  // Serial.print("GpsGravityI2c::begin gps_enabled="); Serial.println(this->gps_enabled);
 
   gnss.enablePower();      // Enable gnss power
 
@@ -114,7 +114,7 @@ void GpsI2c::begin(TwoWire *wireInstance) {
 *   eGPS_BeiDou_GLONASS use gps + beidou + glonass
 */
 
-void GpsI2c::setType(uint8_t t) {
+void GpsGravityI2c::setType(uint8_t t) {
   log_d("setType(i) called");
   // x = std::clamp(t, 1, 7);
   uint8_t x = std::min<uint8_t>(std::max<uint8_t>(t, 1), 7);
@@ -123,7 +123,7 @@ void GpsI2c::setType(uint8_t t) {
   gnss.setGnss((eGnssMode_t) x);
 }
 
-void GpsI2c::setType(String t) {
+void GpsGravityI2c::setType(String t) {
   log_d("setType(S) called");
 
   if (t ==  "gps") gnss.setGnss(eGPS);
@@ -138,7 +138,7 @@ void GpsI2c::setType(String t) {
 
 // GpsInterface Compatibility
 // Honestly, I'm guessing at this part
-String GpsI2c::generateType() {
+String GpsGravityI2c::generateType() {
   log_d("generateType called");
 
   /*
@@ -157,7 +157,7 @@ String GpsI2c::generateType() {
 }
 
 
-uint8_t GpsI2c::GetGNSSTypeCode() { return(this->nav_mode); }
+uint8_t GpsGravityI2c::GetGNSSTypeCode() { return(this->nav_mode); }
 
 static constexpr const char* gnss_type_names[] = {
     "??",
@@ -171,7 +171,7 @@ static constexpr const char* gnss_type_names[] = {
 };
 
 
-const char *GpsI2c::GetGNSSType() {
+const char *GpsGravityI2c::GetGNSSType() {
   log_d("GetGNSSType called");
 
   // std::clamp(gnss.getGnssMode(), 1, 7);
@@ -180,7 +180,7 @@ const char *GpsI2c::GetGNSSType() {
     return gnss_type_names[mode];
 }
 
-struct tm GpsI2c::GetTimeInfo() {
+struct tm GpsGravityI2c::GetTimeInfo() {
   struct tm timeInfo = {0};
   sTim_t utc = gnss.getUTC();
   sTim_t date = gnss.getDate();
@@ -198,7 +198,7 @@ struct tm GpsI2c::GetTimeInfo() {
   return timeInfo;
 }
 
-String GpsI2c::dt_string_from_gps() {
+String GpsGravityI2c::dt_string_from_gps() {
   //Return a datetime String using GPS data only.
   String datetime = "";
 
@@ -221,7 +221,7 @@ String GpsI2c::dt_string_from_gps() {
 }
 
 
-void GpsI2c::setGPSInfo() {
+void GpsGravityI2c::setGPSInfo() {
   String nmea_sentence = String("");
 
   this->num_sats = gnss.getNumSatUsed();
@@ -264,7 +264,7 @@ void GpsI2c::setGPSInfo() {
   // this->accuracy = 2.5;  // ????
 }
 
-void GpsI2c::SHowGPSInfo() {
+void GpsGravityI2c::SHowGPSInfo() {
   Serial.print("NumSatUsed    = "); Serial.println(this->num_sats);
   Serial.print("good_fix      = "); Serial.println(this->good_fix);
   Serial.print("nav_system    = "); Serial.println(this->nav_system);
@@ -282,31 +282,31 @@ void GpsI2c::SHowGPSInfo() {
 
 
 
-// int GpsI2c::getNumSats() { return num_sats; }
+// int GpsGravityI2c::getNumSats() { return num_sats; }
 
 
-// String GpsI2c::getFixStatusAsString() { return this->good_fix ? "Yes" : "No"; }
+// String GpsGravityI2c::getFixStatusAsString() { return this->good_fix ? "Yes" : "No"; }
 
-// bool GpsI2c::getGpsModuleStatus() { return this->gps_enabled; }
-
-
-// int GpsI2c::getTextQueueSize() { return -2; }
+// bool GpsGravityI2c::getGpsModuleStatus() { return this->gps_enabled; }
 
 
-// String GpsI2c::getNmea() {
+// int GpsGravityI2c::getTextQueueSize() { return -2; }
+
+
+// String GpsGravityI2c::getNmea() {
 //   return this->nmea_sentence;
 // }
 
-// String GpsI2c::getNmeaNotimp() {
+// String GpsGravityI2c::getNmeaNotimp() {
 //   return this->notimp_nmea_sentence;
 // }
 
-// String GpsI2c::getNmeaNotparsed() {
+// String GpsGravityI2c::getNmeaNotparsed() {
 //   return this->notparsed_nmea_sentence;
 // }
 
 
-void GpsI2c::main(uint32_t current, uint16_t scanMode) {
+void GpsGravityI2c::main(uint32_t current, uint16_t scanMode) {
   //  if ( (current - lastq) < (400 * (wifi_scan_obj.currentScanMode ? 1 : 20 )))
   //  if ( (current - lastq) < (400 * (scanMode ? 1 : 20 )))
   if ((current - lastq) < 400) {
@@ -322,4 +322,4 @@ void GpsI2c::main(uint32_t current, uint16_t scanMode) {
 }
 
 
-#endif   // HAS_GPSI2C
+#endif   // HAS_GPS_GRAVITY_I2C

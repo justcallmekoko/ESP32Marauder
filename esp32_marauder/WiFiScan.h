@@ -66,10 +66,10 @@
 #ifdef HAS_BATTERY
   #include "BatteryInterface.h"
 #endif
-#if defined(HAS_GPS) && !defined(HAS_GPSI2C)
+#if defined(HAS_GPS) && !defined(HAS_GPS_GRAVITY_I2C)
   #include "GpsInterface.h"
-#elif defined(HAS_GPSI2C)
-  #include "GpsI2c.h"
+#elif defined(HAS_GPS_GRAVITY_I2C)
+  #include "Gps_Gravity_I2c.h"
 #endif
 #include "settings.h"
 #include "GeofenceMath.h"
@@ -251,10 +251,10 @@ extern EvilPortal evil_portal_obj;
   extern SDInterface sd_obj;
 #endif
 
-#if defined(HAS_GPS) && !defined(HAS_GPSI2C)
+#if defined(HAS_GPS) && !defined(HAS_GPS_GRAVITY_I2C)
   extern GpsInterface gps_obj;
-#elif defined(HAS_GPSI2C)
-  extern GpsI2c gps_obj;
+#elif defined(HAS_GPS_GRAVITY_I2C)
+  extern GpsGravityI2c gps_obj;
 #endif
 
 extern Buffer buffer_obj;

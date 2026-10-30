@@ -459,7 +459,7 @@ void CommandLine::runCommand(String input) {
             Serial.println(gps_obj.getText());
           }
 
-          #if defined(HAS_GPS) && !defined(HAS_GPSI2C)
+          #if defined(HAS_GPS) && !defined(HAS_GPS_GRAVITY_I2C)
           else if (gps_info == "nmea"){
             int notparsed_arg = this->argSearch(&cmd_args, "-p");
             int notimp_arg = this->argSearch(&cmd_args, "-i");
@@ -507,7 +507,7 @@ void CommandLine::runCommand(String input) {
     #endif
   } // GPS_CMD
   
-  #ifndef HAS_GPSI2C
+  #ifndef HAS_GPS_GRAVITY_I2C
   else if (cmd_args.get(0) == NMEA_CMD) {
     #ifdef HAS_GPS
       if (gps_obj.getGpsModuleStatus()) {

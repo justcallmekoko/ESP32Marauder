@@ -257,7 +257,7 @@
       #define USE_SD
     // #define HAS_TEMP_SENSOR
     #define HAS_GPS
-      #define HAS_GPSI2C
+      #define HAS_GPS_GRAVITY_I2C
     #define HAS_DIRECT_UPLOAD
   #endif
 
@@ -2864,7 +2864,7 @@
   //// END EVIL PORTAL STUFF
 
   //// GPS STUFF
-  #if defined(HAS_GPS) || defined(HAS_GPSI2C)
+  #if defined(HAS_GPS) || defined(HAS_GPS_GRAVITY_I2C)
     #ifdef HAS_PSRAM
       #define mac_history_len 500
     #else
@@ -2873,7 +2873,7 @@
     #define mac_history_len_half (mac_history_len / 2)
   #endif
 
-  #if defined(HAS_GPSI2C)
+  #if defined(HAS_GPS_GRAVITY_I2C)
 
     #if defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
       #define GPS_SDA 32
@@ -2919,7 +2919,7 @@
     #endif
   #endif
 
-  #if defined(HAS_GPS) && !defined(HAS_GPSI2C)
+  #if defined(HAS_GPS) && !defined(HAS_GPS_GRAVITY_I2C)
 
     #if defined(MARAUDER_V6) || defined(MARAUDER_V6_1)
       #define GPS_SERIAL_INDEX 2
@@ -3347,12 +3347,12 @@
   // CONFIGS LOGIC
 
   // I2C based GPS
-  #if defined(HAS_GPSI2C) && !defined(HAS_GPS)
+  #if defined(HAS_GPS_GRAVITY_I2C) && !defined(HAS_GPS)
     #define HAS_GPS
   #endif
 
   // UART based GPS
-  #if !defined(HAS_GPSI2C)
+  #if !defined(HAS_GPS_GRAVITY_I2C)
     #if defined(HAS_GPS) && ( !defined(GPS_TX) || !defined(GPS_SERIAL_INDEX) )
       #warning "HAS_GPS defined without serial port, check 'GPS STUFF' section"
     #endif

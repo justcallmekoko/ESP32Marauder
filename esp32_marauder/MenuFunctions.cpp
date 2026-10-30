@@ -4056,7 +4056,7 @@ void MenuFunctions::RunSetup()
         wifi_scan_obj.StartScan(WIFI_SCAN_GPS_DATA, TFT_CYAN);
       });
 
-#ifndef HAS_GPSI2C
+#ifndef HAS_GPS_GRAVITY_I2C
       this->addNodes(&gpsMenu, "NMEA Stream", TFTORANGE, GPS_MENU, [this]() {
         wifi_scan_obj.currentScanMode = WIFI_SCAN_GPS_NMEA;
         this->changeMenu(&gpsInfoMenu, true);
