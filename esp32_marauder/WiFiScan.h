@@ -81,6 +81,7 @@
 #elif defined(HAS_NEOPIXEL_LED) || defined(HAS_T_DONGLE_LED)
   #include "LedInterface.h"
 #endif
+#include "time_fmt.h"
 
 //  WIFI_POWER_21dBm = 84,      // 21dBm
 //  WIFI_POWER_20_5dBm = 82,    // 20.5dBm

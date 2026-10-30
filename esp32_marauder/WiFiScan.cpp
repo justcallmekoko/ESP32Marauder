@@ -5013,120 +5013,209 @@ void WiFiScan::RunAPInfo(uint16_t index, bool do_display) {
   #endif
 }
 
+#ifdef DEAD_ALT_CODE
+String uptimeString() {
+  uint64_t secs = millis() / 1000UL;
+  uint32_t s = secs % 60;
+  uint32_t m = (secs / 60) % 60;
+  uint32_t h = (secs / 3600) % 24;
+  uint32_t d = secs / 86400;
+
+  String result;
+  if (d) {
+    result = String(d) + "d " + 
+             String(h, DEC).padStart(2, '0') + ":" +
+             String(m, DEC).padStart(2, '0') + ":" +
+             String(s, DEC).padStart(2, '0');
+  } else {
+    result = String(h, DEC).padStart(2, '0') + ":" +
+             String(m, DEC).padStart(2, '0') + ":" +
+             String(s, DEC).padStart(2, '0');
+  }
+  return result;
+}
+#endif
+
+
+String uptimeString() {
+  // uint64_t secs = esp_timer_get_time() / 1000000ULL;   // 64-bit µs since boot
+
+  uint64_t secs = millis() / 1000UL;
+  uint32_t s = secs % 60;
+  uint32_t m = (secs / 60) % 60;
+  uint32_t h = (secs / 3600) % 24;
+  uint32_t d = secs / 86400;
+
+  char buf[24];
+  if (d)
+    snprintf(buf, sizeof(buf), "%lud %02lu:%02lu:%02lu", (unsigned long)d, (unsigned long)h, (unsigned long)m, (unsigned long)s);
+  else
+    snprintf(buf, sizeof(buf), "%02lu:%02lu:%02lu", (unsigned long)h, (unsigned long)m, (unsigned long)s);
+  return String(buf);
+}
+
+
+static void p_info(const char *text, bool newline = true) {
+  #ifdef HAS_SCREEN
+    if (newline) display_obj.tft.println(text); else display_obj.tft.print(text);
+  #endif
+  if (newline) Serial.println(text); else Serial.print(text);
+}
+
+static inline void p_info(const String &s, bool newline = true) { p_info(s.c_str(), newline); }
+
+  #if defined(HAS_CPU_TEMP)
+      #include "cpu_temp_sensor.hpp"
+  #endif   // HAS_CPU_TEMP
+
 void WiFiScan::RunInfo() {
   uint8_t sta_mac[6];
   uint8_t ap_mac[6];
+  extern bool system_time_set;
 
   this->getMAC(true, sta_mac);
   this->getMAC(false, ap_mac);
   const esp_partition_t* running_partition = esp_ota_get_running_partition();
-  const String app_partition = running_partition ? String(running_partition->label) : String("unknown");
+  //  const String app_partition = running_partition ? String(running_partition->label) : String("unknown");
+
+  char buffer[64];
+
+  uint32_t flashSize = ESP.getFlashChipSize();
 
   #ifdef HAS_SCREEN
     display_obj.tft.setTextWrap(false);
     display_obj.tft.setFreeFont(NULL);
-    display_obj.tft.setCursor(0, SCREEN_HEIGHT / 3);
+    display_obj.tft.setCursor(0, SCREEN_HEIGHT * 2 / 7);  // gives the same result using integers only
     display_obj.tft.setTextSize(1);
     display_obj.tft.setTextColor(TFT_CYAN);
-    display_obj.tft.println(text_table4[20]);
-    display_obj.tft.println(text_table4[21] + display_obj.version_number);
-    display_obj.tft.println("Hardware: " + (String)HARDWARE_NAME);
-    display_obj.tft.println("FCC ID: " + (String)FCC_ID);
-    display_obj.tft.println("App partition: " + app_partition);
-    display_obj.tft.println(text_table4[22] + (String)esp_get_idf_version());
   #endif
 
-  Serial.println(text_table4[20]);
-  Serial.println(text_table4[21] + (String)MARAUDER_VERSION);
-  Serial.println("Hardware: " + (String)HARDWARE_NAME);
-  Serial.println("FCC ID: " + (String)FCC_ID);
-  Serial.println("App partition: " + app_partition);
-  Serial.println(text_table4[22] + (String)esp_get_idf_version());
+  if (system_time_set) {
+    struct tm timeinfo;
+    if(getLocalTime(&timeinfo)) {
+      fmt_datetime(buffer, sizeof(buffer), timeinfo);
+      p_info(buffer);
+    }
+  } 
+  // else p_info("System time not Set");
+
+  p_info(text_table4[20]);
+
+  p_info(text_table4[21] + display_obj.version_number);
+  p_info("Hardware: " + (String)HARDWARE_NAME);
+  if (running_partition) {
+    snprintf(buffer, sizeof(buffer), "App partition:: %s 0x%lx 0x%lx", running_partition->label, running_partition->address, running_partition->size);
+    p_info(buffer);
+  } else {
+    p_info("App partition: unknown");
+  }
+  p_info(text_table4[22] + (String)esp_get_idf_version());
 
   #ifdef ESP_ARDUINO_VERSION_STR
-    Serial.print("Arduino ESP32 Core Version: ");
-    Serial.println(ESP_ARDUINO_VERSION_STR);
-
-    #ifdef HAS_SCREEN
-      display_obj.tft.print("Arduino ESP32 Core Version: ");
-      display_obj.tft.println(ESP_ARDUINO_VERSION_STR);
-    #endif
+    p_info("Arduino ESP32 Core Version: ", 0); p_info(ESP_ARDUINO_VERSION_STR);
   #elif defined(ESP_ARDUINO_VERSION)
-    Serial.printf("Arduino Core Major: %d, Minor: %d, Patch: %d\n",
-            ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
+    snprintf(buffer, sizeof(buffer), "ESP Arduino: %d.%d.%d", ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
+    p_info(buffer);
+  #endif
 
-    #ifdef HAS_SCREEN
-      Serial.printf("Arduino Core Major: %d, Minor: %d, Patch: %d\n",
-            ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
+  p_info("Build Date: " __DATE__ " " __TIME__);
+  #ifdef GIT_BRANCH
+    #ifdef GIT_REV
+      p_info("GIT BRANCH: " GIT_BRANCH " " GIT_REV);
+    #else
+      p_info("GIT BRANCH: " GIT_BRANCH);
     #endif
   #endif
 
-  if (this->wsl_bypass_enabled) {
-    #ifdef HAS_SCREEN
-      display_obj.tft.println(text_table4[23]);
-    #endif
-    Serial.println(text_table4[23]);
-  }
-  else {
-    #ifdef HAS_SCREEN
-      display_obj.tft.println(text_table4[24]);
-    #endif
-    Serial.println(text_table4[24]);
-  }
+  // p_info("App partition: " + app_partition)
 
-  #ifdef HAS_SCREEN
-    display_obj.tft.println(text_table4[25] + screenMac(macToString(sta_mac)));
-    display_obj.tft.println(text_table4[26] + screenMac(macToString(ap_mac)));
+  #ifdef CONFIG_IDF_TARGET
+    // snprintf(buffer, sizeof(buffer), "IDF_TARGET: %s", CONFIG_IDF_TARGET);
+    // p_info(buffer);
+    p_info("IDF_TARGET: " CONFIG_IDF_TARGET);
   #endif
-  Serial.println(text_table4[25] + macToString(sta_mac));
-  Serial.println(text_table4[26] + macToString(ap_mac));
+
+  #ifdef FCC_ID
+    //np_info("FCC ID: "  (String)FCC_ID);
+    p_info("FCC ID: "  FCC_ID);
+  #endif
+
+  // snprintf(buffer, sizeof(buffer), "%s: %s", text_table4[22],  esp_get_idf_version()); p_info(buffer);
+
+
+  snprintf(buffer, sizeof(buffer), "Flash Size:  %luMB", ESP.getFlashChipSize() / (1024 * 1024));
+  p_info(buffer);
+
+  #ifdef HAS_PSRAM
+    snprintf(buffer, sizeof(buffer), "PSRAM Size:  %dMB", (int)(ESP.getPsramSize() / (1024 * 1024)));
+    p_info(buffer);
+  #else
+    p_info("PSRAM Size: 0");
+  #endif
+
+  snprintf(buffer, sizeof(buffer), "CPU=%u MHz  APB=%u Hz", getCpuFrequencyMhz(), getApbFrequency());
+  p_info(buffer);
+
+//  extern const esp_partition_t *run;
+//  snprintf(buffer, sizeof(buffer), "Running from %s @0x%lx", run->label, (unsigned long)run->address);
+//  p_info(buffer);
+
+  p_info(text_table4[25], 0); p_info(macToString(sta_mac));
+  p_info(text_table4[26], 0); p_info(macToString(ap_mac));
 
   #if defined(HAS_SD)
     if (sd_obj.supported) {
-      #ifdef HAS_SCREEN
-        display_obj.tft.println(text_table4[28]);
-        display_obj.tft.print(text_table4[29]);
-        display_obj.tft.print(sd_obj.card_sz);
-        display_obj.tft.println("MB");
-      #endif
-      Serial.println(text_table4[28]);
-      Serial.print(text_table4[29]);
-      Serial.print(sd_obj.card_sz);
-      Serial.println("MB");
+      p_info(text_table4[28]);
+
+      snprintf(buffer, sizeof(buffer), "%s %s", text_table4[29], sd_obj.card_sz.c_str());
+      p_info(buffer);
+
     } else {
-      #ifdef HAS_SCREEN
-        display_obj.tft.println(text_table4[30]);
-        display_obj.tft.println(text_table4[31]);
-      #endif
-      Serial.println(text_table4[30]);
-      Serial.println(text_table4[31]);
+      p_info(text_table4[30]);
+      p_info(text_table4[31]);
     }
   #endif
 
   #ifdef HAS_BATTERY
     if (battery_obj.supported) {
+      // p_info(text_table4[32]);  // "Battery Monitor: supported"
       battery_obj.battery_level = battery_obj.getBatteryLevel();
-      #ifdef HAS_SCREEN
-        display_obj.tft.println(text_table4[32]);
-        display_obj.tft.println(text_table4[33] + (String)battery_obj.battery_level + "%");
-      #endif
-      Serial.println(text_table4[32]);
-      Serial.println(text_table4[33] + (String)battery_obj.battery_level + "%");
+      snprintf(buffer, sizeof(buffer), "%s %d%%", text_table4[33], battery_obj.getBatteryLevel());
+      p_info(buffer);
     }
     else {
-      #ifdef HAS_SCREEN
-        display_obj.tft.println(text_table4[34]);
-      #endif
-      Serial.println(text_table4[34]);
+      p_info(text_table4[34]);
     }
   #endif  // HAS_BATTERY
-  
+
+  #ifdef temp_sensor_hpp
+    #if defined(HAS_TEMP_SENSOR)
+      if (TempSensor_obj->cpu_supported) {
+        snprintf(buffer, sizeof(buffer), "CPU temperature:  %.1fC", TempSensor_obj.cpu_temperature());
+        p_info(buffer);
+      }
+    #endif   // HAS_CPU_TEMP
+  #endif   // temp_sensor_hpp
+
+  #if defined(HAS_CPU_TEMP)
+        snprintf(buffer, sizeof(buffer), "CPU temp:  %.1fC", read_sys_temp());
+        p_info(buffer);
+  #endif   // HAS_CPU_TEMP
+
+//  #if (defined(HAS_PM) && defined(CONFIG_PM_ENABLE)) or defined(CONFIG_PM_DFS_INIT_AUTO)
+//    extern bool pm_active;
+//    extern bool pm_configured;
+//
+//    snprintf(buffer, sizeof(buffer), "Power Mgt: %s%s",
+//          pm_configured ? "Enabled" : "Disabled",
+//          pm_configured ? (pm_active ? " Active" : " Inactive") : "");
+//    p_info(buffer);
+//  #endif
+
+  p_info("Uptime: " + uptimeString());  // wraps after about 49 days because it uses
+
   if (this->wifi_connected)
       showNetworkInfo();
-
-  //#ifdef HAS_SCREEN
-  //  display_obj.tft.println(text_table4[35] + (String)temp_obj.current_temp + " C");
-  //#endif
 }
 
 bool WiFiScan::setStationSelected(uint16_t index, bool selected) {
