@@ -39,11 +39,7 @@ extern Buffer buffer_obj;
 
 extern char apName[MAX_AP_NAME_SIZE];
 
-#ifndef HAS_PSRAM
-  char index_html[MAX_HTML_SIZE] = "TEST";
-#else
-  extern char* index_html;
-#endif
+extern char* index_html;
 
 struct ssid {
   String essid;
@@ -57,6 +53,7 @@ struct AccessPoint {
   uint8_t channel;
   uint8_t bssid[6];
   bool selected;
+  uint8_t attack_scope = 0;
  // LinkedList<char>* beacon;
   char beacon[2];
   int8_t rssi;
@@ -80,7 +77,7 @@ public:
   bool canHandle(AsyncWebServerRequest *request) { return true; }
 
   void handleRequest(AsyncWebServerRequest *request) {
-    request->send_P(200, "text/html", index_html);
+    request->send(200, "text/html", index_html ? index_html : "");
   }
 };
 

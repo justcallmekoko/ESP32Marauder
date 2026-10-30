@@ -36,6 +36,7 @@ class Buffer {
     void write(uint32_t n);
     void write(uint16_t n);
     void write(const uint8_t* buf, uint32_t len);
+    bool writeUnlocked(const uint8_t* buf, uint32_t len);
     void saveFs();
     void saveSerial();
 
@@ -48,6 +49,7 @@ class Buffer {
     bool writing = false; // acceppting writes to buffer
     bool useA = true; // writing to bufA or bufB
     bool saving = false; // currently saving onto the SD card
+    portMUX_TYPE bufferMux = portMUX_INITIALIZER_UNLOCKED;
 
     String fileName = "/0.pcap";
     const char* directory = NULL;

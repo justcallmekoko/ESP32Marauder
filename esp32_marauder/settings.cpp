@@ -45,6 +45,18 @@ static JsonObject ensureGeofenceSetting(DynamicJsonDocument& json) {
   return setting;
 }
 
+static bool ensureCensorSetting(DynamicJsonDocument& json) {
+  for (JsonObject setting : json["Settings"].as<JsonArray>())
+    if (strcmp(setting["name"] | "", "Censor") == 0) return false;
+  JsonObject setting = json["Settings"].as<JsonArray>().createNestedObject();
+  setting["name"] = "Censor";
+  setting["type"] = "bool";
+  setting["value"] = false;
+  setting["range"]["min"] = false;
+  setting["range"]["max"] = true;
+  return true;
+}
+
 static bool writeSettingsDocument(DynamicJsonDocument& json, String& cache) {
   File file = SPIFFS.open("/settings.json", FILE_WRITE);
   if (!file) return false;
@@ -82,6 +94,8 @@ void Settings::_buildCache() {
       _cache.ForceProbe = json["Settings"][i]["value"].as<bool>();
     else if (strcmp(name, "SavePCAP") == 0)
       _cache.SavePCAP = json["Settings"][i]["value"].as<bool>();
+    else if (strcmp(name, "Censor") == 0)
+      _cache.Censor = json["Settings"][i]["value"].as<bool>();
     else if (strcmp(name, "EnableLED") == 0)
       _cache.EnableLED = json["Settings"][i]["value"].as<bool>();
     else if (strcmp(name, "EPDeauth") == 0)
@@ -149,6 +163,7 @@ bool Settings::begin() {
     ensureGeofenceSetting(jsonBuffer);
     settings_changed = true;
   }
+  if (ensureCensorSetting(jsonBuffer)) settings_changed = true;
 
   // One-time, backward-compatible migration of the previous single profile.
   JsonArray saved_wifi = saved_wifi_setting["value"].as<JsonArray>();
@@ -261,6 +276,8 @@ template <> bool Settings::loadSetting<bool>(const char* key) {
     return _cache.ForceProbe;
   if (strcmp(key, "SavePCAP") == 0)
     return _cache.SavePCAP;
+  if (strcmp(key, "Censor") == 0)
+    return _cache.Censor;
   if (strcmp(key, "EnableLED") == 0)
     return _cache.EnableLED;
   if (strcmp(key, "EPDeauth") == 0)
@@ -301,6 +318,8 @@ template <> uint8_t Settings::loadSetting<uint8_t>(const char* key) {
 
   if (strcmp(key, "SavePCAP") == 0)
     return (uint8_t)_cache.SavePCAP;
+  if (strcmp(key, "Censor") == 0)
+    return (uint8_t)_cache.Censor;
 
   if (strcmp(key, "EnableLED") == 0)
     return (uint8_t)_cache.EnableLED;
@@ -366,6 +385,8 @@ template <> bool Settings::saveSetting<bool>(const char* key, bool value) {
         _cache.ForceProbe = value;
       else if (strcmp(key, "SavePCAP") == 0)
         _cache.SavePCAP = value;
+      else if (strcmp(key, "Censor") == 0)
+        _cache.Censor = value;
       else if (strcmp(key, "EnableLED") == 0)
         _cache.EnableLED = value;
       else if (strcmp(key, "EPDeauth") == 0)
@@ -607,6 +628,12 @@ bool Settings::createDefaultSettings(fs::FS &fs, bool spec, uint8_t index, const
     jsonBuffer["Settings"][12]["range"]["min"] = 0;
     jsonBuffer["Settings"][12]["range"]["max"] = MAX_GEOFENCES;
 
+    jsonBuffer["Settings"][13]["name"] = "Censor";
+    jsonBuffer["Settings"][13]["type"] = "bool";
+    jsonBuffer["Settings"][13]["value"] = false;
+    jsonBuffer["Settings"][13]["range"]["min"] = false;
+    jsonBuffer["Settings"][13]["range"]["max"] = true;
+
     serializeJson(jsonBuffer, settingsFile);
     serializeJson(jsonBuffer, settings_string);
   } else {
@@ -719,12 +746,8 @@ WifiCredentialSaveResult Settings::saveWifiCredential(const String& ssid, const 
   profiles[0]["ssid"] = ssid;
   profiles[0]["password"] = password;
 
-  File settings_file = SPIFFS.open("/settings.json", FILE_WRITE);
-  if (!settings_file)
+  if (!writeSettingsDocument(json, this->json_settings_string))
     return WIFI_CREDENTIAL_ERROR;
-  serializeJson(json, settings_file);
-  settings_file.close();
-  serializeJson(json, this->json_settings_string);
   return result;
 }
 
@@ -738,13 +761,7 @@ bool Settings::removeSavedWifiCredential(uint8_t index) {
     return false;
   profiles.remove(index);
 
-  File settings_file = SPIFFS.open("/settings.json", FILE_WRITE);
-  if (!settings_file)
-    return false;
-  serializeJson(json, settings_file);
-  settings_file.close();
-  serializeJson(json, this->json_settings_string);
-  return true;
+  return writeSettingsDocument(json, this->json_settings_string);
 }
 
 bool Settings::markSavedWifiSuccessful(uint8_t index) {

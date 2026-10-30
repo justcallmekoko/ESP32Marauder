@@ -5,7 +5,7 @@
 
 #include "configs.h"
 
-#if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+#if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
   #include "Keyboard.h"
 #endif
 
@@ -112,6 +112,22 @@ extern Settings settings_obj;
 
 struct Menu;
 
+enum class MenuBuildKind : uint8_t {
+  EAGER,
+  MAIN,
+  RECON,
+  WIFI_ROOT,
+  BLUETOOTH_ROOT,
+  DEVICE_ROOT,
+  GPS_ROOT,
+  WIFI_SCANNER,
+  WIFI_SNIFFER,
+  WIFI_ATTACK,
+  WIFI_GENERAL,
+  BLUETOOTH_SNIFFER,
+  BLUETOOTH_ATTACK,
+};
+
 // Individual Nodes of a menu
 
 struct MenuNode {
@@ -126,15 +142,33 @@ struct MenuNode {
 // Full Menus
 struct Menu {
   String name;
-  LinkedList<MenuNode>* list;
-  Menu                * parentMenu;
+  LinkedList<MenuNode>* list = nullptr;
+  Menu                * parentMenu = nullptr;
   uint16_t               selected = 0;
+  MenuBuildKind          buildKind = MenuBuildKind::EAGER;
 };
 
 
 class MenuFunctions
 {
   private:
+
+    enum class AttackTargetKind : uint8_t {
+      NONE,
+      ACCESS_POINTS,
+      SSIDS,
+      DEAUTH_SCOPE,
+      STATION_SCOPE,
+      EVIL_PORTAL,
+      KARMA,
+    };
+
+    enum class AttackTargetMode : uint8_t {
+      NONE,
+      BROADCAST,
+      ALL_STATIONS,
+      PICK_STATIONS,
+    };
 
     enum class FoxHuntListKind : uint8_t {
       AP_TARGETS,
@@ -166,6 +200,8 @@ class MenuFunctions
     uint32_t marquee_selected_since = 0;
     MenuInputRepeat menu_up_repeat;
     MenuInputRepeat menu_down_repeat;
+    MenuInputRepeat menu_touch_up_repeat;
+    MenuInputRepeat menu_touch_down_repeat;
     int8_t menu_touch_button = -1;
 
     void updateClockTemperature(bool update = false);
@@ -227,6 +263,10 @@ class MenuFunctions
     Menu wifiSnifferMenu;
     Menu wifiScannerMenu;
     Menu wifiAttackMenu;
+    Menu attackModeMenu;
+    Menu attackTargetMenu;
+    Menu attackStationMenu;
+    Menu attackReviewMenu;
     /*#ifdef HAS_GPS
       Menu wardrivingMenu;
     #endif*/
@@ -311,6 +351,39 @@ class MenuFunctions
     void drawGraphSmall(uint8_t *values);
     void renderGraphUI(uint8_t scan_mode = 0);
     void addNodes(Menu* menu, const char* name, uint8_t color, int place, std::function<void()> callable, bool selected = false);
+    void buildLazyMenu(Menu* menu);
+    void buildWiFiGeneralMenu();
+    void beginAttackPlan(const char* name, uint8_t scan_mode, uint16_t color,
+                         AttackTargetKind target_kind);
+    void buildAttackModeMenu();
+    void buildAttackApPicker();
+    void buildAttackStationApPicker();
+    void buildAttackStationPicker(uint16_t ap_index);
+    void buildAttackSsidPicker();
+    void buildAttackReviewMenu();
+    void startAttackPlan();
+    void clearAttackApSelections();
+    void clearAttackStationSelections();
+    void clearAttackStationsForAp(uint16_t ap_index);
+    void setAttackApScope(uint16_t ap_index, AttackTargetMode mode);
+    int attackApProfileCount() const;
+    int selectedAttackStationCount(uint16_t ap_index) const;
+    int selectedAttackApCount() const;
+    int selectedAttackStationCount() const;
+    int selectedAttackSsidCount() const;
+    #ifdef HAS_BT
+      void buildBluetoothAttackMenu();
+    #endif
+    bool wifi_general_dependents_initialized = false;
+    String attack_plan_name;
+    String attack_plan_scope;
+    uint8_t attack_plan_scan_mode = 0;
+    uint16_t attack_plan_color = TFT_RED;
+    AttackTargetKind attack_target_kind = AttackTargetKind::NONE;
+    AttackTargetMode attack_target_mode = AttackTargetMode::NONE;
+    uint16_t attack_active_ap_index = 0;
+    void releaseLazyMenu(Menu* menu);
+    Menu* lazy_menu_release_pending = nullptr;
     void battery(bool initial = false);
     void battery2(bool initial = false);
     const char* callSetting(const char* key);
@@ -329,10 +402,13 @@ class MenuFunctions
     #endif
     //#endif
 
-    #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
-      Keyboard_Class M5CardputerKeyboard = Keyboard_Class();
+    #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD)
       void updateKeyboard();
       bool isKeyPressed(char c);
+    #endif
+
+    #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(HAS_FACES_KEYBOARD) || defined(HAS_TOUCH)
+      bool textInput(char *buffer, size_t bufLen, const char *title);
     #endif
 
   public:
@@ -388,5 +464,3 @@ class MenuFunctions
 
 #endif
 #endif
-
-

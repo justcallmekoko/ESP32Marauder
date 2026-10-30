@@ -6,6 +6,9 @@ https://www.online-utility.org/image/convert/to/XBM
 */
 
 #include "configs.h"
+#ifdef MARAUDER_WS_C5_35
+  #include "ws_c5_exio.h"  // backlight PWM lives on the I/O expander
+#endif
 
 #ifndef HAS_SCREEN
   #define MenuFunctions_h
@@ -29,7 +32,7 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #ifdef HAS_FLIPPER_LED
   #include "flipperLED.h"
-#elif defined(XIAO_ESP32_S3)
+#elif defined(XIAO_ESP32_S3) || defined(XIAO_ESP32_C5)
   #include "xiaoLED.h"
 #elif defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
   #include "stickcLED.h"
@@ -40,6 +43,9 @@ https://www.online-utility.org/image/convert/to/XBM
 #include "settings.h"
 #include "CommandLine.h"
 #include "ReconMission.h"
+#if defined(HAS_CSI_MOTION)
+  #include "CsiMotionMonitor.h"
+#endif
 #include "lang_var.h"
 
 #ifdef HAS_T_DONGLE_DISPLAY
@@ -53,6 +59,57 @@ https://www.online-utility.org/image/convert/to/XBM
 #ifdef HAS_SCREEN
   #include "Display.h"
   #include "MenuFunctions.h"
+#endif
+
+#ifdef MARAUDER_M5STACK_CORE2_AWS
+  static void core2AxpWrite(uint8_t reg, uint8_t value) {
+    Wire.beginTransmission(0x34);
+    Wire.write(reg);
+    Wire.write(value);
+    Wire.endTransmission();
+  }
+
+  static uint8_t core2AxpRead(uint8_t reg) {
+    Wire.beginTransmission(0x34);
+    Wire.write(reg);
+    Wire.endTransmission(false);
+    Wire.requestFrom(0x34, 1);
+    return Wire.available() ? Wire.read() : 0;
+  }
+
+  static void core2SetBacklight(uint8_t duty) {
+    uint8_t outputs = core2AxpRead(0x12);
+    if (duty == 0) {
+      // Core2 drives the LCD backlight from DCDC3 (bit 1), not LDO2.
+      core2AxpWrite(0x12, outputs & ~(1 << 1));
+      return;
+    }
+
+    const uint16_t millivolts = map(duty, 1, 255, 2500, 3300);
+    const uint8_t step = (millivolts - 700) / 25;
+    core2AxpWrite(0x27, (core2AxpRead(0x27) & 0x80) | (step & 0x7f));
+    core2AxpWrite(0x12, outputs | (1 << 1));
+  }
+
+  static void core2PowerInit() {
+    Wire.begin(I2C_SDA, I2C_SCL, 400000U);
+    // LDO2 supplies LCD logic/SD at 3.3 V. LDO3 is the vibration motor and
+    // must remain disabled during normal operation.
+    core2AxpWrite(0x28, 0xf2);
+    // DCDC3 supplies the Core2 LCD backlight; start at M5Stack's 2.8 V.
+    core2AxpWrite(0x27, (core2AxpRead(0x27) & 0x80) | 0x54);
+    core2AxpWrite(0x82, 0xff); // battery and power ADCs
+    // DCDC1 (ESP32), DCDC3 (backlight), and LDO2 (LCD logic/SD) on;
+    // explicitly force LDO3 (vibration) off.
+    core2AxpWrite(0x12, (core2AxpRead(0x12) & ~(1 << 3)) | 0x07);
+
+    // GPIO4 resets both the LCD and touch controller on Core2.
+    core2AxpWrite(0x95, (core2AxpRead(0x95) & 0x72) | 0x84);
+    core2AxpWrite(0x96, core2AxpRead(0x96) & ~0x02);
+    delay(100);
+    core2AxpWrite(0x96, core2AxpRead(0x96) | 0x02);
+    delay(100);
+  }
 #endif
 
 #ifdef HAS_BUTTONS
@@ -85,6 +142,9 @@ Buffer buffer_obj;
 Settings settings_obj;
 CommandLine cli_obj;
 ReconMission recon_obj;
+#if defined(HAS_CSI_MOTION)
+  CsiMotionMonitor csi_motion_obj;
+#endif
 
 #ifdef HAS_T_DONGLE_DISPLAY
   TDongleDisplay t_dongle_display;
@@ -111,7 +171,7 @@ ReconMission recon_obj;
 
 #ifdef HAS_FLIPPER_LED
   flipperLED flipper_led;
-#elif defined(XIAO_ESP32_S3)
+#elif defined(XIAO_ESP32_S3) || defined(XIAO_ESP32_C5)
   xiaoLED xiao_led;
 #elif defined(MARAUDER_M5STICKC) || defined(MARAUDER_M5STICKCP2)
   stickcLED stickc_led;
@@ -141,12 +201,20 @@ uint32_t currentTime  = 0;
   const uint8_t BL_NUM_LEVELS = 10;
   uint8_t bl_level_idx = 9; // default full brightness
   Preferences bl_prefs;
+  #ifdef MARAUDER_WS_C5_35
+    bool ws_backlight_bus_ready = false;
+  #endif
 #endif
 
 // Helper macros for LEDC API compatibility (2.x vs 3.x board package)
 #ifdef HAS_SCREEN
   #ifndef HAS_MINI_SCREEN
-    #if ESP_ARDUINO_VERSION_MAJOR >= 3
+    #if defined(MARAUDER_WS_C5_35)
+      // Backlight is the I/O expander's PWM register (0x24 reg 0x05), not a GPIO
+      // (TFT_BL is -1 on this board).
+      #define BL_SETUP()       do {} while (0)
+      #define BL_SET(duty)     do { if (ws_backlight_bus_ready) ws_exio_write(WS_EXIO_PWM_REG, (duty)); } while (0)
+    #elif ESP_ARDUINO_VERSION_MAJOR >= 3
       #define BL_SETUP()       ledcAttach(TFT_BL, BL_FREQ, BL_RESOLUTION)
       #define BL_SET(duty)     ledcWrite(TFT_BL, (duty))
     #else
@@ -159,18 +227,26 @@ uint32_t currentTime  = 0;
 #ifndef HAS_MINI_SCREEN
   void brightnessInit() {
     #ifdef HAS_SCREEN
-      BL_SETUP();
       bl_prefs.begin("backlight", false);
       bl_level_idx = bl_prefs.getUChar("level", 9);
       if (bl_level_idx >= BL_NUM_LEVELS) bl_level_idx = 9;
+      #ifdef MARAUDER_M5STACK_CORE2_AWS
+        core2SetBacklight(BL_LEVELS[bl_level_idx]);
+      #else
+        BL_SETUP();
       BL_SET(BL_LEVELS[bl_level_idx]);
+    #endif
     #endif
   }
 
   void brightnessCycle() {
     #ifdef HAS_SCREEN
       bl_level_idx = (bl_level_idx + 1) % BL_NUM_LEVELS;
+      #ifdef MARAUDER_M5STACK_CORE2_AWS
+        core2SetBacklight(BL_LEVELS[bl_level_idx]);
+      #else
       BL_SET(BL_LEVELS[bl_level_idx]);
+      #endif
       bl_prefs.putUChar("level", bl_level_idx);
       Serial.print(F("[Brightness] Level "));
       Serial.print(bl_level_idx + 1);
@@ -194,20 +270,36 @@ uint32_t currentTime  = 0;
     #ifdef HAS_SCREEN
       if (level >= BL_NUM_LEVELS) level = BL_NUM_LEVELS - 1;
       bl_level_idx = level;
+      #ifdef MARAUDER_M5STACK_CORE2_AWS
+        core2SetBacklight(BL_LEVELS[bl_level_idx]);
+      #else
       BL_SET(BL_LEVELS[bl_level_idx]);
+      #endif
       bl_prefs.putUChar("level", bl_level_idx);
     #endif
   }
 
   void backlightOn() {
     #ifdef HAS_SCREEN
+      // TFT_eSPI::init() reconfigures the backlight pin. Reattach PWM before
+      // restoring the saved duty so display reinitialization cannot force the
+      // backlight to full brightness.
+      #ifdef MARAUDER_M5STACK_CORE2_AWS
+        core2SetBacklight(BL_LEVELS[bl_level_idx]);
+      #else
+        BL_SETUP();
       BL_SET(BL_LEVELS[bl_level_idx]);
+    #endif
     #endif
   }
 
   void backlightOff() {
     #ifdef HAS_SCREEN
+      #ifdef MARAUDER_M5STACK_CORE2_AWS
+        core2SetBacklight(0);
+      #else
       BL_SET(0);
+    #endif
     #endif
   }
 #else
@@ -253,9 +345,6 @@ void setup()
     digitalWrite(ACT_LED_PIN, LOW);
   #endif
 
-  while(!Serial)
-    delay(10);
-
   #ifdef HAS_C5_SD
     sharedSPI.begin(SD_SCK, SD_MISO, SD_MOSI);
     delay(100);
@@ -266,8 +355,12 @@ void setup()
     digitalWrite(POWER_HOLD_PIN, HIGH);
   #endif
   
-  #if defined(HAS_SCREEN) && !defined(MARAUDER_POOM)
+  #if defined(HAS_SCREEN) && !defined(MARAUDER_POOM) && !defined(MARAUDER_M5STACK_CORE2_AWS) && !defined(MARAUDER_WS_C5_35)
     pinMode(TFT_BL, OUTPUT);
+  #endif
+  
+  #ifdef MARAUDER_M5STACK_CORE2_AWS
+    core2PowerInit();
   #endif
   
   backlightOff();
@@ -291,11 +384,6 @@ void setup()
     delay(10);
   #endif
 
-  //Serial.begin(115200);
-
-  //while(!Serial)
-  //  delay(10);
-
   Serial.println("ESP-IDF version is: " + String(esp_get_idf_version()));
 
   #ifdef HAS_PSRAM
@@ -315,6 +403,9 @@ void setup()
 
   #ifdef HAS_SCREEN
     display_obj.RunSetup();
+    #ifdef MARAUDER_WS_C5_35
+      ws_backlight_bus_ready = true;
+    #endif
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
   #endif
 
@@ -333,7 +424,7 @@ void setup()
 
   #ifdef HAS_SCREEN
     // Do some stealth mode stuff
-    #ifdef HAS_BUTTONS
+    #if defined(HAS_BUTTONS) && (C_BTN >= 0)
       if (c_btn.justPressed()) {
         display_obj.headless_mode = true;
 
@@ -350,8 +441,6 @@ void setup()
     Serial.println(F("Current settings format not supported. Installing new default settings..."));
     settings_obj.createDefaultSettings(SPIFFS);
   }
-
-  buffer_obj = Buffer();
 
   #ifndef HAS_SIMPLEX_DISPLAY
     #if defined(HAS_SD)
@@ -381,7 +470,7 @@ void setup()
   // Do some LED stuff
   #ifdef HAS_FLIPPER_LED
     flipper_led.RunSetup();
-  #elif defined(XIAO_ESP32_S3)
+  #elif defined(XIAO_ESP32_S3) || defined(XIAO_ESP32_C5)
     xiao_led.RunSetup();
   #elif defined(MARAUDER_M5STICKC)
     stickc_led.RunSetup();
@@ -439,7 +528,7 @@ void loop()
   #endif
 
   #if (defined(HAS_ILI9341) && !defined(MARAUDER_CYD_2USB))
-    #ifdef HAS_BUTTONS
+    #if defined(HAS_BUTTONS) && (C_BTN >= 0)
       if (c_btn.isHeld()) {
         if (menu_function_obj.disable_touch)
           menu_function_obj.disable_touch = false;
@@ -458,6 +547,9 @@ void loop()
   cli_obj.main(currentTime);
   wifi_scan_obj.main(currentTime);
   recon_obj.main(currentTime);
+  #if defined(HAS_CSI_MOTION)
+    csi_motion_obj.main(currentTime);
+  #endif
 
   #ifdef HAS_T_DONGLE_DISPLAY
     t_dongle_display.update(currentTime, wifi_scan_obj);
@@ -483,7 +575,7 @@ void loop()
   }
   #ifdef HAS_FLIPPER_LED
     flipper_led.main();
-  #elif defined(XIAO_ESP32_S3)
+  #elif defined(XIAO_ESP32_S3) || defined(XIAO_ESP32_C5)
     xiao_led.main();
   #elif defined(MARAUDER_M5STICKC)
     stickc_led.main();

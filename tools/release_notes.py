@@ -2,12 +2,40 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_REGISTRY = REPOSITORY_ROOT / "installer" / "targets.json"
+
+DOCUMENTATION_LINKS = (
+    (
+        "Seeed XIAO ESP32-C5",
+        "https://github.com/justcallmekoko/ESP32Marauder/wiki/Supported-Hardware",
+    ),
+    (
+        "C5 hardware aliases",
+        "https://github.com/justcallmekoko/ESP32Marauder/wiki/ESP32%E2%80%90C5%E2%80%90DevKitC%E2%80%901",
+    ),
+    (
+        "IP5306 and MAX17048",
+        "https://github.com/justcallmekoko/ESP32Marauder/wiki/Battery-Fuel-Gauge",
+    ),
+    (
+        "CSI motion monitor",
+        "https://github.com/justcallmekoko/ESP32Marauder/wiki/CSI-Motion-Monitor",
+    ),
+    (
+        "FindMy Sound",
+        "https://github.com/justcallmekoko/ESP32Marauder/wiki/FindMy-Sound",
+    ),
+    (
+        "wardrive logs",
+        "https://github.com/justcallmekoko/ESP32Marauder/wiki/Wardrive",
+    ),
+)
 
 
 def load_targets(registry_path: Path) -> list[dict[str, Any]]:
@@ -43,10 +71,34 @@ def render_asset_table(targets: list[dict[str, Any]]) -> str:
     return "\n".join(rows)
 
 
-def render_release_notes(targets: list[dict[str, Any]], channel: str) -> str:
-    sections = [
-        "[justcallmekokollc.com](https://justcallmekokollc.com)",
-    ]
+def link_documentation_in_changes(changes: str) -> str:
+    linked_lines = []
+    for line in changes.splitlines():
+        if line.startswith("* "):
+            for label, url in DOCUMENTATION_LINKS:
+                line = re.sub(
+                    re.escape(label),
+                    lambda match: f"[{match.group(0)}]({url})",
+                    line,
+                    count=1,
+                    flags=re.IGNORECASE,
+                )
+        linked_lines.append(line)
+    return "\n".join(linked_lines)
+
+
+def render_release_notes(
+    targets: list[dict[str, Any]], channel: str, changes: str | None = None
+) -> str:
+    sections = []
+    if channel == "stable":
+        if not changes or "## What's Changed" not in changes or "**Full Changelog**:" not in changes:
+            raise ValueError(
+                "Stable release notes require GitHub-generated changes and a full changelog"
+            )
+        sections.append(link_documentation_in_changes(changes.strip()))
+
+    sections.append("[justcallmekokollc.com](https://justcallmekokollc.com)")
     if channel == "nightly":
         sections.append(
             "> **Nightly build:** This automated prerelease is for testing and "
@@ -88,10 +140,20 @@ def main() -> None:
     )
     parser.add_argument("--registry", type=Path, default=DEFAULT_REGISTRY)
     parser.add_argument("--channel", choices=("stable", "nightly"), default="stable")
+    parser.add_argument(
+        "--changes-file",
+        type=Path,
+        help="GitHub-generated change summary to prepend to stable release notes",
+    )
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
-    notes = render_release_notes(load_targets(args.registry), args.channel)
+    changes = (
+        args.changes_file.read_text(encoding="utf-8")
+        if args.changes_file is not None
+        else None
+    )
+    notes = render_release_notes(load_targets(args.registry), args.channel, changes)
     args.output.write_text(notes, encoding="utf-8")
 
 
