@@ -118,6 +118,23 @@ void test_stale_detection_handles_millis_wrap() {
   TEST_ASSERT_TRUE(remoteIdIsStale(1000, 0xFFFFFF00U, 1000));
 }
 
+void test_callback_after_clock_sample_keeps_record() {
+  const uint32_t sampledTimes[] = {1000, 0xFFFFFFFEU};
+  for (uint32_t sampled : sampledTimes) {
+    RemoteIdRecord records[1];
+    RemoteIdStore store(records, 1);
+    const uint8_t mac[6] = {1, 2, 3, 4, 5, 6};
+    store.observe(mac, RemoteIdTransport::WifiBeacon, -35, sampled + 3);
+    TEST_ASSERT_FALSE(remoteIdIsStale(sampled, sampled + 3, 1000));
+    TEST_ASSERT_EQUAL_UINT32(0, store.updateLifecycle(sampled, 1000));
+    TEST_ASSERT_EQUAL_UINT32(0, store.pruneStale(sampled, 30000));
+    TEST_ASSERT_EQUAL_UINT32(1, store.size());
+    TEST_ASSERT_FALSE(store.at(0)->isLost);
+    TEST_ASSERT_EQUAL_UINT32(1, store.updateLifecycle(sampled + 1003, 1000));
+    TEST_ASSERT_EQUAL_UINT32(1, store.pruneStale(sampled + 30003, 30000));
+  }
+}
+
 void test_store_prunes_expired_records_and_preserves_target() {
   RemoteIdRecord records[3];
   RemoteIdStore store(records, 3);
@@ -265,6 +282,7 @@ int main(int, char**) {
   RUN_TEST(test_distance_formatter_uses_kilometers);
   RUN_TEST(test_grid_radius_formatter_switches_to_kilometers);
   RUN_TEST(test_stale_detection_handles_millis_wrap);
+  RUN_TEST(test_callback_after_clock_sample_keeps_record);
   RUN_TEST(test_store_prunes_expired_records_and_preserves_target);
   RUN_TEST(test_lifecycle_marks_lost_and_reacquired);
   RUN_TEST(test_store_tracks_packet_rate_and_can_erase_duplicate_mac);

@@ -224,8 +224,8 @@ void test_decodes_authentication_and_location_sentinels() {
   TEST_ASSERT_FALSE(record.locationTimestampValid);
 }
 
-void test_decodes_wifi_nan_action_frame() {
-  uint8_t frame[44 + RemoteIdDecoder::kMessageSize] = {};
+static size_t makeWifiNanFrame(uint8_t* frame) {
+  std::memset(frame, 0, 44 + RemoteIdDecoder::kMessageSize);
   frame[0] = 0xD0;
   const uint8_t destination[] = {0x51, 0x6F, 0x9A, 0x01, 0x00, 0x00};
   std::memcpy(frame + 4, destination, sizeof(destination));
@@ -248,12 +248,154 @@ void test_decodes_wifi_nan_action_frame() {
   frame[42] = 1 + RemoteIdDecoder::kMessageSize;
   frame[43] = 4;
   makeBasicId(frame + 44);
+  return 44 + RemoteIdDecoder::kMessageSize;
+}
+
+void test_decodes_wifi_nan_action_frame() {
+  uint8_t frame[44 + RemoteIdDecoder::kMessageSize];
+  makeWifiNanFrame(frame);
   RemoteIdRecord record;
   RemoteIdDecoder decoder;
   TEST_ASSERT_EQUAL_UINT8(
       static_cast<uint8_t>(RemoteIdDecodeResult::Decoded),
       static_cast<uint8_t>(decoder.decodeWifiNan(frame, sizeof(frame), record)));
   TEST_ASSERT_EQUAL_STRING("USS-Enterprise", record.uasId);
+}
+
+void test_decodes_nan_after_other_attributes() {
+  uint8_t frame[80] = {};
+  const size_t length = makeWifiNanFrame(frame);
+  std::memmove(frame + 35, frame + 30, length - 30);
+  const uint8_t master[] = {0, 2, 0, 0xFE, 0xEA};
+  std::memcpy(frame + 30, master, sizeof(master));
+  RemoteIdRecord record;
+  TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(RemoteIdDecodeResult::Decoded),
+      static_cast<uint8_t>(RemoteIdDecoder{}.decodeWifiNan(frame, length + 5, record)));
+  TEST_ASSERT_EQUAL_STRING("USS-Enterprise", record.uasId);
+}
+
+void test_decodes_nan_instance_and_control_variations() {
+  const uint8_t controls[] = {0x10, 0x11, 0x12, 0x30};
+  for (uint8_t control : controls) {
+    uint8_t frame[69];
+    makeWifiNanFrame(frame);
+    frame[39] = 7;
+    frame[40] = 3;
+    frame[41] = control;
+    RemoteIdRecord record;
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(RemoteIdDecodeResult::Decoded),
+        static_cast<uint8_t>(RemoteIdDecoder{}.decodeWifiNan(frame, sizeof(frame), record)));
+    TEST_ASSERT_EQUAL_STRING("USS-Enterprise", record.uasId);
+  }
+}
+
+void test_decodes_nan_optional_fields() {
+  uint8_t frame[80] = {};
+  const size_t length = makeWifiNanFrame(frame);
+  const uint8_t fields[] = {1, 0, 2, 1, 0xAA, 1, 0};
+  std::memmove(frame + 42 + sizeof(fields), frame + 42, length - 42);
+  std::memcpy(frame + 42, fields, sizeof(fields));
+  frame[31] += sizeof(fields);
+  frame[41] = 0x5C;
+  RemoteIdRecord record;
+  TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(RemoteIdDecodeResult::Decoded),
+      static_cast<uint8_t>(RemoteIdDecoder{}.decodeWifiNan(frame, length + sizeof(fields), record)));
+  TEST_ASSERT_EQUAL_STRING("USS-Enterprise", record.uasId);
+}
+
+void test_nan_respects_attribute_bounds() {
+  uint8_t frame[69];
+  makeWifiNanFrame(frame);
+  RemoteIdRecord record;
+  frame[31] = 10;
+  TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(RemoteIdDecodeResult::Malformed),
+      static_cast<uint8_t>(RemoteIdDecoder{}.decodeWifiNan(frame, sizeof(frame), record)));
+  TEST_ASSERT_FALSE(record.hasUasId);
+  frame[31] = 255;
+  frame[32] = 255;
+  TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(RemoteIdDecodeResult::Malformed),
+      static_cast<uint8_t>(RemoteIdDecoder{}.decodeWifiNan(frame, sizeof(frame), record)));
+}
+
+void test_nan_rejects_unrelated_service_and_missing_info() {
+  uint8_t frame[69];
+  makeWifiNanFrame(frame);
+  RemoteIdRecord record;
+  frame[33] ^= 1;
+  TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(RemoteIdDecodeResult::Ignored),
+      static_cast<uint8_t>(RemoteIdDecoder{}.decodeWifiNan(frame, sizeof(frame), record)));
+  frame[33] ^= 1;
+  frame[41] = 0;
+  TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(RemoteIdDecodeResult::Ignored),
+      static_cast<uint8_t>(RemoteIdDecoder{}.decodeWifiNan(frame, sizeof(frame), record)));
+  TEST_ASSERT_FALSE(record.hasUasId);
+}
+
+void test_nan_rejects_truncated_optional_fields() {
+  const uint8_t controls[] = {0x50, 0x14, 0x18};
+  for (uint8_t control : controls) {
+    uint8_t frame[69];
+    makeWifiNanFrame(frame);
+    frame[31] = 10;
+    frame[41] = control;
+    frame[42] = 255;
+    RemoteIdRecord record;
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(RemoteIdDecodeResult::Malformed),
+        static_cast<uint8_t>(RemoteIdDecoder{}.decodeWifiNan(frame, sizeof(frame), record)));
+    TEST_ASSERT_FALSE(record.hasUasId);
+  }
+}
+
+void test_nan_skips_other_service_descriptors() {
+  uint8_t frame[108] = {};
+  makeWifiNanFrame(frame);
+  std::memcpy(frame + 69, frame + 30, 39);
+  frame[33] ^= 1;
+  RemoteIdRecord record;
+  TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(RemoteIdDecodeResult::Decoded),
+      static_cast<uint8_t>(RemoteIdDecoder{}.decodeWifiNan(frame, sizeof(frame), record)));
+  TEST_ASSERT_EQUAL_STRING("USS-Enterprise", record.uasId);
+}
+
+void test_decodes_legacy_beacon_identifier() {
+  uint8_t frame[68] = {};
+  frame[0] = 0x80;
+  const uint8_t element[] = {221, 30, 0x90, 0x3A, 0xE6, 0x0D, 1};
+  std::memcpy(frame + 36, element, sizeof(element));
+  makeBasicId(frame + 43);
+  RemoteIdRecord record;
+  TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(RemoteIdDecodeResult::Decoded),
+      static_cast<uint8_t>(RemoteIdDecoder{}.decodeWifiBeacon(frame, sizeof(frame), record)));
+  TEST_ASSERT_EQUAL_STRING("USS-Enterprise", record.uasId);
+  frame[41] = 0x01;
+  record = RemoteIdRecord{};
+  TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(RemoteIdDecodeResult::Ignored),
+      static_cast<uint8_t>(RemoteIdDecoder{}.decodeWifiBeacon(frame, sizeof(frame), record)));
+  TEST_ASSERT_FALSE(record.hasUasId);
+}
+
+void test_nan_rejects_all_truncated_frame_lengths() {
+  uint8_t frame[69];
+  makeWifiNanFrame(frame);
+  for (size_t length = 0; length < sizeof(frame); ++length) {
+    RemoteIdRecord record;
+    TEST_ASSERT_NOT_EQUAL(static_cast<uint8_t>(RemoteIdDecodeResult::Decoded),
+        static_cast<uint8_t>(RemoteIdDecoder{}.decodeWifiNan(frame, length, record)));
+    TEST_ASSERT_FALSE(record.hasUasId);
+  }
+}
+
+void test_nan_rejects_unrelated_action_frames() {
+  const size_t fields[] = {0, 4, 24, 25, 26, 29};
+  for (size_t field : fields) {
+    uint8_t frame[69];
+    makeWifiNanFrame(frame);
+    frame[field] ^= 0x04;
+    RemoteIdRecord record;
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(RemoteIdDecodeResult::Ignored),
+        static_cast<uint8_t>(RemoteIdDecoder{}.decodeWifiNan(frame, sizeof(frame), record)));
+    TEST_ASSERT_FALSE(record.hasUasId);
+  }
 }
 
 int main(int, char**) {
@@ -267,5 +409,15 @@ int main(int, char**) {
   RUN_TEST(test_rejects_out_of_range_location_for_plotting);
   RUN_TEST(test_decodes_authentication_and_location_sentinels);
   RUN_TEST(test_decodes_wifi_nan_action_frame);
+  RUN_TEST(test_decodes_nan_after_other_attributes);
+  RUN_TEST(test_decodes_nan_instance_and_control_variations);
+  RUN_TEST(test_decodes_nan_optional_fields);
+  RUN_TEST(test_nan_respects_attribute_bounds);
+  RUN_TEST(test_nan_rejects_unrelated_service_and_missing_info);
+  RUN_TEST(test_nan_rejects_truncated_optional_fields);
+  RUN_TEST(test_nan_skips_other_service_descriptors);
+  RUN_TEST(test_decodes_legacy_beacon_identifier);
+  RUN_TEST(test_nan_rejects_all_truncated_frame_lengths);
+  RUN_TEST(test_nan_rejects_unrelated_action_frames);
   return UNITY_END();
 }

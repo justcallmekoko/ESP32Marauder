@@ -6,6 +6,9 @@ https://www.online-utility.org/image/convert/to/XBM
 */
 
 #include "configs.h"
+#ifdef MARAUDER_WS_C5_35
+  #include "ws_c5_exio.h"  // backlight PWM lives on the I/O expander
+#endif
 
 #ifndef HAS_SCREEN
   #define MenuFunctions_h
@@ -269,7 +272,8 @@ void setup()
 
   // TFT_BL >= 0 does not if TFT_BL is -1
   // due to cpp's "unsigned promotion rules" where -1 == maxint
-  #if defined(HAS_SCREEN) && !defined(MARAUDER_POOM) && !defined(MARAUDER_M5STACK_CORE2_AWS) && TFT_BL != -1
+  // #if defined(HAS_SCREEN) && !defined(MARAUDER_POOM) && !defined(MARAUDER_M5STACK_CORE2_AWS) && TFT_BL != -1
+  #if defined(HAS_SCREEN) && !defined(MARAUDER_POOM) && !defined(MARAUDER_M5STACK_CORE2_AWS) && !defined(MARAUDER_WS_C5_35)
     log_d("pinMode %d OUTPUT", TFT_BL);
     pinMode(TFT_BL, OUTPUT);
     // perimanSetPinBusExtraType(TFT_BL, "TFT_BL");
@@ -360,6 +364,9 @@ void setup()
 
   #ifdef HAS_SCREEN
     display_obj.RunSetup();
+    #ifdef MARAUDER_WS_C5_35
+      ws_backlight_bus_ready = true;
+    #endif
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
   // this removes the need for "sharedSPI"

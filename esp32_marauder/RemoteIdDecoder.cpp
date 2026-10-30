@@ -12,6 +12,7 @@ constexpr uint8_t kMessageOperatorId = 5;
 constexpr uint8_t kMessagePack = 15;
 constexpr uint8_t kVendorSpecificElement = 221;
 constexpr uint8_t kAsdStanOui[] = {0xFA, 0x0B, 0xBC};
+constexpr uint8_t kLegacyRemoteIdOui[] = {0x90, 0x3A, 0xE6};
 constexpr uint8_t kOpenDroneIdVendorType = 0x0D;
 constexpr uint8_t kOpenDroneIdBleApplicationCode = 0x0D;
 constexpr float kAltitudeOffsetM = 1000.0f;
@@ -187,7 +188,8 @@ RemoteIdDecodeResult RemoteIdDecoder::decodeWifiBeacon(
     offset += 2;
     if (offset + elementLength > length) return RemoteIdDecodeResult::Malformed;
     if (id == kVendorSpecificElement && elementLength >= 8 &&
-        std::memcmp(frame + offset, kAsdStanOui, sizeof(kAsdStanOui)) == 0 &&
+        (std::memcmp(frame + offset, kAsdStanOui, sizeof(kAsdStanOui)) == 0 ||
+         std::memcmp(frame + offset, kLegacyRemoteIdOui, sizeof(kLegacyRemoteIdOui)) == 0) &&
         frame[offset + 3] == kOpenDroneIdVendorType) {
       // OUI, vendor type, and message counter precede the ODID payload.
       return decodePayload(frame + offset + 5, elementLength - 5, record);
@@ -216,7 +218,7 @@ RemoteIdDecodeResult RemoteIdDecoder::decodeWifiNan(
   static constexpr uint8_t kNanDestination[] = {0x51, 0x6F, 0x9A, 0x01, 0x00, 0x00};
   static constexpr uint8_t kWifiAllianceOui[] = {0x50, 0x6F, 0x9A};
   static constexpr uint8_t kRemoteIdService[] = {0x88, 0x69, 0x19, 0x9D, 0x92, 0x09};
-  if (frame == nullptr || length < 44) return RemoteIdDecodeResult::Malformed;
+  if (frame == nullptr || length < 30) return RemoteIdDecodeResult::Malformed;
   if ((frame[0] & 0xFC) != 0xD0) return RemoteIdDecodeResult::Ignored;
   if (std::memcmp(frame + 4, kNanDestination, sizeof(kNanDestination)) != 0)
     return RemoteIdDecodeResult::Ignored;
@@ -225,15 +227,47 @@ RemoteIdDecodeResult RemoteIdDecoder::decodeWifiNan(
       std::memcmp(frame + nan + 2, kWifiAllianceOui, sizeof(kWifiAllianceOui)) != 0 ||
       frame[nan + 5] != 0x13)
     return RemoteIdDecodeResult::Ignored;
-  const size_t descriptor = nan + 6;
-  if (frame[descriptor] != 0x03 ||
-      std::memcmp(frame + descriptor + 3, kRemoteIdService,
-                  sizeof(kRemoteIdService)) != 0 ||
-      frame[descriptor + 9] != 0x01 || frame[descriptor + 11] != 0x10)
-    return RemoteIdDecodeResult::Ignored;
-  const size_t serviceLength = frame[descriptor + 12];
-  const size_t serviceInfo = descriptor + 13;
-  if (serviceLength < 1 || serviceInfo + serviceLength > length)
-    return RemoteIdDecodeResult::Malformed;
-  return decodePayload(frame + serviceInfo + 1, serviceLength - 1, record);
+  // Attribute order and service instance IDs vary between transmitters.
+  size_t offset = nan + 6;
+  while (offset < length) {
+    if (length - offset < 3) return RemoteIdDecodeResult::Malformed;
+    const uint8_t attribute = frame[offset];
+    const size_t attributeLength = readU16Le(frame + offset + 1);
+    offset += 3;
+    if (attributeLength > length - offset) return RemoteIdDecodeResult::Malformed;
+    const size_t end = offset + attributeLength;
+    if (attribute != 0x03) {
+      offset = end;
+      continue;
+    }
+    if (attributeLength < 9) return RemoteIdDecodeResult::Malformed;
+    const uint8_t control = frame[offset + 8];
+    if (std::memcmp(frame + offset, kRemoteIdService, sizeof(kRemoteIdService)) != 0 ||
+        (control & 0x10) == 0 || (control & 0x03) == 0x03 || (control & 0x80) != 0) {
+      offset = end;
+      continue;
+    }
+    size_t serviceInfo = offset + 9;
+    // Optional binding bitmap and filters precede the service information.
+    if ((control & 0x40) != 0) {
+      if (end - serviceInfo < 2) return RemoteIdDecodeResult::Malformed;
+      serviceInfo += 2;
+    }
+    for (uint8_t flag = 0x04; flag <= 0x08; flag <<= 1) {
+      if ((control & flag) == 0) continue;
+      if (serviceInfo == end) return RemoteIdDecodeResult::Malformed;
+      const size_t filterLength = frame[serviceInfo++];
+      if (filterLength > end - serviceInfo) return RemoteIdDecodeResult::Malformed;
+      serviceInfo += filterLength;
+    }
+    if (serviceInfo == end) return RemoteIdDecodeResult::Malformed;
+    const size_t serviceLength = frame[serviceInfo++];
+    if (serviceLength < 1 || serviceLength > end - serviceInfo)
+      return RemoteIdDecodeResult::Malformed;
+    const RemoteIdDecodeResult result =
+        decodePayload(frame + serviceInfo + 1, serviceLength - 1, record);
+    if (result != RemoteIdDecodeResult::Ignored) return result;
+    offset = end;
+  }
+  return RemoteIdDecodeResult::Ignored;
 }

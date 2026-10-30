@@ -237,7 +237,9 @@ float remoteIdBearingDegrees(int32_t latAE7, int32_t lonAE7,
 
 bool remoteIdIsStale(uint32_t nowMs, uint32_t lastSeenMs,
                      uint32_t staleAfterMs) {
-  return static_cast<uint32_t>(nowMs - lastSeenMs) >= staleAfterMs;
+  // Receive callbacks can be newer than the main loop's sampled time.
+  const uint32_t elapsed = nowMs - lastSeenMs;
+  return elapsed < 0x80000000U && elapsed >= staleAfterMs;
 }
 
 bool remoteIdCoordinatesValid(int32_t latitudeE7, int32_t longitudeE7) {

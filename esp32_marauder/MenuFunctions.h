@@ -399,6 +399,7 @@ class MenuFunctions
     void buildAttackSsidPicker();
     void buildAttackReviewMenu();
     void startAttackPlan();
+    void clearAttackApSelections();
     void clearAttackStationSelections();
     void clearAttackStationsForAp(uint16_t ap_index);
     void setAttackApScope(uint16_t ap_index, AttackTargetMode mode);
