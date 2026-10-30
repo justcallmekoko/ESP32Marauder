@@ -3952,6 +3952,7 @@
 
     //// END FUNNY FLIPPER LED STUFF
 
+
     //// WIFI STUFF
 
     #ifndef HAS_DUAL_BAND
@@ -4040,6 +4041,7 @@
     #endif
 
 
+    // HAS_CAP_TOUCH
     #ifdef HAS_CAP_TOUCH
 
       #if defined(MARAUDER_JC2432W328C)
@@ -4079,37 +4081,57 @@
       #define CTP_INT 3
       #define I2C_ADDR_FT6336      0x38
 
-        #elif defined(MARAUDER_WS_C5_28)    // ADC is through IO expander
-          #define HAS_CST3530 1      // distinguish from CST820
-          #define I2C_SDA 0
-          #define I2C_SCL 1
-          #define CTP_SDA           I2C_SDA
-          #define CTP_SCL           I2C_SCL
-          #define CTP_INT           5
-          #define CTP_RST           -1   // CH32V003 EXIO0
-          #define CTP_FREQ          100000  // 100 kHz (Standard-mode) 400 kHz (Fast-mode)
-          #define I2C_ADDR_CST3530  0x58 // NOT 0x1A : CST3530 differs from CST820
+      #elif defined(MARAUDER_WS_C5_28)    // ADC is through IO expander
+        #define HAS_CST3530 1      // distinguish from CST820
+        #define I2C_SDA 0
+        #define I2C_SCL 1
+        #define CTP_SDA           I2C_SDA
+        #define CTP_SCL           I2C_SCL
+        #define CTP_INT           5
+        #define CTP_RST           -1   // CH32V003 EXIO0
+        #define CTP_FREQ          100000  // 100 kHz (Standard-mode) 400 kHz (Fast-mode)
+        #define I2C_ADDR_CST3530  0x58 // NOT 0x1A : CST3530 differs from CST820
 
-        #elif defined(MARAUDER_CYD_3_5_INCH_CAP) 
-          #define HAS_GT911 1 
-          #define CTP_SDA 33
-          #define CTP_SCL 32
-          #define CTP_INT 21
-          #define CTP_RST 25
-          #define I2C_ADDR_GT911 0x38
+      #elif defined(MARAUDER_CYD_3_5_INCH_CAP) 
+        #define HAS_GT911 1 
+        #define CTP_SDA 33
+        #define CTP_SCL 32
+        #define CTP_INT 21
+        #define CTP_RST 25
+        #define I2C_ADDR_GT911 0x38
 
-        #elif defined(MARAUDER_M5STACK_CORE2_AWS)
-          #define HAS_FT6336
-          #define I2C_SDA 21
-          #define I2C_SCL 22
-          #define CTP_SDA I2C_SDA
-          #define CTP_SCL I2C_SCL
-          #define CTP_INT 39
-          #define I2C_FT6336_ADDR      0x38
+      #elif defined(MARAUDER_M5STACK_CORE2_AWS)
+        #define HAS_FT6336
+        #define I2C_SDA 21
+        #define I2C_SCL 22
+        #define CTP_SDA I2C_SDA
+        #define CTP_SCL I2C_SCL
+        #define CTP_INT 39
+        #define I2C_FT6336_ADDR      0x38
 
         #endif
 
       #endif  // HAS_CAP_TOUCH
+      ////  END HAS_CAP_TOUCH
+
+/// I2S 
+  #ifdef HAS_ES8311
+    #if defined(MARAUDER_WS_C5_28)
+      #define ES8311_I2S_MCLK  -1
+      #define ES8311_I2S_BCLK  24    // SCLK
+      #define ES8311_I2S_WS    25    // LRCK
+      #define ES8311_I2S_DOUT  26    // ASDOUT
+      #define ES8311_I2S_DIN   27    // DSDIN
+
+    #elif defined(MARAUDER_WS_C5_35)
+      #define ES8311_I2S_MCLK  -1
+      #define ES8311_I2S_BCLK  23    // SCLK
+      #define ES8311_I2S_WS    10    // LRCK
+      #define ES8311_I2S_DOUT  24    // ASDOUT
+      #define ES8311_I2S_DIN   25    // DSDIN
+    #endif
+  #endif //  HAS_ES8311
+// END I2S
       // CONFIG LOGIC
 
     #pragma GCC diagnostic push
