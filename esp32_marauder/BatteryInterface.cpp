@@ -132,7 +132,7 @@ int8_t BatteryInterface::getBatteryLevel() {
         int percent = (status >= 0 && (status & 0x08))  // bit 3: cell fitted
                         ? this->axp2101Read(AXP2101_REG_BAT_PERCENT) : -1;
         // Hide the status-bar reading while no cell is fitted (or the read fails).
-        this->i2c_supported = percent >= 0;
+        this->supported = percent >= 0;
         if (percent < 0) return -1;
         return percent > 100 ? 100 : (int8_t)percent;
       }
@@ -168,13 +168,13 @@ int8_t BatteryInterface::getBatteryLevel() {
 #ifdef HAS_AXP2101_GAUGE
 bool BatteryInterface::detectAxp2101Gauge() {
   if (this->axp2101Read(AXP2101_REG_CHIP_ID) != AXP2101_CHIP_ID) {
-    this->i2c_supported = false;
+    this->supported = false;
     return false;
   }
 
   int ctrl = this->axp2101Read(AXP2101_REG_GAUGE_CTRL);
   if (ctrl < 0) {
-    this->i2c_supported = false;
+    this->supported = false;
     return false;
   }
   if (!(ctrl & 0x08)) {
@@ -182,18 +182,18 @@ bool BatteryInterface::detectAxp2101Gauge() {
     Wire.write(AXP2101_REG_GAUGE_CTRL);
     Wire.write((uint8_t)(ctrl | 0x08));
     if (Wire.endTransmission() != 0) {
-      this->i2c_supported = false;
+      this->supported = false;
       return false;
     }
     const int enabledCtrl = this->axp2101Read(AXP2101_REG_GAUGE_CTRL);
     if (enabledCtrl < 0 || (enabledCtrl & 0x08) == 0) {
-      this->i2c_supported = false;
+      this->supported = false;
       return false;
     }
   }
   if (!this->has_axp2101_gauge) Serial.println(F("Detected AXP2101"));
   this->has_axp2101_gauge = true;
-  this->i2c_supported = true;
+  this->supported = true;
   return true;
 }
 
