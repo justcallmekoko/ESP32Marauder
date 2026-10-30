@@ -16,6 +16,7 @@
 
 #ifdef HAS_BT
   #include <NimBLEDevice.h> // 1.3.8, 2.3.2
+  #include <NimBLEClient.h>
 
   #ifdef HAS_NIMBLE_2
     using MarauderBLEAdvertisedDevice = const NimBLEAdvertisedDevice;
@@ -66,8 +67,10 @@
 #ifdef HAS_BATTERY
   #include "BatteryInterface.h"
 #endif
-#ifdef HAS_GPS
+#if defined(HAS_GPS) && !defined(HAS_GPS_GRAVITY_I2C)
   #include "GpsInterface.h"
+#elif defined(HAS_GPS_GRAVITY_I2C)
+  #include "Gps_Gravity_I2c.h"
 #endif
 #include "settings.h"
 #include "GeofenceMath.h"
@@ -252,9 +255,13 @@ extern EvilPortal evil_portal_obj;
 #ifdef HAS_SD
   extern SDInterface sd_obj;
 #endif
-#ifdef HAS_GPS
+
+#if defined(HAS_GPS) && !defined(HAS_GPS_GRAVITY_I2C)
   extern GpsInterface gps_obj;
+#elif defined(HAS_GPS_GRAVITY_I2C)
+  extern GpsGravityI2c gps_obj;
 #endif
+
 extern Buffer buffer_obj;
 #ifdef HAS_BATTERY
   extern BatteryInterface battery_obj;

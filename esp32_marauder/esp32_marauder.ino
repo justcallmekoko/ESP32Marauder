@@ -17,7 +17,9 @@ https://www.online-utility.org/image/convert/to/XBM
 
 #include <stdio.h>
 
-#ifdef HAS_GPS
+#if defined(HAS_GPS_GRAVITY_I2C)
+  #include "Gps_Gravity_I2c.h"
+#elif defined(HAS_GPS)
   #include "GpsInterface.h"
 #endif
 
@@ -148,7 +150,9 @@ ReconMission recon_obj;
   TDongleDisplay t_dongle_display;
 #endif
 
-#ifdef HAS_GPS
+#if defined(HAS_GPS_GRAVITY_I2C)
+  GpsGravityI2c gps_obj;
+#elif defined(HAS_GPS)
   GpsInterface gps_obj;
 #endif
 
@@ -230,8 +234,8 @@ uint32_t currentTime  = 0;
         core2SetBacklight(BL_LEVELS[bl_level_idx]);
       #else
         BL_SETUP();
-        BL_SET(BL_LEVELS[bl_level_idx]);
-      #endif
+      BL_SET(BL_LEVELS[bl_level_idx]);
+    #endif
     #endif
   }
 
@@ -241,7 +245,7 @@ uint32_t currentTime  = 0;
       #ifdef MARAUDER_M5STACK_CORE2_AWS
         core2SetBacklight(BL_LEVELS[bl_level_idx]);
       #else
-        BL_SET(BL_LEVELS[bl_level_idx]);
+      BL_SET(BL_LEVELS[bl_level_idx]);
       #endif
       bl_prefs.putUChar("level", bl_level_idx);
       Serial.print(F("[Brightness] Level "));
@@ -269,7 +273,7 @@ uint32_t currentTime  = 0;
       #ifdef MARAUDER_M5STACK_CORE2_AWS
         core2SetBacklight(BL_LEVELS[bl_level_idx]);
       #else
-        BL_SET(BL_LEVELS[bl_level_idx]);
+      BL_SET(BL_LEVELS[bl_level_idx]);
       #endif
       bl_prefs.putUChar("level", bl_level_idx);
     #endif
@@ -284,8 +288,8 @@ uint32_t currentTime  = 0;
         core2SetBacklight(BL_LEVELS[bl_level_idx]);
       #else
         BL_SETUP();
-        BL_SET(BL_LEVELS[bl_level_idx]);
-      #endif
+      BL_SET(BL_LEVELS[bl_level_idx]);
+    #endif
     #endif
   }
 
@@ -294,8 +298,8 @@ uint32_t currentTime  = 0;
       #ifdef MARAUDER_M5STACK_CORE2_AWS
         core2SetBacklight(0);
       #else
-        BL_SET(0);
-      #endif
+      BL_SET(0);
+    #endif
     #endif
   }
 #else
@@ -354,7 +358,7 @@ void setup()
   #if defined(HAS_SCREEN) && !defined(MARAUDER_POOM) && !defined(MARAUDER_M5STACK_CORE2_AWS) && !defined(MARAUDER_WS_C5_35)
     pinMode(TFT_BL, OUTPUT);
   #endif
-
+  
   #ifdef MARAUDER_M5STACK_CORE2_AWS
     core2PowerInit();
   #endif
@@ -474,8 +478,15 @@ void setup()
     led_obj.RunSetup();
   #endif
 
-  #ifdef HAS_GPS
-    gps_obj.begin();
+  #if defined(HAS_GPS_GRAVITY_I2C) 
+      #if defined(GPS_SDA) &&  defined(I2C_SDA) && GPS_SDA != I2C_SDA
+	Wire1.begin(GPS_SDA, GPS_SCL, 10000);
+	gps_obj.begin(&Wire1);
+      #else
+	gps_obj.begin(&Wire);
+      #endif
+  #elif defined(HAS_GPS)
+      gps_obj.begin();
   #endif
 
   #ifdef HAS_SCREEN  
@@ -544,8 +555,10 @@ void loop()
     t_dongle_display.update(currentTime, wifi_scan_obj);
   #endif
 
-  #ifdef HAS_GPS
-    gps_obj.main();
+  #if defined(HAS_GPS) || defined(HAS_GPS_GRAVITY_I2C)
+    if (gps_obj.gps_enabled) {
+      gps_obj.main(currentTime);
+    }
   #endif
 
   // Save buffer to SD and/or serial
