@@ -4,7 +4,7 @@
 
 The contribution is rebased onto Marauder v1.20.0, upstream commit
 `511bb3694d0c4dc064888e762bde44fcc9b7f48a`. The current software checks pass
-**188 native test cases across 32 suites** and **97 Python checks** using GCC
+**188 native test cases across 32 suites** and **101 Python checks** using GCC
 16.2.0 / C++17 and Python 3.12 on Windows.
 
 Startup retains upstream's removal of the serial-host wait. Board power is

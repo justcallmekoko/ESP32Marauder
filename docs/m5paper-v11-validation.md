@@ -4,7 +4,7 @@
 
 The contribution is rebased onto Marauder v1.20.0, upstream commit
 `511bb3694d0c4dc064888e762bde44fcc9b7f48a`. The current software checks pass
-**188 native test cases across 32 suites** and **97 Python checks** using GCC
+**188 native test cases across 32 suites** and **101 Python checks** using GCC
 16.2.0 / C++17 and Python 3.12 on Windows.
 
 Startup retains upstream's removal of the serial-host wait. The main power
@@ -24,6 +24,11 @@ job budget is checked between calls; individual HRDY waits are bounded at
 about 4.1 seconds, while controller polling and SPI transfers also occur
 inside the calls. The total can exceed the budget; it is not a hard
 end-to-end deadline.
+
+The factory-image helper uses the platform's configured esptool launcher,
+including quoted paths with spaces, instead of assuming a package-directory
+lookup is available. Tests reject a missing launcher, unexpected image layout,
+and a merged image whose application bytes differ from the compiled app.
 
 No M5Paper was connected during this review, and this revision has not been
 flashed or tested on battery. The measurements below are historical evidence
