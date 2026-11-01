@@ -1,6 +1,9 @@
 #include "TouchKeyboard.h"
 #include <string.h>
 #include <Arduino.h>
+#ifdef MARAUDER_EPAPER_UI
+#include "EpaperPower.h"
+#endif
 
 #ifdef HAS_TOUCH
 
@@ -40,6 +43,9 @@ enum KeyboardLayout {
 };
 
 static void drawTextArea(const char *title, const char *buffer) {
+  #ifdef MARAUDER_EPAPER_UI
+    display_obj.tft.setTextSize(2);
+  #endif
   int16_t areaHeight = display_obj.tft.height() - kbHeight();
 
   // Clear text area
@@ -52,7 +58,11 @@ static void drawTextArea(const char *title, const char *buffer) {
     display_obj.tft.setCursor(2, cursorY);
     display_obj.tft.setTextColor(TFT_GREEN, TFT_BLACK);
     display_obj.tft.print(title);
-    cursorY += 16;
+    #ifdef MARAUDER_EPAPER_UI
+      cursorY += 24;
+    #else
+      cursorY += 16;
+    #endif
   }
 
   // Draw current text
@@ -62,6 +72,12 @@ static void drawTextArea(const char *title, const char *buffer) {
 }
 
 static void drawKeyboard(KeyboardLayout layout, bool caps) {
+  #ifdef MARAUDER_EPAPER_UI
+    display_obj.tft.setTextSize(2);
+    constexpr int labelScale = 2;
+  #else
+    constexpr int labelScale = 1;
+  #endif
   const int16_t kY = kbYStart();
   const int16_t kH = kbHeight();
   const int16_t kX = kbXStart();
@@ -118,7 +134,7 @@ static void drawKeyboard(KeyboardLayout layout, bool caps) {
       display_obj.tft.drawRect(keyX, keyY, cellW, cellH, TFT_BLACK);
 
       // Label
-      display_obj.tft.setCursor(keyX + cellW / 2 - 3, keyY + cellH / 2 - 4);
+      display_obj.tft.setCursor(keyX + cellW / 2 - 3 * labelScale, keyY + cellH / 2 - 4 * labelScale);
       char c = row[i];
 
       // Apply CAPS on alpha letters
@@ -140,7 +156,7 @@ static void drawKeyboard(KeyboardLayout layout, bool caps) {
       int16_t capsW = 2 * cellW;
 
       display_obj.tft.drawRect(capsX, rowY, capsW, cellH, TFT_BLACK);
-      display_obj.tft.setCursor(capsX + 4, rowY + cellH / 2 - 4);
+      display_obj.tft.setCursor(capsX + 4, rowY + cellH / 2 - 4 * labelScale);
       // Show different label based on state
       if (caps) {
         display_obj.tft.print("caps");
@@ -166,12 +182,12 @@ static void drawKeyboard(KeyboardLayout layout, bool caps) {
 
   // CANCEL
   display_obj.tft.drawRect(x0, rowY, segW, cellH, TFT_BLACK);
-  display_obj.tft.setCursor(x0 + 4, rowY + cellH / 2 - 4);
+  display_obj.tft.setCursor(x0 + 4, rowY + cellH / 2 - 4 * labelScale);
   display_obj.tft.print("CANCEL");
 
   // SYMB / ABC
   display_obj.tft.drawRect(x1, rowY, segW, cellH, TFT_BLACK);
-  display_obj.tft.setCursor(x1 + 4, rowY + cellH / 2 - 4);
+  display_obj.tft.setCursor(x1 + 4, rowY + cellH / 2 - 4 * labelScale);
   if (layout == LAYOUT_ALPHA) {
     display_obj.tft.print("SYMB");
   } else {
@@ -179,15 +195,15 @@ static void drawKeyboard(KeyboardLayout layout, bool caps) {
   }
 
   display_obj.tft.drawRect(x2, rowY, (x3 - x2), cellH, TFT_BLACK);
-  display_obj.tft.setCursor(x2 + 4, rowY + cellH / 2 - 4);
+  display_obj.tft.setCursor(x2 + 4, rowY + cellH / 2 - 4 * labelScale);
   display_obj.tft.print("SPACE");
 
   display_obj.tft.drawRect(x3, rowY, (x4 - x3), cellH, TFT_BLACK);
-  display_obj.tft.setCursor(x3 + 4, rowY + cellH / 2 - 4);
+  display_obj.tft.setCursor(x3 + 4, rowY + cellH / 2 - 4 * labelScale);
   display_obj.tft.print("BKSP");
 
   display_obj.tft.drawRect(x4, rowY, (x5 - x4), cellH, TFT_BLACK);
-  display_obj.tft.setCursor(x4 + 4, rowY + cellH / 2 - 4);
+  display_obj.tft.setCursor(x4 + 4, rowY + cellH / 2 - 4 * labelScale);
   display_obj.tft.print("OK");
 }
 
@@ -371,11 +387,22 @@ bool keyboardInput(char *buffer, size_t bufLen, const char *title) {
 
   uint32_t lastTouchTime = 0;
   const uint32_t debounceMs = 120;
+  #ifdef MARAUDER_EPAPER_UI
+    sticky::InputFrameGate keyboardInputGate;
+  #endif
 
   while (true) {
     uint16_t x = 0, y = 0;
     uint8_t touched = display_obj.updateTouch(&x, &y, TOUCH_THRESHOLD);
 
+    #ifdef MARAUDER_EPAPER_UI
+      // Keep a physical escape even if the touch controller or panel fails.
+      if (epaper::takePowerSelect()) return false;
+      if (!keyboardInputGate.accept(display_obj.tft.inputFrameReady(), touched)) {
+        delay(5);
+        continue;
+      }
+    #endif
     if (touched) {
       uint32_t now = millis();
       if (now - lastTouchTime < debounceMs) {
@@ -404,9 +431,15 @@ bool keyboardInput(char *buffer, size_t bufLen, const char *title) {
       } else if (r == KB_TOGGLE_LAYOUT) {
         layout = (layout == LAYOUT_ALPHA) ? LAYOUT_SYMBOLS : LAYOUT_ALPHA;
         drawKeyboard(layout, caps);
+        #ifdef MARAUDER_EPAPER_UI
+          keyboardInputGate.beginTransition();
+        #endif
       } else if (r == KB_TOGGLE_CAPS) {
         caps = !caps;
         drawKeyboard(layout, caps);
+        #ifdef MARAUDER_EPAPER_UI
+          keyboardInputGate.beginTransition();
+        #endif
       }
     }
 
