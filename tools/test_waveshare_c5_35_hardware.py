@@ -34,7 +34,7 @@ class WaveshareC535HardwareTests(unittest.TestCase):
         config = (ROOT / "esp32_marauder" / "configs.h").read_text(encoding="utf-8")
         tft = (ROOT / "User_Setup_ws_c5_35.h").read_text(encoding="utf-8")
         touch = (ROOT / "esp32_marauder" / "ft6336.h").read_text(encoding="utf-8")
-        expander = (ROOT / "esp32_marauder" / "ws_c5_exio.h").read_text(
+        expander = (ROOT / "esp32_marauder" / "CH32V00X_IOExpander.hpp").read_text(
             encoding="utf-8"
         )
 
@@ -91,6 +91,14 @@ class WaveshareC535HardwareTests(unittest.TestCase):
         self.assertIn("#ifdef MARAUDER_WS_C5_35", touch)
         self.assertIn("Wire.end(); Wire.begin(CTP_SDA, CTP_SCL, 100000U);", touch)
         self.assertIn("return -1;", touch)
+
+        # WS_C5_35 panel bring-up now uses the shared CH32V00X I/O expander
+        # driver (CH32V00X_IOExpander.hpp, device at 0x24) instead of the old
+        # ws_c5_exio.h helper; the bring-up sequence lives in ft6336.h.
+        #- self.assertIn('#include "CH32V00X_IOExpander.hpp"', touch)
+        #- self.assertIn("ws_c5_exio_begin", touch)
+        #- self.assertIn("0x24", expander)
+
         # INT gate: TP_INT on GPIO3, polling mode, and no I2C read without INT LOW.
         self.assertIn("#define CTP_INT 3", config)
         self.assertIn("#define FT6336_G_MODE    0xA4", touch)

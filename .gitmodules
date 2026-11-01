@@ -22,3 +22,15 @@
 [submodule "esp32_marauder/libraries/SwitchLib"]
 	path = esp32_marauder/libraries/SwitchLib
 	url = https://github.com/justcallmekoko/SwitchLib.git
+[submodule "esp32_marauder/libraries/Adafruit_rtclib"]
+	path = esp32_marauder/libraries/Adafruit_rtclib
+	url = https://github.com/adafruit/rtclib.git
+[submodule "esp32_marauder/libraries/PCT2075"]
+	path = esp32_marauder/libraries/PCT2075
+	url = http://github.com/RobTillaart/PCT2075.git
+[submodule "esp32_marauder/libraries/XPowersLib"]
+	path = esp32_marauder/libraries/XPowersLib
+	url = https://github.com/lewisxhe/XPowersLib
+[submodule "esp32_marauder/libraries/Adafruit_MAX1704X"]
+	path = esp32_marauder/libraries/Adafruit_MAX1704X
+	url = https://github.com/adafruit/Adafruit_MAX1704X

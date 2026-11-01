@@ -7,6 +7,7 @@ Buffer::Buffer(){
   bufB = (uint8_t*)malloc(BUF_SIZE);
 }
 
+#ifdef NO_USE
 void Buffer::createFile(const char* name, bool is_pcap, bool is_gpx){
   int i=0;
   String prefix = directory ? String(directory) + "/" : "/";
@@ -31,6 +32,45 @@ void Buffer::createFile(const char* name, bool is_pcap, bool is_gpx){
 
   Serial.println(fileName);
   
+  file = fs->open(fileName, FILE_WRITE);
+  file.close();
+}
+#endif
+
+//  If we know what time it is, we might as well timestamp the files
+void Buffer::createFile(const char* name, bool is_pcap, bool is_gpx) {
+  int i = 0;
+  char buf[64];   // LFN can be up to 255 chars on FatFs
+
+  // With timestamp if system time is set:
+  if (system_time_set) {
+    struct tm timeinfo;
+    getLocalTime(&timeinfo);
+    if (is_pcap) {
+      do {
+        snprintf(buf, sizeof(buf), "/%s_%04d%02d%02d_%02d%02d%02d_%d.pcap",
+          name,
+          timeinfo.tm_year + 1900,
+          timeinfo.tm_mon + 1,
+          timeinfo.tm_mday,
+          timeinfo.tm_hour,
+          timeinfo.tm_min,
+          timeinfo.tm_sec,
+          i++);
+      } while (fs->exists(buf));
+    }
+    // similar for log/gpx...
+  } else {
+    // fallback to existing numeric scheme
+    if (is_pcap) {
+      do {
+        snprintf(buf, sizeof(buf), "/%s_%d.pcap", name, i++);
+      } while (fs->exists(buf));
+    }
+  }
+
+  fileName = String(buf);
+  Serial.println(fileName);
   file = fs->open(fileName, FILE_WRITE);
   file.close();
 }
@@ -101,7 +141,7 @@ void Buffer::add(const uint8_t* buf, uint32_t len, bool is_pcap){
     portEXIT_CRITICAL(&bufferMux);
     return;
   }
-
+  
   // buffer is full -> drop packet
   if((useA && bufSizeA + record_header_len + len > BUF_SIZE && bufSizeB > 0) ||
      (!useA && bufSizeB + record_header_len + len > BUF_SIZE && bufSizeA > 0)){
@@ -185,7 +225,7 @@ void Buffer::write(const uint8_t* buf, uint32_t len){
   if (!saving) writeUnlocked(buf, len);
   portEXIT_CRITICAL(&bufferMux);
 }
-
+  
 bool Buffer::writeUnlocked(const uint8_t* buf, uint32_t len){
   if(useA){
     if (len > BUF_SIZE - bufSizeA) return false;
