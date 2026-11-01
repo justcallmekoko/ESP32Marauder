@@ -7,6 +7,20 @@ The contribution is rebased onto Marauder v1.20.0, upstream commit
 **188 native test cases across 32 suites** and **101 Python checks** using GCC
 16.2.0 / C++17 and Python 3.12 on Windows.
 
+The validated source/tooling revision is `eabe3308676d7262ed614d6c1dc3e5e22be2f1d1`.
+`pio run -e m5paper_v11 -t factory` passes with Arduino 3.3.4 / ESP-IDF
+5.5.1-710-g8410210c9a. The compiler reports 88,196 bytes of static RAM and
+2,053,595 bytes against the 4,194,304-byte app slot. IRAM uses 129,555 of
+131,072 bytes, leaving 1,517 bytes; retain the pinned toolchain and verify
+that margin after changes. These are link-time figures, not runtime heap
+measurements. Esptool validates the ESP32 / 16 MB image checksum and hash;
+the merged bootloader, partition table, and app regions match their components.
+
+| Artifact | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `firmware.bin` | 2,054,096 | `b90555e4e14feb2f205094d2346ddf543ef677e00eb4daea9205c51f63a274d2` |
+| `firmware.factory.bin` | 2,119,632 | `cba849fc80673b17f1014a8720d1ae8801e19ba0b9fa85ad506096917a217c2d` |
+
 Startup retains upstream's removal of the serial-host wait. The main power
 hold is restored as the first `setup()` action, before serial and peripheral
 setup. The original ESP32 M5Paper uses its external USB/UART bridge.

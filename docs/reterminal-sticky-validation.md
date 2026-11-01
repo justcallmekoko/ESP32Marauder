@@ -7,6 +7,18 @@ The contribution is rebased onto Marauder v1.20.0, upstream commit
 **188 native test cases across 32 suites** and **101 Python checks** using GCC
 16.2.0 / C++17 and Python 3.12 on Windows.
 
+The validated source/tooling revision is `eabe3308676d7262ed614d6c1dc3e5e22be2f1d1`.
+`pio run -e reterminal_sticky` passes with Arduino 3.3.12 / ESP-IDF 5.5.5.
+The compiler reports 84,260 bytes of static RAM and 1,814,947 bytes against
+the 6,291,456-byte app slot. These are link-time figures, not runtime heap
+measurements. Esptool validates the ESP32-S3 / 32 MB image checksum and hash;
+the merged bootloader, partition table, and app regions match their components.
+
+| Artifact | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `firmware.bin` | 1,867,024 | `e0f4f53cfba1ebc56d548a4f4efe721ce3d1cf60beb2f6c9e7c3416fdc6a4133` |
+| `firmware.factory.bin` | 1,932,560 | `16911513ecabb1a4dba92f06ad23a4dcab755c06fb31ca5bdaf03389211564de` |
+
 Startup retains upstream's removal of the serial-host wait. Board power is
 latched as the first `setup()` action, before serial and peripheral setup.
 The pinned Sticky build uses its CH343 UART bridge with USB CDC disabled.
