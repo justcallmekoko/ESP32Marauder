@@ -80,9 +80,10 @@ The project applies `tools/m5paper_panel_patch.py` to its local, pinned M5GFX
 dependency. The patch verifies source hashes, preserves upstream license
 notices, latches HRDY timeouts, aborts failed image uploads, and exposes the
 failure to the worker. A failed upload never becomes the last successful
-frame. The job checks an eight-second budget between driver calls; a blocking
-driver wait can exceed that budget by one bounded HRDY wait (about 4.1 seconds).
-This is not a hard eight-second interrupt deadline. Unknown dependency edits
+frame. The job checks an eight-second budget between driver calls. Individual
+HRDY waits are bounded (about 4.1 seconds), but controller polling and SPI
+transfers also occur inside those calls, so the total can exceed that budget.
+This is not a hard end-to-end deadline. Unknown dependency edits
 fail the build instead of applying the patch to an unreviewed driver version.
 
 The GT911 is polled every 8 ms. Not-ready reports preserve an existing touch;

@@ -20,8 +20,10 @@ IT8951 driver. HRDY failures latch an error, terminate image uploads, and
 prevent a failed frame from becoming the previous successful framebuffer.
 Regression checks cover unknown input rejection, exact patch contexts,
 idempotence, and validation of both files before writing. The eight-second
-job budget is checked between calls and can overrun by one driver wait
-(about 4.1 seconds); it is not a hard interrupt deadline.
+job budget is checked between calls; individual HRDY waits are bounded at
+about 4.1 seconds, while controller polling and SPI transfers also occur
+inside the calls. The total can exceed the budget; it is not a hard
+end-to-end deadline.
 
 No M5Paper was connected during this review, and this revision has not been
 flashed or tested on battery. The measurements below are historical evidence
