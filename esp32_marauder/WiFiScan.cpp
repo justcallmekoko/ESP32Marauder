@@ -5072,12 +5072,11 @@ static inline void p_info(const String &s, bool newline = true) { p_info(s.c_str
 void WiFiScan::RunInfo() {
   uint8_t sta_mac[6];
   uint8_t ap_mac[6];
-  extern bool system_time_set;
 
   this->getMAC(true, sta_mac);
   this->getMAC(false, ap_mac);
   const esp_partition_t* running_partition = esp_ota_get_running_partition();
-  //  const String app_partition = running_partition ? String(running_partition->label) : String("unknown");
+  // const String app_partition = running_partition ? String(running_partition->label) : String("unknown");
 
   char buffer[64];
 
@@ -5091,29 +5090,33 @@ void WiFiScan::RunInfo() {
     display_obj.tft.setTextColor(TFT_CYAN);
   #endif
 
-  if (system_time_set) {
-    struct tm timeinfo;
-    if(getLocalTime(&timeinfo)) {
-      fmt_datetime(buffer, sizeof(buffer), timeinfo);
-      p_info(buffer);
-    }
-  } 
-  // else p_info("System time not Set");
 
   p_info(text_table4[20]);
-
-  p_info(text_table4[21] + display_obj.version_number);
-  p_info("Hardware: " + (String)HARDWARE_NAME);
+  p_info(text_table4[21] + (String)MARAUDER_VERSION);
+  // p_info("Hardware: " + (String)HARDWARE_NAME);
+  // p_info("FCC ID: " + (String)FCC_ID);
+  p_info("Hardware: " HARDWARE_NAME);
+  p_info("FCC ID: " FCC_ID);
   if (running_partition) {
-    snprintf(buffer, sizeof(buffer), "App partition:: %s 0x%lx 0x%lx", running_partition->label, running_partition->address, running_partition->size);
-    p_info(buffer);
+      snprintf(buffer, sizeof(buffer), "App partition:: %s 0x%lx", running_partition->label, running_partition->address);
+      p_info(buffer);
   } else {
-    p_info("App partition: unknown");
+      p_info("App partition: unknown");
   }
   p_info(text_table4[22] + (String)esp_get_idf_version());
 
+  if (this->wsl_bypass_enabled) {
+    p_info(text_table4[23]);
+  }
+  else {
+    p_info(text_table4[24]);
+  }
+
+  p_info(text_table4[25] + macToString(sta_mac));
+  p_info(text_table4[26] + macToString(ap_mac));
+
   #ifdef ESP_ARDUINO_VERSION_STR
-    p_info("Arduino ESP32 Core Version: ", 0); p_info(ESP_ARDUINO_VERSION_STR);
+    p_info("Arduino ESP32 Core Version: " ESP_ARDUINO_VERSION_STR);
   #elif defined(ESP_ARDUINO_VERSION)
     snprintf(buffer, sizeof(buffer), "ESP Arduino: %d.%d.%d", ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
     p_info(buffer);
@@ -5128,21 +5131,9 @@ void WiFiScan::RunInfo() {
     #endif
   #endif
 
-  // p_info("App partition: " + app_partition)
-
   #ifdef CONFIG_IDF_TARGET
-    // snprintf(buffer, sizeof(buffer), "IDF_TARGET: %s", CONFIG_IDF_TARGET);
-    // p_info(buffer);
     p_info("IDF_TARGET: " CONFIG_IDF_TARGET);
   #endif
-
-  #ifdef FCC_ID
-    //np_info("FCC ID: "  (String)FCC_ID);
-    p_info("FCC ID: "  FCC_ID);
-  #endif
-
-  // snprintf(buffer, sizeof(buffer), "%s: %s", text_table4[22],  esp_get_idf_version()); p_info(buffer);
-
 
   snprintf(buffer, sizeof(buffer), "Flash Size:  %luMB", ESP.getFlashChipSize() / (1024 * 1024));
   p_info(buffer);
@@ -5154,23 +5145,14 @@ void WiFiScan::RunInfo() {
     p_info("PSRAM Size: 0");
   #endif
 
-  snprintf(buffer, sizeof(buffer), "CPU=%u MHz  APB=%u Hz", getCpuFrequencyMhz(), getApbFrequency());
-  p_info(buffer);
-
 //  extern const esp_partition_t *run;
 //  snprintf(buffer, sizeof(buffer), "Running from %s @0x%lx", run->label, (unsigned long)run->address);
 //  p_info(buffer);
 
-  p_info(text_table4[25], 0); p_info(macToString(sta_mac));
-  p_info(text_table4[26], 0); p_info(macToString(ap_mac));
-
   #if defined(HAS_SD)
     if (sd_obj.supported) {
       p_info(text_table4[28]);
-
-      snprintf(buffer, sizeof(buffer), "%s %s", text_table4[29], sd_obj.card_sz.c_str());
-      p_info(buffer);
-
+      p_info( text_table4[29] + sd_obj.card_sz);
     } else {
       p_info(text_table4[30]);
       p_info(text_table4[31]);
@@ -5178,46 +5160,21 @@ void WiFiScan::RunInfo() {
   #endif
 
   #ifdef HAS_BATTERY
-    if (battery_obj.supported) {
-      // p_info(text_table4[32]);  // "Battery Monitor: supported"
-      battery_obj.battery_level = battery_obj.getBatteryLevel();
-      snprintf(buffer, sizeof(buffer), "%s %d%%", text_table4[33], battery_obj.getBatteryLevel());
-      p_info(buffer);
+    if (battery_obj.i2c_supported) {
+      p_info(text_table4[32]);
+      p_info(text_table4[33] + (String)battery_obj.battery_level + "%");
     }
     else {
       p_info(text_table4[34]);
     }
   #endif  // HAS_BATTERY
 
-  #ifdef temp_sensor_hpp
-    #if defined(HAS_TEMP_SENSOR)
-      if (TempSensor_obj->cpu_supported) {
-        snprintf(buffer, sizeof(buffer), "CPU temperature:  %.1fC", TempSensor_obj.cpu_temperature());
-        p_info(buffer);
-      }
-    #endif   // HAS_CPU_TEMP
-  #endif   // temp_sensor_hpp
-
-  #if defined(HAS_CPU_TEMP)
-        snprintf(buffer, sizeof(buffer), "CPU temp:  %.1fC", read_sys_temp());
-        p_info(buffer);
-  #endif   // HAS_CPU_TEMP
-
-//  #if (defined(HAS_PM) && defined(CONFIG_PM_ENABLE)) or defined(CONFIG_PM_DFS_INIT_AUTO)
-//    extern bool pm_active;
-//    extern bool pm_configured;
-//
-//    snprintf(buffer, sizeof(buffer), "Power Mgt: %s%s",
-//          pm_configured ? "Enabled" : "Disabled",
-//          pm_configured ? (pm_active ? " Active" : " Inactive") : "");
-//    p_info(buffer);
-//  #endif
-
   p_info("Uptime: " + uptimeString());  // wraps after about 49 days because it uses
 
   if (this->wifi_connected)
       showNetworkInfo();
 }
+
 
 bool WiFiScan::setStationSelected(uint16_t index, bool selected) {
   if (stations == nullptr || index >= stations->size())

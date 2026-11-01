@@ -68,23 +68,18 @@ https://www.online-utility.org/image/convert/to/XBM
 
   #if (U_BTN >= 0 && U_BTN != -1)
     Switches u_btn = Switches(U_BTN, 1000, U_PULL);
-    // perimanSetPinBusExtraType(U_BTN, "U_BTN");
   #endif
   #if (D_BTN >= 0 && D_BTN != -1)
     Switches d_btn = Switches(D_BTN, 1000, D_PULL);
-    // perimanSetPinBusExtraType(D_BTN, "D_BTN");
   #endif
   #if (L_BTN >= 0 && L_BTN != -1)
     Switches l_btn = Switches(L_BTN, 1000, L_PULL);
-    // perimanSetPinBusExtraType(L_BTN, "L_BTN");
   #endif
   #if (R_BTN >= 0 && R_BTN != -1)
     Switches r_btn = Switches(R_BTN, 1000, R_PULL);
-    // perimanSetPinBusExtraType(R_BTN, "R_BTN");
   #endif
   #if (C_BTN >= 0 && C_BTN != -1)
     Switches c_btn = Switches(C_BTN, 1000, C_PULL);
-    // perimanSetPinBusExtraType(C_BTN, "C_BTN");
   #endif
   #if defined(MARAUDER_POOM) && (B_BTN >= 0)
     Switches b_btn = Switches(B_BTN, 1000, B_PULL);
@@ -212,7 +207,6 @@ void setup()
     log_d("Enable POWER_HOLD_PIN");
     pinMode(POWER_HOLD_PIN, OUTPUT);
     digitalWrite(POWER_HOLD_PIN, HIGH);
-    // perimanSetPinBusExtraType(POWER_HOLD_PIN, "POWER_HOLD_PIN");
   #endif
 
   // needed for MARAUDER_CYD_HMI "LILYGO T-HMI ESP32-S3
@@ -221,7 +215,6 @@ void setup()
     log_d("Enable power to peripherals");
     pinMode(PWR_EN_PIN, OUTPUT);
     digitalWrite(PWR_EN_PIN, HIGH);
-    // perimanSetPinBusExtraType(PWR_EN_PIN, "PWR_EN_PIN");
   #endif
 
   randomSeed(esp_random());
@@ -248,7 +241,6 @@ void setup()
     pinMode(ACT_LED_PIN, OUTPUT);
     delay(100);
     digitalWrite(ACT_LED_PIN, LOW);
-    // perimanSetPinBusExtraType(ACT_LED_PIN, "ACT_LED_PIN");
   #endif
 
   // prevent freeze from full USBSerial
@@ -273,10 +265,9 @@ void setup()
   // TFT_BL >= 0 does not if TFT_BL is -1
   // due to cpp's "unsigned promotion rules" where -1 == maxint
   // #if defined(HAS_SCREEN) && !defined(MARAUDER_POOM) && !defined(MARAUDER_M5STACK_CORE2_AWS) && TFT_BL != -1
-  #if defined(HAS_SCREEN) && !defined(MARAUDER_POOM) && !defined(MARAUDER_M5STACK_CORE2_AWS) && !defined(MARAUDER_WS_C5_35)
+  #if defined(HAS_SCREEN) && !defined(MARAUDER_POOM) && !defined(MARAUDER_M5STACK_CORE2_AWS) && !defined(HAS_CH32V00X)
     log_d("pinMode %d OUTPUT", TFT_BL);
     pinMode(TFT_BL, OUTPUT);
-    // perimanSetPinBusExtraType(TFT_BL, "TFT_BL");
   #endif
 
   #ifdef MARAUDER_M5STACK_CORE2_AWS
@@ -290,14 +281,11 @@ void setup()
   #if BATTERY_ANALOG_ON == 1
     pinMode(BATTERY_PIN, OUTPUT);
     pinMode(CHARGING_PIN, INPUT);
-    // perimanSetPinBusExtraType(BATTERY_PIN, "BATTERY_PIN");
-    // perimanSetPinBusExtraType(CHARGING_PIN, "CHARGING_PIN");
   #endif
 
   #if defined(TFT_CS) && TFT_CS != -1
     log_d("TFT_CS=%d", TFT_CS);
     pinMode(TFT_CS, OUTPUT);
-    // perimanSetPinBusExtraType(TFT_CS, "TFT_CS");
   #endif
 
   #if defined(MARAUDER_WS_C5_28) || defined(MARAUDER_WS_C5_35)

@@ -842,6 +842,7 @@
         #define CH32V00X_I2C_ADDR 0x24
       #define HAS_TEMP_SENSOR
         #define HAS_SHTC3
+        #define HAS_CPU_TEMP 1
       // Platform capabilities
       #define HAS_PSRAM
         #define BOARD_HAS_PSRAM
@@ -4072,14 +4073,14 @@
         #define CTP_RST 18
         #define I2C_FT6336_ADDR      0x38
 
-    #elif defined(MARAUDER_WS_C5_35)
-      #define I2C_SDA 27
-      #define I2C_SCL 26
-      #define HAS_FT6336
-      #define CTP_SDA I2C_SDA
-      #define CTP_SCL I2C_SCL
-      #define CTP_INT 3
-      #define I2C_ADDR_FT6336      0x38
+      #elif defined(MARAUDER_WS_C5_35)
+        #define I2C_SDA 27
+        #define I2C_SCL 26
+        #define HAS_FT6336
+        #define CTP_SDA I2C_SDA
+        #define CTP_SCL I2C_SCL
+        #define CTP_INT 3
+        #define I2C_ADDR_FT6336      0x38
 
       #elif defined(MARAUDER_WS_C5_28)    // ADC is through IO expander
         #define HAS_CST3530 1      // distinguish from CST820
@@ -4114,25 +4115,26 @@
       #endif  // HAS_CAP_TOUCH
       ////  END HAS_CAP_TOUCH
 
-/// I2S 
-  #ifdef HAS_ES8311
-    #if defined(MARAUDER_WS_C5_28)
-      #define ES8311_I2S_MCLK  -1
-      #define ES8311_I2S_BCLK  24    // SCLK
-      #define ES8311_I2S_WS    25    // LRCK
-      #define ES8311_I2S_DOUT  26    // ASDOUT
-      #define ES8311_I2S_DIN   27    // DSDIN
+    /// I2S 
+    #ifdef HAS_ES8311
+      #if defined(MARAUDER_WS_C5_28)
+        #define ES8311_I2S_MCLK  -1
+        #define ES8311_I2S_BCLK  24    // SCLK
+        #define ES8311_I2S_WS    25    // LRCK
+        #define ES8311_I2S_DOUT  26    // ASDOUT
+        #define ES8311_I2S_DIN   27    // DSDIN
 
-    #elif defined(MARAUDER_WS_C5_35)
-      #define ES8311_I2S_MCLK  -1
-      #define ES8311_I2S_BCLK  23    // SCLK
-      #define ES8311_I2S_WS    10    // LRCK
-      #define ES8311_I2S_DOUT  24    // ASDOUT
-      #define ES8311_I2S_DIN   25    // DSDIN
-    #endif
-  #endif //  HAS_ES8311
-// END I2S
-      // CONFIG LOGIC
+      #elif defined(MARAUDER_WS_C5_35)
+        #define ES8311_I2S_MCLK  -1
+        #define ES8311_I2S_BCLK  23    // SCLK
+        #define ES8311_I2S_WS    10    // LRCK
+        #define ES8311_I2S_DOUT  24    // ASDOUT
+        #define ES8311_I2S_DIN   25    // DSDIN
+      #endif
+    #endif //  HAS_ES8311
+    /// END I2S
+
+    // CONFIG LOGIC
 
     #pragma GCC diagnostic push
     #pragma GCC diagnostic warning "-Wcpp"
@@ -4142,8 +4144,6 @@
       #if defined(HAS_CST820) || defined(HAS_AXS5106L) || defined(HAS_FT6336) || defined(HAS_CST3530)
         #define HAS_CAP_TOUCH 1
       #endif
-
-
 
       #if defined(HAS_NIMBLE_2) && !defined(HAS_BT)
         #warning "HAS_NIMBLE_2 defined without HAS_BT, check 'BOARD FEATURES' section"
@@ -4197,28 +4197,28 @@
     #ifdef HAS_MAX1704X
       #undef HAS_MAX1704X
     #endif
-  // Battery level comes from the on-board AXP2101 PMU (0x34) on the shared I2C bus.
-  #ifndef HAS_BATTERY
-    #define HAS_BATTERY
+    // Battery level comes from the on-board AXP2101 PMU (0x34) on the shared I2C bus.
+    #ifndef HAS_BATTERY
+      #define HAS_BATTERY
     #endif
     #define HAS_TEMP_SENSOR
     #define HAS_SHTC3
 
     #define CTP_SDA 27
     #define CTP_SCL 26
+    // No NeoPixel on this board. Pancake drives its LED on GPIO27, which is the
+    // shared I2C SDA line here (touch + I/O expander), so LED updates corrupt I2C.
+    #ifdef HAS_NEOPIXEL_LED
+      #undef HAS_NEOPIXEL_LED
+    #endif
+    // FT6336 TP_INT is GPIO3 (external 10K pull-up). Touch reads are gated on it.
+    #define CTP_INT 3
+    #define HAS_AXP2101_GAUGE
+    // GPS is a Quectel LC76G on the shared I2C bus (0x50/0x54). The header UART
+    // isn't connected as shipped, and Pancake's GPS UART pins (14/13) are this
+    // board's native USB, so the UART GPS path must never start.
+    #define HAS_GPS_LC76G_I2C
   #endif
-  // No NeoPixel on this board. Pancake drives its LED on GPIO27, which is the
-  // shared I2C SDA line here (touch + I/O expander), so LED updates corrupt I2C.
-  #ifdef HAS_NEOPIXEL_LED
-    #undef HAS_NEOPIXEL_LED
-  #endif
-  // FT6336 TP_INT is GPIO3 (external 10K pull-up). Touch reads are gated on it.
-  #define CTP_INT 3
-  #define HAS_AXP2101_GAUGE
-  // GPS is a Quectel LC76G on the shared I2C bus (0x50/0x54). The header UART
-  // isn't connected as shipped, and Pancake's GPS UART pins (14/13) are this
-  // board's native USB, so the UART GPS path must never start.
-  #define HAS_GPS_LC76G_I2C
-#endif
 
 #endif
+

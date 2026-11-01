@@ -94,7 +94,7 @@
       uint8_t BL_NUM_LEVELS = 16;
 
       inline void _setBrightness(uint8_t value) {
-          uint8_t _brightness = 0;
+          static uint8_t _brightness = 0;
 
           if (_brightness == value) {
               return;
@@ -177,10 +177,8 @@
         // _setBrightness(0);
       }
 
-
     // Init PWM brightness AFTER display init (so ledcAttach overrides TFT_eSPI's pinMode)
     // #ifndef HAS_MINI_SCREEN
-
 
     #elif defined(MARAUDER_M5STACK_CORE2_AWS)
 
@@ -189,7 +187,7 @@
 
       #include "CORE2_AWS.hpp"
 
-      inline void brightnessInit() { 
+      inline void brightnessInit() {
           core2SetBacklight(BL_LEVELS[bl_level_idx]);
       }
 
@@ -391,9 +389,9 @@
       #endif
     }
 
-  #endif //  HAS_AW9364  / !HAS_MINI_SCREEN / ..
+  #endif   //  HAS_AW9364  / !HAS_MINI_SCREEN / ..
 
-#else // HAS_SCREEN
+#else   // HAS_SCREEN
 
   uint8_t BL_NUM_LEVELS = 1;
   // Dummy Functions, should never be called but are here just in case
@@ -405,6 +403,6 @@
   inline void backlightOn() { }
   inline void backlightOff() { }
 
-#endif // HAS_SCREEN
+#endif   // HAS_SCREEN
 
 #endif   //  __BACKlIGHT_HPP__
