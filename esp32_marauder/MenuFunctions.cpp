@@ -613,7 +613,7 @@ void MenuFunctions::main(uint32_t currentTime)
       bool c_btn_press = this->isKeyPressed('(') || this->isKeyPressed(KEY_ENTER);
     #endif
 
-    #ifndef HAS_ILI9341
+    #if !defined(HAS_ILI9341) || defined(XIAO_ESP32_S3_TOUCH)
 
       if ((c_btn_press) &&
           (wifi_scan_obj.currentScanMode != WIFI_SCAN_OFF) &&
@@ -709,7 +709,7 @@ void MenuFunctions::main(uint32_t currentTime)
           wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
 
           // Restore display state without full reinit to avoid screen flash
-          #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV)
+          #if defined(MARAUDER_CARDPUTER) || defined(MARAUDER_CARDPUTER_ADV) || defined(XIAO_ESP32_S3_TOUCH)
             display_obj.tft.setRotation(SCREEN_ORIENTATION);
             display_obj.clearScreen();
           #else
@@ -1064,14 +1064,20 @@ void MenuFunctions::main(uint32_t currentTime)
       const bool down_just_pressed = this->isKeyPressed('.') || this->isKeyPressed('s') || this->isKeyPressed('S');
       const bool down_is_pressed = down_just_pressed;
       #endif
-      const bool down_menu_navigation_active =
-          wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF ||
-          wifi_scan_obj.currentScanMode == WIFI_CONNECTED ||
-          wifi_scan_obj.currentScanMode == OTA_UPDATE;
-      const bool down_event = down_menu_navigation_active
-          ? menu_down_repeat.update(down_is_pressed, currentTime)
-          : down_just_pressed;
-      if (!down_menu_navigation_active) menu_down_repeat.reset();
+      #ifdef XIAO_ESP32_S3_TOUCH
+        // Two-button UX: one press = one move, no hold-to-repeat runaway.
+        (void)down_is_pressed;
+        const bool down_event = down_just_pressed;
+      #else
+        const bool down_menu_navigation_active =
+            wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF ||
+            wifi_scan_obj.currentScanMode == WIFI_CONNECTED ||
+            wifi_scan_obj.currentScanMode == OTA_UPDATE;
+        const bool down_event = down_menu_navigation_active
+            ? menu_down_repeat.update(down_is_pressed, currentTime)
+            : down_just_pressed;
+        if (!down_menu_navigation_active) menu_down_repeat.reset();
+      #endif
       if (down_event) {
         if ((wifi_scan_obj.currentScanMode == WIFI_SCAN_OFF) ||
             (wifi_scan_obj.currentScanMode == WIFI_CONNECTED) ||
@@ -3643,7 +3649,7 @@ void MenuFunctions::buildWiFiGeneralMenu()
       this->changeMenu(current_menu);
     });
   #endif
-  #if (!defined(HAS_TOUCH) && defined(HAS_BUTTONS))
+  #if (!defined(HAS_TOUCH) && defined(HAS_BUTTONS) && !defined(XIAO_ESP32_S3_TOUCH))
     this->addNodes(&wifiGeneralMenu, text_table1[1], TFTNAVY, KEYBOARD_ICO, [this](){
       this->changeMenu(&miniKbMenu, true);
       #ifdef HAS_MINI_KB
@@ -3850,6 +3856,7 @@ void MenuFunctions::buildWiFiGeneralMenu()
       this->changeMenu(&wifiAPMenu, true);
     });
 
+    #ifndef XIAO_ESP32_S3_TOUCH
     this->addNodes(&wifiGeneralMenu, "Join WiFi", TFTWHITE, KEYBOARD_ICO, [this](){
 
       wifiAPMenu.parentMenu = &wifiGeneralMenu;
@@ -3932,6 +3939,8 @@ void MenuFunctions::buildWiFiGeneralMenu()
       this->changeMenu(&wifiAPMenu, true);
     });
 
+    #endif
+
     this->addNodes(&wifiGeneralMenu, "Join Saved WiFi", TFTWHITE, KEYBOARD_ICO, [this](){
       wifi_scan_obj.joinSavedWiFi(true);
       this->changeMenu(&wifiGeneralMenu, true);
@@ -3942,6 +3951,7 @@ void MenuFunctions::buildWiFiGeneralMenu()
       this->changeMenu(&savedWifiMenu, true);
     });
 
+    #ifndef XIAO_ESP32_S3_TOUCH
     this->addNodes(&wifiGeneralMenu, "Start AP", TFTGREEN, KEYBOARD_ICO, [this](){
       ssidsMenu.parentMenu = &wifiGeneralMenu;
 
@@ -3983,6 +3993,8 @@ void MenuFunctions::buildWiFiGeneralMenu()
       }
       this->changeMenu(&ssidsMenu, true);
     });
+
+    #endif
 
     this->addNodes(&wifiGeneralMenu, "Host AP Info", TFTGREEN, BEACON_SNIFF, [this]() {
       display_obj.clearScreen();
@@ -5564,9 +5576,11 @@ void MenuFunctions::buildLazyMenu(Menu* menu)
           });
         }
       #endif
+      #ifndef XIAO_ESP32_S3_TOUCH
       this->addNodes(menu, "Save/Load Files", TFTCYAN, SD_UPDATE, [this]() {
         this->changeMenu(&saveFileMenu, true);
       });
+      #endif
       #ifndef HAS_MINI_SCREEN
         this->addNodes(menu, "Brightness", TFTYELLOW, BRIGHTNESS, [this]() {
           this->brightnessMode();
@@ -5580,9 +5594,11 @@ void MenuFunctions::buildLazyMenu(Menu* menu)
       this->addNodes(menu, text08, TFTBLUE, SETTINGS, [this]() {
         this->changeMenu(&settingsMenu, true);
       });
+      #ifndef XIAO_ESP32_S3_TOUCH
       this->addNodes(menu, "Geofences", TFTGREEN, GPS_MENU, [this]() {
         this->buildGeofenceMenu();
       });
+      #endif
       #ifdef HAS_SD
         if (sd_obj.supported) {
           sdDeleteMenu.parentMenu = &deviceMenu;
@@ -6093,10 +6109,16 @@ void MenuFunctions::displayCurrentMenu(int start_index)
     display_obj.tft.drawCentreString("BRIGHTNESS", TFT_WIDTH/2, 30, 2);
 
     display_obj.tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
+    #ifdef XIAO_ESP32_S3_TOUCH
+    display_obj.tft.drawCentreString("BTN_A: NEXT LEVEL", TFT_WIDTH/2, 10, 1);
+    display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
+    display_obj.tft.drawCentreString("BTN_B / WAIT 3s: SAVE", TFT_WIDTH/2, TFT_HEIGHT/2 + 50, 1);
+    #else
     display_obj.tft.drawCentreString("TAP TOP = BRIGHTER", TFT_WIDTH/2, 10, 1);
     display_obj.tft.drawCentreString("TAP BOTTOM = DIMMER", TFT_WIDTH/2, TFT_HEIGHT - 20, 1);
     display_obj.tft.setTextColor(TFT_RED, TFT_BLACK);
     display_obj.tft.drawCentreString("TAP MIDDLE or WAIT 3s = SAVE", TFT_WIDTH/2, TFT_HEIGHT/2 + 50, 1);
+    #endif
 
     auto drawBar = [&]() {
       uint16_t barX = 30, barY = TFT_HEIGHT/2 - 25, barW = TFT_WIDTH - 60, barH = 30;
@@ -6111,8 +6133,10 @@ void MenuFunctions::displayCurrentMenu(int start_index)
     };
     drawBar();
 
-    uint16_t zoneUp = TFT_HEIGHT * 25 / 100;
-    uint16_t zoneDown = TFT_HEIGHT * 75 / 100;
+    #ifndef XIAO_ESP32_S3_TOUCH
+      uint16_t zoneUp = TFT_HEIGHT * 25 / 100;
+      uint16_t zoneDown = TFT_HEIGHT * 75 / 100;
+    #endif
     uint32_t lastTouch = millis();
 
     while (true) {
@@ -6122,6 +6146,18 @@ void MenuFunctions::displayCurrentMenu(int start_index)
         break;
       }
 
+      #ifdef XIAO_ESP32_S3_TOUCH
+      if (c_btn.justPressed()) {
+        brightnessSave(level);
+        break;
+      }
+      if (d_btn.justPressed()) {
+        level = (level + 1) % numLevels;
+        lastTouch = millis();
+        BL_PREVIEW(levels[level]);
+        drawBar();
+      }
+      #else
       uint16_t tx, ty;
       if (display_obj.updateTouch(&tx, &ty)) {
         lastTouch = millis();
@@ -6147,6 +6183,7 @@ void MenuFunctions::displayCurrentMenu(int start_index)
         }
         delay(150);
       }
+      #endif
       delay(30);
     }
 

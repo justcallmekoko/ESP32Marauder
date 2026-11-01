@@ -1,6 +1,11 @@
 #include "esp_random.h"
 #include "WiFiScan.h"
 #include "StationSelection.h"
+#ifdef XIAO_ESP32_S3_TOUCH
+  #include "Switches.h"
+  extern Switches c_btn;
+  extern Switches d_btn;
+#endif
 #ifdef HAS_FACES_KEYBOARD
   #include "Keyboard.h"
 #endif
@@ -10705,6 +10710,28 @@ bool WiFiScan::filterActive() {
 // GCOVR_EXCL_START -- Packet Monitor graphs require a hardware TFT and live capture.
 #ifdef HAS_SCREEN
   int8_t WiFiScan::checkAnalyzerButtons(uint32_t currentTime) {
+    #ifdef XIAO_ESP32_S3_TOUCH
+      // These graph modes own input polling, including Packet Monitor which
+      // bypasses MenuFunctions. Keep the physical exit key available here.
+      if (c_btn.justPressed()) return EXIT_BUTTON_INDEX;
+      if (d_btn.justPressed()) {
+        // The two-button board has no channel-minus key, so NEXT must wrap.
+        if (this->currentScanMode == WIFI_SCAN_CHAN_ACT) {
+          this->activity_page = this->activity_page >= MAX_CHANNEL / CHAN_PER_PAGE
+              ? 1 : this->activity_page + 1;
+          this->drawChannelLine();
+        } else {
+          this->changeChannel(this->set_channel >= MAX_CHANNEL
+              ? 1 : this->set_channel + 1);
+        }
+        // changeChannel redraws Packet Monitor's own controls.
+        if (this->currentScanMode != WIFI_PACKET_MONITOR) {
+          display_obj.tftDrawChannelScaleButtons(this->set_channel, false);
+          display_obj.tftDrawExitScaleButtons(false);
+        }
+      }
+      return -1;
+    #else
     boolean pressed = false;
   
     uint16_t t_x = 0, t_y = 0; // To store the touch coordinates
@@ -10769,6 +10796,7 @@ bool WiFiScan::filterActive() {
       if (display_obj.key[b].justReleased())
         return b;
     return -1;
+    #endif
   }
 #endif
 
