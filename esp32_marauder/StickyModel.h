@@ -42,4 +42,12 @@ struct TouchState {
   bool apply(bool transportOk, uint8_t status, bool validPoint,
              Point next, uint32_t now);
 };
+
+// A new keyboard/layout must be visible before a fresh touch can activate it.
+// Ordinary text redraws keep the key geometry and need no new transition.
+struct InputFrameGate {
+  bool waiting = true, down = true;
+  void beginTransition() { waiting = true; down = true; }
+  bool accept(bool frameReady, bool pressed);
+};
 }

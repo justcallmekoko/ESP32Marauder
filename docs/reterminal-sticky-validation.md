@@ -1,5 +1,39 @@
 # reTerminal Sticky validation record
 
+## Current software review — 2026-10-31
+
+The contribution is rebased onto Marauder v1.20.0, upstream commit
+`511bb3694d0c4dc064888e762bde44fcc9b7f48a`. The current software checks pass
+**188 native test cases across 32 suites** and **97 Python checks** using GCC
+16.2.0 / C++17 and Python 3.12 on Windows.
+
+Startup retains upstream's removal of the serial-host wait. Board power is
+latched as the first `setup()` action, before serial and peripheral setup.
+The pinned Sticky build uses its CH343 UART bridge with USB CDC disabled.
+Regression checks cover startup order, absence of serial input waits, both
+supported board-selection methods, and the physical packet-monitor exit.
+Keyboard regression cases cover the initial panel refresh, release of the
+opening touch, layout changes, and text-only redraws. Short center release
+now cancels the keyboard even if touch or the display fails.
+
+The previous 20 MiB SPIFFS partition exceeded the pinned SDK's 16-bit page
+index limit, explaining the startup settings-format failure in the historical
+logs. The revised table keeps both app slots and the filesystem start, caps
+SPIFFS at `0xff0000` bytes, and reserves the upper 4 MiB. Boundary checks cover
+both e-paper layouts. Install the corrected partition table with the app;
+current-device formatting and settings persistence still require physical
+verification. First formatting can take time without a serial host.
+
+No Sticky was connected during this review, and this revision has not been
+flashed or tested on battery. All measurements and owner confirmations below
+belong to the earlier firmware. For the current cold-boot check, disconnect
+USB completely, power on from a charged battery, then move the selection and
+open a menu. A retained e-paper menu alone does not prove successful boot.
+Repeat with USB power and all serial monitors closed, recording the firmware
+commit and both results.
+
+## Historical hardware record
+
 Development port against Marauder commit
 8244eab69b0ddc316ccaf6ded470d9a999cf5b5a. This supersedes the earlier
 corner-test report, which did not establish working menu navigation.
@@ -54,9 +88,10 @@ entry into deep sleep, and boot reported `rst:0x5 (DSLEEP)` and wake cause 4
 (timer). After wake, GT911 reported 480x800 at 0x14, the display refreshed
 successfully, and diagnostic counters reported zero display/I2C errors.
 This verifies USB sleep and reinitialization, not physical button wake or
-battery current. An existing startup settings-format warning also appears
-in this log and in the earlier `final-boot.log`; settings persistence is a
-separate outstanding check.
+battery current. The startup settings-format warning in this log and the
+earlier `final-boot.log` used the invalid 20 MiB SPIFFS layout. The current
+review corrects that layout as described above; settings persistence on the
+revised firmware remains a physical qualification item.
 
 ## Display and performance
 

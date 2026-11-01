@@ -12,10 +12,6 @@
   // Production builds must remain fail-closed.
   //#define ALLOW_UNVERIFIED_SD_UPDATE
 
-  #if defined(MARAUDER_RETERMINAL_STICKY) || defined(MARAUDER_M5PAPER)
-    #define MARAUDER_EPAPER_UI
-  #endif
-
   //// BOARD TARGETS
   //#define MARAUDER_M5PAPER // Original M5Paper v1.1, not PaperS3
   //#define MARAUDER_RETERMINAL_STICKY
@@ -60,6 +56,10 @@
     #define MARAUDER_WS_C5_35_OVERRIDE
   #endif
   //// END BOARD TARGETS
+
+  #if defined(MARAUDER_RETERMINAL_STICKY) || defined(MARAUDER_M5PAPER)
+    #define MARAUDER_EPAPER_UI
+  #endif
 
   // The official Arduino board package supplies this identifier for the XIAO
   // ESP32-C5. Auto-select the matching Marauder profile so every translation

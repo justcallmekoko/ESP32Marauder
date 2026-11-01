@@ -177,6 +177,34 @@ void test_power_hold_survives_millis_wrap_and_delayed_poll() {
   TEST_ASSERT_EQUAL_INT(int(sticky::PowerEvent::Shutdown), int(button.update(false, 0xc00u)));
   TEST_ASSERT_EQUAL_INT(0, int(button.update(false, 0xc20u)));
 }
+void test_keyboard_waits_for_visible_layout_and_opening_touch_release() {
+  sticky::InputFrameGate gate;
+  TEST_ASSERT_FALSE(gate.accept(false, false));
+  TEST_ASSERT_FALSE(gate.accept(false, true));
+  TEST_ASSERT_FALSE(gate.accept(true, true));
+  TEST_ASSERT_FALSE(gate.accept(true, true));
+  TEST_ASSERT_FALSE(gate.accept(true, false));
+  TEST_ASSERT_TRUE(gate.accept(true, true));
+  TEST_ASSERT_FALSE(gate.accept(true, true));
+}
+void test_keyboard_layout_transition_discards_touches_on_previous_layout() {
+  sticky::InputFrameGate gate;
+  gate.accept(true, false);
+  TEST_ASSERT_TRUE(gate.accept(true, true));
+  gate.beginTransition();
+  TEST_ASSERT_FALSE(gate.accept(false, false));
+  TEST_ASSERT_FALSE(gate.accept(false, true));
+  TEST_ASSERT_FALSE(gate.accept(false, false));
+  TEST_ASSERT_FALSE(gate.accept(true, false));
+  TEST_ASSERT_TRUE(gate.accept(true, true));
+}
+void test_keyboard_text_redraw_keeps_existing_key_geometry_active() {
+  sticky::InputFrameGate gate;
+  gate.accept(true, false);
+  TEST_ASSERT_TRUE(gate.accept(true, true));
+  TEST_ASSERT_FALSE(gate.accept(false, false));
+  TEST_ASSERT_TRUE(gate.accept(false, true));
+}
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_seeed_touch_reference_corners);
@@ -195,5 +223,8 @@ int main() {
   RUN_TEST(test_power_hold_shuts_down_once_without_selecting);
   RUN_TEST(test_power_boot_hold_is_ignored_until_release);
   RUN_TEST(test_power_hold_survives_millis_wrap_and_delayed_poll);
+  RUN_TEST(test_keyboard_waits_for_visible_layout_and_opening_touch_release);
+  RUN_TEST(test_keyboard_layout_transition_discards_touches_on_previous_layout);
+  RUN_TEST(test_keyboard_text_redraw_keeps_existing_key_geometry_active);
   return UNITY_END();
 }

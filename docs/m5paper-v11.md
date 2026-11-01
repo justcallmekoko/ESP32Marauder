@@ -2,8 +2,8 @@
 
 This target is for the original **M5Stack M5Paper v1.1 / K049-B**, with a classic
 ESP32-D0WDQ6-V3 and IT8951 display controller. It is not a PaperS3 image.
-The upstream base is ESP32Marauder v1.19.2, commit
-`8244eab69b0ddc316ccaf6ded470d9a999cf5b5a`.
+The upstream base is ESP32Marauder v1.20.0, commit
+`511bb3694d0c4dc064888e762bde44fcc9b7f48a`.
 
 ## Hardware contract
 
@@ -37,6 +37,24 @@ the firmware's explicit contract.
   Activity titles use a large font and wrap instead of shrinking.
 - The display has no backlight. LCD backlight and resistive-touch calibration
   paths are disabled for this target.
+- Short center release cancels the touch keyboard, including when touch is
+  unavailable. New keyboard layouts become active only after a successful
+  panel refresh and touch release, so a press on the old layout cannot type
+  into a layout that is not visible yet.
+
+## Standalone startup
+
+The original M5Paper uses an external USB/UART bridge. Startup does not wait
+for a serial monitor, host connection, or incoming serial byte. The first
+`setup()` action drives the main power hold high and releases retained sleep
+pins before serial, SD, display, or radio initialization.
+
+To qualify a revision, disconnect USB entirely, shut down and restart from a
+charged battery, then move the selection and open a menu with the jog control.
+The e-paper panel retains its image with no power, so a visible menu by itself
+is not evidence that the CPU booted. Repeat using USB power with the serial
+monitor closed and record the exact firmware commit. These cold-start checks
+remain pending for the rebased revision because the board was unavailable.
 
 ## Display implementation
 
@@ -57,6 +75,15 @@ not hold the SPI bus. Small updates use DU4, larger partial updates use DU, and
 startup/manual cleaning/every 32 partial updates use GC16. Draw bursts coalesce
 for 25 ms, with a 250 ms maximum coalescing interval and 100 ms minimum submission
 spacing. These are scheduling bounds, not a claim of physical refresh speed.
+
+The project applies `tools/m5paper_panel_patch.py` to its local, pinned M5GFX
+dependency. The patch verifies source hashes, preserves upstream license
+notices, latches HRDY timeouts, aborts failed image uploads, and exposes the
+failure to the worker. A failed upload never becomes the last successful
+frame. The job checks an eight-second budget between driver calls; a blocking
+driver wait can exceed that budget by one bounded HRDY wait (about 4.1 seconds).
+This is not a hard eight-second interrupt deadline. Unknown dependency edits
+fail the build instead of applying the patch to an unreviewed driver version.
 
 The GT911 is polled every 8 ms. Not-ready reports preserve an existing touch;
 ready zero-contact reports release it. Invalid ready reports are acknowledged,

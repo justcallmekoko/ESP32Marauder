@@ -99,4 +99,14 @@ bool TouchState::apply(bool ok, uint8_t status, bool valid, Point next, uint32_t
   }
   return before != down;
 }
+
+bool InputFrameGate::accept(bool frameReady, bool pressed) {
+  if (waiting) {
+    if (!frameReady) return false;
+    waiting = false;
+  }
+  const bool fresh = pressed && !down;
+  down = pressed;
+  return fresh;
+}
 }

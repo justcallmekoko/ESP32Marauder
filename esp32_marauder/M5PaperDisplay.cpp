@@ -82,11 +82,13 @@ void M5PaperDisplay::init() {
   panel.setAutoDisplay(false);
   panel.setRotation(0);
   for (int attempt = 0; attempt < 3; ++attempt) {
+    panel.controller.clearIoError();
     controllerVcom_ = panel.controller.getVCOM();
-    if (controllerVcom_ >= 500 && controllerVcom_ <= 5000) break;
+    if (!panel.controller.hasIoError() &&
+        controllerVcom_ >= 500 && controllerVcom_ <= 5000) break;
     delay(20);
   }
-  if (controllerVcom_ < 500 || controllerVcom_ > 5000) {
+  if (panel.controller.hasIoError() || controllerVcom_ < 500 || controllerVcom_ > 5000) {
     Serial.println("M5Paper: invalid controller read; display disabled");
     releaseBuffers(); return;
   }
@@ -136,6 +138,8 @@ void M5PaperDisplay::display(bool force) {
 }
 
 bool M5PaperDisplay::refresh() {
+  panel.controller.clearIoError();
+  const uint32_t started = millis();
   const auto a = jobArea_;
   const bool small = uint32_t(a.w) * a.h < m5paper::kWidth * m5paper::kHeight / 5;
   panel.setEpdMode(jobFull_ ? lgfx::epd_mode_t::epd_quality :
@@ -152,12 +156,15 @@ bool M5PaperDisplay::refresh() {
       }
     }
     panel.pushImage(a.x, a.y + row, a.w, rows, reinterpret_cast<const lgfx::grayscale_t*>(transfer_));
+    if (panel.controller.hasIoError() || uint32_t(millis() - started) >= 8000)
+      return false;
     taskYIELD();
   }
   panel.display();
-  const uint32_t started = millis();
+  if (panel.controller.hasIoError()) return false;
   while (panel.displayBusy()) {
-    if (uint32_t(millis() - started) >= 8000) return false;
+    if (panel.controller.hasIoError() || uint32_t(millis() - started) >= 8000)
+      return false;
     delay(5);
   }
   return true;

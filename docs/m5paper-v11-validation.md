@@ -1,5 +1,38 @@
 # M5Paper v1.1 development validation
 
+## Current software review — 2026-10-31
+
+The contribution is rebased onto Marauder v1.20.0, upstream commit
+`511bb3694d0c4dc064888e762bde44fcc9b7f48a`. The current software checks pass
+**188 native test cases across 32 suites** and **97 Python checks** using GCC
+16.2.0 / C++17 and Python 3.12 on Windows.
+
+Startup retains upstream's removal of the serial-host wait. The main power
+hold is restored as the first `setup()` action, before serial and peripheral
+setup. The original ESP32 M5Paper uses its external USB/UART bridge.
+Regression checks cover startup order, absence of serial input waits, both
+supported board-selection methods, and the physical packet-monitor exit.
+Keyboard tests cover visible layout transitions and touch release; short
+center release now cancels the editor even when touch or the panel fails.
+
+The clean build applies a source-hash-checked patch to the pinned M5GFX
+IT8951 driver. HRDY failures latch an error, terminate image uploads, and
+prevent a failed frame from becoming the previous successful framebuffer.
+Regression checks cover unknown input rejection, exact patch contexts,
+idempotence, and validation of both files before writing. The eight-second
+job budget is checked between calls and can overrun by one driver wait
+(about 4.1 seconds); it is not a hard interrupt deadline.
+
+No M5Paper was connected during this review, and this revision has not been
+flashed or tested on battery. The measurements below are historical evidence
+from the earlier firmware. To qualify the current revision, disconnect USB,
+shut down and power on from a charged battery, then move the selection and
+open a menu. E-paper retains its image without power, so a visible menu alone
+does not prove a successful boot. Repeat on USB power with all serial monitors
+closed and record the exact firmware commit and both results.
+
+## Historical hardware record — 2026-10-27
+
 Recorded 2026-10-27. These results concern the connected M5Paper v1.1. The owner
 confirmed readable orientation, aligned touches on both corner targets, normal
 touch menu navigation, and jog up/down/short-center selection. Battery shutdown

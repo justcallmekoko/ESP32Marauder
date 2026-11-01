@@ -493,7 +493,7 @@ void MenuFunctions::main(uint32_t currentTime)
     }
   #endif
 
-  // POI button interception during wardrive â€” full width bottom bar
+  // POI button interception during wardrive — full width bottom bar
   #ifdef HAS_ILI9341
     if (pressed &&
         (wifi_scan_obj.currentScanMode == WIFI_SCAN_WAR_DRIVE ||
@@ -854,6 +854,12 @@ void MenuFunctions::main(uint32_t currentTime)
         menu_button = display_obj.menuButton(&t_x, &t_y, pressed);
       }
 
+      #ifdef MARAUDER_EPAPER_UI
+        // Navigation may queue while refreshing; activation must match the
+        // selection that is actually visible on the panel.
+        if (menu_navigation_active && menu_button == SELECT_BUTTON &&
+            !display_obj.tft.inputFrameReady()) menu_button = -1;
+      #endif
       if (menu_button >= 0) {
         #ifdef MARAUDER_EPAPER_UI
           Serial.printf("Sticky menu touch: action=%d menu=%s selected=%u\n",
@@ -1279,6 +1285,7 @@ void MenuFunctions::main(uint32_t currentTime)
         #ifdef MARAUDER_EPAPER_UI
           if (wifi_scan_obj.currentScanMode != WIFI_SCAN_OFF &&
               wifi_scan_obj.currentScanMode != WIFI_CONNECTED) return;
+          if (!display_obj.tft.inputFrameReady()) return;
         #endif
         current_menu->list->get(current_menu->selected).callable();
       }
@@ -3626,7 +3633,7 @@ void MenuFunctions::buildWiFiGeneralMenu()
     this->addNodes(&selectProbeSSIDsMenu, text09, TFTLIGHTGREY, 0, [this]() {
       this->changeMenu(&wifiGeneralMenu, true);
 
-      // TODO: TBD - Should probe_req_ssids have itÂ´s own life and override ap.config and/or ssids -list for EP?
+      // TODO: TBD - Should probe_req_ssids have it´s own life and override ap.config and/or ssids -list for EP?
       // If so, then we should not add selected ssids to ssids list
 
       // Add selected ssid names to ssids list when clicking back button

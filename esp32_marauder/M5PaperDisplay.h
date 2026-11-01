@@ -81,7 +81,8 @@ class M5PaperDisplay : public Adafruit_GFX {
   void requestClean() { cleanRequested_ = true; }
   bool ready() const { return initialized_; }
   bool inputFrameReady() const {
-    return initialized_ && !busy_.load(std::memory_order_acquire) && !dirty_;
+    return initialized_ && !busy_.load(std::memory_order_acquire) &&
+           !dirty_ && panelValid_ && lastOk_;
   }
  private:
   uint8_t *canvas_ = nullptr, *snapshot_ = nullptr, *previous_ = nullptr;

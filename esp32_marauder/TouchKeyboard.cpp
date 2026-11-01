@@ -1,6 +1,9 @@
 #include "TouchKeyboard.h"
 #include <string.h>
 #include <Arduino.h>
+#ifdef MARAUDER_EPAPER_UI
+#include "EpaperPower.h"
+#endif
 
 #ifdef HAS_TOUCH
 
@@ -101,7 +104,7 @@ static void drawKeyboard(KeyboardLayout layout, bool caps) {
                            ? (const char **)rowStringsAlpha
                            : (const char **)rowStringsSym;
 
-  // Draw normal character rows (0â€“3)
+  // Draw normal character rows (0–3)
   for (int r = 0; r < 4; ++r) {
     const char *row = rowsPtr[r];
 
@@ -385,7 +388,7 @@ bool keyboardInput(char *buffer, size_t bufLen, const char *title) {
   uint32_t lastTouchTime = 0;
   const uint32_t debounceMs = 120;
   #ifdef MARAUDER_EPAPER_UI
-    bool stickyKeyDown = true; // Require release of the tap that opened the editor.
+    sticky::InputFrameGate keyboardInputGate;
   #endif
 
   while (true) {
@@ -393,9 +396,12 @@ bool keyboardInput(char *buffer, size_t bufLen, const char *title) {
     uint8_t touched = display_obj.updateTouch(&x, &y, TOUCH_THRESHOLD);
 
     #ifdef MARAUDER_EPAPER_UI
-      const bool newPress = touched && !stickyKeyDown;
-      stickyKeyDown = touched;
-      if (!newPress) { delay(5); continue; }
+      // Keep a physical escape even if the touch controller or panel fails.
+      if (epaper::takePowerSelect()) return false;
+      if (!keyboardInputGate.accept(display_obj.tft.inputFrameReady(), touched)) {
+        delay(5);
+        continue;
+      }
     #endif
     if (touched) {
       uint32_t now = millis();
@@ -425,9 +431,15 @@ bool keyboardInput(char *buffer, size_t bufLen, const char *title) {
       } else if (r == KB_TOGGLE_LAYOUT) {
         layout = (layout == LAYOUT_ALPHA) ? LAYOUT_SYMBOLS : LAYOUT_ALPHA;
         drawKeyboard(layout, caps);
+        #ifdef MARAUDER_EPAPER_UI
+          keyboardInputGate.beginTransition();
+        #endif
       } else if (r == KB_TOGGLE_CAPS) {
         caps = !caps;
         drawKeyboard(layout, caps);
+        #ifdef MARAUDER_EPAPER_UI
+          keyboardInputGate.beginTransition();
+        #endif
       }
     }
 

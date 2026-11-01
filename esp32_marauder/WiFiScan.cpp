@@ -6849,7 +6849,7 @@ void WiFiScan::displayWardriveStats() {
         display_obj.tft.println("Size: " + (String)((float)sd_obj.getFile(buffer_obj.getFileName()).size() / 1024) + "KB");
       #endif
 
-      // POI button â€” full width bottom bar
+      // POI button — full width bottom bar
       #ifdef HAS_TOUCH
         display_obj.tft.drawRect(0, SCREEN_HEIGHT - 50, SCREEN_WIDTH, 50, TFT_MAGENTA);
         display_obj.tft.setTextSize(2);
@@ -7918,7 +7918,7 @@ uint8_t WiFiScan::getSecurityType(const uint8_t* beacon, uint16_t len) {
 
         const uint8_t* tag_data = ies + i + 2;
 
-        // â”€â”€ RSN IE (Tag 48) â€” indicates WPA2/WPA3 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── RSN IE (Tag 48) — indicates WPA2/WPA3 ────────────────────
         if (tag_id == 48) {
             hasRSN = true;
 
@@ -7930,7 +7930,7 @@ uint8_t WiFiScan::getSecurityType(const uint8_t* beacon, uint16_t len) {
             uint16_t offset = 6;
 
             // Read pairwise cipher suite count and skip over the entire pairwise list
-            // This offset is dynamic â€” hardcoding byte 14 is wrong when count > 1
+            // This offset is dynamic — hardcoding byte 14 is wrong when count > 1
             uint16_t pw_count = tag_data[offset] | ((uint16_t)tag_data[offset + 1] << 8);
             offset += 2 + pw_count * 4;
 
@@ -7957,14 +7957,14 @@ uint8_t WiFiScan::getSecurityType(const uint8_t* beacon, uint16_t len) {
                         akmType == 12 ||
                         akmType == 13)
                     isEnterprise = true; // 802.1X authentication (WPA2-Enterprise) | FT over 802.1X | FILS-SHA256 (WPA3-Enterprise) | FILS-SHA384 (WPA3-Enterprise)
-                    if (akmType == 8)  isWPA3 = true;       // SAE (Simultaneous Authentication of Equals) â€” WPA3-Personal
+                    if (akmType == 8)  isWPA3 = true;       // SAE (Simultaneous Authentication of Equals) — WPA3-Personal
                 }
 
                 offset += 4;
             }
         }
 
-        // â”€â”€ WPA IE (Tag 221, OUI 00:50:F2:01) â€” indicates WPA1 â”€â”€â”€â”€â”€â”€â”€
+        // ── WPA IE (Tag 221, OUI 00:50:F2:01) — indicates WPA1 ───────
         else if (tag_id == 221 && tag_len >= 8 &&
                  tag_data[0] == 0x00 && tag_data[1] == 0x50 &&
                  tag_data[2] == 0xf2 && tag_data[3] == 0x01) {
@@ -7997,7 +7997,7 @@ uint8_t WiFiScan::getSecurityType(const uint8_t* beacon, uint16_t len) {
             }
         }
 
-        // â”€â”€ WAPI IE (Tag 68) â€” Chinese national Wi-Fi security standard â”€â”€
+        // ── WAPI IE (Tag 68) — Chinese national Wi-Fi security standard ──
         else if (tag_id == 68) {
             isWAPI = true;
         }
@@ -8005,7 +8005,7 @@ uint8_t WiFiScan::getSecurityType(const uint8_t* beacon, uint16_t len) {
         i += 2 + tag_len;
     }
 
-    // â”€â”€ Security type decision tree (most specific first) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Security type decision tree (most specific first) ────────────
     if (isWAPI)                 return WIFI_SECURITY_WAPI;
     if (isWPA3 && isEnterprise) return WIFI_SECURITY_WPA3_ENTERPRISE;
     if (isWPA3)                 return WIFI_SECURITY_WPA3;
@@ -8015,7 +8015,7 @@ uint8_t WiFiScan::getSecurityType(const uint8_t* beacon, uint16_t len) {
     if (hasWPA)                 return isEnterprise ? WIFI_SECURITY_WPA2_ENTERPRISE
                                                     : WIFI_SECURITY_WPA;
 
-    // WEP is not advertised via IEs â€” detected through the Privacy bit (bit 4)
+    // WEP is not advertised via IEs — detected through the Privacy bit (bit 4)
     // in the Capability Information field at bytes 34-35 (little-endian)
     uint16_t capab = (uint16_t)frame[34] | ((uint16_t)frame[35] << 8);
     if (capab & 0x0010) return WIFI_SECURITY_WEP;
@@ -9932,7 +9932,7 @@ void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6], u
 
   if(sec == WIFI_SECURITY_WPA3 || sec == WIFI_SECURITY_WPA3_ENTERPRISE || sec == WIFI_SECURITY_WAPI) {
     eapol_packet_bad_msg1[35] = 0x5f;     // Length 95 Bytes
-    eapol_packet_bad_msg1[38] = 0xCB;     // Keyâ€‘Info (LSB)  Install|Ack|Pairwise, ver=3
+    eapol_packet_bad_msg1[38] = 0xCB;     // Key‑Info (LSB)  Install|Ack|Pairwise, ver=3
     eapol_packet_bad_msg1[39] = 0x00;     // Key Length MSB
     eapol_packet_bad_msg1[40] = 0x00;     // Key Length LSB   (must be 0 with GCMP)
     frame_size = frame_size - 22;         // Adjust frame size for WPA3
@@ -9978,7 +9978,7 @@ void WiFiScan::sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6], u
 
   if(sec == WIFI_SECURITY_WPA3 || sec == WIFI_SECURITY_WPA3_ENTERPRISE || sec == WIFI_SECURITY_WAPI) {
     eapol_packet_bad_msg1[35] = 0x5f;     // Length 95 Bytes
-    eapol_packet_bad_msg1[38] = 0xCB;     // Keyâ€‘Info (LSB)  Install|Ack|Pairwise, ver=3
+    eapol_packet_bad_msg1[38] = 0xCB;     // Key‑Info (LSB)  Install|Ack|Pairwise, ver=3
     eapol_packet_bad_msg1[39] = 0x00;     // Key Length MSB
     eapol_packet_bad_msg1[40] = 0x00;     // Key Length LSB   (must be 0 with GCMP)
     frame_size = frame_size - 22;         // Adjust frame size for WPA3

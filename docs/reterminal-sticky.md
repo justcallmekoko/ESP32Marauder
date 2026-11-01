@@ -1,7 +1,7 @@
 # Seeed reTerminal Sticky
 
-Development hardware port based on upstream commit
-`8244eab69b0ddc316ccaf6ded470d9a999cf5b5a` (Marauder v1.19.2).
+Hardware port rebased onto upstream commit
+`511bb3694d0c4dc064888e762bde44fcc9b7f48a` (Marauder v1.20.0).
 Target flag: `MARAUDER_RETERMINAL_STICKY`.
 
 ## Hardware and build
@@ -31,7 +31,15 @@ upstream missing-return fixes allow the compiler's return-type checks to
 remain enabled. Other board profiles retain their existing display paths.
 
 The included 32 MB partition table allocates two 6 MB OTA applications and
-the remaining space to SPIFFS, with conventional NVS/OTA data offsets.
+`0xff0000` bytes (just under 16 MiB) to SPIFFS, with conventional NVS/OTA data
+offsets and the upper 4 MiB reserved. The stock SDK uses 16-bit SPIFFS page
+indexes and 256-byte pages; a filesystem above that limit is rejected by
+[ESP-IDF's SPIFFS initialization](https://github.com/espressif/esp-idf/blob/v5.5.5/components/spiffs/esp_spiffs.c).
+The earlier 20 MiB layout was invalid. The corrected table keeps both OTA
+slots and the filesystem's `0xc10000` start, but changes its capacity, so
+install the revised partition table as well as the app. Existing filesystem
+contents may require reformatting; preserve files first. Initial formatting
+can take time and is independent of serial-monitor connection.
 Back up the entire existing flash before the first installation: installing
 a different partition layout does not migrate the old filesystem.
 
@@ -105,6 +113,9 @@ third moves up, middle third selects on release, bottom third moves down.
 There is no side strip or direct row activation. Held up/down touches use
 upstream repeat behavior; keyboards still use their individual key targets.
 Physical buttons remain available when the touch controller is absent.
+In the touch keyboard, a short center release cancels the editor. New keyboard
+layouts wait for a successful panel refresh and a released touch before
+accepting another press; ordinary text updates keep the existing keys active.
 
 Side buttons provide optional navigation: GPIO5 moves up and GPIO6 moves
 down, including held-repeat in menus. Both inputs use 25 ms debounce. A
@@ -119,6 +130,21 @@ low. On battery this removes the main supply; USB bypasses that switch, so
 the processor also enters deep sleep with GPIO4 as its wake source. Startup
 releases held GPIOs and clocks the latch back on. The last e-paper image
 remains visible while powered off.
+
+## Standalone startup
+
+The pinned build uses the CH343 UART bridge and never waits for a serial
+monitor, host connection, or incoming serial byte. The first `setup()` action
+restores the power latch, before serial, storage, display, or radio setup.
+Missing touch or SD peripherals do not introduce a serial startup gate.
+
+For a physical cold-start check, disconnect USB completely, turn the board off,
+then power it from a charged battery and use Up/Down to move the highlight and
+open a menu. An e-paper screen retains its old image without power; seeing a
+menu alone does not prove this boot succeeded. Repeat on USB power with every
+serial monitor closed. Record the exact firmware commit and both results.
+The current rebased revision has software checks; this physical check still
+requires the board, as described in the validation record.
 
 ## Local diagnostics
 
