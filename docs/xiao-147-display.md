@@ -41,8 +41,12 @@ arduino-cli compile --fqbn 'esp32:esp32:XIAO_ESP32S3_Plus:PSRAM=opi,FlashSize=16
 
 The selected TFT setup is checked at compile time. The firmware does not wait
 for a serial host at startup. When USB CDC is enabled, its transmit timeout is
-zero: the screen and buttons continue running if a host is absent or stops
-reading. Output that does not fit the USB transmit buffer can be dropped.
+zero during initialization, so startup output that does not fit the transmit
+buffer can be dropped. At the end of setup the native bounded timeout is
+restored (250 ms for TinyUSB CDC, or 100 ms for Hardware USB Serial/JTAG), so
+runtime CLI replies can wait for a connected host to drain its buffer. With the
+documented TinyUSB configuration, writes return immediately when no serial
+client is connected; restoring the timeout does not require a connection.
 
 Native regression checks:
 

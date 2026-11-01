@@ -334,8 +334,8 @@ void setup()
   #endif
   
   #if defined(XIAO_ESP32_S3_TOUCH) && ARDUINO_USB_CDC_ON_BOOT
-    // USB logging must not delay the screen when a host is absent or stops
-    // reading. CDC drops output that cannot be sent immediately.
+    // Startup logging must not delay the screen while USB is unavailable.
+    // Restore the normal bounded CLI timeout once initialization finishes.
     Serial.setTxTimeoutMs(0);
   #endif
   Serial.begin(115200);
@@ -513,6 +513,17 @@ void setup()
   wifi_scan_obj.StartScan(WIFI_SCAN_OFF);
   
   cli_obj.RunSetup();
+
+  #if defined(XIAO_ESP32_S3_TOUCH) && ARDUINO_USB_CDC_ON_BOOT
+    // Preserve complete runtime CLI replies when a connected host needs time
+    // to drain its FIFO. These are Arduino-ESP32 3.3.12's native defaults;
+    // restoring them does not wait for a serial connection.
+    #if ARDUINO_USB_MODE
+      Serial.setTxTimeoutMs(100);  // Hardware USB Serial/JTAG
+    #else
+      Serial.setTxTimeoutMs(250);  // TinyUSB CDC
+    #endif
+  #endif
 }
 
 
