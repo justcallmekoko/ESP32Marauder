@@ -13,8 +13,9 @@ now has an equivalent C++11-compatible constructor. A strict C++11 syntax
 check compiles both model implementation files without e-paper board flags.
 Manual board selection also reaches the physical-switch implementation;
 preprocessing checks cover both profiles with Arduino's normal build macro.
-The artifact record below belongs to the stated earlier revision; target
-images are being rebuilt after this compatibility correction.
+The artifact record below is retained for its stated earlier revision.
+Current source validation and rebuilt-image evidence are recorded in
+[the reviewed contribution, PR #1685](https://github.com/justcallmekoko/ESP32Marauder/pull/1685).
 
 The validated source/tooling revision is `eabe3308676d7262ed614d6c1dc3e5e22be2f1d1`.
 `pio run -e m5paper_v11 -t factory` passes with Arduino 3.3.4 / ESP-IDF
