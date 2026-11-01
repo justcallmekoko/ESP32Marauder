@@ -55,7 +55,7 @@ bool Switches::getButtonState() {
 
 	// Time-based debounce: only accept a new logical state after it has been
 	// stable for DEBOUNCE_MS. Filters mechanical contact bounce so one physical
-	// press = one press event (and hold-to-repeat still works while held).
+	// press = one press event. Menu repeat policy is handled by the caller.
 	const uint32_t DEBOUNCE_MS = 30;
 	uint32_t now = millis();
 	if (raw != this->db_last_raw) {

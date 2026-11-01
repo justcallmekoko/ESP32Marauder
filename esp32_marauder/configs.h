@@ -619,6 +619,7 @@
     #define HAS_BUTTONS
     // AXS5106L touch and shared-SPI SD are not supported by this initial port.
     // Do not enable HAS_TOUCH, HAS_SD, USE_SD, or HAS_DIRECT_UPLOAD here.
+    #define XIAO_SD_CS 43
   #endif
 
   #ifdef MARAUDER_C5
@@ -1591,7 +1592,9 @@
       #define YMAX 320
       #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
       #define MENU_FONT &FreeMono9pt7b
-      #define BUTTON_SCREEN_LIMIT 12
+      // Ten 25px rows fit below the banner; the old twelve-row layout hid
+      // the final two entries below the 320px panel instead of paging.
+      #define BUTTON_SCREEN_LIMIT 10
       #define BUTTON_ARRAY_LEN BUTTON_SCREEN_LIMIT
       #define STATUS_BAR_WIDTH 16
       #define LVGL_TICK_PERIOD 6

@@ -333,6 +333,11 @@ void setup()
     esp_log_level_set("*", ESP_LOG_NONE);
   #endif
   
+  #if defined(XIAO_ESP32_S3_TOUCH) && ARDUINO_USB_CDC_ON_BOOT
+    // USB logging must not delay the screen when a host is absent or stops
+    // reading. CDC drops output that cannot be sent immediately.
+    Serial.setTxTimeoutMs(0);
+  #endif
   Serial.begin(115200);
 
   #ifdef HAS_ACT_LED
@@ -366,6 +371,12 @@ void setup()
   #endif
   
   // Preset SPI CS pins to avoid bus conflicts
+  #ifdef XIAO_ESP32_S3_TOUCH
+    // The unused card slot still shares the LCD bus. Keep any inserted card
+    // deselected even though this target does not initialize the SD driver.
+    pinMode(XIAO_SD_CS, OUTPUT);
+    digitalWrite(XIAO_SD_CS, HIGH);
+  #endif
   #if defined(HAS_SCREEN) && !defined(MARAUDER_POOM)
     digitalWrite(TFT_CS, HIGH);
   #endif
@@ -516,7 +527,7 @@ void loop()
     #endif
   #endif
 
-  #if (defined(HAS_ILI9341) && !defined(MARAUDER_CYD_2USB))
+  #if (defined(HAS_ILI9341) && !defined(MARAUDER_CYD_2USB) && !defined(XIAO_ESP32_S3_TOUCH))
     #if defined(HAS_BUTTONS) && (C_BTN >= 0)
       if (c_btn.isHeld()) {
         if (menu_function_obj.disable_touch)

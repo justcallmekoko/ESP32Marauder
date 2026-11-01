@@ -670,7 +670,11 @@ void Display::touchToExit()
 {
   tft.setTextColor(TFT_BLACK, TFT_LIGHTGREY);
   tft.fillRect(0, 32, SCREEN_WIDTH, 16, TFT_LIGHTGREY);
-  tft.drawCentreString(text11, SCREEN_WIDTH / 2, 32, 2);
+  #ifdef XIAO_ESP32_S3_TOUCH
+    tft.drawCentreString("BTN_B to exit", SCREEN_WIDTH / 2, 32, 2);
+  #else
+    tft.drawCentreString(text11, SCREEN_WIDTH / 2, 32, 2);
+  #endif
 }
 
 

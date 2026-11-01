@@ -5,6 +5,15 @@
 // rotation must apply it, including landscape graphs and returning to menus.
 class Xiao147Display : public TFT_eSPI {
  public:
+  void init(uint8_t tc = TAB_COLOUR) {
+    TFT_eSPI::init(tc);
+    // TFT_eSPI::init calls its nonvirtual setRotation internally. Restore
+    // the board correction after every reset, not only the first boot.
+    setRotation(getRotation());
+  }
+
+  void begin(uint8_t tc = TAB_COLOUR) { init(tc); }
+
   void setRotation(uint8_t rotation) {
     TFT_eSPI::setRotation(rotation);
     static const uint8_t orientation[] = {
