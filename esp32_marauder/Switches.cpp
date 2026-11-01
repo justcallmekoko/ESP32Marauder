@@ -1,5 +1,5 @@
 #include "Switches.h"
-#if defined(MARAUDER_M5PAPER) || defined(MARAUDER_RETERMINAL_STICKY)
+#if defined(ARDUINO) || defined(MARAUDER_M5PAPER) || defined(MARAUDER_RETERMINAL_STICKY)
 #include "configs.h"
 #endif
 #ifdef MARAUDER_EPAPER_UI

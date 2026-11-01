@@ -4,8 +4,17 @@
 
 The contribution is rebased onto Marauder v1.20.0, upstream commit
 `511bb3694d0c4dc064888e762bde44fcc9b7f48a`. The current software checks pass
-**188 native test cases across 32 suites** and **101 Python checks** using GCC
+**188 native test cases across 32 suites** and **103 Python checks** using GCC
 16.2.0 / C++17 and Python 3.12 on Windows.
+
+Automatic installer CI exposed a legacy C++11 compilation issue in the new
+model sources, which Arduino compiles even on other board profiles. `Area`
+now has an equivalent C++11-compatible constructor. A strict C++11 syntax
+check compiles both model implementation files without e-paper board flags.
+Manual board selection also reaches the physical-switch implementation;
+preprocessing checks cover both profiles with Arduino's normal build macro.
+The artifact record below belongs to the stated earlier revision; target
+images are being rebuilt after this compatibility correction.
 
 The validated source/tooling revision is `eabe3308676d7262ed614d6c1dc3e5e22be2f1d1`.
 `pio run -e reterminal_sticky` passes with Arduino 3.3.12 / ESP-IDF 5.5.5.

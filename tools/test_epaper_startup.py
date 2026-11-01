@@ -4,6 +4,7 @@ import configparser
 import pathlib
 import re
 import subprocess
+import tempfile
 import unittest
 
 
@@ -61,6 +62,26 @@ class EpaperStartupTests(unittest.TestCase):
         analyzer = analyzer.split("boolean pressed", 1)[0]
         self.assertIn("#ifdef MARAUDER_EPAPER_UI", analyzer)
         self.assertIn("if (epaper::takePowerSelect()) return EXIT_BUTTON_INDEX;", analyzer)
+
+    def test_manual_selection_reaches_physical_switch_implementation(self):
+        config = (ROOT / 'esp32_marauder/configs.h').read_text(encoding='utf-8')
+        for target in ('MARAUDER_RETERMINAL_STICKY', 'MARAUDER_M5PAPER'):
+            with self.subTest(target=target), tempfile.TemporaryDirectory() as directory:
+                folder = pathlib.Path(directory)
+                for name in ('Switches.cpp', 'Switches.h', 'EpaperPower.h',
+                             'M5PaperPower.h', 'StickyPower.h'):
+                    (folder / name).write_text((ROOT / 'esp32_marauder' / name)
+                                               .read_text(encoding='utf-8'), encoding='utf-8')
+                (folder / 'configs.h').write_text(config.replace('//#define ' + target,
+                                                               '#define ' + target, 1),
+                                                encoding='utf-8')
+                result = subprocess.run(['g++', '-E', '-P', '-DARDUINO=10819',
+                                         '-I', str(ROOT / 'test/support'),
+                                         '-I', str(ROOT / 'esp32_marauder'),
+                                         str(folder / 'Switches.cpp')],
+                                        check=True, capture_output=True, text=True)
+                self.assertIn('epaper::servicePowerButton();', result.stdout)
+                self.assertIn('epaper::navigationDown(this->pin)', result.stdout)
 
 
 if __name__ == "__main__":

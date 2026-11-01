@@ -8,7 +8,12 @@ constexpr size_t kStride = kPanelWidth / 8;
 constexpr size_t kFrameBytes = kStride * kPanelHeight;
 struct Point { uint16_t x, y; };
 struct Area {
-  uint16_t x = 0, y = 0, w = 0, h = 0;
+  // Arduino also compiles these model sources on legacy C++11 targets.
+  // Default member initializers alone do not permit Area{x, y, w, h} there.
+  constexpr Area(uint16_t xValue = 0, uint16_t yValue = 0,
+                 uint16_t width = 0, uint16_t height = 0)
+      : x(xValue), y(yValue), w(width), h(height) {}
+  uint16_t x, y, w, h;
   bool empty() const { return !w || !h; }
 };
 // Raw GT911 coordinates are stretched across the physical portrait axes.
