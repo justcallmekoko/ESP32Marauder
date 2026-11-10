@@ -399,9 +399,6 @@ void setup()
 
   #ifdef HAS_SCREEN
     display_obj.RunSetup();
-    #ifdef MARAUDER_WS_C5_35
-      ws_backlight_bus_ready = true;
-    #endif
     display_obj.tft.setTextColor(TFT_WHITE, TFT_BLACK);
   #endif
 
@@ -416,6 +413,14 @@ void setup()
   #endif
 
 
+  #ifdef MARAUDER_WS_C5_35
+    // Keep the expander backlight off until the splash is on the glass. Enabling
+    // it earlier lets brightnessInit() light the panel while it still shows its
+    // own memory (static after power-on, the previous picture after reset). The
+    // glass lags panel memory by a few frames, hence the short wait.
+    delay(150);
+    ws_backlight_bus_ready = true;
+  #endif
   backlightOn(); // Need this
 
   #ifdef HAS_SCREEN
