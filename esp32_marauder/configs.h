@@ -53,6 +53,17 @@
     #define MARAUDER_PANCAKE
     #define MARAUDER_WS_C5_35_OVERRIDE
   #endif
+  // Waveshare ESP32-S3-Touch-LCD-1.69 (ST7789 240x280, CST816T cap touch).
+  // No native Marauder target fits, so inherit the CYD Micro full-screen ST7789
+  // layout + feature set and override only this board's panel size, touch chip
+  // and pins (see the MARAUDER_WS_LCD_169_OVERRIDE block at end of this file).
+  //#define MARAUDER_WS_LCD_169
+  #ifdef MARAUDER_WS_LCD_169
+    #define TFT_HEIGHT 280       // 240x280 panel; set before HAS_SCREEN layout resolves
+    #define HAS_PSRAM            // ESP32-S3 OPI PSRAM (larger capture buffers)
+    #define MARAUDER_CYD_MICRO   // structural base: ST7789 240x320 full screen
+    #define MARAUDER_WS_LCD_169_OVERRIDE
+  #endif
   //// END BOARD TARGETS
 
   // The official Arduino board package supplies this identifier for the XIAO
@@ -3584,6 +3595,58 @@
   // isn't connected as shipped, and Pancake's GPS UART pins (14/13) are this
   // board's native USB, so the UART GPS path must never start.
   #define HAS_GPS_LC76G_I2C
+#endif
+
+//// Waveshare ESP32-S3-Touch-LCD-1.69 overrides (applied after CYD Micro defaults)
+#ifdef MARAUDER_WS_LCD_169_OVERRIDE
+  #undef HARDWARE_NAME
+  #define HARDWARE_NAME "WS S3 Touch 1.69"
+
+  // ---- Panel geometry: CYD Micro is 240x320; this panel is 240x280 ----
+  #ifdef YMAX
+    #undef YMAX
+  #endif
+  #define YMAX 280
+  #ifdef MAX_SCREEN_BUFFER
+    #undef MAX_SCREEN_BUFFER
+  #endif
+  #define MAX_SCREEN_BUFFER 16
+
+  // ---- Touch: replace CYD resistive XPT2046 with CST816T capacitive (I2C) ----
+  #ifdef HAS_CYD_TOUCH
+    #undef HAS_CYD_TOUCH
+  #endif
+  #ifndef HAS_TOUCH
+    #define HAS_TOUCH
+  #endif
+  #define HAS_CAP_TOUCH
+  #define HAS_CST816_TOUCH
+  #define CTP_SDA 11
+  #define CTP_SCL 10
+  #define CTP_RST 13
+  #define CTP_INT 14
+
+  // ---- No microSD / battery gauge / RGB LED wired like the CYD. Disable so we
+  //      don't init hardware that isn't there on first boot (re-enable once the
+  //      real peripherals are confirmed). ----
+  #ifdef HAS_SD
+    #undef HAS_SD
+  #endif
+  #ifdef USE_SD
+    #undef USE_SD
+  #endif
+  #ifdef HAS_C5_SD
+    #undef HAS_C5_SD
+  #endif
+  #ifdef HAS_SEPARATE_SD
+    #undef HAS_SEPARATE_SD
+  #endif
+  #ifdef HAS_BATTERY
+    #undef HAS_BATTERY
+  #endif
+  #ifdef HAS_NEOPIXEL_LED
+    #undef HAS_NEOPIXEL_LED
+  #endif
 #endif
 
 #endif
