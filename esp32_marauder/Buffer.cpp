@@ -97,11 +97,6 @@ void Buffer::add(const uint8_t* buf, uint32_t len, bool is_pcap){
 
   portENTER_CRITICAL(&bufferMux);
 
-  if (saving) {
-    portEXIT_CRITICAL(&bufferMux);
-    return;
-  }
-
   // buffer is full -> drop packet
   if((useA && bufSizeA + record_header_len + len > BUF_SIZE && bufSizeB > 0) ||
      (!useA && bufSizeB + record_header_len + len > BUF_SIZE && bufSizeA > 0)){
@@ -199,33 +194,7 @@ bool Buffer::writeUnlocked(const uint8_t* buf, uint32_t len){
   return true;
 }
 
-void Buffer::saveFs(){
-  file = fs->open(fileName, FILE_APPEND);
-  if (!file) {
-    Serial.println(text02+fileName+"'");
-    return;
-  }
-
-  if(useA){
-    if(bufSizeB > 0){
-      file.write(bufB, bufSizeB);
-    }
-    if(bufSizeA > 0){
-      file.write(bufA, bufSizeA);
-    }
-  } else {
-    if(bufSizeA > 0){
-      file.write(bufA, bufSizeA);
-    }
-    if(bufSizeB > 0){
-      file.write(bufB, bufSizeB);
-    }
-  }
-
-  file.close();
-}
-
-void Buffer::saveSerial() {
+bool Buffer::saveSerial(const uint8_t* data, uint32_t len) {
   // Saves to main console UART, user-facing app will ignore these markers
   // Uses / and ] in markers as they are illegal characters for SSIDs
   const char* mark_begin = "[BUF/BEGIN]";
@@ -235,54 +204,65 @@ void Buffer::saveSerial() {
 
   // Additional buffer and memcpy's so that a single Serial.write() is called
   // This is necessary so that other console output isn't mixed into buffer stream
-  uint8_t* buf = (uint8_t*)malloc(mark_begin_len + bufSizeA + bufSizeB + mark_close_len);
+  uint8_t* buf = (uint8_t*)malloc(mark_begin_len + len + mark_close_len);
+  if (!buf) return false;
   uint8_t* it = buf;
   memcpy(it, mark_begin, mark_begin_len);
   it += mark_begin_len;
 
-  if(useA){
-    if(bufSizeB > 0){
-      memcpy(it, bufB, bufSizeB);
-      it += bufSizeB;
-    }
-    if(bufSizeA > 0){
-      memcpy(it, bufA, bufSizeA);
-      it += bufSizeA;
-    }
-  } else {
-    if(bufSizeA > 0){
-      memcpy(it, bufA, bufSizeA);
-      it += bufSizeA;
-    }
-    if(bufSizeB > 0){
-      memcpy(it, bufB, bufSizeB);
-      it += bufSizeB;
-    }
-  }
+  memcpy(it, data, len);
+  it += len;
 
   memcpy(it, mark_close, mark_close_len);
   it += mark_close_len;
   Serial.write(buf, it - buf);
   free(buf);
+  return true;
 }
 
 void Buffer::save() {
-  portENTER_CRITICAL(&bufferMux);
-  saving = true;
+  File output;
+  bool fileOpenAttempted = false;
+  // Reception can continue into the active buffer while the inactive buffer is written.
+  for (int pass = 0; pass < 2; ++pass) {
+    portENTER_CRITICAL(&bufferMux);
+    if (saving || (bufSizeA + bufSizeB) == 0) {
+      portEXIT_CRITICAL(&bufferMux);
+      break;
+    }
 
-  if((bufSizeA + bufSizeB) == 0){
+    // The inactive buffer is older. If empty, hand the active buffer to the writer.
+    bool saveA = !useA;
+    if ((saveA ? bufSizeA : bufSizeB) == 0) {
+      saveA = useA;
+      useA = !useA;
+    }
+    const uint8_t* data = saveA ? bufA : bufB;
+    const uint32_t len = saveA ? bufSizeA : bufSizeB;
+    saving = true;
+    portEXIT_CRITICAL(&bufferMux);
+
+    // Retry failed serial allocations before writing to disk to avoid duplicate SD records.
+    if (this->serial && !saveSerial(data, len)) {
+      portENTER_CRITICAL(&bufferMux);
+      saving = false;
+      portEXIT_CRITICAL(&bufferMux);
+      break;
+    }
+    if (this->fs) {
+      if (!fileOpenAttempted) {
+        output = fs->open(fileName, FILE_APPEND);
+        fileOpenAttempted = true;
+        if (!output) Serial.println(text02+fileName+"'");
+      }
+      if (output) output.write(data, len);
+    }
+
+    portENTER_CRITICAL(&bufferMux);
+    if (saveA) bufSizeA = 0;
+    else bufSizeB = 0;
     saving = false;
     portEXIT_CRITICAL(&bufferMux);
-    return;
   }
-  portEXIT_CRITICAL(&bufferMux);
-
-  if(this->fs) saveFs();
-  if(this->serial) saveSerial();
-
-  portENTER_CRITICAL(&bufferMux);
-  bufSizeA = 0;
-  bufSizeB = 0;
-  saving = false;
-  portEXIT_CRITICAL(&bufferMux);
+  if (output) output.close();
 }
