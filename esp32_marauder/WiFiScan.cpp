@@ -1386,8 +1386,7 @@ extern "C" {
               if (wifi_scan_obj.currentScanMode == BT_SCAN_IBEACON && !is_ibeacon) {
                 wifi_scan_obj.bt_cb_busy = false;
                 return;
-              }
-              ble_device.is_ibeacon = is_ibeacon;
+              }              ble_device.is_ibeacon = is_ibeacon;
               ble_device.device_type = is_ibeacon ? "iBeacon" : wifi_scan_obj.classifyBLEDevice(advertisedDevice);
               if (is_ibeacon)
                 ble_device.name = "iBeacon " + String(ble_device.ibeacon.major) + ":" + String(ble_device.ibeacon.minor);
@@ -2888,8 +2887,7 @@ void WiFiScan::StartScan(uint8_t scan_mode, uint16_t color) {
   else if (scan_mode == WIFI_ATTACK_DEAUTH_MANUAL)
     this->startWiFiAttacks(scan_mode, color, text_table4[8]);
   else if (scan_mode == WIFI_ATTACK_DEAUTH_TARGETED)
-    this->startWiFiAttacks(scan_mode, color, text_table4[47]);
-  else if (scan_mode == WIFI_ATTACK_BAD_MSG_TARGETED)
+    this->startWiFiAttacks(scan_mode, color, text_table4[47]);  else if (scan_mode == WIFI_ATTACK_BAD_MSG_TARGETED)
     this->startWiFiAttacks(scan_mode, color, "Bad Msg Targ");
   else if (scan_mode == WIFI_ATTACK_BAD_MSG)
     this->startWiFiAttacks(scan_mode, color, "Bad Msg");
@@ -4562,8 +4560,7 @@ void WiFiScan::RunGenerateSSIDs(int count) {
 }
 
 void WiFiScan::logPoint(String lat, String lon, float alt, String datetime, bool poi) {
-  datetime.replace(" ", "T");
-  datetime += "Z";
+  datetime.replace(" ", "T");  datetime += "Z";
 
   if (!poi)
     buffer_obj.append("    <trkpt lat=\"" + lat + "\" lon=\"" + lon + "\">\n");
@@ -6142,8 +6139,7 @@ void WiFiScan::executeBLESpam(EBLEPayloadType type) {
     NimBLEAdvertisementData advertisementData = this->GetUniversalAdvertisementData(Apple);
     pAdvertising->setAdvertisementData(advertisementData);
 
-    #ifdef HAS_NIMBLE_2
-      pAdvertising->setConnectableMode((random(2) == 0) ? BLE_GAP_CONN_MODE_NON : BLE_GAP_CONN_MODE_UND);
+    #ifdef HAS_NIMBLE_2      pAdvertising->setConnectableMode((random(2) == 0) ? BLE_GAP_CONN_MODE_NON : BLE_GAP_CONN_MODE_UND);
       pAdvertising->setDiscoverableMode(random(3));
       pAdvertising->setMinInterval(0x20);
       pAdvertising->setMaxInterval(0x20);
@@ -7659,8 +7655,7 @@ void WiFiScan::apSnifferCallbackFull(void* buf, wifi_promiscuous_pkt_type_t type
           ap.bssid[1] = snifferPacket->payload[11];
           ap.bssid[2] = snifferPacket->payload[12];
           ap.bssid[3] = snifferPacket->payload[13];
-          ap.bssid[4] = snifferPacket->payload[14];
-          ap.bssid[5] = snifferPacket->payload[15];
+          ap.bssid[4] = snifferPacket->payload[14];          ap.bssid[5] = snifferPacket->payload[15];
           ap.selected = false;
           ap.stations = new LinkedList<uint16_t>();
           ap.has_msg_1 = false;
@@ -9159,8 +9154,7 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
       
             display_obj.queueLine(display_string);
           #endif
-          
-          Serial.println();    
+                    Serial.println();    
 
           buffer_obj.append(snifferPacket, len);
         }
@@ -9822,8 +9816,15 @@ bool WiFiScan::setBeaconTransmitChannel(uint8_t channel) {
     return true;
 
   const esp_err_t result = esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
-  if (result != ESP_OK)
+  if (result != ESP_OK) {
+    static uint32_t next_channel_error_log = 0;
+    const uint32_t now = millis();
+    if (static_cast<int32_t>(now - next_channel_error_log) >= 0) {
+      Serial.printf("Beacon channel %u failed: %s (%d)\n", channel, esp_err_to_name(result), result);
+      next_channel_error_log = now + 1000;
+    }
     return false;
+  }
 
   set_channel = channel;
   beacon_transmit_channel = channel;
@@ -9850,15 +9851,38 @@ void WiFiScan::transmitBeaconIdentity(
     if (frame_length == 0)
       return;
 
-    const esp_err_t result = esp_wifi_80211_tx(
-      WIFI_IF_AP,
-      frame,
-      frame_length,
-      false
-    );
-    if (result == ESP_OK)
+    esp_err_t result = ESP_ERR_NO_MEM;
+    constexpr uint8_t max_attempts = 3;
+    constexpr uint8_t pacing_ms = 4;
+    for (uint8_t attempt = 0; attempt < max_attempts; ++attempt) {
+      result = esp_wifi_80211_tx(
+        WIFI_IF_AP,
+        frame,
+        frame_length,
+        false
+      );
+      delay(pacing_ms);
+      if (result != ESP_ERR_NO_MEM)
+        break;
+    }
+
+    if (result == ESP_OK) {
       ++packets_sent;
-    identity.sequence = (identity.sequence + 1) & 0x0fff;
+      identity.sequence = (identity.sequence + 1) & 0x0fff;
+    } else {
+      static uint32_t next_tx_error_log = 0;
+      const uint32_t now = millis();
+      if (static_cast<int32_t>(now - next_tx_error_log) >= 0) {
+        Serial.printf(
+          "Beacon TX failed ch=%u len=%u: %s (%d)\n",
+          identity.channel,
+          static_cast<unsigned>(frame_length),
+          esp_err_to_name(result),
+          result
+        );
+        next_tx_error_log = now + 1000;
+      }
+    }
   }
 }
 
@@ -10616,8 +10640,7 @@ uint32_t WiFiScan::getCompleteEapol(int check_index) {
     }
   } else {
     AccessPoint access_point = access_points->get(check_index);
-    if ((access_point.has_msg_1) &&
-        (access_point.has_msg_2) &&
+    if ((access_point.has_msg_1) &&        (access_point.has_msg_2) &&
         (access_point.has_msg_3) &&
         (access_point.has_msg_4))
       total_complete++;
@@ -12075,8 +12098,7 @@ uint16_t WiFiScan::rssiToColor(int8_t rssi) {
 
       const int barY = TFT_HEIGHT - 18;
       display_obj.tft.drawRoundRect(barX, barY, barW, 10, 3, TFT_DARKGREY);
-      display_obj.tft.fillRect(barX + 2, barY + 2, barW - 4, 6, TFT_BLACK);
-      display_obj.tft.fillRoundRect(barX + 2, barY + 2,
+      display_obj.tft.fillRect(barX + 2, barY + 2, barW - 4, 6, TFT_BLACK);      display_obj.tft.fillRoundRect(barX + 2, barY + 2,
                                     ((barW - 4) * safePercent) / 100, 6, 2, accent);
     #else
       if ((safePercent == 0) || waiting) {
