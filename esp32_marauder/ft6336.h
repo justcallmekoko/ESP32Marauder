@@ -56,10 +56,15 @@ static void ft6336_init() {
 
     // Raise touch threshold to reduce phantom touches.
     // Register 0x80 = IDTHRESHOLD, default 22. Higher = less sensitive.
-    // Range 0–255; 40 is a good balance for panel-in-case use.
+    // Range 0–255. The Waveshare C5 panel is hardware-validated at 12;
+    // the prior value of 40 made some bare panels effectively unresponsive.
     Wire.beginTransmission(FT6336_ADDR);
     Wire.write(0x80);
+#ifdef MARAUDER_WS_C5_35
+    Wire.write(12);
+#else
     Wire.write(40);
+#endif
     Wire.endTransmission();
 
 #ifdef MARAUDER_WS_C5_35
@@ -90,25 +95,50 @@ static void ft6336_init() {
 // momentary I2C miss from being interpreted as a new button tap.
 static int8_t ft6336_read_raw(uint16_t *raw_x, uint16_t *raw_y) {
 #ifdef MARAUDER_WS_C5_35
-    // On the C5, the early Wire.begin() does not leave the I2C controller able
-    // to complete reads, so re-open the bus each read. Validate the result
-    // (1-2 points, on-panel coords) so a noisy read cannot register as a tap
-    // and false-trigger STOP during scans. Scoped to this board; other FT6336
-    // boards keep the original path below unchanged.
-    // INT gate: no finger means INT is high, so report no touch and skip I2C.
-    if (_ft6336_int_gate_active && digitalRead(CTP_INT) != LOW) return 0;
-    Wire.end(); Wire.begin(CTP_SDA, CTP_SCL, 100000U);
-    uint8_t data[7];
-    if (!_ft6336_read(FT6336_TD_STATUS, data, 7)) return -1;
-    const uint8_t points = data[0] & 0x0F;
-    if (points == 0) return 0;
-    if (points > 2) return -1;
-    const uint16_t rx = ((uint16_t)(data[1] & 0x0F) << 8) | data[2];
-    const uint16_t ry = ((uint16_t)(data[3] & 0x0F) << 8) | data[4];
-    if (rx >= TFT_WIDTH || ry >= TFT_HEIGHT) return -1;
-    *raw_x = rx;
-    *raw_y = ry;
-    return 1;
+    // The C5 needs the bus reopened before a touch transaction, but reopening
+    // it on every UI loop starves the FT6336 and can collapse input completely.
+    // Pace physical reads to about 80 Hz, retry one malformed/failed transfer,
+    // and bridge brief gaps with the last valid point. This matches the
+    // hardware-validated Waveshare BSP behavior.
+    static uint16_t last_x = 0, last_y = 0;
+    static uint32_t last_read_ms = 0, last_ok_ms = 0;
+    const uint32_t now = millis();
+    int8_t sample = -1;
+
+    if ((uint32_t)(now - last_read_ms) >= 12) {
+      last_read_ms = now;
+      if (_ft6336_int_gate_active && digitalRead(CTP_INT) != LOW) {
+        sample = 0;
+      } else {
+        Wire.end();
+        Wire.begin(CTP_SDA, CTP_SCL, 100000U);
+        for (uint8_t attempt = 0; attempt < 2; ++attempt) {
+          uint8_t data[7];
+          if (!_ft6336_read(FT6336_TD_STATUS, data, 7)) continue;
+          const uint8_t points = data[0] & 0x0F;
+          if (points == 0) {
+            sample = 0;
+            break;
+          }
+          if (points > 2) continue;
+          const uint16_t rx = ((uint16_t)(data[1] & 0x0F) << 8) | data[2];
+          const uint16_t ry = ((uint16_t)(data[3] & 0x0F) << 8) | data[4];
+          if (rx >= TFT_WIDTH || ry >= TFT_HEIGHT) continue;
+          last_x = rx;
+          last_y = ry;
+          last_ok_ms = now;
+          sample = 1;
+          break;
+        }
+      }
+    }
+
+    if (sample == 1 || (last_ok_ms && (uint32_t)(now - last_ok_ms) < 90)) {
+      *raw_x = last_x;
+      *raw_y = last_y;
+      return 1;
+    }
+    return sample == 0 ? 0 : -1;
 #else
     uint8_t data[7];
     if (!_ft6336_read(FT6336_TD_STATUS, data, 7)) return -1;
