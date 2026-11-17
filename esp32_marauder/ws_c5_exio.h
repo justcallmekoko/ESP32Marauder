@@ -59,7 +59,9 @@ static bool ws_c5_exio_begin() {
   ok = ok && ws_exio_set(WS_EXIO_LCD_RST, true);  delay(120);
   ok = ok && ws_exio_set(WS_EXIO_TP_RST, false);  delay(20);
   ok = ok && ws_exio_set(WS_EXIO_TP_RST, true);   delay(300);  // FT6336 boot
-  ok = ok && ws_exio_write(WS_EXIO_PWM_REG, 0xFF);  // backlight full
+  // The backlight stays off here (PWM was zeroed above). Lighting it before the
+  // first frame shows the panel's own memory: static after power-on, the
+  // previous picture after reset. backlightOn() lights it after the boot splash.
   ws_exio_ready = ok;
   Serial.printf("[WS-C5] I/O expander 0x24 %s\n", ok ? "ready" : "NOT FOUND");
   return ok;
