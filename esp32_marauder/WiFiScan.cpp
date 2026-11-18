@@ -3301,9 +3301,10 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
       this->connected_devices = 0;
 
       WiFi.removeEvent(eventId);
-
-      evil_portal_obj.cleanup();
     #endif
+
+    // Portal teardown is required on headless targets too.
+    evil_portal_obj.cleanup();
     evil_portal_obj.has_ap = false;
   }
 
