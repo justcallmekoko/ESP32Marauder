@@ -10764,10 +10764,23 @@ void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
     wifi_scan_obj.max_rssi = snifferPacket->rx_ctrl.rssi;
 
   
+  bool filter = wifi_scan_obj.filterActive() ||
+                wifi_scan_obj.currentScanMode == WIFI_SCAN_ACTIVE_LIST_EAPOL;
+
+  // Apply target restrictions before transmitting deauthentication frames.
+  if (filter) {
+    if ((ap_index < 0) || (!access_points->get(ap_index).selected)) {
+      return;
+    }
+  }
+
   // Found beacon frame. Decide whether to deauth
   if (wifi_scan_obj.send_deauth) {
     if (snifferPacket->payload[0] == 0x80) {    
       // Build packet
+
+      // Other attack modes can leave a unicast destination in this shared frame.
+      memset(wifi_scan_obj.deauth_frame_default + 4, 0xff, 6);
       
       wifi_scan_obj.deauth_frame_default[10] = snifferPacket->payload[10];
       wifi_scan_obj.deauth_frame_default[11] = snifferPacket->payload[11];
@@ -10790,15 +10803,6 @@ void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
     }
 
 
-  }
-
-  bool filter = wifi_scan_obj.filterActive();
-
-  // Check for and apply filters
-  if (filter) {
-    if ((ap_index < 0) || (!access_points->get(ap_index).selected)) {
-      return;
-    }
   }
 
   uint8_t handshake_msg = 0;
