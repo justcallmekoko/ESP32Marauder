@@ -14,6 +14,7 @@
 //#include "Web.h"
 #ifdef HAS_SD
   #include "SDInterface.h"
+  #include "SDFileManager.h"
 #endif
 #include "settings.h"
 #include "ReconMission.h"
