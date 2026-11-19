@@ -1,4 +1,6 @@
 #include "CommandLine.h"
+#include "SdStreamProtocol.h"
+#include "mbedtls/base64.h"
 
 // GCOVR_EXCL_START -- serial protocol output depends on Arduino Serial.
 namespace {
@@ -282,6 +284,9 @@ void CommandLine::runCommand(String input) {
     Serial.println(HELP_REBOOT_CMD);
     Serial.println(HELP_UPDATE_CMD_A);
     Serial.println(HELP_LS_CMD);
+    #ifdef HAS_SD
+      Serial.println(HELP_SD_STREAM_CMD);
+    #endif
     // GCOVR_EXCL_START -- hardware-only command help entry.
     Serial.println(HELP_PROTOCOL_INFO_CMD);
     #ifdef HAS_SD
@@ -550,6 +555,85 @@ void CommandLine::runCommand(String input) {
         sd_obj.listDir(cmd_args.get(1));
     #endif
   }
+  // Stream an SD file through a machine-readable, base64-framed serial protocol.
+  else if (cmd_args.get(0) == SD_STREAM_CMD) {
+    #ifdef HAS_SD
+      if (wifi_scan_obj.scanning()) {
+        Serial.println(F("@MARAUDER:{\"protocol\":1,\"command\":\"sdstream\",\"status\":\"error\",\"code\":\"BUSY\"}"));
+        return;
+      }
+      if (!sd_obj.supported) {
+        Serial.println(F("@MARAUDER:{\"protocol\":1,\"command\":\"sdstream\",\"status\":\"error\",\"code\":\"SD_NOT_READY\"}"));
+        return;
+      }
+      if (cmd_args.size() < 2 || cmd_args.get(1).length() == 0) {
+        Serial.println(F("@MARAUDER:{\"protocol\":1,\"command\":\"sdstream\",\"status\":\"error\",\"code\":\"PATH_REQUIRED\"}"));
+        return;
+      }
+
+      String path = cmd_args.get(1);
+      if (!path.startsWith("/")) path = "/" + path;
+      File input = sd_obj.getFile(path);
+      if (!input || input.isDirectory()) {
+        if (input) input.close();
+        Serial.println(F("@MARAUDER:{\"protocol\":1,\"command\":\"sdstream\",\"status\":\"error\",\"code\":\"FILE_NOT_FOUND\"}"));
+        return;
+      }
+
+      const size_t expected_size = input.size();
+      size_t total = 0;
+      uint32_t crc = marauder::kSdStreamCrc32Initial;
+      uint8_t raw[marauder::kSdStreamChunkSize];
+      unsigned char encoded[marauder::kSdStreamEncodedBufferSize];
+      bool success = true;
+
+      Serial.printf(
+        "@MARAUDER:{\"protocol\":1,\"command\":\"sdstream\",\"status\":\"begin\","
+        "\"encoding\":\"base64\",\"bytes\":%u}\n",
+        static_cast<unsigned int>(expected_size)
+      );
+
+      while (input.available()) {
+        const int bytes_read = input.read(raw, sizeof(raw));
+        if (bytes_read <= 0) {
+          success = false;
+          break;
+        }
+        size_t encoded_size = 0;
+        const int result = mbedtls_base64_encode(
+          encoded, sizeof(encoded), &encoded_size, raw, bytes_read);
+        if (result != 0) {
+          success = false;
+          break;
+        }
+        crc = marauder::sdStreamCrc32Update(crc, raw, bytes_read);
+        total += static_cast<size_t>(bytes_read);
+        Serial.print(F("@MARAUDER:DATA:"));
+        Serial.write(encoded, encoded_size);
+        Serial.println();
+        delay(0);
+      }
+      input.close();
+
+      if (!success || total != expected_size) {
+        Serial.printf(
+          "@MARAUDER:{\"protocol\":1,\"command\":\"sdstream\",\"status\":\"error\","
+          "\"code\":\"READ_FAILED\",\"bytes\":%u}\n",
+          static_cast<unsigned int>(total)
+        );
+        return;
+      }
+
+      crc = marauder::sdStreamCrc32Finish(crc);
+      Serial.printf(
+        "@MARAUDER:{\"protocol\":1,\"command\":\"sdstream\",\"status\":\"success\","
+        "\"bytes\":%u,\"crc32\":\"%08x\"}\n",
+        static_cast<unsigned int>(total), static_cast<unsigned int>(crc)
+      );
+    #else
+      Serial.println(F("@MARAUDER:{\"protocol\":1,\"command\":\"sdstream\",\"status\":\"error\",\"code\":\"SD_NOT_SUPPORTED\"}"));
+    #endif
+  }
   // GCOVR_EXCL_START -- requires mounted SPIFFS and SD filesystems.
   else if (cmd_args.get(0) == PROTOCOL_INFO_CMD) {
     int machine_arg = this->argSearch(&cmd_args, "--machine");
@@ -563,7 +647,7 @@ void CommandLine::runCommand(String input) {
           "@MARAUDER:{\"protocol\":1,\"tx\":\"%s\",\"command\":\"protocolinfo\","
           "\"status\":\"success\",\"code\":\"OK\",\"firmware\":\"%s\","
           "\"capabilities\":[\"spiffs-backup\",\"spiffs-backup-status\","
-          "\"spiffs-restore\"],\"backupPath\":\"/spiffs\"}\n",
+          "\"spiffs-restore\",\"sd-stream\"],\"backupPath\":\"/spiffs\"}\n",
           transaction_id.c_str(), version_number.c_str()
         );
       #else
