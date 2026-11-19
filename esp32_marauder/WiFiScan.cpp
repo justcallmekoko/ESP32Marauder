@@ -3056,6 +3056,11 @@ void WiFiScan::displayTargetFilter() {
 }
 
 void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, const char* title_string) {
+  random_beacon_cycle_ready = false;
+  rick_roll_identities_ready = false;
+  funny_beacon_identities_ready = false;
+  beacon_transmit_channel = 0;
+
   // Common wifi attack configurations
   #ifdef HAS_SCREEN
     this->setupScanDisplayArea(TFT_BLACK, color);
@@ -3114,6 +3119,22 @@ void WiFiScan::startWiFiAttacks(uint8_t scan_mode, uint16_t color, const char* t
   this->wifi_initialized = true;
   this->setLEDMode(MODE_ATTACK);
   initTime = millis();
+
+  if (scan_mode == WIFI_ATTACK_RICK_ROLL) {
+    generateNamedBeaconSet(
+      rick_roll_identities,
+      sizeof(rick_roll_identities) / sizeof(rick_roll_identities[0]),
+      rick_roll
+    );
+    rick_roll_identities_ready = true;
+  } else if (scan_mode == WIFI_ATTACK_FUNNY_BEACON) {
+    generateNamedBeaconSet(
+      funny_beacon_identities,
+      sizeof(funny_beacon_identities) / sizeof(funny_beacon_identities[0]),
+      funny_beacon
+    );
+    funny_beacon_identities_ready = true;
+  }
 }
 
 bool WiFiScan::shutdownWiFi() {
@@ -3280,9 +3301,10 @@ void WiFiScan::StopScan(uint8_t scan_mode) {
       this->connected_devices = 0;
 
       WiFi.removeEvent(eventId);
-
-      evil_portal_obj.cleanup();
     #endif
+
+    // Portal teardown is required on headless targets too.
+    evil_portal_obj.cleanup();
     evil_portal_obj.has_ap = false;
   }
 
@@ -9443,6 +9465,25 @@ void WiFiScan::beaconSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type
 }
 
 void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_ssid, int scan_mode) {
+  if (scan_mode == WIFI_ATTACK_AP_SPAM) {
+    char essid[33] = {};
+    custom_ssid.essid.toCharArray(essid, sizeof(essid));
+    uint8_t spoof_bssid[6];
+    memcpy(spoof_bssid, custom_ssid.bssid, sizeof(spoof_bssid));
+    marauder::makeLocalUnicastBssid(spoof_bssid);
+    marauder::BeaconIdentity identity;
+    populateBeaconIdentity(
+      identity,
+      essid,
+      custom_ssid.channel,
+      spoof_bssid
+    );
+    identity.sequence = compatibility_beacon_sequence;
+    transmitBeaconIdentity(identity, current_time);
+    compatibility_beacon_sequence = identity.sequence;
+    return;
+  }
+
   uint8_t target_channel = custom_ssid.channel;
 
   // Get post-essid stuff ready
@@ -9571,6 +9612,20 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_s
 }
 
 void WiFiScan::broadcastCustomBeacon(uint32_t current_time, ssid custom_ssid, bool for_camera) {
+  if (!for_camera) {
+    char essid[33] = {};
+    custom_ssid.essid.toCharArray(essid, sizeof(essid));
+    uint8_t bssid[6];
+    memcpy(bssid, custom_ssid.bssid, sizeof(bssid));
+    marauder::makeLocalUnicastBssid(bssid);
+    marauder::BeaconIdentity identity;
+    populateBeaconIdentity(identity, essid, custom_ssid.channel, bssid);
+    identity.sequence = compatibility_beacon_sequence;
+    transmitBeaconIdentity(identity, current_time);
+    compatibility_beacon_sequence = identity.sequence;
+    return;
+  }
+
   set_channel = custom_ssid.channel;
 
   const uint8_t* post = nullptr;
@@ -9645,118 +9700,242 @@ void WiFiScan::broadcastCustomBeacon(uint32_t current_time, ssid custom_ssid, bo
 
 }
 
-// Function to send beacons with random ESSID length
-void WiFiScan::broadcastSetSSID(uint32_t current_time, const char* ESSID, uint8_t chan, bool legit) {
-
-  if (chan == 0) {
-    #ifndef HAS_DUAL_BAND
-      set_channel = random(1,12); 
-    #else
-      set_channel = dual_band_channels[random(0, DUAL_BAND_CHANNELS)];
-    #endif
-  }
-  else {
-    set_channel = chan;
-  }
-
-  this->changeChannel(set_channel);
-  // (changeChannel() already delay(1)'d for the channel switch to settle; the extra
-  // delay here was a redundant per-frame block on the beacon-spam path.)
-
-  // Randomize SRC MAC
-  if(!legit) {
-    packet[10] = packet[16] = random(256);
-    packet[11] = packet[17] = random(256);
-    packet[12] = packet[18] = random(256);
-    packet[13] = packet[19] = random(256);
-    packet[14] = packet[20] = random(256);
-    packet[15] = packet[21] = random(256);
-  } else {
-    uint8_t ap_mac[6];
-    esp_read_mac(ap_mac, ESP_MAC_WIFI_SOFTAP);
-    packet[10] = packet[16] = ap_mac[0];
-    packet[11] = packet[17] = ap_mac[1];
-    packet[12] = packet[18] = ap_mac[2];
-    packet[13] = packet[19] = ap_mac[3];
-    packet[14] = packet[20] = ap_mac[4];
-    packet[15] = packet[21] = ap_mac[5];
-  }
-
-  int ssidLen = strlen(ESSID);
-  //int rand_len = sizeof(rand_reg);
-  int fullLen = ssidLen;
-  packet[37] = fullLen;
-
-  // Insert my tag
-  for(int i = 0; i < ssidLen; i++)
-    packet[38 + i] = ESSID[i];
-
-  /////////////////////////////
-  
-  packet[50 + fullLen] = set_channel;
-
-  uint8_t postSSID[13] = {0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x24, 0x30, 0x48, 0x6c, //supported rate
-                      0x03, 0x01, 0x04 /*DSSS (Current Channel)*/ };
-
-
-
-  // Add everything that goes after the SSID
-  for(int i = 0; i < 12; i++) 
-    packet[38 + fullLen + i] = postSSID[i];
-  
-
-  esp_wifi_80211_tx(WIFI_IF_AP, packet, sizeof(packet), false);
-  esp_wifi_80211_tx(WIFI_IF_AP, packet, sizeof(packet), false);
-  esp_wifi_80211_tx(WIFI_IF_AP, packet, sizeof(packet), false);
-
-  packets_sent = packets_sent + 3;
-  
+uint8_t WiFiScan::randomVisibleBeaconChannel() {
+  #ifdef HAS_DUAL_BAND
+    static const uint8_t channels_dual_band[] = {
+      1, 6, 11,
+      36, 40, 44, 48
+    };
+    return channels_dual_band[random(
+      sizeof(channels_dual_band) / sizeof(channels_dual_band[0])
+    )];
+  #else
+    static const uint8_t channels_24ghz[] = {1, 6, 11};
+    return channels_24ghz[random(
+      sizeof(channels_24ghz) / sizeof(channels_24ghz[0])
+    )];
+  #endif
 }
 
-// Function for sending crafted beacon frames
-void WiFiScan::broadcastRandomSSID(uint32_t currentTime) {
-  
+void WiFiScan::generateBeaconBssid(
+  uint8_t bssid[6],
+  const marauder::BeaconIdentity* existing,
+  size_t existing_count
+) {
+  bool duplicate = false;
+  do {
+    for (size_t i = 0; i < 6; ++i)
+      bssid[i] = random(256);
+    marauder::makeLocalUnicastBssid(bssid);
 
-  int ssidLen = random(1, 33);
-  int fullLen = ssidLen;
+    duplicate = false;
+    for (size_t i = 0; i < existing_count; ++i) {
+      if (memcmp(bssid, existing[i].bssid, 6) == 0) {
+        duplicate = true;
+        break;
+      }
+    }
+  } while (duplicate);
+}
 
-  /*#ifndef HAS_DUAL_BAND
-    set_channel = random(1,12); 
-  #else
-    set_channel = dual_band_channels[random(0, DUAL_BAND_CHANNELS)];
-  #endif
-  this->changeChannel(this->set_channel);
-  delay(1);*/
+void WiFiScan::populateBeaconIdentity(
+  marauder::BeaconIdentity& identity,
+  const char* essid,
+  uint8_t channel,
+  const uint8_t* bssid
+) {
+  memset(&identity, 0, sizeof(identity));
+  identity.ssid_length = strnlen(essid, marauder::kMaxBeaconSsidLength);
+  memcpy(identity.ssid, essid, identity.ssid_length);
+  identity.ssid[identity.ssid_length] = '\0';
+  identity.channel = channel;
+  identity.sequence = random(0x1000);
+  if (bssid != nullptr)
+    memcpy(identity.bssid, bssid, sizeof(identity.bssid));
+  else
+    generateBeaconBssid(identity.bssid, nullptr, 0);
+}
 
-  // Randomize SRC MAC
+void WiFiScan::generateRandomBeaconCycle(uint32_t current_time) {
+  for (size_t i = 0; i < marauder::kRandomBeaconIdentityCount; ++i) {
+    char essid[17] = {};
+    bool duplicate = false;
+    do {
+      const uint8_t length = random(8, sizeof(essid));
+      for (uint8_t j = 0; j < length; ++j)
+        essid[j] = alfa[random(65)];
+      essid[length] = '\0';
 
-  int frame_len = 37 + sizeof(post_base) + fullLen + 1;
+      duplicate = false;
+      for (size_t j = 0; j < i; ++j) {
+        if (strcmp(essid, random_beacon_identities[j].ssid) == 0) {
+          duplicate = true;
+          break;
+        }
+      }
+    } while (duplicate);
 
+    populateBeaconIdentity(
+      random_beacon_identities[i],
+      essid,
+      randomVisibleBeaconChannel()
+    );
+    generateBeaconBssid(
+      random_beacon_identities[i].bssid,
+      random_beacon_identities,
+      i
+    );
+  }
 
-  uint8_t temp_frame[frame_len];
-  memcpy(temp_frame, packet, frame_len);
+  std::sort(
+    random_beacon_identities,
+    random_beacon_identities + marauder::kRandomBeaconIdentityCount,
+    [](const marauder::BeaconIdentity& left, const marauder::BeaconIdentity& right) {
+      return left.channel < right.channel;
+    }
+  );
+  random_beacon_cycle_started = current_time;
+  random_beacon_cycle_ready = true;
+}
 
-  temp_frame[10] = temp_frame[16] = (random(256) & 0xFE) | 0x02;
-  temp_frame[11] = temp_frame[17] = random(256);
-  temp_frame[12] = temp_frame[18] = random(256);
-  temp_frame[13] = temp_frame[19] = random(256);
-  temp_frame[14] = temp_frame[20] = random(256);
-  temp_frame[15] = temp_frame[21] = random(256);
+void WiFiScan::generateNamedBeaconSet(
+  marauder::BeaconIdentity* identities,
+  size_t identity_count,
+  const char* const* names
+) {
+  const uint8_t channel = randomVisibleBeaconChannel();
+  for (size_t i = 0; i < identity_count; ++i) {
+    populateBeaconIdentity(identities[i], names[i], channel);
+    generateBeaconBssid(identities[i].bssid, identities, i);
+  }
 
-  temp_frame[37] = ssidLen;
-  
-  for (int i = 0; i < ssidLen; i++)
-    temp_frame[38 + i] = alfa[random(65)];
-  
-  int post_len = sizeof(post_base);
+  std::sort(
+    identities,
+    identities + identity_count,
+    [](const marauder::BeaconIdentity& left, const marauder::BeaconIdentity& right) {
+      return left.channel < right.channel;
+    }
+  );
+}
 
-  memcpy(temp_frame + (38 + fullLen), post_base, post_len);
-  setBeaconFrameChannel(temp_frame, sizeof(temp_frame), fullLen, set_channel); // GCOVR_EXCL_LINE
+bool WiFiScan::setBeaconTransmitChannel(uint8_t channel) {
+  if (beacon_transmit_channel == channel)
+    return true;
 
-  for (int i = 0; i < 2; i++)
-    esp_wifi_80211_tx(WIFI_IF_AP, temp_frame, sizeof(temp_frame), false);
+  const esp_err_t result = esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+  if (result != ESP_OK) {
+    static uint32_t next_channel_error_log = 0;
+    const uint32_t now = millis();
+    if (static_cast<int32_t>(now - next_channel_error_log) >= 0) {
+      Serial.printf("Beacon channel %u failed: %s (%d)\n", channel, esp_err_to_name(result), result);
+      next_channel_error_log = now + 1000;
+    }
+    return false;
+  }
 
-  packets_sent = packets_sent + 2;
+  set_channel = channel;
+  beacon_transmit_channel = channel;
+  delay(1);
+  return true;
+}
+
+void WiFiScan::transmitBeaconIdentity(
+  marauder::BeaconIdentity& identity,
+  uint32_t current_time,
+  uint8_t copies
+) {
+  if (!setBeaconTransmitChannel(identity.channel))
+    return;
+
+  for (uint8_t i = 0; i < copies; ++i) {
+    uint8_t frame[marauder::kMaxOpenBeaconFrameLength];
+    const size_t frame_length = marauder::buildOpenBeaconFrame(
+      frame,
+      sizeof(frame),
+      identity,
+      static_cast<uint64_t>(current_time) * 1000ULL
+    );
+    if (frame_length == 0)
+      return;
+
+    esp_err_t result = ESP_ERR_NO_MEM;
+    constexpr uint8_t max_attempts = 3;
+    constexpr uint8_t pacing_ms = 4;
+    for (uint8_t attempt = 0; attempt < max_attempts; ++attempt) {
+      result = esp_wifi_80211_tx(
+        WIFI_IF_AP,
+        frame,
+        frame_length,
+        false
+      );
+      delay(pacing_ms);
+      if (result != ESP_ERR_NO_MEM)
+        break;
+    }
+
+    if (result == ESP_OK) {
+      ++packets_sent;
+      identity.sequence = (identity.sequence + 1) & 0x0fff;
+    } else {
+      static uint32_t next_tx_error_log = 0;
+      const uint32_t now = millis();
+      if (static_cast<int32_t>(now - next_tx_error_log) >= 0) {
+        Serial.printf(
+          "Beacon TX failed ch=%u len=%u: %s (%d)\n",
+          identity.channel,
+          static_cast<unsigned>(frame_length),
+          esp_err_to_name(result),
+          result
+        );
+        next_tx_error_log = now + 1000;
+      }
+    }
+  }
+}
+
+void WiFiScan::transmitBeaconSet(
+  marauder::BeaconIdentity* identities,
+  size_t identity_count,
+  uint32_t current_time
+) {
+  for (size_t i = 0; i < identity_count; ++i)
+    transmitBeaconIdentity(identities[i], current_time);
+}
+
+void WiFiScan::broadcastSetSSID(
+  uint32_t current_time,
+  const char* ESSID,
+  uint8_t chan,
+  bool legit
+) {
+  const uint8_t channel = chan == 0 ? randomVisibleBeaconChannel() : chan;
+  uint8_t bssid[6];
+  if (legit)
+    esp_read_mac(bssid, ESP_MAC_WIFI_SOFTAP);
+  else
+    generateBeaconBssid(bssid, nullptr, 0);
+
+  marauder::BeaconIdentity identity;
+  populateBeaconIdentity(identity, ESSID, channel, bssid);
+  identity.sequence = compatibility_beacon_sequence;
+  transmitBeaconIdentity(identity, current_time, 3);
+  compatibility_beacon_sequence = identity.sequence;
+}
+
+void WiFiScan::broadcastRandomSSID(uint32_t current_time) {
+  if (!random_beacon_cycle_ready ||
+      marauder::beaconCycleExpired(
+        current_time,
+        random_beacon_cycle_started,
+        marauder::kRandomBeaconCycleMs
+      ))
+    generateRandomBeaconCycle(current_time);
+
+  transmitBeaconSet(
+    random_beacon_identities,
+    marauder::kRandomBeaconIdentityCount,
+    current_time
+  );
 }
 
 // Function to send probe flood to all "active" access points
@@ -10585,10 +10764,23 @@ void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
     wifi_scan_obj.max_rssi = snifferPacket->rx_ctrl.rssi;
 
   
+  bool filter = wifi_scan_obj.filterActive() ||
+                wifi_scan_obj.currentScanMode == WIFI_SCAN_ACTIVE_LIST_EAPOL;
+
+  // Apply target restrictions before transmitting deauthentication frames.
+  if (filter) {
+    if ((ap_index < 0) || (!access_points->get(ap_index).selected)) {
+      return;
+    }
+  }
+
   // Found beacon frame. Decide whether to deauth
   if (wifi_scan_obj.send_deauth) {
     if (snifferPacket->payload[0] == 0x80) {    
       // Build packet
+
+      // Other attack modes can leave a unicast destination in this shared frame.
+      memset(wifi_scan_obj.deauth_frame_default + 4, 0xff, 6);
       
       wifi_scan_obj.deauth_frame_default[10] = snifferPacket->payload[10];
       wifi_scan_obj.deauth_frame_default[11] = snifferPacket->payload[11];
@@ -10611,15 +10803,6 @@ void WiFiScan::eapolSnifferCallback(void* buf, wifi_promiscuous_pkt_type_t type)
     }
 
 
-  }
-
-  bool filter = wifi_scan_obj.filterActive();
-
-  // Check for and apply filters
-  if (filter) {
-    if ((ap_index < 0) || (!access_points->get(ap_index).selected)) {
-      return;
-    }
   }
 
   uint8_t handshake_msg = 0;
@@ -13151,15 +13334,10 @@ void WiFiScan::main(uint32_t currentTime)
   }
   else if ((currentScanMode == WIFI_ATTACK_BEACON_SPAM))
   {
-    // Need this for loop because getTouch causes ~10ms delay
-    // which makes beacon spam less effective
     broadcastRandomSSID(currentTime);
 
     if (currentTime - initTime >= 1000)
     {
-      set_channel = random(1,12); 
-      this->changeChannel(this->set_channel);
-      delay(1);
       initTime = millis();
       this->displayTransmitRate();
       packets_sent = 0;
@@ -13192,15 +13370,19 @@ void WiFiScan::main(uint32_t currentTime)
     }*/
   }
   else if ((currentScanMode == WIFI_ATTACK_RICK_ROLL)) {
-    // Need this for loop because getTouch causes ~10ms delay
-    // which makes beacon spam less effective
-    for (int i = 0; i < 7; i++)
-    {
-      for (int x = 0; x < (sizeof(rick_roll)/sizeof(char *)); x++)
-      {
-        broadcastSetSSID(currentTime, rick_roll[x]);
-      }
+    if (!rick_roll_identities_ready) {
+      generateNamedBeaconSet(
+        rick_roll_identities,
+        sizeof(rick_roll_identities) / sizeof(rick_roll_identities[0]),
+        rick_roll
+      );
+      rick_roll_identities_ready = true;
     }
+    transmitBeaconSet(
+      rick_roll_identities,
+      sizeof(rick_roll_identities) / sizeof(rick_roll_identities[0]),
+      currentTime
+    );
 
     if (currentTime - initTime >= 1000)
     {
@@ -13210,15 +13392,19 @@ void WiFiScan::main(uint32_t currentTime)
     }
   }
   else if ((currentScanMode == WIFI_ATTACK_FUNNY_BEACON)) {
-    // Need this for loop because getTouch causes ~10ms delay
-    // which makes beacon spam less effective
-    for (int i = 0; i < 7; i++)
-    {
-      for (int x = 0; x < (sizeof(funny_beacon)/sizeof(char *)); x++)
-      {
-        broadcastSetSSID(currentTime, funny_beacon[x]);
-      }
+    if (!funny_beacon_identities_ready) {
+      generateNamedBeaconSet(
+        funny_beacon_identities,
+        sizeof(funny_beacon_identities) / sizeof(funny_beacon_identities[0]),
+        funny_beacon
+      );
+      funny_beacon_identities_ready = true;
     }
+    transmitBeaconSet(
+      funny_beacon_identities,
+      sizeof(funny_beacon_identities) / sizeof(funny_beacon_identities[0]),
+      currentTime
+    );
 
     if (currentTime - initTime >= 1000)
     {
