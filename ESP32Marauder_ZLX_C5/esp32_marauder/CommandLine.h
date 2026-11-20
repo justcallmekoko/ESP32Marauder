@@ -1,0 +1,276 @@
+#pragma once
+
+#ifndef CommandLine_h
+#define CommandLine_h
+
+#include "configs.h"
+
+#ifdef HAS_SCREEN
+  #include "MenuFunctions.h"
+  #include "Display.h"
+#endif 
+
+#include "WiFiScan.h"
+//#include "Web.h"
+#ifdef HAS_SD
+  #include "SDInterface.h"
+#endif
+#include "settings.h"
+#include "ReconMission.h"
+#if defined(HAS_NEOPIXEL_LED)
+  #include "LedInterface.h"
+#endif
+
+#ifdef HAS_SCREEN
+  extern MenuFunctions menu_function_obj;
+  extern Display display_obj;
+#endif
+
+extern WiFiScan wifi_scan_obj;
+//extern Web web_obj;
+#ifdef HAS_SD
+  extern SDInterface sd_obj;
+#endif
+extern Settings settings_obj;
+extern ReconMission recon_obj;
+#if defined(HAS_NEOPIXEL_LED)
+  extern LedInterface led_obj;
+#endif
+extern LinkedList<AccessPoint>* access_points;
+extern LinkedList<BleDevice>* ble_devices;
+extern LinkedList<AirTag>* airtags;
+extern LinkedList<Flipper>* flippers;
+extern LinkedList<ssid>* ssids;
+extern LinkedList<Station>* stations;
+extern LinkedList<IPAddress>* ipList;
+extern LinkedList<ProbeReqSsid>* probe_req_ssids;
+extern const String PROGMEM version_number;
+extern const String PROGMEM board_target;
+
+//// Commands
+
+// Admin
+const char PROGMEM CH_CMD[] = "channel";
+const char PROGMEM CLEARAP_CMD[] = "clearlist";
+const char PROGMEM REBOOT_CMD[] = "reboot";
+const char PROGMEM UPDATE_CMD[] = "update";
+const char PROGMEM HELP_CMD[] = "help";
+const char PROGMEM SETTINGS_CMD[] = "settings";
+const char PROGMEM LS_CMD[] = "ls";
+const char PROGMEM PROTOCOL_INFO_CMD[] = "protocolinfo";
+const char PROGMEM BACKUP_SPIFFS_CMD[] = "backupspiffs";
+const char PROGMEM BACKUP_STATUS_CMD[] = "backupstatus";
+const char PROGMEM RESTORE_SPIFFS_CMD[] = "restorespiffs";
+const char PROGMEM LED_CMD[] = "led";
+const char PROGMEM GPS_DATA_CMD[] = "gpsdata";
+const char PROGMEM GPS_CMD[] = "gps";
+const char PROGMEM NMEA_CMD[] = "nmea";
+const char PROGMEM GPS_POI_CMD[] = "gpspoi";
+const char PROGMEM GPS_TRACKER_CMD[] = "gpstracker";
+const char PROGMEM RECON_CMD[] = "recon";
+
+// WiFi sniff/scan
+const char PROGMEM EVIL_PORTAL_CMD[] = "evilportal";
+const char PROGMEM KARMA_CMD[] = "karma";
+const char PROGMEM PACKET_COUNT_CMD[] = "packetcount";
+const char PROGMEM SIGSTREN_CMD[] = "foxhunt";
+const char PROGMEM SCAN_ALL_CMD[] = "scanall";
+//const char PROGMEM SCANSTA_CMD[] = "scansta";
+const char PROGMEM SNIFF_RAW_CMD[] = "sniffraw";
+const char PROGMEM SNIFF_BEACON_CMD[] = "sniffbeacon";
+const char PROGMEM SNIFF_PROBE_CMD[] = "sniffprobe";
+const char PROGMEM SNIFF_PWN_CMD[] = "sniffpwn";
+const char PROGMEM SNIFF_PINESCAN_CMD[] = "sniffpinescan";
+const char PROGMEM SNIFF_MULTISSID_CMD[] = "sniffmultissid";
+const char PROGMEM SNIFF_DEAUTH_CMD[] = "sniffdeauth";
+const char PROGMEM SNIFF_PMKID_CMD[] = "sniffpmkid";
+const char PROGMEM STOPSCAN_CMD[] = "stopscan";
+const char PROGMEM WARDRIVE_CMD[] = "wardrive";
+const char PROGMEM PING_CMD[] = "pingscan";
+const char PROGMEM PORT_SCAN_CMD[] = "portscan";
+const char PROGMEM ARP_SCAN_CMD[] = "arpscan";
+const char PROGMEM MAC_TRACK_CMD[] = "mactrack";
+const char PROGMEM SNIFF_SAE_CMD[] = "sniffsae";
+
+// WiFi attack
+const char PROGMEM ATTACK_CMD[] = "attack";
+const char PROGMEM ATTACK_TYPE_DEAUTH[] = "deauth";
+const char PROGMEM ATTACK_TYPE_BEACON[] = "beacon";
+const char PROGMEM ATTACK_TYPE_PROBE[] = "probe";
+const char PROGMEM ATTACK_TYPE_FUNNY[] = "funny";
+const char PROGMEM ATTACK_TYPE_RR[] = "rickroll";
+const char PROGMEM ATTACK_TYPE_BM[] = "badmsg";
+const char PROGMEM ATTACK_TYPE_S[] = "sleep";
+const char PROGMEM ATTACK_TYPE_SAE[] = "sae";
+const char PROGMEM ATTACK_TYPE_CSA[] = "csa";
+const char PROGMEM ATTACK_TYPE_QUIET[] = "quiet";
+
+// WiFi Aux
+const char PROGMEM LIST_AP_CMD[] = "list";
+const char PROGMEM INFO_CMD[] = "info";
+const char PROGMEM SEL_CMD[] = "select";
+const char PROGMEM SSID_CMD[] = "ssid";
+const char PROGMEM SAVE_CMD[] = "save";
+const char PROGMEM LOAD_CMD[] = "load";
+const char PROGMEM JOIN_CMD[] = "join";
+const char PROGMEM MAC_CMD_A[] = "randapmac";
+const char PROGMEM MAC_CMD_B[] = "randstamac";
+const char PROGMEM MAC_CMD_C[] = "cloneapmac";
+const char PROGMEM MAC_CMD_D[] = "clonestamac";
+const char PROGMEM ADD_CMD[] = "add";
+const char PROGMEM UPLOAD_CMD[] = "upload";
+
+// Bluetooth sniff/scan
+const char PROGMEM BT_SPAM_CMD[] = "blespam";
+const char PROGMEM BT_FINDMY_CMD[] = "findmy";
+const char PROGMEM BT_SNIFF_CMD[] = "sniffbt";
+const char PROGMEM BT_SPOOFAT_CMD[] = "spoofat";
+//const char PROGMEM BT_WARDRIVE_CMD[] = "btwardrive";
+const char PROGMEM BT_SKIM_CMD[] = "sniffskim";
+
+// POI
+const char PROGMEM WARDRIVEPOI_CMD[] = "wardrivepoi";
+
+//// Command help messages
+// Admin
+const char PROGMEM HELP_HEAD[] = "============ Commands ============";
+const char PROGMEM HELP_CH_CMD[] = "channel [-s <channel>]";
+const char PROGMEM HELP_CLEARAP_CMD_A[] = "clearlist -a/-c/-s";
+const char PROGMEM HELP_REBOOT_CMD[] = "reboot";
+const char PROGMEM HELP_UPDATE_CMD_A[] = "update -s/-w";
+const char PROGMEM HELP_SETTINGS_CMD[] = "settings [-s <setting> enable/disable>]/[-r]";
+const char PROGMEM HELP_LS_CMD[] = "ls <directory>";
+const char PROGMEM HELP_PROTOCOL_INFO_CMD[] = "protocolinfo [--machine <transaction-id>]";
+const char PROGMEM HELP_BACKUP_SPIFFS_CMD[] = "backupspiffs [--machine <transaction-id>] - copy SPIFFS to /spiffs on SD";
+const char PROGMEM HELP_BACKUP_STATUS_CMD[] = "backupstatus [--machine <transaction-id>] - inspect /spiffs on SD";
+const char PROGMEM HELP_RESTORE_SPIFFS_CMD[] = "restorespiffs [--machine <transaction-id>] - restore SPIFFS from /spiffs on SD";
+const char PROGMEM HELP_LED_CMD[] = "led -s <hex color>/-p <rainbow>";
+const char PROGMEM HELP_GPS_DATA_CMD[] = "gpsdata";
+const char PROGMEM HELP_GPS_CMD[] = "gps [-t] [-g] <fix/sat/lon/lat/alt/date/accuracy/text/nmea>\r\n    [-n] <native/all/gps/glonass/galileo/navic/qzss/beidou>\r\n         [-b = use BD vs GB for beidou]";
+const char PROGMEM HELP_GPS_POI_CMD[] = "gpspoi -s/-m/-e";
+const char PROGMEM HELP_GPS_TRACKER_CMD[] = "gpstracker -c <start/stop>";
+const char PROGMEM HELP_RECON_CMD[] = "recon wifi|ble|status|stop";
+const char PROGMEM HELP_NMEA_CMD[] = "nmea";
+
+// WiFi sniff/scan
+const char PROGMEM HELP_EVIL_PORTAL_CMD[] = "evilportal [-c start [-w html.html]/sethtml <html.html>]";
+const char PROGMEM HELP_KARMA_CMD[] = "karma -p <index>";
+const char PROGMEM HELP_PACKET_COUNT_CMD[] = "packetcount";
+const char PROGMEM HELP_SIGSTREN_CMD[] = "foxhunt -w <ap>/-s <ap> <station>/-b <ble>/-t <findmy>/-f <flipper>/-p <pineapple>/-m <multissid>";
+const char PROGMEM HELP_SCAN_ALL_CMD[] = "scanall";
+//const char PROGMEM HELP_SCANSTA_CMD[] = "scansta";
+const char PROGMEM HELP_SNIFF_RAW_CMD[] = "sniffraw";
+const char PROGMEM HELP_SNIFF_BEACON_CMD[] = "sniffbeacon";
+const char PROGMEM HELP_SNIFF_PROBE_CMD[] = "sniffprobe";
+const char PROGMEM HELP_SNIFF_PWN_CMD[] = "sniffpwn";
+const char PROGMEM HELP_SNIFF_PINESCAN_CMD[] = "sniffpinescan";
+const char PROGMEM HELP_SNIFF_MULTISSID_CMD[] = "sniffmultissid";
+const char PROGMEM HELP_SNIFF_DEAUTH_CMD[] = "sniffdeauth";
+const char PROGMEM HELP_SNIFF_PMKID_CMD[] = "sniffpmkid [-c <channel>][-d][-l]";
+const char PROGMEM HELP_STOPSCAN_CMD[] = "stopscan [-f]";
+const char PROGMEM HELP_WARDRIVE_CMD[] = "wardrive";
+const char PROGMEM HELP_PING_CMD[] = "pingscan";
+const char PROGMEM HELP_PORT_SCAN_CMD[] = "portscan [-a -t <ip index>]/[-s <ssh/telnet/dns/http/smtp/https/rdp>]";
+const char PROGMEM HELP_ARP_SCAN_CMD[] = "arpscan [-f]";
+const char PROGMEM HELP_MAC_TRACK_CMD[] = "mactrack";
+const char PROGMEM HELP_SNIFF_SAE_CMD[] = "sniffsae";
+
+// WiFi attack
+const char PROGMEM HELP_ATTACK_CMD[] = "attack -t <quiet/csa/sae/beacon [-l/-r/-a]/deauth [-c]/[-s <src mac>] [-d <dst mac>]/probe/rickroll/badmsg [-c]/sleep [-c]>";
+
+// WiFi Aux
+const char PROGMEM HELP_LIST_AP_CMD_A[] = "list -s";
+const char PROGMEM HELP_LIST_AP_CMD_B[] = "list -a";
+const char PROGMEM HELP_LIST_AP_CMD_C[] = "list -c";
+const char PROGMEM HELP_LIST_AP_CMD_D[] = "list -t";
+const char PROGMEM HELP_LIST_AP_CMD_E[] = "list -i";
+const char PROGMEM HELP_LIST_AP_CMD_F[] = "list -p";
+const char PROGMEM HELP_LIST_AP_CMD_G[] = "list -b";
+const char PROGMEM HELP_LIST_AP_CMD_H[] = "list -f";
+const char PROGMEM HELP_LIST_AP_CMD_I[] = "list -x";
+const char PROGMEM HELP_LIST_AP_CMD_J[] = "list -m";
+const char PROGMEM HELP_INFO_CMD[] = "info [-a <index>]";
+const char PROGMEM HELP_SEL_CMD_A[] = "select -a/-s/-c <index (comma separated)>/-f \"equals <String> or contains <String>\"";
+const char PROGMEM HELP_SSID_CMD_A[] = "ssid -a [-g <count>/-n <name>]";
+const char PROGMEM HELP_SSID_CMD_B[] = "ssid -r <index>";
+const char PROGMEM HELP_SAVE_CMD[] = "save -a/-s";
+const char PROGMEM HELP_LOAD_CMD[] = "load -a/-s";
+const char PROGMEM HELP_JOIN_CMD[] = "join -a <index> -p <password>/-s";
+const char PROGMEM HELP_MAC_CMD_A[] = "randapmac";
+const char PROGMEM HELP_MAC_CMD_B[] = "randstamac";
+const char PROGMEM HELP_MAC_CMD_C[] = "cloneapmac [-a <index>]";
+const char PROGMEM HELP_MAC_CMD_D[] = "clonestamac [-s <index>]";
+const char PROGMEM HELP_ADD_CMD_A[] = "add -a -b <mac> [-ch <channel>] [-e <ssid>]";
+const char PROGMEM HELP_ADD_CMD_B[] = "add -c -b <mac> -ap <ap_index>";
+const char PROGMEM HELP_UPLOAD_CMD[] = "upload -d <wdg/wigle/both>";
+
+// Bluetooth sniff/scan
+const char PROGMEM HELP_BT_SNIFF_CMD[] = "sniffbt [-t] <airtag/flipper/flock/meta>";
+const char PROGMEM HELP_BT_FINDMY_CMD[] = "findmy -t <index>";
+const char PROGMEM HELP_BT_SPAM_CMD[] = "blespam -t <sourapple/applejuice/google/samsung/windows/flipper/all>";
+const char PROGMEM HELP_BT_SPOOFAT_CMD[] = "spoofat -t <index>";
+//const char PROGMEM HELP_BT_SOUR_APPLE_CMD[] = "sourapple";
+//const char PROGMEM HELP_BT_SWIFTPAIR_SPAM_CMD[] = "swiftpair";
+//const char PROGMEM HELP_BT_SAMSUNG_SPAM_CMD[] = "samsungblespam";
+//onst char PROGMEM HELP_BT_SPAM_ALL_CMD[] = "btspamall";
+//const char PROGMEM HELP_BT_WARDRIVE_CMD[] = "btwardrive";
+const char PROGMEM HELP_BT_SKIM_CMD[] = "sniffskim";
+
+const char PROGMEM BRIGHTNESS_CMD[] = "brightness";
+const char PROGMEM HELP_BRIGHTNESS_CMD[] = "brightness [-c cycle] [-s <0-9>]";
+
+const char PROGMEM HELP_WARDRIVEPOI_CMD[] = "wardrivepoi [label] - Tag a GPS POI during wardrive";
+const char PROGMEM HELP_FOOT[] = "==================================";
+
+
+class CommandLine {
+  private:
+    String getSerialInput();
+    LinkedList<String> parseCommand(String input, char* delim);
+    String toLowerCase(String str);
+    void filterAccessPoints(String filter);
+    bool checkValueExists(LinkedList<String>* cmd_args_list, int index);
+    bool inRange(int max, int index);
+    //bool apSelected();
+    bool hasSSIDs();
+    void showCounts(int selected, int unselected = -1);
+    int argSearch(LinkedList<String>* cmd_args, const char* key);
+    void startScanFromCLI(int scan_mode, uint16_t color, const char* scan_name);
+
+    #ifndef MARAUDER_V8
+    const char* ascii_art =
+    "\r\n"
+    "              @@@@@@                        \r\n"
+    "              @@@@@@@@                      \r\n"
+    "              @@@@@@@@@@@                   \r\n"
+    "             @@@@@@  @@@@@@                 \r\n"
+    "          @@@@@@@      @@@@@@@              \r\n"
+    "        @@@@@@            @@@@@@            \r\n"
+    "     @@@@@@@                @@@@@@@         \r\n"
+    "   @@@@@@                      @@@@@@       \r\n"
+    "@@@@@@@              @@@@@@@@@@@@@@@@       \r\n"
+    "@@@@@                 @@@@@@@@@@@@@@@       \r\n"
+    "@@@@@                   @@@@@@@             \r\n"
+    "@@@@@                      @@@@@@           \r\n"
+    "@@@@@@                       @@@@@@@        \r\n"
+    "  @@@@@@                        @@@@@@@@@@@@\r\n"
+    "    @@@@@@@                          @@@@@@ \r\n"
+    "       @@@@@@                     @@@@@@    \r\n"
+    "         @@@@@@@                @@@@@@      \r\n"
+    "            @@@@@@           @@@@@@         \r\n"
+    "              @@@@@@@      @@@@@@           \r\n"
+    "                 @@@@@@ @@@@@@              \r\n"
+    "                   @@@@@@@@@                \r\n"
+    "                      @@@@@@                \r\n"
+    "                        @@@@                \r\n"
+    "\r\n";
+    #endif
+        
+  public:
+
+    void RunSetup();
+    void main(uint32_t currentTime);
+    void runCommand(String input);
+};
+
+#endif
