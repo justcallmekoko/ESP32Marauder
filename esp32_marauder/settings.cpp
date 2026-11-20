@@ -112,6 +112,8 @@ void Settings::_buildCache() {
       _cache.wt = json["Settings"][i]["value"].as<String>();
     else if (strcmp(name, WDG_KEY_NAME) == 0)
       _cache.wdg_key = json["Settings"][i]["value"].as<String>();
+    else if (strcmp(name, WARDRIFT_KEY_NAME) == 0)
+      _cache.wardrift_key = json["Settings"][i]["value"].as<String>();
   }
 }
 
@@ -241,6 +243,8 @@ template <> String Settings::loadSetting<String>(const char* key) {
     return _cache.wt;
   if (strcmp(key, WDG_KEY_NAME) == 0)
     return _cache.wdg_key;
+  if (strcmp(key, WARDRIFT_KEY_NAME) == 0)
+    return _cache.wardrift_key;
 
   // Unknown String key: fall back to JSON so the setting can be auto-created.
   DynamicJsonDocument json(JSON_SETTING_SIZE);
@@ -445,6 +449,8 @@ template <> bool Settings::saveSetting<bool>(const char* key, String value) {
         _cache.wt = value;
       else if (strcmp(key, WDG_KEY_NAME) == 0)
         _cache.wdg_key = value;
+      else if (strcmp(key, WARDRIFT_KEY_NAME) == 0)
+        _cache.wardrift_key = value;
 
       this->printJsonSettings(settings_string);
 
@@ -633,6 +639,12 @@ bool Settings::createDefaultSettings(fs::FS &fs, bool spec, uint8_t index, const
     jsonBuffer["Settings"][13]["value"] = false;
     jsonBuffer["Settings"][13]["range"]["min"] = false;
     jsonBuffer["Settings"][13]["range"]["max"] = true;
+
+    jsonBuffer["Settings"][14]["name"] = WARDRIFT_KEY_NAME;
+    jsonBuffer["Settings"][14]["type"] = "String";
+    jsonBuffer["Settings"][14]["value"] = "";
+    jsonBuffer["Settings"][14]["range"]["min"] = "";
+    jsonBuffer["Settings"][14]["range"]["max"] = "";
 
     serializeJson(jsonBuffer, settingsFile);
     serializeJson(jsonBuffer, settings_string);

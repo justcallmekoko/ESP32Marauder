@@ -18,6 +18,7 @@
 #endif
 
 #define WDG_KEY_NAME       "wdg_key"   // WDG Wars API key (String)
+#define WARDRIFT_KEY_NAME  "wardrift_key" // Wardrift (wardrift.net) API key (String)
 #define SAVED_WIFI_KEY_NAME "SavedWiFi"
 #define MAX_SAVED_WIFI_PROFILES 5
 #define GEOFENCES_KEY_NAME "Geofences"
@@ -59,6 +60,7 @@ class Settings {
       String wu           = "";
       String wt           = "";
       String wdg_key      = "";
+      String wardrift_key = "";
     } _cache;
 
     void _buildCache();  // parse json_settings_string -> _cache
