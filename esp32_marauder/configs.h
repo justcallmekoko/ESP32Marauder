@@ -52,6 +52,9 @@
   #ifdef MARAUDER_WS_C5_35
     #define MARAUDER_PANCAKE
     #define MARAUDER_WS_C5_35_OVERRIDE
+    // WarDriveGo-compatible wardrive BLE bridge (see GhostLinkBridge.*).
+    // Scoped to this board only so no other target is affected.
+    #define HAS_BLE_UART_BRIDGE
   #endif
   //// END BOARD TARGETS
 
