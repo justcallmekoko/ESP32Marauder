@@ -342,6 +342,7 @@
     //#define HAS_PWR_MGMT
     #define HAS_SCREEN
     #define HAS_MINI_SCREEN
+    #define HAS_PSRAM
     #define HAS_SD
     #define USE_SD
     #define HAS_TEMP_SENSOR
@@ -2856,7 +2857,7 @@
     #endif
 
     #ifdef MARAUDER_REV_FEATHER
-      #define SD_CS 5
+      #define SD_CS 10      // ADALOGGER daughter board
     #endif
 
     #ifdef MARAUDER_M5STICKC
