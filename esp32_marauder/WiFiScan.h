@@ -9,6 +9,7 @@
 #include "IBeacon.h"
 #include "RemoteIdDecoder.h"
 #include "WigleFormat.h"
+#include "BeaconFrame.h"
 
 #include <ArduinoJson.h>
 #include <algorithm>
@@ -523,6 +524,15 @@ class WiFiScan
     void initWiFi(uint8_t scan_mode);
     uint8_t bluetoothScanTime = 5;
     int packets_sent = 0;
+    marauder::BeaconIdentity random_beacon_identities[marauder::kRandomBeaconIdentityCount] = {};
+    marauder::BeaconIdentity rick_roll_identities[8] = {};
+    marauder::BeaconIdentity funny_beacon_identities[12] = {};
+    uint32_t random_beacon_cycle_started = 0;
+    uint16_t compatibility_beacon_sequence = 0;
+    uint8_t beacon_transmit_channel = 0;
+    bool random_beacon_cycle_ready = false;
+    bool rick_roll_identities_ready = false;
+    bool funny_beacon_identities_ready = false;
     const wifi_promiscuous_filter_t filt = {.filter_mask=WIFI_PROMIS_FILTER_MASK_MGMT | WIFI_PROMIS_FILTER_MASK_DATA};
     #ifdef HAS_BT
       NimBLEScan* pBLEScan;
@@ -850,6 +860,35 @@ class WiFiScan
     void sendEapolBagMsg1(uint8_t bssid[6], int channel, uint8_t mac[6], uint8_t sec = WIFI_SECURITY_WPA2);
     void sendAssociationSleep(const char* ESSID, uint8_t bssid[6], int channel, uint8_t mac[6]);
     void broadcastRandomSSID(uint32_t currentTime);
+    uint8_t randomVisibleBeaconChannel();
+    void generateBeaconBssid(
+      uint8_t bssid[6],
+      const marauder::BeaconIdentity* existing,
+      size_t existing_count
+    );
+    void populateBeaconIdentity(
+      marauder::BeaconIdentity& identity,
+      const char* essid,
+      uint8_t channel,
+      const uint8_t* bssid = nullptr
+    );
+    void generateRandomBeaconCycle(uint32_t current_time);
+    void generateNamedBeaconSet(
+      marauder::BeaconIdentity* identities,
+      size_t identity_count,
+      const char* const* names
+    );
+    void transmitBeaconIdentity(
+      marauder::BeaconIdentity& identity,
+      uint32_t current_time,
+      uint8_t copies = 2
+    );
+    bool setBeaconTransmitChannel(uint8_t channel);
+    void transmitBeaconSet(
+      marauder::BeaconIdentity* identities,
+      size_t identity_count,
+      uint32_t current_time
+    );
     void broadcastCustomBeacon(uint32_t current_time, ssid custom_ssid, bool for_camera = false);
     void broadcastCustomBeacon(uint32_t current_time, AccessPoint custom_ssid, int scan_mode);
     void broadcastSetSSID(uint32_t current_time, const char* ESSID, uint8_t chan = 0, bool legit = false);

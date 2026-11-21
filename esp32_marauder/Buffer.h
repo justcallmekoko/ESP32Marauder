@@ -37,8 +37,7 @@ class Buffer {
     void write(uint16_t n);
     void write(const uint8_t* buf, uint32_t len);
     bool writeUnlocked(const uint8_t* buf, uint32_t len);
-    void saveFs();
-    void saveSerial();
+    bool saveSerial(const uint8_t* data, uint32_t len);
 
     uint8_t* bufA;
     uint8_t* bufB;
