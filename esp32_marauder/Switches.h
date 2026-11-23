@@ -16,7 +16,15 @@ class Switches {
 		bool pullup;
 		
 		bool pressed;
-		
+
+#ifdef XIAO_ESP32_S3_TOUCH
+		// Debounce state: raw reads are filtered so contact bounce does not
+		// register as many rapid presses (which made menu scrolling a "hair trigger").
+		bool db_state = false;       // debounced logical state (true = pressed)
+		bool db_last_raw = false;    // last raw sample
+		uint32_t db_last_change = 0; // millis of last raw change
+#endif
+
 		bool getButtonState();
 		
 	public:

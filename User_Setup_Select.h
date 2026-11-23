@@ -22,6 +22,7 @@
 //#include <User_Setup.h>           // Default setup is root library folder
 
 //#include <User_Setup_og_marauder.h>
+//#include <User_Setup_marauder_xiao_147.h>   // Seeed XIAO ESP32-S3 1.47" JD9853A touch display
 //#include <User_Setup_id_receiver.h>
 //#include <User_Setup_marauder_mini.h>
 //#include <User_Setup_marauder_rev_feather.h>
