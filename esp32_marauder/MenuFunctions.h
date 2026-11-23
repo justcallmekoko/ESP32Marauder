@@ -204,6 +204,8 @@ class MenuFunctions
     MenuInputRepeat menu_touch_down_repeat;
     int8_t menu_touch_button = -1;
 
+    void updateClockTemperature(bool update = false);
+
     void buildWiFiFoxHuntMenu();
     void buildBluetoothFoxHuntMenu();
     void buildFoxTargetList(FoxHuntListKind type, int context_ap = -1);

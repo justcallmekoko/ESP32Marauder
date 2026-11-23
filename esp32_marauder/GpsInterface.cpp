@@ -1,6 +1,6 @@
 #include "GpsInterface.h"
 
-#ifdef HAS_GPS
+#if defined(HAS_GPS) && !defined(HAS_GPS_GRAVITY_I2C)
 
 #ifdef HAS_GPS_LC76G_I2C
   #include "GpsLc76gI2c.h"
@@ -14,6 +14,10 @@
 #endif
 
 extern GpsInterface gps_obj;
+
+extern bool system_time_set;   // flag if system's time/date have been set yet..
+extern bool set_system_time(struct tm, bool setrtc = false);
+extern bool set_system_time(const String& time_str, bool setrtc = false);
 
 char nmeaBuffer[100];
 
@@ -45,7 +49,7 @@ void GpsInterface::begin() {
     nmea.setUnknownSentenceHandler(gps_nmea_notimp);
     return;
   #endif
-
+  
   Serial2.begin(9600, SERIAL_8N1, GPS_TX, GPS_RX);
 
   uint32_t gps_baud = this->initGpsBaudAndForce115200();
@@ -559,6 +563,19 @@ String GpsInterface::generateType(){
   return msg_type;
 }
 
+void GpsInterface::GetTimeInfo(struct tm *timeInfo) {
+  if (nmea.isValid() && nmea.getYear() > 0){
+    timeInfo->tm_year = nmea.getYear() - 1900;
+    timeInfo->tm_mon = nmea.getMonth() - 1;
+    timeInfo->tm_mday = nmea.getDay();
+    timeInfo->tm_hour = nmea.getHour();
+    timeInfo->tm_min = nmea.getMinute();
+    timeInfo->tm_sec = nmea.getSecond();
+    // timeInfo.tm_gmtoff = 0;   //  "UTC"
+  }
+  return;
+}
+
 // Thanks JosephHewitt
 String GpsInterface::dt_string_from_gps(){
   //Return a datetime String using GPS data only.
@@ -612,7 +629,12 @@ void GpsInterface::setGPSInfo() {
   this->nav_system = nmea.getNavSystem();
   this->num_sats = nmea.getNumSatellites();
 
+  if (!good_fix && num_sats == 0)
+    return;
+
   this->datetime = this->dt_string_from_gps();
+  // if (!system_time_set && !this->datetime.isEmpty())
+  //   set_system_time(this->datetime, true);
 
   this->lat_int = nmea.getLatitude();
   this->lon_int = nmea.getLongitude();
@@ -626,6 +648,20 @@ void GpsInterface::setGPSInfo() {
   this->altf = (float)alt / 1000;
 
   this->accuracy = 2.5 * ((float)nmea.getHDOP()/10);
+  // if GPS has a good_fix and system_time_set has not been set
+  if (this->good_fix && !system_time_set) {
+    struct tm timeInfo;
+
+    GetTimeInfo(&timeInfo);
+    set_system_time(timeInfo, true);
+  }
+
+  // if GPS has a good_fix and system_time_set has not been set
+  if (this->good_fix && !system_time_set) {
+    struct tm timeInfo;
+    GetTimeInfo(&timeInfo);
+    set_system_time(timeInfo, true);
+  }
 
   //nmea.clear();
 }
@@ -783,7 +819,7 @@ String GpsInterface::getNmeaNotparsed() {
   return this->notparsed_nmea_sentence;
 }
 
-void GpsInterface::main() {
+void GpsInterface::main(uint32_t curr_time) {
   #ifdef HAS_GPS_LC76G_I2C
     const uint32_t lc76gNow = millis();
     if (!this->gps_enabled &&
@@ -810,11 +846,12 @@ void GpsInterface::main() {
 
   uint8_t num_sat = nmea.getNumSatellites();
 
-  if ((nmea.isValid()) && (num_sat > 0))
+  if ((nmea.isValid()) && (num_sat > 0)) {
+    log_d("nmea.isValid num_sat=%d", num_sat);
     this->setGPSInfo();
 
-  else if ((!nmea.isValid()) && (num_sat <= 0)) {
+  } else if ((!nmea.isValid()) && (num_sat <= 0)) {
     this->setGPSInfo();
   }
 }
-#endif
+#endif   //  HAS_GPS && !HAS_GPS_GRAVITY_I2C
