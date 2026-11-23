@@ -11,7 +11,7 @@ LedInterface::LedInterface() {
 void LedInterface::RunSetup() {
   //Serial.println("Setting neopixel to black...");
   #ifdef HAS_NEOPIXEL_LED
-    #ifdef MARAUDER_M5_NANO_C6
+    #if defined(MARAUDER_M5_NANO_C6) || defined(MARAUDER_M5_NANO_C6_GROVE)
       pinMode(19, OUTPUT);
       delay(100);
       digitalWrite(19, HIGH);
