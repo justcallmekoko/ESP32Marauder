@@ -135,6 +135,44 @@ bool SDInterface::initSD() {
       }
     #endif
 
+    #ifdef MARAUDER_FREENOVE_FNK0104B
+      // SDMMC 1-bit: CLK=38, CMD=40, D0=39. SD_CS (21) is on the display SPI
+      // bus and cannot reach the card slot, so the SPI path is skipped entirely.
+      SD_MMC.setPins(38, 40, 39);
+      if (!SD_MMC.begin("/sdcard", true)) {
+        Serial.println(F("Failed to mount SD Card (SDMMC)"));
+        this->supported = false;
+        return false;
+      }
+
+      this->supported = true;
+      this->cardType = SD_MMC.cardType();
+      this->cardSizeMB = SD_MMC.cardSize() / (1024 * 1024);
+
+      if (this->supported) {
+        const int NUM_DIGITS = log10(this->cardSizeMB) + 1;
+
+        char sz[NUM_DIGITS + 1];
+
+        sz[NUM_DIGITS] =  0;
+        for ( size_t i = NUM_DIGITS; i--; this->cardSizeMB /= 10)
+        {
+            sz[i] = '0' + (this->cardSizeMB % 10);
+            display_string.concat((String)sz[i]);
+        }
+
+        this->card_sz = sz;
+      }
+
+      if (!SD_MMC.exists("/SCRIPTS")) {
+        SD_MMC.mkdir("/SCRIPTS");
+      }
+
+      this->sd_files = new LinkedList<String>();
+
+      return true;
+    #else
+
     pinMode(SD_CS, OUTPUT);
 
     delay(10);
@@ -202,6 +240,8 @@ bool SDInterface::initSD() {
     
       return true;
   }
+
+    #endif
 
   #else
     return false;

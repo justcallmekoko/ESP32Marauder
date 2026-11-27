@@ -45,6 +45,11 @@
   //#define MARAUDER_M5_NANO_C6
   //#define DUAL_MINI_C5
   //#define MARAUDER_POOM
+  // Freenove ESP32-S3 Display FNK0104B/FNK01044B 2.8"
+  // (ESP32-S3 N16R8, ILI9341 240x320 SPI, FT6336U capacitive touch on I2C).
+  // Left commented like every other target: enable it with the build flag
+  // -DMARAUDER_FREENOVE_FNK0104B so no other board changes behaviour.
+  //#define MARAUDER_FREENOVE_FNK0104B
   // Waveshare ESP32-C5-Touch-LCD-3.5 board. Same silicon/panel class as the
   // Pancake V8 (ESP32-C5, ST7796 320x480, FT6336), so reuse Pancake's verified
   // C5 feature + geometry logic and override only this board's differing pins below.
@@ -145,6 +150,8 @@
     #define HARDWARE_NAME "M5 Nano C6"
   #elif defined(MARAUDER_POOM)
     #define HARDWARE_NAME "POOM"
+  #elif defined(MARAUDER_FREENOVE_FNK0104B)
+    #define HARDWARE_NAME "Freenove FNK0104B 2.8\""
   #else
     #define HARDWARE_NAME "ESP32"
   #endif
@@ -755,6 +762,23 @@
     #define HAS_NIMBLE_2
     #define HAS_IDF_3
     //#define HAS_DIRECT_UPLOAD
+  #endif
+
+  #ifdef MARAUDER_FREENOVE_FNK0104B
+    // ESP32-S3 N16R8: 16 MB flash, 8 MB octal PSRAM, ILI9341 240x320 on SPI and
+    // FT6336U capacitive touch on I2C. SD card lives on the SDMMC peripheral.
+    #define HAS_TOUCH
+    #define HAS_CAP_TOUCH
+    #define HAS_BT
+    #define HAS_SCREEN
+    #define HAS_FULL_SCREEN
+    #define HAS_SD
+    #define USE_SD
+    #define HAS_GPS
+    #define HAS_PSRAM
+    #define HAS_NIMBLE_2
+    #define HAS_IDF_3
+    #define HAS_DIRECT_UPLOAD
   #endif
 
   // The bare XIAO carrier has no SD hardware. Keep the capability absent even
@@ -2456,6 +2480,67 @@
       #define STATUSBAR_COLOR 0x4A49
     #endif
 
+    #ifdef MARAUDER_FREENOVE_FNK0104B
+      // 2.8" ILI9341 240x320 portrait + FT6336U capacitive touch.
+      // TFT pins must match User_Setup_freenove_fnk01044b_28.h.
+      #define CHAN_PER_PAGE 7
+      #define SCREEN_CHAR_WIDTH 40
+      #define HAS_ILI9341
+      #define BANNER_TEXT_SIZE 2
+      #define SCREEN_BUFFER
+      #define MAX_SCREEN_BUFFER 21
+      #ifndef TFT_WIDTH
+        #define TFT_WIDTH 240
+      #endif
+      #ifndef TFT_HEIGHT
+        #define TFT_HEIGHT 320
+      #endif
+      #define GRAPH_VERT_LIM TFT_HEIGHT/2 - 1
+      #define EXT_BUTTON_WIDTH 30
+      #define SCREEN_ORIENTATION 0
+      #define CHAR_WIDTH 12
+      #define SCREEN_WIDTH TFT_WIDTH
+      #define SCREEN_HEIGHT TFT_HEIGHT
+      #define HEIGHT_1 TFT_WIDTH
+      #define WIDTH_1 TFT_WIDTH
+      #define STANDARD_FONT_CHAR_LIMIT (TFT_WIDTH/6)
+      #define TEXT_HEIGHT 16
+      #define BOT_FIXED_AREA 0
+      #define TOP_FIXED_AREA 48
+      #define YMAX TFT_HEIGHT
+      #define minimum(a,b)     (((a) < (b)) ? (a) : (b))
+      #define MENU_FONT &FreeMono9pt7b
+      #define BUTTON_SCREEN_LIMIT 12
+      #define BUTTON_ARRAY_LEN BUTTON_SCREEN_LIMIT
+      #define STATUS_BAR_WIDTH 16
+      #define LVGL_TICK_PERIOD 6
+      #define STATUSBAR_COLOR 0x4A49
+
+      // Display SPI (Freenove FNK0104B/FNK01044B)
+      #define TFT_MOSI 11
+      #define TFT_MISO 13
+      #define TFT_SCLK 12
+      #define TFT_CS 10
+      #define TFT_DC 46
+      #define TFT_RST -1
+      #define TFT_BL 45
+      #define TOUCH_CS -1
+
+      // FT6336U capacitive touch (I2C)
+      #define CTP_RST 18
+      #define CTP_SDA 16
+      #define CTP_SCL 15
+      #define CTP_INT 17
+      #define TOUCH_SDA 16
+      #define TOUCH_SCL 15
+      #define TOUCH_INT 17
+      #define TOUCH_RST 18
+      #define I2C_SDA 16
+      #define I2C_SCL 15
+      #define CAP_TOUCH_PANEL_WIDTH 240
+      #define CAP_TOUCH_PANEL_HEIGHT 320
+    #endif
+
   #endif
   //// END DISPLAY DEFINITIONS
 
@@ -2806,6 +2891,22 @@
     #define ICON_H 8
     #define BUTTON_PADDING 4
   #endif
+
+  #ifdef MARAUDER_FREENOVE_FNK0104B
+    #define BANNER_TIME 100
+    #define COMMAND_PREFIX "!"
+    // On-screen keyboard geometry for the 240x320 portrait panel.
+    #define KEY_X 120
+    #define KEY_Y 50
+    #define KEY_W 240
+    #define KEY_H 22
+    #define KEY_SPACING_X 0
+    #define KEY_SPACING_Y 1
+    #define KEY_TEXTSIZE 1
+    #define ICON_W 22
+    #define ICON_H 22
+    #define BUTTON_PADDING 22
+  #endif
   //// END MENU DEFINITIONS
 
   //// SD DEFINITIONS
@@ -2919,6 +3020,13 @@
 
     #ifdef MARAUDER_POOM
       #define SD_CS 5
+    #endif
+
+    #ifdef MARAUDER_FREENOVE_FNK0104B
+      // Unused on this board: the microSD slot is wired to the SDMMC peripheral
+      // (CLK=38, CMD=40, D0=39), not to SPI. Defined only because shared code
+      // references SD_CS for HAS_SD targets.
+      #define SD_CS 21
     #endif
 
   #endif
@@ -3190,6 +3298,11 @@
       #define GPS_SERIAL_INDEX 1
       #define GPS_TX 14
       #define GPS_RX 13
+    #elif defined(MARAUDER_FREENOVE_FNK0104B)
+      // GPS pins exposed on the FNK0104B header; module optional/not populated.
+      #define GPS_SERIAL_INDEX 1
+      #define GPS_TX 43
+      #define GPS_RX 44
     #endif
   #else
     #define mac_history_len 100

@@ -10,6 +10,15 @@
   #include "FS.h"
 #endif
 #include "SD.h"
+#ifdef MARAUDER_FREENOVE_FNK0104B
+  // The microSD slot of the Freenove FNK0104B is wired to the SDMMC
+  // peripheral (1-bit: CLK=38, CMD=40, D0=39), not to the SPI bus. The whole
+  // codebase talks to the SPI `SD` object, so redirect that token to SD_MMC.
+  // Both the include and the alias are compiled only for this target: every
+  // other board keeps using the original SPI SD object.
+  #include "SD_MMC.h"
+  #define SD SD_MMC
+#endif
 #include "SPIFFS.h"
 #ifdef HAS_C5_SD
   #include "SPI.h"
