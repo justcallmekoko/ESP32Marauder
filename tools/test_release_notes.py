@@ -24,7 +24,7 @@ class ReleaseNotesTests(unittest.TestCase):
         notes = render_release_notes(targets, "stable", changes)
         table = notes.split("## Firmware assets\n\n", 1)[1].split("\n\n", 1)[0]
 
-        self.assertEqual(len(targets), 30)
+        self.assertEqual(len(targets), 31)
         for target in targets:
             self.assertEqual(table.count(f"`_{target['assetSuffix']}.bin`"), 1)
             self.assertIn(target["displayName"], table)

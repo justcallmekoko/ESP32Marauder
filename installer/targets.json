@@ -277,6 +277,15 @@
       "assetSuffix": "dual_mini_c5",
       "chipFamily": "ESP32-C5",
       "esptoolChip": "esp32c5"
+    },
+    {
+      "id": "freenove-fnk0104b",
+      "displayName": "Freenove FNK0104B 2.8-inch",
+      "aliases": ["Freenove FNK0104B", "Freenove FNK01044B", "FNK0104B"],
+      "buildFlag": "MARAUDER_FREENOVE_FNK0104B",
+      "assetSuffix": "freenove_fnk0104b",
+      "chipFamily": "ESP32-S3",
+      "esptoolChip": "esp32s3"
     }
   ]
 }
