@@ -2,8 +2,9 @@
 //   TFT_eSPI setup for Freenove / Freenove ESP32-S3 Display
 //   FNK0104B / FNK01044B (2.8", ESP32-S3 N16R8 + ILI9341 SPI + FT6336U touch)
 //
-//   This file is self contained and is NOT referenced by the shared
-//   User_Setup_Select.h of the repository. Select it at build time with one of:
+//   This file is self contained. The repository's User_Setup_Select.h ships a
+//   commented include for it, which the CI/installer build uncomments with sed;
+//   local builds do the same on the TFT_eSPI library copy. Select it with one of:
 //
 //   * Arduino IDE / arduino-cli
 //       copy this file into the TFT_eSPI library folder and make the library's
@@ -13,8 +14,8 @@
 //           cp User_Setup_freenove_fnk01044b_28.h <libraries>/TFT_eSPI/
 //           printf '#include <User_Setup_freenove_fnk01044b_28.h>\n' \
 //             > <libraries>/TFT_eSPI/User_Setup_Select.h
-//       (this is what .tools/build.sh does locally: the repository's own
-//       User_Setup_Select.h is never modified)
+//       (.tools/build.sh does this on the library copy; the repo selector is
+//       only touched by the PR's commented include, which the CI uncomments)
 //
 //   * or simply add the line
 //           #include <User_Setup_freenove_fnk01044b_28.h>

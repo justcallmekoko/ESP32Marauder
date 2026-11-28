@@ -45,7 +45,7 @@ in a board-specific `User_Setup_*.h` that is selected at compile time (no shared
 
 | Board | MCU | Display | Notes |
 | --- | --- | --- | --- |
-| Freenove FNK0104B / FNK01044B 2.8" | ESP32-S3 (N16R8) | 2.8" ILI9341 + FT6336U touch | SDMMC 1-bit microSD; GPS header optional (CSI motion not available on S3) |
+| Freenove FNK0104B / FNK01044B 2.8" | ESP32-S3 (N16R8) | 2.8" ILI9341 + FT6336U touch | SDMMC 1-bit microSD; GPS header optional (CSI motion omitted: passive CSI needs join/self-traffic on S3) |
 
 # For Sale Now
 You can buy the ESP32 Marauder using [this link](https://www.justcallmekokollc.com)
