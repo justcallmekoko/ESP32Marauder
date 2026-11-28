@@ -36,5 +36,16 @@ The Device Info screen reports the FCC ID of the radio module fitted to supporte
 
 The legacy mappings are the closest modular approvals for the modules specified by the repository hardware designs. Confirm the module marking on a physical unit before using an FCC ID for labeling or compliance documentation. Third-party targets display `See hardware label` because their module or complete-device certification can vary by production revision.
 
+# Community and third-party boards
+
+ESP32 Marauder also builds for hardware contributed by the community. Each board
+adds a build target and an installer entry; its display/touch/SD configuration lives
+in a board-specific `User_Setup_*.h` that is selected at compile time (no shared
+`User_Setup_Select.h` logic is changed).
+
+| Board | MCU | Display | Notes |
+| --- | --- | --- | --- |
+| Freenove FNK0104B / FNK01044B 2.8" | ESP32-S3 (N16R8) | 2.8" ILI9341 + FT6336U touch | SDMMC 1-bit microSD; GPS header optional (CSI motion omitted: passive CSI needs join/self-traffic on S3) |
+
 # For Sale Now
 You can buy the ESP32 Marauder using [this link](https://www.justcallmekokollc.com)

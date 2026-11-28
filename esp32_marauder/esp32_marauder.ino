@@ -282,6 +282,11 @@ uint32_t currentTime  = 0;
       // backlight to full brightness.
       #ifdef MARAUDER_M5STACK_CORE2_AWS
         core2SetBacklight(BL_LEVELS[bl_level_idx]);
+      #elif defined(MARAUDER_FREENOVE_FNK0104B)
+        // Plain active-HIGH GPIO on this board; TFT_eSPI::init() may have
+        // reconfigured the pin, so drive it again.
+        pinMode(TFT_BL, OUTPUT);
+        digitalWrite(TFT_BL, HIGH);
       #else
         BL_SETUP();
         BL_SET(BL_LEVELS[bl_level_idx]);
@@ -293,6 +298,9 @@ uint32_t currentTime  = 0;
     #ifdef HAS_SCREEN
       #ifdef MARAUDER_M5STACK_CORE2_AWS
         core2SetBacklight(0);
+      #elif defined(MARAUDER_FREENOVE_FNK0104B)
+        pinMode(TFT_BL, OUTPUT);
+        digitalWrite(TFT_BL, LOW);
       #else
         BL_SET(0);
       #endif
