@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-class FreenoveFNK0104BHardwareTests(unittest.TestCase):
+class FreenoveFNK0104BBoardTests(unittest.TestCase):
     def test_target_is_registered_in_stable_and_nightly_builds(self) -> None:
         target = next(
             target
@@ -34,6 +34,10 @@ class FreenoveFNK0104BHardwareTests(unittest.TestCase):
             self.assertIn("CDCOnBoot=cdc", workflow)
             self.assertIn('file_name: "freenove_fnk0104b"', workflow)
             self.assertIn('tft_file: "User_Setup_freenove_fnk01044b_28.h"', workflow)
+            self.assertIn('addr: "0x0"', workflow)
+
+        selector = (ROOT / "User_Setup_Select.h").read_text(encoding="utf-8")
+        self.assertIn("//#include <User_Setup_freenove_fnk01044b_28.h>", selector)
 
     def test_board_contract_keeps_csi_disabled_and_gps_optional(self) -> None:
         config = (ROOT / "esp32_marauder" / "configs.h").read_text(encoding="utf-8")
